@@ -32,7 +32,7 @@ jobs:
         id: cache-deps
         uses: ./.github/actions/cached-deps
         with:
-          caching: 'true'
+          caching: 'false'
 
       - name: Output information
         run: echo "Cache used? ${{ steps.cache-deps.outputs.used-cache }}"
