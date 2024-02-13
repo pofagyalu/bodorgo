@@ -1,0 +1,375 @@
+tags:
+  - name: Tours
+    description: operations available to application developers
+paths:
+  /v1/tours:
+    get:
+      security:
+        - BearerAuth: []
+      summary: List all tours
+      description: Get a list of all tours in the database
+      tags:
+        - Tours
+      responses:
+        '200':
+          description: An object including a data key containing an array of tours.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'success'
+                  results:
+                    type: number
+                    example: 1
+                  data:
+                    type: object
+                    properties:
+                      tours:
+                        type: array
+                        items:
+                          $ref: '#/components/responses/Tour'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UnauthorizedError'
+    post:
+      security:
+        - BearerAuth: []
+      summary: Create tour
+      description: Create a new tour.
+      tags:
+        - Tours
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tour'
+      responses:
+        '201':
+          description: An object with a key named tour and a value containing the fields of the tour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'success'
+                  data:
+                    type: object
+                    properties:
+                      tour:
+                        $ref: '#/components/responses/Tour'
+        '400':
+          description: Duplicate field value error in case Hungarian or English title already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/DuplicateError'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UnauthorizedError'
+  /v1/tours/{id}:
+    get:
+      security:
+        - BearerAuth: []
+      summary: Get tour by ID
+      description: Get a single **Tour** by its Id value.
+      tags:
+        - Tours
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: String ID of the tour.
+          example: '63ec0f25bfa0a983ffccb360'
+      responses:
+        '200':
+          description: An object with a key named tour and a value containing the fields of the tour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'success'
+                  data:
+                    type: object
+                    properties:
+                      tour:
+                        $ref: '#/components/responses/Tour'
+        '400':
+          description: Tour with given id doesn't exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/InvalidId'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Tour with given ID doesn't exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/DocumentNotFoundError'
+    patch:
+      security:
+        - BearerAuth: []
+      summary: Update tour by ID
+      description: Update an existing tour by Id
+      tags:
+        - Tours
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: String ID of the tour.
+          example: '63ec0f25bfa0a983ffccb360'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tour'
+      responses:
+        '200':
+          description: An object with a key named tour and a value with fields of the updated tour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'success'
+                  data:
+                    type: object
+                    properties:
+                      tour:
+                        $ref: '#/components/responses/Tour'
+        '400':
+          description: Tour with given id doesn't exists **OR** title is already taken.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/InvalidId'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Tour with given ID doesn't exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/DocumentNotFoundError'
+    delete:
+      security:
+        - BearerAuth: []
+      summary: Delete tour by ID
+      tags:
+        - Tours
+      description: Deletes one tour if id is passed as parameter in the request path.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: String ID of the tour.
+          example: '63ec0f25bfa0a983ffccb360'
+      responses:
+        '204':
+          description: Delete confirmation message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/DeleteConfirmationMsg'
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Tour with given ID doesn't exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/responses/DocumentNotFoundError'
+components:
+  schemas:
+    Tour:
+      type: object
+      properties:
+        duration:
+          type: number
+          example: 2
+        maxGroupSize:
+          type: number
+          example: 43
+        place:
+          type: string
+          example: 'Kőszeg'
+        summary:
+          type: string
+          example: 'Egy kis gyöngyszem'
+        description:
+          type: string
+          example: 'az Alpok keleti nyúlványai között, a Kőszegi-hegység lábánál fekszik, amely...'
+        locationName:
+          type: string
+          example: 'Katica vendégfogadó'
+        locationCoordinates:
+          type: object
+          properties:
+            lat:
+              type: number
+              example: 19.234100
+            lng:
+              type: number
+              example: 46.112120
+        startDate:
+          type: string
+          format: date-time
+          description: Starting date of the tour
+          example: '2024-02-21T17:00:00Z'
+  responses:
+    Tour:
+      type: object
+      properties:
+        id:
+          type: string
+          example: '63e8be86363481774afc7395'
+        duration:
+          type: number
+          example: 2
+        maxGroupSize:
+          type: number
+          example: 43
+        ratingsAverage:
+          type: number
+          example: 4.5
+        ratingsQuantity:
+          type: number,
+          example: 23
+        place:
+          type: string
+          example: 'Kőszeg'
+        summary:
+          type: string
+          example: 'Egy kis gyöngyszem'
+        description:
+          type: string
+          example: 'az Alpok keleti nyúlványai között, a Kőszegi-hegység lábánál fekszik, amely...'
+        locationName:
+          type: string
+          example: 'Katica vendégfogadó'
+        locationCoordinates:
+          type: object
+          properties:
+            lat:
+              type: number
+              example: 19.234100
+            lng:
+              type: number
+              example: 46.112120
+        images:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: string
+          example: ['tour-1-0.jpg', 'tour-1-1.jpg']
+        startDate:
+          type: string
+          format: date-time
+          description: Starting date of the tour
+          example: '2024-02-21T17:00:00Z'
+    DeleteConfirmationMsg:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        data:
+          type: object
+          example: null
+    UnauthorizedError:
+      description: Access token is missing or invalid
+      type: object
+      properties:
+        error:
+          type: string
+          example: 'Authentication error'
+    DocumentNotFoundError:
+      type: object
+      properties:
+        status:
+          type: string
+          example: fail
+        message:
+          type: string
+          example: No document found with this ID
+    DuplicateError:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'fail'
+        error:
+          type: object
+          properties:
+            statusCode:
+              type: number
+              example: 400
+            status:
+              type: string
+              example: 'fail'
+            isOperational:
+              type: boolean
+              example: true
+        message:
+          type: string
+          example: 'Duplicate field value: ...'
+    InvalidId:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'fail'
+        error:
+          type: object
+          properties:
+            statusCode:
+              type: number
+              example: 400
+            status:
+              type: string
+              example: 'fail'
+            isOperational:
+              type: boolean
+              example: true
+        message:
+          type: string
+          example: 'Invalid _id: ...'
