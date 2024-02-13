@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const tourSchema = new mongoose.Schema(
   {
+    duration: {
+      type: Number,
+      required: true,
+    },
     name: {
       type: String,
       required: [true, 'A tour must have a name'],
