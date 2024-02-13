@@ -6,6 +6,10 @@ const tourSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    place: {
+      type: String,
+      required: true,
+    },
     name: {
       type: String,
       required: [true, 'A tour must have a name'],
