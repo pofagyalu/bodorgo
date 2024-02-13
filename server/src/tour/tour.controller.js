@@ -1,4 +1,4 @@
-// import Tour from './tour.model.js';
+import Tour from './tour.model.js';
 
 export const getAllTours = (req, res) => {
   res.status(200).json({
@@ -8,7 +8,23 @@ export const getAllTours = (req, res) => {
 
 export const getTour = (req, res) => {};
 
-export const createTour = (req, res) => {};
+export const createTour = async (req, res) => {
+  try {
+    const newTour = await Tour.create(req.body);
+
+    res.status(201).json({
+      status: 'success',
+      data: {
+        tour: newTour,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: err,
+    });
+  }
+};
 
 export const updateTour = (req, res) => {
   res.status(200).json({
