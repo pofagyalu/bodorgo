@@ -7,6 +7,10 @@ on:
     paths:
       - 'server/**'
 
+defaults:
+  run:
+    working-directory: ./server
+
 jobs:
   testing:
     runs-on: ubuntu-latest
