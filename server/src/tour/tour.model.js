@@ -2,26 +2,63 @@ import mongoose from 'mongoose';
 
 const tourSchema = new mongoose.Schema(
   {
-    duration: {
-      type: Number,
-      required: true,
-    },
-    place: {
-      type: String,
-      required: true,
-    },
-    name: {
-      type: String,
-      required: [true, 'A tour must have a name'],
+    startDate: {
+      type: Date,
+      required: [true, 'A tour must have a start date'],
       unique: true,
     },
-    rating: {
+    duration: {
       type: Number,
-      default: 4.5,
+      required: [true, 'A tour must have a duration'],
     },
-    price: { type: Number, required: [true, 'A tour must have a price'] },
+    startLocation: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        required: true,
+      },
+      coordinates: { type: [Number], required: true },
+      city: String,
+      description: String,
+      address: String,
+    },
+    summary: {
+      type: String,
+      required: [true, 'A tour must have a summary'],
+    },
+    description: {
+      type: String,
+      required: [true, 'A tour must have a description'],
+    },
+    maxGroupSize: {
+      type: Number,
+      required: [true, 'A tour must have a group size'],
+    },
+    locations: [
+      {
+        type: {
+          type: String,
+          enum: ['Point'],
+          required: true,
+        },
+        coordinates: { type: [Number], required: true },
+        description: String,
+        address: String,
+        day: Number,
+      },
+    ],
+    imageCover: {
+      type: String,
+      required: [true, 'A tour must have a cover image'],
+    },
+    images: [String],
+    initialPayment: { type: Number, default: 0 },
+    price: { type: Number, default: 0 },
+    noOfAttendants: { type: Number, default: 0 },
+    ratingsAverage: { type: Number, default: 4.5 },
+    ratingsQuantity: { type: Number, default: 0 },
   },
-  { versionKey: false },
+  { timestamps: true },
 );
 
 const Tour = mongoose.model('Tour', tourSchema);

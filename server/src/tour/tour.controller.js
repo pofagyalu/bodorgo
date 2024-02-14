@@ -1,8 +1,21 @@
 import Tour from './tour.model.js';
+import APIFeatures from '../utils/api-features.js';
+
+export const aliasTopTours = async (req, res, next) => {
+  req.query.limit = '3';
+  req.query.sort = '-ratingsAverage,price';
+  req.query.fields = 'startLocation,price,imageCover,ratingsAverage,summary';
+  next();
+};
 
 export const getAllTours = async (req, res) => {
   try {
-    const tours = await Tour.find();
+    const features = new APIFeatures(Tour.find(), req.query)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
+    const tours = await features.query;
 
     res.status(200).json({
       status: 'success',
@@ -50,7 +63,7 @@ export const createTour = async (req, res) => {
   } catch (err) {
     res.status(400).json({
       status: 'fail',
-      message: 'Invalid data sent !',
+      message: err,
     });
   }
 };
@@ -87,7 +100,7 @@ export const deleteTour = async (req, res) => {
   } catch (err) {
     res.status(400).json({
       status: 'fail',
-      message: 'Invalid data sent !',
+      message: err,
     });
   }
 };
