@@ -6,7 +6,7 @@ const DB_URI = `mongodb+srv://${config.db.userName}:${config.db.password}@${conf
 
 async function main() {
   await mongoose.connect(DB_URI);
-  logger.info('Successfully connected to MongoDB');
+  logger.info('MongoDB connection succesful!');
 }
 
 main().catch((err) => logger.error(err));
