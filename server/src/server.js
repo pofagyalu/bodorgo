@@ -4,8 +4,20 @@ import logger from './logger.js';
 import './db.js';
 import app from './app.js';
 
-const PORT = config.port;
+process.on('uncaughtException', (err) => {
+  logger.error('UNCAUGHT EXCEPTION! 🧨 Shutting down...', err.message);
 
-app.listen(PORT, () => {
-  logger.info(`App running on port ${PORT}...`);
+  process.exit(1);
+});
+
+const PORT = config.port;
+const server = app.listen(PORT, () => {
+  logger.info(`Bódorgó App running on port ${PORT}...`);
+});
+
+process.on('unhandledRejection', (err) => {
+  logger.error('UNHANDLED REJECTION! 🧨 Shutting down...', err.message);
+  server.close(() => {
+    process.exit(1);
+  });
 });
