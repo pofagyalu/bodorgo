@@ -48,6 +48,12 @@ const tourSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'A tour must have a start date'],
       unique: true,
+      validate: {
+        validator: function (val) {
+          return val > Date.now();
+        },
+        message: `Tour start date ({VALUE}) cannot be a past date!`,
+      },
     },
     duration: {
       type: Number,
