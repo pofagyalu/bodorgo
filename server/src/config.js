@@ -6,6 +6,10 @@ const config = {
     userName: process.env.MONGODB_USERNAME,
     password: process.env.MONGODB_PASSWORD,
   },
+  jwt: {
+    secret: process.env.JWT_SECRET,
+    expiry: process.env.JWT_EXPIRES_IN,
+  },
 };
 
 export default config;
