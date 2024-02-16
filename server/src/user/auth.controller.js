@@ -68,7 +68,6 @@ export const protect = catchAsync(async (req, res, next) => {
   if (authFragments.length !== 2) {
     return next(new AppError('Invalid authorization header.', 401));
   }
-
   const token = authFragments[1];
 
   let decodedToken;
@@ -88,5 +87,25 @@ export const protect = catchAsync(async (req, res, next) => {
     );
   }
 
+  if (currentUser.changedPasswordAfter(decodedToken.iat)) {
+    return next(
+      new AppError('User recently changed password! Please login again.', 401),
+    );
+  }
+
+  req.currentUser = currentUser;
+
   next();
 });
+
+export const restrictTo =
+  (...roles) =>
+  (req, res, next) => {
+    if (!roles.includes(req.currentUser.role)) {
+      return next(
+        new AppError('Yoy do not have permission to perform this action', 403),
+      );
+    }
+
+    next();
+  };
