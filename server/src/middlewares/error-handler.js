@@ -8,8 +8,8 @@ const handleCastErrorDB = (err) => {
 };
 
 const handleDuplicateFieldsDB = (err) => {
-  const value = err.errmsg; // match(/(["'])(\\?.)*?\1/);
-  const message = `Duplicate field value: ${value}. Please use another value!`;
+  const dupField = Object.keys(err.keyValue)[0]; // match(/(["'])(\\?.)*?\1/);
+  const message = `Duplicate field "${dupField}". Please use another value(${err.keyValue[dupField]})!`;
   return new AppError(message, 400);
 };
 
@@ -58,10 +58,6 @@ export default (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
-  logger.error(
-    `${err.statusCode} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`,
-  );
-
   let error = Object.assign(err);
 
   if (error.name === 'CastError') error = handleCastErrorDB(error);
@@ -72,6 +68,10 @@ export default (err, req, res, next) => {
 
   if (error.name === 'JsonWebTokenError') error = handleJWTError();
   if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
+
+  logger.error(
+    `${error.statusCode} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`,
+  );
 
   if (config.nodeEnv === 'development') {
     sendErrorDev(error, res);
