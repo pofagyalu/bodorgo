@@ -12,6 +12,16 @@ const jwtToken = (id, expiresIn = config.jwt.expiry) =>
 
 const createSendToken = (user, statusCode, res) => {
   const token = jwtToken(user._id);
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + config.jwt.cookieExpiry * 24 * 60 * 60 * 1000,
+    ),
+    httpOnly: true,
+  };
+  if (config.nodeEnv === 'production') cookieOptions.secure = true;
+  res.cookie('bodorgo_jwt', token, cookieOptions);
+
+  user.password = undefined;
 
   res.status(statusCode).json({
     status: 'success',
