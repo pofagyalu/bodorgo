@@ -1,6 +1,7 @@
 import express from 'express';
 import morgan from 'morgan';
-import config from './config.js';
+import rateLimit from 'express-rate-limit';
+
 import logger from './logger.js';
 import errorHandler from './middlewares/error-handler.js';
 import AppError from './utils/app-error.js';
@@ -11,9 +12,15 @@ import swaggerRouter from './routes/swagger.routes.js';
 
 const app = express();
 
-if (config.nodeEnv === 'development') {
-  app.use(morgan('combined', { stream: logger.stream }));
-}
+app.use(morgan('combined', { stream: logger.stream }));
+
+const limiter = rateLimit({
+  max: 120,
+  windowMs: 60 * 60 * 1000,
+  message: 'Too may requests from this IP, please try again in an hour!',
+});
+app.use('/', limiter);
+
 app.use(express.json());
 
 app.use('/v1/tours', tourRouter);
