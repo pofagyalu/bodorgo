@@ -2,6 +2,8 @@ import express from 'express';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
 
 import logger from './logger.js';
 import errorHandler from './middlewares/error-handler.js';
@@ -25,6 +27,10 @@ const limiter = rateLimit({
 app.use('/', limiter);
 
 app.use(express.json({ limit: '10kb' }));
+
+app.use(mongoSanitize());
+
+app.use(xss());
 
 app.use('/v1/tours', tourRouter);
 app.use('/v1/users', userRouter);
