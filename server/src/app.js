@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
-import xss from 'xss-clean';
+import xss from 'express-xss-sanitizer';
 import hpp from 'hpp';
 
 import logger from './logger.js';
