@@ -48,13 +48,34 @@ export const signup = catchAsync(async (req, res, next) => {
 export const login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email }).select('+password');
-
   if (!email || !password) {
     return next(new AppError('Please provide email and password', 400));
   }
 
-  if (!user || !(await user.correctPassword(password, user.password))) {
+  const user = await User.findOne({ email }).select('+password');
+
+  if (!user) {
+    return next(new AppError('No user found', 400));
+  }
+
+  if (user.isLocked) {
+    return next(
+      new AppError(
+        'Too many login attempts. Please try again 5 minutes later',
+        429,
+      ),
+    );
+  }
+
+  if (await user.correctPassword(password, user.password)) {
+    if (user.loginAttempts) {
+      await user.updateOne({
+        $set: { loginAttempts: 0 },
+        $unset: { lockUntil: 1 },
+      });
+    }
+  } else {
+    await user.incLoginAttempts();
     return next(new AppError('Incorrect email or password', 401));
   }
 
