@@ -5,7 +5,7 @@ import './db.js';
 import app from './app.js';
 
 process.on('uncaughtException', (err) => {
-  logger.error('UNCAUGHT EXCEPTION! 🧨 Shutting down...', err.message);
+  logger.error(`UNCAUGHT EXCEPTION! ${err.message} 🧨 Shutting down...`);
 
   process.exit(1);
 });
