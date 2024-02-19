@@ -1,13 +1,20 @@
 name: Server CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - 'server/**'
 
 jobs:
   testing:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./server
 
     strategy:
       matrix:
@@ -25,8 +32,6 @@ jobs:
       - name: Load and cache dependencies
         id: cache-deps
         uses: ./.github/actions/cached-deps
-        with:
-          caching: 'false'
 
       - name: Output caching information
         run: echo "Cache used? ${{ steps.cache-deps.outputs.used-cache }}"
