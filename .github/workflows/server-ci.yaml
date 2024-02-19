@@ -8,13 +8,13 @@ on:
     paths:
       - 'server/**'
 
+defaults:
+  run:
+    working-directory: ./server
+
 jobs:
   testing:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: ./server
 
     strategy:
       matrix:
@@ -29,12 +29,16 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Load and cache dependencies
-        id: cache-deps
-        uses: ./.github/actions/cached-deps
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
 
-      - name: Output caching information
-        run: echo "Cache used? ${{ steps.cache-deps.outputs.used-cache }}"
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci
 
       - name: Lint code
         run: npm run lint
