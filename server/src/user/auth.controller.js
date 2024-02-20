@@ -7,11 +7,15 @@ import catchAsync from '../utils/catch-async.js';
 import AppError from '../utils/app-error.js';
 import sendEmail from '../email/email.js';
 
-const jwtToken = (id, expiresIn = config.jwt.expiry) =>
-  jwt.sign({ id }, config.jwt.secret, { expiresIn });
+const jwtToken = (id, role, email, expiresIn = config.jwt.expiry) =>
+  jwt.sign({ id, role }, config.jwt.secret, {
+    issuer: 'https://bodorgo.padlasfoto.duckdns.org',
+    expiresIn,
+    subject: email,
+  });
 
 const createSendToken = (user, statusCode, res) => {
-  const token = jwtToken(user._id);
+  const token = jwtToken(user._id, user.role, user.email);
   const cookieOptions = {
     expires: new Date(
       Date.now() + config.jwt.cookieExpiry * 24 * 60 * 60 * 1000,
@@ -19,7 +23,7 @@ const createSendToken = (user, statusCode, res) => {
     httpOnly: true,
   };
   if (config.nodeEnv === 'production') cookieOptions.secure = true;
-  res.cookie('bodorgo_jwt', token, cookieOptions);
+  res.cookie('bodorgo_auth_token', token, cookieOptions);
 
   user.password = undefined;
 
