@@ -82,14 +82,6 @@ export const getUser = (req, res, next) => {
   });
 };
 
-export const updateUser = (req, res, next) => {
-  // TODO
-  // update esetében is save()-et használni, hogy működjön a
-  // passwordConfirm
-  res.status(500).json({
-    status: 'error',
-    message: 'This route is not yet defined',
-  });
-};
+export const updateUser = factory.updateOne(User);
 
 export const deleteUser = factory.deleteOne(User);

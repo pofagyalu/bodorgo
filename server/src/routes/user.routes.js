@@ -26,11 +26,11 @@ router
 router
   .route('/:id')
   .get(userController.getUser)
-  .patch(userController.updateUser)
-  .delete(
+  .patch(
     authController.protect,
     authController.restrictTo('admin'),
-    userController.deleteUser,
-  );
+    userController.updateUser,
+  )
+  .delete(userController.deleteUser);
 
 export default router;
