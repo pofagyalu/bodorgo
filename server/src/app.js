@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
-import xss from 'express-xss-sanitizer';
+import { xss } from 'express-xss-sanitizer';
 import hpp from 'hpp';
 
 import logger from './logger.js';
@@ -12,6 +12,7 @@ import AppError from './utils/app-error.js';
 
 import tourRouter from './routes/tour.routes.js';
 import userRouter from './routes/user.routes.js';
+import reviewRouter from './routes/review.routes.js';
 import swaggerRouter from './routes/swagger.routes.js';
 
 const app = express();
@@ -41,6 +42,7 @@ app.use(
 
 app.use('/v1/tours', tourRouter);
 app.use('/v1/users', userRouter);
+app.use('/v1/reviews', reviewRouter);
 app.use('/api-docs', swaggerRouter);
 
 app.all('*', (req, res, next) => {
