@@ -24,23 +24,22 @@ const tourSchema = new mongoose.Schema(
       type: {
         type: String,
         enum: ['Point'],
-        required: true,
+        default: 'Point',
       },
-      coordinates: { type: [Number], required: true },
-      city: String,
-      description: String,
+      coordinates: [Number],
       address: String,
+      description: String,
     },
     locations: [
       {
         type: {
           type: String,
           enum: ['Point'],
-          required: true,
+          default: 'Point',
         },
-        coordinates: { type: [Number], required: true },
-        description: String,
+        coordinates: [Number],
         address: String,
+        description: String,
         day: Number,
       },
     ],
@@ -70,12 +69,11 @@ const tourSchema = new mongoose.Schema(
       type: Number,
       required: [true, 'A tour must have a group size'],
     },
-    attendants: [{ type: Number, default: 0 }],
+    bookings: [{ type: mongoose.Schema.ObjectId, ref: 'Booking' }],
     events: [
       {
-        description: String,
-        day: Number,
-        price: Number,
+        type: mongoose.Schema.ObjectId,
+        ref: 'Event',
       },
     ],
     initialPayment: { type: Number, default: 0 },
@@ -101,6 +99,12 @@ const tourSchema = new mongoose.Schema(
 
 tourSchema.virtual('durationWeeks').get(function () {
   return this.duration / 7;
+});
+
+tourSchema.virtual('reviews', {
+  ref: 'Review',
+  foreignField: 'tour',
+  localField: '_id',
 });
 
 tourSchema.pre('save', function (next) {
