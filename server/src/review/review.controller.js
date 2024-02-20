@@ -2,6 +2,7 @@ import Review from './review.model.js';
 import Tour from '../tour/tour.model.js';
 import catchAsync from '../utils/catch-async.js';
 import AppError from '../utils/app-error.js';
+import factory from '../middlewares/handler-factory.js';
 
 export const getAllReviews = catchAsync(async (req, res, next) => {
   let filter = {};
@@ -39,3 +40,5 @@ export const createReview = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+export const deleteReview = factory.deleteOne(Review);
