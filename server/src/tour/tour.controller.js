@@ -1,7 +1,5 @@
 import Tour from './tour.model.js';
-import APIFeatures from '../utils/api-features.js';
 import catchAsync from '../utils/catch-async.js';
-import AppError from '../utils/app-error.js';
 import factory from '../middlewares/handler-factory.js';
 
 export const aliasTopTours = async (req, res, next) => {
@@ -11,51 +9,10 @@ export const aliasTopTours = async (req, res, next) => {
   next();
 };
 
-export const getAllTours = catchAsync(async (req, res, next) => {
-  const features = new APIFeatures(Tour.find(), req.query)
-    .filter()
-    .sort()
-    .limitFields()
-    .paginate();
-  const tours = await features.query;
-
-  res.status(200).json({
-    status: 'success',
-    results: tours.length,
-    data: {
-      tours,
-    },
-  });
-});
-
-export const getTour = catchAsync(async (req, res, next) => {
-  const tour = await Tour.findById(req.params.id).populate('reviews');
-
-  if (!tour) {
-    return next(new AppError('No document found with that ID', 404));
-  }
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      tour,
-    },
-  });
-});
-
-export const createTour = catchAsync(async (req, res, next) => {
-  const newTour = await Tour.create(req.body);
-
-  res.status(201).json({
-    status: 'success',
-    data: {
-      tour: newTour,
-    },
-  });
-});
-
+export const getAllTours = factory.getAll(Tour);
+export const getTour = factory.getOne(Tour, { path: 'reviews' });
+export const createTour = factory.createOne(Tour);
 export const updateTour = factory.updateOne(Tour);
-
 export const deleteTour = factory.deleteOne(Tour);
 
 export const getTourStats = catchAsync(async (req, res, next) => {
