@@ -1,8 +1,8 @@
-import Review from './review.model.js';
-import Tour from '../tour/tour.model.js';
-import catchAsync from '../utils/catch-async.js';
-import AppError from '../utils/app-error.js';
-import factory from '../middlewares/handler-factory.js';
+import Review from './review.model';
+import Tour from '../tour/tour.model';
+import catchAsync from '../utils/catch-async';
+import AppError from '../utils/app-error';
+import factory from '../middlewares/handler-factory';
 
 export const setTourUserIds = catchAsync(async (req, res, next) => {
   const { tourId } = req.params;
