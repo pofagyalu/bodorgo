@@ -5,11 +5,10 @@ import AuthMethod from './auth.method.model';
 import catchAsync from '../utils/catch-async';
 import AppError from '../utils/app-error';
 import sendEmail from '../email/email';
-import { jwtToken, isTokenValid, attachCookiesToResponse } from '../utils/jwt';
+import { isTokenValid, attachCookiesToResponse } from '../utils/jwt';
 
 const createSendToken = (user, statusCode, res) => {
   const tokenUser = { id: user._id, role: user.role };
-  // const token = jwtToken({ payload: tokenUser });
 
   attachCookiesToResponse({ res, user: tokenUser });
 

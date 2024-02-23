@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import config from './config.js';
-import logger from './logger.js';
+import config from './config';
+import logger from './logger';
 
 const DB_URI = `mongodb+srv://${config.db.userName}:${config.db.password}@${config.db.clusterAddress}/bodorgo?retryWrites=true&w=majority`;
 
@@ -9,4 +9,4 @@ async function main() {
   logger.info('MongoDB connection succesful!');
 }
 
-main().catch((err) => logger.error(err));
+main().catch((err) => logger.error(err.errmsg));
