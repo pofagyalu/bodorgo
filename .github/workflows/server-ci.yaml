@@ -9,16 +9,20 @@ on:
       - 'server/**'
 
 env:
-  MONGODB_CLUSTER_ADDRESS: ${{ secrets.MONGODB_CLUSTER_ADDRESS }}
-  MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
-  MONGODB_USERNAME: ${{ secrets.MONGODB_USERNAME }}
+  MONGODB_NAME: bodorgo
 
 defaults:
   run:
     working-directory: ./server
 
 jobs:
-  testing:
+  test:
+    environment: testing
+    env:
+      MONGODB_CLUSTER_ADDRESS: ${{ secrets.MONGODB_CLUSTER_ADDRESS }}
+      MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
+      MONGODB_USERNAME: ${{ secrets.MONGODB_USERNAME }}
+
     runs-on: ubuntu-latest
 
     strategy:
