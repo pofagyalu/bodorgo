@@ -1,6 +1,6 @@
-import config from '../config.js';
-import logger from '../logger.js';
-import AppError from '../utils/app-error.js';
+import config from '../config';
+import logger from '../logger';
+import AppError from '../utils/app-error';
 
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}.`;

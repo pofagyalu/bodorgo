@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import config from '../config.js';
+import config from '../config';
 
 const sendEmail = async (options) => {
   //1 trnasporter

@@ -1,6 +1,6 @@
-import catchAsync from '../utils/catch-async.js';
-import AppError from '../utils/app-error.js';
-import APIFeatures from '../utils/api-features.js';
+import catchAsync from '../utils/catch-async';
+import AppError from '../utils/app-error';
+import APIFeatures from '../utils/api-features';
 
 const getModelName = (Model) => Model.modelName.toLowerCase();
 
@@ -25,6 +25,7 @@ const factory = {
         .sort()
         .limitFields()
         .paginate();
+
       const docs = await features.query;
 
       res.status(200).json({
