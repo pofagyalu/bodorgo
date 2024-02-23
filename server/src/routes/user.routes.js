@@ -1,13 +1,15 @@
 import express from 'express';
-import * as userController from '../user/user.controller.js';
-import * as authController from '../auth/auth.controller.js';
+import * as userController from '../user/user.controller';
+import * as authController from '../auth/auth.controller';
 
 const router = express.Router();
 
 router.post('/signup', authController.signup);
 router.post('/login', authController.login);
+router.get('/logout', authController.logout);
 router.post('/forgotPassword', authController.forgotPassword);
 router.patch('/resetPassword/:token', authController.resetPassword);
+router.patch('/verify-email', authController.verifyEmail);
 
 router.use(authController.protect);
 

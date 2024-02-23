@@ -1,7 +1,7 @@
 import express from 'express';
-import * as tourController from '../tour/tour.controller.js';
-import * as authController from '../auth/auth.controller.js';
-import reviewRouter from './review.routes.js';
+import * as tourController from '../tour/tour.controller';
+import * as authController from '../auth/auth.controller';
+import reviewRouter from './review.routes';
 
 const router = express.Router();
 
@@ -21,11 +21,18 @@ router
   );
 
 router
+  .route('/tours-within/:distance/center/:latlng')
+  .get(tourController.getToursWithin);
+
+router.route('/distances/:latlng').get(tourController.getDistances);
+
+router
   .route('/')
   .get(tourController.getAllTours)
   .post(
     authController.protect,
     authController.restrictTo('user', 'admin'),
+    tourController.setCreatorId,
     tourController.createTour,
   );
 
