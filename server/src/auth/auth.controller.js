@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 import User from '../user/user.model';
-import AuthenticationMethod from './auth.method.model';
+import AuthMethod from './auth.method.model';
 import catchAsync from '../utils/catch-async';
 import AppError from '../utils/app-error';
 import sendEmail from '../email/email';
@@ -9,13 +9,12 @@ import { jwtToken, isTokenValid, attachCookiesToResponse } from '../utils/jwt';
 
 const createSendToken = (user, statusCode, res) => {
   const tokenUser = { id: user._id, role: user.role };
-  const token = jwtToken({ payload: tokenUser });
+  // const token = jwtToken({ payload: tokenUser });
 
   attachCookiesToResponse({ res, user: tokenUser });
 
   res.status(statusCode).json({
     status: 'success',
-    token,
     data: {
       user,
     },
@@ -23,20 +22,82 @@ const createSendToken = (user, statusCode, res) => {
 };
 
 export const signup = catchAsync(async (req, res, next) => {
-  const newUser = await User.create({
+  const isFirstAccount = (await User.countDocuments({}, { limit: 1 })) === 0;
+  const role = isFirstAccount ? 'admin' : 'user';
+
+  const user = await User.create({
     name: req.body.name,
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     email: req.body.email,
+    role,
   });
 
-  await AuthenticationMethod.create({
+  const auth = await AuthMethod.create({
     type: 'PASSWORD',
     secret: req.body.password,
-    user: newUser.id,
+    user: user.id,
   });
 
-  createSendToken(newUser, 201, res);
+  const verificationToken = auth.createVerificationToken();
+  await auth.save();
+
+  const resetURL = `${req.protocol}://${req.get('host')}/v1/users/verify-email?${verificationToken}&email=${user.email}`;
+
+  const message = `Thank you for registering? Click here to confirm your email address: ${resetURL}\nIf you didn't register please ignore this email!`;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'Your email verification token (valid for 1 hour)',
+      message,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Token sent to email',
+    });
+  } catch (err) {
+    auth.verificationToken = undefined;
+    await auth.save();
+    return next(new AppError('There was an error sending the email.', 500));
+  }
+});
+
+export const verifyEmail = catchAsync(async (req, res, next) => {
+  const { verificationToken, email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return next(
+      new AppError('The user linked with the token does not exist.', 401),
+    );
+  }
+
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(verificationToken)
+    .digest('hex');
+
+  const authUser = await AuthMethod.findOne({
+    verificationToken: hashedToken,
+  });
+
+  if (!authUser) {
+    return next(new AppError('Email verification failed', 400));
+  }
+
+  user.emailVerified = true;
+  user.emailVerifiedAt = Date.now();
+  authUser.verificationToken = undefined;
+  await user.save({ validateBeforeSave: false });
+  await authUser.save();
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Email verified',
+  });
 });
 
 export const login = catchAsync(async (req, res, next) => {
@@ -46,10 +107,18 @@ export const login = catchAsync(async (req, res, next) => {
     return next(new AppError('Please provide email and password', 400));
   }
 
-  const user = await User.findOne({ email });
-
+  const user = await User.findOne({ email }).select('+emailVerified');
   if (!user) {
-    return next(new AppError('No user found', 400));
+    return next(new AppError('No user found.', 400));
+  }
+
+  if (!user.emailVerified) {
+    return next(
+      new AppError(
+        'Email confirmation in progress, please check your inbox.',
+        401,
+      ),
+    );
   }
 
   if (user.isLocked) {
@@ -61,7 +130,7 @@ export const login = catchAsync(async (req, res, next) => {
     );
   }
 
-  const auth = await AuthenticationMethod.findOne({
+  const auth = await AuthMethod.findOne({
     user: user._id,
     type: 'PASSWORD',
   });
@@ -150,7 +219,7 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
     return next(new AppError('There is no user with email address.', 404));
   }
 
-  const auth = await AuthenticationMethod.findOne({
+  const auth = await AuthMethod.findOne({
     user: user._id,
     type: 'PASSWORD',
   });
@@ -201,7 +270,6 @@ export const resetPassword = catchAsync(async (req, res, next) => {
   }
 
   user.password = req.body.password;
-  user.passwordConfirm = req.body.passwordConfirm;
   user.passwordResetToken = undefined;
   user.passwordResetExpires = undefined;
 

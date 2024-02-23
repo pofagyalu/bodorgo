@@ -1,9 +1,7 @@
 import mongoose from 'mongoose';
 import validator from 'validator';
-import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 
-const SALT_ROUNDS = 12;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME = 5 * 60 * 1000;
 
@@ -35,6 +33,7 @@ const userSchema = new mongoose.Schema(
       default: false,
       select: false,
     },
+    emailVerifiedAt: { type: Date, select: false },
     family: String,
     role: {
       type: String,
@@ -42,25 +41,7 @@ const userSchema = new mongoose.Schema(
       default: 'user',
     },
     photo: String,
-    password: {
-      type: String,
-      required: [true, 'Please provide a password'],
-      minlength: 12,
-      select: false,
-    },
-    passwordConfirm: {
-      type: String,
-      required: [true, 'Please confirm your password'],
-      validate: {
-        validator: function (val) {
-          return val === this.password;
-        },
-        message: 'Passwords are not the same!',
-      },
-    },
     passwordChangedAt: Date,
-    passwordResetToken: String,
-    passwordResetExpires: Date,
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Number },
     member: { type: Boolean, default: false },
@@ -77,15 +58,6 @@ userSchema.virtual('isLocked').get(function () {
 });
 
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-
-  this.password = await bcrypt.hash(this.password, SALT_ROUNDS);
-  this.passwordConfirm = undefined;
-
-  next();
-});
-
-userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || this.isNew) return next();
 
   this.passwordChangedAt = Date.now() - 1000;
@@ -97,13 +69,6 @@ userSchema.pre(/^find/, function (next) {
 
   next();
 });
-
-userSchema.methods.correctPassword = async function (
-  candidatePassword,
-  userPassword,
-) {
-  return await bcrypt.compare(candidatePassword, userPassword);
-};
 
 userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {

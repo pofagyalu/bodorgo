@@ -8,7 +8,7 @@ const config = {
   },
   jwt: {
     secret: process.env.JWT_SECRET,
-    expiry: process.env.JWT_EXPIRES_IN,
+    expiry: process.env.JWT_LIFETIME,
     cookieExpiry: process.env.JWT_COOKIE_EXPIRES_IN,
   },
   mailtrap: {

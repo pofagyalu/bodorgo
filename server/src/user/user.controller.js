@@ -1,7 +1,7 @@
-import User from './user.model.js';
-import catchAsync from '../utils/catch-async.js';
-import AppError from '../utils/app-error.js';
-import factory from '../middlewares/handler-factory.js';
+import User from './user.model';
+import catchAsync from '../utils/catch-async';
+import AppError from '../utils/app-error';
+import factory from '../middlewares/handler-factory';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -18,6 +18,11 @@ export const createUser = (req, res, next) => {
     status: 'error',
     message: 'This route is not defined! Please use /signup instead',
   });
+};
+
+export const getMe = (req, res, next) => {
+  req.params.id = req.currentUser.id;
+  next();
 };
 
 export const updateMe = catchAsync(async (req, res, next) => {
