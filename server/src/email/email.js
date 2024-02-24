@@ -1,26 +1,63 @@
 import nodemailer from 'nodemailer';
+import pug from 'pug';
+import { convert } from 'html-to-text';
 import config from '../config';
 
-const sendEmail = async (options) => {
-  //1 trnasporter
-  const transporter = nodemailer.createTransport({
-    host: config.mailtrap.host,
-    port: config.mailtrap.port,
-    auth: {
-      user: config.mailtrap.user,
-      pass: config.mailtrap.password,
-    },
-  });
+export default class Email {
+  constructor(user, url) {
+    this.to = user.email;
+    this.firstName = user.firstName;
+    this.url = url;
+    this.from = `Melinda<${config.email.from}>`;
+  }
 
-  const mailOptions = {
-    from: 'Zoltán Nagy <info@padlasfoto.hu>',
-    to: options.email,
-    subject: options.subject,
-    text: options.message,
-    // html:
-  };
+  newTransport() {
+    if (config.nodeEnv === 'production') {
+      return nodemailer.createTransport({
+        service: 'SendGrid',
+        auth: {
+          user: config.sendgrid.user,
+          pass: config.sendgrid.password,
+        },
+      });
+    }
 
-  await transporter.sendMail(mailOptions);
-};
+    return nodemailer.createTransport({
+      host: config.mailtrap.host,
+      port: config.mailtrap.port,
+      auth: {
+        user: config.mailtrap.user,
+        pass: config.mailtrap.password,
+      },
+    });
+  }
 
-export default sendEmail;
+  async send(template, subject) {
+    const html = pug.renderFile(`${__dirname}/templates/${template}.pug`, {
+      name: this.firstName,
+      url: this.url,
+      subject,
+    });
+
+    const mailOptions = {
+      from: this.from,
+      to: this.to,
+      subject,
+      html,
+      text: convert(html),
+    };
+
+    await this.newTransport().sendMail(mailOptions);
+  }
+
+  async sendWelcome() {
+    await this.send('welcome', 'Üdvözöllek a bódorgó klánban');
+  }
+
+  async sendPasswordReset() {
+    await this.send(
+      'passwordReset',
+      'Jelszó helyreállító token (10percig érvényes)',
+    );
+  }
+}

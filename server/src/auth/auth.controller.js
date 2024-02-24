@@ -4,7 +4,7 @@ import User from '../user/user.model';
 import AuthMethod from './auth.method.model';
 import catchAsync from '../utils/catch-async';
 import AppError from '../utils/app-error';
-import sendEmail from '../email/email';
+import Email from '../email/email';
 import { isTokenValid, attachCookiesToResponse } from '../utils/jwt';
 
 const createSendToken = (user, statusCode, res) => {
@@ -41,16 +41,10 @@ export const signup = catchAsync(async (req, res, next) => {
   const verificationToken = auth.createVerificationToken();
   await auth.save();
 
-  const resetURL = `${req.protocol}://${req.get('host')}/v1/users/verify-email?${verificationToken}&email=${user.email}`;
-
-  const message = `Thank you for registering? Click here to confirm your email address: ${resetURL}\nIf you didn't register please ignore this email!`;
+  const emailVerifyUrl = `${req.protocol}://${req.get('host')}/v1/users/verify-email?${verificationToken}&email=${user.email}`;
 
   try {
-    await sendEmail({
-      email: user.email,
-      subject: 'Your email verification token (valid for 1 hour)',
-      message,
-    });
+    await new Email(user, emailVerifyUrl).sendWelcome();
 
     res.status(200).json({
       status: 'success',
@@ -225,17 +219,16 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   const resetToken = auth.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  const resetURL = `${req.protocol}://${req.get('host')}/v1/users/resetPassword/${resetToken}`;
-
-  const message = `Forgot your password? Submit a PACTH request with your new password and passwordConfirm to: ${resetURL}\nIf you didn' foregt your password, please ignor this email!`;
+  const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`;
 
   try {
-    await sendEmail({
-      email: user.email,
-      subject: 'Your password reset token (valid for 10 min)',
-      message,
-    });
+    // await sendEmail({
+    //   email: user.email,
+    //   subject: 'Your password reset token (valid for 10 min)',
+    //   message,
+    // });
 
+    await new Email(user, resetURL).sendPasswordReset();
     res.status(200).json({
       status: 'success',
       message: 'Token sent to email',

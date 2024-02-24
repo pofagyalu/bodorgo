@@ -1,0 +1,18 @@
+extends baseEmail
+
+block content
+  p Kedves #{name},
+  br
+  p Köszönjük, hogy regisztráltál a Bódorgó KLUB honlapján 🎉🙏
+  p A regisztráció véglegesítéséhez kérjük erősítsd meg az email címed az alábbi gombra kattintva!
+  table.btn.btn-primary(role='presentation', border='0', cellpadding='0', cellspacing='0')
+    tbody
+      tr
+        td(align='left')
+          table(role='presentation', border='0', cellpadding='0', cellspacing='0')
+            tbody
+              tr
+                td
+                  a(href=`${url}`, target='_blank') Email megerősítése
+  p Ha kérdése van, kérem vegye fel velünk a kapcsolatot!
+  p - Biró Melinda, ügyvezető igazgatóasszony

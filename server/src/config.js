@@ -11,12 +11,18 @@ const config = {
     expiry: process.env.JWT_LIFETIME,
     cookieExpiry: process.env.JWT_COOKIE_EXPIRES_IN,
   },
+  email: {
+    from: process.env.EMAIL_FROM,
+  },
   mailtrap: {
     host: process.env.MAILTRAP_EMAIL_HOST,
     port: process.env.MAILTRAP_EMAIL_PORT,
     user: process.env.MAILTRAP_EMAIL_USERNAME,
     password: process.env.MAILTRAP_EMAIL_PASSWORD,
-    from: process.env.MAILTRAP_EMAIL_FROM,
+  },
+  sendgrid: {
+    user: process.env.SENDGRID_USERNAME,
+    password: process.env.SENDGRID_PASSWORD,
   },
 };
 
