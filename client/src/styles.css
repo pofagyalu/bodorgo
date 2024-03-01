@@ -1,0 +1,18 @@
+/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Potland";
+  src: url("assets/fonts/Potland/PotLand.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Marhey";
+  src: url("assets/fonts/Marhey/Marhey-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
