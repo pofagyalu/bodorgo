@@ -1,34 +1,80 @@
 <!-- Nav container -->
-<nav class="relative container mx-auto p-6">
+<nav class="relative container mx-auto py-3 px-5 bg-gray-50">
   <!-- Flex container for All Items -->
   <div class="flex items-center justify-between">
     <!-- Flex container for the logo image-->
     <div class="flex items-center space-x-10">
       <!-- Logo -->
-      <img class="h-14" src="assets/images/transparent_color_logo.svg" alt="" />
-      <!-- Left menu -->
-      <ul class="hidden space-x-1 font-comic font-bold lg:flex text-xl">
-        <li class="active px-3 py-2 rounded-xl bg-none">
-          <a href="#" class="text-bRed hover:text-veryDarkViolet">Események</a>
+      <a routerLink="/" class="cursor:pointer">
+        <img
+          class="lg:h-16 h-12"
+          src="assets/images/transparent_color_logo.svg"
+          alt=""
+        />
+      </a>
+    </div>
+    <!-- Left menu -->
+    <div class="font-comic font-bold text-xl">
+      <ul
+        nav-pills
+        class="hidden lg:flex relative p-1 mb-0 list-none"
+        role="tablist"
+      >
+        <li class="z-30 flex-auto text-center">
+          <a
+            routerLink="/taborok"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bRed hover:text-gray-900"
+            role="tab"
+            >Táborok</a
+          >
         </li>
-        <li class="px-3 py-2 rounded-xl bg-none">
-          <a href="#" class="text-bDarkGreen hover:text-veryDarkViolet"
+        <li class="z-30 flex-auto text-center">
+          <a
+            routerLink="/taborok"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bBlue hover:text-gray-900"
+            role="tab"
+            >Fórum</a
+          >
+        </li>
+        <li class="z-30 flex-auto text-center">
+          <a
+            routerLink="#"
+            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bDarkGreen hover:text-gray-900"
             >Kérdőívek</a
           >
         </li>
-        <li class="px-3 py-2 rounded-xl bg-none">
-          <a href="#" class="text-bOrange hover:text-veryDarkViolet"
+        <li class="z-30 flex-auto text-center">
+          <a
+            routerLink="#"
+            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bOrange hover:text-gray-900"
             >Versenyek</a
           >
         </li>
-        <li class="px-3 py-2 rounded-xl bg-none">
-          <a href="#" class="text-bBlue hover:text-veryDarkViolet">Ócskapiac</a>
+        <li class="z-30 flex-auto text-center">
+          <a
+            routerLink="#"
+            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bBlue hover:text-gray-900"
+            >Ócskapiac</a
+          >
+        </li>
+        <li class="z-30 flex-auto text-center">
+          <a
+            routerLink="/rolunk"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bBrown hover:text-gray-900"
+            >Rólunk</a
+          >
         </li>
       </ul>
     </div>
     <!-- Right Buttons Menu -->
     <div
-      class="hidden items-center space-x-4 font-bold font-comic text-black lg:flex"
+      class="hidden items-center space-x-4 font-bold font-comic text-black text-xl lg:flex"
     >
       <div class="hover:text-veryDarkViolet">Belépés</div>
       <a
@@ -40,9 +86,8 @@
     <!-- @todo Hamburger Button -->
     <button
       id="menu-btn"
-      class="{{
-        toggle === true ? 'open' : ''
-      }} block hamburger lg:hidden focus:outline-none"
+      [ngClass]="{ open: menuShow }"
+      class="block hamburger lg:hidden focus:outline-none"
       type="button"
       (click)="navToggle()"
     >
@@ -54,15 +99,14 @@
   <!-- @todo Mobile menu -->
   <div
     id="menu"
-    class=" {{
-      toggle === true ? 'flex' : 'hidden'
-    }} absolute p-6 rounded-lg bg-darkViolet left-6 right-6 top-20 z-100"
+    [ngClass]="{ hidden: !menuShow, flex: menuShow }"
+    class="absolute p-6 rounded-lg bg-secondaryDark left-6 right-6 top-20 z-100"
   >
     <ul
       class="flex flex-col items-center justify-center w-full space-y-6 font-menu font-bold text-white rounded-sm"
     >
       <li>
-        <a href="#" class="w-full text-center">Események</a>
+        <a href="#" class="w-full text-center">Táborok</a>
       </li>
       <li>
         <a href="#" class="w-full text-center">Kérdőívek</a>
@@ -84,4 +128,3 @@
     </ul>
   </div>
 </nav>
-<app-hero></app-hero>

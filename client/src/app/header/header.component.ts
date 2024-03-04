@@ -1,17 +1,19 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { HeroComponent } from '../hero/hero.component';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [HeroComponent],
+  imports: [CommonModule, HeroComponent, RouterLink, RouterLinkActive],
   templateUrl: './header.component.html',
   styleUrl: './header.component.css',
 })
 export class HeaderComponent {
-  toggle = false;
+  menuShow: boolean = false;
 
   navToggle() {
-    this.toggle = !this.toggle;
+    this.menuShow = !this.menuShow;
   }
 }
