@@ -10,13 +10,7 @@ module.exports = {
         secondary: "	hsl(37, 100%, 45%)",
         secondaryLight: "	hsl(37, 82%, 61%)",
         secondaryDark: "	hsl(31, 100%, 43%)",
-        cyan: "hsl(180, 66%, 49%)",
-        cyanLight: "hsl(180, 66%, 69%)",
-        darkViolet: "hsl(257, 27%, 26%)",
-        red: "hsl(0, 87%, 67%)",
-        grayishViolet: "hsl(257, 7%, 63%)",
-        veryDarkBlue: "hsl(255, 11%, 22%)",
-        veryDarkViolet: "hsl(260, 8%, 14%)",
+
         bOrange: "hsl(16,100%,50%)",
         bBrown: "hsl(24,57%,41%)",
         bLightGreen: "hsl(106,48%,67%)",
@@ -28,6 +22,7 @@ module.exports = {
       fontFamily: {
         sans: ["Poppins", "sans-serif"],
         comic: ["Marhey", "sans-serif"],
+        happy: ["Potland", "sans-serif"],
       },
       spacing: {
         180: "32rem",
