@@ -1,0 +1,12 @@
+<ul
+  class="p-1 font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg"
+>
+  @for(forecast of forecast$ | async; track forecast$){
+  <li class="m-0 p-1 text-center border-b border-gray-200">
+    <p class="text-lg font-bold">{{ forecast.temp | number : "1.0-0" }}°C</p>
+    <p class="text-sm">
+      <em class="font-italic">{{ forecast.dateString | date : "E d" }}</em>
+    </p>
+  </li>
+  }
+</ul>

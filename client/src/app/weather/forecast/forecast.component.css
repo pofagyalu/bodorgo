@@ -1,0 +1,7 @@
+:host {
+  position: fixed;
+  left: 0;
+  flex-direction: column;
+  justify-content: center;
+  display: flex;
+}
