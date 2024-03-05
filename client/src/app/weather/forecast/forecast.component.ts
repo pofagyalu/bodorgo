@@ -8,7 +8,9 @@ import { Observable } from 'rxjs';
   styleUrl: './forecast.component.css',
 })
 export class ForecastComponent {
-  forecast$: Observable<{ dateString: string; temp: number }[]>;
+  forecast$: Observable<
+    { dateString: string; temp: number; weather: string; icon: string }[]
+  >;
 
   constructor(forecastService: ForecastService) {
     this.forecast$ = forecastService.getForecast();

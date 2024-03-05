@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
   Observable,
@@ -8,8 +9,13 @@ import {
   of,
   filter,
   toArray,
+  share,
+  tap,
+  throwError,
+  catchError,
+  retry,
 } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { NotificationsService } from '../notifications/notifications.service';
 
 interface OpenWeatherResponse {
   list: {
@@ -17,6 +23,7 @@ interface OpenWeatherResponse {
     main: {
       temp: number;
     };
+    weather: { main: string; icon: string }[];
   }[];
 }
 
@@ -26,7 +33,10 @@ interface OpenWeatherResponse {
 export class ForecastService {
   private url = 'https://api.openweathermap.org/data/2.5/forecast';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private notificationService: NotificationsService
+  ) {}
 
   getForecast() {
     return this.getCurrentLocation().pipe(
@@ -42,14 +52,18 @@ export class ForecastService {
       ),
       map((response) => response?.list),
       mergeMap((value) => of(...value)),
-      filter((value, index) => index % 8 === 0),
+      filter((value) => new Date(value.dt_txt).getHours() === 15),
+      tap(console.log),
       map((value) => {
         return {
           dateString: value.dt_txt,
           temp: value.main.temp,
+          weather: value.weather[0].main,
+          icon: value.weather[0].icon,
         };
       }),
-      toArray()
+      toArray(),
+      share()
     );
   }
 
@@ -64,6 +78,15 @@ export class ForecastService {
           observer.error(err);
         }
       );
-    });
+    }).pipe(
+      retry(1),
+      tap(() => {
+        this.notificationService.addSuccess('Sikerült a helymeghatározás!');
+      }),
+      catchError((err) => {
+        this.notificationService.addError('Nem sikerült a helymeghatározás!');
+        return throwError(() => new Error(err));
+      })
+    );
   }
 }
