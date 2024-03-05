@@ -1,0 +1,36 @@
+@for(message of messages | async; track message.id){
+
+<div
+  [ngClass]="
+    message.type === 'error'
+      ? 'text-red-800 bg-red-50 dark:text-red-400'
+      : 'text-green-800 bg-green-50 dark:text-green-400'
+  "
+  class="flex justify-between p-4 mb-4 text-sm rounded-lg dark:bg-gray-800"
+  role="alert"
+>
+  <span class="font-medium">{{ message.text }}</span>
+
+  <button
+    class="rounded-md p-1 inline-flex items-center justify-center text-gray-900 dark:text-white hover:text-gray-700 hover:bg-gray-300"
+    (click)="clearMessage(message.id)"
+  >
+    <span class="sr-only">Close</span>
+    <svg
+      class="h-6 w-6"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      aria-hidden="true"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
+  </button>
+</div>
+}
