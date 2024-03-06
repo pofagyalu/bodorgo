@@ -9,6 +9,7 @@ import {
 } from '@angular/router';
 import { HeaderComponent } from './header/header.component';
 import { slideInAnimation } from './animations';
+import { AuthModule } from './auth/auth.module';
 
 @Component({
   selector: 'app-root',
@@ -19,6 +20,7 @@ import { slideInAnimation } from './animations';
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
+    AuthModule,
   ],
   animations: [slideInAnimation],
   templateUrl: './app.component.html',
