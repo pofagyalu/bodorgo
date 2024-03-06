@@ -23,6 +23,8 @@ module.exports = {
         sans: ["Poppins", "sans-serif"],
         comic: ["Marhey", "sans-serif"],
         happy: ["Potland", "sans-serif"],
+        rokkit: ["Rokkitt", "monospace"],
+        mulish: ["Mulish", "sans-serif"],
       },
       spacing: {
         180: "32rem",

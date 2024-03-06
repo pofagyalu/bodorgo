@@ -17,6 +17,20 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: "Rokkitt";
+  src: url("assets/fonts/Rokkitt/static/Rokkitt-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Mulish";
+  src: url("assets/fonts/Mulish/static/Mulish-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
 .ease-soft-in-out {
   transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
 }
