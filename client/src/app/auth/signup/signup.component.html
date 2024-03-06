@@ -1,0 +1,54 @@
+<!-- Global container -->
+<div class="flex items-center justify-center min-h-screen bg-gray-100">
+  <!-- Card container -->
+  <div
+    class="relative flex flex-col m-6 space-y-10 bg-white shadow-2xl rounded-2xl md:flex-row md:space-y-0 md:m-0 overflow-hidden"
+  >
+    <!-- Left side -->
+    <div class="p-6 md:p-20">
+      <!-- Top content -->
+      <h2 class="font-rokkitt mb-5 text-4xl font-bold">Beavatás</h2>
+      <p class="max-w-sm mb-12 font-mulish font-light text-gray-600">
+        Registráld magad sakko megtudsz sokmindent.
+      </p>
+      <!-- Middle content = form -->
+      <form [formGroup]="authForm">
+        <input
+          formControlName="email"
+          class="w-full p-3 mb-5 border border-gray-300 rounded-md placeholder:font-rokkit placeholder:font-light"
+          placeholder="Add meg az email címed"
+        />
+        @if(authForm.get('email')?.errors){
+        <p class="text-sm text-red-500">
+          <em class="italic">rossz email formátum</em>
+        </p>
+        }
+
+        <input
+          formControlName="password"
+          class="w-full p-3 mb-5 border border-gray-300 rounded-md placeholder:font-rokkit placeholder:font-light"
+          placeholder="Írd ide a jelszavad"
+        />
+
+        <input
+          formControlName="passwordConfirm"
+          class="w-full p-3 mb-10 border border-gray-300 rounded-md placeholder:font-rokkit placeholder:font-light"
+          placeholder="Nem hallom, ismételd meg"
+        />
+        <button
+          type="submit"
+          class="w-full mx-auto md:w-auto flex justify-center items-center p-6 space-x-4 font-mulish font-bold text-white rounded-xl shadow-sm px-9 bg-primaryDark shadow-primaryLight hover:bg-opacity-90 hover:shadow-lg border transition hover:translate-y-0.5 duration-150"
+        >
+          <span>Regisztrálok</span>
+        </button>
+        {{ authForm.errors | json }}
+      </form>
+    </div>
+    <!-- Right side -->
+    <img
+      src="assets/images/login-image.jpg"
+      alt=""
+      class="w-[430px] hidden md:block"
+    />
+  </div>
+</div>
