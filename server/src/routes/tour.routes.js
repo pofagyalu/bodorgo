@@ -15,7 +15,7 @@ router.route('/tour-stats').get(tourController.getTourStats);
 router
   .route('/monthly-plan/:year')
   .get(
-    authController.protect,
+    authController.authUser,
     authController.restrictTo('admin'),
     tourController.getMonthlyPlan,
   );
@@ -30,7 +30,7 @@ router
   .route('/')
   .get(tourController.getAllTours)
   .post(
-    authController.protect,
+    authController.authUser,
     authController.restrictTo('user', 'admin'),
     tourController.setCreatorId,
     tourController.createTour,
@@ -40,12 +40,12 @@ router
   .route('/:id')
   .get(tourController.getTour)
   .patch(
-    authController.protect,
+    authController.authUser,
     authController.restrictTo('admin'),
     tourController.updateTour,
   )
   .delete(
-    authController.protect,
+    authController.authUser,
     authController.restrictTo('admin'),
     tourController.deleteTour,
   );

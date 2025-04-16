@@ -24,6 +24,10 @@ const config = {
     user: process.env.SENDGRID_USERNAME,
     password: process.env.SENDGRID_PASSWORD,
   },
+  stripe: {
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+    secretKey: process.env.STRIPE_SECRET_KEY,
+  },
 };
 
 export default config;

@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
@@ -14,9 +15,14 @@ import config from './config';
 import tourRouter from './routes/tour.routes';
 import userRouter from './routes/user.routes';
 import reviewRouter from './routes/review.routes';
+import bookingRouter from './routes/booking.routes';
 import swaggerRouter from './routes/swagger.routes';
 
 const app = express();
+app.options('*', cors());
+
+app.use(cors());
+
 app.use(cookieParser(config.jwt.secret));
 
 app.use(helmet());
@@ -43,6 +49,7 @@ app.use(
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reviews', reviewRouter);
+app.use('/api/v1/bookingss', bookingRouter);
 app.use('/api/api-docs', swaggerRouter);
 
 app.all('*', (req, res, next) => {

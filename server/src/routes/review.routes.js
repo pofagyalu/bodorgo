@@ -4,7 +4,7 @@ import * as authController from '../auth/auth.controller';
 
 const router = express.Router({ mergeParams: true });
 
-router.use(authController.protect);
+router.use(authController.authUser);
 
 router
   .route('/')

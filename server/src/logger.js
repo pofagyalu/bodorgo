@@ -9,12 +9,14 @@ const options = {
     maxsize: 5242880, // 5MB
     maxFiles: 5,
     colorize: false,
-    json: true,
+    format: combine(
+      timestamp({ format: 'YYYY.MM.DD hh:mm:ss' }),
+      format.json(),
+    ),
   },
   console: {
     level: 'debug',
     handleExceptions: true,
-    json: false,
     format: combine(
       colorize(),
       timestamp({ format: 'YYYY.MM.DD hh:mm:ss' }),
@@ -27,33 +29,26 @@ const logger = createLogger({
   exitOnError: false,
   handleRejections: true,
   transports: [
-    Object.assign(
-      new transports.File({
-        ...options.file,
-        filename: 'logs/error.log',
-        level: 'error',
-      }),
-      { handleRejections: true },
-    ),
     new transports.File({
       ...options.file,
-      filename: 'logs/app.log',
+      filename: 'logs/combined.log',
+    }),
+    new transports.File({
+      ...options.file,
+      level: 'error',
+      filename: 'logs/error.log',
     }),
   ],
 });
 
-/* istanbul ignore next */
 logger.stream = {
-  write: (message) => logger.info(message),
+  write: (message) => {
+    logger.info(message);
+  },
 };
 
-/* istanbul ignore next */
 if (process.env.NODE_ENV !== 'production') {
-  logger.add(
-    Object.assign(new transports.Console(options.console), {
-      handleRejections: true,
-    }),
-  );
+  logger.add(new transports.Console(options.console));
 }
 
 export default logger;

@@ -5,14 +5,15 @@ import * as authController from '../auth/auth.controller';
 const router = express.Router();
 
 router.post('/signup', authController.signup);
+router.get('/signedin', authController.signedin);
 router.post('/login', authController.login);
-router.get('/logout', authController.logout);
 router.post('/forgotPassword', authController.forgotPassword);
 router.patch('/resetPassword/:token', authController.resetPassword);
 router.patch('/verify-email', authController.verifyEmail);
 
-router.use(authController.protect);
+router.use(authController.authUser);
 
+router.delete('/logout', authController.logout);
 router.patch('/updateMyPassword', authController.updatePassword);
 router.get('/me', userController.getMe, userController.getUser);
 router.patch('/updateMe', userController.updateMe);

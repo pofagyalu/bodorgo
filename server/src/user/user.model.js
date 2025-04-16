@@ -9,15 +9,14 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
+      trim: true,
     },
     firstName: {
       type: String,
-      required: [true, 'Please tell us your first name!'],
       trim: true,
     },
     lastName: {
       type: String,
-      required: [true, 'Please tell us your last name!'],
       trim: true,
     },
     email: {
@@ -34,12 +33,12 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
     emailVerifiedAt: { type: Date, select: false },
-    family: String,
     role: {
       type: String,
-      enum: ['test', 'user', 'admin'],
+      enum: ['user', 'admin'],
       default: 'user',
     },
+    family: String,
     photo: String,
     passwordChangedAt: Date,
     loginAttempts: { type: Number, default: 0 },

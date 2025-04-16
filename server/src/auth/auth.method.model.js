@@ -14,7 +14,7 @@ const authMethodSchema = Schema({
   secret: {
     type: String,
     required: [true, `Please provide your password`],
-    minlength: 10,
+    minlength: 6,
   },
   passwordResetToken: String,
   passwordResetExpires: Date,

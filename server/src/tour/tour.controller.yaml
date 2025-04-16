@@ -4,12 +4,54 @@ tags:
 paths:
   /v1/tours:
     get:
+      parameters:
+        # - in: query
+        # schema:
+        # type: string
+        # enum: [duration, ratingsAverage]
+        # description: Return items filtered by specified field. Additional limiting parameters can be used such as [gt, gte, lt, lte]
+        # example: ratingsAverage[gte]=4
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [startDate, ratingsAverage]
+            default: -startDate
+          description: Return items sorted by specified field. If "-" prefix is used results are returned in descending order.
+        - in: query
+          name: fields
+          allowEmptyValue: true
+          schema:
+            type: array
+            items:
+              type: string
+              description: Fields of a tour
+              example: duration
+              enum:
+                - startDate
+                - startLocation
+                - ratingsAverage
+                - duration
+          description: Return only selected fields of the items. If "-" prefix is used all fields are returned except the specified one.
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Return items from requested page
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: The maximum number of items to return per page
       security:
         - BearerAuth: []
       summary: List all tours
       description: Get a list of all tours in the database
       tags:
         - Tours
+
       responses:
         '200':
           description: An object including a data key containing an array of tours.

@@ -2,15 +2,39 @@ import crypto from 'crypto';
 
 import User from '../user/user.model';
 import AuthMethod from './auth.method.model';
+import Token from '../token/token.model';
 import catchAsync from '../utils/catch-async';
 import AppError from '../utils/app-error';
 import Email from '../email/email';
 import { isTokenValid, attachCookiesToResponse } from '../utils/jwt';
 
-const createSendToken = (user, statusCode, res) => {
+const createSendToken = async (user, statusCode, req, res) => {
   const tokenUser = { id: user._id, role: user.role };
 
-  attachCookiesToResponse({ res, user: tokenUser });
+  // create refresh token
+  let refreshToken = '';
+  const existingToken = await Token.findOne({ user: user._id });
+
+  if (existingToken) {
+    const { isValid } = existingToken;
+    if (!isValid) {
+      return next(new AppError('Invalid credentials', 401));
+    }
+    // eslint-disable-next-line prefer-destructuring
+    refreshToken = existingToken.refreshToken;
+  }
+
+  // check for existing token for the user
+
+  // create token
+  refreshToken = crypto.randomBytes(40).toString('hex');
+  const userAgent = req.headers['user-agent'];
+  const { ip } = req;
+
+  const userToken = { refreshToken, ip, userAgent, user: user._id };
+  await Token.create(userToken);
+
+  attachCookiesToResponse({ res, user: tokenUser, refreshToken });
 
   res.status(statusCode).json({
     status: 'success',
@@ -20,14 +44,13 @@ const createSendToken = (user, statusCode, res) => {
   });
 };
 
+// első lépés regisztráció
 export const signup = catchAsync(async (req, res, next) => {
   const isFirstAccount = (await User.countDocuments({}, { limit: 1 })) === 0;
   const role = isFirstAccount ? 'admin' : 'user';
 
   const user = await User.create({
     name: req.body.name,
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
     email: req.body.email,
     role,
   });
@@ -140,34 +163,56 @@ export const login = catchAsync(async (req, res, next) => {
     return next(new AppError('Wrong credentials. Please try again.', 401));
   }
 
-  createSendToken(user, 200, res);
+  createSendToken(user, 200, req, res);
 });
 
-export const logout = async (req, res, next) => {
-  res.cookie('authToken', 'logout', {
+export const signedin = catchAsync(async (req, res, next) => {
+  await Token.findOneAndDelete({ user: req.currentUser._id });
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      user: {
+        authenticated: true,
+        username: 'Sanyi',
+        role: 'role',
+      },
+    },
+  });
+});
+
+export const logout = catchAsync(async (req, res, next) => {
+  await Token.findOneAndDelete({ user: req.currentUser._id });
+
+  res.cookie('accesToken', 'logout', {
     httpOnly: true,
     expires: new Date(Date.now()),
   });
+  res.cookie('refreshToken', 'logout', {
+    httpOnly: true,
+    expires: new Date(Date.now()),
+  });
+
   res.status(200).json({
     status: 'success',
     message: 'User logged out!',
   });
-};
+});
 
-export const protect = catchAsync(async (req, res, next) => {
+export const authUser = catchAsync(async (req, res, next) => {
   if (req.method === 'OPTIONS') {
     return next();
   }
-  const { authToken } = req.signedCookies;
+  const { accesToken, refreshToken } = req.signedCookies;
 
-  if (!authToken) {
+  if (!accesToken) {
     const error = new AppError('Authentication Invalid', 401);
     return next(error);
   }
 
   let decodedToken;
   try {
-    decodedToken = isTokenValid(authToken);
+    decodedToken = isTokenValid(accesToken);
   } catch (err) {
     return next(err);
   }
@@ -267,7 +312,7 @@ export const resetPassword = catchAsync(async (req, res, next) => {
 
   await user.save();
 
-  createSendToken(user, 200, res);
+  createSendToken(user, 200, req, res);
 });
 
 export const updatePassword = catchAsync(async (req, res, next) => {
