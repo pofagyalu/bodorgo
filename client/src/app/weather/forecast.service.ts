@@ -53,7 +53,6 @@ export class ForecastService {
       map((response) => response?.list),
       mergeMap((value) => of(...value)),
       filter((value) => new Date(value.dt_txt).getHours() === 15),
-      tap(console.log),
       map((value) => {
         return {
           dateString: value.dt_txt,

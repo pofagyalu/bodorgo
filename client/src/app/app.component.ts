@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClientModule } from '@angular/common/http';
+import { AuthModule } from './auth/auth.module';
+import { AuthService } from './auth/auth.service';
 
 import {
   RouterOutlet,
@@ -8,8 +11,7 @@ import {
   ChildrenOutletContexts,
 } from '@angular/router';
 import { HeaderComponent } from './header/header.component';
-import { slideInAnimation } from './animations';
-import { AuthModule } from './auth/auth.module';
+import { slideAnimation } from './animations';
 
 @Component({
   selector: 'app-root',
@@ -20,14 +22,24 @@ import { AuthModule } from './auth/auth.module';
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
+    HttpClientModule,
     AuthModule,
   ],
-  animations: [slideInAnimation],
+  animations: [slideAnimation],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
 export class AppComponent {
-  constructor(private contexts: ChildrenOutletContexts) {}
+  signedin = false;
+
+  constructor(
+    private contexts: ChildrenOutletContexts,
+    private authService: AuthService
+  ) {}
+
+  ngOnInit() {
+    this.authService.checkAuth().subscribe(() => {});
+  }
 
   getRouteAnimationData() {
     return this.contexts.getContext('primary')?.route?.snapshot?.data?.[

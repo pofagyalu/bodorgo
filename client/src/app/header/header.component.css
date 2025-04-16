@@ -1,8 +1,13 @@
-.active {
-  --tw-shadow: 0 1px 5px 1px #ddd;
-  --tw-shadow-colored: 0 1px 5px 1px var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000),
-    var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+.slider {
+  position: absolute;
+  /* bottom: -5px; */
+  /* margin-left: 2.2em; */
+  border: 2px solid white;
+  transition: 0.3s;
+  width: 79px;
+  height: 30px;
+  box-shadow: 0 1px 5px 1px #ddd;
+  border-radius: 10px;
 }
 
 .hamburger {

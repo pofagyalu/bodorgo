@@ -1,0 +1,41 @@
+<div class="relative mb-10">
+  <input
+    [type]="inputType"
+    class="w-full p-3 shadow-md rounded-md focus:outline-none border-nonde focus:border-b-4 focus:border-secondary"
+    [formControl]="control"
+    spellcheck="false"
+  />
+  <label
+    for="{{ label }}"
+    class="absolute left-0 ml-3 -translate-y-3 bg-white px-1 font-rokkit text-md text-gray-700"
+    >{{ label }}</label
+  >
+  @if(showErrors()){
+  <div class="text-sm text-red-500 italic">
+    @if(control.errors?.['required']){
+    <p>Kötelező megadni!</p>
+    }
+    <!--  -->
+    @if(control.errors?.['email']){
+    <p>Nem megfelelő email formátum.</p>
+    }
+    <!--  -->
+    @if(control.errors?.['minlength']){
+    <p>
+      A bevitt adat
+      {{ control.errors?.['minlength'].actualLength }} karakter hosszú, de
+      legalább {{ control.errors?.['minlength'].requiredLength }}-naknek kell
+      lennie.
+    </p>
+    }
+    <!--  -->
+    @if(control.errors?.['maxlength']){
+    <p>
+      A bevitt adat
+      {{ control.errors?.['maxlength'].actualLength }} karakter hosszú, de
+      legfeljebb {{ control.errors?.['maxlength'].requiredLength }} lehet.
+    </p>
+    }
+  </div>
+  }
+</div>

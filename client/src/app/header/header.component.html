@@ -15,75 +15,91 @@
     </div>
     <!-- Left menu -->
     <div class="font-comic font-bold text-xl">
-      <ul
-        nav-pills
-        class="hidden lg:flex relative p-1 mb-0 list-none"
-        role="tablist"
-      >
-        <li class="z-30 flex-auto text-center">
+      <ul class="hidden lg:flex relative p-1 mb-0 list-none" role="tablist">
+        <li #navElements class="z-30 flex-auto text-center">
           <a
             routerLink="/taborok"
             routerLinkActive="active"
             ariaCurrentWhenActive="page"
             class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bRed hover:text-gray-900"
-            role="tab"
             >Táborok</a
           >
         </li>
-        <li class="z-30 flex-auto text-center">
+        <li #navElements class="z-30 flex-auto text-center">
           <a
-            routerLink="/taborok"
-            routerLinkActive="active"
-            ariaCurrentWhenActive="page"
-            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bBlue hover:text-gray-900"
-            role="tab"
-            >Fórum</a
-          >
-        </li>
-        <li class="z-30 flex-auto text-center">
-          <a
-            routerLink="#"
-            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bDarkGreen hover:text-gray-900"
-            >Kérdőívek</a
-          >
-        </li>
-        <li class="z-30 flex-auto text-center">
-          <a
-            routerLink="#"
-            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bOrange hover:text-gray-900"
-            >Versenyek</a
-          >
-        </li>
-        <li class="z-30 flex-auto text-center">
-          <a
-            routerLink="#"
+            routerLink="/shop"
             class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bBlue hover:text-gray-900"
             >Ócskapiac</a
           >
         </li>
-        <li class="z-30 flex-auto text-center">
+
+        @if(signedin$ | async){
+        <ng-container>
+          <li #navElements class="z-30 flex-auto text-center">
+            <a
+              routerLink="/forum"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              class="block w-full py-1 transition-colors bg-none text-bBlue hover:text-gray-900"
+              >Fórum</a
+            >
+          </li>
+          <li #navElements class="z-30 flex-auto text-center">
+            <a
+              routerLink="#"
+              class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bDarkGreen hover:text-gray-900"
+              >Kérdőívek</a
+            >
+          </li>
+          <li #navElements class="z-30 flex-auto text-center">
+            <a
+              routerLink="#"
+              class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bOrange hover:text-gray-900"
+              >Versenyek</a
+            >
+          </li>
+        </ng-container>
+        }
+        <li #navElements class="z-30 flex-auto text-center">
           <a
             routerLink="/rolunk"
             routerLinkActive="active"
             ariaCurrentWhenActive="page"
-            class="block w-full py-1 transition-colors border-0 rounded-lg ease-soft-in-out bg-inherit bg-none text-bBrown hover:text-gray-900"
+            class="block w-full py-1 bg-none text-bBrown hover:text-gray-900"
             >Rólunk</a
           >
         </li>
+        <li
+          class="slider"
+          [style.width.px]="activeItemWidth"
+          [style.left.px]="activeItemLeftMargin"
+        ></li>
       </ul>
     </div>
     <!-- Right Buttons Menu -->
     <div
       class="hidden items-center space-x-4 font-bold font-comic text-black text-xl lg:flex"
     >
-      <div class="hover:text-veryDarkViolet">Belépés</div>
-      <a
-        href="#"
-        class="px-4 py-3 font-bold text-white bg-primary rounded-full hover:opacity-70"
-        >Regisztráció</a
-      >
+      @if(!(signedin$ | async)){
+      <ng-container>
+        <div class="hover:text-veryDarkViolet">
+          <a routerLink="/login"> Belépés </a>
+        </div>
+        <a
+          routerLink="/signup"
+          class="px-4 py-3 font-bold text-white bg-primary rounded-full hover:opacity-70"
+          >Regisztráció</a
+        >
+      </ng-container>
+      } @if(signedin$ | async){
+      <ng-container>
+        <div class="hover:text-veryDarkViolet">
+          <a routerLink="/logout"> Kijelentkezés </a>
+        </div> </ng-container
+      >}
     </div>
-    <!-- @todo Hamburger Button -->
+
+    <!-- Hamburger Button -->
     <button
       id="menu-btn"
       [ngClass]="{ open: menuShow }"
@@ -103,18 +119,23 @@
     class="absolute p-6 rounded-lg bg-secondaryDark left-6 right-6 top-20 z-100"
   >
     <ul
-      class="flex flex-col items-center justify-center w-full space-y-6 font-menu font-bold text-white rounded-sm"
+      nav-pills
+      class="relative flex flex-wrap p-1 mb-0 list-none dark:shadow-soft-dark-xl dark:bg-gray-950 rounded-xl bg-gray-50 font-menu font-bold"
     >
-      <li>
-        <a href="#" class="w-full text-center">Táborok</a>
+      <li class="z-30 flex-auto text-center">
+        <a
+          href="#"
+          class="block w-full py-1 rounded-lg transition-colors ease-in-out"
+          >Táborok</a
+        >
       </li>
-      <li>
+      <li class="z-30 flex-auto text-center">
         <a href="#" class="w-full text-center">Kérdőívek</a>
       </li>
-      <li>
+      <li class="z-30 flex-auto text-center">
         <a href="#" class="w-full text-center">Versenyek</a>
       </li>
-      <li class="pb-6">
+      <li class="z-30 flex-auto text-center">
         <a href="#" class="w-full text-center">Ócskapiac</a>
       </li>
       <li>

@@ -1,40 +1,48 @@
 <!-- Global container -->
-<div class="flex items-center justify-center min-h-screen bg-gray-100">
+<div class="flex items-center justify-center min-h-screen">
   <!-- Card container -->
   <div
-    class="relative flex flex-col m-6 space-y-10 bg-white shadow-2xl rounded-2xl md:flex-row md:space-y-0 md:m-0 overflow-hidden"
+    class="relative flex flex-col m-6 space-y-10 shadow-2xl rounded-2xl md:flex-row md:space-y-0 md:m-0 overflow-hidden"
   >
     <!-- Left side -->
     <div class="p-6 md:p-20">
       <!-- Top content -->
-      <h2 class="font-rokkitt mb-5 text-4xl font-bold">Beavatás</h2>
+      <h2 class="font-rokkitt mb-5 text-4xl font-bold">Regisztráció</h2>
       <p class="max-w-sm mb-12 font-mulish font-light text-gray-600">
-        Registráld magad sakko megtudsz sokmindent.
+        Registrálj és sok kincset fogsz találni.
       </p>
       <!-- Middle content = form -->
-      <form [formGroup]="authForm">
-        <input
-          formControlName="email"
-          class="w-full p-3 mb-5 border border-gray-300 rounded-md placeholder:font-rokkit placeholder:font-light"
-          placeholder="Add meg az email címed"
-        />
-        @if(authForm.get('email')?.errors){
-        <p class="text-sm text-red-500">
-          <em class="italic">rossz email formátum</em>
-        </p>
+      <form (ngSubmit)="onSubmit()" [formGroup]="signupForm">
+        <app-input
+          inputType="text"
+          label="Email cím"
+          [control]="$any(signupForm).get('email')"
+        ></app-input>
+        <app-input
+          inputType="password"
+          label="Jelszó"
+          [control]="$any(signupForm).get('password')"
+        ></app-input>
+        <app-input
+          inputType="password"
+          label="Jelszó megerősítés"
+          [control]="$any(signupForm).get('passwordConfirm')"
+        ></app-input>
+
+        @if($any(signupForm).get('password').touched &&
+        $any(signupForm).get('passwordConfirm').touched && signupForm.errors){
+        <div class="text-sm text-red-500 italic mb-3">
+          @if($any(signupForm).errors?.['passwordsDontMatch']){
+          <p>A két jelszó nem egyezik</p>
+          }
+        </div>
+        <div class="text-sm text-red-500 italic mb-3">
+          @if($any(signupForm).errors?.['noConnection']){
+          <p>Nincs internetkapcsolat, a regisztráció sikertelen.</p>
+          }
+        </div>
         }
 
-        <input
-          formControlName="password"
-          class="w-full p-3 mb-5 border border-gray-300 rounded-md placeholder:font-rokkit placeholder:font-light"
-          placeholder="Írd ide a jelszavad"
-        />
-
-        <input
-          formControlName="passwordConfirm"
-          class="w-full p-3 mb-10 border border-gray-300 rounded-md placeholder:font-rokkit placeholder:font-light"
-          placeholder="Nem hallom, ismételd meg"
-        />
         <button
           type="submit"
           class="w-full mx-auto md:w-auto flex justify-center items-center p-6 space-x-4 font-mulish font-bold text-white rounded-xl shadow-sm px-9 bg-primaryDark shadow-primaryLight hover:bg-opacity-90 hover:shadow-lg border transition hover:translate-y-0.5 duration-150"
@@ -51,3 +59,4 @@
     />
   </div>
 </div>
+<app-notification-list></app-notification-list>
