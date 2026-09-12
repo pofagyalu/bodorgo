@@ -51,6 +51,6 @@ pm2 startup
 
 `pm2 startup` prints a command (usually prefixed with `sudo`) — copy and run that exact command; it registers a systemd service that calls `pm2 resurrect` on boot. `pm2 save` snapshots the currently-running process list so there's something for it to restore. If a real reboot doesn't bring `bodorgo` back (Synology's DSM occasionally doesn't preserve third-party systemd units across updates), fall back to a DSM Task Scheduler **Triggered Task** (event: Boot-up) that runs `pm2 resurrect`.
 
-## Known gap
+## Reverse proxy
 
-`api.bodorgo.hu` needs an nginx/OpenResty server block on the NAS proxying to this app's port — as of this writing that vhost doesn't exist yet (requests to `api.bodorgo.hu` 403 before ever reaching Node), so the production login flow won't complete end-to-end until that's added. This is infrastructure config outside this repo.
+`api.bodorgo.hu` is proxied to this app by Nginx Proxy Manager (running as a container on the NAS), forwarding to `192.168.1.94:8235`. See the root [README](../README.md#production-topology) for an important DNS gotcha around this (its Cloudflare record must stay DNS-only, not proxied, or a global GeoIP check in NPM will 403 every request before it reaches Node).
