@@ -1,12 +1,6 @@
 import { Component } from '@angular/core';
 
-
-import {
-  RouterOutlet,
-  RouterLink,
-  RouterLinkActive,
-  ChildrenOutletContexts,
-} from '@angular/router';
+import { RouterOutlet, ChildrenOutletContexts } from '@angular/router';
 import { Header } from './components/header/header';
 import { slideInAnimation } from './animations';
 import { AuthService } from './auth/auth.service';
@@ -14,7 +8,7 @@ import { AuthService } from './auth/auth.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [Header, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [Header, RouterOutlet],
   animations: [slideInAnimation],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
