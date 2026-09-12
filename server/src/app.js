@@ -6,8 +6,6 @@ import path from 'path';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import session from 'express-session';
-import MongoStore from 'connect-mongo';
 
 // import * as client from 'openid-client';
 import config from './config.js';
@@ -23,7 +21,9 @@ import logger from './logger.js';
 
 const rootDir = path.resolve();
 
-export default function createApp(mongoClient) {
+// sessionMiddleware is built once in server.js and shared with Socket.IO -
+// see session.js for why.
+export default function createApp(sessionMiddleware) {
   const app = express();
 
   app.set('trust proxy', true);
@@ -32,30 +32,11 @@ export default function createApp(mongoClient) {
 
   app.use(cookieParser(config.cookie.secret));
 
-  app.use(
-    session({
-      secret: config.cookie.secret,
-      resave: false,
-      saveUninitialized: false,
-      store: MongoStore.create({
-        client: mongoClient,
-        dbName: 'bodorgo-test', // optional but recommended
-        collectionName: 'sessions', // optional
-        ttl: 14 * 24 * 60 * 60, // optional
-        touchAfter: 24 * 3600, // time period in seconds
-      }),
-    }),
-  );
-
-  const allowedOrigins = (
-    config.clientOrigin || 'https://bodorgo.hu,http://localhost:4200'
-  )
-    .split(',')
-    .map((origin) => origin.trim());
+  app.use(sessionMiddleware);
 
   app.use(
     cors({
-      origin: allowedOrigins,
+      origin: config.corsOrigins,
       credentials: true, // if sending cookies/tokens
       methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],

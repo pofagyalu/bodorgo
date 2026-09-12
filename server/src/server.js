@@ -1,7 +1,11 @@
 import 'dotenv/config';
+import http from 'http';
 import mongoose from 'mongoose';
+import { Server } from 'socket.io';
 import config from './config.js';
 import createApp from './app.js';
+import createSessionMiddleware from './session.js';
+import registerChatHandlers from './chat/chatSocket.js';
 import logger from './logger.js';
 
 // This handler must run before anything else
@@ -20,8 +24,21 @@ mongoose
     // IMPORTANT: now we have a valid connected client
     const mongoClient = mongoose.connection.getClient();
 
-    const app = createApp(mongoClient);
-    const server = app.listen(PORT, () => {
+    // Built once and shared between Express and Socket.IO - see session.js.
+    const sessionMiddleware = createSessionMiddleware(mongoClient);
+
+    const app = createApp(sessionMiddleware);
+    const server = http.createServer(app);
+
+    const io = new Server(server, {
+      cors: { origin: config.corsOrigins, credentials: true },
+    });
+    // Runs the same session middleware Express uses, once per handshake, so
+    // socket.request.session is populated just like req.session is.
+    io.engine.use(sessionMiddleware);
+    registerChatHandlers(io);
+
+    server.listen(PORT, () => {
       logger.info(`App is listening on ${PORT}`);
     });
 

@@ -1,15 +1,28 @@
-import { Component, signal, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  input,
+  signal,
+  computed,
+  viewChild,
+  afterRenderEffect,
+  ElementRef,
+} from '@angular/core';
 import { io, Socket } from 'socket.io-client';
+import { environment } from '../../../environments/environment';
+import { AuthService } from '../../auth/auth.service';
 import { Compose } from './compose/compose';
 import { Post } from './post/post';
 
 interface IPost {
-  id: string;
-  creator: string;
+  _id: string;
+  creator: { _id: string; name: string };
   text: string;
   image?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   tourId: string;
 }
 
@@ -21,36 +34,65 @@ interface IPost {
   styleUrls: ['./feed.scss'],
 })
 export class Feed implements OnInit, OnDestroy {
+  private authService = inject(AuthService);
+
+  tourId = input.required<string>();
+  currentUserId = computed(() => this.authService.user()?.id);
+
   posts = signal<IPost[]>([]);
   private socket!: Socket;
 
+  private feedContainer = viewChild<ElementRef<HTMLDivElement>>('feedContainer');
+
+  // Bumped only when *I* post something (not on incoming posts from others,
+  // and not on the initial history load) - the effect below reacts only to
+  // this, so sending a message jumps the scroll to it without yanking the
+  // view out from under someone reading older messages when others post.
+  private scrollTrigger = signal(0);
+
+  constructor() {
+    // A plain effect() can fire before the newly-added <app-post> child
+    // component has actually rendered/laid out its content, so scrollHeight
+    // gets read too early and the scroll lands short. afterRenderEffect is
+    // guaranteed to run only once the whole tree has actually painted.
+    afterRenderEffect(() => {
+      this.scrollTrigger();
+      const el = this.feedContainer()?.nativeElement;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+  }
+
   ngOnInit() {
-    this.socket = io('http://localhost:8235');
+    this.socket = io(environment.apiBaseUrl, { withCredentials: true });
+
+    // Re-join on every (re)connect, not just the first one, so a dropped
+    // network connection recovers cleanly instead of silently going stale.
+    this.socket.on('connect', () => {
+      this.socket.emit('join-tour-chat', { tourId: this.tourId() });
+    });
 
     this.socket.on('initial-posts', (data: IPost[]) => {
-      const converted = data.map((p) => ({
-        ...p,
-        timestamp: new Date(p.createdAt),
-      }));
-
-      this.posts.set(converted);
+      this.posts.set(data);
     });
 
     this.socket.on('new-post', (post: IPost) => {
-      const converted = {
-        ...post,
-        timestamp: new Date(post.createdAt),
-      };
+      this.posts.update((p) => [...p, post]);
+      if (post.creator._id === this.currentUserId()) {
+        this.scrollTrigger.update((n) => n + 1);
+      }
+    });
 
-      this.posts.update((p) => [...p, converted]);
+    this.socket.on('chat-error', (message: string) => {
+      console.error('Chat error:', message);
     });
   }
 
   onCompose(data: { text: string }) {
     this.socket.emit('create-post', {
+      tourId: this.tourId(),
       text: data.text,
-      creator: 'Me', // You can replace this with actual user
-      timestamp: new Date().toISOString(),
     });
   }
 

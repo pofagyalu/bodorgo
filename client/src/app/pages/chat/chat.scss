@@ -1,0 +1,27 @@
+// 80px matches .header-container's fixed height in
+// components/header/header.scss (it's sticky, always visible above this
+// page) - Feed's own wrapper fills whatever's left via flex, rather than
+// both of them separately claiming a full 100vh and pushing the compose
+// box below the actual viewport.
+.chat-page {
+  height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-title {
+  margin: 0;
+  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+}
+
+.chat-loading {
+  padding: 1.5rem;
+  color: #666;
+}
+
+app-feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: block;
+}

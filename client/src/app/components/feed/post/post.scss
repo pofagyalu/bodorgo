@@ -1,3 +1,15 @@
+:host {
+  display: flex;
+  // Facebook/Messenger-style: other people's messages hug the left, mine
+  // hug the right - see the .own class below, toggled from isOwn.
+  align-self: flex-start;
+  max-width: 83.33%; // ~5/6 of the width, per request
+}
+
+:host.own {
+  align-self: flex-end;
+}
+
 .post-card {
   background: #fff;
   border-radius: 12px;
@@ -7,13 +19,30 @@
   flex-direction: column;
 }
 
+:host.own .post-card {
+  // The actual light green from the bódorgó logo (transparent_color_logo.svg),
+  // not an approximation, so my own messages are easy to spot at a glance.
+  background: #72b45d;
+}
+
 .post-header {
   font-weight: 600;
   margin-bottom: 6px;
 
   .creator {
-    color: #1877f2;
+    // .creator's actual color (orange for me, blue for others) is set inline
+    // - see nameColor in post.ts.
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
   }
+}
+
+:host.own .post-header .creator {
+  // The orange sits close in brightness to the green bubble, so it gets a
+  // pill like the timestamp badge below - translucent white over the green
+  // bubble reads as a light green, keeping the orange text legible.
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .post-content {
@@ -33,6 +62,22 @@
 .post-footer {
   margin-top: 8px;
   text-align: right;
-  color: #777;
   font-size: 0.8rem;
+
+  // Same translucent-badge trick for both variants: plain #777 text was too
+  // washed out on white and even worse on the green bubble, so the timestamp
+  // always sits on its own small pill with a darker color than the old gray.
+  small {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.06);
+    color: #4a4a4a;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+}
+
+:host.own .post-footer small {
+  background: rgba(255, 255, 255, 0.4);
+  color: #1b3312;
 }

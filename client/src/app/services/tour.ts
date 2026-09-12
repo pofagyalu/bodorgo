@@ -12,6 +12,7 @@ export interface ToursResponse {
 }
 
 export interface Tour {
+  _id: string;
   order: number;
   title: string;
   location: {

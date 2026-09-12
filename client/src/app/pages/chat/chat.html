@@ -1,1 +1,8 @@
-<app-feed></app-feed>
+<div class="chat-page">
+  @if (tour(); as t) {
+    <h2 class="chat-title">{{ t.title }} - Chat</h2>
+    <app-feed [tourId]="t._id" />
+  } @else {
+    <p class="chat-loading">Betöltés, vagy nincs elérhető tábor a csevegéshez...</p>
+  }
+</div>

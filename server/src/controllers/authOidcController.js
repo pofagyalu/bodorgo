@@ -143,6 +143,7 @@ export const me = async (req, res) => {
 
   return res.json({
     loggedIn: true,
+    id: req.session.user.id,
     sub: req.session.user.sub,
     email: req.session.user.email,
     name: req.session.user.name,

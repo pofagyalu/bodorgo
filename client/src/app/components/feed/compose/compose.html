@@ -1,11 +1,11 @@
 <form class="compose-container" (ngSubmit)="submit()">
   <input
     type="text"
-    placeholder="Write a message..."
+    placeholder="Írj egy üzenetet..."
     [ngModel]="text()"
     (ngModelChange)="text.set($event)"
     name="message"
   />
 
-  <button type="submit">Send</button>
+  <button type="submit">Küldés</button>
 </form>

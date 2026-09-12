@@ -43,6 +43,14 @@ const config = {
   clientOrigin: process.env.CLIENT_ORIGIN, // comma-separated list of allowed CORS origins
 };
 
+// Shared by Express's cors() middleware and Socket.IO's own cors option, so
+// both always agree on the same allow-list.
+config.corsOrigins = (
+  config.clientOrigin || 'https://bodorgo.hu,http://localhost:4200'
+)
+  .split(',')
+  .map((origin) => origin.trim());
+
 export const swaggerOptions = {
   definition: {
     openapi: '3.0.0',

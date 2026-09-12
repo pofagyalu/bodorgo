@@ -1,11 +1,12 @@
 <div class="feed-wrapper">
-  <div class="feed-container">
-    @for (post of posts(); track post.createdAt) {
+  <div class="feed-container" #feedContainer>
+    @for (post of posts(); track post._id) {
     <app-post
-      [creatorInput]="post.creator"
+      [creatorInput]="post.creator.name"
       [textInput]="post.text"
       [timestampInput]="post.createdAt"
       [imageUrlInput]="post.image"
+      [isOwn]="post.creator._id === currentUserId()"
     />
     }
   </div>

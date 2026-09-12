@@ -1,5 +1,7 @@
 .feed-wrapper {
-  height: 100vh; // Full viewport height
+  // Fills whatever height the parent page gives app-feed (see chat.scss) -
+  // not the full viewport, since this isn't the only thing on the page.
+  height: 100%;
   display: flex;
   flex-direction: column;
 }

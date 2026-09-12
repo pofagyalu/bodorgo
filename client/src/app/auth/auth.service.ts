@@ -12,6 +12,7 @@ export interface CurrentUser {
 
 interface MeResponse {
   loggedIn: boolean;
+  id?: string;
   sub?: string;
   email?: string;
   name?: string;
@@ -52,7 +53,7 @@ export class AuthService {
           this.currentUser.set(
             res.loggedIn
               ? {
-                  id: res.sub!,
+                  id: res.id!,
                   email: res.email,
                   name: res.name,
                   role: res.role || 'bodorgo',
