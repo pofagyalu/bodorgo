@@ -11,7 +11,7 @@ import {
   toArray,
   share,
   tap,
-  throwError,
+  EMPTY,
   catchError,
   retry,
 } from 'rxjs';
@@ -85,7 +85,9 @@ export class ForecastService {
       }),
       catchError((err: GeolocationPositionError) => {
         this.notificationService.addError('Nem sikerült a helymeghatározás!');
-        return throwError(() => new Error(err.message || 'Geolocation failed'));
+        // Already surfaced to the user above - complete quietly instead of
+        // propagating an uncaught error through the template's async pipe.
+        return EMPTY;
       })
     );
   }
