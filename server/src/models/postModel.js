@@ -1,15 +1,15 @@
-import { Schema, model, Types } from 'mongoose';
+import { Schema, model } from 'mongoose';
 
 const PostSchema = new Schema(
   {
     creator: {
-      type: Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
 
     tourId: {
-      type: Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Tour',
       required: true,
       index: true, // each chat room is efficiently searchable
