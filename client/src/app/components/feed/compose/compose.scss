@@ -11,7 +11,13 @@
     // Flex items default to min-width:auto, which stops them shrinking
     // below their content and pushes siblings (the button) off-screen on
     // narrow viewports - this is what was cutting the button off on mobile.
+    // width:100% is also needed on top of flex:1/min-width:0: unlike
+    // <input>, a <textarea>'s intrinsic width comes from an implicit `cols`
+    // sizing algorithm that some mobile browsers don't fully override with
+    // flex alone, leaving it narrower than the row and trailing whitespace
+    // after the button.
     min-width: 0;
+    width: 100%;
     resize: none;
     overflow-y: auto;
     max-height: 120px; // ~5 lines before it scrolls internally instead of growing forever

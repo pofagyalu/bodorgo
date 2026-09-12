@@ -4,7 +4,12 @@
 // both of them separately claiming a full 100vh and pushing the compose
 // box below the actual viewport.
 .chat-page {
-  height: calc(100vh - 80px);
+  height: calc(100vh - 80px); // fallback for browsers without dvh support
+  // vh is the LARGEST possible mobile viewport (as if the browser's
+  // collapsible address bar were always hidden), so it can overshoot the
+  // actually-visible area and leave the compose box short of the real
+  // bottom edge. dvh tracks the toolbar's current state instead.
+  height: calc(100dvh - 80px);
   display: flex;
   flex-direction: column;
 }
