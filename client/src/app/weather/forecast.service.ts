@@ -83,9 +83,9 @@ export class ForecastService {
       tap(() => {
         this.notificationService.addSuccess('Sikerült a helymeghatározás!');
       }),
-      catchError((err) => {
+      catchError((err: GeolocationPositionError) => {
         this.notificationService.addError('Nem sikerült a helymeghatározás!');
-        return throwError(() => new Error(err));
+        return throwError(() => new Error(err.message || 'Geolocation failed'));
       })
     );
   }
