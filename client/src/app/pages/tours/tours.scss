@@ -31,11 +31,11 @@
 
 .btn {
   text-decoration: none;
-  padding: 1rem 2.5rem;
+  padding: 0.8rem 2rem;
   display: inline-block;
   border-radius: 10rem;
   transition: all 0.2s;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   cursor: pointer;
   border: none;
   font-weight: 600;
@@ -84,7 +84,8 @@
 
 .card-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
-  gap: 3rem;
-  padding: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 20rem));
+  justify-content: center;
+  gap: 1.8rem;
+  padding: 1.8rem;
 }
