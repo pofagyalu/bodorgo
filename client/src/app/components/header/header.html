@@ -1,16 +1,27 @@
 <header class="header-container">
-  <!-- Left: Logo -->
-  <div class="logo-container">
-    <a routerLink="/">
-      <img
-        src="assets/images/transparent_color_logo.svg"
-        alt="Logo"
-        class="logo"
-      />
-    </a>
+  <!-- Left: hamburger (mobile only) + logo, always visible -->
+  <div class="left-group">
+    <button
+      class="hamburger"
+      type="button"
+      aria-label="Menü megnyitása"
+      (click)="isMobileMenuOpen = true"
+    >
+      ☰
+    </button>
+
+    <div class="logo-container">
+      <a routerLink="/">
+        <img
+          src="assets/images/transparent_color_logo.svg"
+          alt="Logo"
+          class="logo"
+        />
+      </a>
+    </div>
   </div>
 
-  <!-- Middle: Menu -->
+  <!-- Middle: Menu (desktop only, hidden on mobile in favor of the hamburger) -->
   @if (auth.isLoggedIn()) {
   <nav class="menu">
     <a routerLink="/taborok" routerLinkActive="active" class="menu-item red">Táborok</a>
@@ -22,7 +33,7 @@
 
   }
 
-  <!-- Right side: Login or Logout -->
+  <!-- Right side: Login or Logout (desktop only) -->
   <div class="login-container">
     @if (!auth.isLoggedIn()) {
     <button class="login-btn" (click)="login()">Gyere bé!</button>
@@ -33,24 +44,31 @@
   </div>
 </header>
 
+<!-- Tapping outside the slide-in panel closes it, like any other app -->
+<div
+  class="mobile-backdrop"
+  [class.open]="isMobileMenuOpen"
+  (click)="closeMobileMenu()"
+></div>
+
 <!-- Mobile Slide-in Menu -->
 <div class="mobile-menu" [class.open]="isMobileMenuOpen">
   <!-- Close button -->
-  <button class="close-btn" (click)="isMobileMenuOpen = false">✖</button>
+  <button class="close-btn" aria-label="Menü bezárása" (click)="closeMobileMenu()">✖</button>
 
   @if (auth.isLoggedIn()) {
   <nav class="mobile-nav">
     <a
       routerLink="/taborok"
       routerLinkActive="active"
-      (click)="isMobileMenuOpen = false"
+      (click)="closeMobileMenu()"
       class="menu-item red"
       >Táborok</a
     >
     <a
       routerLink="/chat"
       routerLinkActive="active"
-      (click)="isMobileMenuOpen = false"
+      (click)="closeMobileMenu()"
       class="menu-item blue"
       >Chat</a
     >
@@ -58,26 +76,22 @@
     <!-- <a
       routerLink="/szavazasok"
       routerLinkActive="active"
-      (click)="isMobileMenuOpen = false"
+      (click)="closeMobileMenu()"
       class="menu-item green"
       >Szavazások</a
     > -->
     <!-- <a
       routerLink="/versenyek"
       routerLinkActive="active"
-      (click)="isMobileMenuOpen = false"
+      (click)="closeMobileMenu()"
       class="menu-item orange"
       >Versenyek</a
     > -->
+    <button class="menu-item logout-item" (click)="logout(); closeMobileMenu()">
+      Kijelentkezés
+    </button>
   </nav>
+  } @else {
+  <button class="login-btn" (click)="login(); closeMobileMenu()">Gyere bé!</button>
   }
-
-  <div class="mobile-login">
-    @if (!auth.isLoggedIn()) {
-    <button class="login-btn" (click)="login()">Gyere bé!</button>
-    } @else {
-    <span class="user-name">Szevasz {{ auth.user()?.name }}!</span>
-    <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
-    }
-  </div>
 </div>

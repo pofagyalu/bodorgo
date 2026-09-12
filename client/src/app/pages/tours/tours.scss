@@ -1,5 +1,6 @@
 .filters {
   display: flex;
+  flex-wrap: wrap; // 4 fields in one unbroken row don't fit on mobile - let them wrap instead
   gap: 1rem;
   margin: 2rem 0;
   padding: 1rem;
@@ -12,7 +13,8 @@
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 1rem;
-  flex: 1;
+  flex: 1 1 160px; // grow to fill the row on desktop, wrap once below ~160px each
+  min-width: 0; // don't let a select's long option text force it wider than its flex-basis
 }
 
 .filter-input:focus {

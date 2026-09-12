@@ -20,4 +20,8 @@ export class Header {
   logout() {
     this.auth.logout();
   }
+
+  closeMobileMenu() {
+    this.isMobileMenuOpen = false;
+  }
 }

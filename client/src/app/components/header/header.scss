@@ -2,13 +2,20 @@
 /* MOBILE ONLY ELEMENTS */
 /* -------------------- */
 
+.left-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .hamburger {
   font-size: 32px;
   background: none;
   border: none;
   cursor: pointer;
   display: none;
-  margin-right: 10px;
+  padding: 0;
+  line-height: 1;
 }
 
 .close-btn {
@@ -19,6 +26,23 @@
   position: absolute;
   top: 20px;
   right: 20px;
+}
+
+/* Darkens the page behind the slide-in panel and closes it on tap,
+   like any other app's mobile nav drawer. */
+.mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 19999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Slide-in mobile menu container */
@@ -44,12 +68,6 @@
   left: 0;
 }
 
-/* Hide desktop menu on mobile */
-.desktop-menu,
-.desktop-login {
-  display: flex;
-}
-
 /* Mobile nav */
 .mobile-nav {
   display: flex;
@@ -61,13 +79,28 @@
   font-size: 1.7rem;
 }
 
+/* Kijelentkezés lives inside the mobile nav list (last item) instead of a
+   separate section - it's a <button>, so reset it to look like the <a>
+   menu items around it. */
+.logout-item {
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: #e53935;
+}
+
 /* -------------------- */
 /* RESPONSIVE BREAKPOINT */
 /* -------------------- */
 
 @media (max-width: 768px) {
-  .desktop-menu,
-  .desktop-login {
+  /* These are the actual desktop nav/login classes - hiding
+     .desktop-menu/.desktop-login here did nothing since no element in the
+     template has those class names. */
+  .menu,
+  .login-container {
     display: none !important;
   }
 
@@ -78,6 +111,15 @@
   .header-container {
     justify-content: flex-start;
     gap: 10px;
+  }
+}
+
+/* Between the mobile breakpoint and full desktop width, the menu is still
+   shown but there may not be room for "Szevasz Name!" without wrapping -
+   drop it rather than let it wrap onto a second line. */
+@media (max-width: 900px) {
+  .user-name {
+    display: none;
   }
 }
 
@@ -177,4 +219,5 @@
   font-size: 1.1rem;
   margin-right: 12px;
   color: #666;
+  white-space: nowrap;
 }
