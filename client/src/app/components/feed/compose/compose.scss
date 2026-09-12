@@ -1,17 +1,26 @@
 .compose-container {
   display: flex;
+  align-items: flex-end; // keeps the button pinned to the bottom as the textarea grows
   gap: 10px;
   padding: 12px;
   background: #ffffff;
   border-top: 1px solid #e0e0e0;
 
-  input {
+  textarea {
     flex: 1;
+    // Flex items default to min-width:auto, which stops them shrinking
+    // below their content and pushes siblings (the button) off-screen on
+    // narrow viewports - this is what was cutting the button off on mobile.
+    min-width: 0;
+    resize: none;
+    overflow-y: auto;
+    max-height: 120px; // ~5 lines before it scrolls internally instead of growing forever
     padding: 10px 14px;
     border-radius: 20px;
     border: 1px solid #ccc;
     outline: none;
-    font-size: 1rem;
+    font: inherit;
+    line-height: 1.3;
 
     &:focus {
       border-color: #1877f2;
@@ -19,17 +28,29 @@
   }
 
   button {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
     background: #1877f2;
     color: #fff;
     border: none;
-    padding: 10px 16px;
-    border-radius: 20px;
+    border-radius: 50%;
     cursor: pointer;
-    font-weight: 600;
     transition: background 0.2s;
 
     &:hover {
       background: #0f62ce;
+    }
+
+    // mat-icon sizes its glyph via font-size, not the host element's
+    // width/height, so both need setting or the icon renders clipped.
+    mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
     }
   }
 }

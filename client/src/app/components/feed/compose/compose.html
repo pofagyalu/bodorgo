@@ -1,11 +1,15 @@
 <form class="compose-container" (ngSubmit)="submit()">
-  <input
-    type="text"
+  <textarea
+    #messageInput
     placeholder="Írj egy üzenetet..."
+    rows="1"
     [ngModel]="text()"
     (ngModelChange)="text.set($event)"
+    (keydown.enter)="onEnter($event)"
     name="message"
-  />
+  ></textarea>
 
-  <button type="submit">Küldés</button>
+  <button type="submit" aria-label="Küldés">
+    <mat-icon>send</mat-icon>
+  </button>
 </form>
