@@ -44,10 +44,10 @@ export class Feed implements OnInit, OnDestroy {
 
   private feedContainer = viewChild<ElementRef<HTMLDivElement>>('feedContainer');
 
-  // Bumped only when *I* post something (not on incoming posts from others,
-  // and not on the initial history load) - the effect below reacts only to
-  // this, so sending a message jumps the scroll to it without yanking the
-  // view out from under someone reading older messages when others post.
+  // Bumped when the chat history first loads (landing on the page should
+  // show the latest message) and whenever *I* post something - but not on
+  // incoming posts from others, so the view doesn't get yanked out from
+  // under someone reading older messages when others post.
   private scrollTrigger = signal(0);
 
   constructor() {
@@ -75,6 +75,7 @@ export class Feed implements OnInit, OnDestroy {
 
     this.socket.on('initial-posts', (data: IPost[]) => {
       this.posts.set(data);
+      this.scrollTrigger.update((n) => n + 1);
     });
 
     this.socket.on('new-post', (post: IPost) => {
