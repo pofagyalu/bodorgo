@@ -1,20 +1,16 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { TourService, Tour } from '../../services/tour';
-import { environment } from '../../../environments/environment';
-import { MatIconModule } from '@angular/material/icon';
-import { NgOptimizedImage } from '@angular/common';
+import { TourCard } from './tour-card/tour-card';
 
 @Component({
   selector: 'app-tours',
   standalone: true,
-  imports: [CommonModule, MatIconModule, NgOptimizedImage],
+  imports: [TourCard],
   templateUrl: './tours.html',
   styleUrl: './tours.scss',
 })
 export class Tours implements OnInit {
   private tourService = inject(TourService);
-  environment = environment;
 
   tours = signal<Tour[]>([]);
   showingAll = signal(false);
