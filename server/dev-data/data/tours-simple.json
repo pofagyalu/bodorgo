@@ -1,0 +1,229 @@
+[
+  {
+    "order": 1,
+    "title": "Szilvásvárad - Szalajkavölgy",
+    "location": {
+      "description": "Napfény vendégház",
+      "type": "Point",
+      "coordinates": [20.390172013033908, 48.09939636005838],
+      "address": "3348,Szilvásvárad,Egri út, 23/1"
+    },
+    "startDate": "2012-04-28,14:00",
+    "duration": 2,
+    "maxCapacity": 17,
+    "ratingsAverage": 7.7,
+    "ratingsQuantity": 10,
+    "price": 4000,
+    "summary": "Utazás a Fátyol-vízeséshez meg a Lipicai méneshez",
+    "description": "Séta a Kalanderdőben, utazás az erdei vasúttal, látogatás a Fátyol-vízeséshez, megnézzük a halastavakat és az ősemberbarlangot. Vana itt még grófi kastély és a Lipicai ménes, meg pingpong asztal",
+    "imageCover": "tour-1-cover.webp",
+    "images": ["tour-1-1.jpg"]
+  },
+  {
+    "order": 2,
+    "title": "Tamási szarvasnéző",
+    "location": {
+      "description": "Kondor Thermal Apartman Hotel",
+      "type": "Point",
+      "coordinates": [18.285221922212102, 46.62857823074785],
+      "address": "7090,Tamási,Szabadság u. 12"
+    },
+    "startDate": "2012-10-21,14:00",
+    "duration": 2,
+    "maxCapacity": 18,
+    "ratingsAverage": 7.5,
+    "ratingsQuantity": 3,
+    "price": 4000,
+    "summary": "Tamási szarvasles és fürdőzés",
+    "description": "Grillezés az udvaron, fürdőzés a tamási termálfürdőben. Séta a pacsmagi tavakhoz és lesz vadles.",
+    "imageCover": "tour-2-cover.webp",
+    "images": ["tour-2-1.jpg", "tour-2-2.jpg", "tour-2-3.jpg"]
+  },
+  {
+    "order": 3,
+    "title": "Sárvári tavasz",
+    "location": {
+      "description": "Napsugár Apartmanház",
+      "type": "Point",
+      "coordinates": [16.943908155839228, 47.25113933440643],
+      "address": "9600,Sárvár,Dévai Bíró Mátyás utca 8/3"
+    },
+    "startDate": "2013-05-11,10:00",
+    "duration": 2,
+    "maxCapacity": 20,
+    "ratingsAverage": 7.5,
+    "ratingsQuantity": 2,
+    "price": 4300,
+    "summary": "Rododendron virágzás a Jeli arborétumban, ",
+    "description": "Látogatás a Lám közelében fekvő Jeli arborétumba és a Nádasdy-várba. Nem hagyjuk ki sem a sárvári csónakázó tavat sem az arborétumot.",
+    "imageCover": "tour-3-cover.webp",
+    "images": ["tour-3-1.jpg", "tour-3-2.jpg", "tour-3-3.jpg"]
+  },
+  {
+    "order": 4,
+    "title": "Erdőbénye Sárospatak",
+    "location": {
+      "description": "Szarvas Panzió",
+      "type": "Point",
+      "coordinates": [21.377288835827862, 48.242756463677765],
+      "address": "3932,Erdőbénye,Szárhegy 2"
+    },
+    "startDate": "2014-05-1,14:00",
+    "duration": 3,
+    "maxCapacity": 31,
+    "ratingsAverage": 8.6,
+    "ratingsQuantity": 5,
+    "price": 1197,
+    "summary": "Látogatás a sárospatali Rákóczi-várhoz, megnézzük a Megyer-hegyi tengerszemet és nem hagyjuk ki Boldogkő várát sem.",
+    "description": "Csendes erdőszéi házikókban lesz a szállásunk és innen fogunl ellátogatni sok sok szé helyre. Megnézzük a sárospataki Rákóczi várat de ha lesz idő elmegyünk Boldogkó várához is. A megyer-hegyi tengerszemknél fogunk egyet piknikezni és amúgy sárospatakon is teszünk egy sétát. Hazafelé akinek kedve van beugorhat Szerencsre is az utoló napon.",
+    "imageCover": "tour-4-cover.webp",
+    "images": ["tour-4-1.jpg", "tour-4-2.jpg", "tour-4-3.jpg"]
+  },
+  {
+    "order": 5,
+    "title": "Parádsasvár",
+    "location": {
+      "description": "Flóra apartman",
+      "type": "Point",
+      "coordinates": [19.976451733811512, 47.909142049678934],
+      "address": "3242,Parádsasvár,Petőfi Sándor út 39"
+    },
+    "coordinates": "",
+    "startDate": "2014-10-23,14:00",
+    "duration": 3,
+    "maxCapacity": 29,
+    "ratingsAverage": 8.9,
+    "ratingsQuantity": 1,
+    "price": 4000,
+    "summary": "Kirándulunk az Ilona-vízeséshez, várat nézünk, üveget fújunk és Sástóhoz megyünk",
+    "description": "Meglátogatjuk az Ilona-vízesést, megtekintjük a siroki várromokt, a parádsasvári üvegmanufakturában üveget fújunk, lesz szauna és ping-pongozás",
+    "imageCover": "tour-5-cover.webp",
+    "images": ["tour-5-1.jpg", "tour-5-2.jpg", "tour-5-3.jpg"]
+  },
+  {
+    "order": 6,
+    "title": "Cserkút",
+    "location": {
+      "description": "Napsugár Panzió",
+      "type": "Point",
+      "coordinates": [16.9439, 47.25118],
+      "address": "9600,Sárvár,Dévai Bíró Mátyás utca 8/3"
+    },
+    "coordinates": "",
+    "startDate": "2021-07-19,10:00",
+    "duration": 4,
+    "maxCapacity": 31,
+    "ratingsAverage": 4.7,
+    "ratingsQuantity": 28,
+    "price": 2997,
+    "summary": "Surfing, skating, parajumping, rock climbing and more, all in one tour",
+    "description": "Nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\nVoluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur!",
+    "imageCover": "tour-6-cover.webp",
+    "images": ["tour-6-1.jpg", "tour-6-2.jpg", "tour-6-3.jpg"]
+  },
+  {
+    "order": 7,
+    "title": "Didergőtanya",
+    "location": {
+      "description": "Napsugár Panzió",
+      "type": "Point",
+      "coordinates": [16.9439, 47.25118],
+      "address": "9600,Sárvár,Dévai Bíró Mátyás utca 8/3"
+    },
+    "coordinates": "",
+    "startDate": "2021-02-12,10:00",
+    "duration": 5,
+    "maxCapacity": 32,
+    "ratingsAverage": 4.5,
+    "ratingsQuantity": 35,
+    "price": 3000,
+    "sum mary": "Exquisite wines, scenic views, exclusive barrel tastings,  and much more",
+    "description": "Consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\nIrure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
+    "imageCover": "tour-7-cover.webp",
+    "images": ["tour-7-1.jpg", "tour-7-2.jpg", "tour-7-3.jpg"]
+  },
+  {
+    "order": 8,
+    "title": "Egerszalók",
+    "location": {
+      "description": "Napsugár Panzió",
+      "type": "Point",
+      "coordinates": [16.9439, 47.25118],
+      "address": "9600,Sárvár,Dévai Bíró Mátyás utca 8/3"
+    },
+    "coordinates": "",
+    "startDate": "2021-03-23,10:00",
+    "duration": 9,
+    "maxCapacity": 32,
+    "ratingsAverage": 4.7,
+    "ratingsQuantity": 28,
+    "price": 2997,
+    "summary": "The most remote and stunningly beautiful places for seeing the night sky",
+    "description": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\nLorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+    "imageCover": "tour-8-cover.webp",
+    "images": ["tour-8-1.jpg", "tour-8-2.jpg", "tour-8-3.jpg"]
+  },
+  {
+    "order": 9,
+    "title": "Szeged",
+    "location": {
+      "description": "Napsugár Panzió",
+      "type": "Point",
+      "coordinates": [16.9439, 47.25118],
+      "address": "9600,Sárvár,Dévai Bíró Mátyás utca 8/3"
+    },
+    "coordinates": "",
+    "startDate": "2021-12-16,10:00",
+    "duration": 3,
+    "maxCapacity": 37,
+    "ratingsAverage": 4.9,
+    "ratingsQuantity": 33,
+    "price": 2500,
+    "summary": "Enjoy the Northern Lights in one of the best places in the world",
+    "description": "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua, ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum!\nDolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur, exercitation ullamco laboris nisi ut aliquip. Lorem ipsum dolor sit amet, consectetur adipisicing elit!",
+    "imageCover": "tour-9-cover.webp",
+    "images": ["tour-9-1.jpg", "tour-9-2.jpg", "tour-9-3.jpg"]
+  },
+  {
+    "order": 10,
+    "title": "Sarud",
+    "location": {
+      "description": "Napsugár Panzió",
+      "type": "Point",
+      "coordinates": [16.9439, 47.25118],
+      "address": "9600,Sárvár,Dévai Bíró Mátyás utca 8/3"
+    },
+    "coordinates": "",
+    "startDate": "2021-12-16,10:00",
+    "duration": 3,
+    "maxCapacity": 40,
+    "ratingsAverage": 4.9,
+    "ratingsQuantity": 33,
+    "price": 1497,
+    "summary": "Enjoy the Northern Lights in one of the best places in the world",
+    "description": "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua, ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum!\nDolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur, exercitation ullamco laboris nisi ut aliquip. Lorem ipsum dolor sit amet, consectetur adipisicing elit!",
+    "imageCover": "tour-10-cover.webp",
+    "images": ["tour-10-1.jpg", "tour-9-2.jpg", "tour-9-3.jpg"]
+  },
+  {
+    "order": 11,
+    "title": "MEGJELENÉS TEsztelő",
+    "location": {
+      "description": "Teszt Panzió",
+      "type": "Point",
+      "coordinates": [16.9439, 47.25118],
+      "address": "10,Sárvár,Dévai Bíró Mátyás utca 8/3"
+    },
+    "coordinates": "",
+    "startDate": "2010-12-16,10:00",
+    "duration": 10,
+    "maxCapacity": 10,
+    "ratingsAverage": 10,
+    "ratingsQuantity": 10,
+    "price": 10,
+    "summary": "Enjoy the Northern Lights in one of the best places in the world",
+    "description": "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua, ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum!\nDolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur, exercitation ullamco laboris nisi ut aliquip. Lorem ipsum dolor sit amet, consectetur adipisicing elit!",
+    "imageCover": "tour-10-cover.webp",
+    "images": ["tour-10-1.jpg", "tour-9-2.jpg", "tour-9-3.jpg"]
+  }
+]

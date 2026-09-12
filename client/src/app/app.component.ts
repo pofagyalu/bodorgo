@@ -1,8 +1,5 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
-import { AuthModule } from './auth/auth.module';
-import { AuthService } from './auth/auth.service';
 
 import {
   RouterOutlet,
@@ -10,35 +7,26 @@ import {
   RouterLinkActive,
   ChildrenOutletContexts,
 } from '@angular/router';
-import { HeaderComponent } from './header/header.component';
-import { slideAnimation } from './animations';
+import { Header } from './components/header/header';
+import { slideInAnimation } from './animations';
+import { AuthService } from './auth/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [
-    CommonModule,
-    HeaderComponent,
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    HttpClientModule,
-    AuthModule,
-  ],
-  animations: [slideAnimation],
+  imports: [CommonModule, Header, RouterOutlet, RouterLink, RouterLinkActive],
+  animations: [slideInAnimation],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
 export class AppComponent {
-  signedin = false;
-
   constructor(
     private contexts: ChildrenOutletContexts,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   ngOnInit() {
-    this.authService.checkAuth().subscribe(() => {});
+    this.authService.checkAuth().subscribe();
   }
 
   getRouteAnimationData() {

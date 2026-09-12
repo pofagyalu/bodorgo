@@ -1,23 +1,28 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+// LEGACY — spec for the retired header (see header.component.ts).
 
-import { HeaderComponent } from './header.component';
+// import { ComponentFixture, TestBed } from '@angular/core/testing';
+// import { provideHttpClient } from '@angular/common/http';
+// import { provideHttpClientTesting } from '@angular/common/http/testing';
 
-describe('HeaderComponent', () => {
-  let component: HeaderComponent;
-  let fixture: ComponentFixture<HeaderComponent>;
+// import { HeaderComponent } from './header.component';
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [HeaderComponent]
-    })
-    .compileComponents();
-    
-    fixture = TestBed.createComponent(HeaderComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
+// describe('HeaderComponent', () => {
+//   let component: HeaderComponent;
+//   let fixture: ComponentFixture<HeaderComponent>;
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-});
+//   beforeEach(async () => {
+//     await TestBed.configureTestingModule({
+//       imports: [HeaderComponent],
+//       providers: [provideHttpClient(), provideHttpClientTesting()],
+//     })
+//     .compileComponents();
+
+//     fixture = TestBed.createComponent(HeaderComponent);
+//     component = fixture.componentInstance;
+//     fixture.detectChanges();
+//   });
+
+//   it('should create', () => {
+//     expect(component).toBeTruthy();
+//   });
+// });

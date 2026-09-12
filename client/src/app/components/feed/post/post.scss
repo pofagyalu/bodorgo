@@ -1,0 +1,38 @@
+.post-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.post-header {
+  font-weight: 600;
+  margin-bottom: 6px;
+
+  .creator {
+    color: #1877f2;
+  }
+}
+
+.post-content {
+  .text {
+    margin-bottom: 10px;
+    line-height: 1.35;
+  }
+}
+
+.post-image {
+  margin-top: 10px;
+  border-radius: 10px;
+  width: 100%;
+  object-fit: cover;
+}
+
+.post-footer {
+  margin-top: 8px;
+  text-align: right;
+  color: #777;
+  font-size: 0.8rem;
+}

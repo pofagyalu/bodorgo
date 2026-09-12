@@ -1,0 +1,20 @@
+.feed-wrapper {
+  height: 100vh; // Full viewport height
+  display: flex;
+  flex-direction: column;
+}
+
+.feed-container {
+  flex: 1; // Take all remaining vertical space
+  overflow-y: auto; // Scrollable
+  padding: 20px;
+  background: #f0f2f5;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+app-compose {
+  border-top: 1px solid #e0e0e0;
+  background: #fff;
+}

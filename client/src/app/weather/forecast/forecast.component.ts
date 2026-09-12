@@ -1,9 +1,11 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ForecastService } from '../forecast.service';
 import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-forecast',
+  imports: [CommonModule],
   templateUrl: './forecast.component.html',
   styleUrl: './forecast.component.css',
 })

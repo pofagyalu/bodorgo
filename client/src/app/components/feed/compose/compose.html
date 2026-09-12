@@ -1,0 +1,11 @@
+<form class="compose-container" (ngSubmit)="submit()">
+  <input
+    type="text"
+    placeholder="Write a message..."
+    [ngModel]="text()"
+    (ngModelChange)="text.set($event)"
+    name="message"
+  />
+
+  <button type="submit">Send</button>
+</form>

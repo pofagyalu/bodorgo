@@ -9,14 +9,8 @@ import {
   group,
 } from '@angular/animations';
 
-export const slideAnimation = trigger('routeAnimations', [
-  transition(':increment', slideTo('right')),
-  transition(':decrement', slideTo('left')),
-]);
-
-function slideTo(direction: string) {
-  const optional = { optional: true };
-  return [
+export const slideInAnimation = trigger('routeAnimations', [
+  transition('* <=> *', [
     style({ position: 'relative' }),
     query(
       ':enter, :leave',
@@ -24,29 +18,24 @@ function slideTo(direction: string) {
         style({
           position: 'absolute',
           top: 0,
-          [direction]: 0,
+          left: 0,
           width: '100%',
         }),
       ],
-      optional
+      { optional: true }
     ),
-    query(':enter', [style({ [direction]: '-100%' })]),
+    query(':enter', [style({ left: '-100%' })], { optional: true }),
+    query(':leave', animateChild(), { optional: true }),
     group([
       query(
         ':leave',
-        [animate('600ms ease-out', style({ [direction]: '100%', opacity: 0 }))],
-        optional
+        [animate('0.3s ease-out', style({ left: '100%', opacity: 0 }))],
+        { optional: true }
       ),
-      query(
-        ':enter',
-        [animate('600ms ease-out', style({ [direction]: '0%' }))],
-        optional
-      ),
-      query('@*', animateChild(), optional),
+      query(':enter', [animate('0.6s ease-out', style({ left: '0%' }))], {
+        optional: true,
+      }),
+      query('@*', animateChild(), { optional: true }),
     ]),
-
-    // Required only if you have child animations on the page
-    // query(':leave', animateChild(), optional),
-    // query(':enter', animateChild()),
-  ];
-}
+  ]),
+]);

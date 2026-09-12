@@ -1,0 +1,35 @@
+.compose-container {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  background: #ffffff;
+  border-top: 1px solid #e0e0e0;
+
+  input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    outline: none;
+    font-size: 1rem;
+
+    &:focus {
+      border-color: #1877f2;
+    }
+  }
+
+  button {
+    background: #1877f2;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #0f62ce;
+    }
+  }
+}

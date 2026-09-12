@@ -1,0 +1,81 @@
+<header class="header-container">
+  <!-- Left: Logo -->
+  <div class="logo-container">
+    <a routerLink="/">
+      <img
+        src="assets/images/transparent_color_logo.svg"
+        alt="Logo"
+        class="logo"
+      />
+    </a>
+  </div>
+
+  <!-- Middle: Menu -->
+  @if (auth.isLoggedIn()) {
+  <nav class="menu">
+    <a routerLink="/taborok" routerLinkActive="active" class="menu-item red">Táborok</a>
+    <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
+    <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item green">Szavazások</a>
+    <a routerLink="/versenyek" routerLinkActive="active" class="menu-item orange">Versenyek</a>
+  </nav>
+
+  }
+
+  <!-- Right side: Login or Logout -->
+  <div class="login-container">
+    @if (!auth.isLoggedIn()) {
+    <button class="login-btn" (click)="login()">Gyere bé!</button>
+    } @else {
+    <span class="user-name">Szevasz {{ auth.user()?.name }}!</span>
+    <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
+    }
+  </div>
+</header>
+
+<!-- Mobile Slide-in Menu -->
+<div class="mobile-menu" [class.open]="isMobileMenuOpen">
+  <!-- Close button -->
+  <button class="close-btn" (click)="isMobileMenuOpen = false">✖</button>
+
+  @if (auth.isLoggedIn()) {
+  <nav class="mobile-nav">
+    <a
+      routerLink="/taborok"
+      routerLinkActive="active"
+      (click)="isMobileMenuOpen = false"
+      class="menu-item red"
+      >Táborok</a
+    >
+    <a
+      routerLink="/chat"
+      routerLinkActive="active"
+      (click)="isMobileMenuOpen = false"
+      class="menu-item blue"
+      >Chat</a
+    >
+    <a
+      routerLink="/szavazasok"
+      routerLinkActive="active"
+      (click)="isMobileMenuOpen = false"
+      class="menu-item green"
+      >Szavazások</a
+    >
+    <a
+      routerLink="/versenyek"
+      routerLinkActive="active"
+      (click)="isMobileMenuOpen = false"
+      class="menu-item orange"
+      >Versenyek</a
+    >
+  </nav>
+  }
+
+  <div class="mobile-login">
+    @if (!auth.isLoggedIn()) {
+    <button class="login-btn" (click)="login()">Gyere bé!</button>
+    } @else {
+    <span class="user-name">Szevasz {{ auth.user()?.name }}!</span>
+    <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
+    }
+  </div>
+</div>

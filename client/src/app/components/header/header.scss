@@ -1,0 +1,183 @@
+/* -------------------- */
+/* MOBILE ONLY ELEMENTS */
+/* -------------------- */
+
+.hamburger {
+  font-size: 32px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: none;
+  margin-right: 10px;
+}
+
+.close-btn {
+  font-size: 32px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+/* Slide-in mobile menu container */
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  left: -300px; /* hidden by default */
+  width: 260px;
+  height: 100%;
+  background: #fff;
+  z-index: 20000;
+  box-shadow: 3px 0 8px rgba(0, 0, 0, 0.25);
+  padding: 60px 20px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  transition: left 0.3s ease;
+}
+
+.mobile-menu.open {
+  left: 0;
+}
+
+/* Hide desktop menu on mobile */
+.desktop-menu,
+.desktop-login {
+  display: flex;
+}
+
+/* Mobile nav */
+.mobile-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mobile-nav .menu-item {
+  font-size: 1.7rem;
+}
+
+/* -------------------- */
+/* RESPONSIVE BREAKPOINT */
+/* -------------------- */
+
+@media (max-width: 768px) {
+  .desktop-menu,
+  .desktop-login {
+    display: none !important;
+  }
+
+  .hamburger {
+    display: block;
+  }
+
+  .header-container {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+}
+
+.header-container {
+  position: sticky;
+  top: 0;
+
+  z-index: 10000;
+  background: #ffffff;
+
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 12px 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.logo-container {
+  margin: 0 2rem;
+}
+.logo {
+  height: 50px;
+  width: auto;
+}
+
+.menu {
+  display: flex;
+  gap: 24px;
+  position: relative;
+}
+
+.menu-item {
+  border: 2px solid transparent; /* keeps space reserved */
+  box-sizing: border-box;
+
+  padding: 0.8rem 0.5rem;
+  box-sizing: border-box;
+  border: 2px solid transparent;
+
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-family: 'Marhey', sans-serif;
+  font-weight: bold;
+
+  position: relative;
+  transition: 0.2s ease;
+}
+
+/* Highlight box */
+.menu-item.active {
+  border: 2px solid white;
+  box-shadow: 0 1px 5px 1px #ddd;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  color: #000;
+}
+
+/* Individual colors */
+.red {
+  color: #e53935; /* red */
+}
+
+.blue {
+  color: #1e88e5; /* blue */
+}
+
+.green {
+  color: #2e7d32; /* dark green */
+}
+
+.orange {
+  color: #fb8c00; /* orange */
+}
+
+.login-btn {
+  font-family: 'Marhey', sans-serif;
+  padding: 8px 18px;
+  background-color: #007bff;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.login-btn:hover {
+  background-color: #0062d1;
+}
+
+.user-name {
+  font-family: 'Marhey', sans-serif;
+  font-size: 1.3rem;
+  margin-right: 12px;
+
+  background: #f5f5f5;
+  padding: 6px 14px;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+
+  color: #333;
+}

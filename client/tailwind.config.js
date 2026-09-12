@@ -32,8 +32,6 @@ module.exports = {
       backgroundImage: {
         "hero-pattern-desktop": "url('/assets/images/bg-header-desktop.png')",
         "hero-pattern-mobile": "url('/assets/images/bg-header-mobile.png')",
-        signup: "url('/assets/images/signup.jpg')",
-        "gradient-105": "linear-gradient(105deg, var(--tw-gradient-stops))",
       },
     },
   },

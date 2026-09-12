@@ -1,23 +1,24 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+// LEGACY — spec for the retired placeholder Tours page (see tours.component.ts).
 
-import { ToursComponent } from './tours.component';
+// import { ComponentFixture, TestBed } from '@angular/core/testing';
+// import { ToursComponent } from './tours.component';
 
-describe('ToursComponent', () => {
-  let component: ToursComponent;
-  let fixture: ComponentFixture<ToursComponent>;
+// describe('ToursComponent', () => {
+//   let component: ToursComponent;
+//   let fixture: ComponentFixture<ToursComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [ToursComponent]
-    })
-    .compileComponents();
-    
-    fixture = TestBed.createComponent(ToursComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
+//   beforeEach(async () => {
+//     await TestBed.configureTestingModule({
+//       imports: [ToursComponent]
+//     })
+//     .compileComponents();
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-});
+//     fixture = TestBed.createComponent(ToursComponent);
+//     component = fixture.componentInstance;
+//     fixture.detectChanges();
+//   });
+
+//   it('should create', () => {
+//     expect(component).toBeTruthy();
+//   });
+// });

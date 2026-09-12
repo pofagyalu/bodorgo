@@ -1,54 +1,60 @@
 import { format, createLogger, transports } from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
 
 const { combine, timestamp, printf, colorize } = format;
 
-const options = {
-  file: {
-    level: 'info',
-    handleExceptions: true,
-    maxsize: 5242880, // 5MB
-    maxFiles: 5,
-    colorize: false,
-    format: combine(
-      timestamp({ format: 'YYYY.MM.DD hh:mm:ss' }),
-      format.json(),
-    ),
-  },
-  console: {
-    level: 'debug',
-    handleExceptions: true,
-    format: combine(
-      colorize(),
-      timestamp({ format: 'YYYY.MM.DD hh:mm:ss' }),
-      printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`),
-    ),
-  },
+const consoleOptions = {
+  level: 'debug',
+  handleExceptions: true,
+  format: combine(
+    colorize(),
+    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`),
+  ),
 };
+
+const logFormat = printf(
+  (info) => `[${info.timestamp}] ${info.level}: ${info.message}`,
+);
 
 const logger = createLogger({
   exitOnError: false,
   handleRejections: true,
+  format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), logFormat),
   transports: [
-    new transports.File({
-      ...options.file,
-      filename: 'logs/combined.log',
+    // 🔥 Rotated application logs
+    new DailyRotateFile({
+      dirname: 'logs',
+      filename: 'app-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true, // gzip compression
+      maxSize: '20m', // max size before rotating
+      maxFiles: '14d', // keep 14 days
+      level: 'info',
+      handleExceptions: true,
+      // handleRejections: true,
     }),
-    new transports.File({
-      ...options.file,
+
+    // 🔥 Rotated error logs
+    new DailyRotateFile({
+      dirname: 'logs',
+      filename: 'error-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true,
+      maxSize: '20m',
+      maxFiles: '30d',
       level: 'error',
-      filename: 'logs/error.log',
+      handleExceptions: true,
     }),
   ],
 });
 
 logger.stream = {
-  write: (message) => {
-    logger.info(message);
-  },
+  write: (message) => logger.info(message.trim()),
 };
 
 if (process.env.NODE_ENV !== 'production') {
-  logger.add(new transports.Console(options.console));
+  logger.add(new transports.Console(consoleOptions));
 }
 
 export default logger;

@@ -1,0 +1,118 @@
+.hero-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  background-image: url('/img/bg-header-mobile.webp');
+
+  @media (min-width: 1024px) {
+    min-height: 24rem;
+    background-image: url('/img/bg-header-desktop.webp');
+  }
+}
+
+.hero-container {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: center;
+  padding: 1.5rem;
+  margin: 0 auto;
+  height: 100%;
+  max-width: 1200px;
+
+  @media (min-width: 1024px) {
+    flex-direction: row;
+  }
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+
+  @media (min-width: 1024px) {
+    margin-top: 4rem;
+    width: 50%;
+    margin-bottom: 13rem;
+  }
+
+  h1 {
+    font-family: 'Marhey', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    color: #ffffff; /* white text */
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    line-height: 1.1;
+
+    @media (min-width: 1024px) {
+      font-size: 3.8rem;
+      text-align: left;
+    }
+  }
+
+  p {
+    font-family: 'Mulish', sans-serif;
+    font-size: 1.2rem;
+    line-height: 1.5;
+    text-align: center;
+
+    /* Much better readability on bright backgrounds */
+    color: rgba(0, 0, 0, 0.95);
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+
+    @media (min-width: 1024px) {
+      text-align: left;
+      max-width: 30rem;
+    }
+  }
+}
+
+.hero-button-container {
+  margin: 0 auto;
+
+  @media (min-width: 1024px) {
+    margin: 0;
+  }
+
+  .hero-button {
+    padding: 1rem 1.75rem;
+    font-size: 1.5rem; /* text-2xl */
+    font-weight: bold;
+    font-family: 'Comic Sans MS', 'Comic Sans', cursive;
+    color: white;
+    background-color: #ef4444; /* primary color */
+    border-radius: 9999px;
+    cursor: pointer;
+    display: inline-block;
+    transition: opacity 0.3s;
+
+    &:hover {
+      opacity: 0.7;
+    }
+
+    @media (min-width: 1024px) {
+      padding: 0.75rem 1.75rem; /* lg:py-3 */
+    }
+  }
+}
+
+/* Right-side image */
+.hero-image-container {
+  margin: 0 auto 6rem;
+
+  img {
+    width: 100%;
+    max-width: 28rem; /* like lg:w-1/2 but with limit */
+  }
+
+  @media (min-width: 1024px) {
+    margin-bottom: 0;
+    width: 50%;
+  }
+}

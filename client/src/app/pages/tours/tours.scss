@@ -1,0 +1,173 @@
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 1rem;
+  background: #f7f7f7;
+  border-radius: 8px;
+}
+
+.filter-input {
+  padding: 0.8rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  flex: 1;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #55c57a;
+}
+
+/* Center the toggle button */
+.toggle-container {
+  margin: 2rem 0 1rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* ---- BUTTON STYLING (Natours style extension) ---- */
+
+.btn {
+  text-decoration: none;
+  padding: 1rem 2.5rem;
+  display: inline-block;
+  border-radius: 10rem;
+  transition: all 0.2s;
+  font-size: 1.3rem;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+}
+
+/* NATOURS GREEN BUTTON */
+.btn--green {
+  background-color: #55c57a;
+  color: #fff;
+}
+
+.btn--green:hover {
+  background-color: #28b485;
+  transform: translateY(-2px);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+}
+
+/* GREY STYLE FOR "show last 3" */
+.btn--grey {
+  background-color: #f7f7f7;
+  color: #777;
+}
+
+.btn--grey:hover {
+  background-color: #eee;
+  transform: translateY(-2px);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.1);
+}
+
+/* TOGGLE-SPECIFIC STYLE */
+.btn--toggle {
+  font-size: 1.4rem;
+  padding: 1.2rem 3rem;
+  min-width: 260px;
+  text-align: center;
+}
+
+/* Ensure buttons drop gracefully on mobile */
+@media (max-width: 600px) {
+  .btn--toggle {
+    font-size: 1.2rem;
+    padding: 1rem 2rem;
+    min-width: 200px;
+  }
+}
+
+.card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
+  gap: 3rem;
+  padding: 3rem;
+}
+
+.card {
+  background-color: #fff;
+  border-radius: 3px;
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  transition: transform 0.5s;
+  max-width: 500px;
+  height: 50rem;
+}
+
+.card:hover {
+  transform: translateY(-1rem);
+}
+
+.card__header {
+  position: relative;
+}
+
+.card__picture {
+  position: relative;
+  overflow: hidden;
+}
+
+.card__picture-img {
+  width: 100%;
+  height: 22rem;
+  background-size: cover;
+  background-image: (to right bottom, rgba(85, 197, 122, 0.7), rgba(34, 34, 34, 0.7)),
+    var(--tour-image);
+
+  background-blend-mode: screen;
+
+  clip-path: polygon(0 0, 100% 0, 100% 90%, 0 100%);
+}
+
+.heading {
+  font-size: 2.5rem;
+  font-weight: 300;
+  text-transform: uppercase;
+  text-align: right;
+  color: white;
+  position: absolute;
+  top: 10rem;
+  right: 1rem;
+  width: 75%;
+}
+
+.heading-span {
+  padding: 1rem 1.5rem;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  background-image: linear-gradient(
+    to right bottom,
+    rgba(27, 126, 60, 0.85),
+    rgba(103, 201, 136, 0.85)
+  );
+  line-height: 1.5;
+}
+
+.card__details {
+  padding: 1.5rem 3rem;
+}
+
+.card__data {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.card__icon {
+  height: 2rem;
+  width: 2rem;
+  margin-right: 0.7rem;
+}
+
+.card__footer {
+  padding: 2rem 3rem;
+  background-color: #f7f7f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

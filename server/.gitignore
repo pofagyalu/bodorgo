@@ -1,4 +1,6 @@
-/node_modules
-.env
-logs
-dev-data
+node_modules/
+*.env
+public
+config.env
+dist/
+logs/

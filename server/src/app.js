@@ -1,61 +1,116 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import compression from 'compression';
+import path from 'path';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import mongoSanitize from 'express-mongo-sanitize';
-import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 
-import logger from './logger';
-import errorHandler from './middlewares/error-handler';
-import AppError from './utils/app-error';
-import config from './config';
+// import * as client from 'openid-client';
+import config from './config.js';
+// import mongoSanitize from 'express-mongo-sanitize';
 
-import tourRouter from './routes/tour.routes';
-import userRouter from './routes/user.routes';
-import reviewRouter from './routes/review.routes';
-import bookingRouter from './routes/booking.routes';
-import swaggerRouter from './routes/swagger.routes';
+import tourRouter from './routes/tourRoutes.js';
+import userRouter from './routes/userRoutes.js';
+import systemRouter from './routes/systemRoutes.js';
+import authOidcRouter from './routes/authOidcRoutes.js';
+import AppError from './utils/appError.js';
+import globalErrorHandler from './controllers/errorController.js';
+import logger from './logger.js';
 
-const app = express();
-app.options('*', cors());
+const rootDir = path.resolve();
 
-app.use(cors());
+export default function createApp(mongoClient) {
+  const app = express();
 
-app.use(cookieParser(config.jwt.secret));
+  app.set('trust proxy', true);
 
-app.use(helmet());
+  // Set security HTTP headers
 
-app.use(morgan('combined', { stream: logger.stream }));
+  app.use(cookieParser(config.cookie.secret));
 
-const limiter = rateLimit({
-  max: 120,
-  windowMs: 60 * 60 * 1000,
-  message: 'Too may requests from this IP, please try again in an hour!',
-});
-app.use('/', limiter);
+  app.use(
+    session({
+      secret: config.cookie.secret,
+      resave: false,
+      saveUninitialized: false,
+      store: MongoStore.create({
+        client: mongoClient,
+        dbName: 'bodorgo-test', // optional but recommended
+        collectionName: 'sessions', // optional
+        ttl: 14 * 24 * 60 * 60, // optional
+        touchAfter: 24 * 3600, // time period in seconds
+      }),
+    }),
+  );
 
-app.use(express.json({ limit: '10kb' }));
+  const allowedOrigins = (
+    config.clientOrigin || 'https://bodorgo.hu,http://localhost:4200'
+  )
+    .split(',')
+    .map((origin) => origin.trim());
 
-app.use(mongoSanitize());
+  app.use(
+    cors({
+      origin: allowedOrigins,
+      credentials: true, // if sending cookies/tokens
+      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    }),
+  );
 
-app.use(
-  hpp({
-    whitelist: ['duration'],
-  }),
-);
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
-app.use('/api/v1/tours', tourRouter);
-app.use('/api/v1/users', userRouter);
-app.use('/api/v1/reviews', reviewRouter);
-app.use('/api/v1/bookingss', bookingRouter);
-app.use('/api/api-docs', swaggerRouter);
+  app.use(morgan('combined', { stream: logger.stream }));
 
-app.all('*', (req, res, next) => {
-  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
-});
+  const limiter = rateLimit({
+    windowMs: 15 * 60000, // 15 minutes
+    max: 1000,
+    handler: function (req, res, next) {
+      logger.warn(`Rate limit exceeded: ${req.ip}`);
 
-app.use(errorHandler);
+      return res.status(429).json({
+        message: 'Too many requests from this IP, please try again in an hour',
+      });
+    },
+  });
+  app.use(limiter);
 
-export default app;
+  // Body parser, reading data from body into
+  app.use(express.json({ limit: '10kb' }));
+  app.use(express.urlencoded({ extended: true }));
+
+  // TODO: old solution try to dins some replacement
+  // app.use(mongoSanitize());
+
+  app.use(express.static(path.join(rootDir, 'public')));
+
+  app.use((req, res, next) => {
+    req.requestTime = new Date().toISOString();
+    next();
+  });
+
+  app.use(compression());
+
+  app.use('/auth', authOidcRouter);
+  app.use('/tours', tourRouter);
+  app.use('/users', userRouter);
+  app.use('/health', systemRouter);
+
+  app.use((req, res, next) => {
+    // Since next gets an argument Express assumes this is an error
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+  });
+
+  app.use(globalErrorHandler);
+
+  return app;
+}

@@ -1,0 +1,14 @@
+<div class="feed-wrapper">
+  <div class="feed-container">
+    @for (post of posts(); track post.createdAt) {
+    <app-post
+      [creatorInput]="post.creator"
+      [textInput]="post.text"
+      [timestampInput]="post.createdAt"
+      [imageUrlInput]="post.image"
+    />
+    }
+  </div>
+
+  <app-compose (send)="onCompose($event)"></app-compose>
+</div>

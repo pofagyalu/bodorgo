@@ -1,87 +1,70 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../environments/environment.development';
-import { BehaviorSubject, tap } from 'rxjs';
+import { tap, catchError, of } from 'rxjs';
+import { environment } from '../../environments/environment';
 
-interface UsernameAvailableResponse {
-  available: boolean;
+export interface CurrentUser {
+  id: string;
+  email?: string;
+  name?: string;
+  role: string;
 }
 
-export interface SignupCredentials {
-  email: string;
-  password: string;
-  // passwordConfirm: string;
-}
-
-interface Signupresponse {}
-
-interface SignedinResponse {
-  data: {
-    user: {
-      authenticated: boolean;
-      username: string;
-      role: string;
-    };
-  };
-}
-
-export interface SigninCredentials {
-  email: string;
-  password: string;
+interface MeResponse {
+  loggedIn: boolean;
+  sub?: string;
+  email?: string;
+  name?: string;
+  role?: string;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  signedin$ = new BehaviorSubject(false);
+  private loggedIn = signal(false);
+  private currentUser = signal<CurrentUser | null>(null);
+
+  isLoggedIn = this.loggedIn.asReadonly();
+  user = this.currentUser.asReadonly();
 
   constructor(private http: HttpClient) {}
 
-  emailAvailable(email: string) {
-    return this.http.post<UsernameAvailableResponse>(
-      'https://api.angular-email.com/auth/username',
-      {
-        username: email,
-      }
-    );
+  // Full-page navigation: the server responds with a redirect to Authentik,
+  // which only makes sense as a top-level browser navigation, not an XHR call.
+  login() {
+    window.location.href = `${environment.apiBaseUrl}/auth/login`;
   }
 
-  signup(credentials: SignupCredentials) {
-    return this.http
-      .post<Signupresponse>(`${environment.apiUrl}/users/signup`, credentials)
-      .pipe(
-        tap(() => {
-          this.signedin$.next(true);
-        })
-      );
+  // Same as login(): the server redirects on to Authentik's end-session page.
+  logout() {
+    window.location.href = `${environment.apiBaseUrl}/auth/logout`;
   }
 
   checkAuth() {
     return this.http
-      .get<SignedinResponse>(`${environment.apiUrl}/users/signedin`)
-      .pipe(
-        tap(({ data }) => {
-          this.signedin$.next(data.user.authenticated);
-        })
-      );
-  }
-
-  logout() {
-    return this.http.post(`${environment.apiUrl}/users/logout`, {}).pipe(
-      tap(() => {
-        this.signedin$.next(false);
+      .get<MeResponse>(`${environment.apiBaseUrl}/auth/me`, {
+        withCredentials: true,
       })
-    );
-  }
-
-  login(credentials: SigninCredentials) {
-    return this.http
-      .post(`${environment.apiUrl}/users/login`, credentials)
       .pipe(
-        tap(() => {
-          this.signedin$.next(true);
-        })
+        tap((res) => {
+          this.loggedIn.set(!!res.loggedIn);
+          this.currentUser.set(
+            res.loggedIn
+              ? {
+                  id: res.sub!,
+                  email: res.email,
+                  name: res.name,
+                  role: res.role || 'bodorgo',
+                }
+              : null,
+          );
+        }),
+        catchError(() => {
+          this.loggedIn.set(false);
+          this.currentUser.set(null);
+          return of({ loggedIn: false } as MeResponse);
+        }),
       );
   }
 }

@@ -1,0 +1,17 @@
+<div class="post-card">
+  <div class="post-header">
+    <span class="creator">{{ creator() }}</span>
+  </div>
+
+  <div class="post-content">
+    <p class="text">{{ text() }}</p>
+
+    @if (imageUrl()) {
+    <img class="post-image" [src]="imageUrl()" alt="Post image" />
+    }
+  </div>
+
+  <div class="post-footer">
+    <small>{{ readableTimestamp() }}</small>
+  </div>
+</div>

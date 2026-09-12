@@ -1,57 +1,41 @@
-import { Component } from '@angular/core';
-import { FormGroup, FormControl, Validators } from '@angular/forms';
-import { MatchPassword } from '../validators/match-password';
-import { AuthService, SignupCredentials } from '../auth.service';
-import { NotificationsService } from '../../notifications/notifications.service';
+// LEGACY — self-rolled signup/registration form, superseded by Authentik
+// self-service registration. Retained per instruction, not deleted; not
+// declared anywhere (see auth.module.ts) and not routed (see app.routes.ts).
 
-@Component({
-  selector: 'app-signup',
-  templateUrl: './signup.component.html',
-  styleUrl: './signup.component.css',
-})
-export class SignupComponent {
-  signupForm = new FormGroup(
-    {
-      email: new FormControl('', [Validators.required, Validators.email]),
-      password: new FormControl('', [
-        Validators.required,
-        Validators.minLength(6),
-        Validators.maxLength(20),
-      ]),
-      passwordConfirm: new FormControl('', [
-        Validators.required,
-        Validators.minLength(6),
-        Validators.maxLength(20),
-      ]),
-    },
-    { validators: [this.matchPassword.validate] }
-  );
+// import { Component } from '@angular/core';
+// import { FormGroup, FormControl, Validators } from '@angular/forms';
+// import { MatchPassword } from '../validators/match-password';
+// import { UniqueEmail } from '../validators/unique-email';
 
-  constructor(
-    private matchPassword: MatchPassword,
-    private authService: AuthService,
-    private notificationService: NotificationsService
-  ) {}
+// @Component({
+//   selector: 'app-signup',
+//   templateUrl: './signup.component.html',
+//   styleUrl: './signup.component.css',
+// })
+// export class SignupComponent {
+//   authForm = new FormGroup(
+//     {
+//       email: new FormControl(
+//         '',
+//         [Validators.required, Validators.email],
+//         [this.uniqueEmail.validate]
+//       ),
+//       password: new FormControl('', [
+//         Validators.required,
+//         Validators.minLength(10),
+//         Validators.maxLength(20),
+//       ]),
+//       passwordConfirm: new FormControl('', [
+//         Validators.required,
+//         Validators.minLength(10),
+//         Validators.maxLength(20),
+//       ]),
+//     },
+//     { validators: [this.matchPassword.validate] }
+//   );
 
-  onSubmit() {
-    if (this.signupForm.invalid) {
-      return;
-    }
-
-    this.authService
-      .signup(this.signupForm.value as SignupCredentials)
-      .subscribe({
-        next: (response) => {
-          // navigate to another route
-        },
-        error: (error) => {
-          if (!error.status) {
-            this.signupForm.setErrors({ noConnection: true });
-          }
-          if (error.status === 'fail') {
-            this.notificationService.addError('Nem sikerült a regisztráció');
-          }
-        },
-      });
-  }
-}
+//   constructor(
+//     private matchPassword: MatchPassword,
+//     private uniqueEmail: UniqueEmail
+//   ) {}
+// }

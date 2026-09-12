@@ -1,41 +1,29 @@
 import { Routes } from '@angular/router';
-import { ToursComponent } from './tours/tours.component';
+// import { ToursComponent } from './tours/tours.component'; // superseded by ./pages/tours/tours
+import { Tours } from './pages/tours/tours';
+import { Chat } from './pages/chat/chat';
+import { Szavazasok } from './pages/szavazasok/szavazasok';
+import { Versenyek } from './pages/versenyek/versenyek';
 import { AboutComponent } from './about/about.component';
 import { HomeComponent } from './home/home.component';
 import { NotFoundComponent } from './not-found/not-found.component';
 import { LoginComponent } from './auth/login/login.component';
-import { SignupComponent } from './auth/signup/signup.component';
-import { LogoutComponent } from './auth/logout/logout.component';
-import { ShopComponent } from './shop/shop.component';
-import { VerifyEmailComponent } from './auth/verify-email/verify-email.component';
+// import { SignupComponent } from './auth/signup/signup.component'; // superseded by Authentik self-service registration
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent, data: { animation: '0' } },
-  {
-    path: 'taborok',
-    title: 'Bódorgó táborok',
-    component: ToursComponent,
-    data: { animation: '1' },
-  },
-  {
-    path: 'shop',
-    title: 'Bódorgó piac',
-    component: ShopComponent,
-    data: { animation: '2' },
-  },
+  { path: '', component: HomeComponent, data: { animation: 'HomePage' } },
+  { path: 'taborok', title: 'Bódorgó táborok', component: Tours },
+  // Chat/Szavazások/Versenyek are routed but still in early development
+  { path: 'chat', title: 'Bódorgó chat', component: Chat },
+  { path: 'szavazasok', title: 'Bódorgó szavazások', component: Szavazasok },
+  { path: 'versenyek', title: 'Bódorgó versenyek', component: Versenyek },
   {
     path: 'rolunk',
     title: 'Bódorgók akik vagyunk',
     component: AboutComponent,
-    data: { animation: '3' },
+    data: { animation: 'AboutPage' },
   },
   { path: 'login', title: 'Bódorgó, gyere bé', component: LoginComponent },
-  { path: 'signup', title: 'Bódorgó avatás', component: SignupComponent },
-  {
-    path: 'email-confirmed',
-    title: 'Bódorgó email ellenőrizve',
-    component: VerifyEmailComponent,
-  },
-  { path: 'logout', title: 'Viszlát', component: LogoutComponent },
+  // { path: 'signup', title: 'Bódorgó avatás', component: SignupComponent }, // superseded by Authentik self-service registration
   { path: '**', component: NotFoundComponent },
 ];
