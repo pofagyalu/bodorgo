@@ -27,7 +27,9 @@ Runs `ng test`, which uses Angular's official Vitest-based unit-test builder. Te
 npm run build
 ```
 
-Runs `ng build` (production configuration by default). Because the app is localized to `hu`, the actual output lands one level deeper than you might expect: `dist/client/browser/hu/`, not `dist/client/` directly.
+Runs `ng build` (production configuration by default). Output lands at `dist/client/browser/`.
+
+Don't re-add Angular's `i18n`/`localize` build options unless the app actually gets translated content — they used to be set (unused, no translation files existed) and caused a real production bug: a localized build's `index.html` gets `<base href="/hu/">`, but this app is deployed straight to the site root, so every relative asset URL silently 404'd (served the SPA's `index.html` instead, which is what a "MIME type text/html, expected JavaScript" console error means for a `<script type="module">` tag).
 
 ## Deploying
 
@@ -35,7 +37,7 @@ Runs `ng build` (production configuration by default). Because the app is locali
 npm run deploy
 ```
 
-Builds and copies `dist/client/browser/hu/` to `W:\bodorgo` (a mapped network drive — the production web root for `bodorgo.hu`) in one step, via `sync.js`. It clears out the previous deploy's files first (keeping `.htaccess`, which isn't build output) so old content-hashed bundles (`main-<hash>.js` etc.) don't pile up release after release.
+Builds and copies `dist/client/browser/` to `W:\bodorgo` (a mapped network drive — the production web root for `bodorgo.hu`) in one step, via `sync.js`. It clears out the previous deploy's files first (keeping `.htaccess`, which isn't build output) so old content-hashed bundles (`main-<hash>.js` etc.) don't pile up release after release.
 
 If you've already built and just want to (re-)copy without rebuilding:
 

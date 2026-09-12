@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const source = path.resolve('dist/client/browser/hu');
+const source = path.resolve('dist/client/browser');
 const dest = 'W:/bodorgo';
 
 // Clear out the previous deploy's content-hashed bundles and asset folders
@@ -14,4 +14,4 @@ for (const entry of fs.readdirSync(dest)) {
 }
 
 fs.cpSync(source, dest, { recursive: true, force: true });
-console.log('✓ Synced dist/client/browser/hu → W:/bodorgo');
+console.log('✓ Synced dist/client/browser → W:/bodorgo');

@@ -4,7 +4,6 @@
   "newProjectRoot": "projects",
   "projects": {
     "client": {
-      "i18n": { "sourceLocale": "hu" },
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -14,7 +13,6 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "localize": ["hu"],
             "outputPath": "dist/client",
             "index": "src/index.html",
             "browser": "src/main.ts",
@@ -68,12 +66,6 @@
             }
           },
           "defaultConfiguration": "development"
-        },
-        "extract-i18n": {
-          "builder": "@angular/build:extract-i18n",
-          "options": {
-            "buildTarget": "client:build"
-          }
         },
         "test": {
           "builder": "@angular/build:unit-test",
