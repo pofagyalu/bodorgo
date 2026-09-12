@@ -97,6 +97,15 @@ export const callback = async (req, res, next) => {
         emailVerified: !!claims.email_verified,
       });
       logger.info(`Provisioned new local user for sub=${claims.sub}`);
+    } else {
+      // Keep the local record in sync with Authentik on every login - it's
+      // the source of truth for profile fields, so a name/email change made
+      // there (e.g. admin -> Gazda) should show up here without needing any
+      // manual DB edit.
+      user.email = claims.email;
+      user.name = claims.name || claims.preferred_username || claims.email;
+      user.emailVerified = !!claims.email_verified;
+      await user.save();
     }
 
     req.session.regenerate((err) => {
