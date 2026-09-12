@@ -15,8 +15,9 @@
   <nav class="menu">
     <a routerLink="/taborok" routerLinkActive="active" class="menu-item red">Táborok</a>
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
-    <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item green">Szavazások</a>
-    <a routerLink="/versenyek" routerLinkActive="active" class="menu-item orange">Versenyek</a>
+    <!-- Hidden for now, still routable - not ready for public linking yet -->
+    <!-- <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item green">Szavazások</a> -->
+    <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item orange">Versenyek</a> -->
   </nav>
 
   }
@@ -53,20 +54,21 @@
       class="menu-item blue"
       >Chat</a
     >
-    <a
+    <!-- Hidden for now, still routable - not ready for public linking yet -->
+    <!-- <a
       routerLink="/szavazasok"
       routerLinkActive="active"
       (click)="isMobileMenuOpen = false"
       class="menu-item green"
       >Szavazások</a
-    >
-    <a
+    > -->
+    <!-- <a
       routerLink="/versenyek"
       routerLinkActive="active"
       (click)="isMobileMenuOpen = false"
       class="menu-item orange"
       >Versenyek</a
-    >
+    > -->
   </nav>
   }
 
