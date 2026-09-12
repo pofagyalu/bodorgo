@@ -50,3 +50,15 @@
 .ease-soft-in-out {
   transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
 }
+
+/* Tailwind's Preflight resets h1 to font-size: inherit (and margin: 0),
+   which doesn't count as an explicit size to browsers - they warn about
+   <h1> inside sectioning content (<section>, <article>, etc.) relying on
+   implicit/inconsistent heading-scaling behavior. This is a plain element
+   selector, so any h1 with its own Tailwind size utility (text-5xl etc.)
+   still wins via specificity - this only affects h1s that would otherwise
+   fall back to "inherit". */
+h1 {
+  font-size: 2rem;
+  margin: 0;
+}

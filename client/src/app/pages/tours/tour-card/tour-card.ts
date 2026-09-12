@@ -13,5 +13,6 @@ import { environment } from '../../../../environments/environment';
 })
 export class TourCard {
   tour = input.required<Tour>();
+  priority = input(false);
   environment = environment;
 }

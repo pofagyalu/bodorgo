@@ -115,7 +115,10 @@
   border: 2px solid transparent; /* keeps space reserved */
   box-sizing: border-box;
 
-  padding: 0.8rem 0.5rem;
+  /* Marhey's own font metrics render the glyphs high in their line box,
+     so equal top/bottom padding still looks top-heavy - more padding-top
+     than padding-bottom compensates. Adjust these two if the font changes. */
+  padding: 0.45rem 0.65rem 0.3rem;
   box-sizing: border-box;
   border: 2px solid transparent;
 
@@ -132,7 +135,7 @@
 .menu-item.active {
   border: 2px solid white;
   box-shadow: 0 1px 5px 1px #ddd;
-  border-radius: 10px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.3);
   color: #000;
 }
@@ -171,13 +174,7 @@
 
 .user-name {
   font-family: 'Marhey', sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   margin-right: 12px;
-
-  background: #f5f5f5;
-  padding: 6px 14px;
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-
-  color: #333;
+  color: #666;
 }

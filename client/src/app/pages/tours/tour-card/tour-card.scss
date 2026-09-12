@@ -113,6 +113,12 @@
   gap: 0.5rem 0.6rem;
 }
 
+/* Location takes its own full-width row; the remaining 4 items (date,
+   duration, capacity, price) auto-flow into two rows of two after it. */
+.card__data--full {
+  grid-column: 1 / -1;
+}
+
 .card__data {
   display: flex;
   align-items: center;

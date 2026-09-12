@@ -53,7 +53,7 @@
 </div>
 
 <div class="card-container">
-  @for (tour of filteredTours(); track tour.order) {
-  <app-tour-card [tour]="tour" />
+  @for (tour of filteredTours(); track tour.order; let i = $index) {
+  <app-tour-card [tour]="tour" [priority]="i === 0" />
   }
 </div>
