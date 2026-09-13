@@ -24,7 +24,7 @@
   <!-- Middle: Menu (desktop only, hidden on mobile in favor of the hamburger) -->
   @if (auth.isLoggedIn()) {
   <nav class="menu">
-    <a routerLink="/taborok" routerLinkActive="active" class="menu-item red">Táborok</a>
+    <a routerLink="/taborok" routerLinkActive="active" class="menu-item">Táborok</a>
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
     <!-- Hidden for now, still routable - not ready for public linking yet -->
     <!-- <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item green">Szavazások</a> -->
@@ -67,7 +67,7 @@
       routerLink="/taborok"
       routerLinkActive="active"
       (click)="closeMobileMenu()"
-      class="menu-item red"
+      class="menu-item"
       >Táborok</a
     >
     <a

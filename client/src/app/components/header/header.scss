@@ -89,15 +89,23 @@
 }
 
 /* Kijelentkezés lives inside the mobile nav list (last item) instead of a
-   separate section - it's a <button>, so reset it to look like the <a>
-   menu items around it. */
+   separate section - it's a <button>, styled as the same logo-red/white
+   button as its desktop counterpart (.login-btn.logout) rather than a
+   plain colored link like Táborok/Chat. */
 .logout-item {
-  background: none;
   border: none;
   font: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
-  color: #e53935;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+}
+
+// Extra specificity (over the plain .menu-item rule below, which also sets
+// color) so this reliably wins regardless of source order.
+.menu-item.logout-item {
+  background-color: #f40e0d; // logo red
+  color: #fff;
 }
 
 /* -------------------- */
@@ -187,13 +195,17 @@
   font-size: 1.5rem;
   font-family: 'Marhey', sans-serif;
   font-weight: bold;
+  // Explicit, rather than relying on the browser's default link color
+  // (there's no global anchor reset in this app) - Táborok's base color;
+  // Chat overrides it with .blue below.
+  color: #222;
 
   position: relative;
   transition: 0.2s ease;
 }
 
 /* Highlight box - the rectangle alone marks the selected item, so its
-   text keeps its own color (red/blue/etc.) instead of switching to black. */
+   text keeps its own color instead of switching to black. */
 .menu-item.active {
   border: 2px solid white;
   box-shadow: 0 1px 5px 1px #ddd;
@@ -201,13 +213,16 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Individual colors */
+/* Individual colors. .red/.green/.orange are only still used by the
+   currently-hidden Szavazások/Versenyek links (see header.html) - left
+   untouched. .blue (Chat) is the actual blue sampled from the bódorgó logo
+   (transparent_color_logo.svg), not a generic Material blue. */
 .red {
   color: #e53935; /* red */
 }
 
 .blue {
-  color: #1e88e5; /* blue */
+  color: #096396; /* logo blue */
 }
 
 .green {
@@ -231,6 +246,16 @@
 
 .login-btn:hover {
   background-color: #0062d1;
+}
+
+// Kijelentkezés keeps .login-btn's white text but gets the logo's red
+// (transparent_color_logo.svg) as its background instead of the default blue.
+.login-btn.logout {
+  background-color: #f40e0d;
+}
+
+.login-btn.logout:hover {
+  background-color: #c40b0a;
 }
 
 .user-name {
