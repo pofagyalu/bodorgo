@@ -1,5 +1,6 @@
 import express from 'express';
 import * as tourController from '../controllers/tourController.js';
+import { signUpForTour } from '../controllers/reservationController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -21,5 +22,7 @@ router
   .get(tourController.getTour)
   .patch(tourController.updateTour)
   .delete(requireAuth, restrictTo('admin'), tourController.deleteTour);
+
+router.route('/:tourId/signup').post(requireAuth, signUpForTour);
 
 export default router;

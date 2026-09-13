@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import slugify from 'slugify';
+import { computeDrivingDistanceKm, BUDAPEST_CENTER } from '../utils/distance.js';
+import logger from '../logger.js';
 
 const { Schema } = mongoose;
 
@@ -31,6 +33,12 @@ const tourSchema = new Schema(
     coordinates: {
       type: String,
     },
+    // Real road/highway driving distance from Budapest's center, computed
+    // once via OpenRouteService (see pre('save') below) and cached here -
+    // never recomputed unless location.coordinates actually changes.
+    distanceFromBudapestKm: {
+      type: Number,
+    },
     startDate: {
       type: Date,
       required: [true, 'A tábornak nincs kezdőidőpontja'],
@@ -56,6 +64,26 @@ const tourSchema = new Schema(
       type: String,
       required: [true, 'A tábornak kell legyen leírása'],
     },
+    // Day-by-day agenda. day is 1-indexed (1 = startDate itself); time is a
+    // plain "HH:mm" string rather than a Date, since it's the same every
+    // year the tour repeats and doesn't need its own date component.
+    schedule: [
+      {
+        day: {
+          type: Number,
+          required: [true, 'A program elemnek kell legyen napja'],
+          min: 1,
+        },
+        time: {
+          type: String,
+          required: [true, 'A program elemnek kell legyen időpontja'],
+        },
+        description: {
+          type: String,
+          required: [true, 'A program elemnek kell legyen leírása'],
+        },
+      },
+    ],
     attachments: [String],
     imageCover: {
       type: String,
@@ -78,6 +106,26 @@ const tourSchema = new Schema(
 // DOCUMENT Middleware, runs before .save() and .create(), .this points to document
 tourSchema.pre('save', function (next) {
   this.slug = slugify(this.title, { lower: true });
+  next();
+});
+
+// Covers Tour.create() and any explicit .save() call. PATCH updates go
+// through findByIdAndUpdate instead, which bypasses this hook - that path
+// is handled explicitly in tourController.js's updateTour.
+tourSchema.pre('save', async function (next) {
+  if (
+    this.isModified('location.coordinates') &&
+    this.location?.coordinates?.length === 2
+  ) {
+    try {
+      this.distanceFromBudapestKm = await computeDrivingDistanceKm(
+        BUDAPEST_CENTER,
+        { lat: this.location.coordinates[1], lng: this.location.coordinates[0] },
+      );
+    } catch (err) {
+      logger.error(`Failed to compute distance from Budapest: ${err.message}`);
+    }
+  }
   next();
 });
 

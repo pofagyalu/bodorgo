@@ -2,6 +2,8 @@ import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
+import { computeDrivingDistanceKm, BUDAPEST_CENTER } from '../utils/distance.js';
+import logger from '../logger.js';
 
 export const aliasLastTours = async (req, res, next) => {
   res.locals.queryOverride = {
@@ -77,6 +79,21 @@ export const createTour = async (req, res) => {
 };
 
 export const updateTour = async (req, res) => {
+  // findByIdAndUpdate bypasses the model's pre('save') hook, so the cached
+  // distance has to be refreshed here explicitly - only when coordinates
+  // are actually part of this update, never on every unrelated edit.
+  const coords = req.body?.location?.coordinates;
+  if (Array.isArray(coords) && coords.length === 2) {
+    try {
+      req.body.distanceFromBudapestKm = await computeDrivingDistanceKm(
+        BUDAPEST_CENTER,
+        { lat: coords[1], lng: coords[0] },
+      );
+    } catch (err) {
+      logger.error(`Failed to compute distance from Budapest: ${err.message}`);
+    }
+  }
+
   const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,

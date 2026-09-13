@@ -26,7 +26,7 @@ const rootDir = path.resolve();
 export default function createApp(sessionMiddleware) {
   const app = express();
 
-  app.set('trust proxy', true);
+  app.set('trust proxy', 1);
 
   // Set security HTTP headers
 

@@ -1,0 +1,174 @@
+import { Component, inject, signal, computed } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { MatIconModule } from '@angular/material/icon';
+import { TourService, Tour, ScheduleEntry } from '../../services/tour';
+import { AuthService } from '../../auth/auth.service';
+import { environment } from '../../../environments/environment';
+
+interface DayGroup {
+  day: number;
+  label: string;
+  events: ScheduleEntry[];
+}
+
+interface AttendeeRow {
+  name: string;
+  paid: boolean;
+}
+
+@Component({
+  selector: 'app-tour-details',
+  standalone: true,
+  imports: [MatIconModule],
+  templateUrl: './tour-details.html',
+  styleUrl: './tour-details.scss',
+})
+export class TourDetails {
+  private route = inject(ActivatedRoute);
+  private tourService = inject(TourService);
+  private sanitizer = inject(DomSanitizer);
+  auth = inject(AuthService);
+  environment = environment;
+
+  tour = signal<Tour | null>(null);
+  participantCount = signal(0);
+  loadError = signal<string | null>(null);
+  signingUp = signal(false);
+  signUpError = signal<string | null>(null);
+  showMap = signal(false);
+
+  currentUserId = computed(() => this.auth.user()?.id);
+
+  // Long Hungarian format ("2026. szeptember 12.") rather than Angular's
+  // DatePipe, which needs hu locale data registered to avoid falling back
+  // to English month names - this app doesn't register it (see the chat
+  // feature's Post component for the same reasoning/pattern).
+  formattedStartDate = computed(() => {
+    const t = this.tour();
+    if (!t) return '';
+    return new Intl.DateTimeFormat('hu-HU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date(t.startDate));
+  });
+
+  dayGroups = computed<DayGroup[]>(() => {
+    const t = this.tour();
+    if (!t) return [];
+
+    const start = new Date(t.startDate);
+    const dateFmt = new Intl.DateTimeFormat('hu-HU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const groups: DayGroup[] = [];
+    for (let day = 1; day <= t.duration; day++) {
+      const date = new Date(start);
+      date.setDate(date.getDate() + (day - 1));
+
+      const events = (t.schedule ?? [])
+        .filter((e) => e.day === day)
+        .slice()
+        .sort((a, b) => a.time.localeCompare(b.time));
+
+      groups.push({ day, label: dateFmt.format(date), events });
+    }
+    return groups;
+  });
+
+  allAttendees = computed<AttendeeRow[]>(() => {
+    const t = this.tour();
+    if (!t?.reservations) return [];
+    return t.reservations.flatMap((r) =>
+      r.attendees.map((a) => ({ name: a.name, paid: r.paid })),
+    );
+  });
+
+  alreadySignedUp = computed(() => {
+    const t = this.tour();
+    const uid = this.currentUserId();
+    if (!t?.reservations || !uid) return false;
+    return t.reservations.some((r) => r.bookedBy?._id === uid);
+  });
+
+  isFull = computed(() => {
+    const t = this.tour();
+    if (!t) return false;
+    return this.participantCount() >= t.maxCapacity;
+  });
+
+  // Embedding an iframe instead of opening a new tab/window keeps the user
+  // on this page entirely - no popup-blocker risk either, unlike
+  // window.open(). Angular sanitizes iframe src by default, hence bypass.
+  mapEmbedUrl = computed<SafeResourceUrl | null>(() => {
+    const t = this.tour();
+    if (!t) return null;
+    const [lng, lat] = t.location.coordinates;
+    const url = `https://www.google.com/maps?q=${lat},${lng}&output=embed`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  constructor() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.loadError.set('Hiányzó tábor azonosító.');
+      return;
+    }
+
+    this.tourService.getTour(id).subscribe({
+      next: (res) => {
+        this.tour.set(res.data.tour);
+        this.participantCount.set(res.data.participantCount);
+      },
+      error: () => {
+        this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');
+      },
+    });
+  }
+
+  signUp() {
+    const t = this.tour();
+    if (!t) return;
+
+    this.signingUp.set(true);
+    this.signUpError.set(null);
+
+    this.tourService.signUp(t._id).subscribe({
+      next: (res) => {
+        this.tour.update((cur) =>
+          cur
+            ? {
+                ...cur,
+                reservations: [...(cur.reservations ?? []), res.data.reservation],
+              }
+            : cur,
+        );
+        this.participantCount.update((n) => n + 1);
+        this.signingUp.set(false);
+      },
+      error: (err) => {
+        this.signUpError.set(
+          err?.error?.message ?? 'Hiba történt a jelentkezés során.',
+        );
+        this.signingUp.set(false);
+      },
+    });
+  }
+
+  login() {
+    this.auth.login();
+  }
+
+  openMap() {
+    this.showMap.set(true);
+  }
+
+  closeMap() {
+    this.showMap.set(false);
+  }
+}

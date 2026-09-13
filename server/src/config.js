@@ -41,6 +41,9 @@ const config = {
     clientBaseUrl: process.env.CLIENT_BASE_URL,
   },
   clientOrigin: process.env.CLIENT_ORIGIN, // comma-separated list of allowed CORS origins
+  openRouteService: {
+    apiKey: process.env.OPENROUTESERVICE_API_KEY,
+  },
 };
 
 // Shared by Express's cors() middleware and Socket.IO's own cors option, so

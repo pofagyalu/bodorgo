@@ -1,0 +1,142 @@
+@if (tour(); as t) {
+<div class="tour-details">
+  <!-- Row 1: image left, key info + long description right -->
+  <div class="hero-row">
+    <div class="hero-image-wrap">
+      <img
+        [src]="environment.assetUrl + '/img/tours/' + t.imageCover"
+        [alt]="t.title"
+        class="hero-image"
+      />
+    </div>
+
+    <div class="hero-info">
+      <h1 class="hero-title">{{ t.title }}</h1>
+
+      <div class="info-line">
+        <mat-icon color="primary">location_on</mat-icon>
+        <button type="button" class="map-link" (click)="openMap()">
+          {{ t.location.description }}
+        </button>
+        <button
+          type="button"
+          class="coords"
+          (click)="openMap()"
+          title="Térkép megnyitása"
+        >
+          ({{ t.location.coordinates[1] }}, {{ t.location.coordinates[0] }})
+        </button>
+      </div>
+
+      @if (t.distanceFromBudapestKm != null) {
+      <div class="distance-note">{{ t.distanceFromBudapestKm }} km Budapesttől (autóval)</div>
+      } @else {
+      <div class="distance-note distance-note--empty">Táv Budapesttől: nincs kiszámítva</div>
+      }
+
+      <div class="info-line">
+        <mat-icon color="primary">event</mat-icon>
+        <span>{{ formattedStartDate() }} · {{ t.duration }} nap</span>
+      </div>
+
+      <p class="long-description">{{ t.description }}</p>
+    </div>
+  </div>
+
+  <!-- Row 2: day-by-day schedule -->
+  <section class="schedule-section">
+    <h2 class="section-heading">Programterv</h2>
+
+    @for (day of dayGroups(); track day.day) {
+    <div class="day-block">
+      <h3 class="day-heading">{{ day.day }}. nap – {{ day.label }}</h3>
+
+      @if (day.events.length) {
+      <ul class="event-list">
+        @for (ev of day.events; track ev._id) {
+        <li class="event-row">
+          <span class="event-time">{{ ev.time }}</span>
+          <span class="event-desc">{{ ev.description }}</span>
+        </li>
+        }
+      </ul>
+      } @else {
+      <p class="empty-note">Erre a napra még nincs program megadva.</p>
+      }
+    </div>
+    }
+  </section>
+
+  <!-- Row 3: participants -->
+  <section class="participants-section">
+    <h2 class="section-heading">
+      Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }})
+    </h2>
+
+    @if (allAttendees().length) {
+    <ul class="attendee-list">
+      @for (a of allAttendees(); track $index) {
+      <li class="attendee-row">
+        <span class="attendee-name">{{ a.name }}</span>
+        @if (a.paid) {
+        <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
+        } @else {
+        <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve"
+          >radio_button_unchecked</mat-icon
+        >
+        }
+      </li>
+      }
+    </ul>
+    } @else {
+    <p class="empty-note">Még senki nem jelentkezett erre a táborra.</p>
+    }
+  </section>
+
+  <!-- Sign up -->
+  <div class="signup-bar">
+    @if (!auth.isLoggedIn()) {
+    <p>A jelentkezéshez be kell jelentkezned.</p>
+    <button class="btn btn--green" (click)="login()">Bejelentkezés</button>
+    } @else if (alreadySignedUp()) {
+    <p class="already-signed">✔ Már jelentkeztél erre a táborra.</p>
+    } @else if (isFull()) {
+    <p class="full-note">A tábor sajnos megtelt.</p>
+    } @else {
+    <button class="btn btn--green" [disabled]="signingUp()" (click)="signUp()">
+      {{ signingUp() ? 'Jelentkezés folyamatban...' : 'Jelentkezés' }}
+    </button>
+    @if (signUpError()) {
+    <p class="error-note">{{ signUpError() }}</p>
+    }
+    }
+  </div>
+
+  <!-- Map popup - an embedded iframe instead of a new tab, so clicking the
+       location never navigates the user away from this page. -->
+  @if (showMap()) {
+  <div class="map-modal-backdrop" (click)="closeMap()">
+    <div class="map-modal" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="map-modal-close"
+        aria-label="Térkép bezárása"
+        (click)="closeMap()"
+      >
+        ✖
+      </button>
+      <iframe
+        class="map-modal-frame"
+        [src]="mapEmbedUrl()"
+        title="Helyszín térképen"
+        loading="lazy"
+      ></iframe>
+    </div>
+  </div>
+  }
+</div>
+} @else if (loadError()) {
+<p class="loading-note">{{ loadError() }}</p>
+} @else {
+<p class="loading-note">Betöltés...</p>
+}

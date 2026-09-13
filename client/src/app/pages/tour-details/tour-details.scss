@@ -1,0 +1,345 @@
+.tour-details {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* ---- Row 1: image + key info ---- */
+
+.hero-row {
+  display: flex;
+  gap: 2.5rem;
+  margin-bottom: 3rem;
+}
+
+.hero-image-wrap {
+  flex: 0 0 42%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.1);
+}
+
+.hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.info-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  color: #444;
+  flex-wrap: wrap;
+}
+
+// .map-link/.coords are <button>s (they open the map modal, not a link),
+// reset to look like the plain text/link they replaced.
+.map-link,
+.coords {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.map-link {
+  color: #2e7d32;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.map-link:hover {
+  text-decoration: underline;
+}
+
+.coords {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.coords:hover {
+  color: #666;
+}
+
+.distance-note {
+  font-size: 0.9rem;
+  color: #2e7d32;
+  margin-top: -0.4rem; // pulls it in tight, right under the location line above
+}
+
+.distance-note--empty {
+  color: #999;
+  font-style: italic;
+}
+
+.long-description {
+  margin-top: 0.5rem;
+  line-height: 1.6;
+  color: #555;
+  white-space: pre-line;
+}
+
+/* ---- Shared section styling ---- */
+
+.section-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #eee;
+}
+
+.schedule-section,
+.participants-section {
+  margin-bottom: 3rem;
+}
+
+.empty-note {
+  color: #999;
+  font-style: italic;
+}
+
+/* ---- Row 2: day-by-day schedule ---- */
+
+.day-block {
+  background: #f7f7f7;
+  border-radius: 10px;
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.day-heading {
+  margin: 0 0 0.7rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2e7d32;
+  text-transform: capitalize;
+}
+
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.event-row {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.event-time {
+  flex: 0 0 4.5rem;
+  font-weight: 700;
+  color: #1e88e5;
+}
+
+.event-desc {
+  color: #444;
+}
+
+/* ---- Row 3: participants ---- */
+
+.attendee-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.attendee-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.attendee-name {
+  color: #333;
+}
+
+.paid-icon {
+  color: #55c57a;
+}
+
+.unpaid-icon {
+  color: #ccc;
+}
+
+/* ---- Sign up ---- */
+
+.signup-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  text-align: center;
+  padding: 2rem;
+  background: #f7f7f7;
+  border-radius: 12px;
+}
+
+.already-signed {
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.full-note,
+.error-note {
+  color: #e53935;
+  font-weight: 600;
+}
+
+.loading-note {
+  text-align: center;
+  color: #777;
+  padding: 4rem 1rem;
+}
+
+/* Duplicated per-component - Angular's view encapsulation means
+   ../tours.scss's .btn/.btn--green can't reach into this component. */
+.btn {
+  text-decoration: none;
+  padding: 0.8rem 2rem;
+  display: inline-block;
+  border-radius: 10rem;
+  transition: all 0.2s;
+  font-size: 1.1rem;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+}
+
+.btn--green {
+  background-color: #55c57a;
+  color: #fff;
+}
+
+.btn--green:hover:not(:disabled) {
+  background-color: #28b485;
+  transform: translateY(-2px);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+}
+
+.btn--green:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* ---- Mobile ---- */
+
+@media (max-width: 768px) {
+  .tour-details {
+    padding: 1.2rem 1rem 3rem;
+  }
+
+  .hero-row {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  .hero-image-wrap {
+    flex: none;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+  }
+
+  .hero-title {
+    font-size: 1.6rem;
+  }
+
+  .event-row {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .event-time {
+    flex: none;
+  }
+
+  .map-modal-backdrop {
+    padding: 0;
+  }
+
+  .map-modal {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+}
+
+/* ---- Map popup ---- */
+
+.map-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 30000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.map-modal {
+  position: relative;
+  width: min(900px, 100%);
+  height: min(600px, 90vh);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.3);
+}
+
+.map-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-modal-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+}

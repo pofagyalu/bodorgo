@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { Tours } from './pages/tours/tours';
+import { TourDetails } from './pages/tour-details/tour-details';
 import { Chat } from './pages/chat/chat';
 import { Szavazasok } from './pages/szavazasok/szavazasok';
 import { Versenyek } from './pages/versenyek/versenyek';
@@ -11,6 +12,7 @@ import { LoginComponent } from './auth/login/login.component';
 export const routes: Routes = [
   { path: '', component: HomeComponent, data: { animation: 'HomePage' } },
   { path: 'taborok', title: 'Bódorgó táborok', component: Tours },
+  { path: 'taborok/:id', title: 'Tábor részletei', component: TourDetails },
   // Chat/Szavazások/Versenyek are routed but still in early development
   { path: 'chat', title: 'Bódorgó chat', component: Chat },
   { path: 'szavazasok', title: 'Bódorgó szavazások', component: Szavazasok },

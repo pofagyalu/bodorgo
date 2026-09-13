@@ -11,6 +11,24 @@ export interface ToursResponse {
   };
 }
 
+export interface ScheduleEntry {
+  _id: string;
+  day: number;
+  time: string;
+  description: string;
+}
+
+export interface Attendee {
+  name: string;
+}
+
+export interface Reservation {
+  _id: string;
+  bookedBy: { _id: string; name: string; email: string };
+  attendees: Attendee[];
+  paid: boolean;
+}
+
 export interface Tour {
   _id: string;
   order: number;
@@ -22,6 +40,10 @@ export interface Tour {
     address: string;
   };
   coordinates: string;
+  // Real road distance from Budapest, computed server-side and cached -
+  // undefined until the server has a routing API key configured and this
+  // tour has been saved/updated at least once since.
+  distanceFromBudapestKm?: number;
   startDate: string;
   duration: number;
   participants: number;
@@ -33,6 +55,24 @@ export interface Tour {
   description: string;
   imageCover: string;
   images: string[];
+  // Only populated on the single-tour endpoint (getTour), not the list one.
+  schedule?: ScheduleEntry[];
+  reservations?: Reservation[];
+}
+
+export interface TourResponse {
+  status: string;
+  data: {
+    tour: Tour;
+    participantCount: number;
+  };
+}
+
+export interface SignUpResponse {
+  status: string;
+  data: {
+    reservation: Reservation;
+  };
 }
 
 @Injectable({
@@ -54,5 +94,13 @@ export class TourService {
   /** Optional: Get tours with query params (sorting/filtering/pagination) */
   getToursWithParams(params: Record<string, any>): Observable<ToursResponse> {
     return this.http.get<ToursResponse>(this.apiUrl, { params });
+  }
+
+  getTour(id: string): Observable<TourResponse> {
+    return this.http.get<TourResponse>(`${this.apiUrl}/${id}`);
+  }
+
+  signUp(tourId: string): Observable<SignUpResponse> {
+    return this.http.post<SignUpResponse>(`${this.apiUrl}/${tourId}/signup`, {});
   }
 }
