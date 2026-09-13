@@ -1,0 +1,8 @@
+[
+  { "day": 1, "time": "09:00", "description": "Indulás Budapestről" },
+  { "day": 1, "time": "12:00", "description": "Ebéd" },
+  { "day": 1, "time": "18:00", "description": "Vacsora, szabad program" },
+  { "day": 2, "time": "08:30", "description": "Túra indulása" },
+  { "day": 2, "time": "13:00", "description": "Ebéd a túrán" },
+  { "day": 3, "time": "10:00", "description": "Hazaindulás" }
+]

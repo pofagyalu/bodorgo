@@ -1,0 +1,18 @@
+{
+  "order": 32,
+  "title": "Példa tábor neve",
+  "location": {
+    "description": "Szálláshely neve",
+    "type": "Point",
+    "coordinates": [19.0402, 47.4979],
+    "address": "1234 Város, Utca 1."
+  },
+  "startDate": "2027-06-15T14:00:00.000Z",
+  "duration": 3,
+  "maxCapacity": 20,
+  "price": 5000,
+  "summary": "Rövid, egy-két mondatos összefoglaló a táborról.",
+  "description": "Hosszabb, részletes leírás a táborról - ez jelenik meg a tábor részletei oldalon.",
+  "imageCover": "tour-32-cover.webp",
+  "images": ["tour-32-1.jpg", "tour-32-2.jpg"]
+}

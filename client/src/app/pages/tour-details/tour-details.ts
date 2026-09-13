@@ -17,6 +17,24 @@ interface AttendeeRow {
   paid: boolean;
 }
 
+// The 7 logo colors, defined once as CSS custom properties in
+// src/styles.scss (:root) so any component can reference them - this picks
+// one at random for each of the four info-line icons below.
+const LOGO_COLOR_VARS = [
+  '--logo-dark-green',
+  '--logo-green',
+  '--logo-orange',
+  '--logo-brown',
+  '--logo-red',
+  '--logo-blue',
+  '--logo-yellow',
+];
+
+function randomLogoColor(): string {
+  const name = LOGO_COLOR_VARS[Math.floor(Math.random() * LOGO_COLOR_VARS.length)];
+  return `var(${name})`;
+}
+
 @Component({
   selector: 'app-tour-details',
   standalone: true,
@@ -30,6 +48,14 @@ export class TourDetails {
   private sanitizer = inject(DomSanitizer);
   auth = inject(AuthService);
   environment = environment;
+
+  // Picked once per page view (not reactive - these don't need to change
+  // while looking at the same tour), one independently random logo color
+  // for each of the four info-line icons.
+  placeIconColor = randomLogoColor();
+  addressIconColor = randomLogoColor();
+  distanceIconColor = randomLogoColor();
+  dateIconColor = randomLogoColor();
 
   tour = signal<Tour | null>(null);
   participantCount = signal(0);

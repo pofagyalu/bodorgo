@@ -18,7 +18,7 @@
       <h1 class="hero-title"><span class="hero-title-span">{{ t.title }}</span></h1>
 
       <div class="info-line">
-        <mat-icon color="primary">location_on</mat-icon>
+        <mat-icon [style.color]="placeIconColor">location_on</mat-icon>
         <button type="button" class="map-link" (click)="openMap()">
           {{ t.location.description }}
         </button>
@@ -32,14 +32,32 @@
         </button>
       </div>
 
-      @if (t.distanceFromBudapestKm != null) {
-      <div class="distance-note">{{ t.distanceFromBudapestKm }} km Budapesttől (autóval)</div>
+      @if (t.location.address) {
+      <div class="info-line">
+        <mat-icon [style.color]="addressIconColor">home</mat-icon>
+        <span>{{ t.location.address }}</span>
+      </div>
       } @else {
-      <div class="distance-note distance-note--empty">Táv Budapesttől: nincs kiszámítva</div>
+      <div class="info-line">
+        <mat-icon [style.color]="addressIconColor">home</mat-icon>
+        <span class="empty-note">Cím: nincs megadva</span>
+      </div>
+      }
+
+      @if (t.distanceFromBudapestKm != null) {
+      <div class="info-line distance-note">
+        <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
+        <span>{{ t.distanceFromBudapestKm }} km Budapesttől</span>
+      </div>
+      } @else {
+      <div class="info-line distance-note distance-note--empty">
+        <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
+        <span>Táv Budapesttől: nincs kiszámítva</span>
+      </div>
       }
 
       <div class="info-line">
-        <mat-icon color="primary">event</mat-icon>
+        <mat-icon [style.color]="dateIconColor">event</mat-icon>
         <span>{{ formattedStartDate() }} · {{ t.duration }} nap</span>
       </div>
 

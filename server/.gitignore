@@ -4,3 +4,10 @@ public
 config.env
 dist/
 logs/
+
+# One-off JSON files for scripts/addTour.js and scripts/addSchedule.js -
+# working data, not permanent seed data, never needs committing.
+scripts/input/*
+!scripts/input/README.md
+!scripts/input/example-tour.json
+!scripts/input/example-events.json

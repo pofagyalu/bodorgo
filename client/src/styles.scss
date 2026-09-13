@@ -1,101 +1,83 @@
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
-@use '@angular/material' as mat;
+/* Global styles. This is the single active global stylesheet (see
+   angular.json) - a previously orphaned styles.scss with stale content
+   (font-face rules pointing at woff2 files that don't actually exist on
+   disk, plus an unverified Material theme override) was replaced with
+   this file's proven-working content instead of being merged in as-is. */
 
-html {
-  @include mat.theme(
-    (
-      color: (
-        primary: mat.$cyan-palette,
-        tertiary: mat.$orange-palette,
-      ),
-      typography: Roboto,
-      density: 0,
-    )
-  );
+/* The 7 colors sampled from the bódorgó logo
+   (src/assets/images/transparent_color_logo.svg) - defined once here so
+   any component can reference them (e.g. var(--logo-green)) instead of
+   re-typing/duplicating the hex values. */
+:root {
+  --logo-dark-green: #1b6548;
+  --logo-green: #72b45d;
+  --logo-orange: #f07827;
+  --logo-brown: #835638;
+  --logo-red: #f40e0d;
+  --logo-blue: #096396;
+  --logo-yellow: #f6b528;
 }
 
-body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
-  margin: 0;
-}
-/* You can add global styles to this file, and also import other style files */
-@font-face {
-  font-family: 'Poppins';
-  src: url('/fonts/poppins/Poppins-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @font-face {
-  font-family: 'Poppins';
-  src: url('/fonts/poppins/Poppins-Bold.woff2') format('woff2');
-  font-weight: 700;
+  font-family: 'Potland';
+  src: url('assets/fonts/Potland/PotLand.ttf') format('truetype');
+  font-weight: normal;
   font-style: normal;
-  font-display: swap;
 }
 
 @font-face {
   font-family: 'Marhey';
-  src: url('/fonts/marhey/Marhey-Regular.woff2') format('woff2');
-  font-weight: 400;
+  src: url('assets/fonts/Marhey/Marhey-Regular.ttf') format('truetype');
+  font-weight: normal;
   font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Marhey';
-  src: url('/fonts/marhey/Marhey-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Mulish';
-  src: url('/fonts/mulish/Mulish-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
 }
 
 @font-face {
   font-family: 'Rokkitt';
-  src: url('/fonts/rokkitt/Rokkitt-Regular.woff2') format('woff2');
+  src: url('assets/fonts/Rokkitt/static/Rokkitt-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Mulish';
+  src: url('assets/fonts/Mulish/static/Mulish-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('assets/fonts/Poppins/Poppins-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Potland';
-  src: url('/fonts/potland/Potland.woff2') format('woff2');
-  font-weight: 400;
+  font-family: 'Poppins';
+  src: url('assets/fonts/Poppins/Poppins-Bold.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
-html,
-body {
-  height: 100%;
+.ease-soft-in-out {
+  transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
 }
-body {
+
+/* Tailwind's Preflight resets h1 to font-size: inherit (and margin: 0),
+   which doesn't count as an explicit size to browsers - they warn about
+   <h1> inside sectioning content (<section>, <article>, etc.) relying on
+   implicit/inconsistent heading-scaling behavior. This is a plain element
+   selector, so any h1 with its own Tailwind size utility (text-5xl etc.)
+   still wins via specificity - this only affects h1s that would otherwise
+   fall back to "inherit". */
+h1 {
+  font-size: 2rem;
   margin: 0;
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
 }
