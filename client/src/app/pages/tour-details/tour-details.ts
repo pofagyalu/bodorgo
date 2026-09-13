@@ -2,7 +2,7 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
-import { TourService, Tour, ScheduleEntry } from '../../services/tour';
+import { TourService, Tour, ScheduleEntry, DailyWeather, WeatherCondition } from '../../services/tour';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { randomLogoColor } from '../../shared/logo-colors';
@@ -11,6 +11,7 @@ interface DayGroup {
   day: number;
   label: string;
   events: ScheduleEntry[];
+  weather?: DailyWeather;
 }
 
 interface AttendeeRow {
@@ -98,10 +99,26 @@ export class TourDetails {
         .slice()
         .sort((a, b) => a.time.localeCompare(b.time));
 
-      groups.push({ day, label: dateFmt.format(date), events });
+      const weather = t.dailyWeather?.find((w) => w.day === day);
+
+      groups.push({ day, label: dateFmt.format(date), events, weather });
     }
     return groups;
   });
+
+  private static readonly WEATHER_ICONS: Record<WeatherCondition, string> = {
+    clear: 'clear.svg',
+    'partly-cloudy': 'partly-cloudy.svg',
+    cloudy: 'cloudy.svg',
+    fog: 'fog.svg',
+    rain: 'rain.svg',
+    snow: 'snow.svg',
+    thunderstorm: 'thunderstorm.svg',
+  };
+
+  weatherIconPath(condition: WeatherCondition): string {
+    return `assets/images/weather/${TourDetails.WEATHER_ICONS[condition]}`;
+  }
 
   allAttendees = computed<AttendeeRow[]>(() => {
     const t = this.tour();

@@ -225,7 +225,55 @@
   font-size: 1.1rem;
   font-weight: 600;
   color: #2e7d32;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.day-heading-date {
   text-transform: capitalize;
+}
+
+// One compact pill holding both the icon and the temps, up front before the
+// date text. A solid dark backdrop is used deliberately (rather than white)
+// since several icons (cloudy, fog, rain's cloud) are a near-white pastel
+// gradient that all but disappears on any light background.
+.day-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem 0.25rem 0.35rem;
+  border-radius: 999px;
+  background: #445a67;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.day-weather-icon {
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+}
+
+.day-weather-icon--placeholder {
+  color: #cfd8dc;
+  font-size: 1.9rem;
+  line-height: 1.9rem;
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+.day-weather--empty {
+  background: #b0bec5;
+  color: #fff;
+  padding: 0.3rem 0.5rem;
+}
+
+.day-weather-temp {
+  white-space: nowrap;
 }
 
 .event-list {

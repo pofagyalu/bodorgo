@@ -4,7 +4,78 @@ import Reservation from '../models/reservationModel.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import { computeDrivingDistanceKm, BUDAPEST_CENTER } from '../utils/distance.js';
+import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
 import logger from '../logger.js';
+
+const WEATHER_REFETCH_HOURS = 6;
+
+function toDateStr(date) {
+  return date.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function upsertDailyWeather(tour, day, data) {
+  const idx = tour.dailyWeather.findIndex((w) => w.day === day);
+  if (idx >= 0) {
+    Object.assign(tour.dailyWeather[idx], data);
+  } else {
+    tour.dailyWeather.push({ day, ...data });
+  }
+}
+
+// Called on every getTour - forecasts a tour's still-upcoming days
+// (throttled so repeat page views don't re-hit the API every time), and
+// once a day has passed, fetches the real recorded weather for it exactly
+// once and freezes it (isFinal) forever after. Never blocks the tour from
+// loading if Open-Meteo is unreachable - fetchForecast/fetchHistorical
+// already swallow their own errors and return null.
+async function refreshTourWeather(tour) {
+  const coords = tour.location?.coordinates;
+  if (coords?.length !== 2 || coords[0] == null || coords[1] == null) return;
+  const [lng, lat] = coords;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tasks = [];
+
+  for (let day = 1; day <= tour.duration; day++) {
+    const existing = tour.dailyWeather.find((w) => w.day === day);
+    if (existing?.isFinal) continue; // frozen, never touch again
+
+    const date = new Date(tour.startDate);
+    date.setDate(date.getDate() + (day - 1));
+    date.setHours(0, 0, 0, 0);
+
+    if (date <= today) {
+      // One last fetch of what actually happened, then freeze forever.
+      tasks.push(
+        fetchHistorical(lat, lng, toDateStr(date)).then((result) => {
+          if (result) upsertDailyWeather(tour, day, { ...result, isFinal: true, fetchedAt: new Date() });
+        }),
+      );
+      continue;
+    }
+
+    const daysAhead = Math.round((date - today) / (24 * 60 * 60 * 1000));
+    if (daysAhead > MAX_FORECAST_DAYS_AHEAD) continue; // beyond any free forecast horizon - nothing to fetch yet
+
+    const staleMs = WEATHER_REFETCH_HOURS * 60 * 60 * 1000;
+    if (existing?.fetchedAt && Date.now() - new Date(existing.fetchedAt).getTime() < staleMs) {
+      continue; // fetched recently enough, skip
+    }
+
+    tasks.push(
+      fetchForecast(lat, lng, toDateStr(date)).then((result) => {
+        if (result) upsertDailyWeather(tour, day, { ...result, isFinal: false, fetchedAt: new Date() });
+      }),
+    );
+  }
+
+  if (tasks.length) {
+    await Promise.all(tasks);
+    await tour.save();
+  }
+}
 
 export const aliasLastTours = async (req, res, next) => {
   res.locals.queryOverride = {
@@ -67,6 +138,8 @@ export const getTour = async (req, res, next) => {
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
   }
+
+  await refreshTourWeather(tour);
 
   const participantCount = tour.reservations.reduce(
     (sum, r) => sum + r.attendees.length,

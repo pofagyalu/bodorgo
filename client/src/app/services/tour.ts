@@ -34,6 +34,26 @@ export interface ToggleParticipationResponse {
   };
 }
 
+export type WeatherCondition =
+  | 'clear'
+  | 'partly-cloudy'
+  | 'cloudy'
+  | 'fog'
+  | 'rain'
+  | 'snow'
+  | 'thunderstorm';
+
+export interface DailyWeather {
+  day: number;
+  condition: WeatherCondition;
+  tempDayC: number;
+  tempNightC: number;
+  windSpeedKmh: number;
+  // Forecast while the day is still upcoming; the real recorded weather,
+  // frozen forever, once the day has passed.
+  isFinal: boolean;
+}
+
 export interface Attendee {
   name: string;
 }
@@ -74,6 +94,7 @@ export interface Tour {
   images: string[];
   // Only populated on the single-tour endpoint (getTour), not the list one.
   schedule?: ScheduleEntry[];
+  dailyWeather?: DailyWeather[];
   reservations?: Reservation[];
 }
 

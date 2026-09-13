@@ -71,7 +71,19 @@
 
     @for (day of dayGroups(); track day.day) {
     <div class="day-block">
-      <h3 class="day-heading">{{ day.day }}. nap – {{ day.label }}</h3>
+      <h3 class="day-heading">
+        @if (day.weather; as w) {
+        <span class="day-weather" [title]="w.isFinal ? 'Tényleges időjárás' : 'Előrejelzés'">
+          <img [src]="weatherIconPath(w.condition)" alt="" class="day-weather-icon" />
+          <span class="day-weather-temp">{{ w.tempDayC }}°/{{ w.tempNightC }}°</span>
+        </span>
+        } @else {
+        <span class="day-weather day-weather--empty" title="Még nincs előrejelzés">
+          <mat-icon class="day-weather-icon day-weather-icon--placeholder">help_outline</mat-icon>
+        </span>
+        }
+        <span class="day-heading-date">{{ day.day }}. nap – {{ day.label }}</span>
+      </h3>
 
       @if (day.events.length) {
       <ul class="event-list">

@@ -103,6 +103,26 @@ const tourSchema = new Schema(
         ],
       },
     ],
+    // One entry per tour day (1-indexed, same numbering as schedule),
+    // filled in and refreshed on-demand (see tourController.js's
+    // refreshTourWeather) rather than on a schedule - a forecast while the
+    // day is still upcoming, replaced by the real recorded weather once
+    // the day has passed and then frozen (isFinal) forever, so a past
+    // tour's page always shows what the weather actually was.
+    dailyWeather: [
+      {
+        day: { type: Number, required: true, min: 1 },
+        condition: {
+          type: String,
+          enum: ['clear', 'partly-cloudy', 'cloudy', 'fog', 'rain', 'snow', 'thunderstorm'],
+        },
+        tempDayC: Number,
+        tempNightC: Number,
+        windSpeedKmh: Number,
+        isFinal: { type: Boolean, default: false },
+        fetchedAt: Date,
+      },
+    ],
     attachments: [String],
     imageCover: {
       type: String,
