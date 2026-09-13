@@ -38,6 +38,7 @@ export class TourDetails {
   signUpError = signal<string | null>(null);
   showMap = signal(false);
   showImage = signal(false);
+  showParticipants = signal(false);
   // Starts as the "-full.webp" variant (derived by naming convention from
   // imageCover, e.g. tour-4-cover.webp -> tour-4-full.webp), falling back
   // to the regular thumbnail via (error) on the <img> if that file doesn't

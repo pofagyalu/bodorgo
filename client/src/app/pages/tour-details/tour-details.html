@@ -73,31 +73,44 @@
 
   <!-- Row 3: participants -->
   <section class="participants-section">
-    <h2 class="section-heading">
+    <h2 class="section-heading participants-heading">
       Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }})
       @if (isFull()) {
       <span class="full-badge">Megtelt</span>
       }
+      <button
+        type="button"
+        class="toggle-btn"
+        [attr.aria-expanded]="showParticipants()"
+        aria-label="Résztvevők listájának megjelenítése/elrejtése"
+        (click)="showParticipants.set(!showParticipants())"
+      >
+        <mat-icon>{{ showParticipants() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
     </h2>
 
-    @if (allAttendees().length) {
-    <ul class="attendee-list">
-      @for (a of allAttendees(); track $index) {
-      <li class="attendee-row">
-        <span class="attendee-name">{{ a.name }}</span>
-        @if (a.paid) {
-        <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
-        } @else {
-        <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve"
-          >radio_button_unchecked</mat-icon
-        >
+    <!-- Always rendered (not @if) with .open toggled, so max-height has a
+         "before" state to transition from - see .participants-collapse. -->
+    <div class="participants-collapse" [class.open]="showParticipants()">
+      @if (allAttendees().length) {
+      <ul class="attendee-list">
+        @for (a of allAttendees(); track $index) {
+        <li class="attendee-row">
+          <span class="attendee-name">{{ a.name }}</span>
+          @if (a.paid) {
+          <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
+          } @else {
+          <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve"
+            >radio_button_unchecked</mat-icon
+          >
+          }
+        </li>
         }
-      </li>
+      </ul>
+      } @else {
+      <p class="empty-note">Még senki nem jelentkezett erre a táborra.</p>
       }
-    </ul>
-    } @else {
-    <p class="empty-note">Még senki nem jelentkezett erre a táborra.</p>
-    }
+    </div>
   </section>
 
   <!-- Sign up - hidden entirely (not just the "full" message) once the
