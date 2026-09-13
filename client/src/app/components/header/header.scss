@@ -89,23 +89,20 @@
 }
 
 /* Kijelentkezés lives inside the mobile nav list (last item) instead of a
-   separate section - it's a <button>, styled as the same logo-red/white
-   button as its desktop counterpart (.login-btn.logout) rather than a
-   plain colored link like Táborok/Chat. */
+   separate section - it's a <button>, so reset it to look like a plain
+   text menu item (same as Táborok/Chat), just colored logo-red. */
 .logout-item {
+  background: none;
   border: none;
   font: inherit;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
-  border-radius: 8px;
-  padding: 0.5rem 1rem;
 }
 
 // Extra specificity (over the plain .menu-item rule below, which also sets
 // color) so this reliably wins regardless of source order.
 .menu-item.logout-item {
-  background-color: #f40e0d; // logo red
-  color: #fff;
+  color: #f40e0d; // logo red
 }
 
 /* -------------------- */
