@@ -112,6 +112,12 @@
     justify-content: flex-start;
     gap: 10px;
   }
+
+  // Pull the logo in tight against the hamburger instead of the desktop
+  // spacing, to leave room for the name on the right.
+  .logo-container {
+    margin: 0;
+  }
 }
 
 /* Between the mobile breakpoint and full desktop width, the menu is still
@@ -220,4 +226,26 @@
   margin-right: 12px;
   color: #666;
   white-space: nowrap;
+}
+
+// Mobile-only: just the name (no "Szevasz"/logout - those live in the
+// hamburger menu), pushed to the far right of the row by margin-left:auto.
+.mobile-user-name {
+  display: none;
+  font-family: 'Marhey', sans-serif;
+  // Smaller than the desktop .user-name so more of a long name fits before
+  // the ellipsis kicks in below.
+  font-size: 1rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .mobile-user-name {
+    display: block;
+  }
 }

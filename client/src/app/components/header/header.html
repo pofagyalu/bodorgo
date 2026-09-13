@@ -42,6 +42,11 @@
     <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
     }
   </div>
+
+  <!-- Mobile only: just the name, no greeting/logout - those live in the hamburger menu -->
+  @if (auth.isLoggedIn()) {
+  <span class="mobile-user-name">{{ auth.user()?.name }}</span>
+  }
 </header>
 
 <!-- Tapping outside the slide-in panel closes it, like any other app -->
