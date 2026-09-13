@@ -9,9 +9,11 @@ import logger from '../logger.js';
 const ORS_DIRECTIONS_URL =
   'https://api.heigit.org/openrouteservice/v2/directions/driving-car';
 
-// Deák Ferenc tér - an unambiguous, well-known reference point for
-// "Budapest city center" (Basilica/Astoria area, metro interchange).
-export const BUDAPEST_CENTER = { lat: 47.4979, lng: 19.0537 };
+// Hungary's official "0 km stone" (Nulla kilométerkő) at Clark Ádám tér -
+// the canonical point all Hungarian road distances are measured from.
+// 47°29'53"N 19°2'24"E converted to decimal degrees.
+// https://geohack.toolforge.org/geohack.php?language=hu&pagename=%E2%80%9E0%E2%80%9D_kilom%C3%A9terk%C5%91&params=47_29_53_N_19_2_24_E_type:landmark
+export const BUDAPEST_CENTER = { lat: 47.4981, lng: 19.04 };
 
 // Real road/highway distance, not straight-line - requires a routing
 // service. Returns kilometers (one decimal), or undefined if no API key is
