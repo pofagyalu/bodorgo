@@ -45,14 +45,14 @@
       }
 
       @if (t.distanceFromBudapestKm != null) {
-      <div class="info-line distance-note">
+      <div class="info-line">
         <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
         <span>{{ t.distanceFromBudapestKm }} km Budapesttől</span>
       </div>
       } @else {
-      <div class="info-line distance-note distance-note--empty">
+      <div class="info-line">
         <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
-        <span>Táv Budapesttől: nincs kiszámítva</span>
+        <span class="empty-note">Táv Budapesttől: nincs kiszámítva</span>
       </div>
       }
 

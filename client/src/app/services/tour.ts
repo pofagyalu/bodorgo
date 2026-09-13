@@ -82,6 +82,12 @@ export class TourService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/tours`;
 
+  // Remembers the Tours page's "last 3" vs "all" choice across navigation -
+  // the Tours component gets destroyed and recreated every time you
+  // navigate back to it, wiping its own signals, but this service is a
+  // singleton that lives for the app's session.
+  showAllPreference = false;
+
   getTours(): Observable<ToursResponse> {
     return this.http.get<ToursResponse>(this.apiUrl);
   }

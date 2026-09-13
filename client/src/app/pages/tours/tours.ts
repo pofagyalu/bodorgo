@@ -23,12 +23,19 @@ export class Tours implements OnInit {
   sort = signal('');
 
   ngOnInit() {
-    this.loadLast3(); // <-- Load only last 3 tours initially
+    // Restores whatever "last 3" vs "all" choice was last made, instead of
+    // always resetting to "last 3" on every visit to this page.
+    if (this.tourService.showAllPreference) {
+      this.loadAllTours();
+    } else {
+      this.loadLast3();
+    }
   }
 
   /** Load last 3 tours */
   loadLast3() {
     this.showingAll.set(false);
+    this.tourService.showAllPreference = false;
 
     this.tourService.getLast3Tours().subscribe({
       next: (res) => this.tours.set(res.data.tours),
@@ -38,6 +45,7 @@ export class Tours implements OnInit {
 
   loadAllTours() {
     this.showingAll.set(true);
+    this.tourService.showAllPreference = true;
 
     this.tourService.getTours().subscribe({
       next: (res) => this.tours.set(res.data.tours),
