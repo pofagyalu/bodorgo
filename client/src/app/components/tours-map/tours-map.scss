@@ -10,20 +10,19 @@
 // Angular's emulated view encapsulation can't scope normal rules to it -
 // ::ng-deep (still functional despite being deprecated) is the standard
 // escape hatch for exactly this kind of third-party-library DOM.
-::ng-deep .tour-marker-pin {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--logo-green);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+//
+// fill: var(...) is set here via a real CSS rule rather than as an inline
+// SVG attribute (fill="var(...)"), since custom properties only resolve
+// reliably through the CSS cascade, not raw XML/SVG attribute values.
+::ng-deep .tour-pin {
   cursor: pointer;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+}
+
+::ng-deep .tour-pin-shape {
+  // Orange, not green - OpenStreetMap tiles are covered in forest across
+  // Hungary, so green pins would blend right into the map background.
+  fill: var(--logo-orange);
 }
 
 // Leaflet already fades tooltips in/out via its own opacity toggling

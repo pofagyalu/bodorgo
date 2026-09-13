@@ -44,6 +44,13 @@ export class ToursMap {
   private initMap(container: HTMLDivElement, tours: Tour[]) {
     this.map = L.map(container);
 
+    // Since Russia's invasion of Ukraine, Leaflet itself (not OpenStreetMap)
+    // auto-adds a Ukrainian flag to its attribution control's "prefix"
+    // segment - a separate piece from the tile attribution text below.
+    // Setting our own tile attribution isn't enough to remove it; the
+    // prefix has to be cleared explicitly too.
+    this.map.attributionControl.setPrefix(false);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
@@ -55,12 +62,36 @@ export class ToursMap {
       const [lng, lat] = tour.location.coordinates;
       if (lat == null || lng == null) continue;
 
+      // A plain circle has no inherent "point", so its visual center (not
+      // the anchored pixel) is what people read as the location - any
+      // mismatch there gets visually amplified when zoomed out, since the
+      // same pixel offset then covers a much larger real-world distance.
+      // A pin shape with a sharp tip makes the anchor unambiguous: iconAnchor
+      // below is set to that exact tip pixel.
+      //
+      // One single <path> (not a separate circle+polygon) so it always
+      // reads as one cohesive pin rather than two overlapping pieces - the
+      // order number lives in the hover tooltip only, not on the pin
+      // itself, keeping this one simple unified shape. The classic
+      // "Google Maps style" punched-out hole is a second circular subpath
+      // inside the same d attribute, combined with fill-rule="evenodd" so
+      // it renders as a hole rather than a separately-colored circle.
       const icon = L.divIcon({
         className: 'tour-marker',
-        html: `<div class="tour-marker-pin">${tour.order}</div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -34],
+        html: `
+          <svg class="tour-pin" width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
+            <path
+              class="tour-pin-shape"
+              fill-rule="evenodd"
+              d="M15 0C7.8 0 2 5.8 2 13c0 9.75 13 27 13 27s13-17.25 13-27C28 5.8 22.2 0 15 0z M10 13a5 5 0 1 0 10 0a5 5 0 1 0 -10 0z"
+              stroke="#fff"
+              stroke-width="1.5"
+            ></path>
+          </svg>
+        `,
+        iconSize: [30, 40],
+        iconAnchor: [15, 40],
+        popupAnchor: [0, -40],
       });
 
       const marker = L.marker([lat, lng], { icon })
