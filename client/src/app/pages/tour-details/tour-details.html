@@ -77,8 +77,59 @@
       <ul class="event-list">
         @for (ev of day.events; track ev._id) {
         <li class="event-row">
-          <span class="event-time">{{ ev.time }}</span>
-          <span class="event-desc">{{ ev.description }}</span>
+          <div class="event-main">
+            <span class="event-time">{{ ev.time }}</span>
+            <span class="event-desc">{{ ev.description }}</span>
+            @if (ev.isOptional) {
+            <span class="event-extra-badge">+{{ ev.extraCost }} Ft</span>
+            }
+          </div>
+
+          @if (ev.isOptional) {
+          <div class="event-optin-row">
+            @if (!auth.isLoggedIn()) {
+            <span class="empty-note">Bejelentkezés szükséges a jelentkezéshez</span>
+            } @else {
+            <button
+              type="button"
+              class="optin-btn"
+              [class.optin-btn--joined]="isOptedIn(ev)"
+              [disabled]="togglingEventId() === ev._id"
+              (click)="toggleEventOptIn(ev)"
+            >
+              {{ isOptedIn(ev) ? 'Visszalépek' : 'Jelentkezem' }}
+            </button>
+            }
+
+            <button
+              type="button"
+              class="event-participants-toggle"
+              [attr.aria-expanded]="isEventExpanded(ev._id)"
+              (click)="toggleEventExpanded(ev._id)"
+            >
+              {{ (ev.participants ?? []).length }} jelentkező
+              <mat-icon>{{
+                isEventExpanded(ev._id) ? 'expand_less' : 'expand_more'
+              }}</mat-icon>
+            </button>
+          </div>
+
+          @if (eventToggleError() && togglingEventId() === null) {
+          <p class="error-note">{{ eventToggleError() }}</p>
+          }
+
+          <div class="event-participants-collapse" [class.open]="isEventExpanded(ev._id)">
+            @if ((ev.participants ?? []).length) {
+            <ul class="event-participant-list">
+              @for (p of ev.participants ?? []; track p.user) {
+              <li>{{ p.name }}</li>
+              }
+            </ul>
+            } @else {
+            <p class="empty-note">Még senki nem jelentkezett.</p>
+            }
+          </div>
+          }
         </li>
         }
       </ul>

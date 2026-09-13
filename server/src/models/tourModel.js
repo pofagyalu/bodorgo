@@ -82,6 +82,25 @@ const tourSchema = new Schema(
           type: String,
           required: [true, 'A program elemnek kell legyen leírása'],
         },
+        // Optional extra-cost events (e.g. a wine tasting) that not every
+        // attendee necessarily wants - who's coming is tracked right here
+        // on the event itself so headcounts for the venue/vendor are just
+        // participants.length.
+        isOptional: {
+          type: Boolean,
+          default: false,
+        },
+        extraCost: {
+          type: Number, // only meaningful when isOptional is true
+        },
+        participants: [
+          {
+            user: { type: Schema.Types.ObjectId, ref: 'User' },
+            // Denormalized, same pattern as Reservation.attendees - avoids
+            // populating just to show a name list.
+            name: String,
+          },
+        ],
       },
     ],
     attachments: [String],

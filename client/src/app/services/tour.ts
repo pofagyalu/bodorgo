@@ -11,11 +11,27 @@ export interface ToursResponse {
   };
 }
 
+export interface EventParticipant {
+  user: string;
+  name: string;
+}
+
 export interface ScheduleEntry {
   _id: string;
   day: number;
   time: string;
   description: string;
+  isOptional?: boolean;
+  extraCost?: number;
+  participants?: EventParticipant[];
+}
+
+export interface ToggleParticipationResponse {
+  status: string;
+  data: {
+    joined: boolean;
+    participants: EventParticipant[];
+  };
 }
 
 export interface Attendee {
@@ -136,5 +152,15 @@ export class TourService {
 
   getTourStats(): Observable<TourStatsResponse> {
     return this.http.get<TourStatsResponse>(`${this.apiUrl}/tour-stats`);
+  }
+
+  toggleScheduleParticipation(
+    tourId: string,
+    eventId: string,
+  ): Observable<ToggleParticipationResponse> {
+    return this.http.post<ToggleParticipationResponse>(
+      `${this.apiUrl}/${tourId}/schedule/${eventId}/toggle-participation`,
+      {},
+    );
   }
 }

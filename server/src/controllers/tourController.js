@@ -124,6 +124,48 @@ export const deleteTour = async (req, res) => {
   res.status(204).json({ status: 'success', data: null });
 };
 
+// Lets the current user opt in or out of an optional schedule event
+// (e.g. a wine tasting with an extra cost) - anytime, either direction.
+// Never trusts a client-supplied identity, same principle as the chat
+// feature's create-post and the tour signup endpoint.
+export const toggleScheduleParticipation = async (req, res) => {
+  const { tourId, eventId } = req.params;
+
+  const tour = await Tour.findById(tourId);
+  if (!tour) {
+    throw new AppError('No tour found with that ID!', 404);
+  }
+
+  const event = tour.schedule.id(eventId);
+  if (!event) {
+    throw new AppError('No such schedule event!', 404);
+  }
+
+  if (!event.isOptional) {
+    throw new AppError('This event does not require opting in.', 400);
+  }
+
+  const existingIndex = event.participants.findIndex(
+    (p) => p.user.toString() === req.user._id.toString(),
+  );
+
+  let joined;
+  if (existingIndex >= 0) {
+    event.participants.splice(existingIndex, 1);
+    joined = false;
+  } else {
+    event.participants.push({ user: req.user._id, name: req.user.name });
+    joined = true;
+  }
+
+  await tour.save();
+
+  res.status(200).json({
+    status: 'success',
+    data: { joined, participants: event.participants },
+  });
+};
+
 export const getTourStats = async (req, res) => {
   // Was previously $match: { ratingsAverage: { $gte: 4.5 } } before counting
   // - a leftover from this codebase's Natours-tutorial origins where the

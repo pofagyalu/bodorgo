@@ -239,8 +239,15 @@
 
 .event-row {
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.event-main {
+  display: flex;
   gap: 1rem;
   align-items: baseline;
+  flex-wrap: wrap;
 }
 
 .event-time {
@@ -250,6 +257,87 @@
 }
 
 .event-desc {
+  color: #444;
+}
+
+.event-extra-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--logo-orange);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+}
+
+// Lines up under .event-desc, matching .event-time's flex-basis above.
+.event-optin-row,
+.event-participants-collapse {
+  margin-left: 4.5rem;
+}
+
+.event-optin-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.optin-btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--logo-green);
+  color: #fff;
+}
+
+.optin-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.optin-btn--joined {
+  background: #eee;
+  color: #555;
+}
+
+.event-participants-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #777;
+  font-size: 0.85rem;
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.event-participants-collapse {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.event-participants-collapse.open {
+  max-height: 400px;
+}
+
+.event-participant-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
   color: #444;
 }
 
@@ -391,13 +479,22 @@
     font-size: 1.6rem;
   }
 
-  .event-row {
+  // .event-row itself is already column at every width - this collapses
+  // the inner time+description row too, matching .event-time's flex:none
+  // below (no more fixed-width column for the time to sit beside).
+  .event-main {
     flex-direction: column;
     gap: 0.2rem;
   }
 
   .event-time {
     flex: none;
+  }
+
+  // No fixed-width time column to align under on mobile.
+  .event-optin-row,
+  .event-participants-collapse {
+    margin-left: 0;
   }
 
   .map-modal-backdrop {

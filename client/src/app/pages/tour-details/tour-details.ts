@@ -48,6 +48,12 @@ export class TourDetails {
   showMap = signal(false);
   showImage = signal(false);
   showParticipants = signal(false);
+  // Which optional schedule events currently have their opted-in list
+  // expanded - per-event, since a tour can have several optional events at
+  // once, each independently collapsible.
+  expandedEvents = signal<Set<string>>(new Set());
+  togglingEventId = signal<string | null>(null);
+  eventToggleError = signal<string | null>(null);
   // Starts as the "-full.webp" variant (derived by naming convention from
   // imageCover, e.g. tour-4-cover.webp -> tour-4-full.webp), falling back
   // to the regular thumbnail via (error) on the <img> if that file doesn't
@@ -210,5 +216,56 @@ export class TourDetails {
 
   closeImage() {
     this.showImage.set(false);
+  }
+
+  isOptedIn(event: ScheduleEntry): boolean {
+    const uid = this.currentUserId();
+    if (!uid) return false;
+    return (event.participants ?? []).some((p) => p.user === uid);
+  }
+
+  isEventExpanded(eventId: string): boolean {
+    return this.expandedEvents().has(eventId);
+  }
+
+  toggleEventExpanded(eventId: string) {
+    this.expandedEvents.update((set) => {
+      const next = new Set(set);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  }
+
+  toggleEventOptIn(event: ScheduleEntry) {
+    const t = this.tour();
+    if (!t) return;
+
+    this.togglingEventId.set(event._id);
+    this.eventToggleError.set(null);
+
+    this.tourService.toggleScheduleParticipation(t._id, event._id).subscribe({
+      next: (res) => {
+        this.tour.update((cur) => {
+          if (!cur?.schedule) return cur;
+          return {
+            ...cur,
+            schedule: cur.schedule.map((e) =>
+              e._id === event._id ? { ...e, participants: res.data.participants } : e,
+            ),
+          };
+        });
+        this.togglingEventId.set(null);
+      },
+      error: (err) => {
+        this.eventToggleError.set(
+          err?.error?.message ?? 'Hiba történt a jelentkezés módosítása során.',
+        );
+        this.togglingEventId.set(null);
+      },
+    });
   }
 }

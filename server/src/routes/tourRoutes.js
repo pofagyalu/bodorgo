@@ -25,4 +25,8 @@ router
 
 router.route('/:tourId/signup').post(requireAuth, signUpForTour);
 
+router
+  .route('/:tourId/schedule/:eventId/toggle-participation')
+  .post(requireAuth, tourController.toggleScheduleParticipation);
+
 export default router;
