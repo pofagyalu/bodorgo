@@ -61,7 +61,7 @@
   );
   z-index: 20000;
   box-shadow: 3px 0 8px rgba(0, 0, 0, 0.25);
-  padding: 60px 20px;
+  padding: 100px 20px 20px; // extra top space so Táborok isn't crowded against the ✖
 
   display: flex;
   flex-direction: column;
@@ -192,13 +192,13 @@
   transition: 0.2s ease;
 }
 
-/* Highlight box */
+/* Highlight box - the rectangle alone marks the selected item, so its
+   text keeps its own color (red/blue/etc.) instead of switching to black. */
 .menu-item.active {
   border: 2px solid white;
   box-shadow: 0 1px 5px 1px #ddd;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.3);
-  color: #000;
 }
 
 /* Individual colors */
