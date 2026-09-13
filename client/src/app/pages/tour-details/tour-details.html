@@ -7,11 +7,15 @@
         [src]="environment.assetUrl + '/img/tours/' + t.imageCover"
         [alt]="t.title"
         class="hero-image"
+        (click)="openImage()"
       />
     </div>
 
     <div class="hero-info">
       <h1 class="hero-title">{{ t.title }}</h1>
+      <p class="order-label">
+        ({{ t.order === 1 ? 'Első' : t.order + '.' }} bódorgó tábor)
+      </p>
 
       <div class="info-line">
         <mat-icon color="primary">location_on</mat-icon>
@@ -131,6 +135,29 @@
         title="Helyszín térképen"
         loading="lazy"
       ></iframe>
+    </div>
+  </div>
+  }
+
+  <!-- Image popup - full size but capped to the viewport, never bigger
+       than the screen. -->
+  @if (showImage()) {
+  <div class="image-modal-backdrop" (click)="closeImage()">
+    <div class="image-modal" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="image-modal-close"
+        aria-label="Kép bezárása"
+        (click)="closeImage()"
+      >
+        ✖
+      </button>
+      <img
+        [src]="popupImageSrc()"
+        [alt]="t.title"
+        class="image-modal-img"
+        (error)="onPopupImageError()"
+      />
     </div>
   </div>
   }

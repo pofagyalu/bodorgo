@@ -37,6 +37,12 @@ export class TourDetails {
   signingUp = signal(false);
   signUpError = signal<string | null>(null);
   showMap = signal(false);
+  showImage = signal(false);
+  // Starts as the "-full.webp" variant (derived by naming convention from
+  // imageCover, e.g. tour-4-cover.webp -> tour-4-full.webp), falling back
+  // to the regular thumbnail via (error) on the <img> if that file doesn't
+  // exist yet for a given tour - see onPopupImageError().
+  popupImageSrc = signal('');
 
   currentUserId = computed(() => this.auth.user()?.id);
 
@@ -124,11 +130,27 @@ export class TourDetails {
       next: (res) => {
         this.tour.set(res.data.tour);
         this.participantCount.set(res.data.participantCount);
+        this.popupImageSrc.set(this.fullImageUrl(res.data.tour));
       },
       error: () => {
         this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');
       },
     });
+  }
+
+  private fullImageUrl(t: Tour): string {
+    const filename = t.imageCover.replace('-cover.webp', '-full.webp');
+    return `${environment.assetUrl}/img/tours/${filename}`;
+  }
+
+  // The "-full" file doesn't exist yet for most tours (only new ones will
+  // have one exported) - fall back to the regular thumbnail rather than
+  // showing a broken image.
+  onPopupImageError() {
+    const t = this.tour();
+    if (t) {
+      this.popupImageSrc.set(`${environment.assetUrl}/img/tours/${t.imageCover}`);
+    }
   }
 
   signUp() {
@@ -170,5 +192,13 @@ export class TourDetails {
 
   closeMap() {
     this.showMap.set(false);
+  }
+
+  openImage() {
+    this.showImage.set(true);
+  }
+
+  closeImage() {
+    this.showImage.set(false);
   }
 }
