@@ -90,9 +90,9 @@ export class TourDetails {
   allAttendees = computed<AttendeeRow[]>(() => {
     const t = this.tour();
     if (!t?.reservations) return [];
-    return t.reservations.flatMap((r) =>
-      r.attendees.map((a) => ({ name: a.name, paid: r.paid })),
-    );
+    return t.reservations
+      .flatMap((r) => r.attendees.map((a) => ({ name: a.name, paid: r.paid })))
+      .sort((a, b) => a.name.localeCompare(b.name, 'hu'));
   });
 
   alreadySignedUp = computed(() => {

@@ -75,6 +75,9 @@
   <section class="participants-section">
     <h2 class="section-heading">
       Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }})
+      @if (isFull()) {
+      <span class="full-badge">Megtelt</span>
+      }
     </h2>
 
     @if (allAttendees().length) {
@@ -97,15 +100,17 @@
     }
   </section>
 
-  <!-- Sign up -->
+  <!-- Sign up - hidden entirely (not just the "full" message) once the
+       tour is full and the user hasn't already signed up, since that
+       status is already shown as a badge next to Résztvevők above and
+       nobody scrolls down here to see it repeated. -->
+  @if (!auth.isLoggedIn() || alreadySignedUp() || !isFull()) {
   <div class="signup-bar">
     @if (!auth.isLoggedIn()) {
     <p>A jelentkezéshez be kell jelentkezned.</p>
     <button class="btn btn--green" (click)="login()">Bejelentkezés</button>
     } @else if (alreadySignedUp()) {
     <p class="already-signed">✔ Már jelentkeztél erre a táborra.</p>
-    } @else if (isFull()) {
-    <p class="full-note">A tábor sajnos megtelt.</p>
     } @else {
     <button class="btn btn--green" [disabled]="signingUp()" (click)="signUp()">
       {{ signingUp() ? 'Jelentkezés folyamatban...' : 'Jelentkezés' }}
@@ -115,6 +120,7 @@
     }
     }
   </div>
+  }
 
   <!-- Map popup - an embedded iframe instead of a new tab, so clicking the
        location never navigates the user away from this page. -->

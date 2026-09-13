@@ -221,10 +221,23 @@
   font-size: 1.1rem;
 }
 
-.full-note,
 .error-note {
   color: #e53935;
   font-weight: 600;
+}
+
+.full-badge {
+  display: inline-block;
+  vertical-align: middle;
+  color: #fff;
+  background: #e53935;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  margin-left: 0.7rem;
 }
 
 .loading-note {
