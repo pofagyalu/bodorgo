@@ -1,7 +1,22 @@
+// Grey backdrop so the white content panel below reads as a separate
+// "card" floating on the page instead of blending into it - 80px matches
+// the sticky header's height (see chat.scss for the same convention).
+:host {
+  display: block;
+  background: #ececec;
+  min-height: calc(100dvh - 80px);
+}
+
 .tour-details {
   max-width: 1100px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
+  background: #fff;
+  // Symmetric (no offset) so it reads evenly on both sides rather than
+  // favoring one direction - most visible left/right since the page's grey
+  // margins flank the panel there at every scroll position, while
+  // top/bottom just blend into the surrounding page flow.
+  box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
 }
 
 /* ---- Row 1: image + key info ---- */
@@ -13,9 +28,12 @@
 }
 
 .hero-image-wrap {
+  // Needed so .order-label below can be positioned relative to this and
+  // allowed to overflow past its bottom-right corner, stamp-style - no
+  // overflow:hidden here (that would clip it); the rounding lives directly
+  // on the <img> instead.
+  position: relative;
   flex: 0 0 42%;
-  border-radius: 12px;
-  overflow: hidden;
   box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.1);
 }
 
@@ -25,6 +43,7 @@
   object-fit: cover;
   display: block;
   cursor: pointer;
+  border-radius: 12px;
 }
 
 .hero-info {
@@ -39,14 +58,47 @@
   margin: 0;
   font-size: 2.2rem;
   font-weight: 700;
-  color: #333;
 }
 
+// Same diagonal semi-transparent green gradient as the tour cards' title
+// band (tour-card.scss's .heading-span) and the mobile menu background.
+// inline-block (not inline + box-decoration-break) so clip-path below can
+// slant the whole shape as one banner instead of per wrapped line.
+.hero-title-span {
+  display: inline-block;
+  max-width: 100%;
+  color: #fff;
+  padding: 0.6rem 1.6rem;
+  background-image: linear-gradient(
+    to right bottom,
+    rgba(27, 126, 60, 0.85),
+    rgba(103, 201, 136, 0.85)
+  );
+  line-height: 1.6;
+  // Slants the left/right edges into a subtle parallelogram/banner shape
+  // instead of a plain rectangle.
+  clip-path: polygon(4% 0, 100% 0, 96% 100%, 0 100%);
+}
+
+// Same stamp treatment as the tour card's numbered badge
+// (tour-card.scss's .card__badge) - white border, drop shadow, stamped on
+// the corner - just at the bottom-right here, and a wider pill since the
+// text is the full "Nth bódorgó tábor" phrase instead of a bare number.
 .order-label {
-  margin: -0.6rem 0 0; // pulls it in tight under the title, overriding .hero-info's gap
-  font-size: 0.95rem;
-  font-style: italic;
-  color: #888;
+  position: absolute;
+  bottom: -0.7rem;
+  right: -0.7rem;
+  z-index: 2;
+  display: inline-block;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  background-color: #e08e0b;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 3px solid #fff;
+  box-shadow: 0 0.3rem 0.7rem rgba(0, 0, 0, 0.3);
 }
 
 .info-line {
@@ -279,8 +331,17 @@
 /* ---- Mobile ---- */
 
 @media (max-width: 768px) {
+  // Fills the full width on mobile, so the "card floating on a grey
+  // backdrop" look (and its shadow) only makes sense on wider screens
+  // where the panel doesn't already span edge-to-edge.
+  :host {
+    background: #fff;
+    min-height: 0;
+  }
+
   .tour-details {
     padding: 1.2rem 1rem 3rem;
+    box-shadow: none;
   }
 
   .hero-row {
@@ -378,6 +439,14 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.image-modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .image-modal {
@@ -385,6 +454,12 @@
   max-width: 100%;
   max-height: 100%;
   display: flex;
+  transform: scale(0.94);
+  transition: transform 0.25s ease;
+}
+
+.image-modal-backdrop.open .image-modal {
+  transform: scale(1);
 }
 
 .image-modal-img {

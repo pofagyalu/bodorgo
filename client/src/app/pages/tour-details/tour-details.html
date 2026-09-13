@@ -9,13 +9,13 @@
         class="hero-image"
         (click)="openImage()"
       />
+      <span class="order-label">
+        {{ t.order === 1 ? 'Első' : t.order + '.' }} bódorgó tábor
+      </span>
     </div>
 
     <div class="hero-info">
-      <h1 class="hero-title">{{ t.title }}</h1>
-      <p class="order-label">
-        ({{ t.order === 1 ? 'Első' : t.order + '.' }} bódorgó tábor)
-      </p>
+      <h1 class="hero-title"><span class="hero-title-span">{{ t.title }}</span></h1>
 
       <div class="info-line">
         <mat-icon color="primary">location_on</mat-icon>
@@ -146,9 +146,11 @@
   }
 
   <!-- Image popup - full size but capped to the viewport, never bigger
-       than the screen. -->
-  @if (showImage()) {
-  <div class="image-modal-backdrop" (click)="closeImage()">
+       than the screen. Always rendered (not @if) with .open toggled, so
+       the fade/scale-in transition below has a "before" state to animate
+       from - an @if'd element has no prior DOM state to transition out of,
+       which is why it used to just pop in instantly. -->
+  <div class="image-modal-backdrop" [class.open]="showImage()" (click)="closeImage()">
     <div class="image-modal" (click)="$event.stopPropagation()">
       <button
         type="button"
@@ -166,7 +168,6 @@
       />
     </div>
   </div>
-  }
 </div>
 } @else if (loadError()) {
 <p class="loading-note">{{ loadError() }}</p>
