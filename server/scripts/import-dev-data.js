@@ -2,9 +2,12 @@ import 'dotenv/config';
 import fs from 'fs';
 import mongoose from 'mongoose';
 import path from 'path';
-import Tour from '../../src/models/tourModel.js';
-import config from '../../src/config.js';
+import Tour from '../src/models/tourModel.js';
+import config from '../src/config.js';
 
+// CWD-relative (run this from server/, same as every other script here) -
+// the underlying data file stays in dev-data/data/ even though this script
+// itself moved to scripts/.
 const rootDir = path.resolve();
 
 const DB = config.db.uri;

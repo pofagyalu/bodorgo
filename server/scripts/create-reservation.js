@@ -1,9 +1,8 @@
-// scripts/createReservation.js
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import Reservation from '../../src/models/reservationModel.js';
-import config from '../../src/config.js';
-import User from '../../src/models/userModel.js';
+import Reservation from '../src/models/reservationModel.js';
+import config from '../src/config.js';
+import User from '../src/models/userModel.js';
 
 const createOrFindUserByName = async (name) => {
   // Try to find user by name
