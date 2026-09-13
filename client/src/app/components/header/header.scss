@@ -23,6 +23,7 @@
   background: none;
   border: none;
   cursor: pointer;
+  color: #fff; // was inheriting dark text, invisible against the green gradient below
   position: absolute;
   top: 20px;
   right: 20px;
@@ -45,14 +46,19 @@
   pointer-events: auto;
 }
 
-/* Slide-in mobile menu container */
+/* Slide-in mobile menu container - same diagonal semi-transparent green
+   gradient as the tour cards' title band (tour-card.scss's .heading-span). */
 .mobile-menu {
   position: fixed;
   top: 0;
-  left: -300px; /* hidden by default */
-  width: 260px;
+  left: 0;
+  width: 100%;
   height: 100%;
-  background: #fff;
+  background-image: linear-gradient(
+    to right bottom,
+    rgba(27, 126, 60, 0.85),
+    rgba(103, 201, 136, 0.85)
+  );
   z-index: 20000;
   box-shadow: 3px 0 8px rgba(0, 0, 0, 0.25);
   padding: 60px 20px;
@@ -61,11 +67,14 @@
   flex-direction: column;
   gap: 20px;
 
-  transition: left 0.3s ease;
+  // transform instead of animating `left` - a percentage-based full width
+  // has no fixed pixel offset to slide from/to the way the old 260px panel did.
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
 }
 
 .mobile-menu.open {
-  left: 0;
+  transform: translateX(0);
 }
 
 /* Mobile nav */
@@ -112,12 +121,6 @@
     justify-content: flex-start;
     gap: 10px;
   }
-
-  // Pull the logo in tight against the hamburger instead of the desktop
-  // spacing, to leave room for the name on the right.
-  .logo-container {
-    margin: 0;
-  }
 }
 
 /* Between the mobile breakpoint and full desktop width, the menu is still
@@ -147,6 +150,16 @@
 
 .logo-container {
   margin: 0 2rem;
+}
+
+// This must come after the base .logo-container rule above: both set
+// margin, and with equal specificity the later declaration in the
+// stylesheet wins regardless of the media query - putting this override
+// earlier in the file (as it was before) meant the base rule always won.
+@media (max-width: 768px) {
+  .logo-container {
+    margin: 0;
+  }
 }
 .logo {
   height: 50px;
