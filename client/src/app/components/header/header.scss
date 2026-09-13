@@ -214,6 +214,10 @@
    currently-hidden Szavazások/Versenyek links (see header.html) - left
    untouched. .blue (Chat) is the actual blue sampled from the bódorgó logo
    (transparent_color_logo.svg), not a generic Material blue. */
+.dark-green {
+  color: var(--logo-dark-green);
+}
+
 .red {
   color: #e53935; /* red */
 }

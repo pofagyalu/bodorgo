@@ -5,12 +5,12 @@ import { Chat } from './pages/chat/chat';
 import { Szavazasok } from './pages/szavazasok/szavazasok';
 import { Versenyek } from './pages/versenyek/versenyek';
 import { AboutComponent } from './about/about.component';
-import { HomeComponent } from './home/home.component';
+import { Home } from './pages/home/home';
 import { NotFoundComponent } from './not-found/not-found.component';
 import { LoginComponent } from './auth/login/login.component';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent, data: { animation: 'HomePage' } },
+  { path: '', component: Home, data: { animation: 'HomePage' } },
   { path: 'taborok', title: 'Bódorgó táborok', component: Tours },
   { path: 'taborok/:id', title: 'Tábor részletei', component: TourDetails },
   // Chat/Szavazások/Versenyek are routed but still in early development

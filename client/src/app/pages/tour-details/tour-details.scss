@@ -8,7 +8,7 @@
 }
 
 .tour-details {
-  max-width: 1100px;
+  max-width: 1300px; // matches tours.scss/homepage.scss/chat.scss so pages don't jump width switching between them
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
   background: #fff;
@@ -62,17 +62,17 @@
 
 // Same diagonal semi-transparent green gradient as the tour cards' title
 // band (tour-card.scss's .heading-span) and the mobile menu background.
-// inline-block (not inline + box-decoration-break) so clip-path below can
-// slant the whole shape as one banner instead of per wrapped line.
+// block, not inline-block, so the banner always spans the full width of
+// its container regardless of title length - inline-block would shrink to
+// fit a short title, leaving a short, oddly-sized green patch instead of a
+// consistent full-width banner.
 .hero-title-span {
-  display: inline-block;
-  max-width: 100%;
-  // text-align:right alone would shift EVERY wrapped line uniformly
-  // (including the first, if it happens to be shorter than the last).
-  // text-align-last targets only the actual last line, so the first line
-  // always stays flush left and only a wrapped second line shifts right.
-  text-align: left;
-  text-align-last: right;
+  display: block;
+  // Centers a single-line title; for a wrapped title, each line centers
+  // independently on its own width, so a shorter line naturally sits with
+  // more breathing room than a longer one - a simple, natural-looking fan
+  // without measuring line widths or any per-line JS/CSS trickery.
+  text-align: center;
   color: #fff;
   padding: 0.6rem 1.6rem;
   background-image: linear-gradient(

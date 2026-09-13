@@ -33,6 +33,7 @@ export interface Tour {
   _id: string;
   order: number;
   title: string;
+  slug: string;
   location: {
     description: string;
     type: string;
@@ -75,6 +76,29 @@ export interface SignUpResponse {
   };
 }
 
+export interface TourStatsResponse {
+  status: string;
+  data: {
+    totalTours: number;
+    totalParticipants: number;
+    mostAttendedTour: {
+      _id: string;
+      title: string;
+      order: number;
+      slug: string;
+      participantCount: number;
+    } | null;
+    bestRatedTour: {
+      _id: string;
+      title: string;
+      order: number;
+      slug: string;
+      ratingsAverage: number;
+      ratingsQuantity: number;
+    } | null;
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -108,5 +132,9 @@ export class TourService {
 
   signUp(tourId: string): Observable<SignUpResponse> {
     return this.http.post<SignUpResponse>(`${this.apiUrl}/${tourId}/signup`, {});
+  }
+
+  getTourStats(): Observable<TourStatsResponse> {
+    return this.http.get<TourStatsResponse>(`${this.apiUrl}/tour-stats`);
   }
 }

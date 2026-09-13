@@ -1,0 +1,55 @@
+.map-container {
+  width: 100%;
+  height: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+}
+
+// Leaflet injects marker DOM outside Angular's template rendering, so
+// Angular's emulated view encapsulation can't scope normal rules to it -
+// ::ng-deep (still functional despite being deprecated) is the standard
+// escape hatch for exactly this kind of third-party-library DOM.
+::ng-deep .tour-marker-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--logo-green);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+// Leaflet already fades tooltips in/out via its own opacity toggling
+// (it sets el.style.opacity directly) - this transition just animates
+// *between* those values smoothly instead of relying on Leaflet's own
+// subtle default fade-anim behavior.
+::ng-deep .tour-tooltip {
+  background: var(--logo-dark-green);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.2s ease;
+}
+
+// Matches the little arrow's color to the new dark-green background
+// instead of Leaflet's default white.
+::ng-deep .tour-tooltip.leaflet-tooltip-top::before {
+  border-top-color: var(--logo-dark-green);
+}
+
+@media (max-width: 768px) {
+  .map-container {
+    height: 320px;
+  }
+}

@@ -1,3 +1,43 @@
+// Grey backdrop so the white content panel below reads as a separate
+// "card" floating on the page instead of blending into it - matches
+// tour-details.scss's and homepage.scss's identical treatment. 80px is
+// the sticky header's height (see chat.scss for the same convention).
+:host {
+  display: block;
+  background: #ececec;
+  min-height: calc(100dvh - 80px);
+}
+
+.tours-page {
+  // Wide enough for 3 tour cards in one row - also the shared width for
+  // tour-details.scss/homepage.scss/chat.scss, so pages don't visibly
+  // jump width when switching between them.
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  background: #fff;
+  // Symmetric (no offset) so it reads evenly on both sides rather than
+  // favoring one direction - most visible left/right since the page's grey
+  // margins flank the panel there at every scroll position, while
+  // top/bottom just blend into the surrounding page flow.
+  box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  // Fills the full width on mobile, so the "card floating on a grey
+  // backdrop" look (and its shadow) only makes sense on wider screens
+  // where the panel doesn't already span edge-to-edge.
+  :host {
+    background: #fff;
+    min-height: 0;
+  }
+
+  .tours-page {
+    padding: 1.2rem 1rem 3rem;
+    box-shadow: none;
+  }
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap; // 4 fields in one unbroken row don't fit on mobile - let them wrap instead

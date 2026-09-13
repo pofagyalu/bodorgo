@@ -1,15 +1,26 @@
+// Grey backdrop so the white content panel below reads as a separate
+// "card" floating on the page instead of blending into it - matches
+// tour-details.scss/homepage.scss/tours.scss's identical treatment.
+//
 // 80px matches .header-container's fixed height in
 // components/header/header.scss (it's sticky, always visible above this
-// page) - Feed's own wrapper fills whatever's left via flex, rather than
-// both of them separately claiming a full 100vh and pushing the compose
-// box below the actual viewport.
-.chat-page {
+// page). Unlike the other three pages (which use min-height and let
+// content scroll normally), chat needs a genuine fixed height here -
+// Feed's internal flex layout depends on a bounded height to keep the
+// compose box pinned at the bottom instead of pushed off-screen.
+:host {
+  display: block;
+  background: #ececec;
   height: calc(100vh - 80px); // fallback for browsers without dvh support
-  // vh is the LARGEST possible mobile viewport (as if the browser's
-  // collapsible address bar were always hidden), so it can overshoot the
-  // actually-visible area and leave the compose box short of the real
-  // bottom edge. dvh tracks the toolbar's current state instead.
   height: calc(100dvh - 80px);
+}
+
+.chat-page {
+  max-width: 1300px; // matches tours.scss/tour-details.scss/homepage.scss
+  margin: 0 auto;
+  height: 100%;
+  background: #fff;
+  box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
 }
@@ -29,4 +40,17 @@ app-feed {
   flex: 1 1 auto;
   min-height: 0;
   display: block;
+}
+
+@media (max-width: 768px) {
+  // Fills the full width on mobile, so the "card floating on a grey
+  // backdrop" look (and its shadow) only makes sense on wider screens
+  // where the panel doesn't already span edge-to-edge.
+  :host {
+    background: #fff;
+  }
+
+  .chat-page {
+    box-shadow: none;
+  }
 }
