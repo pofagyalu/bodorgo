@@ -7,7 +7,10 @@ const { Schema } = mongoose;
 
 const userSchema = new Schema(
   {
-    sub: { type: String, unique: true, required: true },
+    // Absent for a dependent (e.g. a child) who has no Authentik account of
+    // their own and can never log in - they exist purely as an attendee
+    // record shared with their family. See familyId below.
+    sub: { type: String, sparse: true, unique: true, required: false },
     name: {
       type: String,
       required: [true, 'Névtelenül, mi???'],
@@ -71,6 +74,16 @@ const userSchema = new Schema(
       type: Boolean,
       default: true,
       select: false,
+    },
+    // Groups a real account together with the login-less dependents (and
+    // any other real accounts, e.g. a spouse) it shares tour attendance
+    // with - lets a logged-in parent's signup dropdown be scoped to
+    // "everyone with this familyId" instead of a free-text/global search.
+    // Assigned by hand for now (see server/scripts/createFamily.js and
+    // addFamilyMember.js), not through any self-service flow.
+    familyId: {
+      type: Schema.Types.ObjectId,
+      index: true,
     },
   },
   { timestamps: true },

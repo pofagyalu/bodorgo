@@ -1,15 +1,16 @@
 import express from 'express';
 import * as userController from '../controllers/userController.js';
-import requireAuth from '../auth/requireAuth.js';
+import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
 
 router.patch('/updateMe', requireAuth, userController.updateMe);
 router.delete('/deleteMe', requireAuth, userController.deleteMe);
+router.get('/me/attendance', requireAuth, userController.getMyAttendance);
 
 router
   .route('/')
-  .get(userController.getAllUsers)
+  .get(requireAuth, restrictTo('admin'), userController.getAllUsers)
   .post(userController.createUser);
 router
   .route('/:id')

@@ -33,6 +33,7 @@
     >
     <a routerLink="/taborok" routerLinkActive="active" class="menu-item">Táborok</a>
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
+    <a routerLink="/profil" routerLinkActive="active" class="menu-item">Profil</a>
     <!-- Hidden for now, still routable - not ready for public linking yet -->
     <!-- <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item green">Szavazások</a> -->
     <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item orange">Versenyek</a> -->
@@ -91,6 +92,13 @@
       (click)="closeMobileMenu()"
       class="menu-item blue"
       >Chat</a
+    >
+    <a
+      routerLink="/profil"
+      routerLinkActive="active"
+      (click)="closeMobileMenu()"
+      class="menu-item"
+      >Profil</a
     >
     <!-- Hidden for now, still routable - not ready for public linking yet -->
     <!-- <a

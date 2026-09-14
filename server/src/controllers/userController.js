@@ -1,4 +1,5 @@
 import User from '../models/userModel.js';
+import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
 
 const filterObj = (obj, ...allowedFields) => {
@@ -10,8 +11,14 @@ const filterObj = (obj, ...allowedFields) => {
   return newObj;
 };
 
+// Admin-only (see userRoutes.js) - lets an admin sanity-check the
+// hand-curated family data (server/scripts/createFamily.js etc.) by seeing
+// every person's name/email/familyId in one place. Sorted so family
+// members sit next to each other rather than in creation order.
 export const getAllUsers = async (req, res) => {
-  const users = await User.find();
+  const users = await User.find()
+    .select('name email familyId role sub createdAt')
+    .sort('familyId name');
 
   res.status(200).json({
     status: 'success',
@@ -38,6 +45,25 @@ export const updateMe = async (req, res, next) => {
       user: updatedUser,
     },
   });
+};
+
+// Powers the "which tours have I attended" list on the profile page - every
+// reservation where the current user shows up as an attendee, whether they
+// booked it themselves or a family member (see userModel.js's familyId)
+// booked it for them.
+export const getMyAttendance = async (req, res) => {
+  const reservations = await Reservation.find({ 'attendees.user': req.user._id })
+    .populate('tour', 'title slug order startDate imageCover')
+    .sort('-createdAt');
+
+  const tours = reservations
+    .filter((r) => r.tour) // guards against a tour that's since been deleted
+    .map((r) => ({
+      tour: r.tour,
+      paid: r.paid,
+    }));
+
+  res.status(200).json({ status: 'success', data: { tours } });
 };
 
 export const deleteMe = async (req, res, next) => {

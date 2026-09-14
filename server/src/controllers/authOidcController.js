@@ -89,6 +89,19 @@ export const callback = async (req, res, next) => {
     logger.info(`ID Token Claims for sub=${claims.sub}`);
 
     let user = await User.findOne({ sub: claims.sub });
+
+    // No login yet under this sub, but a login-less dependent record (e.g.
+    // a child, see userModel.js's familyId) may already have this exact
+    // email pre-assigned in anticipation of them getting their own account
+    // one day - claim that record instead of provisioning a disconnected
+    // new one, so their whole attendance history stays attached.
+    if (!user && claims.email) {
+      user = await User.findOne({ email: claims.email, sub: { $exists: false } });
+      if (user) {
+        logger.info(`Claiming existing dependent record for sub=${claims.sub}`);
+      }
+    }
+
     if (!user) {
       user = await User.create({
         sub: claims.sub,
@@ -102,9 +115,18 @@ export const callback = async (req, res, next) => {
       // the source of truth for profile fields, so a name/email change made
       // there (e.g. admin -> Gazda) should show up here without needing any
       // manual DB edit.
+      user.sub = claims.sub; // no-op for a returning user, sets it once when claiming a dependent record
       user.email = claims.email;
       user.name = claims.name || claims.preferred_username || claims.email;
       user.emailVerified = !!claims.email_verified;
+      // A dependent (e.g. a child, see userModel.js's familyId) is 'guest'
+      // specifically because they have no login yet - the moment they
+      // actually log in for the first time (right here), they've graduated
+      // into a normal member and should read as one, same as anyone else
+      // who signs up.
+      if (user.role === 'guest') {
+        user.role = 'bodorgo';
+      }
       await user.save();
     }
 

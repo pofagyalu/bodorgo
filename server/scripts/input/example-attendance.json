@@ -1,0 +1,16 @@
+[
+  {
+    "members": [
+      { "name": "Nagy Zoltán", "email": "zoltan@example.com" },
+      { "name": "Nagy Anna", "email": "anna@example.com" },
+      { "name": "Nagy Bálint" }
+    ],
+    "attendees": ["Nagy Zoltán", "Nagy Anna", "Nagy Bálint"],
+    "paidBy": "Nagy Zoltán",
+    "paid": true
+  },
+  {
+    "anchor": "peter@kovacs.hu",
+    "attendees": ["Kovács Péter", "Kovács Kata"]
+  }
+]

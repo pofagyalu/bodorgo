@@ -1,0 +1,89 @@
+<div class="profile-page">
+  <h1 class="page-title">Profil</h1>
+
+  <section class="profile-section">
+    <p><strong>{{ auth.user()?.name }}</strong></p>
+    @if (auth.user()?.email) {
+    <p class="empty-note">{{ auth.user()?.email }}</p>
+    }
+  </section>
+
+  <section class="profile-section">
+    <h2 class="section-heading">Táboraim</h2>
+
+    @if (attendanceError()) {
+    <p class="error-note">{{ attendanceError() }}</p>
+    } @else if (attendance().length === 0) {
+    <p class="empty-note">Még nem jelentkeztél egyetlen táborra sem.</p>
+    } @else {
+    <ul class="attendance-list">
+      @for (row of attendance(); track row.tour._id) {
+      <li class="attendance-row">
+        <a [routerLink]="['/taborok', row.tour.slug]" class="attendance-link">
+          {{ row.tour.order }}. {{ row.tour.title }}
+        </a>
+        <span class="attendance-date">{{ formatDate(row.tour.startDate) }}</span>
+        @if (!row.paid) {
+        <span class="unpaid-badge">Nincs kifizetve</span>
+        }
+      </li>
+      }
+    </ul>
+    }
+  </section>
+
+  @if (auth.user()?.role === 'admin') {
+  <section class="profile-section">
+    <h2 class="section-heading">Összes felhasználó</h2>
+    <p class="page-subtitle">
+      {{ users().length }} személy - a családi csoportok (familyId) szerint rendezve,
+      hogy egymás mellett látszódjanak.
+    </p>
+
+    @if (usersError()) {
+    <p class="error-note">{{ usersError() }}</p>
+    } @else {
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Név</th>
+          <th>E-mail</th>
+          <th>Család</th>
+          <th>Szerepkör</th>
+          <th>Be tud lépni?</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of users(); track u._id) {
+        <tr>
+          <td>{{ u.name }}</td>
+          <td>
+            @if (u.email) {
+            {{ u.email }}
+            } @else {
+            <span class="empty-note">—</span>
+            }
+          </td>
+          <td>
+            @if (u.familyId) {
+            <span class="family-tag" [title]="u.familyId">{{ u.familyId.slice(-6) }}</span>
+            } @else {
+            <span class="empty-note">—</span>
+            }
+          </td>
+          <td>{{ u.role }}</td>
+          <td>
+            @if (canLogin(u)) {
+            <span class="login-yes">✔</span>
+            } @else {
+            <span class="login-no">✖</span>
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+    }
+  </section>
+  }
+</div>

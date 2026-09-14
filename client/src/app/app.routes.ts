@@ -8,6 +8,7 @@ import { AboutComponent } from './about/about.component';
 import { Home } from './pages/home/home';
 import { NotFoundComponent } from './not-found/not-found.component';
 import { LoginComponent } from './auth/login/login.component';
+import { Profile } from './pages/profile/profile';
 
 export const routes: Routes = [
   { path: '', component: Home, data: { animation: 'HomePage' } },
@@ -24,5 +25,6 @@ export const routes: Routes = [
     data: { animation: 'AboutPage' },
   },
   { path: 'login', title: 'Bódorgó, gyere bé', component: LoginComponent },
+  { path: 'profil', title: 'Profil', component: Profile },
   { path: '**', component: NotFoundComponent },
 ];

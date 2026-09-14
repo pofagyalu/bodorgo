@@ -1,0 +1,144 @@
+// Same grey-backdrop + white-panel treatment as tours.scss/tour-details.scss
+// /homepage.scss/chat.scss, for visual consistency across pages.
+:host {
+  display: block;
+  background: #ececec;
+  min-height: calc(100dvh - 80px);
+}
+
+.profile-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  background: #fff;
+  box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
+}
+
+.page-title {
+  margin: 0 0 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.profile-section {
+  margin-bottom: 2.5rem;
+}
+
+.section-heading {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 0.8rem;
+}
+
+.page-subtitle {
+  margin: 0 0 1rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.error-note {
+  color: #b00020;
+}
+
+.empty-note {
+  color: #999;
+}
+
+.attendance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.attendance-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  background: #f7f7f7;
+  border-radius: 8px;
+}
+
+.attendance-link {
+  font-weight: 600;
+  color: #2e7d32;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.attendance-date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.unpaid-badge {
+  margin-left: auto;
+  background: #fff3e0;
+  color: #e65100;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  th {
+    font-weight: 700;
+    color: #333;
+  }
+}
+
+.family-tag {
+  font-family: monospace;
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+}
+
+.login-yes {
+  color: #2e7d32;
+}
+
+.login-no {
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  :host {
+    background: #fff;
+    min-height: 0;
+  }
+
+  .profile-page {
+    padding: 1.2rem 1rem 3rem;
+    box-shadow: none;
+  }
+
+  .users-table {
+    font-size: 0.85rem;
+
+    th,
+    td {
+      padding: 0.4rem 0.5rem;
+    }
+  }
+}
