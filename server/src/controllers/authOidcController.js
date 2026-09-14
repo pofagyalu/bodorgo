@@ -108,6 +108,7 @@ export const callback = async (req, res, next) => {
         email: claims.email,
         name: claims.name || claims.preferred_username || claims.email,
         emailVerified: !!claims.email_verified,
+        lastLoginAt: new Date(),
       });
       logger.info(`Provisioned new local user for sub=${claims.sub}`);
     } else {
@@ -119,14 +120,11 @@ export const callback = async (req, res, next) => {
       user.email = claims.email;
       user.name = claims.name || claims.preferred_username || claims.email;
       user.emailVerified = !!claims.email_verified;
-      // A dependent (e.g. a child, see userModel.js's familyId) is 'guest'
-      // specifically because they have no login yet - the moment they
-      // actually log in for the first time (right here), they've graduated
-      // into a normal member and should read as one, same as anyone else
-      // who signs up.
-      if (user.role === 'guest') {
-        user.role = 'bodorgo';
-      }
+      user.lastLoginAt = new Date();
+      // role is deliberately left untouched here - 'bodorgo' means an
+      // official, dues-paying club member (see userModel.js), which is a
+      // status an admin grants by hand, not something logging in (even for
+      // the first time, e.g. a claimed dependent) confers automatically.
       await user.save();
     }
 
@@ -172,13 +170,24 @@ export const me = async (req, res) => {
     return res.json({ loggedIn: false });
   }
 
+  // Reads role/familyId fresh from the DB rather than the session's own
+  // snapshot (taken once at login) - both can change afterwards (an admin
+  // grants membership or assigns a family at any time, same as
+  // requireAuth.js already does for req.user), and this way a user sees the
+  // change immediately rather than needing to log out and back in.
+  const user = await User.findById(req.session.user.id);
+  if (!user) {
+    return res.json({ loggedIn: false });
+  }
+
   return res.json({
     loggedIn: true,
-    id: req.session.user.id,
-    sub: req.session.user.sub,
-    email: req.session.user.email,
-    name: req.session.user.name,
-    role: req.session.user.role,
+    id: user._id.toString(),
+    sub: user.sub,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    familyId: user.familyId,
   });
 };
 

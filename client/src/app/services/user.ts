@@ -10,6 +10,7 @@ export interface AdminUser {
   familyId?: string;
   role: string;
   sub?: string;
+  lastLoginAt?: string;
   createdAt: string;
 }
 
@@ -37,6 +38,20 @@ export interface MyAttendanceResponse {
   };
 }
 
+export interface FamilyMember {
+  _id: string;
+  name: string;
+  email?: string;
+  role: string;
+}
+
+export interface MyFamilyResponse {
+  status: string;
+  data: {
+    members: FamilyMember[];
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -50,5 +65,9 @@ export class UserService {
 
   getMyAttendance(): Observable<MyAttendanceResponse> {
     return this.http.get<MyAttendanceResponse>(`${this.apiUrl}/me/attendance`);
+  }
+
+  getMyFamily(): Observable<MyFamilyResponse> {
+    return this.http.get<MyFamilyResponse>(`${this.apiUrl}/me/family`);
   }
 }

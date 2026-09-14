@@ -8,6 +8,7 @@ export interface CurrentUser {
   email?: string;
   name?: string;
   role: string;
+  familyId?: string;
 }
 
 interface MeResponse {
@@ -17,6 +18,7 @@ interface MeResponse {
   email?: string;
   name?: string;
   role?: string;
+  familyId?: string;
 }
 
 @Injectable({
@@ -56,7 +58,11 @@ export class AuthService {
                   id: res.id!,
                   email: res.email,
                   name: res.name,
-                  role: res.role || 'bodorgo',
+                  // 'guest' - not the old 'bodorgo' - is the safe default:
+                  // see userModel.js, 'bodorgo' is dues-paying membership,
+                  // never assumed just because a role wasn't returned.
+                  role: res.role || 'guest',
+                  familyId: res.familyId,
                 }
               : null,
           );

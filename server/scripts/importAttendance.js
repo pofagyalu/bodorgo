@@ -86,7 +86,14 @@ async function findByAnchor(anchor) {
 async function ensureFamily(memberDefs) {
   const matches = [];
   for (const def of memberDefs) {
-    const existing = def.email ? await findByAnchor(def.email) : await findByAnchor(def.name);
+    // Try email first (the more authoritative identifier), but a person
+    // created before family/email tracking existed (e.g. by the old
+    // create-reservation.js, matched by exact name only) has no email yet -
+    // falling back to a name match reuses that same historical record and
+    // backfills the email onto it, instead of silently creating a
+    // disconnected duplicate that "attended" this tour under a different
+    // identity than their other tours.
+    const existing = (def.email && (await findByAnchor(def.email))) || (await findByAnchor(def.name));
     matches.push({ def, existing });
   }
 
@@ -103,22 +110,40 @@ async function ensureFamily(memberDefs) {
   }
   if (!familyId) familyId = new mongoose.Types.ObjectId();
 
+  // Returns { name, user } pairs rather than bare User docs - name is
+  // always the JSON's own def.name, which matters when an email resolves
+  // to an existing account whose stored .name differs (e.g. an admin's
+  // account might be named "Nagy Gazda" today but attended a 2012 tour as
+  // "Nagy Zoltán"). attendees/paidBy below match against this def.name, not
+  // the account's current display name - matching against the account's
+  // name instead silently dropped that attendee entirely in one real case.
   const members = [];
   for (const { def, existing } of matches) {
     if (existing) {
+      let changed = false;
       if (!existing.familyId) {
         existing.familyId = familyId;
-        await existing.save();
+        changed = true;
       }
-      members.push(existing);
+      // Backfill an email onto a pre-existing name-only record, but never
+      // overwrite one that's already set - that would be a real conflict,
+      // not a gap to fill. role is deliberately never touched here -
+      // 'bodorgo' means an official, dues-paying club member (see
+      // userModel.js), a status only an admin grants by hand, not
+      // something having an email implies.
+      if (def.email && !existing.email) {
+        existing.email = def.email.toLowerCase();
+        changed = true;
+      }
+      if (changed) await existing.save();
+      members.push({ name: def.name, user: existing });
     } else {
       const created = await User.create({
         name: def.name,
         email: def.email ? def.email.toLowerCase() : undefined,
         familyId,
-        role: 'guest',
       });
-      members.push(created);
+      members.push({ name: def.name, user: created });
     }
   }
   return members;
@@ -162,7 +187,8 @@ for (const block of blocks) {
         console.error(`Skipping block: no existing family found for anchor "${block.anchor}".`);
         continue;
       }
-      familyMembers = await User.find({ familyId: anchorUser.familyId });
+      const users = await User.find({ familyId: anchorUser.familyId });
+      familyMembers = users.map((user) => ({ name: user.name, user }));
     } else {
       console.error('Skipping block: needs either "members" or "anchor".');
       continue;
@@ -177,39 +203,39 @@ for (const block of blocks) {
     continue;
   }
 
-  const attendeeUsers = [];
+  const attendees = [];
   for (const name of block.attendees) {
-    const user = familyMembers.find((m) => m.name === name);
-    if (!user) {
+    const match = familyMembers.find((m) => m.name === name);
+    if (!match) {
       console.error(`  "${name}" is not part of this family - skipping this name.`);
       continue;
     }
-    if (alreadyRegisteredIds.has(user._id.toString())) {
+    if (alreadyRegisteredIds.has(match.user._id.toString())) {
       console.log(`  ${name} already registered for this tour - skipping.`);
       continue;
     }
-    attendeeUsers.push(user);
+    attendees.push(match);
   }
 
-  if (attendeeUsers.length === 0) {
+  if (attendees.length === 0) {
     console.log('  Nothing new to register for this family.');
     continue;
   }
 
   const paidByName = block.paidBy || block.attendees[0];
-  const paidByUser = familyMembers.find((m) => m.name === paidByName) || attendeeUsers[0];
+  const paidByMatch = familyMembers.find((m) => m.name === paidByName) || attendees[0];
 
   const reservation = await Reservation.create({
     tour: tour._id,
-    bookedBy: paidByUser._id,
-    attendees: attendeeUsers.map((m) => ({ user: m._id, name: m.name })),
+    bookedBy: paidByMatch.user._id,
+    attendees: attendees.map(({ name, user }) => ({ user: user._id, name })),
     paid: block.paid !== undefined ? block.paid : true,
   });
 
-  attendeeUsers.forEach((m) => alreadyRegisteredIds.add(m._id.toString()));
+  attendees.forEach(({ user }) => alreadyRegisteredIds.add(user._id.toString()));
 
   console.log(
-    `✓ ${attendeeUsers.map((m) => m.name).join(', ')} (paid by ${paidByUser.name}, paid: ${reservation.paid})`,
+    `✓ ${attendees.map((a) => a.name).join(', ')} (paid by ${paidByMatch.name}, paid: ${reservation.paid})`,
   );
 }
 

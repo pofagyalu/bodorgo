@@ -13,18 +13,37 @@ const filterObj = (obj, ...allowedFields) => {
 
 // Admin-only (see userRoutes.js) - lets an admin sanity-check the
 // hand-curated family data (server/scripts/createFamily.js etc.) by seeing
-// every person's name/email/familyId in one place. Sorted so family
-// members sit next to each other rather than in creation order.
+// every person's name/email/familyId in one place. Alphabetical by name -
+// the familyId column already shown lets an admin spot who belongs
+// together without needing physical grouping in the list itself.
 export const getAllUsers = async (req, res) => {
   const users = await User.find()
-    .select('name email familyId role sub createdAt')
-    .sort('familyId name');
+    .select('name email familyId role sub lastLoginAt createdAt')
+    .sort('name');
 
   res.status(200).json({
     status: 'success',
     results: users.length,
     data: { users },
   });
+};
+
+// Every logged-in user can see their own family's roster (their own
+// familyId, see userModel.js) - not just an admin. Excludes the caller
+// themselves, since a "your family members" list doesn't need to list you.
+export const getMyFamily = async (req, res) => {
+  if (!req.user.familyId) {
+    return res.status(200).json({ status: 'success', data: { members: [] } });
+  }
+
+  const members = await User.find({
+    familyId: req.user.familyId,
+    _id: { $ne: req.user._id },
+  })
+    .select('name email role')
+    .sort('name');
+
+  res.status(200).json({ status: 'success', data: { members } });
 };
 
 export const updateMe = async (req, res, next) => {

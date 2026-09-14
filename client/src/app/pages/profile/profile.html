@@ -32,12 +32,34 @@
     }
   </section>
 
+  @if (auth.user()?.role !== 'admin') {
+  <section class="profile-section">
+    <h2 class="section-heading">Családtagok</h2>
+
+    @if (familyError()) {
+    <p class="error-note">{{ familyError() }}</p>
+    } @else if (family().length === 0) {
+    <p class="empty-note">Még nincs hozzád rendelve családtag.</p>
+    } @else {
+    <ul class="family-list">
+      @for (m of family(); track m._id) {
+      <li class="family-row">
+        <span class="family-name">{{ m.name }}</span>
+        @if (m.email) {
+        <span class="empty-note">{{ m.email }}</span>
+        }
+      </li>
+      }
+    </ul>
+    }
+  </section>
+  }
+
   @if (auth.user()?.role === 'admin') {
   <section class="profile-section">
     <h2 class="section-heading">Összes felhasználó</h2>
     <p class="page-subtitle">
-      {{ users().length }} személy - a családi csoportok (familyId) szerint rendezve,
-      hogy egymás mellett látszódjanak.
+      {{ users().length }} személy - a saját családod tagjai kiemelve.
     </p>
 
     @if (usersError()) {
@@ -50,12 +72,12 @@
           <th>E-mail</th>
           <th>Család</th>
           <th>Szerepkör</th>
-          <th>Be tud lépni?</th>
+          <th>Utolsó belépés</th>
         </tr>
       </thead>
       <tbody>
         @for (u of users(); track u._id) {
-        <tr>
+        <tr [class.own-family-row]="isOwnFamily(u)">
           <td>{{ u.name }}</td>
           <td>
             @if (u.email) {
@@ -71,12 +93,12 @@
             <span class="empty-note">—</span>
             }
           </td>
-          <td>{{ u.role }}</td>
+          <td>{{ roleLabel(u.role) }}</td>
           <td>
-            @if (canLogin(u)) {
-            <span class="login-yes">✔</span>
+            @if (u.lastLoginAt) {
+            {{ formatDateTime(u.lastLoginAt) }}
             } @else {
-            <span class="login-no">✖</span>
+            <span class="empty-note">még nem lépett be</span>
             }
           </td>
         </tr>

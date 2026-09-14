@@ -42,6 +42,12 @@ const userSchema = new Schema(
       default: false,
       select: false,
     },
+    // Set on every successful Authentik login (see authOidcController.js) -
+    // absent entirely for a login-less dependent who's never actually
+    // logged in themselves yet.
+    lastLoginAt: {
+      type: Date,
+    },
     photo: {
       type: String,
     },
@@ -63,10 +69,16 @@ const userSchema = new Schema(
       },
     },
     passwordChangedAt: Date,
+    // 'bodorgo' is an official, dues-paying club member - granted by an
+    // admin by hand once membership is actually paid, never automatically
+    // (not on signup, not on first login). Everyone starts, and stays,
+    // 'guest' until then - that covers both a login-less dependent (e.g. a
+    // child) and an adult with a real account who simply hasn't paid dues
+    // yet. See docs/memory on bodorgo role semantics for the full picture.
     role: {
       type: String,
       enum: ['bodorgo', 'admin', 'guest'],
-      default: 'bodorgo',
+      default: 'guest',
     },
     passwordResetToken: String,
     passwordResetExpires: Date,

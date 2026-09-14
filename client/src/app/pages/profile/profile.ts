@@ -1,12 +1,18 @@
 import { Component, inject, signal, effect } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { UserService, AdminUser, AttendedTour } from '../../services/user';
+import { UserService, AdminUser, AttendedTour, FamilyMember } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
 
 interface AttendanceRow {
   tour: AttendedTour;
   paid: boolean;
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'admin',
+  bodorgo: 'klubtag',
+  guest: 'vendég',
+};
 
 @Component({
   selector: 'app-profile',
@@ -22,10 +28,17 @@ export class Profile {
   attendance = signal<AttendanceRow[]>([]);
   attendanceError = signal<string | null>(null);
 
-  // Only ever populated for an admin - see loadAdminUsers().
+  // Every logged-in user's own family roster, not just an admin's.
+  family = signal<FamilyMember[]>([]);
+  familyError = signal<string | null>(null);
+
+  // Only ever populated for an admin - see loadAdminUsers(). An admin
+  // already sees everyone (with their own family highlighted, see
+  // isOwnFamily()), so they don't get the separate Családtagok section a
+  // non-admin does - loadFamily() is never called for them.
   users = signal<AdminUser[]>([]);
   usersError = signal<string | null>(null);
-  private adminUsersRequested = false;
+  private roleBasedDataRequested = false;
 
   constructor() {
     this.userService.getMyAttendance().subscribe({
@@ -36,15 +49,19 @@ export class Profile {
     // auth.user() often isn't resolved yet at construction time -
     // AppComponent's checkAuth() call is still in flight on a fresh page
     // load - so a plain one-time check here could run before the role is
-    // known and silently skip loading the list forever, even though the
+    // known and silently skip loading data forever, even though the
     // template's own @if would still show the (now permanently empty)
     // section once the role does resolve. effect() re-evaluates whenever
     // the signal changes, so it fires as soon as the role is actually
     // known, whether that's immediately or a moment later.
     effect(() => {
-      if (this.auth.user()?.role === 'admin' && !this.adminUsersRequested) {
-        this.adminUsersRequested = true;
+      const role = this.auth.user()?.role;
+      if (!role || this.roleBasedDataRequested) return;
+      this.roleBasedDataRequested = true;
+      if (role === 'admin') {
         this.loadAdminUsers();
+      } else {
+        this.loadFamily();
       }
     });
   }
@@ -56,8 +73,22 @@ export class Profile {
     });
   }
 
-  canLogin(user: AdminUser): boolean {
-    return !!user.sub;
+  private loadFamily() {
+    this.userService.getMyFamily().subscribe({
+      next: (res) => this.family.set(res.data.members),
+      error: () => this.familyError.set('A családtagok betöltése nem sikerült.'),
+    });
+  }
+
+  roleLabel(role: string): string {
+    return ROLE_LABELS[role] || role;
+  }
+
+  // Highlights the admin's own family within the full user list, so they
+  // stand out from the rest without needing a separate lookup.
+  isOwnFamily(user: AdminUser): boolean {
+    const myFamilyId = this.auth.user()?.familyId;
+    return !!myFamilyId && user.familyId === myFamilyId;
   }
 
   // Long Hungarian format, same reasoning as tour-details.ts's
@@ -68,6 +99,16 @@ export class Profile {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+    }).format(new Date(dateStr));
+  }
+
+  formatDateTime(dateStr: string): string {
+    return new Intl.DateTimeFormat('hu-HU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     }).format(new Date(dateStr));
   }
 }
