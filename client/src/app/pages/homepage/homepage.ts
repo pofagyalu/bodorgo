@@ -23,6 +23,8 @@ export class HomePage {
   totalParticipantsIconColor = randomLogoColor();
   mostAttendedIconColor = randomLogoColor();
   bestRatedIconColor = randomLogoColor();
+  documentIconColor1 = randomLogoColor();
+  documentIconColor2 = randomLogoColor();
 
   constructor() {
     this.tourService.getTourStats().subscribe({

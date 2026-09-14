@@ -108,6 +108,93 @@
   font-style: italic;
 }
 
+.club-info-section {
+  margin-bottom: 3rem;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 1.2rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid #eee;
+  }
+}
+
+.club-info-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.club-info-row {
+  background: #f7f7f7;
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+
+  dt {
+    font-size: 0.85rem;
+    color: #777;
+    margin-bottom: 0.3rem;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+    color: #333;
+  }
+}
+
+.club-documents {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.2rem;
+}
+
+.document-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  padding: 1.5rem 1rem;
+  background: #f7f7f7;
+  border-radius: 12px;
+
+  mat-icon {
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+.document-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.document-date {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.document-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.document-link {
+  color: #2e7d32;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 @media (max-width: 768px) {
   // Fills the full width on mobile, so the "card floating on a grey
   // backdrop" look (and its shadow) only makes sense on wider screens
