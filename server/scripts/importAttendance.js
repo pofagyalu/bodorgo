@@ -127,10 +127,9 @@ async function ensureFamily(memberDefs) {
       }
       // Backfill an email onto a pre-existing name-only record, but never
       // overwrite one that's already set - that would be a real conflict,
-      // not a gap to fill. role is deliberately never touched here -
-      // 'bodorgo' means an official, dues-paying club member (see
-      // userModel.js), a status only an admin grants by hand, not
-      // something having an email implies.
+      // not a gap to fill. role is deliberately never touched here - it's
+      // driven entirely by Authentik on login (see
+      // authOidcController.js), not something having an email implies.
       if (def.email && !existing.email) {
         existing.email = def.email.toLowerCase();
         changed = true;

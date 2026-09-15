@@ -8,6 +8,19 @@ Node/Express API, ESM (`"type": "module"`), MongoDB via Mongoose, session-based 
 - A reachable MongoDB instance
 - An OAuth2/OpenID **Provider** + **Application** set up in Authentik (confidential client), with the redirect URI(s) you'll actually use registered under "Redirect URIs" — e.g. `http://localhost:8235/auth/callback` for local dev and `https://api.bodorgo.hu/auth/callback` for production. The server computes its `redirect_uri` from the incoming request's own host, so both must be registered on the Authentik side; nothing in this repo needs to change between environments for that specific value.
 
+## Roles & Authentik integration
+
+Local user records (`src/models/userModel.js`) have a `role` field: `admin | member | guest`. This is **not** set by hand in the app — it's driven entirely by Authentik, re-synced on every login:
+
+- Authentik has three flat groups: `bodorgo-admin`, `bodorgo-member`, `bodorgo-guest`. Invitation links point at whichever of three separate enrollment flows adds the invitee to the matching group — role assignment happens at invite time, on Authentik's side. This app has no invite/role-picker UI of its own.
+- A custom scope/property mapping on the Authentik OAuth2/OIDC provider (Customization → Property Mappings → Scope Mappings, scope name `bodorgo_role`) computes the role from the user's group membership (`user.groups.all()`) and returns it directly as a claim: `"admin" | "member" | "guest" | null` (`null` when the user isn't in any of the three groups). The login request (`authOidcController.js`'s `login()`) requests this scope alongside `openid profile email`; the callback reads `claims.bodorgo_role`, falling back to the userinfo endpoint if the ID token itself didn't carry it.
+- **A missing or unrecognized role denies the login outright** (`roleFromClaim()` returns `null` → redirect to `/login?error=no-role`, no session created, no local user record created or touched) — a deliberate choice so a broken invite or a group membership removed later locks someone out instead of silently downgrading them to guest. A role change (including a downgrade) only takes effect on that user's *next* login, not by killing an already-active session immediately.
+- `admin` = full access. `member` = an official, dues-paying club member. `guest` = can log in and use the app fully, just isn't a paying member (this is *not* the same as "not enrolled" — a real `bodorgo-guest` group member still gets a valid role and logs in fine).
+- The one exception: a login-less dependent (e.g. a child with no email/account of their own, created by hand via `scripts/addFamilyMember.js` or `scripts/importAttendance.js`) never goes through a login at all, so their `role` (schema default `guest`) stays whatever it was set to until they get a real Authentik account — at which point the callback's email-match "claim" logic attaches their `sub` and the group sync above takes over normally.
+- `scripts/testRoleFromClaim.js` verifies the claim-validation logic without needing a live Authentik login.
+
+This replaced an earlier design (raw `groups` claim mapped to a role in this app's own code, group named `bodorgo` rather than `bodorgo-member`, and "keep the existing role" instead of "deny login" when the claim was missing) — `scripts/testRoleFromGroups.js` documents that superseded mapping for reference only; it's not used by the app anymore.
+
 ## Local development
 
 1. Copy `src/.env.example` to `.env` (at the `server/` root, next to `package.json`) and fill in real values — DB connection string, Authentik client ID/secret, `COOKIE_SECRET`, etc. This file is gitignored; never commit it.

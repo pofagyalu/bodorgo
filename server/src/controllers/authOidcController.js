@@ -3,28 +3,34 @@ import config from '../config.js';
 import User from '../models/userModel.js';
 import logger from '../logger.js';
 
-// Authentik group name -> local role. Checked in this order (most
-// privileged first) since a user could technically belong to more than one
-// group; whoever set up Authentik's groups controls this entirely from
-// there now, not by hand in this DB. Belonging to none of these three still
-// logs in fine, just as the least-privileged 'guest'.
+// Role now comes straight from Authentik as a single claim, `bodorgo_role`,
+// via a custom scope/property mapping configured on the provider itself
+// (see authentik-integration-instructions.md) - an expression there reads
+// the user's group membership (bodorgo-admin/bodorgo-member/bodorgo-guest)
+// and returns "admin" | "member" | "guest" | null directly. This app no
+// longer maps group names to a role itself (that used to happen here via a
+// plain `groups` claim - see server/scripts/testRoleFromGroups.js for that
+// superseded design, kept only as a historical/verification artifact).
 //
-// Returns null specifically when groups data wasn't available at all (not
-// an array - the claim was missing/misconfigured on Authentik's end) so the
-// caller can tell "known to be in no matching group" (guest) apart from
-// "we don't actually know" (keep whatever role was already there).
-const GROUP_ROLE_ORDER = [
-  ['bodorgo-admin', 'admin'],
-  ['bodorgo', 'bodorgo'],
-  ['bodorgo-guest', 'guest'],
-];
+// A missing or unrecognized value is treated as "not enrolled" and denies
+// login entirely (see callback()) rather than falling back to guest or
+// keeping whatever role was there before - a deliberate choice so a broken
+// invite or a removed group membership locks someone out instead of
+// silently downgrading them.
+const VALID_ROLES = ['admin', 'member', 'guest'];
 
-export function roleFromGroups(groups) {
-  if (!Array.isArray(groups)) return null;
-  for (const [group, role] of GROUP_ROLE_ORDER) {
-    if (groups.includes(group)) return role;
-  }
-  return 'guest';
+export function roleFromClaim(bodorgoRole) {
+  return VALID_ROLES.includes(bodorgoRole) ? bodorgoRole : null;
+}
+
+// In local dev, send the browser back to the Angular dev server (ng serve)
+// rather than the configured production client URL. Always ends in '/', so
+// callers can append a path directly (e.g. `${base}login`).
+function getClientBaseUrl(req) {
+  const isLocalRequest = ['localhost', '127.0.0.1'].includes(req.hostname);
+  return isLocalRequest
+    ? 'http://localhost:4200/'
+    : config.oridzs.clientBaseUrl || '/';
 }
 
 let oidcConfigPromise;
@@ -73,10 +79,10 @@ export const login = async (req, res) => {
 
   const parameters = {
     redirect_uri: redirectUri,
-    // 'groups' drives role entirely (see roleFromGroups above) - requires a
-    // matching scope/claim mapping configured on the Authentik provider
-    // itself, not just requested here.
-    scope: 'openid email profile groups',
+    // 'bodorgo_role' drives role entirely (see roleFromClaim above) -
+    // requires the matching custom scope/property mapping configured on the
+    // Authentik provider itself, not just requested here.
+    scope: 'openid email profile bodorgo_role',
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
     state,
@@ -115,25 +121,36 @@ export const callback = async (req, res, next) => {
     const claims = tokens.claims();
     logger.info(`ID Token Claims for sub=${claims.sub}`);
 
-    // Authentik's "groups" scope mapping isn't always embedded in the ID
+    // Authentik's custom scope mappings aren't always embedded in the ID
     // token itself (depends on how the mapping is configured on the
-    // provider) - the userinfo endpoint is the reliable place to get it if
-    // the ID token didn't include it.
-    let groups = claims.groups;
-    if (!Array.isArray(groups)) {
+    // provider) - the userinfo endpoint is the reliable place to get the
+    // claim if the ID token didn't include it.
+    let bodorgoRole = claims.bodorgo_role;
+    if (bodorgoRole === undefined) {
       try {
         const userinfo = await openidClient.fetchUserInfo(
           oidcConfig,
           tokens.access_token,
           claims.sub,
         );
-        groups = userinfo.groups;
+        bodorgoRole = userinfo.bodorgo_role;
       } catch (err) {
-        logger.error(`Failed to fetch userinfo for groups: ${err.message}`);
+        logger.error(`Failed to fetch userinfo for bodorgo_role: ${err.message}`);
       }
     }
-    logger.info(`Groups for sub=${claims.sub}: ${JSON.stringify(groups)}`);
-    const role = roleFromGroups(groups);
+    logger.info(`bodorgo_role for sub=${claims.sub}: ${JSON.stringify(bodorgoRole)}`);
+    const role = roleFromClaim(bodorgoRole);
+
+    // Not enrolled in any bodorgo-* group (or the claim was missing entirely
+    // - a misconfigured provider) -> deny login outright, don't create or
+    // update anything locally. A role downgrade removing someone from every
+    // group takes effect on their *next* login, not by killing an existing
+    // session immediately - simplest option, revisit if that's ever a
+    // problem in practice.
+    if (role === null) {
+      logger.error(`Denying login for sub=${claims.sub}: no valid bodorgo_role (got ${JSON.stringify(bodorgoRole)})`);
+      return res.redirect(`${getClientBaseUrl(req)}login?error=no-role`);
+    }
 
     let user = await User.findOne({ sub: claims.sub });
 
@@ -155,11 +172,7 @@ export const callback = async (req, res, next) => {
         email: claims.email,
         name: claims.name || claims.preferred_username || claims.email,
         emailVerified: !!claims.email_verified,
-        // role omitted (falls back to the schema default, 'guest') when
-        // groups data wasn't available at all - there's no existing role to
-        // fall back to for a brand-new user, unlike the returning-user
-        // branch below.
-        ...(role !== null && { role }),
+        role,
         lastLoginAt: new Date(),
       });
       logger.info(`Provisioned new local user for sub=${claims.sub}`);
@@ -167,20 +180,14 @@ export const callback = async (req, res, next) => {
       // Keep the local record in sync with Authentik on every login - it's
       // the source of truth for profile fields, so a name/email change made
       // there (e.g. admin -> Gazda) should show up here without needing any
-      // manual DB edit.
+      // manual DB edit. role is always a valid value at this point (see the
+      // deny-login check above), so it's always synced too.
       user.sub = claims.sub; // no-op for a returning user, sets it once when claiming a dependent record
       user.email = claims.email;
       user.name = claims.name || claims.preferred_username || claims.email;
       user.emailVerified = !!claims.email_verified;
       user.lastLoginAt = new Date();
-      // Role is driven entirely by Authentik group membership now (see
-      // roleFromGroups above), synced on every login - but only when
-      // groups data actually came through. If Authentik didn't send it
-      // (misconfigured scope/mapping), role===null and the existing value
-      // is left untouched rather than being reset to a guess.
-      if (role !== null) {
-        user.role = role;
-      }
+      user.role = role;
       await user.save();
     }
 
@@ -198,15 +205,7 @@ export const callback = async (req, res, next) => {
 
       req.session.save(() => {
         logger.info('User session stored. Redirecting…');
-        // In local dev, send the browser back to the Angular dev server
-        // (ng serve) rather than the configured production client URL.
-        const isLocalRequest = ['localhost', '127.0.0.1'].includes(
-          req.hostname,
-        );
-        const clientRedirect = isLocalRequest
-          ? 'http://localhost:4200/'
-          : config.oridzs.clientBaseUrl || '/';
-        return res.redirect(clientRedirect);
+        return res.redirect(getClientBaseUrl(req));
       });
     });
   } catch (err) {

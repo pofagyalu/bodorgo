@@ -1,14 +1,32 @@
-// Sanity check for authOidcController.js's roleFromGroups() - the pure
-// function mapping Authentik group membership to a local role. Kept as a
-// permanent script (not deleted after use) so the mapping's exact
-// precedence (admin > bodorgo > guest, the "not in any group" fallback, and
-// the "groups data missing entirely" null case) stays verifiable without
-// needing a live Authentik login.
+// Historical: authOidcController.js used to map the raw `groups` claim to a
+// role in this app's own code. That was superseded on 2026-09-15 by having
+// Authentik itself compute and return the role directly via a custom
+// `bodorgo_role` scope claim (see roleFromClaim() and
+// testRoleFromClaim.js) - Authentik's groups are now named
+// bodorgo-admin/bodorgo-member/bodorgo-guest, and the mapping expression
+// lives entirely on the Authentik side.
+//
+// roleFromGroups() is no longer exported from authOidcController.js, so
+// it's inlined here rather than imported - this script is kept only as a
+// verifiable record of the old design's exact precedence rules, not
+// because it's still exercised by the app.
 //
 // Usage:
 //   node scripts/testRoleFromGroups.js
 
-import { roleFromGroups } from '../src/controllers/authOidcController.js';
+const GROUP_ROLE_ORDER = [
+  ['bodorgo-admin', 'admin'],
+  ['bodorgo', 'bodorgo'],
+  ['bodorgo-guest', 'guest'],
+];
+
+function roleFromGroups(groups) {
+  if (!Array.isArray(groups)) return null;
+  for (const [group, role] of GROUP_ROLE_ORDER) {
+    if (groups.includes(group)) return role;
+  }
+  return 'guest';
+}
 
 const cases = [
   { groups: ['bodorgo-admin'], expected: 'admin' },

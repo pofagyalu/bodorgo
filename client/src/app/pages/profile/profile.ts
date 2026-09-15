@@ -23,7 +23,7 @@ function emptyUserForm(): UserFormModel {
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'admin',
-  bodorgo: 'klubtag',
+  member: 'klubtag',
   guest: 'vendég',
 };
 
@@ -47,7 +47,7 @@ export class Profile {
   family = signal<FamilyMember[]>([]);
   familyError = signal<string | null>(null);
 
-  // Only for a 'bodorgo' member (not a mere logged-in guest) - the full
+  // Only for a 'member' (not a mere logged-in guest) - the full
   // membership roster, see loadClubMembers(). An admin doesn't get this
   // separately since they already see everyone in the admin table below.
   clubMembers = signal<FamilyMember[]>([]);
@@ -99,7 +99,7 @@ export class Profile {
         this.loadAdminUsers();
       } else {
         this.loadFamily();
-        if (role === 'bodorgo') {
+        if (role === 'member') {
           this.loadClubMembers();
         }
       }

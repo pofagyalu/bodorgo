@@ -69,15 +69,19 @@ const userSchema = new Schema(
       },
     },
     passwordChangedAt: Date,
-    // 'bodorgo' is an official, dues-paying club member - granted by an
-    // admin by hand once membership is actually paid, never automatically
-    // (not on signup, not on first login). Everyone starts, and stays,
-    // 'guest' until then - that covers both a login-less dependent (e.g. a
-    // child) and an adult with a real account who simply hasn't paid dues
-    // yet. See docs/memory on bodorgo role semantics for the full picture.
+    // Role is driven entirely by Authentik on every login (see
+    // authOidcController.js's callback()) via a custom `bodorgo_role` scope
+    // claim that Authentik itself computes from the user's group membership
+    // - this app no longer maps group names to a role by hand. A login
+    // always sends a valid role or is denied outright, so 'member'/'admin'
+    // only ever land here via a real login.
+    // 'member' is an official, dues-paying club member.
+    // The 'guest' default only ever applies to a login-less dependent
+    // (e.g. a child, see addFamilyMember.js/importAttendance.js) who has
+    // never logged in and so never went through the claim above.
     role: {
       type: String,
-      enum: ['bodorgo', 'admin', 'guest'],
+      enum: ['admin', 'member', 'guest'],
       default: 'guest',
     },
     passwordResetToken: String,
