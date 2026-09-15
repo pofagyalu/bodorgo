@@ -34,15 +34,38 @@
 
   @if (auth.user()?.role !== 'admin') {
   <section class="profile-section">
-    <h2 class="section-heading">Családtagok</h2>
+    <h2 class="section-heading">Hozzátartozók</h2>
 
     @if (familyError()) {
     <p class="error-note">{{ familyError() }}</p>
     } @else if (family().length === 0) {
-    <p class="empty-note">Még nincs hozzád rendelve családtag.</p>
+    <p class="empty-note">Még nincs hozzád rendelve hozzátartozó.</p>
     } @else {
     <ul class="family-list">
       @for (m of family(); track m._id) {
+      <li class="family-row">
+        <span class="family-name">{{ m.name }}</span>
+        @if (m.email) {
+        <span class="empty-note">{{ m.email }}</span>
+        }
+      </li>
+      }
+    </ul>
+    }
+  </section>
+  }
+
+  @if (auth.user()?.role === 'bodorgo') {
+  <section class="profile-section">
+    <h2 class="section-heading">Klubtagok</h2>
+
+    @if (clubMembersError()) {
+    <p class="error-note">{{ clubMembersError() }}</p>
+    } @else if (clubMembers().length === 0) {
+    <p class="empty-note">Még nincs regisztrált klubtag.</p>
+    } @else {
+    <ul class="family-list">
+      @for (m of clubMembers(); track m._id) {
       <li class="family-row">
         <span class="family-name">{{ m.name }}</span>
         @if (m.email) {

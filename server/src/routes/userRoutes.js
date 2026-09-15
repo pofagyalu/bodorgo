@@ -8,6 +8,7 @@ router.patch('/updateMe', requireAuth, userController.updateMe);
 router.delete('/deleteMe', requireAuth, userController.deleteMe);
 router.get('/me/attendance', requireAuth, userController.getMyAttendance);
 router.get('/me/family', requireAuth, userController.getMyFamily);
+router.get('/members', requireAuth, userController.getClubMembers);
 
 router
   .route('/')

@@ -28,14 +28,22 @@ export class Profile {
   attendance = signal<AttendanceRow[]>([]);
   attendanceError = signal<string | null>(null);
 
-  // Every logged-in user's own family roster, not just an admin's.
+  // Every logged-in user's own family roster (Hozzátartozók), not just an
+  // admin's.
   family = signal<FamilyMember[]>([]);
   familyError = signal<string | null>(null);
 
+  // Only for a 'bodorgo' member (not a mere logged-in guest) - the full
+  // membership roster, see loadClubMembers(). An admin doesn't get this
+  // separately since they already see everyone in the admin table below.
+  clubMembers = signal<FamilyMember[]>([]);
+  clubMembersError = signal<string | null>(null);
+
   // Only ever populated for an admin - see loadAdminUsers(). An admin
   // already sees everyone (with their own family highlighted, see
-  // isOwnFamily()), so they don't get the separate Családtagok section a
-  // non-admin does - loadFamily() is never called for them.
+  // isOwnFamily()), so they don't get the separate Hozzátartozók/Klubtagok
+  // sections a non-admin does - loadFamily()/loadClubMembers() are never
+  // called for them.
   users = signal<AdminUser[]>([]);
   usersError = signal<string | null>(null);
   private roleBasedDataRequested = false;
@@ -62,6 +70,9 @@ export class Profile {
         this.loadAdminUsers();
       } else {
         this.loadFamily();
+        if (role === 'bodorgo') {
+          this.loadClubMembers();
+        }
       }
     });
   }
@@ -76,7 +87,14 @@ export class Profile {
   private loadFamily() {
     this.userService.getMyFamily().subscribe({
       next: (res) => this.family.set(res.data.members),
-      error: () => this.familyError.set('A családtagok betöltése nem sikerült.'),
+      error: () => this.familyError.set('A hozzátartozók betöltése nem sikerült.'),
+    });
+  }
+
+  private loadClubMembers() {
+    this.userService.getClubMembers().subscribe({
+      next: (res) => this.clubMembers.set(res.data.members),
+      error: () => this.clubMembersError.set('A klubtagok betöltése nem sikerült.'),
     });
   }
 

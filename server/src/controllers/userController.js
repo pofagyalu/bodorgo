@@ -28,6 +28,22 @@ export const getAllUsers = async (req, res) => {
   });
 };
 
+// A club member (role 'bodorgo') or admin can see the full membership
+// roster - not the admin's whole user table (that also includes login-less
+// dependents and their familyId/role/last-login, which isn't this
+// audience's business), just the names/emails of actual dues-paying
+// members. A 'guest' (no membership, e.g. a login-less dependent) gets a
+// 403 - they only ever see their own family's roster, see getMyFamily.
+export const getClubMembers = async (req, res) => {
+  if (req.user.role !== 'bodorgo' && req.user.role !== 'admin') {
+    throw new AppError('Csak klubtagok láthatják a tagok listáját.', 403);
+  }
+
+  const members = await User.find({ role: 'bodorgo' }).select('name email').sort('name');
+
+  res.status(200).json({ status: 'success', data: { members } });
+};
+
 // Every logged-in user can see their own family's roster (their own
 // familyId, see userModel.js) - not just an admin. Excludes the caller
 // themselves, since a "your family members" list doesn't need to list you.

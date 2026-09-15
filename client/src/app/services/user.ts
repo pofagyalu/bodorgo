@@ -52,6 +52,15 @@ export interface MyFamilyResponse {
   };
 }
 
+// Same shape as a family member ({ _id, name, email?, role }) - reused
+// rather than duplicated since a club member listing is just name/email too.
+export interface ClubMembersResponse {
+  status: string;
+  data: {
+    members: FamilyMember[];
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -69,5 +78,9 @@ export class UserService {
 
   getMyFamily(): Observable<MyFamilyResponse> {
     return this.http.get<MyFamilyResponse>(`${this.apiUrl}/me/family`);
+  }
+
+  getClubMembers(): Observable<ClubMembersResponse> {
+    return this.http.get<ClubMembersResponse>(`${this.apiUrl}/members`);
   }
 }
