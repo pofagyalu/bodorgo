@@ -208,6 +208,49 @@
   text-transform: capitalize;
 }
 
+// Icon-only "add event" trigger - no text, a tooltip carries the meaning
+// (same convention as tour-event.scss's edit/save/cancel buttons).
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  color: #666;
+
+  &:hover {
+    background: #eee;
+  }
+}
+
+.icon-btn--add {
+  // Pushed all the way to the right of .day-heading's flex row (weather
+  // pill, date text), same margin-left:auto pattern as .icon-btn--edit in
+  // tour-event.scss.
+  margin-left: auto;
+  // "Filled" look (a solid dark rounded-rectangle container, not just a
+  // bare glyph) - same dark tone as this page's day-weather pill, so the
+  // icon reads clearly rather than blending into .day-block's light grey.
+  background: #445a67;
+  border-radius: 8px;
+  color: #fff;
+
+  // The "+" glyph reads as thin/spindly at this size otherwise - a text
+  // stroke thickens it without needing a different icon font. No effect
+  // outside Chromium/WebKit, but degrades harmlessly to the original glyph.
+  mat-icon {
+    -webkit-text-stroke: 0.5px currentColor;
+  }
+
+  &:hover {
+    background: #37474f;
+  }
+}
+
 // One compact pill holding both the icon and the temps, up front before the
 // date text. A solid dark backdrop is used deliberately (rather than white)
 // since several icons (cloudy, fog, rain's cloud) are a near-white pastel
@@ -262,104 +305,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.event-main {
-  display: flex;
-  gap: 1rem;
-  align-items: baseline;
-  flex-wrap: wrap;
-}
-
-.event-time {
-  flex: 0 0 4.5rem;
-  font-weight: 700;
-  color: #1e88e5;
-}
-
-.event-desc {
-  color: #444;
-}
-
-.event-extra-badge {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #fff;
-  background: var(--logo-orange);
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-}
-
-// Lines up under .event-desc, matching .event-time's flex-basis above.
-.event-optin-row,
-.event-participants-collapse {
-  margin-left: 4.5rem;
-}
-
-.event-optin-row {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-}
-
-.optin-btn {
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  border: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--logo-green);
-  color: #fff;
-}
-
-.optin-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.optin-btn--joined {
-  background: #eee;
-  color: #555;
-}
-
-.event-participants-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #777;
-  font-size: 0.85rem;
-
-  mat-icon {
-    font-size: 1.1rem;
-    width: 1.1rem;
-    height: 1.1rem;
-  }
-}
-
-.event-participants-collapse {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
-
-.event-participants-collapse.open {
-  max-height: 400px;
-}
-
-.event-participant-list {
-  list-style: none;
-  margin: 0.4rem 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.9rem;
-  color: #444;
 }
 
 /* ---- Row 3: participants ---- */
@@ -498,24 +443,6 @@
 
   .hero-title {
     font-size: 1.6rem;
-  }
-
-  // .event-row itself is already column at every width - this collapses
-  // the inner time+description row too, matching .event-time's flex:none
-  // below (no more fixed-width column for the time to sit beside).
-  .event-main {
-    flex-direction: column;
-    gap: 0.2rem;
-  }
-
-  .event-time {
-    flex: none;
-  }
-
-  // No fixed-width time column to align under on mobile.
-  .event-optin-row,
-  .event-participants-collapse {
-    margin-left: 0;
   }
 
   .map-modal-backdrop {

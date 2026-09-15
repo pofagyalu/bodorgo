@@ -29,4 +29,12 @@ router
   .route('/:tourId/schedule/:eventId/toggle-participation')
   .post(requireAuth, tourController.toggleScheduleParticipation);
 
+router
+  .route('/:tourId/schedule')
+  .post(requireAuth, restrictTo('admin'), tourController.createScheduleEvent);
+
+router
+  .route('/:tourId/schedule/:eventId')
+  .patch(requireAuth, restrictTo('admin'), tourController.updateScheduleEvent);
+
 export default router;

@@ -1,0 +1,66 @@
+@if (editing()) {
+<app-event-form
+  [model]="editForm"
+  [saving]="saving()"
+  [error]="editError()"
+  (save)="saveEdit()"
+  (cancel)="cancelEdit()"
+/>
+} @else {
+<div class="event-main">
+  <span class="event-time">{{ event.time }}</span>
+  <span class="event-desc">{{ event.description }}</span>
+  @if (event.isOptional) {
+  <span class="event-extra-badge">+{{ event.extraCost }} Ft</span>
+  }
+  @if (auth.user()?.role === 'admin') {
+  <button type="button" class="icon-btn icon-btn--edit" title="Esemény szerkesztése" (click)="startEdit()">
+    <mat-icon>edit</mat-icon>
+  </button>
+  }
+</div>
+}
+
+@if (event.isOptional) {
+<div class="event-optin-row">
+  @if (!auth.isLoggedIn()) {
+  <span class="empty-note">Bejelentkezés szükséges a jelentkezéshez</span>
+  } @else {
+  <button
+    type="button"
+    class="optin-btn"
+    [class.optin-btn--joined]="isOptedIn()"
+    [disabled]="toggling()"
+    (click)="toggleOptIn()"
+  >
+    {{ isOptedIn() ? 'Visszalépek' : 'Jelentkezem' }}
+  </button>
+  }
+
+  <button
+    type="button"
+    class="event-participants-toggle"
+    [attr.aria-expanded]="expanded()"
+    (click)="toggleExpanded()"
+  >
+    {{ (event.participants ?? []).length }} jelentkező
+    <mat-icon>{{ expanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+  </button>
+</div>
+
+@if (toggleError()) {
+<p class="error-note">{{ toggleError() }}</p>
+}
+
+<div class="event-participants-collapse" [class.open]="expanded()">
+  @if ((event.participants ?? []).length) {
+  <ul class="event-participant-list">
+    @for (p of event.participants ?? []; track p.user) {
+    <li>{{ p.name }}</li>
+    }
+  </ul>
+  } @else {
+  <p class="empty-note">Még senki nem jelentkezett.</p>
+  }
+</div>
+}

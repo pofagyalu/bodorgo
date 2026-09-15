@@ -197,6 +197,36 @@ export const deleteTour = async (req, res) => {
   res.status(204).json({ status: 'success', data: null });
 };
 
+// Admin-only (see tourRoutes.js) - appends a brand new schedule event to a
+// given day. Separate from updateScheduleEvent since there's no existing
+// subdocument to look up yet.
+export const createScheduleEvent = async (req, res) => {
+  const { tourId } = req.params;
+  const { day, time, description, isOptional, extraCost } = req.body;
+
+  const tour = await Tour.findById(tourId);
+  if (!tour) {
+    throw new AppError('No tour found with that ID!', 404);
+  }
+
+  if (day === undefined || !time || !description) {
+    throw new AppError('A program elemnek kell legyen napja, időpontja és leírása.', 400);
+  }
+
+  tour.schedule.push({
+    day,
+    time,
+    description,
+    isOptional: !!isOptional,
+    extraCost: isOptional ? extraCost : undefined,
+  });
+
+  await tour.save();
+
+  const created = tour.schedule[tour.schedule.length - 1];
+  res.status(201).json({ status: 'success', data: { event: created } });
+};
+
 // Lets the current user opt in or out of an optional schedule event
 // (e.g. a wine tasting with an extra cost) - anytime, either direction.
 // Never trusts a client-supplied identity, same principle as the chat
@@ -237,6 +267,38 @@ export const toggleScheduleParticipation = async (req, res) => {
     status: 'success',
     data: { joined, participants: event.participants },
   });
+};
+
+// Admin-only (see tourRoutes.js) - fixes a schedule event's own details
+// (time/description/isOptional/extraCost), not who's opted into it. Day is
+// deliberately not editable here - moving an event between days is rare
+// enough to not need a quick inline editor, and would require re-grouping
+// it in the UI besides.
+export const updateScheduleEvent = async (req, res) => {
+  const { tourId, eventId } = req.params;
+
+  const tour = await Tour.findById(tourId);
+  if (!tour) {
+    throw new AppError('No tour found with that ID!', 404);
+  }
+
+  const event = tour.schedule.id(eventId);
+  if (!event) {
+    throw new AppError('No such schedule event!', 404);
+  }
+
+  const { time, description, isOptional, extraCost } = req.body;
+  if (time !== undefined) event.time = time;
+  if (description !== undefined) event.description = description;
+  if (isOptional !== undefined) event.isOptional = isOptional;
+  // extraCost only means anything for an optional event - clearing it when
+  // isOptional turns off avoids a stale price lingering on a now-required
+  // event (see tourModel.js's schedule.extraCost comment).
+  event.extraCost = isOptional ? extraCost : undefined;
+
+  await tour.save();
+
+  res.status(200).json({ status: 'success', data: { event } });
 };
 
 export const getTourStats = async (req, res) => {

@@ -6,6 +6,9 @@ import { TourService, Tour, ScheduleEntry, DailyWeather, WeatherCondition } from
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { randomLogoColor } from '../../shared/logo-colors';
+import { TourEvent } from './tour-event/tour-event';
+import { EventForm, EventFormModel } from './event-form/event-form';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 interface DayGroup {
   day: number;
@@ -22,7 +25,7 @@ interface AttendeeRow {
 @Component({
   selector: 'app-tour-details',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, TourEvent, EventForm],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
@@ -30,6 +33,7 @@ export class TourDetails {
   private route = inject(ActivatedRoute);
   private tourService = inject(TourService);
   private sanitizer = inject(DomSanitizer);
+  private notifications = inject(NotificationsService);
   auth = inject(AuthService);
   environment = environment;
 
@@ -49,12 +53,13 @@ export class TourDetails {
   showMap = signal(false);
   showImage = signal(false);
   showParticipants = signal(false);
-  // Which optional schedule events currently have their opted-in list
-  // expanded - per-event, since a tour can have several optional events at
-  // once, each independently collapsible.
-  expandedEvents = signal<Set<string>>(new Set());
-  togglingEventId = signal<string | null>(null);
-  eventToggleError = signal<string | null>(null);
+  // Which day (its 1-indexed number, or null for none) currently has the
+  // "add new event" form open - only one at a time, same pattern as
+  // tour-event.ts's own single-event edit mode.
+  addingEventForDay = signal<number | null>(null);
+  addingEvent = signal(false);
+  addEventError = signal<string | null>(null);
+  addEventForm: EventFormModel = { time: '08:00', description: '', isOptional: false, extraCost: null };
   // Starts as the "-full.webp" variant (derived by naming convention from
   // imageCover, e.g. tour-4-cover.webp -> tour-4-full.webp), falling back
   // to the regular thumbnail via (error) on the <img> if that file doesn't
@@ -235,54 +240,60 @@ export class TourDetails {
     this.showImage.set(false);
   }
 
-  isOptedIn(event: ScheduleEntry): boolean {
-    const uid = this.currentUserId();
-    if (!uid) return false;
-    return (event.participants ?? []).some((p) => p.user === uid);
-  }
-
-  isEventExpanded(eventId: string): boolean {
-    return this.expandedEvents().has(eventId);
-  }
-
-  toggleEventExpanded(eventId: string) {
-    this.expandedEvents.update((set) => {
-      const next = new Set(set);
-      if (next.has(eventId)) {
-        next.delete(eventId);
-      } else {
-        next.add(eventId);
-      }
-      return next;
+  // Called when a <app-tour-event> emits a fresh event after an opt-in
+  // toggle or an admin edit - patches this one entry into the tour's own
+  // schedule array immutably, which then flows back down to the same child
+  // instance (matched by track ev._id) as its updated @Input().
+  onEventUpdated(updated: ScheduleEntry) {
+    this.tour.update((cur) => {
+      if (!cur?.schedule) return cur;
+      return {
+        ...cur,
+        schedule: cur.schedule.map((e) => (e._id === updated._id ? updated : e)),
+      };
     });
   }
 
-  toggleEventOptIn(event: ScheduleEntry) {
+  startAddEvent(day: number) {
+    this.addEventError.set(null);
+    this.addEventForm = { time: '08:00', description: '', isOptional: false, extraCost: null };
+    this.addingEventForDay.set(day);
+  }
+
+  cancelAddEvent() {
+    this.addingEventForDay.set(null);
+    this.addEventError.set(null);
+  }
+
+  saveNewEvent(day: number) {
     const t = this.tour();
     if (!t) return;
 
-    this.togglingEventId.set(event._id);
-    this.eventToggleError.set(null);
+    this.addingEvent.set(true);
+    this.addEventError.set(null);
 
-    this.tourService.toggleScheduleParticipation(t._id, event._id).subscribe({
-      next: (res) => {
-        this.tour.update((cur) => {
-          if (!cur?.schedule) return cur;
-          return {
-            ...cur,
-            schedule: cur.schedule.map((e) =>
-              e._id === event._id ? { ...e, participants: res.data.participants } : e,
-            ),
-          };
-        });
-        this.togglingEventId.set(null);
-      },
-      error: (err) => {
-        this.eventToggleError.set(
-          err?.error?.message ?? 'Hiba történt a jelentkezés módosítása során.',
-        );
-        this.togglingEventId.set(null);
-      },
-    });
+    const form = this.addEventForm;
+    this.tourService
+      .createScheduleEvent(t._id, {
+        day,
+        time: form.time,
+        description: form.description,
+        isOptional: form.isOptional,
+        extraCost: form.isOptional ? (form.extraCost ?? undefined) : undefined,
+      })
+      .subscribe({
+        next: (res) => {
+          this.tour.update((cur) =>
+            cur ? { ...cur, schedule: [...(cur.schedule ?? []), res.data.event] } : cur,
+          );
+          this.addingEvent.set(false);
+          this.addingEventForDay.set(null);
+          this.notifications.addSuccess('Esemény mentése sikeres');
+        },
+        error: (err) => {
+          this.addEventError.set(err?.error?.message ?? 'Hiba történt a hozzáadás során.');
+          this.addingEvent.set(false);
+        },
+      });
   }
 }

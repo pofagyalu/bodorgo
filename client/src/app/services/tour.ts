@@ -34,6 +34,35 @@ export interface ToggleParticipationResponse {
   };
 }
 
+export interface UpdateScheduleEventPayload {
+  time?: string;
+  description?: string;
+  isOptional?: boolean;
+  extraCost?: number;
+}
+
+export interface UpdateScheduleEventResponse {
+  status: string;
+  data: {
+    event: ScheduleEntry;
+  };
+}
+
+export interface CreateScheduleEventPayload {
+  day: number;
+  time: string;
+  description: string;
+  isOptional?: boolean;
+  extraCost?: number;
+}
+
+export interface CreateScheduleEventResponse {
+  status: string;
+  data: {
+    event: ScheduleEntry;
+  };
+}
+
 export type WeatherCondition =
   | 'clear'
   | 'partly-cloudy'
@@ -183,5 +212,23 @@ export class TourService {
       `${this.apiUrl}/${tourId}/schedule/${eventId}/toggle-participation`,
       {},
     );
+  }
+
+  updateScheduleEvent(
+    tourId: string,
+    eventId: string,
+    payload: UpdateScheduleEventPayload,
+  ): Observable<UpdateScheduleEventResponse> {
+    return this.http.patch<UpdateScheduleEventResponse>(
+      `${this.apiUrl}/${tourId}/schedule/${eventId}`,
+      payload,
+    );
+  }
+
+  createScheduleEvent(
+    tourId: string,
+    payload: CreateScheduleEventPayload,
+  ): Observable<CreateScheduleEventResponse> {
+    return this.http.post<CreateScheduleEventResponse>(`${this.apiUrl}/${tourId}/schedule`, payload);
   }
 }

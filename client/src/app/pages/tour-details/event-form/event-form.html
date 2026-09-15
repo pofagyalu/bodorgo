@@ -1,0 +1,40 @@
+<div class="event-edit-form">
+  <select class="event-edit-time" [(ngModel)]="model.time" title="Kezdés időpontja">
+    @for (time of timeOptions; track time) {
+    <option [value]="time">{{ time }}</option>
+    }
+  </select>
+  <input type="text" class="event-edit-desc" [(ngModel)]="model.description" placeholder="Leírás" />
+  <button
+    type="button"
+    class="toggle-switch"
+    [class.toggle-switch--on]="model.isOptional"
+    (click)="model.isOptional = !model.isOptional"
+    title="Opcionális, külön jelentkezést igénylő program"
+  >
+    <span class="toggle-icon toggle-icon--check">I</span>
+    <span class="toggle-icon toggle-icon--cross">N</span>
+    <span class="toggle-thumb"></span>
+  </button>
+  @if (model.isOptional) {
+  <input
+    type="number"
+    class="event-edit-cost"
+    [(ngModel)]="model.extraCost"
+    placeholder="Ft"
+    min="0"
+    title="Ár (Ft)"
+  />
+  }
+  <div class="event-edit-actions">
+    <button type="button" class="icon-btn icon-btn--save" title="Mentés" [disabled]="saving" (click)="save.emit()">
+      <mat-icon>check</mat-icon>
+    </button>
+    <button type="button" class="icon-btn icon-btn--cancel" title="Mégse" (click)="cancel.emit()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  @if (error) {
+  <p class="error-note">{{ error }}</p>
+  }
+</div>

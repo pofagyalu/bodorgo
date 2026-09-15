@@ -1,0 +1,162 @@
+.event-main {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.event-time {
+  flex: 0 0 4.5rem;
+  font-weight: 700;
+  color: #1e88e5;
+}
+
+.event-desc {
+  color: #444;
+}
+
+.event-extra-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--logo-orange);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+}
+
+// Icon-only edit trigger - no text, a tooltip carries the meaning.
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  color: #666;
+
+  &:hover {
+    background: #eee;
+  }
+}
+
+.icon-btn--edit {
+  // Pushes the edit button to the far right of .event-main, which is
+  // otherwise a left-aligned flex row (time, description, badge).
+  margin-left: auto;
+  // "Filled" look (a solid dark rounded-rectangle container, not just a
+  // bare glyph) - same dark tone as tour-details.scss's day-weather pill
+  // and .icon-btn--add, for a consistent admin-action look on this page.
+  background: #445a67;
+  border-radius: 8px;
+  color: #fff;
+
+  &:hover {
+    background: #37474f;
+  }
+}
+
+// Lines up under .event-desc, matching .event-time's flex-basis above.
+.event-optin-row,
+.event-participants-collapse {
+  margin-left: 4.5rem;
+}
+
+.event-optin-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.optin-btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--logo-green);
+  color: #fff;
+}
+
+.optin-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.optin-btn--joined {
+  background: #eee;
+  color: #555;
+}
+
+.event-participants-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #777;
+  font-size: 0.85rem;
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.event-participants-collapse {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.event-participants-collapse.open {
+  max-height: 400px;
+}
+
+.event-participant-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.empty-note {
+  color: #999;
+  font-style: italic;
+}
+
+.error-note {
+  color: #e53935;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  // .event-row itself is already column at every width (see
+  // tour-details.scss) - this collapses the inner time+description row
+  // too, matching .event-time's flex:none below (no more fixed-width
+  // column for the time to sit beside).
+  .event-main {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .event-time {
+    flex: none;
+  }
+
+  // No fixed-width time column to align under on mobile.
+  .event-optin-row,
+  .event-participants-collapse {
+    margin-left: 0;
+  }
+}
