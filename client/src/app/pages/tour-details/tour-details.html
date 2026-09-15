@@ -162,22 +162,78 @@
   <!-- Sign up - hidden entirely (not just the "full" message) once the
        tour is full and the user hasn't already signed up, since that
        status is already shown as a badge next to Résztvevők above and
-       nobody scrolls down here to see it repeated. -->
+       nobody scrolls down here to see it repeated. Once full, the
+       Jelentkezés button itself is also hidden (not merely disabled) even
+       for a member/admin who's already registered themselves - capacity
+       applies to everyone regardless of role, there's just no other
+       reason to keep the whole bar around once they're personally signed
+       up (the checkmark below still needs to show). -->
   @if (!auth.isLoggedIn() || alreadySignedUp() || !isFull()) {
   <div class="signup-bar">
     @if (!auth.isLoggedIn()) {
     <p>A jelentkezéshez be kell jelentkezned.</p>
     <button class="btn btn--green" (click)="login()">Bejelentkezés</button>
-    } @else if (alreadySignedUp()) {
-    <p class="already-signed">✔ Már jelentkeztél erre a táborra.</p>
     } @else {
-    <button class="btn btn--green" [disabled]="signingUp()" (click)="signUp()">
+    @if (alreadySignedUp()) {
+    <p class="already-signed">✔ Már jelentkeztél erre a táborra.</p>
+    }
+    @if (!isFull()) {
+    @if (pickerOptions().length === 1) {
+    <button class="btn btn--green" [disabled]="signingUp()" (click)="signUpSingle()">
       {{ signingUp() ? 'Jelentkezés folyamatban...' : 'Jelentkezés' }}
     </button>
+    } @else if (pickerOptions().length > 1) {
+    <button class="btn btn--green" (click)="openAttendeePicker()">Jelentkezés</button>
+    }
+    }
     @if (signUpError()) {
     <p class="error-note">{{ signUpError() }}</p>
     }
     }
+  </div>
+  }
+
+  <!-- Attendee picker popup - only for a member/admin with more than one
+       eligible person to choose from (self+family, or literally anyone).
+       Closes on a successful submit (see doSignUp()) - reopening for a
+       second round of picking is a deliberate extra click, not automatic. -->
+  @if (showAttendeePicker()) {
+  <div class="attendee-modal-backdrop" (click)="closeAttendeePicker()">
+    <div class="attendee-modal" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="attendee-modal-close"
+        aria-label="Bezárás"
+        (click)="closeAttendeePicker()"
+      >
+        ✖
+      </button>
+      <p class="picker-label">Kit szeretnél regisztrálni?</p>
+      <ul class="picker-list">
+        @for (opt of pickerOptions(); track opt._id) {
+        <li>
+          <label class="picker-option">
+            <input
+              type="checkbox"
+              [checked]="isAttendeeSelected(opt._id)"
+              (change)="toggleAttendeeSelected(opt._id)"
+            />
+            {{ opt.name }}
+          </label>
+        </li>
+        }
+      </ul>
+      <button
+        class="btn btn--green"
+        [disabled]="signingUp() || selectedAttendeeIds().size === 0"
+        (click)="signUpSelected()"
+      >
+        {{ signingUp() ? 'Jelentkezés folyamatban...' : 'Jelentkezés (' + selectedAttendeeIds().size + ' fő)' }}
+      </button>
+      @if (signUpError()) {
+      <p class="error-note">{{ signUpError() }}</p>
+      }
+    </div>
   </div>
   }
 

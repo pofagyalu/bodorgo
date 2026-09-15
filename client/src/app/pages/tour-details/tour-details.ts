@@ -1,8 +1,9 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService, Tour, ScheduleEntry, DailyWeather, WeatherCondition } from '../../services/tour';
+import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { randomLogoColor } from '../../shared/logo-colors';
@@ -22,6 +23,14 @@ interface AttendeeRow {
   paid: boolean;
 }
 
+// One selectable entry in the sign-up picker - a plain subset shared by
+// FamilyMember, AdminUser and the logged-in user's own auth profile, all
+// of which have _id + name but otherwise different shapes.
+interface PickerOption {
+  _id: string;
+  name: string;
+}
+
 @Component({
   selector: 'app-tour-details',
   standalone: true,
@@ -32,6 +41,7 @@ interface AttendeeRow {
 export class TourDetails {
   private route = inject(ActivatedRoute);
   private tourService = inject(TourService);
+  private userService = inject(UserService);
   private sanitizer = inject(DomSanitizer);
   private notifications = inject(NotificationsService);
   auth = inject(AuthService);
@@ -65,6 +75,17 @@ export class TourDetails {
   // to the regular thumbnail via (error) on the <img> if that file doesn't
   // exist yet for a given tour - see onPopupImageError().
   popupImageSrc = signal('');
+
+  // Sign-up picker: who a 'member' or 'admin' can additionally choose to
+  // register besides themselves - loaded once the role is known (see the
+  // effect in the constructor, same pattern as profile.ts since
+  // auth.user() resolves asynchronously). A 'guest' never needs either, so
+  // both stay empty for them.
+  familyMembers = signal<FamilyMember[]>([]);
+  allUsers = signal<AdminUser[]>([]);
+  private pickerDataRequested = false;
+  selectedAttendeeIds = signal<Set<string>>(new Set());
+  showAttendeePicker = signal(false);
 
   currentUserId = computed(() => this.auth.user()?.id);
 
@@ -133,11 +154,50 @@ export class TourDetails {
       .sort((a, b) => a.name.localeCompare(b.name, 'hu'));
   });
 
-  alreadySignedUp = computed(() => {
+  // Every user id already registered as an attendee (by anyone's
+  // reservation) for this tour - drives both "have I signed up" and which
+  // people the picker below should no longer offer.
+  attendeeUserIds = computed<Set<string>>(() => {
     const t = this.tour();
+    if (!t?.reservations) return new Set<string>();
+    return new Set(t.reservations.flatMap((r) => r.attendees.map((a) => a.user)));
+  });
+
+  // Checks the actual attendee list, not just "did I book a reservation" -
+  // a guest/member can also be registered by an admin acting on their
+  // behalf, in which case they're an attendee without being the booker.
+  alreadySignedUp = computed(() => {
     const uid = this.currentUserId();
-    if (!t?.reservations || !uid) return false;
-    return t.reservations.some((r) => r.bookedBy?._id === uid);
+    return !!uid && this.attendeeUserIds().has(uid);
+  });
+
+  // Who the logged-in user can still pick to register for this tour -
+  // guest: just themselves (if not already registered); member: themselves
+  // plus any not-yet-registered family member; admin: anyone at all not
+  // yet registered. Mirrors reservationController.js's assertCanRegister,
+  // purely so the picker doesn't offer choices the server would reject -
+  // the server is still the actual source of truth for who's allowed.
+  pickerOptions = computed<PickerOption[]>(() => {
+    const user = this.auth.user();
+    if (!user) return [];
+    const already = this.attendeeUserIds();
+
+    if (user.role === 'admin') {
+      return this.allUsers()
+        .filter((u) => !already.has(u._id))
+        .map((u) => ({ _id: u._id, name: u.name }));
+    }
+
+    const options: PickerOption[] = [];
+    if (user.name && !already.has(user.id)) {
+      options.push({ _id: user.id, name: user.name });
+    }
+    if (user.role === 'member') {
+      this.familyMembers()
+        .filter((m) => !already.has(m._id))
+        .forEach((m) => options.push({ _id: m._id, name: m.name }));
+    }
+    return options;
   });
 
   isFull = computed(() => {
@@ -174,6 +234,24 @@ export class TourDetails {
         this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');
       },
     });
+
+    // auth.user() often isn't resolved yet at construction time - see
+    // profile.ts's constructor for the same reasoning. A 'guest' needs
+    // neither request, so this only ever fires for 'member'/'admin'.
+    effect(() => {
+      const role = this.auth.user()?.role;
+      if (!role || this.pickerDataRequested) return;
+      this.pickerDataRequested = true;
+      if (role === 'admin') {
+        this.userService.getAllUsers().subscribe({
+          next: (res) => this.allUsers.set(res.data.users),
+        });
+      } else if (role === 'member') {
+        this.userService.getMyFamily().subscribe({
+          next: (res) => this.familyMembers.set(res.data.members),
+        });
+      }
+    });
   }
 
   private fullImageUrl(t: Tour): string {
@@ -191,14 +269,52 @@ export class TourDetails {
     }
   }
 
-  signUp() {
+  // The simple one-click case: exactly one person to offer (a guest, or a
+  // member/admin who has nobody else left to add) - no picker needed.
+  signUpSingle() {
+    const opt = this.pickerOptions()[0];
+    if (opt) this.doSignUp([opt._id]);
+  }
+
+  openAttendeePicker() {
+    this.signUpError.set(null);
+    this.showAttendeePicker.set(true);
+  }
+
+  closeAttendeePicker() {
+    this.showAttendeePicker.set(false);
+    this.selectedAttendeeIds.set(new Set());
+    this.signUpError.set(null);
+  }
+
+  isAttendeeSelected(id: string): boolean {
+    return this.selectedAttendeeIds().has(id);
+  }
+
+  toggleAttendeeSelected(id: string) {
+    this.selectedAttendeeIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  signUpSelected() {
+    this.doSignUp([...this.selectedAttendeeIds()]);
+  }
+
+  private doSignUp(attendeeIds: string[]) {
     const t = this.tour();
-    if (!t) return;
+    if (!t || attendeeIds.length === 0) return;
 
     this.signingUp.set(true);
     this.signUpError.set(null);
 
-    this.tourService.signUp(t._id).subscribe({
+    this.tourService.signUp(t._id, attendeeIds).subscribe({
       next: (res) => {
         this.tour.update((cur) =>
           cur
@@ -208,8 +324,13 @@ export class TourDetails {
               }
             : cur,
         );
-        this.participantCount.update((n) => n + 1);
+        this.participantCount.update((n) => n + attendeeIds.length);
+        this.selectedAttendeeIds.set(new Set());
         this.signingUp.set(false);
+        // A successful submit always closes the picker - a no-op for the
+        // single-click self/guest path, which never opens it in the first
+        // place.
+        this.showAttendeePicker.set(false);
       },
       error: (err) => {
         this.signUpError.set(

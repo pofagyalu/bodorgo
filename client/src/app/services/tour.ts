@@ -84,6 +84,7 @@ export interface DailyWeather {
 }
 
 export interface Attendee {
+  user: string;
   name: string;
 }
 
@@ -224,8 +225,11 @@ export class TourService {
     return this.http.patch<TourResponse>(`${this.apiUrl}/${id}`, payload);
   }
 
-  signUp(tourId: string): Observable<SignUpResponse> {
-    return this.http.post<SignUpResponse>(`${this.apiUrl}/${tourId}/signup`, {});
+  // attendeeIds is who to register in this one reservation - who the
+  // caller is actually allowed to include is enforced server-side based on
+  // their role (see reservationController.js's assertCanRegister).
+  signUp(tourId: string, attendeeIds: string[]): Observable<SignUpResponse> {
+    return this.http.post<SignUpResponse>(`${this.apiUrl}/${tourId}/signup`, { attendeeIds });
   }
 
   getTourStats(): Observable<TourStatsResponse> {
