@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import User from '../models/userModel.js';
 import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
@@ -10,6 +11,42 @@ const filterObj = (obj, ...allowedFields) => {
 
   return newObj;
 };
+
+const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
+
+// The admin table only ever shows the last 6 characters of a familyId (see
+// getAllUsers's comment and profile.html's family-tag) - the full 24-char
+// id is only reachable via a hover tooltip, so typing that short suffix
+// into the add/edit form is the natural (and only realistically
+// discoverable) thing to do. Resolves either a full id or a suffix of one
+// already in use to the real, full familyId.
+export async function resolveFamilyId(input) {
+  const trimmed = input.trim();
+  if (OBJECT_ID_RE.test(trimmed)) {
+    return trimmed;
+  }
+
+  const suffix = trimmed.toLowerCase();
+  const candidates = await User.find({ familyId: { $exists: true } }).select('familyId');
+  const matches = [
+    ...new Set(
+      candidates
+        .map((u) => u.familyId.toString())
+        .filter((id) => id.toLowerCase().endsWith(suffix)),
+    ),
+  ];
+
+  if (matches.length === 0) {
+    throw new AppError(`Nem található család ezzel az azonosítóval: "${input}".`, 400);
+  }
+  if (matches.length > 1) {
+    throw new AppError(
+      `Több család azonosítója is végződik erre: "${input}" - adj meg egy hosszabb részletet.`,
+      400,
+    );
+  }
+  return matches[0];
+}
 
 // Admin-only (see userRoutes.js) - lets an admin sanity-check the
 // hand-curated family data (server/scripts/createFamily.js etc.) by seeing
@@ -117,19 +154,95 @@ export const getUser = (req, res) => {
   });
 };
 
-export const createUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'this route is not yet implemented',
+// Admin-only (see userRoutes.js) - for quickly entering historical people
+// by hand, same identity model as the family scripts (createFamily.js
+// etc.): omitting familyId starts a brand new family for this one person,
+// giving one joins them into that existing family directly.
+export const createUser = async (req, res) => {
+  const { name, email, familyId } = req.body;
+  if (!name) {
+    throw new AppError('A névnek nem lehet üres.', 400);
+  }
+
+  const user = await User.create({
+    name,
+    email: email ? email.toLowerCase() : undefined,
+    familyId: familyId ? await resolveFamilyId(familyId) : new mongoose.Types.ObjectId(),
   });
+
+  res.status(201).json({ status: 'success', data: { user } });
 };
 
-// used for admin updates other users
-export const updateUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'this route is not yet implemented',
+// Admin-only - edits name/email/familyId by hand. familyId as an empty
+// string explicitly removes the user from their family (rather than the
+// field being silently ignored), for undoing a mistaken assignment.
+export const updateUser = async (req, res) => {
+  const { name, email, familyId } = req.body;
+
+  const set = {};
+  const unset = {};
+  if (name !== undefined) set.name = name;
+  if (email !== undefined) set.email = email ? email.toLowerCase() : null;
+  if (familyId !== undefined) {
+    if (familyId) set.familyId = await resolveFamilyId(familyId);
+    else unset.familyId = 1;
+  }
+
+  const ops = {};
+  if (Object.keys(set).length) ops.$set = set;
+  if (Object.keys(unset).length) ops.$unset = unset;
+
+  const user = await User.findByIdAndUpdate(req.params.id, ops, {
+    new: true,
+    runValidators: true,
   });
+
+  if (!user) {
+    throw new AppError('No user found with that ID!', 404);
+  }
+
+  res.status(200).json({ status: 'success', data: { user } });
+};
+
+// Admin-only - groups several existing users into one shared family in a
+// single call, for exactly the "these people clearly belong together but
+// don't have a common familyId yet" cleanup case. Reuses whichever single
+// familyId (if any) already appears among the selection, so extending an
+// existing family with newly-matched members works too; refuses to
+// silently merge two already-different families, since either could have
+// other members outside this selection that would otherwise get orphaned
+// from the choice made here.
+export const joinFamily = async (req, res) => {
+  const { userIds } = req.body;
+  if (!Array.isArray(userIds) || userIds.length < 2) {
+    throw new AppError('Legalább 2 felhasználót ki kell választani.', 400);
+  }
+
+  const users = await User.find({ _id: { $in: userIds } }).select('familyId');
+  if (users.length !== userIds.length) {
+    throw new AppError('Néhány kiválasztott felhasználó nem található.', 404);
+  }
+
+  const existingFamilyIds = [
+    ...new Set(users.filter((u) => u.familyId).map((u) => u.familyId.toString())),
+  ];
+
+  if (existingFamilyIds.length > 1) {
+    throw new AppError(
+      'A kiválasztott felhasználók már különböző családokhoz tartoznak - ezt kézzel kell rendezni.',
+      400,
+    );
+  }
+
+  const familyId = existingFamilyIds[0] || new mongoose.Types.ObjectId();
+
+  await User.updateMany({ _id: { $in: userIds } }, { familyId });
+
+  const updatedUsers = await User.find({ _id: { $in: userIds } })
+    .select('name email familyId role sub lastLoginAt createdAt')
+    .sort('name');
+
+  res.status(200).json({ status: 'success', data: { users: updatedUsers, familyId } });
 };
 
 export const deleteUser = (req, res) => {

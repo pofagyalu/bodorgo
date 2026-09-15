@@ -1,11 +1,24 @@
 import { Component, inject, signal, effect } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { UserService, AdminUser, AttendedTour, FamilyMember } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 interface AttendanceRow {
   tour: AttendedTour;
   paid: boolean;
+}
+
+interface UserFormModel {
+  name: string;
+  email: string;
+  familyId: string;
+}
+
+function emptyUserForm(): UserFormModel {
+  return { name: '', email: '', familyId: '' };
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -17,12 +30,13 @@ const ROLE_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule, MatIconModule],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
 export class Profile {
   private userService = inject(UserService);
+  private notifications = inject(NotificationsService);
   auth = inject(AuthService);
 
   attendance = signal<AttendanceRow[]>([]);
@@ -47,6 +61,21 @@ export class Profile {
   users = signal<AdminUser[]>([]);
   usersError = signal<string | null>(null);
   private roleBasedDataRequested = false;
+
+  // Admin-only user management: add, per-row edit, and bulk "join into one
+  // family" - built for quickly entering/cleaning up historical people by
+  // hand (see server/scripts/createFamily.js etc. for the script-based
+  // equivalent this complements).
+  addingUser = signal(false);
+  addUserSaving = signal(false);
+  addUserForm: UserFormModel = emptyUserForm();
+
+  editingUserId = signal<string | null>(null);
+  editUserSaving = signal(false);
+  editUserForm: UserFormModel = emptyUserForm();
+
+  selectedUserIds = signal<Set<string>>(new Set());
+  joiningFamily = signal(false);
 
   constructor() {
     this.userService.getMyAttendance().subscribe({
@@ -128,5 +157,118 @@ export class Profile {
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(dateStr));
+  }
+
+  startAddUser() {
+    this.addUserForm = emptyUserForm();
+    this.addingUser.set(true);
+  }
+
+  cancelAddUser() {
+    this.addingUser.set(false);
+  }
+
+  saveNewUser() {
+    const f = this.addUserForm;
+    if (!f.name.trim()) {
+      this.notifications.addError('A névnek nem lehet üres.');
+      return;
+    }
+
+    this.addUserSaving.set(true);
+    this.userService
+      .createUser({
+        name: f.name.trim(),
+        email: f.email.trim() || undefined,
+        familyId: f.familyId.trim() || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.addUserSaving.set(false);
+          this.addingUser.set(false);
+          this.notifications.addSuccess('Felhasználó hozzáadva');
+          this.loadAdminUsers();
+        },
+        error: (err) => {
+          this.notifications.addError(err?.error?.message ?? 'Hiba történt a hozzáadás során.');
+          this.addUserSaving.set(false);
+        },
+      });
+  }
+
+  startEditUser(user: AdminUser) {
+    this.editUserForm = {
+      name: user.name,
+      email: user.email ?? '',
+      familyId: user.familyId ?? '',
+    };
+    this.editingUserId.set(user._id);
+  }
+
+  cancelEditUser() {
+    this.editingUserId.set(null);
+  }
+
+  saveEditUser(user: AdminUser) {
+    const f = this.editUserForm;
+    if (!f.name.trim()) {
+      this.notifications.addError('A névnek nem lehet üres.');
+      return;
+    }
+
+    this.editUserSaving.set(true);
+    this.userService
+      .updateUser(user._id, {
+        name: f.name.trim(),
+        email: f.email.trim(),
+        familyId: f.familyId.trim(),
+      })
+      .subscribe({
+        next: () => {
+          this.editUserSaving.set(false);
+          this.editingUserId.set(null);
+          this.notifications.addSuccess('Felhasználó mentve');
+          this.loadAdminUsers();
+        },
+        error: (err) => {
+          this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
+          this.editUserSaving.set(false);
+        },
+      });
+  }
+
+  isUserSelected(id: string): boolean {
+    return this.selectedUserIds().has(id);
+  }
+
+  toggleUserSelected(id: string) {
+    this.selectedUserIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  joinSelectedIntoFamily() {
+    const ids = [...this.selectedUserIds()];
+    if (ids.length < 2) return;
+
+    this.joiningFamily.set(true);
+    this.userService.joinFamily(ids).subscribe({
+      next: () => {
+        this.joiningFamily.set(false);
+        this.selectedUserIds.set(new Set());
+        this.notifications.addSuccess('Családba kapcsolva');
+        this.loadAdminUsers();
+      },
+      error: (err) => {
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt az összekapcsolás során.');
+        this.joiningFamily.set(false);
+      },
+    });
   }
 }

@@ -9,15 +9,16 @@ router.delete('/deleteMe', requireAuth, userController.deleteMe);
 router.get('/me/attendance', requireAuth, userController.getMyAttendance);
 router.get('/me/family', requireAuth, userController.getMyFamily);
 router.get('/members', requireAuth, userController.getClubMembers);
+router.post('/join-family', requireAuth, restrictTo('admin'), userController.joinFamily);
 
 router
   .route('/')
   .get(requireAuth, restrictTo('admin'), userController.getAllUsers)
-  .post(userController.createUser);
+  .post(requireAuth, restrictTo('admin'), userController.createUser);
 router
   .route('/:id')
   .get(userController.getUser)
-  .patch(userController.updateUser)
+  .patch(requireAuth, restrictTo('admin'), userController.updateUser)
   .delete(userController.deleteUser);
 
 export default router;

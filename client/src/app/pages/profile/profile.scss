@@ -147,6 +147,119 @@
   box-shadow: inset 3px 0 0 #2e7d32;
 }
 
+.section-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+
+  .section-heading {
+    margin-bottom: 0;
+  }
+}
+
+// Same filled dark-rectangle icon-button look used throughout the app for
+// admin actions (tour-details/tour-event/tours), so add/edit/save/cancel
+// here read consistently with everywhere else.
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  background: #445a67;
+  color: #fff;
+  cursor: pointer;
+
+  &:hover {
+    background: #37474f;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.icon-btn--save {
+  background: #2e7d32;
+
+  &:hover {
+    background: #1b5e20;
+  }
+}
+
+.icon-btn--cancel {
+  background: #b00020;
+
+  &:hover {
+    background: #7f0016;
+  }
+}
+
+.user-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  background: #f7f7f7;
+  border-radius: 8px;
+
+  input {
+    flex: 1 1 160px;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font: inherit;
+  }
+}
+
+.user-form-actions {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.bulk-actions {
+  margin-bottom: 1rem;
+}
+
+.join-family-btn {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 999px;
+  background: #445a67;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #37474f;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.users-table input {
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+}
+
 @media (max-width: 768px) {
   :host {
     background: #fff;

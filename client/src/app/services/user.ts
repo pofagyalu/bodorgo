@@ -61,6 +61,35 @@ export interface ClubMembersResponse {
   };
 }
 
+export interface CreateUserPayload {
+  name: string;
+  email?: string;
+  familyId?: string;
+}
+
+export interface UpdateUserPayload {
+  name?: string;
+  email?: string;
+  // An empty string explicitly removes the user from their family - see
+  // userController.js's updateUser.
+  familyId?: string;
+}
+
+export interface AdminUserResponse {
+  status: string;
+  data: {
+    user: AdminUser;
+  };
+}
+
+export interface JoinFamilyResponse {
+  status: string;
+  data: {
+    users: AdminUser[];
+    familyId: string;
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -82,5 +111,17 @@ export class UserService {
 
   getClubMembers(): Observable<ClubMembersResponse> {
     return this.http.get<ClubMembersResponse>(`${this.apiUrl}/members`);
+  }
+
+  createUser(payload: CreateUserPayload): Observable<AdminUserResponse> {
+    return this.http.post<AdminUserResponse>(this.apiUrl, payload);
+  }
+
+  updateUser(id: string, payload: UpdateUserPayload): Observable<AdminUserResponse> {
+    return this.http.patch<AdminUserResponse>(`${this.apiUrl}/${id}`, payload);
+  }
+
+  joinFamily(userIds: string[]): Observable<JoinFamilyResponse> {
+    return this.http.post<JoinFamilyResponse>(`${this.apiUrl}/join-family`, { userIds });
   }
 }
