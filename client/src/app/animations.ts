@@ -1,15 +1,10 @@
-import {
-  trigger,
-  state,
-  style,
-  animate,
-  transition,
-  query,
-  animateChild,
-  group,
-} from '@angular/animations';
+import { trigger, style, animate, transition, query, animateChild, group } from '@angular/animations';
 
-export const slideInAnimation = trigger('routeAnimations', [
+// A movie-style cross-dissolve: the leaving page fades out while the
+// entering page fades in on top of it, both overlapping in place (no
+// left/right movement at all) - replaces the old slide-in/out transition,
+// which the user found overly busy and inconsistent-looking.
+export const routeFadeAnimation = trigger('routeAnimations', [
   transition('* <=> *', [
     style({ position: 'relative' }),
     query(
@@ -22,19 +17,13 @@ export const slideInAnimation = trigger('routeAnimations', [
           width: '100%',
         }),
       ],
-      { optional: true }
+      { optional: true },
     ),
-    query(':enter', [style({ left: '-100%' })], { optional: true }),
+    query(':enter', [style({ opacity: 0 })], { optional: true }),
     query(':leave', animateChild(), { optional: true }),
     group([
-      query(
-        ':leave',
-        [animate('0.3s ease-out', style({ left: '100%', opacity: 0 }))],
-        { optional: true }
-      ),
-      query(':enter', [animate('0.6s ease-out', style({ left: '0%' }))], {
-        optional: true,
-      }),
+      query(':leave', [animate('0.25s ease-out', style({ opacity: 0 }))], { optional: true }),
+      query(':enter', [animate('0.35s ease-in', style({ opacity: 1 }))], { optional: true }),
       query('@*', animateChild(), { optional: true }),
     ]),
   ]),

@@ -24,13 +24,6 @@
   <!-- Middle: Menu (desktop only, hidden on mobile in favor of the hamburger) -->
   @if (auth.isLoggedIn()) {
   <nav class="menu">
-    <a
-      routerLink="/"
-      routerLinkActive="active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      class="menu-item dark-green"
-      >Főoldal</a
-    >
     <a routerLink="/taborok" routerLinkActive="active" class="menu-item">Táborok</a>
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
     <a routerLink="/profil" routerLinkActive="active" class="menu-item">Profil</a>
@@ -71,14 +64,6 @@
 
   @if (auth.isLoggedIn()) {
   <nav class="mobile-nav">
-    <a
-      routerLink="/"
-      routerLinkActive="active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      (click)="closeMobileMenu()"
-      class="menu-item dark-green"
-      >Főoldal</a
-    >
     <a
       routerLink="/taborok"
       routerLinkActive="active"
