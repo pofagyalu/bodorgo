@@ -3,6 +3,30 @@ import config from '../config.js';
 import User from '../models/userModel.js';
 import logger from '../logger.js';
 
+// Authentik group name -> local role. Checked in this order (most
+// privileged first) since a user could technically belong to more than one
+// group; whoever set up Authentik's groups controls this entirely from
+// there now, not by hand in this DB. Belonging to none of these three still
+// logs in fine, just as the least-privileged 'guest'.
+//
+// Returns null specifically when groups data wasn't available at all (not
+// an array - the claim was missing/misconfigured on Authentik's end) so the
+// caller can tell "known to be in no matching group" (guest) apart from
+// "we don't actually know" (keep whatever role was already there).
+const GROUP_ROLE_ORDER = [
+  ['bodorgo-admin', 'admin'],
+  ['bodorgo', 'bodorgo'],
+  ['bodorgo-guest', 'guest'],
+];
+
+export function roleFromGroups(groups) {
+  if (!Array.isArray(groups)) return null;
+  for (const [group, role] of GROUP_ROLE_ORDER) {
+    if (groups.includes(group)) return role;
+  }
+  return 'guest';
+}
+
 let oidcConfigPromise;
 
 function getOidcConfig() {
@@ -49,7 +73,10 @@ export const login = async (req, res) => {
 
   const parameters = {
     redirect_uri: redirectUri,
-    scope: 'openid email profile',
+    // 'groups' drives role entirely (see roleFromGroups above) - requires a
+    // matching scope/claim mapping configured on the Authentik provider
+    // itself, not just requested here.
+    scope: 'openid email profile groups',
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
     state,
@@ -88,6 +115,26 @@ export const callback = async (req, res, next) => {
     const claims = tokens.claims();
     logger.info(`ID Token Claims for sub=${claims.sub}`);
 
+    // Authentik's "groups" scope mapping isn't always embedded in the ID
+    // token itself (depends on how the mapping is configured on the
+    // provider) - the userinfo endpoint is the reliable place to get it if
+    // the ID token didn't include it.
+    let groups = claims.groups;
+    if (!Array.isArray(groups)) {
+      try {
+        const userinfo = await openidClient.fetchUserInfo(
+          oidcConfig,
+          tokens.access_token,
+          claims.sub,
+        );
+        groups = userinfo.groups;
+      } catch (err) {
+        logger.error(`Failed to fetch userinfo for groups: ${err.message}`);
+      }
+    }
+    logger.info(`Groups for sub=${claims.sub}: ${JSON.stringify(groups)}`);
+    const role = roleFromGroups(groups);
+
     let user = await User.findOne({ sub: claims.sub });
 
     // No login yet under this sub, but a login-less dependent record (e.g.
@@ -108,6 +155,11 @@ export const callback = async (req, res, next) => {
         email: claims.email,
         name: claims.name || claims.preferred_username || claims.email,
         emailVerified: !!claims.email_verified,
+        // role omitted (falls back to the schema default, 'guest') when
+        // groups data wasn't available at all - there's no existing role to
+        // fall back to for a brand-new user, unlike the returning-user
+        // branch below.
+        ...(role !== null && { role }),
         lastLoginAt: new Date(),
       });
       logger.info(`Provisioned new local user for sub=${claims.sub}`);
@@ -121,10 +173,14 @@ export const callback = async (req, res, next) => {
       user.name = claims.name || claims.preferred_username || claims.email;
       user.emailVerified = !!claims.email_verified;
       user.lastLoginAt = new Date();
-      // role is deliberately left untouched here - 'bodorgo' means an
-      // official, dues-paying club member (see userModel.js), which is a
-      // status an admin grants by hand, not something logging in (even for
-      // the first time, e.g. a claimed dependent) confers automatically.
+      // Role is driven entirely by Authentik group membership now (see
+      // roleFromGroups above), synced on every login - but only when
+      // groups data actually came through. If Authentik didn't send it
+      // (misconfigured scope/mapping), role===null and the existing value
+      // is left untouched rather than being reset to a guess.
+      if (role !== null) {
+        user.role = role;
+      }
       await user.save();
     }
 
