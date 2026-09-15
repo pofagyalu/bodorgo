@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TourService, TourStatsResponse } from '../../services/tour';
 import { ToursMap } from '../../components/tours-map/tours-map';
 import { randomLogoColor } from '../../shared/logo-colors';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-homepage',
@@ -14,6 +15,10 @@ import { randomLogoColor } from '../../shared/logo-colors';
 })
 export class HomePage {
   private tourService = inject(TourService);
+
+  // Documents are served through a requireAuth-gated API route, not a
+  // plain public client asset - see server/src/controllers/documentController.js.
+  documentsUrl = `${environment.apiBaseUrl}/documents`;
 
   stats = signal<TourStatsResponse['data'] | null>(null);
 

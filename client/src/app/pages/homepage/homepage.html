@@ -32,10 +32,10 @@
         <mat-icon [style.color]="documentIconColor1">description</mat-icon>
         <span class="document-title">Klub alapító okirata</span>
         <div class="document-actions">
-          <a href="assets/documents/alapito-okirat.pdf" target="_blank" rel="noopener" class="document-link"
+          <a [href]="documentsUrl + '/alapito-okirat.pdf'" target="_blank" rel="noopener" class="document-link"
             >Megnyitás</a
           >
-          <a href="assets/documents/alapito-okirat.pdf" download class="document-link">Letöltés</a>
+          <a [href]="documentsUrl + '/alapito-okirat.pdf?download=1'" class="document-link">Letöltés</a>
         </div>
       </div>
 
@@ -44,10 +44,10 @@
         <span class="document-title">Az első írásos emlék, ahol a „Bódorgó” név szerepel</span>
         <span class="document-date">2015. április 17.</span>
         <div class="document-actions">
-          <a href="assets/documents/elso-irasos-emlek.pdf" target="_blank" rel="noopener" class="document-link"
+          <a [href]="documentsUrl + '/elso-irasos-emlek.pdf'" target="_blank" rel="noopener" class="document-link"
             >Megnyitás</a
           >
-          <a href="assets/documents/elso-irasos-emlek.pdf" download class="document-link">Letöltés</a>
+          <a [href]="documentsUrl + '/elso-irasos-emlek.pdf?download=1'" class="document-link">Letöltés</a>
         </div>
       </div>
     </div>

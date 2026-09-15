@@ -15,6 +15,7 @@ import tourRouter from './routes/tourRoutes.js';
 import userRouter from './routes/userRoutes.js';
 import systemRouter from './routes/systemRoutes.js';
 import authOidcRouter from './routes/authOidcRoutes.js';
+import documentRouter from './routes/documentRoutes.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
 import logger from './logger.js';
@@ -71,6 +72,13 @@ export default function createApp(sessionMiddleware) {
 
   // TODO: old solution try to dins some replacement
   // app.use(mongoSanitize());
+
+  // Registered before the public static middleware below (which serves
+  // everything under public/ with zero auth) so a same-named path could
+  // never accidentally fall through to an unauthenticated public file -
+  // documentRoutes.js's files live outside public/ entirely anyway, but
+  // this keeps the auth check first no matter what.
+  app.use('/documents', documentRouter);
 
   app.use(express.static(path.join(rootDir, 'public')));
 
