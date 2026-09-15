@@ -51,6 +51,11 @@
       Csak az utolsó 3 megjelenítése
     </button>
     }
+    @if (auth.user()?.role === 'admin') {
+    <a routerLink="/taborok/uj" class="new-tour-btn">
+      <mat-icon>add</mat-icon> Új tábor
+    </a>
+    }
   </div>
 
   <div class="card-container">

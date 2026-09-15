@@ -22,6 +22,15 @@
         <button type="button" class="map-link" (click)="openMap()" title="Térkép megnyitása">
           {{ t.location.description }}
         </button>
+        @if (auth.user()?.role === 'admin') {
+        <a
+          [routerLink]="['/taborok', t.slug, 'szerkesztes']"
+          class="icon-btn icon-btn--edit-tour"
+          title="Tábor szerkesztése"
+        >
+          <mat-icon>edit</mat-icon>
+        </a>
+        }
       </div>
 
       @if (t.location.address) {

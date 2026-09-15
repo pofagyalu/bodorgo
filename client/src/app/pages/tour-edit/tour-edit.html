@@ -1,0 +1,82 @@
+@if (auth.user()?.role !== 'admin') {
+<div class="tour-edit-page">
+  <p class="denied-note">Nincs jogosultságod ehhez az oldalhoz.</p>
+</div>
+} @else {
+<div class="tour-edit-page">
+  <h1 class="page-title">{{ isEditMode ? 'Tábor szerkesztése' : 'Új tábor létrehozása' }}</h1>
+
+  @if (loading()) {
+  <p class="loading-note">Betöltés...</p>
+  } @else {
+  <form class="tour-form" (ngSubmit)="save()">
+    <div class="form-row">
+      <label>Sorszám<input type="number" [(ngModel)]="form.order" name="order" required /></label>
+      <label>Cím<input type="text" [(ngModel)]="form.title" name="title" required /></label>
+    </div>
+
+    <div class="form-row">
+      <label>Helyszín neve<input type="text" [(ngModel)]="form.placeName" name="placeName" /></label>
+      <label>Cím (utca, város)<input type="text" [(ngModel)]="form.address" name="address" /></label>
+    </div>
+
+    <div class="form-row">
+      <label>Szélesség (lat)<input type="number" step="any" [(ngModel)]="form.lat" name="lat" /></label>
+      <label>Hosszúság (lng)<input type="number" step="any" [(ngModel)]="form.lng" name="lng" /></label>
+    </div>
+
+    <div class="form-row">
+      <label
+        >Kezdés
+        <input type="datetime-local" [(ngModel)]="form.startDateLocal" name="startDateLocal" required
+      /></label>
+      <label>Időtartam (nap)<input type="number" [(ngModel)]="form.duration" name="duration" required /></label>
+    </div>
+
+    <div class="form-row">
+      <label
+        >Maximum létszám
+        <input type="number" [(ngModel)]="form.maxCapacity" name="maxCapacity" required
+      /></label>
+      <label>Ár (Ft)<input type="number" [(ngModel)]="form.price" name="price" required /></label>
+    </div>
+
+    <label class="form-field-full"
+      >Rövid összefoglaló
+      <input type="text" [(ngModel)]="form.summary" name="summary" />
+    </label>
+
+    <label class="form-field-full"
+      >Leírás
+      <textarea [(ngModel)]="form.description" name="description" rows="5" required></textarea>
+    </label>
+
+    <label class="form-field-full"
+      >Borítókép fájlneve
+      <input
+        type="text"
+        [(ngModel)]="form.imageCover"
+        name="imageCover"
+        placeholder="tour-33-cover.webp"
+        required
+      />
+    </label>
+
+    @if (error()) {
+    <p class="error-note">{{ error() }}</p>
+    }
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn--green" [disabled]="saving()">
+        {{ saving() ? 'Mentés...' : 'Mentés' }}
+      </button>
+      @if (isEditMode) {
+      <a [routerLink]="['/taborok', tourId]" class="btn btn--grey">Mégse</a>
+      } @else {
+      <a routerLink="/taborok" class="btn btn--grey">Mégse</a>
+      }
+    </div>
+  </form>
+  }
+</div>
+}

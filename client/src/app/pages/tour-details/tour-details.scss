@@ -60,6 +60,7 @@
   font-weight: 700;
 }
 
+
 // Same diagonal semi-transparent green gradient as the tour cards' title
 // band (tour-card.scss's .heading-span) and the mobile menu background.
 // block, not inline-block, so the banner always spans the full width of
@@ -245,6 +246,23 @@
   mat-icon {
     -webkit-text-stroke: 0.5px currentColor;
   }
+
+  &:hover {
+    background: #37474f;
+  }
+}
+
+// Same filled dark-rectangle icon-button look as .icon-btn--add above and
+// tour-event.scss's edit trigger - sits right after the place name in
+// .info-line, tooltip-only (no visible label, per the admin's request).
+.icon-btn--edit-tour {
+  // Pushed to the far right of .info-line, same margin-left:auto pattern
+  // as the event edit icon in tour-event.scss.
+  margin-left: auto;
+  background: #445a67;
+  border-radius: 8px;
+  color: #fff;
+  text-decoration: none; // it's an <a>, not a <button>, so this isn't free
 
   &:hover {
     background: #37474f;

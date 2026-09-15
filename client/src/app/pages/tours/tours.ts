@@ -1,16 +1,20 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
 import { TourService, Tour } from '../../services/tour';
 import { TourCard } from './tour-card/tour-card';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-tours',
   standalone: true,
-  imports: [TourCard],
+  imports: [TourCard, RouterLink, MatIconModule],
   templateUrl: './tours.html',
   styleUrl: './tours.scss',
 })
 export class Tours implements OnInit {
   private tourService = inject(TourService);
+  auth = inject(AuthService);
 
   tours = signal<Tour[]>([]);
   showingAll = signal(false);

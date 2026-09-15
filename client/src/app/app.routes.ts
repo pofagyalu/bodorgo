@@ -9,10 +9,16 @@ import { Home } from './pages/home/home';
 import { NotFoundComponent } from './not-found/not-found.component';
 import { LoginComponent } from './auth/login/login.component';
 import { Profile } from './pages/profile/profile';
+import { TourEdit } from './pages/tour-edit/tour-edit';
 
 export const routes: Routes = [
   { path: '', component: Home, data: { animation: 'HomePage' } },
   { path: 'taborok', title: 'Bódorgó táborok', component: Tours },
+  // Both declared before the generic taborok/:id below, so "uj" and
+  // ":id/szerkesztes" match here first rather than being swallowed as a
+  // tour id/slug.
+  { path: 'taborok/uj', title: 'Új tábor', component: TourEdit },
+  { path: 'taborok/:id/szerkesztes', title: 'Tábor szerkesztése', component: TourEdit },
   { path: 'taborok/:id', title: 'Tábor részletei', component: TourDetails },
   // Chat/Szavazások/Versenyek are routed but still in early development
   { path: 'chat', title: 'Bódorgó chat', component: Chat },

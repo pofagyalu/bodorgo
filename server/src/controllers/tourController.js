@@ -3,7 +3,6 @@ import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
-import { computeDrivingDistanceKm, BUDAPEST_CENTER } from '../utils/distance.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
 import logger from '../logger.js';
 
@@ -149,7 +148,20 @@ export const getTour = async (req, res, next) => {
   res.status(200).json({ status: 'success', data: { tour, participantCount } });
 };
 
+// order can't be safely auto-computed from the current max (most of the
+// real ~32 historical tours aren't uploaded yet, see addTour.js), so it's
+// required explicitly here too, with the same collision check that script
+// already does.
 export const createTour = async (req, res) => {
+  if (req.body.order === undefined) {
+    throw new AppError('A tábornak kell legyen sorszáma (order).', 400);
+  }
+
+  const existing = await Tour.findOne({ order: req.body.order }).select('title');
+  if (existing) {
+    throw new AppError(`A ${req.body.order}. sorszám már foglalt ("${existing.title}").`, 400);
+  }
+
   const newTour = await Tour.create(req.body);
 
   if (!newTour) {
@@ -159,36 +171,44 @@ export const createTour = async (req, res) => {
   res.status(201).json({ status: 'success', data: { tour: newTour } });
 };
 
+// Loads and .save()s rather than findByIdAndUpdate, which bypasses the
+// model's pre('save') hooks entirely - that used to mean a title change
+// left the old slug in place, and location.coordinates changing needed its
+// distance recomputed by hand here. Same approach as scripts/updateTour.js.
 export const updateTour = async (req, res) => {
-  // findByIdAndUpdate bypasses the model's pre('save') hook, so the cached
-  // distance has to be refreshed here explicitly - only when coordinates
-  // are actually part of this update, never on every unrelated edit.
-  const coords = req.body?.location?.coordinates;
-  if (Array.isArray(coords) && coords.length === 2) {
-    try {
-      req.body.distanceFromBudapestKm = await computeDrivingDistanceKm(
-        BUDAPEST_CENTER,
-        { lat: coords[1], lng: coords[0] },
-      );
-    } catch (err) {
-      logger.error(`Failed to compute distance from Budapest: ${err.message}`);
-    }
-  }
+  // Same id-or-slug resolution as getTour - the edit page's link uses the
+  // tour's slug, same as everywhere else in the app.
+  const query = mongoose.isValidObjectId(req.params.id)
+    ? { _id: req.params.id }
+    : { slug: req.params.id };
 
-  const tour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-
+  const tour = await Tour.findOne(query);
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
   }
+
+  if (req.body.order !== undefined && req.body.order !== tour.order) {
+    const existing = await Tour.findOne({ order: req.body.order }).select('title');
+    if (existing) {
+      throw new AppError(`A ${req.body.order}. sorszám már foglalt ("${existing.title}").`, 400);
+    }
+  }
+
+  for (const [key, value] of Object.entries(req.body)) {
+    tour[key] = value;
+  }
+  await tour.save();
 
   res.status(200).json({ status: 'success', data: { tour } });
 };
 
 export const deleteTour = async (req, res) => {
-  const tour = await Tour.findByIdAndDelete(req.params.id);
+  // Same id-or-slug resolution as getTour/updateTour.
+  const query = mongoose.isValidObjectId(req.params.id)
+    ? { _id: req.params.id }
+    : { slug: req.params.id };
+
+  const tour = await Tour.findOneAndDelete(query);
 
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);

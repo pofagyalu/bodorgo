@@ -15,12 +15,12 @@ router.route('/montly-plan/:year').get(tourController.getMonthlyPlan);
 router
   .route('/')
   .get(tourController.getAlltours) // public: browsing tours needs no login
-  .post(tourController.createTour);
+  .post(requireAuth, restrictTo('admin'), tourController.createTour);
 
 router
   .route('/:id')
   .get(tourController.getTour)
-  .patch(tourController.updateTour)
+  .patch(requireAuth, restrictTo('admin'), tourController.updateTour)
   .delete(requireAuth, restrictTo('admin'), tourController.deleteTour);
 
 router.route('/:tourId/signup').post(requireAuth, signUpForTour);

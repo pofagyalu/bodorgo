@@ -64,9 +64,41 @@
 
 /* Center the toggle button */
 .toggle-container {
+  position: relative;
   margin: 2rem 0 1rem 0;
   display: flex;
+  align-items: center;
   justify-content: center;
+}
+
+// A distinct admin action, not "just another toggle button" - absolutely
+// positioned (taken out of the flex flow entirely) so it sits at the far
+// right without pulling the toggle button's own centering off to one side.
+// Same dark-filled look as the admin icon buttons on tour-details/tour-event.
+.new-tour-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 10rem;
+  background: #445a67;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    background: #37474f;
+  }
+
+  mat-icon {
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
 }
 
 /* ---- BUTTON STYLING (Natours style extension) ---- */
@@ -121,6 +153,18 @@
     font-size: 1.2rem;
     padding: 1rem 2rem;
     min-width: 200px;
+  }
+
+  // The absolutely-positioned .new-tour-btn would overlap the (wider, on
+  // mobile) toggle button here - stack them instead.
+  .toggle-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .new-tour-btn {
+    position: static;
+    transform: none;
   }
 }
 

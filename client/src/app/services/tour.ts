@@ -135,6 +135,26 @@ export interface TourResponse {
   };
 }
 
+// Shape for both createTour and updateTour - a partial on update (only the
+// changed fields need to be sent), but order/title/etc. are all required
+// when creating a brand new tour (enforced server-side, not just here).
+export interface TourPayload {
+  order?: number;
+  title?: string;
+  location?: {
+    description?: string;
+    address?: string;
+    coordinates?: number[];
+  };
+  startDate?: string;
+  duration?: number;
+  maxCapacity?: number;
+  price?: number;
+  summary?: string;
+  description?: string;
+  imageCover?: string;
+}
+
 export interface SignUpResponse {
   status: string;
   data: {
@@ -194,6 +214,14 @@ export class TourService {
 
   getTour(id: string): Observable<TourResponse> {
     return this.http.get<TourResponse>(`${this.apiUrl}/${id}`);
+  }
+
+  createTour(payload: TourPayload): Observable<TourResponse> {
+    return this.http.post<TourResponse>(this.apiUrl, payload);
+  }
+
+  updateTour(id: string, payload: TourPayload): Observable<TourResponse> {
+    return this.http.patch<TourResponse>(`${this.apiUrl}/${id}`, payload);
   }
 
   signUp(tourId: string): Observable<SignUpResponse> {

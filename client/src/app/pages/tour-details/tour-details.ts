@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService, Tour, ScheduleEntry, DailyWeather, WeatherCondition } from '../../services/tour';
@@ -25,7 +25,7 @@ interface AttendeeRow {
 @Component({
   selector: 'app-tour-details',
   standalone: true,
-  imports: [MatIconModule, TourEvent, EventForm],
+  imports: [MatIconModule, RouterLink, TourEvent, EventForm],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
