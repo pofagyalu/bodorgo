@@ -1,0 +1,23 @@
+/* The header above this section is a sticky 80px bar (see
+   header.scss's .header-container) that always occupies its own space in
+   the document flow, even before scrolling triggers its sticky behavior -
+   so #hero has to reserve exactly that much less than the viewport height
+   to avoid a taller-than-screen page (the "no scrolling on the landing
+   page" fix). 100vh first as a fallback for browsers without dvh support;
+   100dvh (dynamic viewport height) after that correctly excludes a mobile
+   browser's address bar instead of being measured behind it. */
+#hero {
+  height: calc(100vh - 80px);
+  height: calc(100dvh - 80px);
+}
+
+/* The thin, dark default text was getting lost against the orange/busy
+   parts of the hero background image - a soft white halo (rather than an
+   opaque box behind the text) keeps it legible everywhere on the image
+   while still reading as part of the background, not a slapped-on banner. */
+.hero-tagline {
+  color: #1a1a1a;
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.9),
+    0 0 14px rgba(255, 255, 255, 0.6);
+}

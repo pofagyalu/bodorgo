@@ -1,0 +1,69 @@
+.ticker {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  // Slightly translucent rather than a flat solid bar, so a hint of the
+  // hero background image behind it still comes through. Plain background
+  // first as a fallback for a browser without color-mix() support.
+  background: var(--logo-dark-green, #1b6548);
+  background: color-mix(in srgb, var(--logo-dark-green, #1b6548) 88%, transparent);
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  // The "emerging from an opaque strip" effect the design asked for: the
+  // scrolling text itself fades to fully transparent right at each edge
+  // (revealing the bar's own solid background behind it, not the page
+  // behind that), so text seems to materialize out of / sink into the bar
+  // rather than being hard-clipped.
+  mask-image: linear-gradient(90deg, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+}
+
+.ticker-track {
+  display: inline-flex;
+  // 8 identical copies (see tour-ticker.html) - translating by exactly
+  // -1/8 (-12.5%) of the track's own width shifts by precisely one copy's
+  // width, so the moment the animation resets from -12.5% back to 0%, copy
+  // 2 is sitting exactly where copy 1 started - the loop point is
+  // invisible, and having 8 rather than only 2 copies means the track
+  // stays wider than the widest realistic viewport for a sentence this
+  // length, so there's never a stretch with nothing left to scroll in.
+  animation: ticker-scroll 28s linear infinite;
+}
+
+.ticker-item {
+  display: inline-block;
+  padding-right: 4rem;
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-12.5%); // -100% / 8 copies = one copy's width
+  }
+}
+
+@media (min-width: 1024px) {
+  .ticker {
+    height: 3.25rem;
+  }
+
+  .ticker-item {
+    font-size: 1.05rem;
+  }
+}

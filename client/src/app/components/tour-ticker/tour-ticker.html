@@ -1,0 +1,17 @@
+@if (tickerText(); as text) {
+<div class="ticker">
+  <!-- 8 identical copies, not 2 - with only 2, the track is only twice as
+       wide as one copy, so on any screen wider than that (most desktops,
+       for a short sentence) there's a real gap: the container runs out of
+       content and sits empty until the loop resets and copy 1 scrolls back
+       in. 8 copies keeps the track comfortably wider than the widest
+       realistic viewport, so there's always another copy already lined up
+       and ready to enter - see tour-ticker.scss for the matching keyframe. -->
+  <div class="ticker-track">
+    <span class="ticker-item">{{ text }}</span>
+    @for (i of [1, 2, 3, 4, 5, 6, 7]; track i) {
+    <span class="ticker-item" aria-hidden="true">{{ text }}</span>
+    }
+  </div>
+</div>
+}

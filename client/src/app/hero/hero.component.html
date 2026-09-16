@@ -1,17 +1,24 @@
 <section
   id="hero"
-  class="bg-cover bg-hero-pattern-mobile lg:bg-hero-pattern-desktop bg-no-repeat"
+  class="bg-cover bg-hero-pattern-mobile lg:bg-hero-pattern-desktop bg-no-repeat flex flex-col overflow-hidden"
 >
-  <!-- Hero container -->
-  <div class="container flex flex-col-reverse mx-auto p-6 lg:flex-row">
+  <!-- Hero container - flex-1 so it fills whatever's left of #hero's fixed
+       height (see hero.component.css) above the ticker, and centers its
+       content vertically within that instead of relying on fixed margins
+       that assumed a free-scrolling page. -->
+  <div
+    class="container flex flex-col-reverse mx-auto px-6 flex-1 min-h-0 items-center justify-center lg:flex-row lg:justify-between"
+  >
     <!-- Content container -->
-    <div class="flex flex-col space-y-10 mb-44 lg:mt-16 lg:w-1/2 xl:mb-52">
+    <div class="flex flex-col space-y-3 lg:space-y-8 lg:w-1/2">
       <h1
-        class="text-5xl font-bold text-center lg:text-6xl lg:max-w-md lg:text-left"
+        class="text-3xl font-bold text-center sm:text-4xl lg:text-6xl lg:max-w-md lg:text-left"
       >
         Bódorgó klub
       </h1>
-      <p class="text-2xl text-center text-gray-900 lg:max-w-md lg:text-left">
+      <p
+        class="hero-tagline text-base font-semibold text-center sm:text-lg lg:text-2xl lg:max-w-md lg:text-left"
+      >
         Vízben és tűzben edzett, sportot, kulturát és természetjárást kedvelők
         egyesülete.
       </p>
@@ -26,8 +33,10 @@
       -->
     </div>
     <!-- Image -->
-    <div class="mb-6 mx-auto md:w-180 lg:mb-0 lg:w-1/2">
-      <img src="assets/images/illustration.png" alt="" />
+    <div class="w-32 sm:w-48 md:w-64 lg:w-1/2">
+      <img src="assets/images/illustration.png" alt="" class="w-full h-auto" />
     </div>
   </div>
+
+  <app-tour-ticker></app-tour-ticker>
 </section>
