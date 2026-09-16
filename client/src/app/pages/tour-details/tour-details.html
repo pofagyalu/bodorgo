@@ -12,6 +12,12 @@
       <span class="order-label">
         {{ t.order === 1 ? 'Első' : t.order + '.' }} bódorgó tábor
       </span>
+      @if (tourImages().length > 0) {
+      <span class="gallery-badge">
+        <mat-icon>photo_library</mat-icon>
+        {{ tourImages().length }}
+      </span>
+      }
     </div>
 
     <div class="hero-info">

@@ -108,6 +108,36 @@
   box-shadow: 0 0.3rem 0.7rem rgba(0, 0, 0, 0.3);
 }
 
+// Deliberately the opposite treatment from .order-label's stamp (which
+// overflows past the image's own edge, white border, drop shadow) - this
+// sits fully inside the image, translucent, no border, like a video
+// duration overlay or a photo-stack counter. The goal is to read as a
+// floating overlay CONTROL (implying the image itself does something),
+// not another stamped-on label - and top-left keeps it diagonally clear of
+// the stamp so the two don't visually compete as a matched pair.
+.gallery-badge {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  pointer-events: none; // purely informational - clicks fall through to .hero-image
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
 .info-line {
   display: flex;
   align-items: center;
