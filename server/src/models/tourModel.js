@@ -128,7 +128,30 @@ const tourSchema = new Schema(
       type: String,
       required: [true, 'A tábornak kell legyen fotója'],
     },
-    images: [String],
+    // Gallery photos, synced from a NAS folder by scripts/syncTourImages.js
+    // (append-only, so an already-recorded photo never shifts position on
+    // re-sync). width/height are captured at sync time via sharp - the
+    // frontend gallery (PhotoSwipe) needs them upfront for correct
+    // sizing/zoom, not just as a nice-to-have. Both sourceFolder and
+    // images are `select: false` - the raw NAS folder name and file list
+    // must never appear on the public tour endpoints (GET /tours,
+    // GET /tours/:id both work with no login), only through the dedicated
+    // requireAuth-gated image routes (see tourImageController.js).
+    sourceFolder: { type: String, select: false },
+    images: {
+      type: [
+        {
+          _id: false,
+          filename: { type: String, required: true },
+          width: Number,
+          height: Number,
+          // Bytes, from fs.statSync at sync time - lets the client show a
+          // total zip size without statting every file on every request.
+          size: Number,
+        },
+      ],
+      select: false,
+    },
     secretTour: {
       type: Boolean,
       default: false,

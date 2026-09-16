@@ -81,3 +81,45 @@ h1 {
   font-size: 2rem;
   margin: 0;
 }
+
+/* PhotoSwipe custom bottom filmstrip (see tour-details.ts's initLightbox())
+   - registered via registerElement({ appendTo: 'root' }), so this DOM lives
+   inside PhotoSwipe's own fixed-position overlay, appended straight to
+   <body> - entirely outside any Angular component's view, hence global
+   rather than component-scoped CSS. Click any thumbnail to jump straight
+   to it; the currently open slide is highlighted via
+   .pswp__thumbnails-strip-item--active. */
+.pswp__thumbnails-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10; /* same convention as PhotoSwipe's own top-bar/buttons - already inside the .pswp root's own 100000 stacking context */
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-overflow-scrolling: touch;
+}
+
+.pswp__thumbnails-strip-item {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  border: 2px solid transparent;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.pswp__thumbnails-strip-item:hover {
+  opacity: 0.85;
+}
+
+.pswp__thumbnails-strip-item--active {
+  opacity: 1;
+  border-color: #fff;
+}

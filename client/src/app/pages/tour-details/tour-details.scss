@@ -564,9 +564,7 @@
   box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.3);
 }
 
-// Shared by both popups below (map and image).
-.map-modal-close,
-.image-modal-close {
+.map-modal-close {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -588,49 +586,4 @@
   width: 100%;
   height: 100%;
   border: none;
-}
-
-/* ---- Image popup ---- */
-
-.image-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  z-index: 30000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-
-.image-modal-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.image-modal {
-  position: relative;
-  max-width: 100%;
-  max-height: 100%;
-  display: flex;
-  transform: scale(0.94);
-  transition: transform 0.25s ease;
-}
-
-.image-modal-backdrop.open .image-modal {
-  transform: scale(1);
-}
-
-.image-modal-img {
-  max-width: 100%;
-  // Accounts for the backdrop's 1.5rem top+bottom padding, so the image
-  // never exceeds the viewport even though it's sized to its natural
-  // dimensions otherwise.
-  max-height: calc(100vh - 3rem);
-  object-fit: contain;
-  border-radius: 8px;
-  display: block;
 }

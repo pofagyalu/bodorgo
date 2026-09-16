@@ -1,6 +1,7 @@
 import express from 'express';
 import * as tourController from '../controllers/tourController.js';
 import { signUpForTour } from '../controllers/reservationController.js';
+import * as tourImageController from '../controllers/tourImageController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -36,5 +37,22 @@ router
 router
   .route('/:tourId/schedule/:eventId')
   .patch(requireAuth, restrictTo('admin'), tourController.updateScheduleEvent);
+
+// Gallery routes - all requireAuth (see
+// tour-photos-implementation-plan.md), same "logged in, that's it, no
+// role restriction" bar as the homepage documents. The literal
+// "download-zip" path must be registered before the generic "/:filename"
+// one below it, or Express would match "download-zip" as a filename.
+router.route('/:tourId/images').get(requireAuth, tourImageController.getTourImages);
+router
+  .route('/:tourId/images/download-zip')
+  .get(requireAuth, tourImageController.downloadTourImagesZip);
+router
+  .route('/:tourId/images/:filename/thumb')
+  .get(requireAuth, tourImageController.getTourImageThumb);
+router
+  .route('/:tourId/images/:filename/download')
+  .get(requireAuth, tourImageController.downloadTourImage);
+router.route('/:tourId/images/:filename').get(requireAuth, tourImageController.getTourImage);
 
 export default router;

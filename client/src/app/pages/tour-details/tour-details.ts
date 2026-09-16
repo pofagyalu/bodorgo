@@ -1,8 +1,9 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnDestroy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
-import { TourService, Tour, ScheduleEntry, DailyWeather, WeatherCondition } from '../../services/tour';
+import type PhotoSwipeLightbox from 'photoswipe/lightbox';
+import { TourService, Tour, ScheduleEntry, DailyWeather, WeatherCondition, TourImage } from '../../services/tour';
 import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
@@ -38,7 +39,7 @@ interface PickerOption {
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
-export class TourDetails {
+export class TourDetails implements OnDestroy {
   private route = inject(ActivatedRoute);
   private tourService = inject(TourService);
   private userService = inject(UserService);
@@ -61,7 +62,6 @@ export class TourDetails {
   signingUp = signal(false);
   signUpError = signal<string | null>(null);
   showMap = signal(false);
-  showImage = signal(false);
   showParticipants = signal(false);
   // Which day (its 1-indexed number, or null for none) currently has the
   // "add new event" form open - only one at a time, same pattern as
@@ -70,11 +70,6 @@ export class TourDetails {
   addingEvent = signal(false);
   addEventError = signal<string | null>(null);
   addEventForm: EventFormModel = { time: '08:00', description: '', isOptional: false, extraCost: null };
-  // Starts as the "-full.webp" variant (derived by naming convention from
-  // imageCover, e.g. tour-4-cover.webp -> tour-4-full.webp), falling back
-  // to the regular thumbnail via (error) on the <img> if that file doesn't
-  // exist yet for a given tour - see onPopupImageError().
-  popupImageSrc = signal('');
 
   // Sign-up picker: who a 'member' or 'admin' can additionally choose to
   // register besides themselves - loaded once the role is known (see the
@@ -86,6 +81,17 @@ export class TourDetails {
   private pickerDataRequested = false;
   selectedAttendeeIds = signal<Set<string>>(new Set());
   showAttendeePicker = signal(false);
+
+  // Gallery (see tour-photos-implementation-plan.md) - only ever fetched
+  // for a logged-in viewer (the route is requireAuth-gated server-side
+  // anyway), so an anonymous visitor never triggers a guaranteed 401.
+  // Deliberately not shown as a thumbnail grid on the page itself (that
+  // was the first attempt, dropped per feedback) - clicking the cover
+  // photo is the only entry point, everything else happens inside the
+  // opened PhotoSwipe viewer (see initLightbox()).
+  tourImages = signal<TourImage[]>([]);
+  private imagesRequested = false;
+  private lightbox: PhotoSwipeLightbox | null = null;
 
   currentUserId = computed(() => this.auth.user()?.id);
 
@@ -228,7 +234,6 @@ export class TourDetails {
       next: (res) => {
         this.tour.set(res.data.tour);
         this.participantCount.set(res.data.participantCount);
-        this.popupImageSrc.set(this.fullImageUrl(res.data.tour));
       },
       error: () => {
         this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');
@@ -252,21 +257,187 @@ export class TourDetails {
         });
       }
     });
+
+    // Same "wait for both pieces of async state" pattern as the picker
+    // effect above - fires once the tour is loaded AND login status is
+    // known to be true, never for an anonymous visitor. Once the images
+    // arrive, initLightbox() sets up the (DOM-independent, see below)
+    // PhotoSwipe instance once - openCoverGallery() only ever opens it.
+    effect(() => {
+      const t = this.tour();
+      const loggedIn = this.auth.isLoggedIn();
+      if (!t || !loggedIn || this.imagesRequested) return;
+      this.imagesRequested = true;
+      this.tourService.getTourImages(t._id).subscribe({
+        next: (res) => {
+          this.tourImages.set(res.data.images);
+          if (res.data.images.length > 0) this.initLightbox();
+        },
+      });
+    });
   }
 
-  private fullImageUrl(t: Tour): string {
-    const filename = t.imageCover.replace('-cover.webp', '-full.webp');
-    return `${environment.assetUrl}/img/tours/${filename}`;
+  // No on-page thumbnail grid (dropped per feedback - too much clutter),
+  // so there's no DOM gallery for PhotoSwipeLightbox to scan; every open
+  // instead passes an explicit dataSource built from tourImages() (see
+  // openCoverGallery()), and the two custom toolbar buttons below + the
+  // bottom filmstrip are the only way to browse once it's open.
+  private async initLightbox() {
+    const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
+    this.lightbox = new PhotoSwipeLightbox({
+      pswpModule: () => import('photoswipe'),
+    });
+
+    this.lightbox.on('uiRegister', () => {
+      const ui = this.lightbox!.pswp!.ui!;
+
+      // Download button, next to zoom/close - see
+      // https://photoswipe.com/adding-ui-elements/. Points at the
+      // dedicated /download route (sets Content-Disposition: attachment)
+      // rather than the plain display URL - a bare <a download> is
+      // silently ignored by the browser for a cross-origin URL (client and
+      // API are on different subdomains), same reasoning as
+      // documentController.js's own download route elsewhere in this app.
+      ui.registerElement({
+        name: 'download-button',
+        order: 8,
+        isButton: true,
+        tagName: 'a',
+        title: 'Fénykép letöltése',
+        html: {
+          isCustomSVG: true,
+          size: 24,
+          inner: '<path d="M12 16l-6-6h4V4h4v6h4l-6 6zM5 18h14v2H5z" id="pswp__icn-download"/>',
+          outlineID: 'pswp__icn-download',
+        },
+        onInit: (el, pswp) => {
+          const link = el as HTMLAnchorElement;
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener');
+          pswp.on('change', () => {
+            const img = this.tourImages()[pswp.currIndex];
+            link.href = img ? this.galleryDownloadUrl(img.filename) : '';
+          });
+        },
+      });
+
+      // Second button - the whole gallery as a zip, same download-forcing
+      // reasoning as above. Static href/title (doesn't depend on the
+      // current slide), set once.
+      ui.registerElement({
+        name: 'download-all-button',
+        order: 9,
+        isButton: true,
+        tagName: 'a',
+        html: {
+          isCustomSVG: true,
+          size: 24,
+          inner:
+            '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16h-2v2h-2v-2h-2v-2h2v-2h2v2h2v2z" id="pswp__icn-download-all"/>',
+          outlineID: 'pswp__icn-download-all',
+        },
+        onInit: (el) => {
+          const link = el as HTMLAnchorElement;
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener');
+          link.href = this.galleryZipUrl();
+          const totalBytes = this.tourImages().reduce((sum, img) => sum + img.size, 0);
+          // Native title tooltips render a literal \n as a line break.
+          link.title = `Összes kép letöltése\n(zip, kb. ${this.formatBytes(totalBytes)})`;
+        },
+      });
+
+      // Bottom filmstrip - click any thumbnail to jump straight to it, or
+      // use PhotoSwipe's own built-in arrows/swipe to advance one by one.
+      // Lives in PhotoSwipe's own root overlay (outside Angular's view
+      // entirely, appended straight to <body>), so it's built with plain
+      // DOM APIs rather than a template - styled globally in styles.scss
+      // since a component-scoped stylesheet could never reach it anyway.
+      ui.registerElement({
+        name: 'thumbnails-strip',
+        appendTo: 'root',
+        onInit: (el, pswp) => {
+          el.className = 'pswp__thumbnails-strip';
+          const thumbEls = this.tourImages().map((img, i) => {
+            const thumb = document.createElement('img');
+            thumb.src = this.galleryThumbUrl(img.filename);
+            thumb.loading = 'lazy';
+            thumb.className = 'pswp__thumbnails-strip-item';
+            thumb.addEventListener('click', () => pswp.goTo(i));
+            el.appendChild(thumb);
+            return thumb;
+          });
+
+          const setActive = () => {
+            thumbEls.forEach((thumb, i) => {
+              thumb.classList.toggle('pswp__thumbnails-strip-item--active', i === pswp.currIndex);
+            });
+            thumbEls[pswp.currIndex]?.scrollIntoView({ inline: 'center', block: 'nearest' });
+          };
+          pswp.on('change', setActive);
+          pswp.on('afterInit', setActive);
+        },
+      });
+    });
+
+    this.lightbox.init();
   }
 
-  // The "-full" file doesn't exist yet for most tours (only new ones will
-  // have one exported) - fall back to the regular thumbnail rather than
-  // showing a broken image.
-  onPopupImageError() {
+  ngOnDestroy() {
+    this.lightbox?.destroy();
+  }
+
+  // Clicking the cover image opens the gallery at its first photo, rather
+  // than the old separate single-image popup - the cover is just the
+  // tours-list thumbnail, the gallery is the actual photo collection now
+  // that one exists. A no-op if the gallery hasn't loaded (or doesn't
+  // exist) yet for this tour, rather than erroring.
+  openCoverGallery() {
+    const images = this.tourImages();
+    if (images.length === 0 || !this.lightbox) return;
+    this.lightbox.loadAndOpen(
+      0,
+      images.map((img) => ({
+        src: this.galleryFullUrl(img.filename),
+        width: img.width,
+        height: img.height,
+        alt: img.filename,
+      })),
+    );
+  }
+
+  // Only used from initLightbox()/openCoverGallery() now - there's no
+  // on-page gallery template binding these into anymore.
+  private galleryThumbUrl(filename: string): string {
     const t = this.tour();
-    if (t) {
-      this.popupImageSrc.set(`${environment.assetUrl}/img/tours/${t.imageCover}`);
+    return t ? this.tourService.tourImageThumbUrl(t._id, filename) : '';
+  }
+
+  private galleryFullUrl(filename: string): string {
+    const t = this.tour();
+    return t ? this.tourService.tourImageFullUrl(t._id, filename) : '';
+  }
+
+  private galleryDownloadUrl(filename: string): string {
+    const t = this.tour();
+    return t ? this.tourService.tourImageDownloadUrl(t._id, filename) : '';
+  }
+
+  private galleryZipUrl(): string {
+    const t = this.tour();
+    return t ? this.tourService.tourImagesZipUrl(t._id) : '';
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    const units = ['KB', 'MB', 'GB'];
+    let value = bytes / 1024;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex++;
     }
+    return `${value.toFixed(1)} ${units[unitIndex]}`;
   }
 
   // The simple one-click case: exactly one person to offer (a guest, or a
@@ -351,14 +522,6 @@ export class TourDetails {
 
   closeMap() {
     this.showMap.set(false);
-  }
-
-  openImage() {
-    this.showImage.set(true);
-  }
-
-  closeImage() {
-    this.showImage.set(false);
   }
 
   // Called when a <app-tour-event> emits a fresh event after an opt-in

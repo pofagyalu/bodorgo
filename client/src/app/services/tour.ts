@@ -163,6 +163,23 @@ export interface SignUpResponse {
   };
 }
 
+// width/height are what PhotoSwipe needs upfront for every slide to size
+// and zoom correctly; size (bytes) drives the "download all" zip button's
+// total-size tooltip - see tourImageController.js.
+export interface TourImage {
+  filename: string;
+  width: number;
+  height: number;
+  size: number;
+}
+
+export interface TourImagesResponse {
+  status: string;
+  data: {
+    images: TourImage[];
+  };
+}
+
 export interface TourStatsResponse {
   status: string;
   data: {
@@ -262,5 +279,29 @@ export class TourService {
     payload: CreateScheduleEventPayload,
   ): Observable<CreateScheduleEventResponse> {
     return this.http.post<CreateScheduleEventResponse>(`${this.apiUrl}/${tourId}/schedule`, payload);
+  }
+
+  getTourImages(tourId: string): Observable<TourImagesResponse> {
+    return this.http.get<TourImagesResponse>(`${this.apiUrl}/${tourId}/images`);
+  }
+
+  // Plain URLs, not Observables - these back <img>/<a> src/href attributes
+  // directly. Auth rides on the session cookie (bodorgo.hu/api.bodorgo.hu
+  // share a registrable domain, so it's same-site for cookie purposes even
+  // though it's cross-origin - same reasoning imageCover already relies on).
+  tourImageThumbUrl(tourId: string, filename: string): string {
+    return `${this.apiUrl}/${tourId}/images/${encodeURIComponent(filename)}/thumb`;
+  }
+
+  tourImageFullUrl(tourId: string, filename: string): string {
+    return `${this.apiUrl}/${tourId}/images/${encodeURIComponent(filename)}`;
+  }
+
+  tourImageDownloadUrl(tourId: string, filename: string): string {
+    return `${this.apiUrl}/${tourId}/images/${encodeURIComponent(filename)}/download`;
+  }
+
+  tourImagesZipUrl(tourId: string): string {
+    return `${this.apiUrl}/${tourId}/images/download-zip`;
   }
 }
