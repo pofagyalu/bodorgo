@@ -123,3 +123,11 @@ h1 {
   opacity: 1;
   border-color: #fff;
 }
+
+/* Admin-only restrict-to-attendees toggle (see tour-details.ts's
+   initLightbox()) - tints the icon orange while the currently-viewed
+   photo is restricted, so the state is visible at a glance, not just via
+   the button's title tooltip. */
+.pswp__button--restrict-active svg {
+  fill: var(--logo-orange, #f07827);
+}

@@ -148,6 +148,12 @@ const tourSchema = new Schema(
           // Bytes, from fs.statSync at sync time - lets the client show a
           // total zip size without statting every file on every request.
           size: Number,
+          // Set by hand by an admin, after upload, for the rare sensitive
+          // photo - true restricts it to that tour's own attendees (plus
+          // any admin), everyone else can't see it at all (not even that
+          // it exists - see tourImageController.js's canViewRestrictedImage).
+          // Most photos never get touched, so this defaults to visible.
+          restricted: { type: Boolean, default: false },
         },
       ],
       select: false,

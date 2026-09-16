@@ -19,6 +19,7 @@ import { Writable } from 'stream';
 import mongoose from 'mongoose';
 import config from '../src/config.js';
 import Tour from '../src/models/tourModel.js';
+import User from '../src/models/userModel.js';
 import {
   getTourImages,
   getTourImageThumb,
@@ -62,9 +63,15 @@ if (!tour || tour.images.length === 0) {
 const tourId = tour._id.toString();
 const knownFilename = tour.images[0].filename;
 
+// None of these real photos are restricted, so role doesn't matter here -
+// but every handler now unconditionally checks req.user (see
+// canViewRestrictedImages in tourImageController.js), so it always has to
+// be a real user, not left undefined like before that feature existed.
+const user = await User.findOne({ role: 'admin' });
+
 // GET /tours/:tourId/images
 const listRes = fakeRes();
-await getTourImages({ params: { tourId } }, listRes);
+await getTourImages({ params: { tourId }, user }, listRes);
 check('getTourImages returns the full recorded list', listRes.body?.data?.images?.length === tour.images.length);
 check(
   'getTourImages list starts with the expected filename',
@@ -81,7 +88,7 @@ check(
 
 // GET /tours/:tourId/images/:filename/thumb - normal case, thumbnail exists
 const thumbRes = fakeRes();
-await getTourImageThumb({ params: { tourId, filename: knownFilename } }, thumbRes);
+await getTourImageThumb({ params: { tourId, filename: knownFilename }, user }, thumbRes);
 check(
   'getTourImageThumb serves the pre-generated .webp when it exists',
   thumbRes.sentFile?.endsWith('.webp') && fs.existsSync(thumbRes.sentFile),
@@ -97,7 +104,7 @@ const thumbBackup = `${thumbPath}.testbackup`;
 fs.renameSync(thumbPath, thumbBackup);
 try {
   const fallbackRes = fakeRes();
-  await getTourImageThumb({ params: { tourId, filename: knownFilename } }, fallbackRes);
+  await getTourImageThumb({ params: { tourId, filename: knownFilename }, user }, fallbackRes);
   check(
     'getTourImageThumb falls back to the full image when the thumbnail is missing',
     fallbackRes.sentFile?.endsWith(knownFilename),
@@ -108,14 +115,14 @@ try {
 
 // GET /tours/:tourId/images/:filename - full image
 const fullRes = fakeRes();
-await getTourImage({ params: { tourId, filename: knownFilename } }, fullRes);
+await getTourImage({ params: { tourId, filename: knownFilename }, user }, fullRes);
 check('getTourImage serves the full-resolution original', fullRes.sentFile?.endsWith(knownFilename));
 
 // An id/filename combination that was never recorded must be rejected,
 // not silently served or crash.
 let unknownError = null;
 try {
-  await getTourImage({ params: { tourId, filename: 'not-a-real-file.jpg' } }, fakeRes());
+  await getTourImage({ params: { tourId, filename: 'not-a-real-file.jpg' }, user }, fakeRes());
 } catch (err) {
   unknownError = err;
 }
@@ -136,7 +143,7 @@ const collector = new Writable({
 collector.headersSent = false;
 collector.attachment = () => {}; // res.attachment() is a no-op on this fake
 const zipDone = new Promise((resolve) => collector.on('finish', resolve));
-await downloadTourImagesZip({ params: { tourId } }, collector);
+await downloadTourImagesZip({ params: { tourId }, user }, collector);
 await zipDone;
 const zipBuffer = Buffer.concat(chunks);
 check('zip download produces a real zip (PK magic bytes)', zipBuffer.subarray(0, 2).toString() === 'PK');

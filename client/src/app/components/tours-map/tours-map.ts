@@ -1,5 +1,6 @@
 import { Component, inject, signal, ElementRef, viewChild, afterRenderEffect } from '@angular/core';
 import { Router } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
 import { TourService, Tour } from '../../services/tour';
 
@@ -9,7 +10,7 @@ import { TourService, Tour } from '../../services/tour';
 @Component({
   selector: 'app-tours-map',
   standalone: true,
-  imports: [],
+  imports: [MatIconModule],
   templateUrl: './tours-map.html',
   styleUrl: './tours-map.scss',
 })
@@ -18,6 +19,7 @@ export class ToursMap {
   private router = inject(Router);
 
   private tours = signal<Tour[]>([]);
+  isFullscreen = signal(false);
 
   private mapContainer = viewChild<ElementRef<HTMLDivElement>>('mapContainer');
   private map: L.Map | null = null;
@@ -78,8 +80,12 @@ export class ToursMap {
       // it renders as a hole rather than a separately-colored circle.
       const icon = L.divIcon({
         className: 'tour-marker',
+        // Sized at 2/3 of the original 30x40 (was reported as too big) -
+        // the viewBox stays at the shape's own native 30x40 coordinate
+        // space, only the rendered width/height (and the matching
+        // iconSize/iconAnchor/popupAnchor below) actually shrink.
         html: `
-          <svg class="tour-pin" width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
+          <svg class="tour-pin" width="20" height="27" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
             <path
               class="tour-pin-shape"
               fill-rule="evenodd"
@@ -89,9 +95,9 @@ export class ToursMap {
             ></path>
           </svg>
         `,
-        iconSize: [30, 40],
-        iconAnchor: [15, 40],
-        popupAnchor: [0, -40],
+        iconSize: [20, 27],
+        iconAnchor: [10, 27],
+        popupAnchor: [0, -27],
       });
 
       const marker = L.marker([lat, lng], { icon })
@@ -111,5 +117,18 @@ export class ToursMap {
     } else {
       this.map.setView([47.1625, 19.5033], 7); // fallback: roughly Hungary's center
     }
+  }
+
+  // Leaflet measures and caches its container's size once and never
+  // notices a plain CSS-driven resize (like the .map-fullscreen class
+  // toggled below) on its own - invalidateSize() forces it to re-measure,
+  // otherwise the map would keep rendering at its old (pre-toggle) size
+  // inside the new box. requestAnimationFrame (not afterNextRender - this
+  // runs from a template click handler, outside any injection context)
+  // defers it to the next paint, by which point the browser has actually
+  // applied the new .map-fullscreen layout.
+  toggleFullscreen() {
+    this.isFullscreen.update((v) => !v);
+    requestAnimationFrame(() => this.map?.invalidateSize());
   }
 }

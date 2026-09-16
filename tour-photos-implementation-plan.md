@@ -140,3 +140,15 @@ Frontend done too:
 - Client-side type-check, dev/prod builds, and all 16 unit tests pass. **Not yet visually verified in a real browser while logged in** - no browser-automation tool was available in this environment to click through it end-to-end, and login requires real Authentik credentials. Worth a real look on your end before/after deploying.
 
 Next: your visual check, then the single-image/zip download UX once you've tried it for real, then decommissioning the old tunnel.
+
+## Update: restricted (sensitive) photos
+
+The on-page thumbnail grid mentioned above was later dropped entirely per feedback (felt like clutter) - clicking the cover photo now opens PhotoSwipe directly, with a bottom filmstrip (click any thumbnail to jump to it) and toolbar buttons for single/zip download built inside the viewer itself via PhotoSwipe's `registerElement` API. The gallery data model and server routes described above are otherwise unchanged.
+
+Added a per-photo `restricted` flag (`Tour.images[].restricted`, default `false`) for the rare sensitive photo an admin wants visible only to that tour's own attendees:
+
+- `canViewRestrictedImages(user, tourId)` (`tourImageController.js`) - true for an admin, or anyone with a real `Reservation` for that tour (same attendee check `getMyAttendance` already uses elsewhere). Not cached - restricted photos are meant to be rare, so the extra query per request is a non-issue.
+- Every image route (`list`, `thumb`, `full`, `download`, `download-zip`) enforces this. A restricted photo a viewer isn't allowed to see is **omitted from the list** and returns the exact same "not found" error as an unknown filename on the direct routes - deliberately indistinguishable from a photo that was never recorded, so its existence isn't revealed to anyone outside the allowed set either.
+- New admin-only route: `PATCH /tours/:tourId/images/:filename` with `{ restricted: boolean }` - toggles one photo. `restrictTo('admin')`, confirmed 401 without a session.
+- Client: an admin-only toggle button inside the PhotoSwipe toolbar (a lock icon, tinted orange while the current photo is restricted) - `setImageRestricted()` on `TourService`, patches `tourImages()` locally on success so the icon and gallery list reflect the new state immediately without reloading.
+- `scripts/testRestrictedImages.js` (new) verifies all of this against real data (tour order 2, a real reservation's real attendee) - admin sees it, the actual attendee sees it, a fabricated non-attendee gets rejected, and the list correctly includes/omits it depending on the viewer. Temporarily restricts one real photo and always restores it in a `finally`, since this touches production data.

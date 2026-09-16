@@ -53,6 +53,9 @@ router
 router
   .route('/:tourId/images/:filename/download')
   .get(requireAuth, tourImageController.downloadTourImage);
-router.route('/:tourId/images/:filename').get(requireAuth, tourImageController.getTourImage);
+router
+  .route('/:tourId/images/:filename')
+  .get(requireAuth, tourImageController.getTourImage)
+  .patch(requireAuth, restrictTo('admin'), tourImageController.setImageRestricted);
 
 export default router;

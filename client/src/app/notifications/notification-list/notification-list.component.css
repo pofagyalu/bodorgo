@@ -4,4 +4,10 @@
   bottom: 0;
   right: 10px;
   width: 300px;
+  /* Higher than every modal/overlay in the app, including PhotoSwipe's own
+     root (--pswp-root-z-index: 100000, see styles.scss) - without this a
+     toast fired while the gallery viewer is open renders behind it and is
+     nearly invisible, since :host had no z-index at all before (relying on
+     plain document order, which PhotoSwipe's own stacking context beats). */
+  z-index: 200000;
 }

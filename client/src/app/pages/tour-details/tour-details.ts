@@ -291,6 +291,44 @@ export class TourDetails implements OnDestroy {
     this.lightbox.on('uiRegister', () => {
       const ui = this.lightbox!.pswp!.ui!;
 
+      // Admin-only: mark/unmark the currently-viewed photo as restricted
+      // to that tour's own attendees (see
+      // tourImageController.js's canViewRestrictedImages) - for the rare
+      // sensitive photo, set by hand after upload. Only registered at all
+      // for an admin viewer; toggling patches tourImages() locally so the
+      // icon and any later re-open reflect the new state without
+      // reloading the whole gallery.
+      if (this.auth.user()?.role === 'admin') {
+        ui.registerElement({
+          name: 'restrict-button',
+          order: 7,
+          isButton: true,
+          html: {
+            isCustomSVG: true,
+            size: 24,
+            inner:
+              '<path d="M12 17a2 2 0 0 0 2-2 2 2 0 0 0-2-2 2 2 0 0 0-2 2 2 2 0 0 0 2 2m6-9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h1V6a5 5 0 0 1 10 0v2h-2V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v2z" id="pswp__icn-restrict"/>',
+            outlineID: 'pswp__icn-restrict',
+          },
+          onInit: (el, pswp) => {
+            const refresh = () => {
+              const img = this.tourImages()[pswp.currIndex];
+              el.title = img?.restricted
+                ? 'Csak a résztvevők látják - kattints a feloldáshoz'
+                : 'Mindenki látja - kattints a résztvevőkre korlátozáshoz';
+              el.classList.toggle('pswp__button--restrict-active', !!img?.restricted);
+            };
+            pswp.on('change', refresh);
+            refresh();
+
+            el.addEventListener('click', () => {
+              const img = this.tourImages()[pswp.currIndex];
+              if (img) this.toggleImageRestricted(img.filename, !img.restricted, refresh);
+            });
+          },
+        });
+      }
+
       // Download button, next to zoom/close - see
       // https://photoswipe.com/adding-ui-elements/. Points at the
       // dedicated /download route (sets Content-Disposition: attachment)
@@ -404,6 +442,28 @@ export class TourDetails implements OnDestroy {
         alt: img.filename,
       })),
     );
+  }
+
+  private toggleImageRestricted(filename: string, restricted: boolean, onDone: () => void) {
+    const t = this.tour();
+    if (!t) return;
+
+    this.tourService.setImageRestricted(t._id, filename, restricted).subscribe({
+      next: () => {
+        this.tourImages.update((imgs) =>
+          imgs.map((img) => (img.filename === filename ? { ...img, restricted } : img)),
+        );
+        onDone();
+        this.notifications.addSuccess(
+          restricted ? 'Fénykép korlátozva a résztvevőkre' : 'Fénykép újra mindenki számára látható',
+        );
+      },
+      error: (err) => {
+        this.notifications.addError(
+          err?.error?.message ?? 'Hiba történt a korlátozás módosítása közben.',
+        );
+      },
+    });
   }
 
   // Only used from initLightbox()/openCoverGallery() now - there's no

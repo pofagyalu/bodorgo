@@ -165,12 +165,15 @@ export interface SignUpResponse {
 
 // width/height are what PhotoSwipe needs upfront for every slide to size
 // and zoom correctly; size (bytes) drives the "download all" zip button's
-// total-size tooltip - see tourImageController.js.
+// total-size tooltip. restricted (admin-only, set by hand per photo) means
+// only that tour's own attendees (plus an admin) can see it - anyone else
+// never receives it in this list at all, see tourImageController.js.
 export interface TourImage {
   filename: string;
   width: number;
   height: number;
   size: number;
+  restricted: boolean;
 }
 
 export interface TourImagesResponse {
@@ -303,5 +306,18 @@ export class TourService {
 
   tourImagesZipUrl(tourId: string): string {
     return `${this.apiUrl}/${tourId}/images/download-zip`;
+  }
+
+  // Admin-only server-side (restrictTo('admin') on the route) - marks/
+  // unmarks one photo as restricted to that tour's own attendees.
+  setImageRestricted(
+    tourId: string,
+    filename: string,
+    restricted: boolean,
+  ): Observable<{ status: string; data: { image: TourImage } }> {
+    return this.http.patch<{ status: string; data: { image: TourImage } }>(
+      `${this.apiUrl}/${tourId}/images/${encodeURIComponent(filename)}`,
+      { restricted },
+    );
   }
 }

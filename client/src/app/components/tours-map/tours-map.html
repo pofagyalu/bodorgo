@@ -1,1 +1,18 @@
-<div class="map-container" #mapContainer></div>
+<!-- The button lives outside #mapContainer, not inside it - Leaflet takes
+     that element over as its own root (appending tile/marker panes as
+     children of it), so anything Angular put inside would be at the mercy
+     of however Leaflet manages that DOM. Toggling .map-fullscreen here on
+     the wrapper (not the Leaflet container itself) keeps the two fully
+     independent. -->
+<div class="map-wrapper" [class.map-fullscreen]="isFullscreen()">
+  <div class="map-container" #mapContainer></div>
+  <button
+    type="button"
+    class="map-fullscreen-toggle"
+    [attr.aria-label]="isFullscreen() ? 'Térkép bezárása' : 'Térkép teljes képernyőn'"
+    [title]="isFullscreen() ? 'Bezárás' : 'Teljes képernyő'"
+    (click)="toggleFullscreen()"
+  >
+    <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+  </button>
+</div>
