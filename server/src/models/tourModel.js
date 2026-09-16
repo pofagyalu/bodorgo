@@ -177,9 +177,10 @@ tourSchema.pre('save', function (next) {
   next();
 });
 
-// Covers Tour.create() and any explicit .save() call. PATCH updates go
-// through findByIdAndUpdate instead, which bypasses this hook - that path
-// is handled explicitly in tourController.js's updateTour.
+// Covers Tour.create() and any explicit .save() call - tourController.js's
+// updateTour loads and .save()s rather than using findByIdAndUpdate
+// specifically so this (and the dailyWeather hook below) actually fire on
+// an edit, not just on creation.
 tourSchema.pre('save', async function (next) {
   if (
     this.isModified('location.coordinates') &&
@@ -193,6 +194,29 @@ tourSchema.pre('save', async function (next) {
     } catch (err) {
       logger.error(`Failed to compute distance from Budapest: ${err.message}`);
     }
+  }
+  next();
+});
+
+// tourController.js's refreshTourWeather caches weather per day number and
+// freezes it (isFinal: true) forever once that day has passed - it never
+// revisits a frozen entry, regardless of whether the tour's actual dates
+// changed since. Without this, editing startDate/duration (a date shift)
+// or location.coordinates (weather is fetched for a specific lat/lng)
+// after a tour already has cached/frozen weather leaves the *old* dates'
+// or *old* location's weather sitting there, silently wrong for the
+// tour's new dates/place - this was a real reported bug (several tours
+// quickly created with the same placeholder date+location all ended up
+// showing identical weather that never updated once the real per-tour
+// dates were edited in). Clearing it here forces a fresh fetch on the
+// next view. A no-op on creation, since dailyWeather starts empty anyway.
+tourSchema.pre('save', function (next) {
+  if (
+    this.isModified('startDate') ||
+    this.isModified('duration') ||
+    this.isModified('location.coordinates')
+  ) {
+    this.dailyWeather = [];
   }
   next();
 });
