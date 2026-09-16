@@ -1,0 +1,52 @@
+// Same look as tour-details.scss's .section-heading/.participants-section
+// - duplicated here since Angular's view encapsulation means that
+// component's stylesheet can't reach into this one, same reasoning
+// documented repeatedly elsewhere in this app (e.g. tour-event.scss's
+// icon-btn rules).
+.review-section {
+  margin-bottom: 3rem;
+}
+
+.section-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #eee;
+}
+
+.review-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.review-stars-row {
+  display: flex;
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  padding: 0.1rem;
+  cursor: pointer;
+  color: #ccc;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.1s ease;
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.star-btn.filled {
+  color: var(--logo-orange, #f07827);
+}
+
+.review-value {
+  font-weight: 600;
+  color: #444;
+  min-width: 3.5rem;
+}

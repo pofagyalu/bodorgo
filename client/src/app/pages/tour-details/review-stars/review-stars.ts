@@ -1,0 +1,75 @@
+import { Component, EventEmitter, Input, Output, OnInit, inject, signal, computed } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
+import { TourService } from '../../../services/tour';
+import { NotificationsService } from '../../../notifications/notifications.service';
+
+// A 10-star rating control, one per attendee per tour, editable any time -
+// submitting again just replaces the same person's earlier rating (see
+// reviewController.js's submitReview), it never adds a second entry. Only
+// ever rendered for an actual attendee of this specific tour - ngOnInit's
+// getMyReview() call is what tells the template whether to show anything
+// at all (isAttendee()), same attendance check the restricted-images
+// feature already uses elsewhere.
+@Component({
+  selector: 'app-review-stars',
+  standalone: true,
+  imports: [MatIconModule],
+  templateUrl: './review-stars.html',
+  styleUrl: './review-stars.scss',
+})
+export class ReviewStars implements OnInit {
+  private tourService = inject(TourService);
+  private notifications = inject(NotificationsService);
+
+  @Input({ required: true }) tourId!: string;
+  @Output() reviewSubmitted = new EventEmitter<{ average: number; quantity: number }>();
+
+  readonly stars = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  loaded = signal(false);
+  isAttendee = signal(false);
+  savedRating = signal<number | null>(null);
+  hoverRating = signal<number | null>(null);
+  submitting = signal(false);
+
+  // Hovering previews over whatever's actually saved - reverts the instant
+  // the mouse leaves without a click.
+  displayRating = computed(() => this.hoverRating() ?? this.savedRating());
+
+  ngOnInit() {
+    this.tourService.getMyReview(this.tourId).subscribe({
+      next: (res) => {
+        this.isAttendee.set(res.data.isAttendee);
+        this.savedRating.set(res.data.rating);
+        this.loaded.set(true);
+      },
+      error: () => this.loaded.set(true),
+    });
+  }
+
+  onHover(value: number) {
+    this.hoverRating.set(value);
+  }
+
+  onLeave() {
+    this.hoverRating.set(null);
+  }
+
+  onClick(value: number) {
+    if (this.submitting()) return;
+    this.submitting.set(true);
+
+    this.tourService.submitReview(this.tourId, value).subscribe({
+      next: (res) => {
+        this.savedRating.set(res.data.rating);
+        this.submitting.set(false);
+        this.notifications.addSuccess('Értékelés mentve');
+        this.reviewSubmitted.emit({ average: res.data.ratingsAverage, quantity: res.data.ratingsQuantity });
+      },
+      error: (err) => {
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt az értékelés mentése közben.');
+        this.submitting.set(false);
+      },
+    });
+  }
+}

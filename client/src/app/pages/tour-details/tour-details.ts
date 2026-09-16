@@ -10,6 +10,7 @@ import { environment } from '../../../environments/environment';
 import { randomLogoColor } from '../../shared/logo-colors';
 import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
+import { ReviewStars } from './review-stars/review-stars';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 interface DayGroup {
@@ -35,7 +36,7 @@ interface PickerOption {
 @Component({
   selector: 'app-tour-details',
   standalone: true,
-  imports: [MatIconModule, RouterLink, TourEvent, EventForm],
+  imports: [MatIconModule, RouterLink, TourEvent, EventForm, ReviewStars],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
@@ -596,6 +597,15 @@ export class TourDetails implements OnDestroy {
         schedule: cur.schedule.map((e) => (e._id === updated._id ? updated : e)),
       };
     });
+  }
+
+  // Called when <app-review-stars> emits after a successful submit - keeps
+  // the compact average shown near the top in sync immediately, without
+  // reloading the whole tour.
+  onReviewSubmitted(result: { average: number; quantity: number }) {
+    this.tour.update((cur) =>
+      cur ? { ...cur, ratingsAverage: result.average, ratingsQuantity: result.quantity } : cur,
+    );
   }
 
   startAddEvent(day: number) {

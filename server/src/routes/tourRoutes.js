@@ -2,6 +2,7 @@ import express from 'express';
 import * as tourController from '../controllers/tourController.js';
 import { signUpForTour } from '../controllers/reservationController.js';
 import * as tourImageController from '../controllers/tourImageController.js';
+import * as reviewController from '../controllers/reviewController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -57,5 +58,12 @@ router
   .route('/:tourId/images/:filename')
   .get(requireAuth, tourImageController.getTourImage)
   .patch(requireAuth, restrictTo('admin'), tourImageController.setImageRestricted);
+
+// Reviews - requireAuth only, not restrictTo('admin')/anything role-based;
+// the actual "who's allowed" check is attendance-based, enforced inside
+// reviewController.js since it needs a per-tour Reservation lookup that a
+// static route-level role check can't express.
+router.route('/:tourId/reviews').put(requireAuth, reviewController.submitReview);
+router.route('/:tourId/reviews/me').get(requireAuth, reviewController.getMyReview);
 
 export default router;

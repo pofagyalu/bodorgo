@@ -1,0 +1,25 @@
+@if (loaded() && isAttendee()) {
+<section class="review-section">
+  <h2 class="section-heading">Értékelésed</h2>
+  <div class="review-stars">
+    <div class="review-stars-row" (mouseleave)="onLeave()">
+      @for (value of stars; track value) {
+      <button
+        type="button"
+        class="star-btn"
+        [class.filled]="value <= (displayRating() ?? 0)"
+        [disabled]="submitting()"
+        (mouseenter)="onHover(value)"
+        (click)="onClick(value)"
+        [attr.aria-label]="value + ' csillag'"
+      >
+        <mat-icon>{{ value <= (displayRating() ?? 0) ? 'star' : 'star_border' }}</mat-icon>
+      </button>
+      }
+    </div>
+    <span class="review-value">
+      {{ displayRating() !== null ? displayRating() + '/10' : 'Még nem értékelted' }}
+    </span>
+  </div>
+</section>
+}

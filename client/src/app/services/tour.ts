@@ -183,6 +183,23 @@ export interface TourImagesResponse {
   };
 }
 
+export interface MyReviewResponse {
+  status: string;
+  data: {
+    isAttendee: boolean;
+    rating: number | null;
+  };
+}
+
+export interface SubmitReviewResponse {
+  status: string;
+  data: {
+    rating: number;
+    ratingsAverage: number;
+    ratingsQuantity: number;
+  };
+}
+
 export interface TourStatsResponse {
   status: string;
   data: {
@@ -319,5 +336,18 @@ export class TourService {
       `${this.apiUrl}/${tourId}/images/${encodeURIComponent(filename)}`,
       { restricted },
     );
+  }
+
+  // Tells the caller both whether they're even allowed to review this tour
+  // (an actual attendee - see reviewController.js) and, if so, whatever
+  // they've already rated it.
+  getMyReview(tourId: string): Observable<MyReviewResponse> {
+    return this.http.get<MyReviewResponse>(`${this.apiUrl}/${tourId}/reviews/me`);
+  }
+
+  // Submitting again just replaces this same person's earlier rating -
+  // "change it any time", not a new entry each time.
+  submitReview(tourId: string, rating: number): Observable<SubmitReviewResponse> {
+    return this.http.put<SubmitReviewResponse>(`${this.apiUrl}/${tourId}/reviews`, { rating });
   }
 }

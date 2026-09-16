@@ -53,8 +53,28 @@ const tourSchema = new Schema(
       type: Number,
       required: [true, 'A tábornak kell legyen mérete'],
     },
+    // Real, computed from `reviews` below on every submit (see the
+    // pre('save') hook) - the 4.5/0 defaults only ever apply to a tour
+    // nobody has reviewed yet (a leftover from this codebase's
+    // Natours-tutorial origins, kept as the placeholder for that case).
     ratingsAverage: { type: Number, default: 4.5 },
     ratingsQuantity: { type: Number, default: 0 },
+    // One entry per attendee, upserted on each submit (see
+    // reviewController.js's submitReview - "change it any time" means
+    // replace, not append). select:false - who rated what is nobody
+    // else's business, only the aggregate ratingsAverage/ratingsQuantity
+    // above are public.
+    reviews: {
+      type: [
+        {
+          _id: false,
+          user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+          rating: { type: Number, required: true, min: 1, max: 10 },
+          updatedAt: { type: Date, default: Date.now },
+        },
+      ],
+      select: false,
+    },
     price: { type: Number, required: [true, 'A tábornak kell legyen ára'] },
     summary: {
       type: String,
@@ -217,6 +237,21 @@ tourSchema.pre('save', function (next) {
     this.isModified('location.coordinates')
   ) {
     this.dailyWeather = [];
+  }
+  next();
+});
+
+// Recomputes the public ratingsAverage/ratingsQuantity from the real
+// per-attendee reviews array whenever it changes (reviewController.js's
+// submitReview upserts into it) - these two fields are what tour cards
+// actually display, `reviews` itself is select:false and never exposed.
+// Only recomputes once there's at least one real review; an unreviewed
+// tour keeps the schema's 4.5/0 placeholder rather than dropping to 0.
+tourSchema.pre('save', function (next) {
+  if (this.isModified('reviews') && this.reviews.length > 0) {
+    const sum = this.reviews.reduce((acc, r) => acc + r.rating, 0);
+    this.ratingsAverage = Math.round((sum / this.reviews.length) * 10) / 10;
+    this.ratingsQuantity = this.reviews.length;
   }
   next();
 });
