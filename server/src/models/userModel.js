@@ -42,6 +42,16 @@ const userSchema = new Schema(
       default: false,
       select: false,
     },
+    // Neither is shown directly (birthday especially never renders in the
+    // admin table - see userController.js's computeAge) - birthday only
+    // exists to derive a displayed age, and to pre-fill the edit form.
+    birthday: {
+      type: Date,
+    },
+    gender: {
+      type: String,
+      enum: ['férfi', 'nő'],
+    },
     // Set on every successful Authentik login (see authOidcController.js) -
     // absent entirely for a login-less dependent who's never actually
     // logged in themselves yet.

@@ -14,6 +14,21 @@ const filterObj = (obj, ...allowedFields) => {
 
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 
+// Age is derived, never stored - birthday is the only real field, this
+// just computes today's age from it. Returns null rather than a bogus
+// number when there's no birthday on record yet.
+export function computeAge(birthday) {
+  if (!birthday) return null;
+  const today = new Date();
+  const birth = new Date(birthday);
+  let age = today.getFullYear() - birth.getFullYear();
+  const hadBirthdayThisYear =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+  if (!hadBirthdayThisYear) age--;
+  return age;
+}
+
 // The admin table only ever shows the last 6 characters of a familyId (see
 // getAllUsers's comment and profile.html's family-tag) - the full 24-char
 // id is only reachable via a hover tooltip, so typing that short suffix
@@ -53,32 +68,36 @@ export async function resolveFamilyId(input) {
 // every person's name/email/familyId in one place. Alphabetical by name -
 // the familyId column already shown lets an admin spot who belongs
 // together without needing physical grouping in the list itself.
+// An admin gets the full roster with every management field; a plain
+// 'member' can also see the whole list now (name/email/age/gender only -
+// no familyId/role/lastLoginAt, and no raw birthday, just the computed
+// age), but never the fields that back admin-only actions like editing or
+// the family/role columns. A 'guest' still can't call this at all (see
+// userRoutes.js's restrictTo) - they only ever see their own family, via
+// getMyFamily.
 export const getAllUsers = async (req, res) => {
-  const users = await User.find()
-    .select('name email familyId role sub lastLoginAt createdAt')
-    .sort('name');
+  const isAdmin = req.user.role === 'admin';
+  const selectFields = isAdmin
+    ? 'name email familyId role sub lastLoginAt createdAt birthday gender'
+    : 'name email birthday gender';
+
+  const users = await User.find().select(selectFields).sort('name').lean();
+
+  // birthday itself is only ever needed by the admin's edit form (see
+  // profile.ts's startEditUser) - a 'member' viewer gets the computed age
+  // only, never the raw date.
+  const withAge = users.map((u) => {
+    const age = computeAge(u.birthday);
+    if (isAdmin) return { ...u, age };
+    const { birthday, ...rest } = u;
+    return { ...rest, age };
+  });
 
   res.status(200).json({
     status: 'success',
-    results: users.length,
-    data: { users },
+    results: withAge.length,
+    data: { users: withAge },
   });
-};
-
-// A club member (role 'member') or admin can see the full membership
-// roster - not the admin's whole user table (that also includes login-less
-// dependents and their familyId/role/last-login, which isn't this
-// audience's business), just the names/emails of actual dues-paying
-// members. A 'guest' (no membership, e.g. a login-less dependent) gets a
-// 403 - they only ever see their own family's roster, see getMyFamily.
-export const getClubMembers = async (req, res) => {
-  if (req.user.role !== 'member' && req.user.role !== 'admin') {
-    throw new AppError('Csak klubtagok láthatják a tagok listáját.', 403);
-  }
-
-  const members = await User.find({ role: 'member' }).select('name email').sort('name');
-
-  res.status(200).json({ status: 'success', data: { members } });
 };
 
 // Every logged-in user can see their own family's roster (their own
@@ -159,7 +178,7 @@ export const getUser = (req, res) => {
 // etc.): omitting familyId starts a brand new family for this one person,
 // giving one joins them into that existing family directly.
 export const createUser = async (req, res) => {
-  const { name, email, familyId } = req.body;
+  const { name, email, familyId, birthday, gender } = req.body;
   if (!name) {
     throw new AppError('A névnek nem lehet üres.', 400);
   }
@@ -168,16 +187,21 @@ export const createUser = async (req, res) => {
     name,
     email: email ? email.toLowerCase() : undefined,
     familyId: familyId ? await resolveFamilyId(familyId) : new mongoose.Types.ObjectId(),
+    birthday: birthday || undefined,
+    gender: gender || undefined,
   });
 
-  res.status(201).json({ status: 'success', data: { user } });
+  res.status(201).json({
+    status: 'success',
+    data: { user: { ...user.toObject(), age: computeAge(user.birthday) } },
+  });
 };
 
 // Admin-only - edits name/email/familyId by hand. familyId as an empty
 // string explicitly removes the user from their family (rather than the
 // field being silently ignored), for undoing a mistaken assignment.
 export const updateUser = async (req, res) => {
-  const { name, email, familyId } = req.body;
+  const { name, email, familyId, birthday, gender } = req.body;
 
   const set = {};
   const unset = {};
@@ -186,6 +210,14 @@ export const updateUser = async (req, res) => {
   if (familyId !== undefined) {
     if (familyId) set.familyId = await resolveFamilyId(familyId);
     else unset.familyId = 1;
+  }
+  if (birthday !== undefined) {
+    if (birthday) set.birthday = birthday;
+    else unset.birthday = 1;
+  }
+  if (gender !== undefined) {
+    if (gender) set.gender = gender;
+    else unset.gender = 1;
   }
 
   const ops = {};
@@ -201,7 +233,10 @@ export const updateUser = async (req, res) => {
     throw new AppError('No user found with that ID!', 404);
   }
 
-  res.status(200).json({ status: 'success', data: { user } });
+  res.status(200).json({
+    status: 'success',
+    data: { user: { ...user.toObject(), age: computeAge(user.birthday) } },
+  });
 };
 
 // Admin-only - groups several existing users into one shared family in a
@@ -239,10 +274,12 @@ export const joinFamily = async (req, res) => {
   await User.updateMany({ _id: { $in: userIds } }, { familyId });
 
   const updatedUsers = await User.find({ _id: { $in: userIds } })
-    .select('name email familyId role sub lastLoginAt createdAt')
-    .sort('name');
+    .select('name email familyId role sub lastLoginAt createdAt birthday gender')
+    .sort('name')
+    .lean();
+  const withAge = updatedUsers.map((u) => ({ ...u, age: computeAge(u.birthday) }));
 
-  res.status(200).json({ status: 'success', data: { users: updatedUsers, familyId } });
+  res.status(200).json({ status: 'success', data: { users: withAge, familyId } });
 };
 
 export const deleteUser = (req, res) => {

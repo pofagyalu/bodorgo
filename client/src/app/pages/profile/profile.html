@@ -2,10 +2,10 @@
   <h1 class="page-title">Profil</h1>
 
   <section class="profile-section">
-    <p><strong>{{ auth.user()?.name }}</strong></p>
-    @if (auth.user()?.email) {
-    <p class="empty-note">{{ auth.user()?.email }}</p>
-    }
+    <p class="profile-summary"><strong>Név:</strong> {{ auth.user()?.name }}</p>
+    <p class="profile-summary"><strong>E-mail cím:</strong> {{ auth.user()?.email }}</p>
+    <p class="profile-summary"><strong>Klubtag:</strong> {{ isClubMember() ? 'igen' : 'nem' }}</p>
+    <p class="profile-summary"><strong>Tábori részvételek száma:</strong> {{ attendance().length }}</p>
   </section>
 
   <section class="profile-section">
@@ -55,33 +55,11 @@
   </section>
   }
 
-  @if (auth.user()?.role === 'member') {
-  <section class="profile-section">
-    <h2 class="section-heading">Klubtagok</h2>
-
-    @if (clubMembersError()) {
-    <p class="error-note">{{ clubMembersError() }}</p>
-    } @else if (clubMembers().length === 0) {
-    <p class="empty-note">Még nincs regisztrált klubtag.</p>
-    } @else {
-    <ul class="family-list">
-      @for (m of clubMembers(); track m._id) {
-      <li class="family-row">
-        <span class="family-name">{{ m.name }}</span>
-        @if (m.email) {
-        <span class="empty-note">{{ m.email }}</span>
-        }
-      </li>
-      }
-    </ul>
-    }
-  </section>
-  }
-
-  @if (auth.user()?.role === 'admin') {
+  @if (auth.user()?.role === 'admin' || auth.user()?.role === 'member') {
   <section class="profile-section">
     <div class="section-header-row">
       <h2 class="section-heading">Összes felhasználó</h2>
+      @if (isAdmin()) {
       <button
         type="button"
         class="icon-btn icon-btn--add"
@@ -90,12 +68,14 @@
       >
         <mat-icon>add</mat-icon>
       </button>
+      }
     </div>
     <p class="page-subtitle">
-      {{ users().length }} személy - a saját családod tagjai kiemelve.
+      {{ users().length }} személy
+      @if (isAdmin()) { - a saját családod tagjai kiemelve. }
     </p>
 
-    @if (addingUser()) {
+    @if (isAdmin() && addingUser()) {
     <div class="user-form">
       <input type="text" [(ngModel)]="addUserForm.name" placeholder="Név" />
       <input type="email" [(ngModel)]="addUserForm.email" placeholder="E-mail (opcionális)" />
@@ -104,6 +84,12 @@
         [(ngModel)]="addUserForm.familyId"
         placeholder="Család ID vagy annak vége (üresen új család)"
       />
+      <input type="date" [(ngModel)]="addUserForm.birthday" title="Születési dátum (opcionális)" />
+      <select [(ngModel)]="addUserForm.gender" title="Nem (opcionális)">
+        <option value="">Nem (opcionális)</option>
+        <option value="férfi">Férfi</option>
+        <option value="nő">Nő</option>
+      </select>
       <div class="user-form-actions">
         <button
           type="button"
@@ -121,7 +107,7 @@
     </div>
     }
 
-    @if (selectedUserIds().size >= 2) {
+    @if (isAdmin() && selectedUserIds().size >= 2) {
     <div class="bulk-actions">
       <button type="button" class="join-family-btn" [disabled]="joiningFamily()" (click)="joinSelectedIntoFamily()">
         {{ selectedUserIds().size }} kiválasztott összekapcsolása egy családba
@@ -135,18 +121,25 @@
     <table class="users-table">
       <thead>
         <tr>
+          @if (isAdmin()) {
           <th></th>
+          }
           <th>Név</th>
           <th>E-mail</th>
+          <th>Kor</th>
+          <th>Nem</th>
+          @if (isAdmin()) {
           <th>Család</th>
           <th>Szerepkör</th>
           <th>Utolsó belépés</th>
           <th></th>
+          }
         </tr>
       </thead>
       <tbody>
         @for (u of users(); track u._id) {
         <tr [class.own-family-row]="isOwnFamily(u)">
+          @if (isAdmin()) {
           <td>
             <input
               type="checkbox"
@@ -154,9 +147,20 @@
               (change)="toggleUserSelected(u._id)"
             />
           </td>
+          }
           @if (editingUserId() === u._id) {
           <td><input type="text" [(ngModel)]="editUserForm.name" /></td>
           <td><input type="email" [(ngModel)]="editUserForm.email" /></td>
+          <td class="age-edit-cell">
+            <input type="date" [(ngModel)]="editUserForm.birthday" title="Születési dátum" />
+          </td>
+          <td class="age-edit-cell">
+            <select [(ngModel)]="editUserForm.gender" title="Nem">
+              <option value="">—</option>
+              <option value="férfi">Férfi</option>
+              <option value="nő">Nő</option>
+            </select>
+          </td>
           <td>
             <input type="text" [(ngModel)]="editUserForm.familyId" placeholder="Család ID vagy annak vége" />
           </td>
@@ -174,7 +178,7 @@
               class="icon-btn icon-btn--save"
               title="Mentés"
               [disabled]="editUserSaving()"
-              (click)="saveEditUser(u)"
+              (click)="saveEditUser(u, $event)"
             >
               <mat-icon>check</mat-icon>
             </button>
@@ -182,7 +186,7 @@
               type="button"
               class="icon-btn icon-btn--cancel"
               title="Mégse"
-              (click)="cancelEditUser()"
+              (click)="cancelEditUser($event)"
             >
               <mat-icon>close</mat-icon>
             </button>
@@ -196,6 +200,21 @@
             <span class="empty-note">—</span>
             }
           </td>
+          <td>
+            @if (u.age !== null && u.age !== undefined) {
+            {{ u.age }}
+            } @else {
+            <span class="empty-note">—</span>
+            }
+          </td>
+          <td>
+            @if (u.gender) {
+            {{ u.gender === 'férfi' ? 'Férfi' : 'Nő' }}
+            } @else {
+            <span class="empty-note">—</span>
+            }
+          </td>
+          @if (isAdmin()) {
           <td>
             @if (u.familyId) {
             <span class="family-tag" [title]="u.familyId">{{ u.familyId.slice(-6) }}</span>
@@ -216,11 +235,12 @@
               type="button"
               class="icon-btn icon-btn--edit"
               title="Szerkesztés"
-              (click)="startEditUser(u)"
+              (click)="startEditUser(u, $event)"
             >
               <mat-icon>edit</mat-icon>
             </button>
           </td>
+          }
           }
         </tr>
         }

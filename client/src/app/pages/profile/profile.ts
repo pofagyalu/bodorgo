@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,10 +15,12 @@ interface UserFormModel {
   name: string;
   email: string;
   familyId: string;
+  birthday: string;
+  gender: string;
 }
 
 function emptyUserForm(): UserFormModel {
-  return { name: '', email: '', familyId: '' };
+  return { name: '', email: '', familyId: '', birthday: '', gender: '' };
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -47,20 +49,19 @@ export class Profile {
   family = signal<FamilyMember[]>([]);
   familyError = signal<string | null>(null);
 
-  // Only for a 'member' (not a mere logged-in guest) - the full
-  // membership roster, see loadClubMembers(). An admin doesn't get this
-  // separately since they already see everyone in the admin table below.
-  clubMembers = signal<FamilyMember[]>([]);
-  clubMembersError = signal<string | null>(null);
-
-  // Only ever populated for an admin - see loadAdminUsers(). An admin
-  // already sees everyone (with their own family highlighted, see
-  // isOwnFamily()), so they don't get the separate Hozzátartozók/Klubtagok
-  // sections a non-admin does - loadFamily()/loadClubMembers() are never
-  // called for them.
+  // Shown to admin and member alike (see loadUsersList()) - a plain
+  // member gets a trimmed-down response (no familyId/role/lastLoginAt,
+  // see userController.js's getAllUsers), which the template also reflects
+  // by hiding those columns and every edit affordance for non-admins.
   users = signal<AdminUser[]>([]);
   usersError = signal<string | null>(null);
   private roleBasedDataRequested = false;
+
+  isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  // 'admin' and 'member' are both real, dues-paying club members; only
+  // 'guest' (a login-less dependent's own login, or an outside visitor)
+  // isn't. Drives the "Klubtag: igen/nem" line at the top of the page.
+  isClubMember = computed(() => this.auth.user()?.role !== 'guest');
 
   // Admin-only user management: add, per-row edit, and bulk "join into one
   // family" - built for quickly entering/cleaning up historical people by
@@ -95,20 +96,45 @@ export class Profile {
       const role = this.auth.user()?.role;
       if (!role || this.roleBasedDataRequested) return;
       this.roleBasedDataRequested = true;
-      if (role === 'admin') {
-        this.loadAdminUsers();
-      } else {
+      if (role !== 'admin') {
         this.loadFamily();
-        if (role === 'member') {
-          this.loadClubMembers();
-        }
+      }
+      if (role === 'admin' || role === 'member') {
+        this.loadUsersList();
       }
     });
   }
 
-  private loadAdminUsers() {
+  // Clicking edit/save/cancel on a row swaps its cells between plain text
+  // and input fields. The table isn't table-layout:fixed, so column widths
+  // are shared across every row - an input in one row can force ALL rows'
+  // columns to a new width, rewrapping text and changing row heights above
+  // the one that was actually clicked. That means restoring the page's old
+  // absolute scrollY isn't enough (a real reported bug: the clicked row
+  // still ended up somewhere else on screen, or off the bottom entirely) -
+  // the fix has to anchor on the row itself: capture where it sits on
+  // screen before the change, then after Angular repaints, nudge the
+  // scroll by exactly however far that row moved. requestAnimationFrame is
+  // used (rather than restoring synchronously) so the new layout already
+  // exists when we measure it.
+  private restoreRowPosition(row: HTMLElement | null, prevTop: number) {
+    if (!row) return;
+    requestAnimationFrame(() => {
+      const newTop = row.getBoundingClientRect().top;
+      if (newTop !== prevTop) {
+        window.scrollBy(0, newTop - prevTop);
+      }
+    });
+  }
+
+  private loadUsersList(keepRow?: { row: HTMLElement; prevTop: number }) {
     this.userService.getAllUsers().subscribe({
-      next: (res) => this.users.set(res.data.users),
+      next: (res) => {
+        this.users.set(res.data.users);
+        if (keepRow) {
+          this.restoreRowPosition(keepRow.row, keepRow.prevTop);
+        }
+      },
       error: () => this.usersError.set('A felhasználók betöltése nem sikerült.'),
     });
   }
@@ -117,13 +143,6 @@ export class Profile {
     this.userService.getMyFamily().subscribe({
       next: (res) => this.family.set(res.data.members),
       error: () => this.familyError.set('A hozzátartozók betöltése nem sikerült.'),
-    });
-  }
-
-  private loadClubMembers() {
-    this.userService.getClubMembers().subscribe({
-      next: (res) => this.clubMembers.set(res.data.members),
-      error: () => this.clubMembersError.set('A klubtagok betöltése nem sikerült.'),
     });
   }
 
@@ -181,13 +200,15 @@ export class Profile {
         name: f.name.trim(),
         email: f.email.trim() || undefined,
         familyId: f.familyId.trim() || undefined,
+        birthday: f.birthday || undefined,
+        gender: f.gender || undefined,
       })
       .subscribe({
         next: () => {
           this.addUserSaving.set(false);
           this.addingUser.set(false);
           this.notifications.addSuccess('Felhasználó hozzáadva');
-          this.loadAdminUsers();
+          this.loadUsersList();
         },
         error: (err) => {
           this.notifications.addError(err?.error?.message ?? 'Hiba történt a hozzáadás során.');
@@ -196,25 +217,40 @@ export class Profile {
       });
   }
 
-  startEditUser(user: AdminUser) {
+  startEditUser(user: AdminUser, event: MouseEvent) {
     this.editUserForm = {
       name: user.name,
       email: user.email ?? '',
       familyId: user.familyId ?? '',
+      // A native date input wants a bare "YYYY-MM-DD", not the full ISO
+      // timestamp the API returns.
+      birthday: user.birthday ? user.birthday.slice(0, 10) : '',
+      gender: user.gender ?? '',
     };
+    // See restoreRowPosition()'s comment - entering/leaving edit mode can
+    // shift this row (and others) on screen.
+    const row = (event.currentTarget as HTMLElement).closest('tr');
+    const prevTop = row?.getBoundingClientRect().top ?? 0;
     this.editingUserId.set(user._id);
+    this.restoreRowPosition(row as HTMLElement | null, prevTop);
   }
 
-  cancelEditUser() {
+  cancelEditUser(event: MouseEvent) {
+    const row = (event.currentTarget as HTMLElement).closest('tr');
+    const prevTop = row?.getBoundingClientRect().top ?? 0;
     this.editingUserId.set(null);
+    this.restoreRowPosition(row as HTMLElement | null, prevTop);
   }
 
-  saveEditUser(user: AdminUser) {
+  saveEditUser(user: AdminUser, event: MouseEvent) {
     const f = this.editUserForm;
     if (!f.name.trim()) {
       this.notifications.addError('A névnek nem lehet üres.');
       return;
     }
+
+    const row = (event.currentTarget as HTMLElement).closest('tr') as HTMLElement | null;
+    const prevTop = row?.getBoundingClientRect().top ?? 0;
 
     this.editUserSaving.set(true);
     this.userService
@@ -222,13 +258,18 @@ export class Profile {
         name: f.name.trim(),
         email: f.email.trim(),
         familyId: f.familyId.trim(),
+        birthday: f.birthday,
+        gender: f.gender,
       })
       .subscribe({
         next: () => {
           this.editUserSaving.set(false);
           this.editingUserId.set(null);
+          // Reverting this row out of edit mode is itself a layout change,
+          // so correct for it before the reload (below) causes another one.
+          this.restoreRowPosition(row, prevTop);
           this.notifications.addSuccess('Felhasználó mentve');
-          this.loadAdminUsers();
+          this.loadUsersList(row ? { row, prevTop } : undefined);
         },
         error: (err) => {
           this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
@@ -263,7 +304,7 @@ export class Profile {
         this.joiningFamily.set(false);
         this.selectedUserIds.set(new Set());
         this.notifications.addSuccess('Családba kapcsolva');
-        this.loadAdminUsers();
+        this.loadUsersList();
       },
       error: (err) => {
         this.notifications.addError(err?.error?.message ?? 'Hiba történt az összekapcsolás során.');

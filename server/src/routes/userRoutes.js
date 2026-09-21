@@ -8,12 +8,11 @@ router.patch('/updateMe', requireAuth, userController.updateMe);
 router.delete('/deleteMe', requireAuth, userController.deleteMe);
 router.get('/me/attendance', requireAuth, userController.getMyAttendance);
 router.get('/me/family', requireAuth, userController.getMyFamily);
-router.get('/members', requireAuth, userController.getClubMembers);
 router.post('/join-family', requireAuth, restrictTo('admin'), userController.joinFamily);
 
 router
   .route('/')
-  .get(requireAuth, restrictTo('admin'), userController.getAllUsers)
+  .get(requireAuth, restrictTo('admin', 'member'), userController.getAllUsers)
   .post(requireAuth, restrictTo('admin'), userController.createUser);
 router
   .route('/:id')

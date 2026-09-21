@@ -12,6 +12,12 @@ export interface AdminUser {
   sub?: string;
   lastLoginAt?: string;
   createdAt: string;
+  // birthday is only ever used to pre-fill the edit form - the table shows
+  // the computed age instead, never the raw date (see userController.js's
+  // computeAge).
+  birthday?: string;
+  gender?: string;
+  age?: number | null;
 }
 
 export interface AdminUsersResponse {
@@ -52,19 +58,12 @@ export interface MyFamilyResponse {
   };
 }
 
-// Same shape as a family member ({ _id, name, email?, role }) - reused
-// rather than duplicated since a club member listing is just name/email too.
-export interface ClubMembersResponse {
-  status: string;
-  data: {
-    members: FamilyMember[];
-  };
-}
-
 export interface CreateUserPayload {
   name: string;
   email?: string;
   familyId?: string;
+  birthday?: string;
+  gender?: string;
 }
 
 export interface UpdateUserPayload {
@@ -73,6 +72,9 @@ export interface UpdateUserPayload {
   // An empty string explicitly removes the user from their family - see
   // userController.js's updateUser.
   familyId?: string;
+  // Same "empty string clears it" convention as familyId above.
+  birthday?: string;
+  gender?: string;
 }
 
 export interface AdminUserResponse {
@@ -107,10 +109,6 @@ export class UserService {
 
   getMyFamily(): Observable<MyFamilyResponse> {
     return this.http.get<MyFamilyResponse>(`${this.apiUrl}/me/family`);
-  }
-
-  getClubMembers(): Observable<ClubMembersResponse> {
-    return this.http.get<ClubMembersResponse>(`${this.apiUrl}/members`);
   }
 
   createUser(payload: CreateUserPayload): Observable<AdminUserResponse> {

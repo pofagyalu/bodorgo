@@ -39,6 +39,15 @@
   font-size: 0.9rem;
 }
 
+.profile-summary {
+  margin: 0 0 0.3rem;
+  color: #444;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
 .error-note {
   color: #b00020;
 }
@@ -213,7 +222,8 @@
   background: #f7f7f7;
   border-radius: 8px;
 
-  input {
+  input,
+  select {
     flex: 1 1 160px;
     padding: 0.4rem 0.6rem;
     border: 1px solid #ccc;
@@ -225,6 +235,20 @@
 .user-form-actions {
   display: flex;
   gap: 0.3rem;
+}
+
+// Kor/Nem's edit-mode inputs - narrow rather than widening the whole table
+// for two rarely-edited fields.
+.age-edit-cell {
+  input,
+  select {
+    width: 8rem;
+    padding: 0.3rem 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 0.85rem;
+  }
 }
 
 .bulk-actions {
