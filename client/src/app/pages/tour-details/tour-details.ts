@@ -7,7 +7,7 @@ import { TourService, Tour, ScheduleEntry, DailyWeather, WeatherCondition, TourI
 import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
-import { randomLogoColor } from '../../shared/logo-colors';
+import { shuffledLogoColors } from '../../shared/logo-colors';
 import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
@@ -50,12 +50,13 @@ export class TourDetails implements OnDestroy {
   environment = environment;
 
   // Picked once per page view (not reactive - these don't need to change
-  // while looking at the same tour), one independently random logo color
-  // for each of the four info-line icons.
-  placeIconColor = randomLogoColor();
-  addressIconColor = randomLogoColor();
-  distanceIconColor = randomLogoColor();
-  dateIconColor = randomLogoColor();
+  // while looking at the same tour), one per icon off a shuffled copy of
+  // the logo colors so none of the four can repeat.
+  private readonly infoLineIconColors = shuffledLogoColors();
+  placeIconColor = this.infoLineIconColors[0];
+  addressIconColor = this.infoLineIconColors[1];
+  distanceIconColor = this.infoLineIconColors[2];
+  dateIconColor = this.infoLineIconColors[3];
 
   tour = signal<Tour | null>(null);
   participantCount = signal(0);

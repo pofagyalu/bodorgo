@@ -59,20 +59,20 @@
     @if (stats(); as s) {
     <div class="stats-grid">
       <div class="stat-card">
-        <mat-icon [style.color]="totalToursIconColor">hiking</mat-icon>
+        <mat-icon [style.color]="totalToursIconColor">holiday_village</mat-icon>
         <span class="stat-value">{{ s.totalTours }}</span>
         <span class="stat-label">tábor eddig</span>
       </div>
 
       <div class="stat-card">
-        <mat-icon [style.color]="totalParticipantsIconColor">groups</mat-icon>
+        <mat-icon [style.color]="totalParticipantsIconColor">hiking</mat-icon>
         <span class="stat-value">{{ s.totalParticipants }}</span>
         <span class="stat-label">résztvevő összesen</span>
       </div>
 
       @if (s.mostAttendedTour; as m) {
       <a class="stat-card stat-card--link" [routerLink]="['/taborok', m.slug]">
-        <mat-icon [style.color]="mostAttendedIconColor">star</mat-icon>
+        <mat-icon [style.color]="mostAttendedIconColor">groups</mat-icon>
         <span class="stat-value">{{ m.participantCount }} fő</span>
         <span class="stat-label">legnépesebb tábor: {{ m.order }}. {{ m.title }}</span>
       </a>
@@ -84,6 +84,23 @@
         <span class="stat-value">{{ b.ratingsAverage }}</span>
         <span class="stat-label">legjobbra értékelt tábor: {{ b.order }}. {{ b.title }}</span>
       </a>
+      }
+
+      @if (s.genderRatio; as g) {
+      <div class="stat-card stat-card--gender">
+        <div class="gender-pie" [style.background]="genderPieBackground(g.malePercentage)"></div>
+        <div class="gender-legend">
+          <span class="gender-legend-item">
+            <mat-icon [style.color]="maleColor">male</mat-icon>
+            {{ g.malePercentage }}%
+          </span>
+          <span class="gender-legend-item">
+            <mat-icon [style.color]="femaleColor">female</mat-icon>
+            {{ g.femalePercentage }}%
+          </span>
+        </div>
+        <span class="stat-label">résztvevők nemek szerinti aránya</span>
+      </div>
       }
     </div>
     } @else {
