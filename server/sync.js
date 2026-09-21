@@ -15,3 +15,15 @@ fs.cpSync(path.resolve('documents'), path.join(dest, 'documents'), {
   force: true,
 });
 console.log('✓ Synced documents → S:/bodorgo/documents');
+
+// assets/ holds files read directly off disk by server code (currently:
+// the TTF fonts tourPdfController.js embeds for Hungarian ő/ű support,
+// which pdfkit's built-in fonts lack) - unlike public/, this is meant to
+// be git-tracked and deployed automatically, not manually placed on the
+// NAS share by hand (a manual step already caused one real missing-file
+// bug for a tour cover image - see the git history around that).
+fs.cpSync(path.resolve('assets'), path.join(dest, 'assets'), {
+  recursive: true,
+  force: true,
+});
+console.log('✓ Synced assets → S:/bodorgo/assets');

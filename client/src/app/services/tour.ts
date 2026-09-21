@@ -280,6 +280,17 @@ export class TourService {
   // singleton that lives for the app's session.
   showAllPreference = false;
 
+  // A plain GET URL, not an HttpClient call - the browser navigates/
+  // downloads directly (see tour-details.html's <a [href]>), same as any
+  // other file download; the server sets Content-Disposition so it saves
+  // rather than navigates. Requires being logged in (the session cookie
+  // rides along automatically) - each copy is stamped with the
+  // downloader's own name in the footer (see tourPdfController.js), so
+  // tour-details.html only shows the download button when logged in.
+  pdfUrl(tourId: string): string {
+    return `${this.apiUrl}/${tourId}/pdf`;
+  }
+
   getTours(): Observable<ToursResponse> {
     return this.http.get<ToursResponse>(this.apiUrl);
   }

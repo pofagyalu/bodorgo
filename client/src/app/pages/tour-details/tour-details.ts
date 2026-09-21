@@ -315,6 +315,23 @@ export class TourDetails implements OnDestroy {
     this.loadTour(this.tourId);
   }
 
+  pdfUrl(tourId: string): string {
+    return this.tourService.pdfUrl(tourId);
+  }
+
+  // Same deep-link URLs as tourPdfController.js's Helyszín row - each
+  // app handles the handoff itself (installed app on mobile, its own web
+  // app on desktop), nothing platform-specific to detect here.
+  wazeUrl(t: Tour): string {
+    const [lng, lat] = t.location.coordinates;
+    return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+  }
+
+  googleMapsUrl(t: Tour): string {
+    const [lng, lat] = t.location.coordinates;
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  }
+
   // No on-page thumbnail grid (dropped per feedback - too much clutter),
   // so there's no DOM gallery for PhotoSwipeLightbox to scan; every open
   // instead passes an explicit dataSource built from tourImages() (see

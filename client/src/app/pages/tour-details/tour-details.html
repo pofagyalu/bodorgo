@@ -18,6 +18,16 @@
         {{ tourImages().length }}
       </span>
       }
+      @if (auth.isLoggedIn()) {
+      <a
+        [href]="pdfUrl(t._id)"
+        class="pdf-download-badge"
+        title="Tábor adatlapja PDF-ben"
+        (click)="$event.stopPropagation()"
+      >
+        <mat-icon>picture_as_pdf</mat-icon>
+      </a>
+      }
     </div>
 
     <div class="hero-info">
@@ -35,6 +45,28 @@
         <button type="button" class="map-link" (click)="openMap()" title="Térkép megnyitása">
           {{ t.location.description }}
         </button>
+        @if (t.location.coordinates.length === 2) {
+        <a
+          [href]="wazeUrl(t)"
+          target="_blank"
+          rel="noopener"
+          class="navigate-icon"
+          title="Vezess ide Waze-zel"
+          (click)="$event.stopPropagation()"
+        >
+          <img src="assets/images/navigate/waze.png" alt="Waze" />
+        </a>
+        <a
+          [href]="googleMapsUrl(t)"
+          target="_blank"
+          rel="noopener"
+          class="navigate-icon"
+          title="Vezess ide Google Maps-szel"
+          (click)="$event.stopPropagation()"
+        >
+          <img src="assets/images/navigate/google-maps.png" alt="Google Maps" />
+        </a>
+        }
         @if (auth.user()?.role === 'admin') {
         <a
           [routerLink]="['/taborok', t.slug, 'szerkesztes']"
@@ -72,7 +104,7 @@
 
       <div class="info-line">
         <mat-icon [style.color]="dateIconColor">event</mat-icon>
-        <span>{{ formattedStartDate() }} · {{ t.duration }} nap</span>
+        <span>{{ formattedStartDate() }} · {{ t.duration }} nap / {{ t.duration - 1 }} éjszaka</span>
       </div>
 
       <p class="long-description">{{ t.description }}</p>

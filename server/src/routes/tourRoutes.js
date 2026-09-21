@@ -3,6 +3,7 @@ import * as tourController from '../controllers/tourController.js';
 import { signUpForTour, updateAttendeeNights } from '../controllers/reservationController.js';
 import * as tourImageController from '../controllers/tourImageController.js';
 import * as reviewController from '../controllers/reviewController.js';
+import { downloadTourPdf } from '../controllers/tourPdfController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -24,6 +25,11 @@ router
   .get(tourController.getTour)
   .patch(requireAuth, restrictTo('admin'), tourController.updateTour)
   .delete(requireAuth, restrictTo('admin'), tourController.deleteTour);
+
+// requireAuth (not restrictTo - any logged-in role) - each copy is
+// stamped with the downloader's own name in the footer, so there has to
+// be a real logged-in user to attribute it to.
+router.route('/:id/pdf').get(requireAuth, downloadTourPdf);
 
 router.route('/:tourId/signup').post(requireAuth, signUpForTour);
 router

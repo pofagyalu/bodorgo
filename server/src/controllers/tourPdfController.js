@@ -1,0 +1,453 @@
+import fs from 'fs';
+import path from 'path';
+import mongoose from 'mongoose';
+import PDFDocument from 'pdfkit';
+import sharp from 'sharp';
+import Tour from '../models/tourModel.js';
+import AppError from '../utils/appError.js';
+
+// Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
+// - the cover image lives under there; the logo/fonts live under
+// server/assets instead (see sync.js) since they're code-adjacent assets,
+// not user-managed media.
+const rootDir = path.resolve();
+
+// The real Bódorgó wordmark (the same file client/header.html uses) -
+// pre-converted from its source SVG to a PNG once (pdfkit can't embed SVG
+// directly), not the crown-only icon PNGs under public/img/, which turned
+// out to be inherited, unbranded placeholders from this codebase's
+// Natours-tutorial origins.
+const LOGO_PATH = path.join(rootDir, 'assets', 'img', 'logo.png');
+
+// Real app icons (provided directly, 300x300) for the tap-to-navigate
+// links next to the Helyszín line - not converted from anything, unlike
+// the other image assets here.
+const WAZE_ICON_PATH = path.join(rootDir, 'assets', 'img', 'waze.png');
+const GOOGLE_MAPS_ICON_PATH = path.join(rootDir, 'assets', 'img', 'google-maps.png');
+
+// pdfkit's built-in standard-14 fonts (Helvetica etc.) use WinAnsiEncoding,
+// which is missing ő/ű (U+0151/U+0171) entirely - they'd silently render
+// as garbage. Mulish is the same font the site's own body text uses
+// (client/src/assets/fonts/Mulish), copied into server/assets/fonts (see
+// sync.js) purely so this file can embed it - full Unicode coverage, so
+// Hungarian text renders correctly.
+const FONT_REGULAR = path.join(rootDir, 'assets', 'fonts', 'Mulish-Regular.ttf');
+const FONT_BOLD = path.join(rootDir, 'assets', 'fonts', 'Mulish-Bold.ttf');
+
+// The classic Material Icons glyph font, same one client/index.html loads
+// for <mat-icon> ligatures (e.g. "location_on") - but pdfkit's text layout
+// doesn't perform OpenType ligature substitution, so ligature names never
+// resolve to a glyph here. Each glyph instead lives at a fixed Private Use
+// Area codepoint (see ICON_CODEPOINTS below, from node_modules/
+// material-icons/css/_codepoints.scss) that renders correctly regardless.
+// The npm package only ships WOFF/WOFF2 (pdfkit/fontkit needs TTF/OTF,
+// and this particular WOFF2's CFF outlines hit a pdfkit embedding bug
+// besides) - server/assets/fonts/material-icons.ttf is a one-time decode
+// of material-icons.woff2 to raw TTF (via the wawoff2 package, not a
+// runtime dependency - only needed for that one conversion).
+const FONT_ICONS = path.join(rootDir, 'assets', 'fonts', 'material-icons.ttf');
+const ICON_CODEPOINTS = {
+  location_on: 0xe0c8,
+  home: 0xe88a,
+  directions_car: 0xe531,
+  event: 0xe878,
+};
+
+// Same 7 colors as src/styles.scss's :root logo-* custom properties -
+// duplicated here since this is a completely different runtime (no CSS),
+// same "small values copied per-context" pattern the client itself uses
+// (see client/src/app/shared/logo-colors.ts).
+const COLORS = {
+  darkGreen: '#1b6548',
+  green: '#72b45d',
+  orange: '#f07827',
+  brown: '#835638',
+  red: '#f40e0d',
+  blue: '#096396',
+  yellow: '#f6b528',
+};
+
+function formatHu(date, options) {
+  return new Intl.DateTimeFormat('hu-HU', options).format(date);
+}
+
+// Mirrors pdfkit's own `fit` image option (scale down to fit inside a
+// box, preserving aspect ratio) but returns the actual resulting
+// dimensions instead of just drawing - needed to know how much vertical
+// space an image really occupies (a landscape photo fit into a
+// width-constrained box is usually much shorter than the box's max
+// height), rather than assuming it always fills the full box.
+function fitDims(origWidth, origHeight, boxWidth, boxHeight) {
+  const scale = Math.min(boxWidth / origWidth, boxHeight / origHeight);
+  return { width: origWidth * scale, height: origHeight * scale };
+}
+
+const LONG_DATE = { year: 'numeric', month: 'long', day: 'numeric' };
+const LONG_DATE_WEEKDAY = { weekday: 'long', ...LONG_DATE };
+
+const PAGE_MARGIN = 50;
+
+// Same condition set as tour-details.ts's WEATHER_ICONS map, pre-converted
+// to PNG (client/src/assets/images/weather/*.svg, pdfkit can't embed SVG
+// directly) into server/assets/img/weather so the day heading can show
+// which icon a day's °day/°night figures actually belong to, same as the
+// page's own day-heading weather chip.
+const WEATHER_ICON_DIR = path.join(rootDir, 'assets', 'img', 'weather');
+function weatherIconPath(condition) {
+  return path.join(WEATHER_ICON_DIR, `${condition}.png`);
+}
+
+// One colored icon + label:value line, e.g. "📍 Helyszín: X" - the same
+// icon/color pairing as the tour-details page's own info-line icons.
+function infoLine(doc, x, width, color, iconName, text) {
+  const startY = doc.y;
+  doc
+    .font('Icons')
+    .fontSize(14)
+    .fillColor(color)
+    .text(String.fromCodePoint(ICON_CODEPOINTS[iconName]), x, startY - 2);
+  doc
+    .font('Body')
+    .fontSize(11)
+    .fillColor('#000')
+    .text(text, x + 18, startY, { width: width - 18 });
+}
+
+// Generated fresh from the current Tour document on every request - never
+// cached or pre-rendered - so an edit to the tour is reflected the very
+// next time someone downloads it. Deliberately leaves out the rating/
+// review widget (not meaningful in a static, point-in-time document);
+// everything else visible on the tour-details page's own info block is
+// included: place, address, distance, date/duration, description, the
+// full day-by-day schedule (with that day's weather, if known), a
+// two-column layout mirroring the page's own image-left/info-right hero
+// row, and a footer on every page naming who downloaded it.
+export const downloadTourPdf = async (req, res) => {
+  const query = mongoose.isValidObjectId(req.params.id)
+    ? { _id: req.params.id }
+    : { slug: req.params.id };
+  const tour = await Tour.findOne(query);
+  if (!tour) {
+    throw new AppError('No tour found with that ID!', 404);
+  }
+
+  // bufferPages: true lets the footer (which needs to know the final page
+  // count) be added to every page in one pass at the very end, rather
+  // than trying to predict page breaks up front.
+  const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
+  const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  doc.pipe(res);
+
+  doc.registerFont('Body', FONT_REGULAR);
+  doc.registerFont('Heading', FONT_BOLD);
+  doc.registerFont('Icons', FONT_ICONS);
+  doc.font('Body');
+
+  const contentWidth = doc.page.width - PAGE_MARGIN * 2;
+
+  // Logo top-left (half the size of the first version of this layout),
+  // continued with "- Programfüzet" so it reads as a masthead/title
+  // rather than a bare brand mark.
+  if (fs.existsSync(LOGO_PATH)) {
+    const logoMeta = await sharp(LOGO_PATH).metadata();
+    const logo = fitDims(logoMeta.width, logoMeta.height, 140, 30);
+    const logoTop = doc.y;
+    doc.image(LOGO_PATH, PAGE_MARGIN, logoTop, logo);
+    doc
+      .font('Heading')
+      .fontSize(16)
+      .fillColor(COLORS.darkGreen)
+      .text('- Programfüzet', PAGE_MARGIN + logo.width + 10, logoTop + logo.height / 2 - 8);
+    doc.y = logoTop + logo.height + 15;
+    doc.x = PAGE_MARGIN;
+  }
+
+  // Two-column hero row: cover image left (roughly half width, capped in
+  // height so a tall photo can't push the info column down awkwardly),
+  // title + info lines right - same arrangement as tour-details.html's
+  // .hero-row, just without the review widget.
+  const imageColWidth = contentWidth * 0.45;
+  const infoColX = PAGE_MARGIN + imageColWidth + 20;
+  const infoColWidth = contentWidth - imageColWidth - 20;
+  const heroTop = doc.y;
+
+  const coverPath = tour.imageCover ? path.join(rootDir, 'public', 'img', 'tours', tour.imageCover) : null;
+  // Actual rendered height of the cover image, once known below - a
+  // landscape photo fit into imageColWidth is usually much shorter than
+  // the 220pt cap, so the space reserved for it (and where content
+  // resumes below the hero row) has to reflect that real height, not
+  // just assume the cap - otherwise a short image leaves a large blank
+  // gap before the description starts.
+  let coverHeight = 0;
+  if (coverPath && fs.existsSync(coverPath)) {
+    // Tour covers are stored as .webp (see tourImageController.js), which
+    // pdfkit can't embed directly (JPEG/PNG only), so it's converted in
+    // memory first via sharp (already a dependency for image processing
+    // elsewhere in this app).
+    const coverImage = sharp(coverPath);
+    const coverMeta = await coverImage.metadata();
+    const coverPng = await coverImage.png().toBuffer();
+    const cover = fitDims(coverMeta.width, coverMeta.height, imageColWidth, 220);
+    coverHeight = cover.height;
+    doc.image(coverPng, PAGE_MARGIN, heroTop, cover);
+  }
+
+  doc.y = heroTop;
+  doc.x = infoColX;
+  doc.font('Heading').fontSize(20).fillColor(COLORS.darkGreen).text(tour.title, infoColX, heroTop, {
+    width: infoColWidth,
+  });
+  doc
+    .font('Body')
+    .fontSize(10)
+    .fillColor('#666')
+    .text(`${tour.order === 1 ? 'Első' : `${tour.order}.`} bódorgó tábor`, infoColX, doc.y, {
+      width: infoColWidth,
+    });
+  doc.y += 10;
+
+  // The Helyszín row, with short tap-to-navigate links appended right
+  // after the place name on the same line (not the generic infoLine()
+  // helper, since this one line needs that extra inline content) - each
+  // app's own deep link handles the handoff itself (opens the installed
+  // app with a confirmation prompt on mobile, falls back to its own web
+  // app on desktop), so there's nothing platform-specific to detect here.
+  {
+    const startY = doc.y;
+    doc
+      .font('Icons')
+      .fontSize(14)
+      .fillColor(COLORS.darkGreen)
+      .text(String.fromCodePoint(ICON_CODEPOINTS.location_on), infoColX, startY - 2);
+    const placeText = `Helyszín: ${tour.location?.description || '-'}`;
+    doc.font('Body').fontSize(11).fillColor('#000');
+    const placeWidth = doc.widthOfString(placeText);
+    doc.text(placeText, infoColX + 18, startY, { lineBreak: false });
+
+    if (tour.location?.coordinates?.length === 2) {
+      const [lng, lat] = tour.location.coordinates;
+      const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+      const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
+      // Real app icons, each with a click-through link annotation over
+      // it - pdfkit's .image() has no `link` option of its own, unlike
+      // .text(), so the clickable area is added separately via .link().
+      const iconSize = 16;
+      let navX = infoColX + 18 + placeWidth + 10;
+      const iconY = startY - 1;
+      if (fs.existsSync(WAZE_ICON_PATH)) {
+        doc.image(WAZE_ICON_PATH, navX, iconY, { width: iconSize, height: iconSize });
+        doc.link(navX, iconY, iconSize, iconSize, wazeUrl);
+        navX += iconSize + 6;
+      }
+      if (fs.existsSync(GOOGLE_MAPS_ICON_PATH)) {
+        doc.image(GOOGLE_MAPS_ICON_PATH, navX, iconY, { width: iconSize, height: iconSize });
+        doc.link(navX, iconY, iconSize, iconSize, googleUrl);
+      }
+    }
+
+    doc.x = infoColX;
+    doc.y = startY + 16;
+  }
+  infoLine(doc, infoColX, infoColWidth, COLORS.orange, 'home', `Cím: ${tour.location?.address || 'nincs megadva'}`);
+  doc.y += 6;
+  infoLine(
+    doc,
+    infoColX,
+    infoColWidth,
+    COLORS.blue,
+    'directions_car',
+    tour.distanceFromBudapestKm != null
+      ? `Táv Budapesttől: ${tour.distanceFromBudapestKm} km`
+      : 'Táv Budapesttől: nincs kiszámítva',
+  );
+  doc.y += 6;
+  infoLine(
+    doc,
+    infoColX,
+    infoColWidth,
+    COLORS.brown,
+    'event',
+    `Időpont: ${formatHu(tour.startDate, LONG_DATE)} · ${tour.duration} nap / ${tour.duration - 1} éjszaka`,
+  );
+
+  // Whichever column ended up taller (image or the text beside it)
+  // decides where full-width content resumes.
+  doc.y = Math.max(doc.y + 20, heroTop + coverHeight + 20);
+  doc.x = PAGE_MARGIN;
+
+  // Long description - full width, below both columns.
+  doc.font('Body').fontSize(11).fillColor('#000').text(tour.description, PAGE_MARGIN, doc.y, {
+    width: contentWidth,
+    align: 'justify',
+  });
+  doc.x = PAGE_MARGIN;
+  doc.moveDown();
+
+  // Programterv - same day-by-day grouping (and per-day weather, with its
+  // condition icon) as tour-details.ts's dayGroups, reimplemented here
+  // since the PDF is generated server-side with no access to that
+  // client-side computed signal.
+  doc.font('Heading').fontSize(16).fillColor(COLORS.darkGreen).text('Programterv', PAGE_MARGIN, doc.y, {
+    width: contentWidth,
+  });
+  doc.x = PAGE_MARGIN;
+  doc.moveDown(0.5);
+
+  const start = new Date(tour.startDate);
+  for (let day = 1; day <= tour.duration; day++) {
+    const date = new Date(start);
+    date.setDate(date.getDate() + (day - 1));
+    const label = formatHu(date, LONG_DATE_WEEKDAY);
+    const weather = (tour.dailyWeather || []).find((w) => w.day === day);
+
+    const events = (tour.schedule || [])
+      .filter((e) => e.day === day)
+      .slice()
+      .sort((a, b) => a.time.localeCompare(b.time));
+
+    if (doc.y > 700) doc.addPage();
+    let brokeAcrossPage = false;
+    const dayBlockStartY = doc.y;
+
+    const headingText = `${day}. nap – ${label}`;
+    const headingY = doc.y;
+    doc.font('Heading').fontSize(13).fillColor('#333');
+    const headingWidth = doc.widthOfString(headingText);
+    doc.text(headingText, PAGE_MARGIN, headingY, { width: contentWidth });
+    doc.x = PAGE_MARGIN;
+
+    // Bare icon (no background chip) right before the temperatures, same
+    // as the tour-details page's own day-heading weather icon - without
+    // it, "22°/7°" on its own doesn't read as weather at a glance.
+    if (weather) {
+      const iconSize = 14;
+      const iconX = PAGE_MARGIN + headingWidth + 8;
+      const iconPath = weatherIconPath(weather.condition);
+      if (fs.existsSync(iconPath)) {
+        doc.image(iconPath, iconX, headingY + 1, { width: iconSize, height: iconSize });
+      }
+      doc
+        .font('Body')
+        .fontSize(11)
+        .fillColor('#333')
+        .text(`${weather.tempDayC}°/${weather.tempNightC}°`, iconX + iconSize + 4, headingY + 2, {
+          lineBreak: false,
+        });
+      doc.x = PAGE_MARGIN;
+    }
+    doc.y = Math.max(doc.y, headingY + 16);
+    doc.moveDown(0.3);
+
+    if (events.length === 0) {
+      doc
+        .font('Body')
+        .fontSize(10)
+        .fillColor('#999')
+        .text('Erre a napra még nincs program megadva.', PAGE_MARGIN + 15, doc.y, {
+          width: contentWidth - 15,
+        });
+      doc.x = PAGE_MARGIN;
+    } else {
+      for (const event of events) {
+        if (doc.y > 720) {
+          doc.addPage();
+          brokeAcrossPage = true;
+        }
+        const extra = event.isOptional && event.extraCost != null ? ` (+${event.extraCost} Ft)` : '';
+        doc
+          .font('Body')
+          .fontSize(10)
+          .fillColor('#000')
+          .text(`${event.time} – ${event.description}${extra}`, PAGE_MARGIN + 15, doc.y, {
+            width: contentWidth - 15,
+          });
+        doc.x = PAGE_MARGIN;
+      }
+    }
+
+    // A rounded-rectangle outline around the whole day, drawn last (after
+    // its text) so the stroke-only box never covers anything - skipped if
+    // the day's events ran onto a second page, since a box can't sensibly
+    // span two separate pages.
+    if (!brokeAcrossPage) {
+      const boxPadding = 8;
+      // doc.y sits right at the last line's own bottom edge (no descender
+      // room), so the box needs padding added on both top AND bottom to
+      // clear the content, not just once - a single boxPadding only
+      // pushed the top edge up, leaving the last event flush against the
+      // bottom border.
+      const bottomPadding = 6;
+      doc
+        .roundedRect(
+          PAGE_MARGIN - boxPadding,
+          dayBlockStartY - boxPadding,
+          contentWidth + boxPadding * 2,
+          doc.y - dayBlockStartY + boxPadding + bottomPadding,
+          6,
+        )
+        .stroke('#ddd');
+    }
+    // A fixed gap rather than moveDown (which scales with whatever font
+    // size was last set, an easy way to under-shoot) - has to clear the
+    // box's own top+bottom padding (8 + 6) plus a few pixels of real
+    // visual gap, or the next day's box overlaps this one's bottom edge.
+    doc.y += 20;
+  }
+
+  // Footer on every page: download date bottom-left, ownership
+  // attribution bottom-right - added last (after all real content, once
+  // the final page count is known) via bufferPages, not interleaved with
+  // the content loop above.
+  const footerY = doc.page.height - PAGE_MARGIN - 10;
+  const range = doc.bufferedPageRange();
+  for (let i = range.start; i < range.start + range.count; i++) {
+    doc.switchToPage(i);
+    // pdfkit's auto-page-break check is "does doc.y + this line's full
+    // height exceed page.maxY() (= page.height - margins.bottom)" - even
+    // a small 8pt line's height can push past that with only 10pt of
+    // clearance, silently inserting a whole blank page instead of
+    // drawing the footer. Temporarily zeroing the bottom margin (only
+    // this page object, restored after) gives the line room regardless
+    // of its exact height, without needing to guess at font metrics.
+    const realBottomMargin = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
+    doc.y = footerY;
+    doc
+      .font('Body')
+      .fontSize(8)
+      .fillColor('#999')
+      .text(`Letöltve: ${formatHu(new Date(), LONG_DATE)}`, PAGE_MARGIN, footerY, {
+        width: contentWidth / 2,
+        lineBreak: false,
+      });
+    doc.y = footerY;
+    doc
+      .font('Body')
+      .fontSize(8)
+      .fillColor('#999')
+      .text(`Ez a dokumentum a ${req.user.name} tulajdona.`, PAGE_MARGIN + contentWidth / 2, footerY, {
+        width: contentWidth / 2,
+        align: 'right',
+        lineBreak: false,
+      });
+
+    // Centered, clickable link back to the site - the blue fill alone
+    // signals it's a link, no underline.
+    doc.font('Body').fontSize(8);
+    const siteLabel = 'bodorgo.hu';
+    const siteLabelWidth = doc.widthOfString(siteLabel);
+    doc
+      .fillColor(COLORS.blue)
+      .text(siteLabel, PAGE_MARGIN + contentWidth / 2 - siteLabelWidth / 2, footerY, {
+        link: 'https://bodorgo.hu',
+        lineBreak: false,
+      });
+
+    doc.page.margins.bottom = realBottomMargin;
+  }
+
+  doc.end();
+};
