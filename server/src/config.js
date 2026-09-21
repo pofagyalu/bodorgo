@@ -19,6 +19,10 @@ const config = {
     password: process.env.MAILTRAP_EMAIL_PASSWORD,
     from: process.env.MAILTRAP_EMAIL_FROM,
   },
+  resend: {
+    apiKey: process.env.RESEND_API_KEY,
+    from: process.env.RESEND_EMAIL_FROM,
+  },
   redisUrl: process.env.REDIS_URL,
   sendgrid: {
     user: process.env.SENDGRID_USERNAME,

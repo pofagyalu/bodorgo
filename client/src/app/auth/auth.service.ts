@@ -9,6 +9,7 @@ export interface CurrentUser {
   name?: string;
   role: string;
   familyId?: string;
+  wantsEmailNotifications?: boolean;
 }
 
 interface MeResponse {
@@ -19,6 +20,7 @@ interface MeResponse {
   name?: string;
   role?: string;
   familyId?: string;
+  wantsEmailNotifications?: boolean;
 }
 
 @Injectable({
@@ -32,6 +34,15 @@ export class AuthService {
   user = this.currentUser.asReadonly();
 
   constructor(private http: HttpClient) {}
+
+  // Lets a component (e.g. the profile page's notification toggle) reflect
+  // a just-saved change immediately, without a full /auth/me round trip.
+  patchCurrentUser(patch: Partial<CurrentUser>) {
+    const current = this.currentUser();
+    if (current) {
+      this.currentUser.set({ ...current, ...patch });
+    }
+  }
 
   // Full-page navigation: the server responds with a redirect to Authentik,
   // which only makes sense as a top-level browser navigation, not an XHR call.
@@ -63,6 +74,9 @@ export class AuthService {
                   // role wasn't returned.
                   role: res.role || 'guest',
                   familyId: res.familyId,
+                  // Same default as the schema (userModel.js) - only ever
+                  // false when explicitly turned off.
+                  wantsEmailNotifications: res.wantsEmailNotifications !== false,
                 }
               : null,
           );

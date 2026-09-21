@@ -119,6 +119,27 @@ export class Profile {
     return this.sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward';
   }
 
+  // Self-service opt-out toggle (I/N pill, same visual language as the
+  // event form's isOptional switch) - defaults to true, so this only ever
+  // reflects an explicit false from the server.
+  savingEmailNotifications = signal(false);
+
+  toggleEmailNotifications() {
+    const next = !(this.auth.user()?.wantsEmailNotifications ?? true);
+    this.savingEmailNotifications.set(true);
+    this.userService.updateMe({ wantsEmailNotifications: next }).subscribe({
+      next: () => {
+        this.savingEmailNotifications.set(false);
+        this.auth.patchCurrentUser({ wantsEmailNotifications: next });
+        this.notifications.addSuccess('Beállítás mentve');
+      },
+      error: (err) => {
+        this.savingEmailNotifications.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
+      },
+    });
+  }
+
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   // 'admin' and 'member' are both real, dues-paying club members; only
   // 'guest' (a login-less dependent's own login, or an outside visitor)

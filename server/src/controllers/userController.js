@@ -133,7 +133,7 @@ export const updateMe = async (req, res, next) => {
     throw new AppError('This route is not for password update.', 400);
   }
 
-  const filteredBody = filterObj(req.body, 'name', 'email');
+  const filteredBody = filterObj(req.body, 'name', 'email', 'wantsEmailNotifications');
 
   const updatedUser = await User.findByIdAndUpdate(req.user._id, filteredBody, {
     new: true,

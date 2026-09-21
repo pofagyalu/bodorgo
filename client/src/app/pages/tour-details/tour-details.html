@@ -18,20 +18,12 @@
         {{ tourImages().length }}
       </span>
       }
-      @if (auth.isLoggedIn()) {
-      <a
-        [href]="pdfUrl(t._id)"
-        class="pdf-download-badge"
-        title="Tábor adatlapja PDF-ben"
-        (click)="$event.stopPropagation()"
-      >
-        <mat-icon>picture_as_pdf</mat-icon>
-      </a>
-      }
     </div>
 
     <div class="hero-info">
-      <h1 class="hero-title"><span class="hero-title-span">{{ t.title }}</span></h1>
+      <h1 class="hero-title">
+        <span class="hero-title-span">{{ t.title }}</span>
+      </h1>
 
       <app-review-stars
         [tourId]="t._id"
@@ -42,7 +34,12 @@
 
       <div class="info-line">
         <mat-icon [style.color]="placeIconColor">location_on</mat-icon>
-        <button type="button" class="map-link" (click)="openMap()" title="Térkép megnyitása">
+        <button
+          type="button"
+          class="map-link"
+          (click)="openMap()"
+          title="Térkép megnyitása"
+        >
           {{ t.location.description }}
         </button>
         @if (t.location.coordinates.length === 2) {
@@ -66,8 +63,7 @@
         >
           <img src="assets/images/navigate/google-maps.png" alt="Google Maps" />
         </a>
-        }
-        @if (auth.user()?.role === 'admin') {
+        } @if (auth.user()?.role === 'admin') {
         <a
           [routerLink]="['/taborok', t.slug, 'szerkesztes']"
           class="icon-btn icon-btn--edit-tour"
@@ -88,9 +84,7 @@
         <mat-icon [style.color]="addressIconColor">home</mat-icon>
         <span class="empty-note">Cím: nincs megadva</span>
       </div>
-      }
-
-      @if (t.distanceFromBudapestKm != null) {
+      } @if (t.distanceFromBudapestKm != null) {
       <div class="info-line">
         <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
         <span>{{ t.distanceFromBudapestKm }} km Budapesttől</span>
@@ -104,7 +98,10 @@
 
       <div class="info-line">
         <mat-icon [style.color]="dateIconColor">event</mat-icon>
-        <span>{{ formattedStartDate() }} · {{ t.duration }} nap / {{ t.duration - 1 }} éjszaka</span>
+        <span
+          >{{ formattedStartDate() }} · {{ t.duration }} nap / {{ t.duration - 1
+          }} éjszaka</span
+        >
       </div>
 
       <p class="long-description">{{ t.description }}</p>
@@ -119,16 +116,32 @@
     <div class="day-block">
       <h3 class="day-heading">
         @if (day.weather; as w) {
-        <span class="day-weather" [title]="w.isFinal ? 'Tényleges időjárás' : 'Előrejelzés'">
-          <img [src]="weatherIconPath(w.condition)" alt="" class="day-weather-icon" />
-          <span class="day-weather-temp">{{ w.tempDayC }}°/{{ w.tempNightC }}°</span>
+        <span
+          class="day-weather"
+          [title]="w.isFinal ? 'Tényleges időjárás' : 'Előrejelzés'"
+        >
+          <img
+            [src]="weatherIconPath(w.condition)"
+            alt=""
+            class="day-weather-icon"
+          />
+          <span class="day-weather-temp"
+            >{{ w.tempDayC }}°/{{ w.tempNightC }}°</span
+          >
         </span>
         } @else {
-        <span class="day-weather day-weather--empty" title="Még nincs előrejelzés">
-          <mat-icon class="day-weather-icon day-weather-icon--placeholder">help_outline</mat-icon>
+        <span
+          class="day-weather day-weather--empty"
+          title="Még nincs előrejelzés"
+        >
+          <mat-icon class="day-weather-icon day-weather-icon--placeholder"
+            >help_outline</mat-icon
+          >
         </span>
         }
-        <span class="day-heading-date">{{ day.day }}. nap – {{ day.label }}</span>
+        <span class="day-heading-date"
+          >{{ day.day }}. nap – {{ day.label }}</span
+        >
         @if (auth.user()?.role === 'admin') {
         <button
           type="button"
@@ -149,13 +162,15 @@
         (save)="saveNewEvent(day.day)"
         (cancel)="cancelAddEvent()"
       />
-      }
-
-      @if (day.events.length) {
+      } @if (day.events.length) {
       <ul class="event-list">
         @for (ev of day.events; track ev._id) {
         <li class="event-row">
-          <app-tour-event [event]="ev" [tourId]="t._id" (updated)="onEventUpdated($event)" />
+          <app-tour-event
+            [event]="ev"
+            [tourId]="t._id"
+            (updated)="onEventUpdated($event)"
+          />
         </li>
         }
       </ul>
@@ -166,22 +181,133 @@
     }
   </section>
 
+  <!-- Extra infók: the always-present Programfüzet card, plus whatever
+       admin-uploaded documents (map, beszámoló, etc.) this tour has. -->
+  <section class="extra-info-section">
+    <div class="section-header-row">
+      <h2 class="section-heading">Extrák</h2>
+      @if (auth.user()?.role === 'admin' && (t.extraDocuments ?? []).length < 5)
+      {
+      <button
+        type="button"
+        class="icon-btn icon-btn--add"
+        title="Dokumentum hozzáadása"
+        (click)="startAddDocument()"
+      >
+        <mat-icon>add</mat-icon>
+      </button>
+      }
+    </div>
+
+    @if (addingDocument()) {
+    <div class="document-upload-form">
+      <input type="text" [(ngModel)]="newDocumentTitle" placeholder="Cím" />
+      <input
+        type="file"
+        accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
+        (change)="onDocumentFileSelected($event)"
+      />
+      <div class="user-form-actions">
+        <button
+          type="button"
+          class="icon-btn icon-btn--save"
+          title="Feltöltés"
+          [disabled]="uploadingDocument()"
+          (click)="saveNewDocument(t._id)"
+        >
+          <mat-icon>check</mat-icon>
+        </button>
+        <button
+          type="button"
+          class="icon-btn icon-btn--cancel"
+          title="Mégse"
+          (click)="cancelAddDocument()"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+    }
+
+    <div class="extra-docs-grid">
+      <a [href]="pdfUrl(t._id)" target="_blank" class="extra-doc-card extra-doc-card--featured">
+        <mat-icon>picture_as_pdf</mat-icon>
+        <span class="extra-doc-title">Programfüzet</span>
+        <span class="extra-doc-action"><mat-icon>download</mat-icon> Letöltés</span>
+      </a>
+      <button
+        type="button"
+        class="extra-doc-card extra-doc-card--featured"
+        [disabled]="emailingPdf()"
+        (click)="sendPdfByEmail(t._id)"
+      >
+        <mat-icon>email</mat-icon>
+        <span class="extra-doc-title">Programfüzet</span>
+        <span class="extra-doc-action"
+          ><mat-icon>{{ emailingPdf() ? 'hourglass_top' : 'send' }}</mat-icon>
+          {{ emailingPdf() ? 'Küldés...' : 'email' }}</span
+        >
+      </button>
+      @if ((t.extraDocuments ?? []).length > 0) {
+      <span class="extra-docs-divider"></span>
+      }
+      @for (doc of t.extraDocuments ?? []; track doc._id) {
+      <a
+        [href]="documentUrl(t._id, doc.filename)"
+        target="_blank"
+        class="extra-doc-card"
+        [title]="doc.title"
+      >
+        <mat-icon
+          >{{ doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image'
+          }}</mat-icon
+        >
+        <span>{{ doc.title }}</span>
+        @if (auth.user()?.role === 'admin') {
+        <button
+          type="button"
+          class="extra-doc-delete"
+          title="Törlés"
+          (click)="askDeleteDocument(doc, $event)"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+        }
+      </a>
+      }
+    </div>
+  </section>
+
   <!-- Row 3: participants -->
   <section class="participants-section">
     <h2 class="section-heading participants-heading">
-      Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }})
-      @if (isFull()) {
+      Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }}) @if (isFull()) {
       <span class="full-badge">Megtelt</span>
       }
-      <button
-        type="button"
-        class="toggle-btn"
-        [attr.aria-expanded]="showParticipants()"
-        aria-label="Résztvevők listájának megjelenítése/elrejtése"
-        (click)="showParticipants.set(!showParticipants())"
-      >
-        <mat-icon>{{ showParticipants() ? 'expand_less' : 'expand_more' }}</mat-icon>
-      </button>
+      <span class="participants-heading-actions">
+        @if (auth.user()?.role === 'admin') {
+        <button
+          type="button"
+          class="icon-btn"
+          title="Programfüzet küldése e-mailben minden erre jogosult résztvevőnek"
+          [disabled]="emailingAttendees()"
+          (click)="askEmailAttendees()"
+        >
+          <mat-icon>forward_to_inbox</mat-icon>
+        </button>
+        }
+        <button
+          type="button"
+          class="toggle-btn"
+          [attr.aria-expanded]="showParticipants()"
+          aria-label="Résztvevők listájának megjelenítése/elrejtése"
+          (click)="showParticipants.set(!showParticipants())"
+        >
+          <mat-icon
+            >{{ showParticipants() ? 'expand_less' : 'expand_more' }}</mat-icon
+          >
+        </button>
+      </span>
     </h2>
 
     @if (showParticipants()) { @if (allAttendees().length) {
@@ -210,23 +336,84 @@
     @if (!auth.isLoggedIn()) {
     <p>A jelentkezéshez be kell jelentkezned.</p>
     <button class="btn btn--green" (click)="login()">Bejelentkezés</button>
-    } @else {
-    @if (alreadySignedUp()) {
+    } @else { @if (alreadySignedUp()) {
     <p class="already-signed">✔ Már jelentkeztél erre a táborra.</p>
-    }
-    @if (!isFull()) {
-    @if (pickerOptions().length === 1) {
-    <button class="btn btn--green" [disabled]="signingUp()" (click)="signUpSingle()">
+    } @if (!isFull()) { @if (pickerOptions().length === 1) {
+    <button
+      class="btn btn--green"
+      [disabled]="signingUp()"
+      (click)="signUpSingle()"
+    >
       {{ signingUp() ? 'Jelentkezés folyamatban...' : 'Jelentkezés' }}
     </button>
     } @else if (pickerOptions().length > 1) {
-    <button class="btn btn--green" (click)="openAttendeePicker()">Jelentkezés</button>
-    }
-    }
-    @if (signUpError()) {
+    <button class="btn btn--green" (click)="openAttendeePicker()">
+      Jelentkezés
+    </button>
+    } } @if (signUpError()) {
     <p class="error-note">{{ signUpError() }}</p>
-    }
-    }
+    } }
+  </div>
+  }
+
+  <!-- Extra infók document delete confirmation - a real in-app modal
+       (same visual language as the attendee picker below), not the
+       browser's own confirm(). -->
+  @if (documentPendingDelete(); as pending) {
+  <div class="attendee-modal-backdrop" (click)="cancelDeleteDocument()">
+    <div class="confirm-modal" (click)="$event.stopPropagation()">
+      <p>Biztos, hogy törölni akarod a "{{ pending.title }}" dokumentumot?</p>
+      <div class="user-form-actions">
+        <button
+          type="button"
+          class="confirm-btn confirm-btn--safe"
+          [disabled]="deletingDocument()"
+          (click)="cancelDeleteDocument()"
+        >
+          Mégse
+        </button>
+        <button
+          type="button"
+          class="confirm-btn confirm-btn--danger"
+          [disabled]="deletingDocument()"
+          (click)="confirmDeleteDocument(t._id)"
+        >
+          Törlés
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Admin's "email everyone" confirmation - a real send to potentially
+       several real people, so it gets the same explicit confirm as
+       deleting a document, not a one-click fire. -->
+  @if (confirmingEmailAttendees()) {
+  <div class="attendee-modal-backdrop" (click)="cancelEmailAttendees()">
+    <div class="confirm-modal" (click)="$event.stopPropagation()">
+      <p>
+        Biztosan elküldöd a Programfüzetet e-mailben minden erre jogosult résztvevőnek? (Csak azoknak megy ki, akiknek
+        van e-mail címük, már beléptek legalább egyszer, és nem kapcsolták ki az e-mail értesítéseket.)
+      </p>
+      <div class="user-form-actions">
+        <button
+          type="button"
+          class="confirm-btn confirm-btn--safe"
+          [disabled]="emailingAttendees()"
+          (click)="cancelEmailAttendees()"
+        >
+          Mégse
+        </button>
+        <button
+          type="button"
+          class="confirm-btn confirm-btn--danger"
+          [disabled]="emailingAttendees()"
+          (click)="confirmEmailAttendees(t._id)"
+        >
+          Küldés
+        </button>
+      </div>
+    </div>
   </div>
   }
 
@@ -265,7 +452,8 @@
         [disabled]="signingUp() || selectedAttendeeIds().size === 0"
         (click)="signUpSelected()"
       >
-        {{ signingUp() ? 'Jelentkezés folyamatban...' : 'Jelentkezés (' + selectedAttendeeIds().size + ' fő)' }}
+        {{ signingUp() ? 'Jelentkezés folyamatban...' : 'Jelentkezés (' +
+        selectedAttendeeIds().size + ' fő)' }}
       </button>
       @if (signUpError()) {
       <p class="error-note">{{ signUpError() }}</p>
@@ -296,7 +484,6 @@
     </div>
   </div>
   }
-
 </div>
 } @else if (loadError()) {
 <p class="loading-note">{{ loadError() }}</p>

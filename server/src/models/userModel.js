@@ -58,6 +58,16 @@ const userSchema = new Schema(
     lastLoginAt: {
       type: Date,
     },
+    // Self-service opt-out (see profile's toggle) - defaults to true ("yes,
+    // send me email notifications") so this only matters for someone who's
+    // actively turned it off. Also gates the admin's "email every attendee
+    // the Programfüzet" bulk-send (see reservationController-adjacent logic
+    // in tourPdfController.js's emailTourPdfToAttendees), alongside having
+    // an email address at all and having logged in at least once.
+    wantsEmailNotifications: {
+      type: Boolean,
+      default: true,
+    },
     photo: {
       type: String,
     },

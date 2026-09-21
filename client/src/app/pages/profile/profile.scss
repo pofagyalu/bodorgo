@@ -48,6 +48,73 @@
   }
 }
 
+.profile-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+// Custom on/off switch (not Material's) - same pill-with-sliding-thumb
+// pattern as tour-details/event-form.scss's isOptional toggle, duplicated
+// here since Angular's view encapsulation keeps each component's styles
+// scoped to its own template.
+.toggle-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 3.4rem;
+  height: 1.8rem;
+  border: none;
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+  background: #c62828;
+  transition: background 0.2s ease;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.toggle-switch--on {
+  background: #2e7d32;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.toggle-switch--on .toggle-thumb {
+  transform: translateX(1.6rem);
+}
+
+.toggle-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  pointer-events: none;
+}
+
+.toggle-icon--check {
+  left: 0.4rem;
+}
+
+.toggle-icon--cross {
+  right: 0.4rem;
+}
+
 .error-note {
   color: #b00020;
 }

@@ -3,7 +3,13 @@ import * as tourController from '../controllers/tourController.js';
 import { signUpForTour, updateAttendeeNights } from '../controllers/reservationController.js';
 import * as tourImageController from '../controllers/tourImageController.js';
 import * as reviewController from '../controllers/reviewController.js';
-import { downloadTourPdf } from '../controllers/tourPdfController.js';
+import { downloadTourPdf, emailTourPdf, emailTourPdfToAttendees } from '../controllers/tourPdfController.js';
+import {
+  loadTourForUpload,
+  uploadMiddleware,
+  uploadTourDocument,
+  deleteTourDocument,
+} from '../controllers/tourDocumentController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -30,6 +36,17 @@ router
 // stamped with the downloader's own name in the footer, so there has to
 // be a real logged-in user to attribute it to.
 router.route('/:id/pdf').get(requireAuth, downloadTourPdf);
+router.route('/:id/pdf/email').post(requireAuth, emailTourPdf);
+router.route('/:id/pdf/email-attendees').post(requireAuth, restrictTo('admin'), emailTourPdfToAttendees);
+
+// Extra infók - admin-only upload/delete; viewing is a plain static file
+// URL under public/documents/tours/ (see tourDocumentController.js), same
+// unauthenticated-but-unlisted precedent as tour cover images, so no GET
+// route is needed here at all.
+router
+  .route('/:tourId/documents')
+  .post(requireAuth, restrictTo('admin'), loadTourForUpload, uploadMiddleware, uploadTourDocument);
+router.route('/:tourId/documents/:documentId').delete(requireAuth, restrictTo('admin'), deleteTourDocument);
 
 router.route('/:tourId/signup').post(requireAuth, signUpForTour);
 router

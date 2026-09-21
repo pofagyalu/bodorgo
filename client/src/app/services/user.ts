@@ -88,6 +88,12 @@ export interface AdminUserResponse {
   };
 }
 
+export interface UpdateMePayload {
+  name?: string;
+  email?: string;
+  wantsEmailNotifications?: boolean;
+}
+
 export interface JoinFamilyResponse {
   status: string;
   data: {
@@ -121,6 +127,10 @@ export class UserService {
 
   updateUser(id: string, payload: UpdateUserPayload): Observable<AdminUserResponse> {
     return this.http.patch<AdminUserResponse>(`${this.apiUrl}/${id}`, payload);
+  }
+
+  updateMe(payload: UpdateMePayload): Observable<AdminUserResponse> {
+    return this.http.patch<AdminUserResponse>(`${this.apiUrl}/updateMe`, payload);
   }
 
   joinFamily(userIds: string[]): Observable<JoinFamilyResponse> {

@@ -6,6 +6,21 @@
     <p class="profile-summary"><strong>E-mail cím:</strong> {{ auth.user()?.email }}</p>
     <p class="profile-summary"><strong>Klubtag:</strong> {{ isClubMember() ? 'igen' : 'nem' }}</p>
     <p class="profile-summary"><strong>Tábori részvételek száma:</strong> {{ attendance().length }}</p>
+    <p class="profile-summary profile-toggle-row">
+      <strong>Kérek értesítéseket email-ben:</strong>
+      <button
+        type="button"
+        class="toggle-switch"
+        [class.toggle-switch--on]="auth.user()?.wantsEmailNotifications ?? true"
+        [disabled]="savingEmailNotifications()"
+        (click)="toggleEmailNotifications()"
+        title="Kérek értesítéseket email-ben"
+      >
+        <span class="toggle-icon toggle-icon--check">I</span>
+        <span class="toggle-icon toggle-icon--cross">N</span>
+        <span class="toggle-thumb"></span>
+      </button>
+    </p>
   </section>
 
   <section class="profile-section">

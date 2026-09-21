@@ -137,6 +137,21 @@ export interface Tour {
   accommodationPricePerNight?: number;
   advancePaymentPercentage?: number;
   clubSubsidyAmount?: number;
+  // Admin-uploaded extras shown in the "Extra infók" section (a map, a
+  // beszámoló, places-to-visit notes, etc.) - only populated on the
+  // single-tour endpoint, same as schedule/reservations above.
+  extraDocuments?: ExtraDocument[];
+}
+
+// filename is what's actually on disk under
+// server/public/documents/tours/<tourId>/ (see TourService.documentUrl) -
+// never the original upload name.
+export interface ExtraDocument {
+  _id: string;
+  title: string;
+  filename: string;
+  mimeType: 'application/pdf' | 'image/jpeg';
+  uploadedAt: string;
 }
 
 // One attendee's accommodation share, computed server-side from the
@@ -289,6 +304,48 @@ export class TourService {
   // tour-details.html only shows the download button when logged in.
   pdfUrl(tourId: string): string {
     return `${this.apiUrl}/${tourId}/pdf`;
+  }
+
+  // A plain static file URL, same as tour cover images - see
+  // tourDocumentController.js's comment on why these aren't served
+  // through a requireAuth-gated route.
+  documentUrl(tourId: string, filename: string): string {
+    return `${environment.assetUrl}/documents/tours/${tourId}/${filename}`;
+  }
+
+  // multipart/form-data, not JSON - HttpClient sets the right Content-Type
+  // (with boundary) automatically when given a FormData body.
+  uploadDocument(tourId: string, title: string, file: File): Observable<TourResponse> {
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('file', file);
+    return this.http.post<TourResponse>(`${this.apiUrl}/${tourId}/documents`, formData);
+  }
+
+  deleteDocument(tourId: string, documentId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${tourId}/documents/${documentId}`);
+  }
+
+  // Sends the same PDF pdfUrl() downloads as an email attachment to the
+  // logged-in requester's own address (no recipient picker yet).
+  emailPdf(tourId: string): Observable<{ status: string; data: { sentTo: string } }> {
+    return this.http.post<{ status: string; data: { sentTo: string } }>(
+      `${this.apiUrl}/${tourId}/pdf/email`,
+      {},
+    );
+  }
+
+  // Admin-only: emails the Programfüzet to every eligible attendee of this
+  // tour (has an email, has logged in at least once, hasn't opted out) -
+  // see tourPdfController.js's partitionAttendeesByEmailEligibility.
+  emailPdfToAttendees(tourId: string): Observable<{
+    status: string;
+    data: { sentCount: number; sentTo: string[]; skipped: { name: string; reason: string }[] };
+  }> {
+    return this.http.post<{
+      status: string;
+      data: { sentCount: number; sentTo: string[]; skipped: { name: string; reason: string }[] };
+    }>(`${this.apiUrl}/${tourId}/pdf/email-attendees`, {});
   }
 
   getTours(): Observable<ToursResponse> {

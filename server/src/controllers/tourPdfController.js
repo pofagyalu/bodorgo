@@ -4,7 +4,9 @@ import mongoose from 'mongoose';
 import PDFDocument from 'pdfkit';
 import sharp from 'sharp';
 import Tour from '../models/tourModel.js';
+import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
+import sendResendEmail from '../utils/resendEmail.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
 // - the cover image lives under there; the logo/fonts live under
@@ -113,33 +115,22 @@ function infoLine(doc, x, width, color, iconName, text) {
     .text(text, x + 18, startY, { width: width - 18 });
 }
 
-// Generated fresh from the current Tour document on every request - never
-// cached or pre-rendered - so an edit to the tour is reflected the very
-// next time someone downloads it. Deliberately leaves out the rating/
-// review widget (not meaningful in a static, point-in-time document);
-// everything else visible on the tour-details page's own info block is
-// included: place, address, distance, date/duration, description, the
-// full day-by-day schedule (with that day's weather, if known), a
-// two-column layout mirroring the page's own image-left/info-right hero
-// row, and a footer on every page naming who downloaded it.
-export const downloadTourPdf = async (req, res) => {
-  const query = mongoose.isValidObjectId(req.params.id)
-    ? { _id: req.params.id }
-    : { slug: req.params.id };
+async function findTourByIdParam(idParam) {
+  const query = mongoose.isValidObjectId(idParam) ? { _id: idParam } : { slug: idParam };
   const tour = await Tour.findOne(query);
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
   }
+  return tour;
+}
 
-  // bufferPages: true lets the footer (which needs to know the final page
-  // count) be added to every page in one pass at the very end, rather
-  // than trying to predict page breaks up front.
-  const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
-  const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  doc.pipe(res);
-
+// Draws the entire Programfüzet onto an already-configured PDFDocument and
+// ends it - shared by the direct-download route and the email-attachment
+// route below, which differ only in what happens to the resulting bytes
+// (piped straight to the HTTP response vs. collected into a Buffer).
+// ownerName is passed in rather than read off req directly so this
+// function has no dependency on the request/response objects at all.
+async function renderTourPdfDocument(doc, tour, ownerName) {
   doc.registerFont('Body', FONT_REGULAR);
   doc.registerFont('Heading', FONT_BOLD);
   doc.registerFont('Icons', FONT_ICONS);
@@ -397,6 +388,39 @@ export const downloadTourPdf = async (req, res) => {
     doc.y += 20;
   }
 
+  // Extra infók - only when the tour actually has at least one uploaded
+  // document, and only ever the titles, never the files themselves or a
+  // way to reach them - the PDF can end up printed or shared beyond a
+  // logged-in visitor, unlike the tour-details page's own "Extra infók"
+  // cards, which link straight to each file.
+  if (tour.extraDocuments?.length > 0) {
+    if (doc.y > 700) doc.addPage();
+    doc.font('Heading').fontSize(16).fillColor(COLORS.darkGreen).text('Extrák', PAGE_MARGIN, doc.y, {
+      width: contentWidth,
+    });
+    doc.x = PAGE_MARGIN;
+    doc.moveDown(0.5);
+    doc
+      .font('Body')
+      .fontSize(10)
+      .fillColor('#666')
+      .text('A táborhoz tartoznak kiegészítő file-ok is, de ahhoz be kell lépned:', PAGE_MARGIN, doc.y, {
+        width: contentWidth,
+      });
+    doc.x = PAGE_MARGIN;
+    doc.moveDown(0.4);
+    for (const document of tour.extraDocuments) {
+      if (doc.y > 720) doc.addPage();
+      doc
+        .font('Body')
+        .fontSize(10)
+        .fillColor('#000')
+        .text(`• ${document.title}`, PAGE_MARGIN + 10, doc.y, { width: contentWidth - 10 });
+      doc.x = PAGE_MARGIN;
+    }
+    doc.moveDown(1);
+  }
+
   // Footer on every page: download date bottom-left, ownership
   // attribution bottom-right - added last (after all real content, once
   // the final page count is known) via bufferPages, not interleaved with
@@ -428,7 +452,7 @@ export const downloadTourPdf = async (req, res) => {
       .font('Body')
       .fontSize(8)
       .fillColor('#999')
-      .text(`Ez a dokumentum a ${req.user.name} tulajdona.`, PAGE_MARGIN + contentWidth / 2, footerY, {
+      .text(`Ez a dokumentum a ${ownerName} tulajdona.`, PAGE_MARGIN + contentWidth / 2, footerY, {
         width: contentWidth / 2,
         align: 'right',
         lineBreak: false,
@@ -450,4 +474,146 @@ export const downloadTourPdf = async (req, res) => {
   }
 
   doc.end();
+}
+
+// Generated fresh from the current Tour document on every request - never
+// cached or pre-rendered - so an edit to the tour is reflected the very
+// next time someone downloads it. Deliberately leaves out the rating/
+// review widget (not meaningful in a static, point-in-time document);
+// everything else visible on the tour-details page's own info block is
+// included: place, address, distance, date/duration, description, the
+// full day-by-day schedule (with that day's weather, if known), a
+// two-column layout mirroring the page's own image-left/info-right hero
+// row, and a footer on every page naming who downloaded it.
+export const downloadTourPdf = async (req, res) => {
+  const tour = await findTourByIdParam(req.params.id);
+
+  // bufferPages: true lets the footer (which needs to know the final page
+  // count) be added to every page in one pass at the very end, rather
+  // than trying to predict page breaks up front.
+  const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
+  const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  doc.pipe(res);
+
+  await renderTourPdfDocument(doc, tour, req.user.name);
+};
+
+// Builds the same PDF as downloadTourPdf, but collects it into a Buffer
+// instead of streaming it to an HTTP response - PDFKit's bufferPages
+// mechanism already defers the actual byte-writing until doc.end() calls
+// flush internally, so attaching these 'data'/'end' listeners beforehand
+// is enough to capture every page regardless.
+function renderTourPdfToBuffer(tour, ownerName) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    renderTourPdfDocument(doc, tour, ownerName).catch(reject);
+  });
+}
+
+// Shared by both the self-test send below and the admin's bulk send to
+// every eligible attendee - the plain-text/basic-HTML body here is
+// intentionally minimal; a proper branded template (MJML) is a separate
+// follow-up. The "don't reply" line matters because this really is a
+// send-only address (see terfotozas.hu's own MX - no-reply@ has no
+// mailbox, so a reply would just bounce).
+function programfuzetEmailBody(recipientName, tourTitle) {
+  const noReplyNote = 'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
+  return {
+    subject: `Programfüzet - ${tourTitle}`,
+    text: `Szia ${recipientName}!\n\nCsatolva küldjük a(z) "${tourTitle}" tábor programfüzetét.\n\nÜdvözlettel,\nBódorgó\n\n${noReplyNote}`,
+    html: `<p>Szia ${recipientName}!</p><p>Csatolva küldjük a(z) "${tourTitle}" tábor programfüzetét.</p><p>Üdvözlettel,<br>Bódorgó</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
+  };
+}
+
+// v1: sends the tour's own Programfüzet PDF to the logged-in requester's
+// own email address (there's no recipient picker yet - this is the "click
+// and see it received" test the admin asked for).
+export const emailTourPdf = async (req, res) => {
+  const tour = await findTourByIdParam(req.params.id);
+  if (!req.user.email) {
+    throw new AppError('A fiókodhoz nincs e-mail cím rendelve.', 400);
+  }
+
+  const pdfBuffer = await renderTourPdfToBuffer(tour, req.user.name);
+  const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
+  const { subject, text, html } = programfuzetEmailBody(req.user.name, tour.title);
+
+  await sendResendEmail({ to: req.user.email, subject, text, html, attachments: [{ filename, content: pdfBuffer }] });
+
+  res.status(200).json({ status: 'success', data: { sentTo: req.user.email } });
+};
+
+// Pure (no DB/network) so it's directly unit-testable - given a list of
+// candidate users (already populated with the 3 fields it cares about),
+// splits them into who's eligible for the bulk Programfüzet email and who
+// isn't, and why. The 3 rules, in the order the admin described them:
+// has an email address, has logged in at least once (lastLoginAt set - a
+// login-less dependent added by hand never has this and has no way to
+// read email tied to their "account" anyway), and hasn't turned off
+// wantsEmailNotifications in their own profile.
+export function partitionAttendeesByEmailEligibility(users) {
+  const eligible = [];
+  const skipped = [];
+  for (const user of users) {
+    if (!user.email) {
+      skipped.push({ name: user.name, reason: 'nincs e-mail cím' });
+    } else if (!user.lastLoginAt) {
+      skipped.push({ name: user.name, reason: 'még sosem jelentkezett be' });
+    } else if (user.wantsEmailNotifications === false) {
+      skipped.push({ name: user.name, reason: 'kikapcsolta az e-mail értesítéseket' });
+    } else {
+      eligible.push(user);
+    }
+  }
+  return { eligible, skipped };
+}
+
+// Admin-only: emails the Programfüzet to every eligible attendee of this
+// tour (see partitionAttendeesByEmailEligibility above). The same person
+// can show up as an attendee on more than one reservation for this tour
+// (rare, but possible - see e.g. a re-booking); deduped so they only get
+// one copy. Each copy is still generated (and footer-stamped) per-
+// recipient, same as the self-send above, rather than one generic PDF for
+// everyone.
+export const emailTourPdfToAttendees = async (req, res) => {
+  const tour = await findTourByIdParam(req.params.id);
+
+  const reservations = await Reservation.find({ tour: tour._id }).populate({
+    path: 'attendees.user',
+    select: 'name email lastLoginAt wantsEmailNotifications',
+  });
+
+  const recipientsById = new Map();
+  for (const reservation of reservations) {
+    for (const attendee of reservation.attendees) {
+      const user = attendee.user;
+      if (user && !recipientsById.has(String(user._id))) {
+        recipientsById.set(String(user._id), user);
+      }
+    }
+  }
+
+  const { eligible, skipped } = partitionAttendeesByEmailEligibility([...recipientsById.values()]);
+
+  const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
+  for (const user of eligible) {
+    const pdfBuffer = await renderTourPdfToBuffer(tour, user.name);
+    const { subject, text, html } = programfuzetEmailBody(user.name, tour.title);
+    await sendResendEmail({ to: user.email, subject, text, html, attachments: [{ filename, content: pdfBuffer }] });
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      sentCount: eligible.length,
+      sentTo: eligible.map((u) => u.email),
+      skipped,
+    },
+  });
 };

@@ -243,6 +243,7 @@ export const me = async (req, res) => {
     name: user.name,
     role: user.role,
     familyId: user.familyId,
+    wantsEmailNotifications: user.wantsEmailNotifications,
   });
 };
 

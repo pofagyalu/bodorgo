@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, effect, OnDestroy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import type PhotoSwipeLightbox from 'photoswipe/lightbox';
@@ -12,6 +13,7 @@ import {
   TourImage,
   AttendeePayment,
   PaymentTotals,
+  ExtraDocument,
 } from '../../services/tour';
 import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
@@ -49,7 +51,7 @@ interface PickerOption {
 @Component({
   selector: 'app-tour-details',
   standalone: true,
-  imports: [MatIconModule, RouterLink, TourEvent, EventForm, ReviewStars, AttendeeList],
+  imports: [MatIconModule, RouterLink, FormsModule, TourEvent, EventForm, ReviewStars, AttendeeList],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
@@ -330,6 +332,153 @@ export class TourDetails implements OnDestroy {
   googleMapsUrl(t: Tour): string {
     const [lng, lat] = t.location.coordinates;
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  }
+
+  // Extra infók - admin-only upload/delete of the handful of documents
+  // (map, beszámoló, places-to-visit notes) shown alongside the always-
+  // present Programfüzet card.
+  addingDocument = signal(false);
+  uploadingDocument = signal(false);
+  newDocumentTitle = '';
+  private selectedDocumentFile: File | null = null;
+
+  documentUrl(tourId: string, filename: string): string {
+    return this.tourService.documentUrl(tourId, filename);
+  }
+
+  // v1 test of the "send Programfüzet by email" card - sends to the
+  // logged-in user's own address, no recipient picker yet.
+  emailingPdf = signal(false);
+
+  sendPdfByEmail(tourId: string) {
+    if (this.emailingPdf()) return;
+    this.emailingPdf.set(true);
+    this.tourService.emailPdf(tourId).subscribe({
+      next: (res) => {
+        this.emailingPdf.set(false);
+        this.notifications.addSuccess(`Programfüzet elküldve: ${res.data.sentTo}`);
+      },
+      error: (err) => {
+        this.emailingPdf.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a küldés során.');
+      },
+    });
+  }
+
+  // Admin-only: emails the Programfüzet to every eligible attendee - a
+  // real send to potentially several real people, so it's gated behind an
+  // explicit confirm modal (same reasoning as the document-delete one
+  // above), not a one-click fire.
+  confirmingEmailAttendees = signal(false);
+  emailingAttendees = signal(false);
+
+  askEmailAttendees() {
+    this.confirmingEmailAttendees.set(true);
+  }
+
+  cancelEmailAttendees() {
+    this.confirmingEmailAttendees.set(false);
+  }
+
+  confirmEmailAttendees(tourId: string) {
+    this.emailingAttendees.set(true);
+    this.tourService.emailPdfToAttendees(tourId).subscribe({
+      next: (res) => {
+        this.emailingAttendees.set(false);
+        this.confirmingEmailAttendees.set(false);
+        const { sentCount, skipped } = res.data;
+        this.notifications.addSuccess(`Programfüzet elküldve ${sentCount} résztvevőnek.`);
+        if (skipped.length > 0) {
+          this.notifications.addError(
+            `${skipped.length} résztvevő kimaradt: ${skipped.map((s) => `${s.name} (${s.reason})`).join(', ')}`,
+          );
+        }
+      },
+      error: (err) => {
+        this.emailingAttendees.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a küldés során.');
+      },
+    });
+  }
+
+  startAddDocument() {
+    this.newDocumentTitle = '';
+    this.selectedDocumentFile = null;
+    this.addingDocument.set(true);
+  }
+
+  cancelAddDocument() {
+    this.addingDocument.set(false);
+  }
+
+  onDocumentFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedDocumentFile = input.files?.[0] ?? null;
+  }
+
+  saveNewDocument(tourId: string) {
+    const title = this.newDocumentTitle.trim();
+    if (!title) {
+      this.notifications.addError('A dokumentumnak kell legyen címe.');
+      return;
+    }
+    if (!this.selectedDocumentFile) {
+      this.notifications.addError('Válassz ki egy PDF vagy JPG fájlt.');
+      return;
+    }
+
+    this.uploadingDocument.set(true);
+    this.tourService.uploadDocument(tourId, title, this.selectedDocumentFile).subscribe({
+      next: (res) => {
+        this.uploadingDocument.set(false);
+        this.addingDocument.set(false);
+        this.tour.set(res.data.tour);
+        this.notifications.addSuccess('Dokumentum feltöltve');
+      },
+      error: (err) => {
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a feltöltés során.');
+        this.uploadingDocument.set(false);
+      },
+    });
+  }
+
+  // A real in-app modal (reusing the attendee-picker's backdrop/box visual
+  // language) rather than the browser's own confirm() - not just for
+  // looks, the native dialog also can't be styled/translated consistently
+  // with the rest of the page.
+  documentPendingDelete = signal<ExtraDocument | null>(null);
+  deletingDocument = signal(false);
+
+  askDeleteDocument(doc: ExtraDocument, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.documentPendingDelete.set(doc);
+  }
+
+  cancelDeleteDocument() {
+    this.documentPendingDelete.set(null);
+  }
+
+  confirmDeleteDocument(tourId: string) {
+    const doc = this.documentPendingDelete();
+    if (!doc) return;
+
+    this.deletingDocument.set(true);
+    this.tourService.deleteDocument(tourId, doc._id).subscribe({
+      next: () => {
+        const t = this.tour();
+        if (t) {
+          this.tour.set({ ...t, extraDocuments: (t.extraDocuments ?? []).filter((d) => d._id !== doc._id) });
+        }
+        this.deletingDocument.set(false);
+        this.documentPendingDelete.set(null);
+        this.notifications.addSuccess('Dokumentum törölve');
+      },
+      error: (err) => {
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a törlés során.');
+        this.deletingDocument.set(false);
+      },
+    });
   }
 
   // No on-page thumbnail grid (dropped per feedback - too much clutter),
