@@ -74,11 +74,17 @@ try {
     'every row has a real name and a non-null totalPrice',
     attendeePayments.every((p) => typeof p.name === 'string' && p.name.length > 0 && p.totalPrice !== null),
   );
+  // Not the sum of the individual rows - each attendee's own share rounds
+  // UP to a whole forint, so summing them would overstate the true total
+  // by a few forints (see testAttendeePayments.js). The declared totals
+  // are the tour's own exact configured numbers instead.
+  const expectedTotalPrice = 2000 * (tour.duration - 1);
+  const expectedAdvance = Math.ceil((expectedTotalPrice * 30) / 100);
   check(
-    'totals match the sum of the individual rows',
-    paymentTotals.totalPrice === attendeePayments.reduce((s, p) => s + p.totalPrice, 0) &&
-      paymentTotals.advance === attendeePayments.reduce((s, p) => s + p.advance, 0) &&
-      paymentTotals.rest === attendeePayments.reduce((s, p) => s + p.rest, 0),
+    'totals reflect the tour\'s own exact configured numbers, not the sum of rounded-up rows',
+    paymentTotals.totalPrice === expectedTotalPrice &&
+      paymentTotals.advance === expectedAdvance &&
+      paymentTotals.rest === expectedTotalPrice - expectedAdvance,
   );
 } finally {
   tour.accommodationPricePerNight = original.accommodationPricePerNight;

@@ -3,6 +3,13 @@ import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import AppError from '../utils/appError.js';
 
+// The club didn't exist before this date, so it can't have contributed
+// money toward a tour's accommodation before it either - see
+// computeAttendeePayments below. Guarded here (not just disabled in the
+// tour-edit form) so a stale/manually-set clubSubsidyAmount on an old
+// tour can never actually get applied.
+const CLUB_FOUNDING_DATE = new Date('2019-01-01T00:00:00.000Z');
+
 // Who a given caller is allowed to register depends on their role:
 // - guest: only themselves.
 // - member: themselves and anyone sharing their familyId (see
@@ -144,21 +151,42 @@ export function computeAttendeePayments(tour, reservations) {
   // The director's lump-sum contribution is split equally across
   // club-member attendees and only ever reduces their Maradék (rest),
   // never their Foglaló (advance) - see tourModel.js's clubSubsidyAmount.
-  const subsidyTotal = tour.clubSubsidyAmount || 0;
+  // Floored, not ceiled: unlike totalPrice/advance below (money owed TO
+  // the club, rounded in the club's favor), this is money the club GIVES
+  // AWAY, so it must never round up past what was actually budgeted - the
+  // sum of N floored equal shares can never exceed the original total.
+  // Ignored entirely for a tour that predates the club's founding - it
+  // couldn't have contributed money to something before it existed.
+  const subsidyEligible = new Date(tour.startDate) >= CLUB_FOUNDING_DATE;
+  const subsidyTotal = subsidyEligible ? tour.clubSubsidyAmount || 0 : 0;
   const clubMemberCount = rows.filter((r) => r.isClubMember).length;
-  const subsidyShare = clubMemberCount > 0 ? Math.round(subsidyTotal / clubMemberCount) : 0;
+  const subsidyShare = clubMemberCount > 0 ? Math.floor(subsidyTotal / clubMemberCount) : 0;
 
-  let totalSum = 0;
-  let advanceSum = 0;
-  let restSum = 0;
+  // The declared totals are the tour's own configured numbers (e.g.
+  // 39000/night * 2 nights = 78000, 20% of that = 15600), not the sum of
+  // each attendee's individually rounded-up share - splitting a fixed
+  // amount into whole-forint per-person shares unavoidably rounds every
+  // share up a little, so summing them would overstate the true total by
+  // a few forints (17 people each rounded up ~0.9 Ft adds up). advance is
+  // still rounded up here too, same reasoning as per-attendee amounts.
+  const totalAdvance = Math.ceil((totalHouseFee * advancePct) / 100);
+
+  let totalSubsidyApplied = 0;
   const attendeePayments = rows.map((r) => {
-    const totalPrice = Math.round(r.nights * pricePerPersonNight);
-    const advance = Math.round((totalPrice * advancePct) / 100);
-    const rest = Math.max(0, totalPrice - advance - (r.isClubMember ? subsidyShare : 0));
+    // Rounded up rather than to the nearest forint - a fractional split
+    // should never leave the club collecting less than the real cost,
+    // even by a few forints, so every attendee's share rounds in the
+    // club's favor.
+    const totalPrice = Math.ceil(r.nights * pricePerPersonNight);
+    const advance = Math.ceil((totalPrice * advancePct) / 100);
+    const restBeforeSubsidy = totalPrice - advance;
+    // Capped at this person's own rest rather than floored at 0 after
+    // subtracting - the difference matters for totalSubsidyApplied below,
+    // which needs to reflect subsidy actually used, not nominally assigned.
+    const appliedSubsidy = r.isClubMember ? Math.min(subsidyShare, restBeforeSubsidy) : 0;
+    const rest = restBeforeSubsidy - appliedSubsidy;
 
-    totalSum += totalPrice;
-    advanceSum += advance;
-    restSum += rest;
+    totalSubsidyApplied += appliedSubsidy;
 
     return {
       reservationId: r.reservationId,
@@ -173,7 +201,11 @@ export function computeAttendeePayments(tour, reservations) {
 
   return {
     attendeePayments,
-    totals: { totalPrice: totalSum, advance: advanceSum, rest: restSum },
+    totals: {
+      totalPrice: totalHouseFee,
+      advance: totalAdvance,
+      rest: totalHouseFee - totalAdvance - totalSubsidyApplied,
+    },
   };
 }
 

@@ -1,9 +1,11 @@
 // Verifies tourModel.js's price pre('save') hook - once
 // accommodationPricePerNight is set, price becomes the average price per
 // person per night, assuming the tour fills to maxCapacity
-// (rate / maxCapacity - duration-independent), recomputed whenever either
-// input changes. A tour that never sets accommodationPricePerNight keeps
-// its old plain manually-entered price untouched.
+// (rate / maxCapacity - duration-independent), rounded UP (never to
+// nearest or down, so the advertised price is never an under-estimate),
+// recomputed whenever either input changes. A tour that never sets
+// accommodationPricePerNight keeps its old plain manually-entered price
+// untouched.
 //
 // Snapshots and restores a real tour's fields - safe to re-run.
 //
@@ -65,6 +67,14 @@ try {
   tour.accommodationPricePerNight = 4000;
   await tour.save();
   check('price recomputes when accommodationPricePerNight changes afterward', tour.price === 200); // 4000 / 20
+
+  // A fractional result (176.47...) rounds UP to 177, not down to 176 -
+  // discriminates ceiling from round-to-nearest, unlike the exact
+  // divisions above.
+  tour.maxCapacity = 17;
+  tour.accommodationPricePerNight = 3000;
+  await tour.save();
+  check('a fractional price rounds up (177), not to nearest (176)', tour.price === 177);
 
   // Changing something unrelated (summary) does NOT recompute (isModified guard).
   tour.price = 999; // simulate a stale value that should NOT get silently recomputed here

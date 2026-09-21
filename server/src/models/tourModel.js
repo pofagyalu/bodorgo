@@ -306,7 +306,7 @@ tourSchema.pre('save', function (next) {
     this.accommodationPricePerNight != null &&
     (this.isModified('accommodationPricePerNight') || this.isModified('maxCapacity'))
   ) {
-    this.price = Math.round(this.accommodationPricePerNight / this.maxCapacity);
+    this.price = Math.ceil(this.accommodationPricePerNight / this.maxCapacity);
   }
   next();
 });

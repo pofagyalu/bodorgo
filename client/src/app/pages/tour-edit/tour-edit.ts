@@ -87,6 +87,20 @@ export class TourEdit {
     return this.tourId !== null;
   }
 
+  // The club was founded in 2019, so it can't have contributed money
+  // toward a tour that predates it - same cutoff as
+  // reservationController.js's CLUB_FOUNDING_DATE, which also ignores
+  // clubSubsidyAmount entirely for an old tour even if one somehow got
+  // set on it. Disabled here (not just left at its 0 default) so there's
+  // no chance of an admin entering a value that would silently never
+  // apply.
+  private static readonly CLUB_FOUNDING_DATE = new Date('2019-01-01T00:00:00.000Z');
+
+  get subsidyAllowed(): boolean {
+    if (!this.form.startDateLocal) return true; // no date chosen yet - don't block the field prematurely
+    return new Date(this.form.startDateLocal) >= TourEdit.CLUB_FOUNDING_DATE;
+  }
+
   constructor() {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return; // create mode - keep the empty form
@@ -148,7 +162,11 @@ export class TourEdit {
       imageCover: f.imageCover,
       accommodationPricePerNight: f.accommodationPricePerNight ?? undefined,
       advancePaymentPercentage: f.advancePaymentPercentage ?? undefined,
-      clubSubsidyAmount: f.clubSubsidyAmount ?? undefined,
+      // Never sent for a pre-2019 tour, even if the disabled field
+      // somehow still holds a stale nonzero value - the server ignores it
+      // anyway (see reservationController.js's CLUB_FOUNDING_DATE), but
+      // there's no reason to persist a misleading number either.
+      clubSubsidyAmount: this.subsidyAllowed ? f.clubSubsidyAmount ?? undefined : 0,
     };
 
     const request = this.isEditMode

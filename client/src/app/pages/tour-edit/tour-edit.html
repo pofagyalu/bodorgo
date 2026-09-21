@@ -63,9 +63,17 @@
       /></label>
       <label
         >Klub hozzájárulása (Ft)
-        <input type="number" [(ngModel)]="form.clubSubsidyAmount" name="clubSubsidyAmount"
+        <input
+          type="number"
+          [(ngModel)]="form.clubSubsidyAmount"
+          name="clubSubsidyAmount"
+          [disabled]="!subsidyAllowed"
+          [title]="subsidyAllowed ? '' : 'A klub 2019-ben alakult, korábbi táborhoz nem járulhatott hozzá.'"
       /></label>
     </div>
+    @if (!subsidyAllowed) {
+    <p class="field-note">A klub 2019-ben alakult, ezért korábbi táborokhoz nem rendelhető hozzájárulás.</p>
+    }
 
     <label class="form-field-full"
       >Rövid összefoglaló
