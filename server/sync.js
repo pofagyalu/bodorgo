@@ -27,3 +27,45 @@ fs.cpSync(path.resolve('assets'), path.join(dest, 'assets'), {
   force: true,
 });
 console.log('✓ Synced assets → S:/bodorgo/assets');
+
+// pdfkit is marked `external` in build.js (see its comment) rather than
+// bundled, so the deployed server.js does a plain runtime require('pdfkit')
+// - which needs pdfkit AND its own full dependency tree physically
+// present alongside it (pdfkit's pre-built js/pdfkit.js itself does real
+// requires of these, e.g. '@noble/hashes/utils' for PDF signing support -
+// that's not inlined into pdfkit's own bundle). All pure JS, no native
+// compilation, so copying them as-is from this (Windows) dev machine
+// works identically on the NAS's Linux. This exact package list is
+// pdfkit's full transitive closure per package-lock.json - regenerate it
+// with the one-liner in this file's git history if pdfkit's own
+// dependencies ever change. sharp is also external but deliberately NOT
+// shipped this way (yet) - it has a compiled-per-platform native addon
+// this dev machine can't produce a Linux build of; see build.js's comment.
+const PDFKIT_DEPENDENCY_CLOSURE = [
+  'pdfkit',
+  '@noble/ciphers',
+  '@noble/hashes',
+  '@swc/helpers',
+  'base64-js',
+  'brotli',
+  'clone',
+  'dfa',
+  'fast-deep-equal',
+  'fflate',
+  'fontkit',
+  'linebreak',
+  'pako',
+  'png-js',
+  'restructure',
+  'tiny-inflate',
+  'tslib',
+  'unicode-properties',
+  'unicode-trie',
+];
+for (const pkg of PDFKIT_DEPENDENCY_CLOSURE) {
+  fs.cpSync(path.resolve('node_modules', pkg), path.join(dest, 'node_modules', pkg), {
+    recursive: true,
+    force: true,
+  });
+}
+console.log(`✓ Synced pdfkit + its ${PDFKIT_DEPENDENCY_CLOSURE.length - 1} dependencies → S:/bodorgo/node_modules`);

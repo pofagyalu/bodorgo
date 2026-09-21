@@ -2,11 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
 import PDFDocument from 'pdfkit';
-import sharp from 'sharp';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
 import sendResendEmail from '../utils/resendEmail.js';
+import logger from '../logger.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
 // - the cover image lives under there; the logo/fonts live under
@@ -142,8 +142,12 @@ async function renderTourPdfDocument(doc, tour, ownerName) {
   // continued with "- Programfüzet" so it reads as a masthead/title
   // rather than a bare brand mark.
   if (fs.existsSync(LOGO_PATH)) {
-    const logoMeta = await sharp(LOGO_PATH).metadata();
-    const logo = fitDims(logoMeta.width, logoMeta.height, 140, 30);
+    // pdfkit reads PNG/JPEG dimensions itself (openImage) - no need for
+    // sharp just to measure a file we already know is a plain PNG. Kept
+    // separate from the cover-image conversion below, which genuinely
+    // needs sharp (source is .webp, which pdfkit can't decode at all).
+    const logoImage = doc.openImage(LOGO_PATH);
+    const logo = fitDims(logoImage.width, logoImage.height, 140, 30);
     const logoTop = doc.y;
     doc.image(LOGO_PATH, PAGE_MARGIN, logoTop, logo);
     doc
@@ -172,17 +176,33 @@ async function renderTourPdfDocument(doc, tour, ownerName) {
   // just assume the cap - otherwise a short image leaves a large blank
   // gap before the description starts.
   let coverHeight = 0;
-  if (coverPath && fs.existsSync(coverPath)) {
-    // Tour covers are stored as .webp (see tourImageController.js), which
-    // pdfkit can't embed directly (JPEG/PNG only), so it's converted in
-    // memory first via sharp (already a dependency for image processing
-    // elsewhere in this app).
-    const coverImage = sharp(coverPath);
-    const coverMeta = await coverImage.metadata();
-    const coverPng = await coverImage.png().toBuffer();
-    const cover = fitDims(coverMeta.width, coverMeta.height, imageColWidth, 220);
+  const coverExt = coverPath ? path.extname(coverPath).toLowerCase() : null;
+  if (coverPath && fs.existsSync(coverPath) && (coverExt === '.jpg' || coverExt === '.jpeg' || coverExt === '.png')) {
+    // pdfkit reads JPEG/PNG (and their real dimensions) itself - no sharp
+    // needed at all for a cover already in one of those formats.
+    const coverImage = doc.openImage(coverPath);
+    const cover = fitDims(coverImage.width, coverImage.height, imageColWidth, 220);
     coverHeight = cover.height;
-    doc.image(coverPng, PAGE_MARGIN, heroTop, cover);
+    doc.image(coverPath, PAGE_MARGIN, heroTop, cover);
+  } else if (coverPath && fs.existsSync(coverPath)) {
+    // Legacy .webp covers (see tourImageController.js's older convention)
+    // - pdfkit can't embed those directly, so sharp converts one in memory
+    // first. sharp is a native addon, so it's not something a plain
+    // esbuild bundle can carry with it (see build.js's comment on this) -
+    // if it can't load or run in a given environment, the PDF should
+    // still generate, just without the cover photo, rather than fail
+    // outright.
+    try {
+      const { default: sharp } = await import('sharp');
+      const coverImage = sharp(coverPath);
+      const coverMeta = await coverImage.metadata();
+      const coverPng = await coverImage.png().toBuffer();
+      const cover = fitDims(coverMeta.width, coverMeta.height, imageColWidth, 220);
+      coverHeight = cover.height;
+      doc.image(coverPng, PAGE_MARGIN, heroTop, cover);
+    } catch (err) {
+      logger.warn(`Tour PDF: cover image skipped (sharp unavailable): ${err.message}`);
+    }
   }
 
   doc.y = heroTop;
