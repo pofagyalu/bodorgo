@@ -8,13 +8,20 @@
 // converting removes the dependency on sharp working in production for
 // this to render.
 //
-// Operates directly on the NAS's live files/DB (dev and prod share the
-// same MongoDB - see config.js's db.uri/testUri - and public/img/tours/
-// is per-environment, not git-synced, so there's no "local" copy of these
-// real cover photos to convert instead). Uses THIS dev machine's own
-// (Windows) sharp only for the one-time conversion, not the deployed
-// server, since local sharp works fine here - the deploy-time problem is
-// specifically about shipping a Linux binary from this machine.
+// Operates directly on the NAS's live files/DB - dev and prod share the
+// same MongoDB (see config.js's db.uri/testUri), but public/img/tours/ is
+// per-environment and NOT git-synced, so this only writes the new .jpg
+// files to the NAS side (TOURS_IMG_DIR below). The local dev copy under
+// server/public/img/tours/ (which does have its own real files, just the
+// old .webp ones) needs those new .jpg files copied down separately, or
+// the DB's now-updated imageCover pointing at a filename that only exists
+// on the NAS breaks cover images on localhost - a real bug this caused
+// the first time this script ran, fixed by hand that once by copying
+// S:/bodorgo/public/img/tours/*.jpg into the local folder. Uses THIS dev
+// machine's own (Windows) sharp only for the one-time conversion, not the
+// deployed server, since local sharp works fine here - the deploy-time
+// problem is specifically about shipping a Linux binary from this
+// machine.
 //
 // Old .webp files are left in place (not deleted) - safe to re-run, and
 // easy to roll back by hand if a converted photo looks wrong.
