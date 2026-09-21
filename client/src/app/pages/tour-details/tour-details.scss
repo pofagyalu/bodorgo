@@ -60,26 +60,6 @@
   font-weight: 700;
 }
 
-// Compact, read-only average - everyone sees this regardless of role or
-// login state, same numbers the tour card already shows. The interactive
-// 10-star input further down (review-stars/) is a completely separate
-// thing, only ever shown to an actual attendee.
-.rating-summary {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  color: #444;
-
-  mat-icon {
-    color: var(--logo-orange, #f07827);
-    font-size: 1.2rem;
-    width: 1.2rem;
-    height: 1.2rem;
-  }
-}
-
-
 // Same diagonal semi-transparent green gradient as the tour cards' title
 // band (tour-card.scss's .heading-span) and the mobile menu background.
 // block, not inline-block, so the banner always spans the full width of

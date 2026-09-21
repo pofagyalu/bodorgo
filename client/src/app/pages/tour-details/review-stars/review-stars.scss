@@ -1,19 +1,44 @@
-// Same look as tour-details.scss's .section-heading/.participants-section
-// - duplicated here since Angular's view encapsulation means that
-// component's stylesheet can't reach into this one, same reasoning
-// documented repeatedly elsewhere in this app (e.g. tour-event.scss's
-// icon-btn rules).
-.review-section {
-  margin-bottom: 3rem;
+// Same look as tour-details.scss used to have for its own .rating-summary
+// (now removed there - this component owns the whole line) - duplicated
+// per Angular's view encapsulation, same reasoning documented repeatedly
+// elsewhere in this app (e.g. tour-event.scss's icon-btn rules).
+.rating-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: #444;
+  flex-wrap: wrap;
+
+  mat-icon {
+    color: var(--logo-orange, #f07827);
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
 }
 
-.section-heading {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 1.2rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 2px solid #eee;
+.empty-note {
+  color: #999;
+  font-style: italic;
+}
+
+// Small pill, not a full-size button - it's inline within a text line, not
+// a standalone action.
+.review-edit-btn {
+  background: none;
+  border: 1px solid var(--logo-orange, #f07827);
+  border-radius: 999px;
+  color: var(--logo-orange, #f07827);
+  padding: 0.15rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--logo-orange, #f07827);
+    color: #fff;
+  }
 }
 
 .review-stars {

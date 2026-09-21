@@ -3,13 +3,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
 
-// A 10-star rating control, one per attendee per tour, editable any time -
-// submitting again just replaces the same person's earlier rating (see
-// reviewController.js's submitReview), it never adds a second entry. Only
-// ever rendered for an actual attendee of this specific tour - ngOnInit's
-// getMyReview() call is what tells the template whether to show anything
-// at all (isAttendee()), same attendance check the restricted-images
-// feature already uses elsewhere.
+// Owns the whole "★ 7.5/10 (...)" line near the top of the tour details
+// page - not just the star input. For a non-attendee (or before
+// getMyReview() resolves) it's the plain public average + review count,
+// same as always. For an actual attendee it swaps the parenthetical for
+// their own status ("még nem értékeltél" / "a te értékelésed N") plus an
+// Értékelek/Módosítom button that swaps the whole line for the 10-star
+// input - clicking a star submits immediately and swaps back to the
+// summary line, updated.
 @Component({
   selector: 'app-review-stars',
   standalone: true,
@@ -22,6 +23,8 @@ export class ReviewStars implements OnInit {
   private notifications = inject(NotificationsService);
 
   @Input({ required: true }) tourId!: string;
+  @Input({ required: true }) averageRating!: number;
+  @Input({ required: true }) reviewCount!: number;
   @Output() reviewSubmitted = new EventEmitter<{ average: number; quantity: number }>();
 
   readonly stars = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -31,6 +34,7 @@ export class ReviewStars implements OnInit {
   savedRating = signal<number | null>(null);
   hoverRating = signal<number | null>(null);
   submitting = signal(false);
+  editing = signal(false);
 
   // Hovering previews over whatever's actually saved - reverts the instant
   // the mouse leaves without a click.
@@ -45,6 +49,10 @@ export class ReviewStars implements OnInit {
       },
       error: () => this.loaded.set(true),
     });
+  }
+
+  startEditing() {
+    this.editing.set(true);
   }
 
   onHover(value: number) {
@@ -63,6 +71,7 @@ export class ReviewStars implements OnInit {
       next: (res) => {
         this.savedRating.set(res.data.rating);
         this.submitting.set(false);
+        this.editing.set(false);
         this.notifications.addSuccess('Értékelés mentve');
         this.reviewSubmitted.emit({ average: res.data.ratingsAverage, quantity: res.data.ratingsQuantity });
       },

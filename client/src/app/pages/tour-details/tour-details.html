@@ -23,11 +23,12 @@
     <div class="hero-info">
       <h1 class="hero-title"><span class="hero-title-span">{{ t.title }}</span></h1>
 
-      <p class="rating-summary">
-        <mat-icon>star</mat-icon>
-        {{ t.ratingsAverage }}/10
-        <span class="empty-note">({{ t.ratingsQuantity }} értékelés)</span>
-      </p>
+      <app-review-stars
+        [tourId]="t._id"
+        [averageRating]="t.ratingsAverage"
+        [reviewCount]="t.ratingsQuantity"
+        (reviewSubmitted)="onReviewSubmitted($event)"
+      />
 
       <div class="info-line">
         <mat-icon [style.color]="placeIconColor">location_on</mat-icon>
@@ -170,11 +171,6 @@
     <p class="empty-note">Még senki nem jelentkezett erre a táborra.</p>
     } }
   </section>
-
-  <!-- Review - the component (including its own heading) renders nothing
-       at all unless the viewer is an actual attendee of this tour (see
-       review-stars.ts/.html), so no @if is needed here around it. -->
-  <app-review-stars [tourId]="t._id" (reviewSubmitted)="onReviewSubmitted($event)" />
 
   <!-- Sign up - hidden entirely (not just the "full" message) once the
        tour is full and the user hasn't already signed up, since that

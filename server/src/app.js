@@ -39,7 +39,12 @@ export default function createApp(sessionMiddleware) {
     cors({
       origin: config.corsOrigins,
       credentials: true, // if sending cookies/tokens
-      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+      // PUT added for reviewController.js's submitReview - without it, the
+      // browser's own CORS preflight (client and API are on different
+      // subdomains) silently blocks the request before it ever reaches the
+      // server, surfacing client-side as a generic network error rather
+      // than any response this app's own error handling could shape.
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     }),
   );
