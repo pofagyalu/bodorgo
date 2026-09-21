@@ -41,6 +41,16 @@ export class Profile {
   private notifications = inject(NotificationsService);
   auth = inject(AuthService);
 
+  // Bounds for the birthday <input type="date"> fields. Without a `max`,
+  // Chrome's year segment allows up to 6 digits and can't tell you're done
+  // after 4 - it won't auto-advance to the month field until you either
+  // type further or move focus manually. Giving it a realistic max (and a
+  // matching min) lets it recognize a 4-digit year as already at its
+  // limit, fixing that - and it's sensible validation regardless (no one's
+  // birthday is in the future or before 1900).
+  readonly minBirthday = '1900-01-01';
+  readonly maxBirthday = new Date().toISOString().slice(0, 10);
+
   attendance = signal<AttendanceRow[]>([]);
   attendanceError = signal<string | null>(null);
 

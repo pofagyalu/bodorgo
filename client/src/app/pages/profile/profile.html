@@ -84,7 +84,13 @@
         [(ngModel)]="addUserForm.familyId"
         placeholder="Család ID vagy annak vége (üresen új család)"
       />
-      <input type="date" [(ngModel)]="addUserForm.birthday" title="Születési dátum (opcionális)" />
+      <input
+        type="date"
+        [(ngModel)]="addUserForm.birthday"
+        [min]="minBirthday"
+        [max]="maxBirthday"
+        title="Születési dátum (opcionális)"
+      />
       <select [(ngModel)]="addUserForm.gender" title="Nem (opcionális)">
         <option value="">Nem (opcionális)</option>
         <option value="férfi">Férfi</option>
@@ -152,7 +158,13 @@
           <td><input type="text" [(ngModel)]="editUserForm.name" /></td>
           <td><input type="email" [(ngModel)]="editUserForm.email" /></td>
           <td class="age-edit-cell">
-            <input type="date" [(ngModel)]="editUserForm.birthday" title="Születési dátum" />
+            <input
+              type="date"
+              [(ngModel)]="editUserForm.birthday"
+              [min]="minBirthday"
+              [max]="maxBirthday"
+              title="Születési dátum"
+            />
           </td>
           <td class="age-edit-cell">
             <select [(ngModel)]="editUserForm.gender" title="Nem">
