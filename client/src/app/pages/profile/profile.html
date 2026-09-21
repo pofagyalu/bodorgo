@@ -130,20 +130,33 @@
           @if (isAdmin()) {
           <th></th>
           }
-          <th>Név</th>
+          <th class="sortable-header" [class.sortable-header--active]="sortColumn() === 'name'" (click)="toggleSort('name')">
+            Név
+            <mat-icon class="sort-icon">{{ sortIcon('name') }}</mat-icon>
+          </th>
           <th>E-mail</th>
-          <th>Kor</th>
+          <th class="sortable-header" [class.sortable-header--active]="sortColumn() === 'age'" (click)="toggleSort('age')">
+            Kor
+            <mat-icon class="sort-icon">{{ sortIcon('age') }}</mat-icon>
+          </th>
           <th>Nem</th>
           @if (isAdmin()) {
-          <th>Család</th>
+          <th class="sortable-header" [class.sortable-header--active]="sortColumn() === 'familyId'" (click)="toggleSort('familyId')">
+            Család
+            <mat-icon class="sort-icon">{{ sortIcon('familyId') }}</mat-icon>
+          </th>
           <th>Szerepkör</th>
+          <th class="sortable-header" [class.sortable-header--active]="sortColumn() === 'toursAttended'" (click)="toggleSort('toursAttended')">
+            Táborok
+            <mat-icon class="sort-icon">{{ sortIcon('toursAttended') }}</mat-icon>
+          </th>
           <th>Utolsó belépés</th>
           <th></th>
           }
         </tr>
       </thead>
       <tbody>
-        @for (u of users(); track u._id) {
+        @for (u of sortedUsers(); track u._id) {
         <tr [class.own-family-row]="isOwnFamily(u)">
           @if (isAdmin()) {
           <td>
@@ -177,6 +190,7 @@
             <input type="text" [(ngModel)]="editUserForm.familyId" placeholder="Család ID vagy annak vége" />
           </td>
           <td>{{ roleLabel(u.role) }}</td>
+          <td>{{ u.toursAttended }}</td>
           <td>
             @if (u.lastLoginAt) {
             {{ formatDateTime(u.lastLoginAt) }}
@@ -235,6 +249,7 @@
             }
           </td>
           <td>{{ roleLabel(u.role) }}</td>
+          <td>{{ u.toursAttended }}</td>
           <td>
             @if (u.lastLoginAt) {
             {{ formatDateTime(u.lastLoginAt) }}

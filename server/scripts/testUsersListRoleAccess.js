@@ -12,6 +12,7 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import config from '../src/config.js';
+import Reservation from '../src/models/reservationModel.js';
 import { getAllUsers } from '../src/controllers/userController.js';
 
 function fakeRes() {
@@ -52,6 +53,27 @@ check(
     adminUsers.some((u) => 'lastLoginAt' in u),
 );
 check('admin response still includes a computed age field', 'age' in adminUsers[0]);
+check(
+  'admin response includes a toursAttended count for every user',
+  adminUsers.every((u) => typeof u.toursAttended === 'number'),
+);
+
+// Independently compute expected tour counts via a plain JS pass over
+// every reservation, checking the aggregation against a different code
+// path rather than against itself.
+const reservations = await Reservation.find().select('tour attendees.user').lean();
+const expectedTours = new Map(); // userId -> Set<tourId>
+for (const r of reservations) {
+  for (const a of r.attendees) {
+    const key = String(a.user);
+    if (!expectedTours.has(key)) expectedTours.set(key, new Set());
+    expectedTours.get(key).add(String(r.tour));
+  }
+}
+const toursAttendedMatches = adminUsers.every(
+  (u) => u.toursAttended === (expectedTours.get(String(u._id))?.size ?? 0),
+);
+check('toursAttended matches an independent count for every user', toursAttendedMatches);
 
 const memberRes = fakeRes();
 await getAllUsers({ user: { role: 'member' } }, memberRes);
@@ -68,6 +90,7 @@ check(
 );
 check('member response omits the raw birthday too', !('birthday' in memberUsers[0]));
 check('member response still includes name/email/gender/computed age', 'name' in memberUsers[0] && 'age' in memberUsers[0]);
+check('member response omits toursAttended', !('toursAttended' in memberUsers[0]));
 
 // Same underlying people, just a trimmed view - names should line up 1:1
 // in the same sorted order.

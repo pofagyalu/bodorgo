@@ -118,6 +118,33 @@
   }
 }
 
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  &:hover .sort-icon {
+    color: #445a67;
+  }
+}
+
+// A crisp vector icon reads clearly even at a small size, unlike a tiny
+// Unicode glyph (⇅ rendered as a grey smudge) - unfold_more (neutral
+// up/down chevrons) when this isn't the active column, a single bold
+// arrow_upward/arrow_downward once it is (see profile.ts's sortIcon()).
+.sort-icon {
+  font-size: 1.1rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  vertical-align: text-bottom;
+  margin-left: 0.15rem;
+  color: #999;
+}
+
+.sortable-header--active .sort-icon {
+  color: #445a67;
+}
+
 .family-tag {
   font-family: monospace;
   background: #f0f0f0;

@@ -67,6 +67,58 @@ export class Profile {
   usersError = signal<string | null>(null);
   private roleBasedDataRequested = false;
 
+  // Clicking a sortable column header (Név/Kor/Család/Táborok) sorts by
+  // it; clicking the same one again flips direction. Defaults to Név/asc
+  // (matching the server's own default order) so the ▲ arrow is visible
+  // from the first load, hinting that the columns are sortable at all.
+  sortColumn = signal<'name' | 'age' | 'familyId' | 'toursAttended'>('name');
+  sortDirection = signal<'asc' | 'desc'>('asc');
+
+  sortedUsers = computed(() => {
+    const column = this.sortColumn();
+    const list = this.users();
+    const dir = this.sortDirection() === 'asc' ? 1 : -1;
+    return [...list].sort((a, b) => {
+      const av = a[column];
+      const bv = b[column];
+      // Missing values (e.g. no birthday yet, so no age) always sort last,
+      // regardless of direction - flipping to desc shouldn't bury filled-in
+      // rows under a pile of blanks.
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv), 'hu') * dir;
+    });
+  });
+
+  // The direction each column starts in on its first click - age/toursAttended
+  // are more useful sorted highest-first (oldest, most-attended), while
+  // name/familyId read naturally A-Z.
+  private static readonly DEFAULT_SORT_DIRECTION: Record<'name' | 'age' | 'familyId' | 'toursAttended', 'asc' | 'desc'> = {
+    name: 'asc',
+    age: 'desc',
+    familyId: 'asc',
+    toursAttended: 'desc',
+  };
+
+  toggleSort(column: 'name' | 'age' | 'familyId' | 'toursAttended') {
+    if (this.sortColumn() === column) {
+      this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortColumn.set(column);
+      this.sortDirection.set(Profile.DEFAULT_SORT_DIRECTION[column]);
+    }
+  }
+
+  // A Material icon name for a sortable header's indicator - unfold_more
+  // (a neutral up/down chevron) when it isn't the active column, a single
+  // direction arrow once it is.
+  sortIcon(column: 'name' | 'age' | 'familyId' | 'toursAttended'): string {
+    if (this.sortColumn() !== column) return 'unfold_more';
+    return this.sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward';
+  }
+
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   // 'admin' and 'member' are both real, dues-paying club members; only
   // 'guest' (a login-less dependent's own login, or an outside visitor)

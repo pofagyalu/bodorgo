@@ -18,6 +18,10 @@ export interface AdminUser {
   birthday?: string;
   gender?: string;
   age?: number | null;
+  // Admin-only, like familyId/role/lastLoginAt above - distinct tour count
+  // from Reservation.attendees, not stored on the user (see
+  // userController.js's getAllUsers).
+  toursAttended?: number;
 }
 
 export interface AdminUsersResponse {

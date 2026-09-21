@@ -63,18 +63,14 @@ export async function resolveFamilyId(input) {
   return matches[0];
 }
 
-// Admin-only (see userRoutes.js) - lets an admin sanity-check the
-// hand-curated family data (server/scripts/createFamily.js etc.) by seeing
-// every person's name/email/familyId in one place. Alphabetical by name -
-// the familyId column already shown lets an admin spot who belongs
-// together without needing physical grouping in the list itself.
-// An admin gets the full roster with every management field; a plain
-// 'member' can also see the whole list now (name/email/age/gender only -
-// no familyId/role/lastLoginAt, and no raw birthday, just the computed
-// age), but never the fields that back admin-only actions like editing or
-// the family/role columns. A 'guest' still can't call this at all (see
-// userRoutes.js's restrictTo) - they only ever see their own family, via
-// getMyFamily.
+// An admin gets the full roster with every management field, including
+// the "Táborok" column's tour count; a plain 'member' can also see the
+// whole list now (name/email/age/gender only - no familyId/role/
+// lastLoginAt/toursAttended, and no raw birthday, just the computed age),
+// but never the fields that back admin-only actions like editing or the
+// family/role/tour-count columns. A 'guest' still can't call this at all
+// (see userRoutes.js's restrictTo) - they only ever see their own family,
+// via getMyFamily.
 export const getAllUsers = async (req, res) => {
   const isAdmin = req.user.role === 'admin';
   const selectFields = isAdmin
@@ -83,12 +79,26 @@ export const getAllUsers = async (req, res) => {
 
   const users = await User.find().select(selectFields).sort('name').lean();
 
+  // How many distinct tours each user has actually attended - counted from
+  // Reservation.attendees rather than stored on User, same source of truth
+  // getMyAttendance uses. $addToSet dedupes in case a user was somehow
+  // added as an attendee on more than one reservation for the same tour.
+  let toursAttendedById = new Map();
+  if (isAdmin) {
+    const attendanceCounts = await Reservation.aggregate([
+      { $unwind: '$attendees' },
+      { $group: { _id: '$attendees.user', tours: { $addToSet: '$tour' } } },
+      { $project: { toursAttended: { $size: '$tours' } } },
+    ]);
+    toursAttendedById = new Map(attendanceCounts.map((a) => [String(a._id), a.toursAttended]));
+  }
+
   // birthday itself is only ever needed by the admin's edit form (see
   // profile.ts's startEditUser) - a 'member' viewer gets the computed age
   // only, never the raw date.
   const withAge = users.map((u) => {
     const age = computeAge(u.birthday);
-    if (isAdmin) return { ...u, age };
+    if (isAdmin) return { ...u, age, toursAttended: toursAttendedById.get(String(u._id)) ?? 0 };
     const { birthday, ...rest } = u;
     return { ...rest, age };
   });
