@@ -89,6 +89,12 @@
 .stat-label {
   font-size: 0.9rem;
   color: #777;
+  // Grid items stretch to the tallest card in their row by default, and
+  // the gender card's icon+legend block isn't the same height as a plain
+  // icon+value block - anchoring every label to the bottom of its (now
+  // equal-height) card keeps them lined up horizontally across the row
+  // instead of each just following its own card's shorter content.
+  margin-top: auto;
 }
 
 .stat-card--link {
@@ -101,6 +107,34 @@
 .stat-card--link:hover {
   transform: translateY(-2px);
   box-shadow: 0 0.6rem 1.2rem rgba(0, 0, 0, 0.1);
+}
+
+// A pure-CSS pie chart (see homepage.ts's genderPieBackground) sized to
+// match the 4rem icon used by every other stat card, so this card lines
+// up with the rest of the grid.
+.gender-pie {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+}
+
+.gender-legend {
+  display: flex;
+  gap: 1rem;
+}
+
+.gender-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 700;
+  color: #333;
+
+  mat-icon {
+    font-size: 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+  }
 }
 
 .loading-note {

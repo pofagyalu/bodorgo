@@ -205,6 +205,10 @@ export interface TourStatsResponse {
   data: {
     totalTours: number;
     totalParticipants: number;
+    // The gender split pooled across every tour attendee on record (not
+    // every registered user - see tourController.js's getTourStats). null
+    // until at least one attendee has a gender on file.
+    genderRatio: { malePercentage: number; femalePercentage: number } | null;
     mostAttendedTour: {
       _id: string;
       title: string;

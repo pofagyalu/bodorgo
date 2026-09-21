@@ -359,11 +359,45 @@ export const getTourStats = async (req, res) => {
     .sort('-ratingsAverage -ratingsQuantity')
     .select('title order slug ratingsAverage ratingsQuantity');
 
+  // The gender split across every tour attendee on record (not every
+  // registered user - plenty of those, e.g. login-less family members,
+  // have never actually attended a tour). Attendees whose gender isn't
+  // set are excluded rather than counted as a third bucket.
+  const [genderAgg] = await Reservation.aggregate([
+    { $unwind: '$attendees' },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'attendees.user',
+        foreignField: '_id',
+        as: 'attendeeUser',
+      },
+    },
+    { $unwind: '$attendeeUser' },
+    { $match: { 'attendeeUser.gender': { $in: ['férfi', 'nő'] } } },
+    {
+      $group: {
+        _id: null,
+        maleCount: { $sum: { $cond: [{ $eq: ['$attendeeUser.gender', 'férfi'] }, 1, 0] } },
+        femaleCount: { $sum: { $cond: [{ $eq: ['$attendeeUser.gender', 'nő'] }, 1, 0] } },
+      },
+    },
+  ]);
+
+  // Rounding the two independently could land on e.g. 34/67 (101) - deriving
+  // female as the remainder guarantees they always sum to 100.
+  const malePercentage = genderAgg
+    ? Math.round((genderAgg.maleCount / (genderAgg.maleCount + genderAgg.femaleCount)) * 100)
+    : null;
+  const genderRatio =
+    malePercentage === null ? null : { malePercentage, femalePercentage: 100 - malePercentage };
+
   res.status(200).json({
     status: 'success',
     data: {
       totalTours,
       totalParticipants,
+      genderRatio,
       mostAttendedTour: mostAttendedTourDoc
         ? {
             _id: mostAttendedTourDoc._id,
