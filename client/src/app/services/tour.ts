@@ -117,7 +117,12 @@ export interface Tour {
   maxCapacity: number;
   ratingsAverage: number;
   ratingsQuantity: number;
-  price: number;
+  // Average price per person per night (accommodationPricePerNight /
+  // maxCapacity), assuming the tour fills up - no longer admin-entered,
+  // server-derived once accommodationPricePerNight is set (see
+  // tourModel.js's pre('save') hook), so it stays unset until then.
+  // tour-card.html shows "Nincs adat" for that gap.
+  price?: number;
   summary: string;
   description: string;
   imageCover: string;
@@ -126,6 +131,36 @@ export interface Tour {
   schedule?: ScheduleEntry[];
   dailyWeather?: DailyWeather[];
   reservations?: Reservation[];
+  // The three inputs behind each attendee's accommodation breakdown (see
+  // AttendeePayment below) - all optional, a tour with none of these set
+  // simply has no payment breakdown to show yet.
+  accommodationPricePerNight?: number;
+  advancePaymentPercentage?: number;
+  clubSubsidyAmount?: number;
+}
+
+// One attendee's accommodation share, computed server-side from the
+// tour's accommodationPricePerNight/advancePaymentPercentage/
+// clubSubsidyAmount (see reservationController.js's
+// computeAttendeePayments) - never stored, so editing those tour fields
+// recalculates every attendee immediately. totalPrice/advance/rest are
+// all null when the tour has no pricing configured yet. reservationId/
+// attendeeId identify exactly which attendee subdocument to target for
+// updateAttendeeNights.
+export interface AttendeePayment {
+  reservationId: string;
+  attendeeId: string;
+  name: string;
+  nights: number;
+  totalPrice: number | null;
+  advance: number | null;
+  rest: number | null;
+}
+
+export interface PaymentTotals {
+  totalPrice: number;
+  advance: number;
+  rest: number;
 }
 
 export interface TourResponse {
@@ -133,6 +168,8 @@ export interface TourResponse {
   data: {
     tour: Tour;
     participantCount: number;
+    attendeePayments: AttendeePayment[];
+    paymentTotals: PaymentTotals | null;
   };
 }
 
@@ -154,6 +191,9 @@ export interface TourPayload {
   summary?: string;
   description?: string;
   imageCover?: string;
+  accommodationPricePerNight?: number;
+  advancePaymentPercentage?: number;
+  clubSubsidyAmount?: number;
 }
 
 export interface SignUpResponse {
@@ -271,6 +311,21 @@ export class TourService {
   // their role (see reservationController.js's assertCanRegister).
   signUp(tourId: string, attendeeIds: string[]): Observable<SignUpResponse> {
     return this.http.post<SignUpResponse>(`${this.apiUrl}/${tourId}/signup`, { attendeeIds });
+  }
+
+  // Admin-only (see reservationController.js's updateAttendeeNights) - the
+  // rare correction for someone leaving a night early. Not exposed to the
+  // person registering; their nights are always set server-side at signup.
+  updateAttendeeNights(
+    tourId: string,
+    reservationId: string,
+    attendeeId: string,
+    nights: number,
+  ): Observable<{ status: string; data: { attendee: Attendee } }> {
+    return this.http.patch<{ status: string; data: { attendee: Attendee } }>(
+      `${this.apiUrl}/${tourId}/reservations/${reservationId}/attendees/${attendeeId}/nights`,
+      { nights },
+    );
   }
 
   getTourStats(): Observable<TourStatsResponse> {

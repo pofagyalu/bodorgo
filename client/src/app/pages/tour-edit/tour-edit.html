@@ -38,7 +38,33 @@
         >Maximum létszám
         <input type="number" [(ngModel)]="form.maxCapacity" name="maxCapacity" required
       /></label>
-      <label>Ár (Ft)<input type="number" [(ngModel)]="form.price" name="price" required /></label>
+    </div>
+
+    <!-- The accommodation payment breakdown shown per-attendee on the
+         tour-details page (Teljes ár/Foglaló/Maradék) - all optional, see
+         reservationController.js's computeAttendeePayments. The tour's
+         advertised price (Ár) is no longer edited here at all - it's
+         server-derived from these once accommodationPricePerNight is set
+         (see tourModel.js's pre('save') hook), and shown on the tour card
+         instead, not on this admin form. -->
+    <div class="form-row">
+      <label
+        >Szállás ára / éjszaka (Ft)
+        <input type="number" [(ngModel)]="form.accommodationPricePerNight" name="accommodationPricePerNight"
+      /></label>
+      <label
+        >Előleg (%)
+        <input
+          type="number"
+          [(ngModel)]="form.advancePaymentPercentage"
+          name="advancePaymentPercentage"
+          min="0"
+          max="100"
+      /></label>
+      <label
+        >Klub hozzájárulása (Ft)
+        <input type="number" [(ngModel)]="form.clubSubsidyAmount" name="clubSubsidyAmount"
+      /></label>
     </div>
 
     <label class="form-field-full"

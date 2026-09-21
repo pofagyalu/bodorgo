@@ -1,0 +1,84 @@
+<table class="attendee-table">
+  <thead>
+    <tr>
+      <th>Név</th>
+      <th>Éjszakák</th>
+      @if (hasPricing()) {
+      <th>Teljes ár</th>
+      <th>Foglaló</th>
+      <th>Maradék</th>
+      }
+      <th class="paid-col"></th>
+      @if (isAdmin()) {
+      <th></th>
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @for (a of attendees; track a.attendeeId) {
+    <tr>
+      <td>{{ a.name }}</td>
+
+      @if (editingAttendeeId() === a.attendeeId) {
+      <td class="nights-edit-cell">
+        <input type="number" min="0" [(ngModel)]="editNights" />
+      </td>
+      } @else {
+      <td>{{ a.nights }}</td>
+      }
+
+      @if (hasPricing()) {
+      <td>{{ formatForint(a.totalPrice) }} Ft</td>
+      <td>{{ formatForint(a.advance) }} Ft</td>
+      <td>{{ formatForint(a.rest) }} Ft</td>
+      }
+
+      <td class="paid-col">
+        @if (a.paid) {
+        <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
+        } @else {
+        <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">radio_button_unchecked</mat-icon>
+        }
+      </td>
+
+      @if (isAdmin()) {
+      <td class="row-actions">
+        @if (editingAttendeeId() === a.attendeeId) {
+        <button
+          type="button"
+          class="icon-btn icon-btn--save"
+          title="Mentés"
+          [disabled]="savingNights()"
+          (click)="saveNights(a)"
+        >
+          <mat-icon>check</mat-icon>
+        </button>
+        <button type="button" class="icon-btn icon-btn--cancel" title="Mégse" (click)="cancelEditNights()">
+          <mat-icon>close</mat-icon>
+        </button>
+        } @else {
+        <button type="button" class="icon-btn icon-btn--edit" title="Éjszakák szerkesztése" (click)="startEditNights(a)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        }
+      </td>
+      }
+    </tr>
+    }
+  </tbody>
+  @if (hasPricing() && totals) {
+  <tfoot>
+    <tr class="totals-row">
+      <td>Összesen</td>
+      <td></td>
+      <td>{{ formatForint(totals.totalPrice) }} Ft</td>
+      <td>{{ formatForint(totals.advance) }} Ft</td>
+      <td>{{ formatForint(totals.rest) }} Ft</td>
+      <td class="paid-col"></td>
+      @if (isAdmin()) {
+      <td></td>
+      }
+    </tr>
+  </tfoot>
+  }
+</table>

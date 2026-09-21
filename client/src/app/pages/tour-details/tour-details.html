@@ -153,20 +153,12 @@
     </h2>
 
     @if (showParticipants()) { @if (allAttendees().length) {
-    <ul class="attendee-list">
-      @for (a of allAttendees(); track $index) {
-      <li class="attendee-row">
-        <span class="attendee-name">{{ a.name }}</span>
-        @if (a.paid) {
-        <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
-        } @else {
-        <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve"
-          >radio_button_unchecked</mat-icon
-        >
-        }
-      </li>
-      }
-    </ul>
+    <app-attendee-list
+      [tourId]="t._id"
+      [attendees]="allAttendees()"
+      [totals]="paymentTotals()"
+      (nightsUpdated)="onAttendeeNightsUpdated()"
+    />
     } @else {
     <p class="empty-note">Még senki nem jelentkezett erre a táborra.</p>
     } }

@@ -356,37 +356,6 @@
 
 /* ---- Row 3: participants ---- */
 
-.attendee-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.attendee-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.6rem 1rem;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 8px;
-}
-
-.attendee-name {
-  color: #333;
-}
-
-.paid-icon {
-  color: #55c57a;
-}
-
-.unpaid-icon {
-  color: #ccc;
-}
-
 /* ---- Sign up ---- */
 
 .signup-bar {

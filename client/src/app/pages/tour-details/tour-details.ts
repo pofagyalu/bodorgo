@@ -3,7 +3,16 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import type PhotoSwipeLightbox from 'photoswipe/lightbox';
-import { TourService, Tour, ScheduleEntry, DailyWeather, WeatherCondition, TourImage } from '../../services/tour';
+import {
+  TourService,
+  Tour,
+  ScheduleEntry,
+  DailyWeather,
+  WeatherCondition,
+  TourImage,
+  AttendeePayment,
+  PaymentTotals,
+} from '../../services/tour';
 import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
@@ -11,6 +20,7 @@ import { shuffledLogoColors } from '../../shared/logo-colors';
 import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
+import { AttendeeList } from './attendee-list/attendee-list';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 interface DayGroup {
@@ -20,8 +30,11 @@ interface DayGroup {
   weather?: DailyWeather;
 }
 
-interface AttendeeRow {
-  name: string;
+// AttendeePayment (from the API) plus the whole-reservation `paid` flag -
+// a different, pre-existing concept ("has an admin marked this
+// reservation as settled") from the newly computed per-person amounts, so
+// it's merged in here rather than folded into computeAttendeePayments.
+interface AttendeeRow extends AttendeePayment {
   paid: boolean;
 }
 
@@ -36,7 +49,7 @@ interface PickerOption {
 @Component({
   selector: 'app-tour-details',
   standalone: true,
-  imports: [MatIconModule, RouterLink, TourEvent, EventForm, ReviewStars],
+  imports: [MatIconModule, RouterLink, TourEvent, EventForm, ReviewStars, AttendeeList],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
@@ -58,8 +71,15 @@ export class TourDetails implements OnDestroy {
   distanceIconColor = this.infoLineIconColors[2];
   dateIconColor = this.infoLineIconColors[3];
 
+  private tourId!: string;
   tour = signal<Tour | null>(null);
   participantCount = signal(0);
+  // Each attendee's accommodation breakdown, computed server-side (see
+  // getTour/computeAttendeePayments) - reloaded in full (not patched
+  // locally) after an admin edits one attendee's nights, since re-fetching
+  // is simple and this is a rare admin action, not a hot path.
+  attendeePayments = signal<AttendeePayment[]>([]);
+  paymentTotals = signal<PaymentTotals | null>(null);
   loadError = signal<string | null>(null);
   signingUp = signal(false);
   signUpError = signal<string | null>(null);
@@ -157,8 +177,9 @@ export class TourDetails implements OnDestroy {
   allAttendees = computed<AttendeeRow[]>(() => {
     const t = this.tour();
     if (!t?.reservations) return [];
-    return t.reservations
-      .flatMap((r) => r.attendees.map((a) => ({ name: a.name, paid: r.paid })))
+    const paidByReservationId = new Map(t.reservations.map((r) => [r._id, r.paid]));
+    return this.attendeePayments()
+      .map((p) => ({ ...p, paid: paidByReservationId.get(p.reservationId) ?? false }))
       .sort((a, b) => a.name.localeCompare(b.name, 'hu'));
   });
 
@@ -231,16 +252,8 @@ export class TourDetails implements OnDestroy {
       this.loadError.set('Hiányzó tábor azonosító.');
       return;
     }
-
-    this.tourService.getTour(id).subscribe({
-      next: (res) => {
-        this.tour.set(res.data.tour);
-        this.participantCount.set(res.data.participantCount);
-      },
-      error: () => {
-        this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');
-      },
-    });
+    this.tourId = id;
+    this.loadTour(id);
 
     // auth.user() often isn't resolved yet at construction time - see
     // profile.ts's constructor for the same reasoning. A 'guest' needs
@@ -277,6 +290,29 @@ export class TourDetails implements OnDestroy {
         },
       });
     });
+  }
+
+  // Extracted out of the constructor so the attendee list's nights-edit
+  // action (admin-only) can trigger a full reload after saving - simplest
+  // way to get every attendee's recomputed totals back in sync, and rare
+  // enough (an occasional admin correction) that refetching everything
+  // instead of patching one row locally is not a real cost.
+  private loadTour(id: string) {
+    this.tourService.getTour(id).subscribe({
+      next: (res) => {
+        this.tour.set(res.data.tour);
+        this.participantCount.set(res.data.participantCount);
+        this.attendeePayments.set(res.data.attendeePayments);
+        this.paymentTotals.set(res.data.paymentTotals);
+      },
+      error: () => {
+        this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');
+      },
+    });
+  }
+
+  onAttendeeNightsUpdated() {
+    this.loadTour(this.tourId);
   }
 
   // No on-page thumbnail grid (dropped per feedback - too much clutter),

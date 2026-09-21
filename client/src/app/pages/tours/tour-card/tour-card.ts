@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Tour } from '../../../services/tour';
 import { environment } from '../../../../environments/environment';
+import { formatForint } from '../../../shared/format';
 
 @Component({
   selector: 'app-tour-card',
@@ -16,6 +17,7 @@ export class TourCard {
   tour = input.required<Tour>();
   priority = input(false);
   environment = environment;
+  readonly formatForint = formatForint;
 
   // Intl.DateTimeFormat rather than Angular's `date` pipe - this app
   // doesn't register Hungarian locale data, so the pipe's month names

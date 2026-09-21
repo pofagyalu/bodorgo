@@ -53,6 +53,34 @@ const tourSchema = new Schema(
       type: Number,
       required: [true, 'A tábornak kell legyen mérete'],
     },
+    // The three admin-only inputs behind each attendee's accommodation
+    // breakdown (Teljes ár/Foglaló/Maradék) - see
+    // reservationController.js's computeAttendeePayments. All optional:
+    // a tour with none of these set simply shows no payment breakdown yet.
+    // What the HOUSE costs per night (not a per-person rate) - the club
+    // rents it for the tour's standard duration regardless of headcount,
+    // and that fixed total is split across attendees proportional to each
+    // one's own nights (see computeAttendeePayments).
+    accommodationPricePerNight: {
+      type: Number,
+      min: [0, 'A szállásköltség nem lehet negatív'],
+    },
+    advancePaymentPercentage: {
+      type: Number,
+      min: [0, 'Az előleg százaléka nem lehet negatív'],
+      max: [100, 'Az előleg százaléka nem lehet 100-nál több'],
+    },
+    // The director's one-off lump-sum contribution toward this tour's
+    // accommodation, split equally across club-member attendees and
+    // deducted only from their Maradék (rest), never from Foglaló
+    // (advance) - see computeAttendeePayments. Defaults to 0 ("no club
+    // money this time") rather than being left unset, since that's the
+    // common case.
+    clubSubsidyAmount: {
+      type: Number,
+      min: [0, 'A klub hozzájárulása nem lehet negatív'],
+      default: 0,
+    },
     // Real, computed from `reviews` below on every submit (see the
     // pre('save') hook) - the 4.5/0 defaults only ever apply to a tour
     // nobody has reviewed yet (a leftover from this codebase's
@@ -75,7 +103,11 @@ const tourSchema = new Schema(
       ],
       select: false,
     },
-    price: { type: Number, required: [true, 'A tábornak kell legyen ára'] },
+    // No longer admin-entered - see the pre('save') hook below. Optional
+    // rather than required, since it stays unset until an admin
+    // configures accommodationPricePerNight for the tour; tour-card.html
+    // shows "Nincs adat" for that gap.
+    price: { type: Number },
     summary: {
       type: String,
       trim: true,
@@ -252,6 +284,29 @@ tourSchema.pre('save', function (next) {
     const sum = this.reviews.reduce((acc, r) => acc + r.rating, 0);
     this.ratingsAverage = Math.round((sum / this.reviews.length) * 10) / 10;
     this.ratingsQuantity = this.reviews.length;
+  }
+  next();
+});
+
+// Once an admin sets accommodationPricePerNight, the tour's advertised
+// price is no longer something they maintain by hand. accommodationPrice
+// PerNight is what the whole HOUSE costs per night, not a per-person
+// rate (see computeAttendeePayments) - there's no single real per-person
+// total until people actually register and it gets split among however
+// many show up, which isn't known yet for a tour being advertised. This
+// shows the average price per person per night instead, assuming the
+// tour fills to maxCapacity (nightlyRate / maxCapacity) - a duration-
+// independent figure, shown on tour-card.html as "Ft/fő/éj". Recomputed
+// whenever either input changes. A tour that has never used the
+// accommodation-pricing feature keeps its old plain manually-entered
+// price untouched - this only ever takes over once accommodationPrice
+// PerNight actually has a value.
+tourSchema.pre('save', function (next) {
+  if (
+    this.accommodationPricePerNight != null &&
+    (this.isModified('accommodationPricePerNight') || this.isModified('maxCapacity'))
+  ) {
+    this.price = Math.round(this.accommodationPricePerNight / this.maxCapacity);
   }
   next();
 });

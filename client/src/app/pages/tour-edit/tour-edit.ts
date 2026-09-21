@@ -15,10 +15,16 @@ interface TourEditForm {
   startDateLocal: string;
   duration: number | null;
   maxCapacity: number | null;
-  price: number | null;
   summary: string;
   description: string;
   imageCover: string;
+  // The accommodation payment breakdown shown on the tour-details
+  // attendee list (Teljes ár/Foglaló/Maradék) - see
+  // reservationController.js's computeAttendeePayments. All optional;
+  // leaving them unset just means that breakdown isn't shown yet.
+  accommodationPricePerNight: number | null;
+  advancePaymentPercentage: number | null;
+  clubSubsidyAmount: number | null;
 }
 
 function emptyForm(): TourEditForm {
@@ -32,10 +38,14 @@ function emptyForm(): TourEditForm {
     startDateLocal: '',
     duration: null,
     maxCapacity: null,
-    price: null,
     summary: '',
     description: '',
     imageCover: '',
+    accommodationPricePerNight: null,
+    advancePaymentPercentage: null,
+    // 0 ("no club money this time") is the common case, not an unusual
+    // exception, so it starts filled in rather than blank.
+    clubSubsidyAmount: 0,
   };
 }
 
@@ -97,10 +107,12 @@ export class TourEdit {
           startDateLocal: toDatetimeLocal(t.startDate),
           duration: t.duration,
           maxCapacity: t.maxCapacity,
-          price: t.price,
           summary: t.summary,
           description: t.description,
           imageCover: t.imageCover,
+          accommodationPricePerNight: t.accommodationPricePerNight ?? null,
+          advancePaymentPercentage: t.advancePaymentPercentage ?? null,
+          clubSubsidyAmount: t.clubSubsidyAmount ?? 0,
         };
         this.loading.set(false);
       },
@@ -127,10 +139,16 @@ export class TourEdit {
       startDate: f.startDateLocal ? new Date(f.startDateLocal).toISOString() : undefined,
       duration: f.duration ?? undefined,
       maxCapacity: f.maxCapacity ?? undefined,
-      price: f.price ?? undefined,
+      // price is never sent from this form at all - it's entirely
+      // server-derived once accommodationPricePerNight is set (see
+      // tourModel.js's pre('save') hook), and simply stays unset (shown
+      // as "Nincs adat" on the tour card) until then.
       summary: f.summary,
       description: f.description,
       imageCover: f.imageCover,
+      accommodationPricePerNight: f.accommodationPricePerNight ?? undefined,
+      advancePaymentPercentage: f.advancePaymentPercentage ?? undefined,
+      clubSubsidyAmount: f.clubSubsidyAmount ?? undefined,
     };
 
     const request = this.isEditMode

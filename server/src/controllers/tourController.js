@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
+import { computeAttendeePayments } from './reservationController.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
@@ -131,7 +132,13 @@ export const getTour = async (req, res, next) => {
 
   const tour = await Tour.findOne(query).populate({
     path: 'reservations',
-    populate: { path: 'bookedBy', select: 'name email' },
+    populate: [
+      { path: 'bookedBy', select: 'name email' },
+      // role only, to decide club-subsidy eligibility in
+      // computeAttendeePayments - name is already denormalized onto the
+      // attendee subdocument itself, no need to populate it too.
+      { path: 'attendees.user', select: 'role' },
+    ],
   });
 
   if (!tour) {
@@ -145,7 +152,15 @@ export const getTour = async (req, res, next) => {
     0,
   );
 
-  res.status(200).json({ status: 'success', data: { tour, participantCount } });
+  const { attendeePayments, totals: paymentTotals } = computeAttendeePayments(
+    tour,
+    tour.reservations,
+  );
+
+  res.status(200).json({
+    status: 'success',
+    data: { tour, participantCount, attendeePayments, paymentTotals },
+  });
 };
 
 // order can't be safely auto-computed from the current max (most of the

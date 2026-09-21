@@ -13,6 +13,17 @@ const attendeeSchema = new Schema({
     type: String,
     required: true,
   },
+  // How many nights of the tour this specific person is being billed for -
+  // set to the tour's own (duration - 1) at signup time (see
+  // reservationController.js's signUpForTour), and only ever changed
+  // afterward by an admin, for the rare case someone leaves a night early.
+  // Older attendees created before this field existed simply don't have
+  // it - computeAttendeePayments falls back to the same (duration - 1)
+  // default for them, so no backfill migration was needed.
+  nights: {
+    type: Number,
+    min: [0, 'Az éjszakák száma nem lehet negatív'],
+  },
 });
 
 const reservationSchema = new Schema(

@@ -1,6 +1,6 @@
 import express from 'express';
 import * as tourController from '../controllers/tourController.js';
-import { signUpForTour } from '../controllers/reservationController.js';
+import { signUpForTour, updateAttendeeNights } from '../controllers/reservationController.js';
 import * as tourImageController from '../controllers/tourImageController.js';
 import * as reviewController from '../controllers/reviewController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
@@ -26,6 +26,9 @@ router
   .delete(requireAuth, restrictTo('admin'), tourController.deleteTour);
 
 router.route('/:tourId/signup').post(requireAuth, signUpForTour);
+router
+  .route('/:tourId/reservations/:reservationId/attendees/:attendeeId/nights')
+  .patch(requireAuth, restrictTo('admin'), updateAttendeeNights);
 
 router
   .route('/:tourId/schedule/:eventId/toggle-participation')

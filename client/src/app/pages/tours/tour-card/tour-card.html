@@ -61,7 +61,11 @@
 
       <div class="card__data">
         <mat-icon class="card__icon" color="primary">attach_money</mat-icon>
-        <span>{{ tour().price }} Ft/fő</span>
+        @if (tour().price != null) {
+        <span>{{ formatForint(tour().price!) }} Ft/fő/éj</span>
+        } @else {
+        <span>Nincs adat</span>
+        }
       </div>
     </div>
   </div>
