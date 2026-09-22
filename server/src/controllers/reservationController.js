@@ -3,6 +3,9 @@ import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import AppError from '../utils/appError.js';
 import { computeAge } from './userController.js';
+import { partitionAttendeesByEmailEligibility } from './tourPdfController.js';
+import sendResendEmail from '../utils/resendEmail.js';
+import logger from '../logger.js';
 
 // The club didn't exist before this date, so it can't have contributed
 // money toward a tour's accommodation before it either - see
@@ -42,6 +45,96 @@ async function assertCanRegister(user, attendeeIds) {
   }
 }
 
+// Three variants: the registrant registering themselves (+ maybe family),
+// the registrant registering only other people (e.g. an admin signing up
+// a member who called in - not attending themselves, so no "you secured
+// your own spot" framing), and a family member who got signed up
+// alongside them but didn't do it themselves. otherNames is who else is
+// on the same reservation, from the recipient's own point of view.
+function registrationConfirmationEmailBody(
+  recipientName,
+  { registrantIsRecipient, registrantIsAttendee, registrantName, tourTitle, otherNames },
+) {
+  const noReplyNote = 'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
+  const signature = 'Üdvözlettel,\nA Bódorgó csapat 🏕️';
+  const signatureHtml = 'Üdvözlettel,<br>A Bódorgó csapat 🏕️';
+  const nextSteps = 'Hamarosan véglegesedik a szállás ára, és jöhet az előlegbefizetés.';
+
+  let intro;
+  let introHtml;
+  if (registrantIsRecipient && registrantIsAttendee && otherNames.length > 0) {
+    intro = `Gratulálunk, ${recipientName}! Bebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${tourTitle}" táborra:\n\n${otherNames.map((n) => `- ${n}`).join('\n')}`;
+    introHtml = `<p>Gratulálunk, ${recipientName}! Bebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${tourTitle}" táborra:</p><ul>${otherNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+  } else if (registrantIsRecipient && registrantIsAttendee) {
+    intro = `Gratulálunk, ${recipientName}! Bebiztosítottad a helyet magadnak a(z) "${tourTitle}" táborra.`;
+    introHtml = `<p>Gratulálunk, ${recipientName}! Bebiztosítottad a helyet magadnak a(z) "${tourTitle}" táborra.</p>`;
+  } else if (registrantIsRecipient) {
+    // Registered only other people (e.g. an admin signing up a member who
+    // called in) - not attending themselves, so no "gratulálunk" framing
+    // implying they secured their own spot too.
+    intro = `Sikeresen jelentkeztetted az alábbi résztvevőket a(z) "${tourTitle}" táborra:\n\n${otherNames.map((n) => `- ${n}`).join('\n')}`;
+    introHtml = `<p>Sikeresen jelentkeztetted az alábbi résztvevőket a(z) "${tourTitle}" táborra:</p><ul>${otherNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+  } else {
+    // A family member signed up by someone else - still a "gratulálunk"
+    // (they're getting a spot too, they just didn't click the button
+    // themselves), but framed around who did it. remainingNames excludes
+    // both the recipient (already addressed as "téged") and the
+    // registrant (already named directly) - "és még ezeket a
+    // családtagokat is" only appears when there's genuinely someone left
+    // over (e.g. kids), not for a plain two-person registrant+recipient
+    // reservation.
+    const remainingNames = otherNames.filter((n) => n !== registrantName);
+    const verb = registrantIsAttendee ? 'benevezett magán kívül' : 'jelentkeztetett';
+    if (remainingNames.length > 0) {
+      intro = `Gratulálunk, ${recipientName}! ${registrantName} ${verb} téged és még az alábbi családtagokat is a(z) "${tourTitle}" táborra:\n\n${remainingNames.map((n) => `- ${n}`).join('\n')}`;
+      introHtml = `<p>Gratulálunk, ${recipientName}! ${registrantName} ${verb} téged és még az alábbi családtagokat is a(z) "${tourTitle}" táborra:</p><ul>${remainingNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+    } else {
+      intro = `Gratulálunk, ${recipientName}! ${registrantName} ${verb} téged is a(z) "${tourTitle}" táborra.`;
+      introHtml = `<p>Gratulálunk, ${recipientName}! ${registrantName} ${verb} téged is a(z) "${tourTitle}" táborra.</p>`;
+    }
+  }
+
+  return {
+    subject: `Sikeres jelentkezés - ${tourTitle}`,
+    text: `${intro}\n\n${nextSteps}\n\n${signature}\n\n${noReplyNote}`,
+    html: `${introHtml}<p>${nextSteps}</p><p>${signatureHtml}</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
+  };
+}
+
+// Pure (no DB/network) so it's directly unit-testable, same reasoning as
+// partitionAttendeesByEmailEligibility - given who registered, who they
+// registered (attendeeUsers, name/email/lastLoginAt/wantsEmailNotifications
+// already populated), and the tour's title, returns the exact list of
+// {to, subject, text, html} emails signUpForTour should send: the
+// registrant is always a candidate (even if only registering other
+// people), every attendee is too, eligibility-filtered, deduped by user
+// id, each with the wording variant that fits their own role in this
+// particular reservation (see registrationConfirmationEmailBody above).
+export function buildRegistrationEmails({ registrant, tourTitle, attendeeUsers }) {
+  const candidatesById = new Map();
+  candidatesById.set(String(registrant._id), registrant);
+  for (const u of attendeeUsers) candidatesById.set(String(u._id), u);
+
+  const { eligible } = partitionAttendeesByEmailEligibility([...candidatesById.values()]);
+  const attendeeNamesById = new Map(attendeeUsers.map((u) => [String(u._id), u.name]));
+  const registrantIsAttendee = attendeeNamesById.has(String(registrant._id));
+
+  return eligible.map((recipient) => {
+    const registrantIsRecipient = String(recipient._id) === String(registrant._id);
+    const otherNames = [...attendeeNamesById.entries()]
+      .filter(([id]) => id !== String(recipient._id))
+      .map(([, name]) => name);
+    const { subject, text, html } = registrationConfirmationEmailBody(recipient.name, {
+      registrantIsRecipient,
+      registrantIsAttendee,
+      registrantName: registrant.name,
+      tourTitle,
+      otherNames,
+    });
+    return { to: recipient.email, subject, text, html };
+  });
+}
+
 // Registers one or more people for a tour in a single reservation -
 // exactly who is allowed depends on the caller's role, see
 // assertCanRegister above. bookedBy is always the logged-in caller, even
@@ -64,7 +157,9 @@ export const signUpForTour = async (req, res) => {
 
   await assertCanRegister(req.user, attendeeIds);
 
-  const attendeeUsers = await User.find({ _id: { $in: attendeeIds } }).select('name');
+  const attendeeUsers = await User.find({ _id: { $in: attendeeIds } }).select(
+    'name email lastLoginAt wantsEmailNotifications',
+  );
   if (attendeeUsers.length !== attendeeIds.length) {
     throw new AppError('Néhány kiválasztott résztvevő nem található.', 404);
   }
@@ -96,6 +191,20 @@ export const signUpForTour = async (req, res) => {
     attendees: attendeeUsers.map((u) => ({ user: u._id, name: u.name, nights: tour.duration - 1 })),
   });
   await reservation.populate('bookedBy', 'name email');
+
+  // A nice-to-have on top of the registration having already succeeded
+  // (the reservation above is real regardless of what happens next) - a
+  // failure here (e.g. the email provider being briefly down) shouldn't
+  // fail the sign-up itself, just gets logged for follow-up. The
+  // registrant (req.user) is always considered even if they registered
+  // only other people (e.g. an admin signing up a member who called in) -
+  // they're the one who'd want to know it went through.
+  try {
+    const emails = buildRegistrationEmails({ registrant: req.user, tourTitle: tour.title, attendeeUsers });
+    for (const email of emails) await sendResendEmail(email);
+  } catch (err) {
+    logger.error(`Reservation ${reservation._id}: registration confirmation email failed: ${err.message}`);
+  }
 
   res.status(201).json({ status: 'success', data: { reservation } });
 };
