@@ -125,16 +125,26 @@ export interface Tour {
   price?: number;
   summary: string;
   description: string;
-  imageCover: string;
+  // Optional since the server no longer requires it at creation time - a
+  // brand new tour has none until its cover is uploaded (see
+  // tourCoverController.js).
+  imageCover?: string;
   images: string[];
   // Only populated on the single-tour endpoint (getTour), not the list one.
   schedule?: ScheduleEntry[];
   dailyWeather?: DailyWeather[];
   reservations?: Reservation[];
-  // The three inputs behind each attendee's accommodation breakdown (see
+  // The inputs behind each attendee's accommodation breakdown (see
   // AttendeePayment below) - all optional, a tour with none of these set
-  // simply has no payment breakdown to show yet.
+  // simply has no payment breakdown to show yet. 'perHouse' (the default)
+  // means accommodationPricePerNight is the whole house's nightly rate;
+  // 'perPerson' means it's the adult per-person-per-night rate instead,
+  // with childPricePerNight/childAgeLimitYears distinguishing a child
+  // discount - see tourModel.js's own fields for the full reasoning.
+  pricingMode?: 'perHouse' | 'perPerson';
   accommodationPricePerNight?: number;
+  childPricePerNight?: number;
+  childAgeLimitYears?: number;
   advancePaymentPercentage?: number;
   clubSubsidyAmount?: number;
   // Admin-uploaded extras shown in the "Extra infók" section (a map, a
@@ -206,7 +216,10 @@ export interface TourPayload {
   summary?: string;
   description?: string;
   imageCover?: string;
+  pricingMode?: 'perHouse' | 'perPerson';
   accommodationPricePerNight?: number;
+  childPricePerNight?: number;
+  childAgeLimitYears?: number;
   advancePaymentPercentage?: number;
   clubSubsidyAmount?: number;
 }
@@ -372,6 +385,30 @@ export class TourService {
 
   updateTour(id: string, payload: TourPayload): Observable<TourResponse> {
     return this.http.patch<TourResponse>(`${this.apiUrl}/${id}`, payload);
+  }
+
+  // Replaces an existing tour's cover image - the server names the saved
+  // file itself (tour-<order>-cover.<ext>), not whatever the uploaded
+  // file was originally called, so there's nothing else to send but the
+  // file.
+  uploadCoverImage(tourId: string, file: File): Observable<TourResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<TourResponse>(`${this.apiUrl}/${tourId}/cover`, formData);
+  }
+
+  // For a tour that doesn't exist yet - the filename convention only ever
+  // depended on order (which the admin already typed in before saving),
+  // not the tour's _id, so the cover can be uploaded before the tour is
+  // actually created. Returns the filename to send as imageCover in the
+  // createTour call that follows.
+  uploadCoverImageForOrder(order: number, file: File): Observable<{ status: string; data: { filename: string } }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ status: string; data: { filename: string } }>(
+      `${this.apiUrl}/cover/${order}`,
+      formData,
+    );
   }
 
   // attendeeIds is who to register in this one reservation - who the

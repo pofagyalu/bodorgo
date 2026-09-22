@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TourService, TourPayload } from '../../services/tour';
 import { AuthService } from '../../auth/auth.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { environment } from '../../../environments/environment';
 
 interface TourEditForm {
   order: number | null;
@@ -22,7 +23,15 @@ interface TourEditForm {
   // attendee list (Teljes ár/Foglaló/Maradék) - see
   // reservationController.js's computeAttendeePayments. All optional;
   // leaving them unset just means that breakdown isn't shown yet.
+  // 'perHouse' (the default) treats accommodationPricePerNight as the
+  // whole house's nightly rate; 'perPerson' treats it as the adult
+  // per-person-per-night rate instead, with childPricePerNight/
+  // childAgeLimitYears distinguishing a child discount - see
+  // tourModel.js's own fields for the full reasoning.
+  pricingMode: 'perHouse' | 'perPerson';
   accommodationPricePerNight: number | null;
+  childPricePerNight: number | null;
+  childAgeLimitYears: number | null;
   advancePaymentPercentage: number | null;
   clubSubsidyAmount: number | null;
 }
@@ -41,7 +50,10 @@ function emptyForm(): TourEditForm {
     summary: '',
     description: '',
     imageCover: '',
+    pricingMode: 'perHouse',
     accommodationPricePerNight: null,
+    childPricePerNight: null,
+    childAgeLimitYears: null,
     advancePaymentPercentage: null,
     // 0 ("no club money this time") is the common case, not an unusual
     // exception, so it starts filled in rather than blank.
@@ -68,12 +80,13 @@ function toDatetimeLocal(iso: string): string {
   templateUrl: './tour-edit.html',
   styleUrl: './tour-edit.scss',
 })
-export class TourEdit {
+export class TourEdit implements OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private tourService = inject(TourService);
   private notifications = inject(NotificationsService);
   auth = inject(AuthService);
+  environment = environment;
 
   // The route param as-is (accepts either an id or a slug, same as
   // tour-details.ts) - null means create mode.
@@ -123,8 +136,11 @@ export class TourEdit {
           maxCapacity: t.maxCapacity,
           summary: t.summary,
           description: t.description,
-          imageCover: t.imageCover,
+          imageCover: t.imageCover ?? '',
+          pricingMode: t.pricingMode ?? 'perHouse',
           accommodationPricePerNight: t.accommodationPricePerNight ?? null,
+          childPricePerNight: t.childPricePerNight ?? null,
+          childAgeLimitYears: t.childAgeLimitYears ?? null,
           advancePaymentPercentage: t.advancePaymentPercentage ?? null,
           clubSubsidyAmount: t.clubSubsidyAmount ?? 0,
         };
@@ -137,10 +153,77 @@ export class TourEdit {
     });
   }
 
+  // Cover image upload - a real file, not a hand-typed filename. Can be
+  // picked right away even while creating a brand new tour (nothing
+  // stops you choosing the file first) - the server just needs a real
+  // tour _id to name the saved file after (tour-<order>-cover.<ext>), so
+  // in create mode the actual upload request happens automatically right
+  // after the tour itself is created (see save() below), not on a
+  // separate click.
+  uploadingCover = signal(false);
+  private selectedCoverFile: File | null = null;
+  // A local, instant preview of whatever was just picked (before any
+  // upload even starts) - revoked/replaced on every new selection so this
+  // doesn't leak object URLs across picks.
+  coverPreviewUrl = signal<string | null>(null);
+
+  onCoverFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.selectedCoverFile = file;
+
+    const previous = this.coverPreviewUrl();
+    if (previous) URL.revokeObjectURL(previous);
+    this.coverPreviewUrl.set(file ? URL.createObjectURL(file) : null);
+  }
+
+  // Edit mode only (create mode uploads automatically on save - see
+  // above) - the tour already exists, so a cover change doesn't need to
+  // wait for the rest of the form to be resubmitted too.
+  uploadCover() {
+    if (!this.selectedCoverFile || !this.tourId) return;
+
+    this.uploadingCover.set(true);
+    this.tourService.uploadCoverImage(this.tourId, this.selectedCoverFile).subscribe({
+      next: (res) => {
+        this.form.imageCover = res.data.tour.imageCover ?? '';
+        this.selectedCoverFile = null;
+        this.uploadingCover.set(false);
+        this.notifications.addSuccess('Borítókép feltöltve');
+      },
+      error: (err) => {
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a feltöltés során.');
+        this.uploadingCover.set(false);
+      },
+    });
+  }
+
   save() {
-    this.saving.set(true);
     this.error.set(null);
 
+    // Create mode with a cover already picked: upload it first (using
+    // just the order the admin already typed in - see
+    // uploadCoverImageForOrder's own comment on why the tour doesn't need
+    // to exist yet for that), then include the resulting filename
+    // directly in the createTour call below - one request creates the
+    // tour with its cover already set, instead of two separate steps with
+    // their own partial-failure states to juggle.
+    if (!this.isEditMode && this.selectedCoverFile) {
+      this.saving.set(true);
+      this.tourService.uploadCoverImageForOrder(this.form.order!, this.selectedCoverFile).subscribe({
+        next: (res) => this.doSave(res.data.filename),
+        error: (err) => {
+          this.notifications.addError(err?.error?.message ?? 'Hiba történt a borítókép feltöltése során.');
+          this.saving.set(false);
+        },
+      });
+    } else {
+      this.saving.set(true);
+      this.doSave();
+    }
+  }
+
+  private doSave(uploadedCoverFilename?: string) {
     const f = this.form;
     const payload: TourPayload = {
       order: f.order ?? undefined,
@@ -159,8 +242,18 @@ export class TourEdit {
       // as "Nincs adat" on the tour card) until then.
       summary: f.summary,
       description: f.description,
-      imageCover: f.imageCover,
+      // Only ever set here for a brand new tour whose cover was already
+      // uploaded (see save() above) - an existing tour's cover changes
+      // exclusively through uploadCover() below, its own separate request.
+      imageCover: uploadedCoverFilename,
+      pricingMode: f.pricingMode,
       accommodationPricePerNight: f.accommodationPricePerNight ?? undefined,
+      // Only meaningful (and only shown/editable) in perPerson mode -
+      // simply omitted while in perHouse mode rather than cleared, so a
+      // value entered earlier survives toggling the mode back and forth
+      // instead of having to be retyped.
+      childPricePerNight: f.pricingMode === 'perPerson' ? f.childPricePerNight ?? undefined : undefined,
+      childAgeLimitYears: f.pricingMode === 'perPerson' ? f.childAgeLimitYears ?? undefined : undefined,
       advancePaymentPercentage: f.advancePaymentPercentage ?? undefined,
       // Never sent for a pre-2019 tour, even if the disabled field
       // somehow still holds a stale nonzero value - the server ignores it
@@ -169,22 +262,31 @@ export class TourEdit {
       clubSubsidyAmount: this.subsidyAllowed ? f.clubSubsidyAmount ?? undefined : 0,
     };
 
-    const request = this.isEditMode
-      ? this.tourService.updateTour(this.tourId!, payload)
-      : this.tourService.createTour(payload);
+    const wasEditMode = this.isEditMode;
+    const request = wasEditMode ? this.tourService.updateTour(this.tourId!, payload) : this.tourService.createTour(payload);
 
     request.subscribe({
       next: (res) => {
         this.saving.set(false);
-        this.notifications.addSuccess(
-          this.isEditMode ? 'Tábor mentése sikeres' : 'Tábor létrehozása sikeres',
-        );
-        this.router.navigate(['/taborok', res.data.tour.slug]);
+        this.notifications.addSuccess(wasEditMode ? 'Tábor mentése sikeres' : 'Tábor létrehozása sikeres');
+        if (wasEditMode || uploadedCoverFilename) {
+          this.router.navigate(['/taborok', res.data.tour.slug]);
+        } else {
+          // A brand new tour with no cover picked - land on this same
+          // form in edit mode so uploading one afterward is just one more
+          // click, rather than having to find their way back here.
+          this.router.navigate(['/taborok', res.data.tour._id, 'szerkesztes']);
+        }
       },
       error: (err) => {
         this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
         this.saving.set(false);
       },
     });
+  }
+
+  ngOnDestroy() {
+    const previous = this.coverPreviewUrl();
+    if (previous) URL.revokeObjectURL(previous);
   }
 }

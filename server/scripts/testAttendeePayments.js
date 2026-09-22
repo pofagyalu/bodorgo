@@ -205,6 +205,153 @@ function reservation(id, attendees) {
   );
 }
 
+// --- perPerson mode: accommodationPricePerNight is the adult rate
+// directly, childPricePerNight/childAgeLimitYears distinguish a discount
+// by age, evaluated as of the tour's own startDate (not today). Each
+// attendee's charge is independent (nights * their own rate), so unlike
+// perHouse there's no proportional-split rounding drift to guard against
+// - the declared totals are just the sum of the (still ceiled, for the
+// same "round in the club's favor" reasoning) individual amounts. ---
+{
+  const tour = {
+    startDate: '2024-06-01',
+    duration: 4, // 3 nights
+    pricingMode: 'perPerson',
+    accommodationPricePerNight: 5000, // adult rate
+    childPricePerNight: 3000,
+    childAgeLimitYears: 12, // 12 and under is a child
+    advancePaymentPercentage: 20,
+    clubSubsidyAmount: 0,
+  };
+  const reservations = [
+    reservation('r1', [
+      // 30 years old on the tour's startDate - adult.
+      { name: 'Adult Alice', nights: 3, user: { role: 'member', birthday: '1994-01-01' } },
+      // Exactly 12 on the tour's startDate (birthday just passed) - at
+      // the limit, still counts as a child (inclusive).
+      { name: 'Child Bob', nights: 3, user: { role: 'member', birthday: '2012-05-01' } },
+      // Turns 13 the week after the tour - still 12 (a child) *during*
+      // the tour, so must be priced as a child even though today (this
+      // test's "now") they might already be 13.
+      { name: 'Child Casey', nights: 3, user: { role: 'member', birthday: '2011-06-08' } },
+    ]),
+  ];
+  const { attendeePayments, totals } = computeAttendeePayments(tour, reservations);
+  const byName = Object.fromEntries(attendeePayments.map((p) => [p.name, p]));
+
+  check('adult priced at the adult rate (3 * 5000 = 15000)', byName['Adult Alice'].totalPrice === 15000);
+  check('child at the exact age limit still gets the child rate (3 * 3000 = 9000)', byName['Child Bob'].totalPrice === 9000);
+  check(
+    'child priced by age on the tour\'s own startDate, not today (still 9000, not bumped to adult)',
+    byName['Child Casey'].totalPrice === 9000,
+  );
+  check(
+    'totals are the sum of independent per-attendee amounts (15000 + 9000 + 9000 = 33000), no shared-pot split at all',
+    totals.totalPrice === 33000,
+  );
+  check('advance totals sum too (20% of 33000 = 6600)', totals.advance === 6600);
+}
+
+// --- averagePricePerPersonPerNight - the real, live average once actual
+// attendees exist, used to correct the tour-card's advertised price
+// instead of leaving it at a pre-registration assumption once reality is
+// known to differ. perHouse: fewer than the assumed full capacity
+// actually attending pushes the true average UP; perPerson: any child
+// attendee at a discount pulls the true blended average DOWN. ---
+{
+  // perHouse: house fee 3000 (1000/night * 3 nights), but only 2 people
+  // (5 person-nights) actually attend instead of some larger assumed
+  // capacity - true average is higher than a naive "assume everyone at
+  // one rate" figure would suggest for a partially-filled tour.
+  const tour = { startDate: '2024-01-01', duration: 4, accommodationPricePerNight: 1000, advancePaymentPercentage: 20, clubSubsidyAmount: 0 };
+  const reservations = [
+    reservation('r1', [
+      { name: 'Alice', nights: 3, user: { role: 'member' } },
+      { name: 'Bob', nights: 2, user: { role: 'member' } },
+    ]),
+  ];
+  const { totals } = computeAttendeePayments(tour, reservations);
+  check('perHouse: average is the real house fee over real person-nights (3000 / 5 = 600)', totals.averagePricePerPersonPerNight === 600);
+}
+{
+  // perPerson: one adult (5000/night) and two children (3000/night, 3
+  // nights each) - blended average must come out below the flat adult
+  // rate, reflecting the real discount actually given.
+  const tour = {
+    startDate: '2024-06-01',
+    duration: 4,
+    pricingMode: 'perPerson',
+    accommodationPricePerNight: 5000,
+    childPricePerNight: 3000,
+    childAgeLimitYears: 12,
+    advancePaymentPercentage: 20,
+    clubSubsidyAmount: 0,
+  };
+  const reservations = [
+    reservation('r1', [
+      { name: 'Adult', nights: 3, user: { role: 'member', birthday: '1990-01-01' } },
+      { name: 'Kid One', nights: 3, user: { role: 'member', birthday: '2015-01-01' } },
+      { name: 'Kid Two', nights: 3, user: { role: 'member', birthday: '2016-01-01' } },
+    ]),
+  ];
+  const { totals } = computeAttendeePayments(tour, reservations);
+  // (15000 + 9000 + 9000) / 9 person-nights = 3667 (ceiled)
+  check(
+    'perPerson: blended average reflects the real child discount, well below the flat adult rate (3667, not 5000)',
+    totals.averagePricePerPersonPerNight === 3667 && totals.averagePricePerPersonPerNight < tour.accommodationPricePerNight,
+  );
+}
+{
+  // No attendees at all - nothing real to average yet.
+  const tour = { startDate: '2024-01-01', duration: 3, accommodationPricePerNight: 1000, advancePaymentPercentage: 20, clubSubsidyAmount: 0 };
+  const { totals } = computeAttendeePayments(tour, []);
+  check('no attendees yet: averagePricePerPersonPerNight is null, nothing to derive it from', totals.averagePricePerPersonPerNight === null);
+}
+
+// --- perPerson mode with no childPricePerNight/childAgeLimitYears set at
+// all: a perfectly valid "per person, but no child discount" setup -
+// everyone just pays the adult rate regardless of age. ---
+{
+  const tour = {
+    startDate: '2024-06-01',
+    duration: 3,
+    pricingMode: 'perPerson',
+    accommodationPricePerNight: 4000,
+    advancePaymentPercentage: 10,
+    clubSubsidyAmount: 0,
+  };
+  const reservations = [
+    reservation('r1', [{ name: 'Kid', nights: 2, user: { role: 'member', birthday: '2018-01-01' } }]),
+  ];
+  const { attendeePayments } = computeAttendeePayments(tour, reservations);
+  check(
+    'with no child rate configured, even a young child pays the adult rate (2 * 4000 = 8000)',
+    attendeePayments[0].totalPrice === 8000,
+  );
+}
+
+// --- perPerson mode, attendee with no birthday on record (e.g. a
+// login-less dependent never given one) - can't determine child
+// eligibility, so defaults to the adult rate rather than guessing. ---
+{
+  const tour = {
+    startDate: '2024-06-01',
+    duration: 3,
+    pricingMode: 'perPerson',
+    accommodationPricePerNight: 4000,
+    childPricePerNight: 2000,
+    childAgeLimitYears: 12,
+    advancePaymentPercentage: 10,
+    clubSubsidyAmount: 0,
+  };
+  const reservations = [reservation('r1', [{ name: 'No Birthday Nóra', nights: 2, user: { role: 'member' } }])];
+  const { attendeePayments } = computeAttendeePayments(tour, reservations);
+  check(
+    'unknown age (no birthday) defaults to the adult rate, not the child discount (2 * 4000 = 8000)',
+    attendeePayments[0].totalPrice === 8000,
+  );
+}
+
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed.`);
   process.exit(1);

@@ -10,6 +10,13 @@ import {
   uploadTourDocument,
   deleteTourDocument,
 } from '../controllers/tourDocumentController.js';
+import {
+  loadTourForCoverUpload,
+  uploadCoverMiddleware,
+  uploadTourCover,
+  uploadCoverForOrderMiddleware,
+  uploadCoverForOrder,
+} from '../controllers/tourCoverController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -38,6 +45,20 @@ router
 router.route('/:id/pdf').get(requireAuth, downloadTourPdf);
 router.route('/:id/pdf/email').post(requireAuth, emailTourPdf);
 router.route('/:id/pdf/email-attendees').post(requireAuth, restrictTo('admin'), emailTourPdfToAttendees);
+
+// Cover image - admin-only upload, replacing the old "type the filename
+// by hand" workflow. Viewing is the same plain, unauthenticated static
+// file URL under public/img/tours/ as always (see tour-details.html), so
+// no GET route is needed here.
+router
+  .route('/:id/cover')
+  .post(requireAuth, restrictTo('admin'), loadTourForCoverUpload, uploadCoverMiddleware, uploadTourCover);
+// Pre-creation cover upload (see tourCoverController.js's own comment) -
+// a plain "cover" first-segment, not "/:id/cover" above, so it can never
+// collide with a real tour id.
+router
+  .route('/cover/:order')
+  .post(requireAuth, restrictTo('admin'), uploadCoverForOrderMiddleware, uploadCoverForOrder);
 
 // Extra infók - admin-only upload/delete; viewing is a plain static file
 // URL under public/documents/tours/ (see tourDocumentController.js), same

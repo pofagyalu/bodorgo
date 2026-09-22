@@ -53,17 +53,52 @@ const tourSchema = new Schema(
       type: Number,
       required: [true, 'A tábornak kell legyen mérete'],
     },
-    // The three admin-only inputs behind each attendee's accommodation
+    // The admin-only inputs behind each attendee's accommodation
     // breakdown (Teljes ár/Foglaló/Maradék) - see
     // reservationController.js's computeAttendeePayments. All optional:
     // a tour with none of these set simply shows no payment breakdown yet.
-    // What the HOUSE costs per night (not a per-person rate) - the club
-    // rents it for the tour's standard duration regardless of headcount,
-    // and that fixed total is split across attendees proportional to each
-    // one's own nights (see computeAttendeePayments).
+    //
+    // 'perHouse' (the default, and the only mode that ever existed before
+    // this field) - accommodationPricePerNight is what the whole HOUSE
+    // costs per night, not a per-person rate; the club rents it for the
+    // tour's standard duration regardless of headcount, and that fixed
+    // total is split across attendees proportional to each one's own
+    // nights (see computeAttendeePayments).
+    //
+    // 'perPerson' - some accommodation owners instead quote a rate per
+    // person per night, with a separate (lower) child rate - and where
+    // the age cutoff between "child" and "adult" differs from place to
+    // place, so it has to be configured per tour, not hardcoded. In this
+    // mode, accommodationPricePerNight is repurposed to mean the ADULT
+    // per-night rate directly (see childPricePerNight/childAgeLimitYears
+    // below) - there's no house total to split at all, each attendee's
+    // own charge is just their own nights times their own (age-based) rate.
+    pricingMode: {
+      type: String,
+      enum: ['perHouse', 'perPerson'],
+      default: 'perHouse',
+    },
     accommodationPricePerNight: {
       type: Number,
       min: [0, 'A szállásköltség nem lehet negatív'],
+    },
+    // Only meaningful when pricingMode is 'perPerson' - left unset simply
+    // means every attendee is billed at the adult
+    // (accommodationPricePerNight) rate regardless of age, a perfectly
+    // valid "per person, but no child discount" setup.
+    childPricePerNight: {
+      type: Number,
+      min: [0, 'A gyermekár nem lehet negatív'],
+    },
+    // The oldest age (inclusive) still considered a child for pricing -
+    // e.g. 12 means "12 and under pays the child rate, 13+ pays the adult
+    // rate". Evaluated against the attendee's age on the tour's own
+    // startDate, not today (see computeAttendeePayments) - a child who
+    // turns over the limit shortly after the tour shouldn't retroactively
+    // become adult-priced for a trip they took while still under it.
+    childAgeLimitYears: {
+      type: Number,
+      min: [0, 'Az életkorhatár nem lehet negatív'],
     },
     advancePaymentPercentage: {
       type: Number,
@@ -204,9 +239,13 @@ const tourSchema = new Schema(
         message: 'Legfeljebb 5 extra dokumentum tölthető fel egy táborhoz.',
       },
     },
+    // No longer required at creation time - a brand new tour is created
+    // first (needs a real _id/order before a cover can be named after
+    // it), then its cover gets uploaded separately right after (see
+    // tourCoverController.js) via the tour-edit page, not typed in by
+    // hand alongside everything else.
     imageCover: {
       type: String,
-      required: [true, 'A tábornak kell legyen fotója'],
     },
     // Gallery photos, synced from a NAS folder by scripts/syncTourImages.js
     // (append-only, so an already-recorded photo never shifts position on
@@ -317,24 +356,34 @@ tourSchema.pre('save', function (next) {
 });
 
 // Once an admin sets accommodationPricePerNight, the tour's advertised
-// price is no longer something they maintain by hand. accommodationPrice
-// PerNight is what the whole HOUSE costs per night, not a per-person
-// rate (see computeAttendeePayments) - there's no single real per-person
-// total until people actually register and it gets split among however
-// many show up, which isn't known yet for a tour being advertised. This
-// shows the average price per person per night instead, assuming the
-// tour fills to maxCapacity (nightlyRate / maxCapacity) - a duration-
-// independent figure, shown on tour-card.html as "Ft/fő/éj". Recomputed
-// whenever either input changes. A tour that has never used the
+// price is no longer something they maintain by hand - shown on
+// tour-card.html as "Ft/fő/éj" (Ft per person per night). Recomputed
+// whenever a relevant input changes. A tour that has never used the
 // accommodation-pricing feature keeps its old plain manually-entered
 // price untouched - this only ever takes over once accommodationPrice
 // PerNight actually has a value.
+//
+// In 'perHouse' mode, accommodationPricePerNight is the whole house's
+// nightly rate - there's no single real per-person total until people
+// actually register and it gets split among however many show up, which
+// isn't known yet for a tour being advertised, so this shows the average
+// instead, assuming the tour fills to maxCapacity (nightlyRate /
+// maxCapacity) - a duration-independent figure.
+//
+// In 'perPerson' mode, accommodationPricePerNight already directly IS the
+// adult per-person-per-night rate (see the field's own comment) - nothing
+// to average, it's shown as-is.
 tourSchema.pre('save', function (next) {
   if (
     this.accommodationPricePerNight != null &&
-    (this.isModified('accommodationPricePerNight') || this.isModified('maxCapacity'))
+    (this.isModified('accommodationPricePerNight') ||
+      this.isModified('maxCapacity') ||
+      this.isModified('pricingMode'))
   ) {
-    this.price = Math.ceil(this.accommodationPricePerNight / this.maxCapacity);
+    this.price =
+      this.pricingMode === 'perPerson'
+        ? this.accommodationPricePerNight
+        : Math.ceil(this.accommodationPricePerNight / this.maxCapacity);
   }
   next();
 });

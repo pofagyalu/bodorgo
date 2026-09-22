@@ -35,10 +35,17 @@ const original = {
   price: tour.price,
   duration: tour.duration,
   maxCapacity: tour.maxCapacity,
+  pricingMode: tour.pricingMode,
   accommodationPricePerNight: tour.accommodationPricePerNight,
 };
 
 try {
+  // Pinned explicitly - this test's expected numbers are all perHouse
+  // (rate / maxCapacity) math, regardless of whatever pricingMode this
+  // real tour actually has set for real (it's been used to test
+  // perPerson pricing too - see testTourListPrice.js).
+  tour.pricingMode = 'perHouse';
+
   // A tour with no accommodationPricePerNight set keeps its old manual
   // price even when something unrelated changes.
   tour.accommodationPricePerNight = undefined;
@@ -88,6 +95,7 @@ try {
   tour.price = original.price;
   tour.duration = original.duration;
   tour.maxCapacity = original.maxCapacity;
+  tour.pricingMode = original.pricingMode;
   tour.accommodationPricePerNight = original.accommodationPricePerNight;
   await tour.save();
   console.log('\nRestored tour order 2 to its original values.');

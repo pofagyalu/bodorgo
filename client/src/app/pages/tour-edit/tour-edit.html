@@ -47,9 +47,22 @@
          server-derived from these once accommodationPricePerNight is set
          (see tourModel.js's pre('save') hook), and shown on the tour card
          instead, not on this admin form. -->
+    <label class="form-field-full"
+      >Árazás típusa
+      <select [(ngModel)]="form.pricingMode" name="pricingMode">
+        <option value="perHouse">Egész házra (fix ár/éjszaka)</option>
+        <option value="perPerson">Személyenként (fő/éjszaka, gyerekárral)</option>
+      </select>
+    </label>
+    <p class="field-note">
+      @if (form.pricingMode === 'perHouse') { A megadott ár a teljes szállás egy éjszakára eső ára - ez oszlik el a
+      résztvevők között az éjszakáik arányában. } @else { A megadott ár egy felnőtt egy éjszakájának ára - a gyerekár
+      és az életkorhatár alább külön állítható be. }
+    </p>
+
     <div class="form-row">
       <label
-        >Szállás ára / éjszaka (Ft)
+        >{{ form.pricingMode === 'perPerson' ? 'Felnőtt ár / fő / éjszaka (Ft)' : 'Szállás ára / éjszaka (Ft)' }}
         <input type="number" [(ngModel)]="form.accommodationPricePerNight" name="accommodationPricePerNight"
       /></label>
       <label
@@ -75,6 +88,27 @@
     <p class="field-note">A klub 2019-ben alakult, ezért korábbi táborokhoz nem rendelhető hozzájárulás.</p>
     }
 
+    @if (form.pricingMode === 'perPerson') {
+    <div class="form-row">
+      <label
+        >Gyermekár / fő / éjszaka (Ft)
+        <input
+          type="number"
+          [(ngModel)]="form.childPricePerNight"
+          name="childPricePerNight"
+          placeholder="Ha üres, mindenki felnőttárat fizet"
+      /></label>
+      <label
+        >Gyermek életkorhatár (év, ennyi és ez alatt)
+        <input type="number" [(ngModel)]="form.childAgeLimitYears" name="childAgeLimitYears" min="0" />
+      </label>
+    </div>
+    <p class="field-note">
+      Az életkort a tábor kezdő napjára számoljuk ki, nem a mai napra - aki a tábor alatt még a korhatár alatt van,
+      gyerekárat fizet akkor is, ha közben időközben elmúlt idősebb.
+    </p>
+    }
+
     <label class="form-field-full"
       >Rövid összefoglaló
       <input type="text" [(ngModel)]="form.summary" name="summary" />
@@ -85,16 +119,32 @@
       <textarea [(ngModel)]="form.description" name="description" rows="5" required></textarea>
     </label>
 
-    <label class="form-field-full"
-      >Borítókép fájlneve
-      <input
-        type="text"
-        [(ngModel)]="form.imageCover"
-        name="imageCover"
-        placeholder="tour-33-cover.webp"
-        required
+    <div class="form-field-full cover-upload">
+      <span class="cover-upload-label">Borítókép</span>
+      @if (coverPreviewUrl() || form.imageCover) {
+      <img
+        class="cover-preview"
+        [src]="coverPreviewUrl() ?? environment.assetUrl + '/img/tours/' + form.imageCover"
+        alt="Borítókép előnézet"
       />
-    </label>
+      }
+      <div class="cover-upload-row">
+        <input type="file" accept="image/jpeg,image/png" (change)="onCoverFileSelected($event)" />
+        @if (isEditMode) {
+        <button
+          type="button"
+          class="btn btn--green btn--small"
+          [disabled]="uploadingCover()"
+          (click)="uploadCover()"
+        >
+          {{ uploadingCover() ? 'Feltöltés...' : 'Feltöltés' }}
+        </button>
+        }
+      </div>
+      @if (!isEditMode) {
+      <p class="field-note">A kiválasztott kép a tábor mentésekor kerül feltöltésre.</p>
+      }
+    </div>
 
     @if (error()) {
     <p class="error-note">{{ error() }}</p>

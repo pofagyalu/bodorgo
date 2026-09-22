@@ -49,12 +49,18 @@ if (!tour) {
 }
 
 const original = {
+  pricingMode: tour.pricingMode,
   accommodationPricePerNight: tour.accommodationPricePerNight,
   advancePaymentPercentage: tour.advancePaymentPercentage,
   clubSubsidyAmount: tour.clubSubsidyAmount,
 };
 
 try {
+  // Pinned explicitly - this test's expected numbers are perHouse math,
+  // regardless of whatever pricingMode this real tour actually has set
+  // for real (it's been used to test perPerson pricing too - see
+  // testTourListPrice.js).
+  tour.pricingMode = 'perHouse';
   tour.accommodationPricePerNight = 2000;
   tour.advancePaymentPercentage = 30;
   tour.clubSubsidyAmount = 0;
@@ -87,6 +93,7 @@ try {
       paymentTotals.rest === expectedTotalPrice - expectedAdvance,
   );
 } finally {
+  tour.pricingMode = original.pricingMode;
   tour.accommodationPricePerNight = original.accommodationPricePerNight;
   tour.advancePaymentPercentage = original.advancePaymentPercentage;
   tour.clubSubsidyAmount = original.clubSubsidyAmount;

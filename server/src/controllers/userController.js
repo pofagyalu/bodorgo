@@ -15,11 +15,16 @@ const filterObj = (obj, ...allowedFields) => {
 const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 
 // Age is derived, never stored - birthday is the only real field, this
-// just computes today's age from it. Returns null rather than a bogus
-// number when there's no birthday on record yet.
-export function computeAge(birthday) {
+// just computes the age as of a given moment from it (today by default).
+// Returns null rather than a bogus number when there's no birthday on
+// record yet. The optional asOf lets reservationController.js's
+// computeAttendeePayments ask "how old were they on the tour's own
+// startDate" for per-person child-pricing eligibility, rather than their
+// current age - see that function's own comment on why that distinction
+// matters.
+export function computeAge(birthday, asOf = new Date()) {
   if (!birthday) return null;
-  const today = new Date();
+  const today = new Date(asOf);
   const birth = new Date(birthday);
   let age = today.getFullYear() - birth.getFullYear();
   const hadBirthdayThisYear =

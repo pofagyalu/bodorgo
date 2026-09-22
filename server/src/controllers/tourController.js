@@ -100,7 +100,14 @@ export const getAlltours = async (req, res) => {
     .sort()
     .limitFields()
     .paginate();
-  const tours = await features.query.populate('reservations');
+  // attendees.user needs role/birthday, not just its bare id, for
+  // computeAttendeePayments below (club-subsidy eligibility and
+  // perPerson child pricing respectively) - same populate shape getTour
+  // already uses for the single-tour view.
+  const tours = await features.query.populate({
+    path: 'reservations',
+    populate: [{ path: 'attendees.user', select: 'role birthday' }],
+  });
 
   // Return total documents without any filters and so on
   const totalDocuments = await Tour.countDocuments();
@@ -110,7 +117,18 @@ export const getAlltours = async (req, res) => {
       (sum, r) => sum + r.attendees.length,
       0,
     );
-    return { ...tour.toObject(), participantCount };
+
+    // The advertised card price ("Ft/fő/éj") is normally a pre-
+    // registration assumption (tourModel.js's pre('save') hook) - once
+    // real people are actually registered, show the genuine average
+    // instead (see computeAttendeePayments' averagePricePerPersonPerNight),
+    // which can differ from that assumption in either direction (fewer
+    // than maxCapacity attending pushes perHouse's true average up; any
+    // attendee getting perPerson's child discount pulls it down).
+    const { totals } = computeAttendeePayments(tour, tour.reservations);
+    const price = totals?.averagePricePerPersonPerNight ?? tour.price;
+
+    return { ...tour.toObject(), participantCount, price };
   });
 
   // SENDING RESPONSE
@@ -134,10 +152,11 @@ export const getTour = async (req, res, next) => {
     path: 'reservations',
     populate: [
       { path: 'bookedBy', select: 'name email' },
-      // role only, to decide club-subsidy eligibility in
-      // computeAttendeePayments - name is already denormalized onto the
+      // role decides club-subsidy eligibility; birthday decides
+      // child/adult pricing in 'perPerson' mode (see
+      // computeAttendeePayments) - name is already denormalized onto the
       // attendee subdocument itself, no need to populate it too.
-      { path: 'attendees.user', select: 'role' },
+      { path: 'attendees.user', select: 'role birthday' },
     ],
   });
 

@@ -1,6 +1,5 @@
 // Same grey-backdrop + white-panel treatment as other pages this session
-// (profile.scss, tour-details.scss) - narrower than the shared 1300px
-// content width since this is a form, not a content page.
+// (profile.scss, tour-details.scss).
 :host {
   display: block;
   background: #ececec;
@@ -8,7 +7,10 @@
 }
 
 .tour-edit-page {
-  max-width: 800px;
+  // Matches tour-details.scss/tours.scss/homepage.scss/chat.scss's shared
+  // 1300px content width, per the admin's request, so this page doesn't
+  // feel cramped next to the page it's editing.
+  max-width: 1300px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
   background: #fff;
@@ -62,6 +64,7 @@ label {
 }
 
 input,
+select,
 textarea {
   padding: 0.5rem 0.7rem;
   border: 1px solid #ccc;
@@ -110,6 +113,38 @@ textarea {
 .btn--grey {
   background-color: #eee;
   color: #555;
+}
+
+.btn--small {
+  padding: 0.5rem 1.2rem;
+  font-size: 0.9rem;
+}
+
+.cover-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cover-upload-label {
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.cover-preview {
+  max-width: 320px;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.cover-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 600px) {
