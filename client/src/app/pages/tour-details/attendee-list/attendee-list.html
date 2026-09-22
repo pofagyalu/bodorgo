@@ -15,8 +15,8 @@
     </tr>
   </thead>
   <tbody>
-    @for (a of attendees; track a.attendeeId) {
-    <tr>
+    @for (a of groupedAttendees; track a.attendeeId) {
+    <tr [class.attendee-row--stripe]="a.familyStripe === 1">
       <td>{{ a.name }}</td>
 
       @if (editingAttendeeId() === a.attendeeId) {

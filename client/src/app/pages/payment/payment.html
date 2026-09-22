@@ -1,0 +1,64 @@
+<div class="payment-page">
+  @if (loading()) {
+  <p class="loading-note">Betöltés...</p>
+  } @else if (error()) {
+  <p class="error-note">{{ error() }}</p>
+  } @else {
+  <h1 class="page-title">Előleg befizetés</h1>
+  <p class="tour-subtitle">
+    <a [routerLink]="['/taborok', tourSlug()]">{{ tourTitle() }}</a>
+  </p>
+
+  @if (myGroup().length === 0) {
+  <p class="empty-note">Nincs kifizetendő előleg ehhez a táborhoz.</p>
+  } @else {
+  <p class="field-note">
+    Az alábbi listában a családod (vagy te magad) közül azok szerepelnek, akiknek még nincs kifizetve az előlege. Ha
+    valakiért most nem szeretnél fizetni, vedd ki a pipát mellőle - őt majd később is befizetheted.
+  </p>
+
+  <ul class="payer-list">
+    @for (p of myGroup(); track p.attendeeId) {
+    <li class="payer-row">
+      <label class="payer-checkbox">
+        <input type="checkbox" [checked]="isSelected(p.attendeeId)" (change)="toggleSelected(p.attendeeId)" />
+        {{ p.name }}
+      </label>
+      <span class="payer-amount">{{ formatForint(p.advance) }} Ft</span>
+    </li>
+    }
+  </ul>
+
+  <div class="total-row">
+    <span>Fizetendő összesen</span>
+    <span class="total-amount">{{ formatForint(totalToPay()) }} Ft</span>
+  </div>
+
+  <h2 class="section-heading">Fizetési mód</h2>
+  <div class="payment-methods">
+    <button
+      type="button"
+      class="method-card"
+      [class.method-card--selected]="paymentMethod() === 'card'"
+      (click)="selectMethod('card')"
+    >
+      <mat-icon>credit_card</mat-icon>
+      Bankkártya
+    </button>
+    <button
+      type="button"
+      class="method-card"
+      [class.method-card--selected]="paymentMethod() === 'revolut'"
+      (click)="selectMethod('revolut')"
+    >
+      <mat-icon>account_balance_wallet</mat-icon>
+      Revolut
+    </button>
+  </div>
+  <p class="field-note">Hamarosan további fizetési módok is elérhetők lesznek.</p>
+
+  <button type="button" class="btn btn--green" [disabled]="!canPay()" (click)="pay()">
+    Fizetés ({{ formatForint(totalToPay()) }} Ft)
+  </button>
+  } }
+</div>

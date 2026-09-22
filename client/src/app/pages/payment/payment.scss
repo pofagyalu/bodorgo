@@ -1,0 +1,188 @@
+// Same grey-backdrop + white-panel treatment as other pages this session
+// (profile.scss, tour-details.scss, tour-edit.scss).
+:host {
+  display: block;
+  background: #ececec;
+  min-height: calc(100dvh - 80px);
+}
+
+.payment-page {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  background: #fff;
+  box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
+}
+
+.page-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.tour-subtitle {
+  margin: 0 0 1.5rem;
+
+  a {
+    color: #096396;
+  }
+}
+
+.loading-note {
+  color: #999;
+  font-style: italic;
+}
+
+.error-note {
+  color: #b00020;
+}
+
+.empty-note {
+  color: #999;
+  font-style: italic;
+}
+
+.field-note {
+  color: #777;
+  font-size: 0.9rem;
+}
+
+.payer-list {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.payer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1rem;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #eee;
+  }
+}
+
+.payer-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 500;
+
+  input {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.payer-amount {
+  font-weight: 600;
+  color: #333;
+}
+
+.total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1.5rem;
+  background: #f7f7f7;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.total-amount {
+  font-size: 1.2rem;
+  color: #2e7d32;
+}
+
+.section-heading {
+  margin: 0 0 0.8rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.payment-methods {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.method-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1 1 0;
+  padding: 1.2rem;
+  border: 2px solid #eee;
+  border-radius: 10px;
+  background: #fafafa;
+  font: inherit;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+
+  mat-icon {
+    font-size: 1.8rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    color: #777;
+  }
+
+  &:hover {
+    border-color: #ccc;
+  }
+}
+
+.method-card--selected {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+  color: #1b5e20;
+
+  mat-icon {
+    color: #2e7d32;
+  }
+}
+
+.btn {
+  text-decoration: none;
+  padding: 0.8rem 2rem;
+  display: inline-block;
+  border-radius: 10rem;
+  transition: all 0.2s;
+  font-size: 1.1rem;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+  margin-top: 1.5rem;
+}
+
+.btn--green {
+  background-color: #55c57a;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background-color: #28b485;
+    transform: translateY(-2px);
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+@media (max-width: 600px) {
+  .payment-methods {
+    flex-direction: column;
+  }
+}

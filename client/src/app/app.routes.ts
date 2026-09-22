@@ -9,6 +9,7 @@ import { NotFoundComponent } from './not-found/not-found.component';
 import { LoginComponent } from './auth/login/login.component';
 import { Profile } from './pages/profile/profile';
 import { TourEdit } from './pages/tour-edit/tour-edit';
+import { Payment } from './pages/payment/payment';
 
 export const routes: Routes = [
   { path: '', component: Home },
@@ -18,6 +19,7 @@ export const routes: Routes = [
   // tour id/slug.
   { path: 'taborok/uj', title: 'Új tábor', component: TourEdit },
   { path: 'taborok/:id/szerkesztes', title: 'Tábor szerkesztése', component: TourEdit },
+  { path: 'taborok/:id/befizetes', title: 'Előleg befizetés', component: Payment },
   { path: 'taborok/:id', title: 'Tábor részletei', component: TourDetails },
   // Chat/Szavazások/Versenyek are routed but still in early development
   { path: 'chat', title: 'Bódorgó chat', component: Chat },

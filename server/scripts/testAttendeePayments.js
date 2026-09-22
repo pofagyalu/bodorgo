@@ -110,6 +110,48 @@ function reservation(id, attendees) {
   check('totals is null when pricing is unset', totals === null);
 }
 
+// --- familyId/userId/paid are carried through to the output rows (used
+// by the client to group/stripe the attendee list by family, identify
+// "which rows are me / my family" on the advance-payment page, and
+// exclude whoever's already paid from that page entirely - see
+// attendee-list.ts/payment.ts), in both the pricing-unset and
+// pricing-configured shapes, and are null (not undefined/crashing) for
+// someone with no family/user link at all. paid is this specific
+// attendee's own field (reservationModel.js's attendeeSchema.paid), not
+// anything derived from the whole reservation. ---
+{
+  const tour = { startDate: '2024-01-01', duration: 3 };
+  const reservations = [
+    reservation('r1', [
+      { name: 'Family Member', nights: 2, paid: true, user: { _id: 'user-1', role: 'member', familyId: 'fam-1' } },
+      { name: 'No Family Guest', nights: 2, paid: false, user: { role: 'guest' } },
+    ]),
+  ];
+  const { attendeePayments } = computeAttendeePayments(tour, reservations);
+  check('familyId is carried through when pricing is unset', attendeePayments[0].familyId === 'fam-1');
+  check('userId is carried through when pricing is unset', attendeePayments[0].userId === 'user-1');
+  check('no family on record comes through as null, not undefined', attendeePayments[1].familyId === null);
+  check('paid is carried through when pricing is unset', attendeePayments[0].paid === true && attendeePayments[1].paid === false);
+}
+{
+  const tour = { startDate: '2024-01-01', duration: 3, accommodationPricePerNight: 1000, advancePaymentPercentage: 20, clubSubsidyAmount: 0 };
+  const reservations = [
+    reservation('r1', [{ name: 'Family Member', nights: 2, paid: true, user: { _id: 'user-2', role: 'member', familyId: 'fam-2' } }]),
+  ];
+  const { attendeePayments } = computeAttendeePayments(tour, reservations);
+  check('familyId is also carried through once pricing is configured', attendeePayments[0].familyId === 'fam-2');
+  check('userId is also carried through once pricing is configured', attendeePayments[0].userId === 'user-2');
+  check('paid is also carried through once pricing is configured', attendeePayments[0].paid === true);
+}
+{
+  // No `paid` field at all on the attendee (e.g. old data before a
+  // migration ran) - falls back to false, not undefined/crashing.
+  const tour = { startDate: '2024-01-01', duration: 3, accommodationPricePerNight: 1000, advancePaymentPercentage: 20, clubSubsidyAmount: 0 };
+  const reservations = [reservation('r1', [{ name: 'Never Set', nights: 2, user: { role: 'member' } }])];
+  const { attendeePayments } = computeAttendeePayments(tour, reservations);
+  check('a missing paid field defaults to false, not undefined', attendeePayments[0].paid === false);
+}
+
 // --- advancePaymentPercentage of exactly 0 is a valid configured value, not "unset" ---
 {
   const tour = { startDate: '2024-01-01', duration: 3, accommodationPricePerNight: 1000, advancePaymentPercentage: 0, clubSubsidyAmount: 0 };

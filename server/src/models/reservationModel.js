@@ -24,6 +24,19 @@ const attendeeSchema = new Schema({
     type: Number,
     min: [0, 'Az éjszakák száma nem lehet negatív'],
   },
+  // Whether THIS specific person has paid their own advance for this
+  // tour. The real source of truth for display now - Reservation.paid
+  // below used to be read for this (see computeAttendeePayments), but it
+  // only ever tracked the whole reservation, incorrectly showing every
+  // family member sharing one as paid/unpaid together even though
+  // different family members can genuinely pay at different times
+  // (especially with the self-service "Előleg befizetés" flow). Existing
+  // reservations were backfilled from their own Reservation.paid value
+  // (see scripts/migrateAttendeePaidField.js) - new ones default to false.
+  paid: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const reservationSchema = new Schema(
@@ -46,6 +59,11 @@ const reservationSchema = new Schema(
       type: Number,
       required: false,
     },
+    // No longer read anywhere for display - see attendeeSchema's own
+    // paid field above for the real, per-person source of truth. Kept
+    // around as the original whole-booking intent (e.g. still set by
+    // scripts/create-reservation.js and importAttendance.js when
+    // entering historical data by hand), not actively used by the app.
     paid: {
       type: Boolean,
       default: false,

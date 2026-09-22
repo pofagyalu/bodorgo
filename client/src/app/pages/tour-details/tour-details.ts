@@ -14,6 +14,8 @@ import {
   AttendeePayment,
   PaymentTotals,
   ExtraDocument,
+  attendeeUserId,
+  isInMyPaymentGroup,
 } from '../../services/tour';
 import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
@@ -36,10 +38,6 @@ interface DayGroup {
 // a different, pre-existing concept ("has an admin marked this
 // reservation as settled") from the newly computed per-person amounts, so
 // it's merged in here rather than folded into computeAttendeePayments.
-interface AttendeeRow extends AttendeePayment {
-  paid: boolean;
-}
-
 // One selectable entry in the sign-up picker - a plain subset shared by
 // FamilyMember, AdminUser and the logged-in user's own auth profile, all
 // of which have _id + name but otherwise different shapes.
@@ -176,13 +174,12 @@ export class TourDetails implements OnDestroy {
     return `assets/images/weather/${TourDetails.WEATHER_ICONS[condition]}`;
   }
 
-  allAttendees = computed<AttendeeRow[]>(() => {
-    const t = this.tour();
-    if (!t?.reservations) return [];
-    const paidByReservationId = new Map(t.reservations.map((r) => [r._id, r.paid]));
-    return this.attendeePayments()
-      .map((p) => ({ ...p, paid: paidByReservationId.get(p.reservationId) ?? false }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'hu'));
+  // paid comes straight from the API now (see AttendeePayment's own
+  // comment) - this specific person's own status, not the whole
+  // reservation's, so no merging needed here beyond the display sort.
+  allAttendees = computed<AttendeePayment[]>(() => {
+    if (!this.tour()?.reservations) return [];
+    return [...this.attendeePayments()].sort((a, b) => a.name.localeCompare(b.name, 'hu'));
   });
 
   // Every user id already registered as an attendee (by anyone's
@@ -191,7 +188,7 @@ export class TourDetails implements OnDestroy {
   attendeeUserIds = computed<Set<string>>(() => {
     const t = this.tour();
     if (!t?.reservations) return new Set<string>();
-    return new Set(t.reservations.flatMap((r) => r.attendees.map((a) => a.user)));
+    return new Set(t.reservations.flatMap((r) => r.attendees.map((a) => attendeeUserId(a))));
   });
 
   // Checks the actual attendee list, not just "did I book a reservation" -
@@ -200,6 +197,17 @@ export class TourDetails implements OnDestroy {
   alreadySignedUp = computed(() => {
     const uid = this.currentUserId();
     return !!uid && this.attendeeUserIds().has(uid);
+  });
+
+  // Whether there's anyone left in my own payment group (self + family)
+  // who still has an unpaid advance - if everyone's already settled up,
+  // the "Előleg befizetés" button would just lead to an empty, useless
+  // page, so it's hidden entirely rather than shown pointlessly. Same
+  // isInMyPaymentGroup rule the payment page itself uses to build its own
+  // list, so the two can never disagree about who's included.
+  hasUnpaidAdvanceInMyGroup = computed(() => {
+    const me = this.auth.user();
+    return this.attendeePayments().some((p) => p.advance != null && !p.paid && isInMyPaymentGroup(p, me));
   });
 
   // Who the logged-in user can still pick to register for this tour -

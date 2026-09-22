@@ -131,7 +131,11 @@ if (attendees.length === 0) {
 const reservation = await Reservation.create({
   tour: tour._id,
   bookedBy: bookedByUser._id,
-  attendees: attendees.map((m) => ({ user: m._id, name: m.name })),
+  // paid is set on each attendee individually now (the real source of
+  // truth - see reservationModel.js's attendeeSchema.paid), not just the
+  // whole reservation - this --unpaid flag still applies uniformly to
+  // everyone in this one-shot creation, same as before.
+  attendees: attendees.map((m) => ({ user: m._id, name: m.name, paid: !flags.unpaid })),
   paid: !flags.unpaid,
 });
 

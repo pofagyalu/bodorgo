@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { CurrentUser } from '../auth/auth.service';
 
 export interface ToursResponse {
   status: string;
@@ -84,8 +85,21 @@ export interface DailyWeather {
 }
 
 export interface Attendee {
-  user: string;
+  // A bare id fresh off signUp()'s own response (Reservation.create()
+  // doesn't populate anything), but a populated object once loaded via
+  // getTour (attendees.user is populated there for computeAttendeePayments
+  // - see tourController.js) - genuinely both shapes in practice, since a
+  // freshly-appended reservation (see tour-details.ts's doSignUp) sits
+  // alongside getTour-loaded ones in the same reservations array until
+  // the page is reloaded. Use attendeeUserId() below rather than reading
+  // this directly.
+  user: string | { _id: string; role?: string; birthday?: string; familyId?: string };
   name: string;
+}
+
+// See Attendee.user's own comment on why this can't just be read directly.
+export function attendeeUserId(attendee: Attendee): string {
+  return typeof attendee.user === 'string' ? attendee.user : attendee.user._id;
 }
 
 export interface Reservation {
@@ -177,9 +191,31 @@ export interface AttendeePayment {
   attendeeId: string;
   name: string;
   nights: number;
+  // Lets the attendee list group/stripe by family (see attendee-list.ts)
+  // - null for someone with no family on record at all.
+  familyId: string | null;
+  // The linked User's own id (distinct from attendeeId, this attendee
+  // *subdocument's* own id) - lets the advance-payment page identify "is
+  // this row literally me", which familyId alone can't do for someone
+  // with no family on record.
+  userId: string | null;
+  // This specific person's own paid status (see reservationModel.js's
+  // attendeeSchema.paid) - not the whole reservation's, since a family
+  // reservation can have some members paid and others not.
+  paid: boolean;
   totalPrice: number | null;
   advance: number | null;
   rest: number | null;
+}
+
+// Whether this attendee row is the given logged-in user themselves, or
+// shares their family - the one rule behind both the tour-details page's
+// "Előleg befizetés" button (only shown when there's actually someone
+// left in the group with an unpaid advance) and the payment page's own
+// attendee list, kept in exactly one place so the two can't drift apart.
+export function isInMyPaymentGroup(payment: AttendeePayment, me: CurrentUser | null): boolean {
+  if (!me) return false;
+  return payment.userId === me.id || (!!me.familyId && payment.familyId === me.familyId);
 }
 
 export interface PaymentTotals {

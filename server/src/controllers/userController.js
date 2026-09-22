@@ -166,7 +166,11 @@ export const getMyAttendance = async (req, res) => {
     .filter((r) => r.tour) // guards against a tour that's since been deleted
     .map((r) => ({
       tour: r.tour,
-      paid: r.paid,
+      // This specific attendee's own paid status (see
+      // reservationModel.js's attendeeSchema.paid), not the whole
+      // reservation's - a family reservation can have some members paid
+      // and others not.
+      paid: r.attendees.find((a) => String(a.user) === String(req.user._id))?.paid ?? false,
     }));
 
   res.status(200).json({ status: 'success', data: { tours } });

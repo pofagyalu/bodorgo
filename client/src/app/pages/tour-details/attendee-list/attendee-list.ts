@@ -11,10 +11,18 @@ export interface AttendeeListRow {
   attendeeId: string;
   name: string;
   nights: number;
+  familyId: string | null;
   totalPrice: number | null;
   advance: number | null;
   rest: number | null;
   paid: boolean;
+}
+
+// A row plus which alternating family "stripe" it belongs to (0 or 1),
+// for the alternating white/light-grey background per family - see
+// groupedAttendees below.
+export interface StripedAttendeeRow extends AttendeeListRow {
+  familyStripe: 0 | 1;
 }
 
 // The tour-details "Résztvevők" list, doing double duty: a plain roster
@@ -47,6 +55,43 @@ export class AttendeeList {
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   readonly formatForint = formatForint;
   hasPricing = computed(() => this.totals !== null);
+
+  // Grouped by family (so relatives sit together and can find themselves
+  // at a glance, and so payment status is easy to eyeball per family)
+  // instead of a flat alphabetical list - each family (or lone attendee
+  // with no family on record, its own single-person "group") gets an
+  // alternating white/light-grey background, see attendee-list.scss's
+  // .attendee-row--stripe. A plain getter (re-run every change-detection
+  // pass) rather than a computed signal, since `attendees` is a classic
+  // @Input(), not a signal input - fine for a roster this size.
+  get groupedAttendees(): StripedAttendeeRow[] {
+    const groups = new Map<string, AttendeeListRow[]>();
+    for (const a of this.attendees) {
+      // No family on record: each such attendee is its own group, keyed
+      // by their own id so they never merge with another family-less
+      // attendee.
+      const key = a.familyId ?? `solo-${a.attendeeId}`;
+      const group = groups.get(key);
+      if (group) {
+        group.push(a);
+      } else {
+        groups.set(key, [a]);
+      }
+    }
+
+    for (const members of groups.values()) {
+      members.sort((x, y) => x.name.localeCompare(y.name, 'hu'));
+    }
+
+    // Families ordered by their own first (alphabetically earliest)
+    // member, so the roster still reads roughly alphabetically at a
+    // glance rather than in arbitrary family-creation order.
+    const orderedGroups = [...groups.values()].sort((a, b) => a[0].name.localeCompare(b[0].name, 'hu'));
+
+    return orderedGroups.flatMap((members, i) =>
+      members.map((m) => ({ ...m, familyStripe: (i % 2) as 0 | 1 })),
+    );
+  }
 
   editingAttendeeId = signal<string | null>(null);
   editNights = 0;

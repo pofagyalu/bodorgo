@@ -100,6 +100,19 @@ export const signUpForTour = async (req, res) => {
   res.status(201).json({ status: 'success', data: { reservation } });
 };
 
+// Called whenever a tour's advancePaymentPercentage is set to exactly 0
+// (see tourController.js's updateTour) - that's a real, deliberate
+// configuration (a rare accommodation that genuinely needs no advance at
+// all), not "not yet configured" (which is null/undefined, not 0 - see
+// computeAttendeePayments' own pricingConfigured check). With nothing
+// actually owed upfront, every current attendee is automatically marked
+// as having paid their (non-existent) advance, rather than leaving them
+// all incorrectly showing as unpaid/pending forever with no way to
+// "pay" a real amount of zero.
+export async function markAllAttendeesPaidForTour(tourId) {
+  await Reservation.updateMany({ tour: tourId }, { $set: { 'attendees.$[].paid': true } });
+}
+
 // Each attendee's accommodation share, computed fresh from the tour's own
 // per-night rate/advance-%/subsidy rather than stored - editing any of
 // those on the tour immediately recalculates everyone rather than going
@@ -118,6 +131,22 @@ export function computeAttendeePayments(tour, reservations) {
       nights: a.nights ?? tour.duration - 1,
       isClubMember: a.user?.role !== 'guest',
       birthday: a.user?.birthday ?? null,
+      // Lets the client group/stripe the attendee list by family (see
+      // attendee-list.ts), and (together with userId below) identify
+      // "which rows are me / my family" on the advance-payment page - not
+      // used in any pricing math here, just carried through to the
+      // output rows below.
+      familyId: a.user?.familyId ? String(a.user.familyId) : null,
+      // The linked User's own id (distinct from attendeeId, which is
+      // this attendee *subdocument's* own id) - lets the client match "is
+      // this row literally me", which familyId alone can't do for
+      // someone with no family on record.
+      userId: a.user?._id ? String(a.user._id) : null,
+      // Per-person, not the whole reservation's own paid flag (see
+      // reservationModel.js's attendeeSchema.paid) - drives both the
+      // attendee list's paid/unpaid icon and the advance-payment page
+      // excluding whoever's already settled up.
+      paid: a.paid ?? false,
     })),
   );
 
@@ -127,11 +156,14 @@ export function computeAttendeePayments(tour, reservations) {
 
   if (!pricingConfigured) {
     return {
-      attendeePayments: rows.map(({ reservationId, attendeeId, name, nights }) => ({
+      attendeePayments: rows.map(({ reservationId, attendeeId, name, nights, familyId, userId, paid }) => ({
         reservationId,
         attendeeId,
         name,
         nights,
+        familyId,
+        userId,
+        paid,
         totalPrice: null,
         advance: null,
         rest: null,
@@ -218,6 +250,9 @@ export function computeAttendeePayments(tour, reservations) {
       attendeeId: r.attendeeId,
       name: r.name,
       nights: r.nights,
+      familyId: r.familyId,
+      userId: r.userId,
+      paid: r.paid,
       totalPrice,
       advance,
       rest,

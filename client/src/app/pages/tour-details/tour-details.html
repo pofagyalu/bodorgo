@@ -338,6 +338,9 @@
     <button class="btn btn--green" (click)="login()">Bejelentkezés</button>
     } @else { @if (alreadySignedUp()) {
     <p class="already-signed">✔ Már jelentkeztél erre a táborra.</p>
+    @if (paymentTotals() && hasUnpaidAdvanceInMyGroup()) {
+    <a [routerLink]="['/taborok', t._id, 'befizetes']" class="btn btn--green">Előleg befizetés</a>
+    }
     } @if (!isFull()) { @if (pickerOptions().length === 1) {
     <button
       class="btn btn--green"

@@ -223,12 +223,17 @@ for (const block of blocks) {
 
   const paidByName = block.paidBy || block.attendees[0];
   const paidByMatch = familyMembers.find((m) => m.name === paidByName) || attendees[0];
+  const paid = block.paid !== undefined ? block.paid : true;
 
   const reservation = await Reservation.create({
     tour: tour._id,
     bookedBy: paidByMatch.user._id,
-    attendees: attendees.map(({ name, user }) => ({ user: user._id, name })),
-    paid: block.paid !== undefined ? block.paid : true,
+    // paid is set on each attendee individually now (the real source of
+    // truth - see reservationModel.js's attendeeSchema.paid), not just
+    // the whole reservation - this JSON block's own "paid" field still
+    // applies uniformly to everyone in it, same as before.
+    attendees: attendees.map(({ name, user }) => ({ user: user._id, name, paid })),
+    paid,
   });
 
   attendees.forEach(({ user }) => alreadyRegisteredIds.add(user._id.toString()));

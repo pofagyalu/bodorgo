@@ -19,6 +19,13 @@
   }
 }
 
+// Alternates per family group (not per row) - see attendee-list.ts's
+// groupedAttendees - so relatives visually cluster together and it's
+// obvious at a glance where one family ends and the next begins.
+.attendee-row--stripe {
+  background: #f7f7f7;
+}
+
 .paid-col {
   width: 2.5rem;
   text-align: center;

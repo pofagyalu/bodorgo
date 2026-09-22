@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
-import { computeAttendeePayments } from './reservationController.js';
+import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservationController.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
@@ -106,7 +106,7 @@ export const getAlltours = async (req, res) => {
   // already uses for the single-tour view.
   const tours = await features.query.populate({
     path: 'reservations',
-    populate: [{ path: 'attendees.user', select: 'role birthday' }],
+    populate: [{ path: 'attendees.user', select: 'role birthday familyId' }],
   });
 
   // Return total documents without any filters and so on
@@ -153,10 +153,12 @@ export const getTour = async (req, res, next) => {
     populate: [
       { path: 'bookedBy', select: 'name email' },
       // role decides club-subsidy eligibility; birthday decides
-      // child/adult pricing in 'perPerson' mode (see
-      // computeAttendeePayments) - name is already denormalized onto the
-      // attendee subdocument itself, no need to populate it too.
-      { path: 'attendees.user', select: 'role birthday' },
+      // child/adult pricing in 'perPerson' mode; familyId lets the client
+      // group/stripe the attendee list by family (see
+      // computeAttendeePayments/attendee-list.ts) - name is already
+      // denormalized onto the attendee subdocument itself, no need to
+      // populate it too.
+      { path: 'attendees.user', select: 'role birthday familyId' },
     ],
   });
 
@@ -231,7 +233,20 @@ export const updateTour = async (req, res) => {
   for (const [key, value] of Object.entries(req.body)) {
     tour[key] = value;
   }
+
+  // Captured before save() - Mongoose clears isModified's tracking for a
+  // path once it's actually been saved. 0% advance is a real, deliberate
+  // setting (a rare accommodation that genuinely needs no advance at
+  // all) distinct from "not yet configured" (null/undefined) - see
+  // markAllAttendeesPaidForTour's own comment on why that's worth an
+  // automatic side effect.
+  const advanceBecameZero = tour.isModified('advancePaymentPercentage') && tour.advancePaymentPercentage === 0;
+
   await tour.save();
+
+  if (advanceBecameZero) {
+    await markAllAttendeesPaidForTour(tour._id);
+  }
 
   res.status(200).json({ status: 'success', data: { tour } });
 };
