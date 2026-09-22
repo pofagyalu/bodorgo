@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, computed, inject, signal } from
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService, PaymentTotals } from '../../../services/tour';
+import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { formatForint } from '../../../shared/format';
@@ -41,15 +42,17 @@ export interface StripedAttendeeRow extends AttendeeListRow {
 })
 export class AttendeeList {
   private tourService = inject(TourService);
+  private paymentService = inject(PaymentService);
   private notifications = inject(NotificationsService);
   auth = inject(AuthService);
 
   @Input({ required: true }) tourId!: string;
   @Input({ required: true }) attendees!: AttendeeListRow[];
   @Input() totals: PaymentTotals | null = null;
-  // Fires after a nights edit saves successfully - the parent reloads the
-  // whole tour rather than this component recomputing totals itself,
-  // keeping the payment formula in exactly one place (the server).
+  // Fires after a nights edit (or a cash payment gets recorded) saves
+  // successfully - the parent reloads the whole tour rather than this
+  // component recomputing totals itself, keeping the payment formula in
+  // exactly one place (the server).
   @Output() nightsUpdated = new EventEmitter<void>();
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
@@ -123,6 +126,30 @@ export class AttendeeList {
       error: (err) => {
         this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
         this.savingNights.set(false);
+      },
+    });
+  }
+
+  // Real case: a friend hands the admin cash instead of transferring the
+  // advance online - the admin marks it paid on their behalf right here,
+  // no Stripe involved (see paymentController.js's recordCashPayment).
+  // Tracked per attendeeId (not a single "saving" flag) so marking one
+  // person doesn't disable every other row's button while the request is
+  // in flight.
+  markingCashPaidId = signal<string | null>(null);
+
+  markCashPaid(row: AttendeeListRow) {
+    if (this.markingCashPaidId()) return;
+    this.markingCashPaidId.set(row.attendeeId);
+    this.paymentService.recordCashPayment(this.tourId, [row.attendeeId]).subscribe({
+      next: () => {
+        this.markingCashPaidId.set(null);
+        this.notifications.addSuccess(`${row.name} előlege készpénzesen kifizetettnek jelölve.`);
+        this.nightsUpdated.emit();
+      },
+      error: (err) => {
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a rögzítés során.');
+        this.markingCashPaidId.set(null);
       },
     });
   }

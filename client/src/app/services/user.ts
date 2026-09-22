@@ -44,7 +44,18 @@ export interface AttendedTour {
 export interface MyAttendanceResponse {
   status: string;
   data: {
-    tours: { tour: AttendedTour; paid: boolean }[];
+    // paymentId/paymentMethod are only ever set when paid is true AND it
+    // was actually paid through a payment this app tracked (Stripe or an
+    // admin's cash entry) - a lot of real paid=true data predates that
+    // (imported historical attendance, or the "0% advance" auto-mark),
+    // which has no such record at all. method 'stripe' has a real receipt
+    // to download; 'cash' doesn't (see paymentController.js).
+    tours: {
+      tour: AttendedTour;
+      paid: boolean;
+      paymentId: string | null;
+      paymentMethod: 'stripe' | 'cash' | null;
+    }[];
   };
 }
 

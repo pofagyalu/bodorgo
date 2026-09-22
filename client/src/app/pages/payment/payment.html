@@ -9,6 +9,24 @@
     <a [routerLink]="['/taborok', tourSlug()]">{{ tourTitle() }}</a>
   </p>
 
+  @if (returningPaymentId) {
+  <!-- Landed back here from Stripe's own Checkout page - show the result
+       instead of the pick-who-to-pay form, which no longer applies (the
+       payment this page started has already been decided one way or
+       another by now). -->
+  @if (checkingResult()) {
+  <p class="loading-note">A fizetés eredményének ellenőrzése...</p>
+  } @else if (resultStatus() === 'Succeeded') {
+  <p class="result-banner result-banner--success">✔ A fizetés sikeres volt, köszönjük!</p>
+  <a [routerLink]="['/taborok', tourSlug()]" class="btn btn--green">Vissza a tábor oldalára</a>
+  } @else if (resultStatus() === 'Failed' || resultStatus() === 'Canceled' || resultStatus() === 'Expired') {
+  <p class="result-banner result-banner--failed">✘ A fizetés nem sikerült ({{ resultStatus() }}). Próbáld meg újra.</p>
+  <a [routerLink]="['/taborok', tourSlug(), 'befizetes']" class="btn btn--green">Vissza a fizetéshez</a>
+  } @else {
+  <p class="result-banner">A fizetés még feldolgozás alatt van, kérjük próbáld frissíteni az oldalt kicsit később.</p>
+  <a [routerLink]="['/taborok', tourSlug()]" class="btn btn--green">Vissza a tábor oldalára</a>
+  } } @else {
+  <!-- Normal pick-who-to-pay form. -->
   @if (myGroup().length === 0) {
   <p class="empty-note">Nincs kifizetendő előleg ehhez a táborhoz.</p>
   } @else {
@@ -34,31 +52,10 @@
     <span class="total-amount">{{ formatForint(totalToPay()) }} Ft</span>
   </div>
 
-  <h2 class="section-heading">Fizetési mód</h2>
-  <div class="payment-methods">
-    <button
-      type="button"
-      class="method-card"
-      [class.method-card--selected]="paymentMethod() === 'card'"
-      (click)="selectMethod('card')"
-    >
-      <mat-icon>credit_card</mat-icon>
-      Bankkártya
-    </button>
-    <button
-      type="button"
-      class="method-card"
-      [class.method-card--selected]="paymentMethod() === 'revolut'"
-      (click)="selectMethod('revolut')"
-    >
-      <mat-icon>account_balance_wallet</mat-icon>
-      Revolut
-    </button>
-  </div>
-  <p class="field-note">Hamarosan további fizetési módok is elérhetők lesznek.</p>
+  <p class="field-note">A Fizetés gombra kattintva a Stripe biztonságos fizetési oldalára kerülsz.</p>
 
-  <button type="button" class="btn btn--green" [disabled]="!canPay()" (click)="pay()">
-    Fizetés ({{ formatForint(totalToPay()) }} Ft)
+  <button type="button" class="btn btn--green" [disabled]="!canPay() || starting()" (click)="pay()">
+    {{ starting() ? 'Átirányítás...' : 'Fizetés (' + formatForint(totalToPay()) + ' Ft)' }}
   </button>
-  } }
+  } } }
 </div>

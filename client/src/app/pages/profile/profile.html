@@ -40,7 +40,26 @@
         <span class="attendance-date">{{ formatDate(row.tour.startDate) }}</span>
         @if (!row.paid) {
         <span class="unpaid-badge">Nincs kifizetve</span>
-        }
+        } @else {
+        <span class="paid-badge">Fizetve</span>
+        @if (row.paymentMethod === 'cash') {
+        <span class="cash-badge" title="Az előleg készpénzben lett kifizetve">
+          <mat-icon>attach_money</mat-icon>
+        </span>
+        } @else if (row.paymentId) {
+        <!-- credit_card for 'stripe' - the only online method today. Once
+             Payment.method grows a 'revolut' option, add another @if branch
+             here with a Revolut-branded icon rather than replacing this
+             one, same pattern as the cash branch above. -->
+        <a
+          [href]="receiptUrl(row.paymentId)"
+          target="_blank"
+          class="receipt-btn"
+          title="Fizetési igazolás letöltése (bankkártyás fizetés)"
+        >
+          <mat-icon>credit_card</mat-icon>
+        </a>
+        } }
       </li>
       }
     </ul>

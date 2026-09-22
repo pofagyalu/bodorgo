@@ -28,9 +28,20 @@ const config = {
     user: process.env.SENDGRID_USERNAME,
     password: process.env.SENDGRID_PASSWORD,
   },
+  // The advance-payment flow (see paymentController.js) - test mode by
+  // default (a Stripe test secret key, sk_test_...), since this is a real
+  // gateway integration being tried out for the first time, not yet a
+  // live key. Test-mode keys are shown directly on the Stripe dashboard
+  // the moment you sign up - no separate "shop" object or approval step,
+  // unlike some other providers this project tried first. webhookSecret
+  // verifies that a POST to /payments/stripe/webhook genuinely came from
+  // Stripe (see app.js's raw-body handling for that one route, and
+  // utils/stripe.js's constructWebhookEvent) - found on the webhook
+  // endpoint's own page in the Stripe dashboard once one is registered.
   stripe: {
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
   cookie: {
     secret: process.env.COOKIE_SECRET,

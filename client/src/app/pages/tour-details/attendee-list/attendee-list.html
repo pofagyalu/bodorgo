@@ -34,11 +34,24 @@
       }
 
       <td class="paid-col">
-        @if (a.paid) {
-        <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
-        } @else {
-        <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">radio_button_unchecked</mat-icon>
-        }
+        <span class="paid-cell">
+          @if (a.paid) {
+          <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
+          } @else {
+          <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">radio_button_unchecked</mat-icon>
+          @if (isAdmin() && a.advance != null) {
+          <button
+            type="button"
+            class="cash-btn"
+            title="Készpénzes befizetés rögzítése (pl. személyesen átadott előleg)"
+            [disabled]="markingCashPaidId() === a.attendeeId"
+            (click)="markCashPaid(a)"
+          >
+            <mat-icon>attach_money</mat-icon>
+          </button>
+          }
+          }
+        </span>
       </td>
 
       @if (isAdmin()) {

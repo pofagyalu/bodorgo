@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import User from '../models/userModel.js';
 import Reservation from '../models/reservationModel.js';
+import Payment from '../models/paymentModel.js';
 import AppError from '../utils/appError.js';
 
 const filterObj = (obj, ...allowedFields) => {
@@ -162,16 +163,39 @@ export const getMyAttendance = async (req, res) => {
     .populate('tour', 'title slug order startDate imageCover')
     .sort('-createdAt');
 
-  const tours = reservations
-    .filter((r) => r.tour) // guards against a tour that's since been deleted
-    .map((r) => ({
-      tour: r.tour,
-      // This specific attendee's own paid status (see
-      // reservationModel.js's attendeeSchema.paid), not the whole
-      // reservation's - a family reservation can have some members paid
-      // and others not.
-      paid: r.attendees.find((a) => String(a.user) === String(req.user._id))?.paid ?? false,
-    }));
+  const tours = await Promise.all(
+    reservations
+      .filter((r) => r.tour) // guards against a tour that's since been deleted
+      .map(async (r) => {
+        const myAttendee = r.attendees.find((a) => String(a.user) === String(req.user._id));
+        // This specific attendee's own paid status (see
+        // reservationModel.js's attendeeSchema.paid), not the whole
+        // reservation's - a family reservation can have some members
+        // paid and others not.
+        const paid = myAttendee?.paid ?? false;
+
+        // Only set when paid is true AND it was actually paid through
+        // a payment this app tracked (Stripe or an admin's cash entry -
+        // see paymentController.js) - a lot of real paid=true data
+        // predates that (imported historical attendance, or the "0%
+        // advance" auto-mark), which has no such record at all, so this
+        // stays null for those rather than pointing at a Payment
+        // document that doesn't exist.
+        let paymentId = null;
+        let paymentMethod = null;
+        if (paid && myAttendee) {
+          const payment = await Payment.findOne({
+            purpose: 'tourAdvance',
+            status: 'Succeeded',
+            'attendees.attendeeId': myAttendee._id,
+          }).select('_id method');
+          paymentId = payment?._id ?? null;
+          paymentMethod = payment?.method ?? null;
+        }
+
+        return { tour: r.tour, paid, paymentId, paymentMethod };
+      }),
+  );
 
   res.status(200).json({ status: 'success', data: { tours } });
 };

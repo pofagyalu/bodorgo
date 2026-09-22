@@ -16,6 +16,8 @@ import userRouter from './routes/userRoutes.js';
 import systemRouter from './routes/systemRoutes.js';
 import authOidcRouter from './routes/authOidcRoutes.js';
 import documentRouter from './routes/documentRoutes.js';
+import paymentRouter from './routes/paymentRoutes.js';
+import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
 import logger from './logger.js';
@@ -71,6 +73,15 @@ export default function createApp(sessionMiddleware) {
   });
   app.use(limiter);
 
+  // Stripe's webhook signature check needs the exact raw request bytes,
+  // not the parsed object express.json() below would otherwise produce -
+  // this has to be registered before that global body parser, or by the
+  // time the request reaches paymentController.js's stripeWebhook the
+  // raw body is already gone. No requireAuth either - Stripe calls this
+  // server-to-server, verified by signature instead (see
+  // utils/stripe.js's constructWebhookEvent).
+  app.post('/payments/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+
   // Body parser, reading data from body into
   app.use(express.json({ limit: '10kb' }));
   app.use(express.urlencoded({ extended: true }));
@@ -97,6 +108,7 @@ export default function createApp(sessionMiddleware) {
   app.use('/auth', authOidcRouter);
   app.use('/tours', tourRouter);
   app.use('/users', userRouter);
+  app.use('/payments', paymentRouter);
   app.use('/health', systemRouter);
 
   app.use((req, res, next) => {

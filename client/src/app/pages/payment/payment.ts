@@ -1,11 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { MatIconModule } from '@angular/material/icon';
 import { TourService, AttendeePayment, isInMyPaymentGroup } from '../../services/tour';
+import { PaymentService, PaymentStatus } from '../../services/payment';
 import { AuthService } from '../../auth/auth.service';
 import { formatForint } from '../../shared/format';
-
-type PaymentMethod = 'card' | 'revolut';
 
 // Advance-payment page for one family (or a lone attendee with no family
 // on record) at a time - reached via the tour-details page's "Előleg
@@ -17,20 +15,23 @@ type PaymentMethod = 'card' | 'revolut';
 // this lists everyone in the current user's own payment group (self +
 // same familyId), not just the caller themselves.
 //
-// v1 scope (confirmed with the admin): get the UI to a ready-to-click Pay
-// button - no real payment processor is wired up yet (a future pass would
-// add e.g. SimplePay/OTP SimplePay or Barion for card payments, and a
-// real Revolut payment link/API for that option).
+// Pays via Stripe Checkout (test mode for now - see server/src/config.js's
+// stripe block) - Stripe's own hosted page is where the payer actually
+// enters card details, so this page doesn't offer its own method choice
+// (an earlier mockup version did, with a fake "Revolut" option that had
+// no real equivalent on any gateway this project actually tried -
+// removed once this became a real integration rather than a stub).
 @Component({
   selector: 'app-payment',
   standalone: true,
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink],
   templateUrl: './payment.html',
   styleUrl: './payment.scss',
 })
 export class Payment {
   private route = inject(ActivatedRoute);
   private tourService = inject(TourService);
+  private paymentService = inject(PaymentService);
   auth = inject(AuthService);
   readonly formatForint = formatForint;
 
@@ -40,6 +41,13 @@ export class Payment {
   tourTitle = signal('');
   tourSlug = signal('');
 
+  // Set once the browser is redirected back from Stripe's Checkout page
+  // (see the ?paymentId= query param) - while this has a value, the normal
+  // pick-who-to-pay form is replaced by a plain result banner.
+  returningPaymentId = this.route.snapshot.queryParamMap.get('paymentId');
+  checkingResult = signal(false);
+  resultStatus = signal<PaymentStatus | null>(null);
+
   // Everyone in the current user's own payment group (self + same
   // familyId) who actually has an advance amount to pay - not the whole
   // tour roster.
@@ -48,7 +56,7 @@ export class Payment {
   // group, but a family member who's already settled up separately (e.g.
   // bank transfer) can be unchecked so they're left out of this payment.
   selectedAttendeeIds = signal<Set<string>>(new Set());
-  paymentMethod = signal<PaymentMethod | null>(null);
+  starting = signal(false);
 
   constructor() {
     this.tourService.getTour(this.tourId).subscribe({
@@ -68,10 +76,28 @@ export class Payment {
         this.myGroup.set(mine);
         this.selectedAttendeeIds.set(new Set(mine.map((p) => p.attendeeId)));
         this.loading.set(false);
+
+        if (this.returningPaymentId) {
+          this.checkResult(this.returningPaymentId);
+        }
       },
       error: () => {
         this.error.set('A tábor betöltése nem sikerült.');
         this.loading.set(false);
+      },
+    });
+  }
+
+  private checkResult(paymentId: string) {
+    this.checkingResult.set(true);
+    this.paymentService.getPaymentStatus(paymentId).subscribe({
+      next: (res) => {
+        this.resultStatus.set(res.data.status);
+        this.checkingResult.set(false);
+      },
+      error: () => {
+        this.error.set('A fizetés állapotát nem sikerült lekérdezni.');
+        this.checkingResult.set(false);
       },
     });
   }
@@ -99,17 +125,25 @@ export class Payment {
       .reduce((sum, p) => sum + (p.advance ?? 0), 0);
   });
 
-  selectMethod(method: PaymentMethod) {
-    this.paymentMethod.set(method);
-  }
+  canPay = computed(() => this.selectedAttendeeIds().size > 0);
 
-  canPay = computed(() => this.paymentMethod() !== null && this.selectedAttendeeIds().size > 0);
-
-  // Intentionally a no-op for now - see this file's own top comment on
-  // why. A real implementation would kick off the chosen processor's
-  // checkout flow here (redirect, embedded widget, etc.) for
-  // totalToPay()'s amount.
   pay() {
-    // Not implemented yet.
+    if (!this.canPay() || this.starting()) return;
+
+    this.starting.set(true);
+    this.error.set(null);
+    this.paymentService.startTourAdvancePayment(this.tourId, [...this.selectedAttendeeIds()]).subscribe({
+      next: (res) => {
+        // A full navigation, not a client-side route change - the payer
+        // needs to actually leave the site for Stripe's own hosted
+        // Checkout page, then gets redirected straight back here
+        // (success_url/cancel_url, set server-side) once done.
+        window.location.href = res.data.gatewayUrl;
+      },
+      error: (err) => {
+        this.error.set(err?.error?.message ?? 'Hiba történt a fizetés indítása során.');
+        this.starting.set(false);
+      },
+    });
   }
 }

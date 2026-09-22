@@ -167,6 +167,64 @@
   font-weight: 600;
 }
 
+.paid-badge {
+  margin-left: auto;
+  background: #e8f5e9;
+  color: #1b6548;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+// Sits right after .paid-badge (which absorbs the margin-left:auto that
+// pushes both of them to the row's right edge together) - a receipt is
+// only ever downloadable once a real Payment record exists behind it
+// (see profile.ts's receiptUrl), not for every "Fizetve" row.
+.receipt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  // Fixed at the same 1.8rem box as before - this is already the tallest
+  // element in .attendance-row, so the icon inside is sized up but the
+  // box itself isn't, keeping the row's own height unchanged.
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  color: #1b6548;
+
+  mat-icon {
+    font-size: 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  &:hover {
+    background: #e8f5e9;
+  }
+}
+
+// Shown instead of .receipt-btn when an admin recorded the advance as a
+// cash handoff (see attendee-list.ts's markCashPaid) - there's no Stripe
+// receipt to download for these, so an icon-only marker, not a clickable
+// button. Same box/icon size as .receipt-btn so the two line up exactly
+// wherever one replaces the other from row to row.
+.cash-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  color: #8a6d00;
+
+  mat-icon {
+    font-size: 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+}
+
 .users-table {
   width: 100%;
   border-collapse: collapse;

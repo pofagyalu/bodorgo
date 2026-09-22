@@ -3,12 +3,15 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { UserService, AdminUser, AttendedTour, FamilyMember } from '../../services/user';
+import { PaymentService } from '../../services/payment';
 import { AuthService } from '../../auth/auth.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 interface AttendanceRow {
   tour: AttendedTour;
   paid: boolean;
+  paymentId: string | null;
+  paymentMethod: 'stripe' | 'cash' | null;
 }
 
 interface UserFormModel {
@@ -39,6 +42,7 @@ const ROLE_LABELS: Record<string, string> = {
 export class Profile {
   private userService = inject(UserService);
   private notifications = inject(NotificationsService);
+  private paymentService = inject(PaymentService);
   auth = inject(AuthService);
 
   // Bounds for the birthday <input type="date"> fields. Without a `max`,
@@ -249,6 +253,10 @@ export class Profile {
       month: 'long',
       day: 'numeric',
     }).format(new Date(dateStr));
+  }
+
+  receiptUrl(paymentId: string): string {
+    return this.paymentService.receiptUrl(paymentId);
   }
 
   formatDateTime(dateStr: string): string {
