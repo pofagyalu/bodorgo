@@ -21,6 +21,7 @@ import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { shuffledLogoColors } from '../../shared/logo-colors';
+import { formatDrivingDuration } from '../../shared/format';
 import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
@@ -61,6 +62,7 @@ export class TourDetails implements OnDestroy {
   private notifications = inject(NotificationsService);
   auth = inject(AuthService);
   environment = environment;
+  readonly formatDrivingDuration = formatDrivingDuration;
 
   // Picked once per page view (not reactive - these don't need to change
   // while looking at the same tour), one per icon off a shuffled copy of

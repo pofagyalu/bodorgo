@@ -121,10 +121,12 @@ export interface Tour {
     address: string;
   };
   coordinates: string;
-  // Real road distance from Budapest, computed server-side and cached -
-  // undefined until the server has a routing API key configured and this
-  // tour has been saved/updated at least once since.
+  // Real road distance/estimated driving time from Budapest, computed
+  // server-side and cached (one routing API call gives both) - undefined
+  // until the server has a routing API key configured and this tour has
+  // been saved/updated at least once since.
   distanceFromBudapestKm?: number;
+  drivingDurationFromBudapestMinutes?: number;
   startDate: string;
   duration: number;
   participants: number;

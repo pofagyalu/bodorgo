@@ -11,3 +11,17 @@ export function formatForint(amount: number | null): string {
   const digits = Math.abs(rounded).toString();
   return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
+
+// "kb. 2 óra 45 perc" / "kb. 45 perc" / "kb. 2 óra" - "kb." (approx.)
+// since this is a routing estimate (see distance.js server-side), not a
+// promise - traffic/weather/actual driving style all vary. Mirrors
+// server/src/utils/distance.js's formatDrivingDuration (used in the PDF)
+// so the wording matches wherever it's shown.
+export function formatDrivingDuration(minutes: number | null | undefined): string {
+  if (minutes == null) return '';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `kb. ${mins} perc`;
+  if (mins === 0) return `kb. ${hours} óra`;
+  return `kb. ${hours} óra ${mins} perc`;
+}

@@ -6,6 +6,7 @@ import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
 import sendResendEmail from '../utils/resendEmail.js';
+import { formatDrivingDuration } from '../utils/distance.js';
 import logger from '../logger.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
@@ -271,7 +272,11 @@ async function renderTourPdfDocument(doc, tour, ownerName) {
     COLORS.blue,
     'directions_car',
     tour.distanceFromBudapestKm != null
-      ? `Táv Budapesttől: ${tour.distanceFromBudapestKm} km`
+      ? `Táv Budapesttől: ${tour.distanceFromBudapestKm} km${
+          tour.drivingDurationFromBudapestMinutes != null
+            ? ` (${formatDrivingDuration(tour.drivingDurationFromBudapestMinutes)})`
+            : ''
+        }`
       : 'Táv Budapesttől: nincs kiszámítva',
   );
   doc.y += 6;

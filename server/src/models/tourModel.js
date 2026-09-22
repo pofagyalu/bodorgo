@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import slugify from 'slugify';
-import { computeDrivingDistanceKm, BUDAPEST_CENTER } from '../utils/distance.js';
+import { computeDrivingRoute, BUDAPEST_CENTER } from '../utils/distance.js';
 import logger from '../logger.js';
 
 const { Schema } = mongoose;
@@ -37,6 +37,12 @@ const tourSchema = new Schema(
     // once via OpenRouteService (see pre('save') below) and cached here -
     // never recomputed unless location.coordinates actually changes.
     distanceFromBudapestKm: {
+      type: Number,
+    },
+    // Same OpenRouteService call as distanceFromBudapestKm above (one
+    // request returns both), estimated real driving time rather than a
+    // straight-line guess - see pre('save') below.
+    drivingDurationFromBudapestMinutes: {
       type: Number,
     },
     startDate: {
@@ -306,12 +312,14 @@ tourSchema.pre('save', async function (next) {
     this.location?.coordinates?.length === 2
   ) {
     try {
-      this.distanceFromBudapestKm = await computeDrivingDistanceKm(
-        BUDAPEST_CENTER,
-        { lat: this.location.coordinates[1], lng: this.location.coordinates[0] },
-      );
+      const route = await computeDrivingRoute(BUDAPEST_CENTER, {
+        lat: this.location.coordinates[1],
+        lng: this.location.coordinates[0],
+      });
+      this.distanceFromBudapestKm = route?.distanceKm;
+      this.drivingDurationFromBudapestMinutes = route?.durationMinutes;
     } catch (err) {
-      logger.error(`Failed to compute distance from Budapest: ${err.message}`);
+      logger.error(`Failed to compute distance/duration from Budapest: ${err.message}`);
     }
   }
   next();

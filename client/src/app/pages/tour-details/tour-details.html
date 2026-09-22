@@ -87,7 +87,12 @@
       } @if (t.distanceFromBudapestKm != null) {
       <div class="info-line">
         <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
-        <span>{{ t.distanceFromBudapestKm }} km Budapesttől</span>
+        <span
+          >{{ t.distanceFromBudapestKm }} km Budapesttől
+          @if (t.drivingDurationFromBudapestMinutes != null) {
+          ({{ formatDrivingDuration(t.drivingDurationFromBudapestMinutes) }})
+          }</span
+        >
       </div>
       } @else {
       <div class="info-line">
