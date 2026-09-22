@@ -43,13 +43,13 @@ function user(id, name, overrides = {}) {
   check('everyone eligible gets exactly one email each', emails.length === 3);
 
   const toLajos = emails.find((e) => e.to === lajos.email);
-  check('Lajos (the registrant, also attending) gets the "gratulálunk...magad és" wording', toLajos.text.includes('Gratulálunk, Lajos! Bebiztosítottad a helyet a magad és az alábbi családtagok számára'));
+  check('Lajos (the registrant, also attending) gets the "gratulálunk...magad és" wording', toLajos.text.includes('Gratulálunk, Lajos!\n\nBebiztosítottad a helyet a magad és az alábbi családtagok számára'));
   check('...listing both Enikő and Janka', toLajos.text.includes('- Enikő') && toLajos.text.includes('- Janka'));
 
   const toEniko = emails.find((e) => e.to === eniko.email);
   check(
     'Enikő (registered by Lajos, who is also attending) gets the "benevezett magán kívül" wording',
-    toEniko.text.includes('Gratulálunk, Enikő! Lajos benevezett magán kívül téged és még az alábbi családtagokat is'),
+    toEniko.text.includes('Gratulálunk, Enikő!\n\nLajos benevezett magán kívül téged és még az alábbi családtagokat is'),
   );
   check('...listing Janka but not Lajos himself (already named) or herself', toEniko.text.includes('- Janka') && !toEniko.text.includes('- Lajos') && !toEniko.text.includes('- Enikő'));
 

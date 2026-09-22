@@ -63,11 +63,11 @@ function registrationConfirmationEmailBody(
   let intro;
   let introHtml;
   if (registrantIsRecipient && registrantIsAttendee && otherNames.length > 0) {
-    intro = `Gratulálunk, ${recipientName}! Bebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${tourTitle}" táborra:\n\n${otherNames.map((n) => `- ${n}`).join('\n')}`;
-    introHtml = `<p>Gratulálunk, ${recipientName}! Bebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${tourTitle}" táborra:</p><ul>${otherNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+    intro = `Gratulálunk, ${recipientName}!\n\nBebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${tourTitle}" táborra:\n\n${otherNames.map((n) => `- ${n}`).join('\n')}`;
+    introHtml = `<p>Gratulálunk, ${recipientName}!</p><p>Bebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${tourTitle}" táborra:</p><ul>${otherNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
   } else if (registrantIsRecipient && registrantIsAttendee) {
-    intro = `Gratulálunk, ${recipientName}! Bebiztosítottad a helyet magadnak a(z) "${tourTitle}" táborra.`;
-    introHtml = `<p>Gratulálunk, ${recipientName}! Bebiztosítottad a helyet magadnak a(z) "${tourTitle}" táborra.</p>`;
+    intro = `Gratulálunk, ${recipientName}!\n\nBebiztosítottad a helyet magadnak a(z) "${tourTitle}" táborra.`;
+    introHtml = `<p>Gratulálunk, ${recipientName}!</p><p>Bebiztosítottad a helyet magadnak a(z) "${tourTitle}" táborra.</p>`;
   } else if (registrantIsRecipient) {
     // Registered only other people (e.g. an admin signing up a member who
     // called in) - not attending themselves, so no "gratulálunk" framing
@@ -86,11 +86,11 @@ function registrationConfirmationEmailBody(
     const remainingNames = otherNames.filter((n) => n !== registrantName);
     const verb = registrantIsAttendee ? 'benevezett magán kívül' : 'jelentkeztetett';
     if (remainingNames.length > 0) {
-      intro = `Gratulálunk, ${recipientName}! ${registrantName} ${verb} téged és még az alábbi családtagokat is a(z) "${tourTitle}" táborra:\n\n${remainingNames.map((n) => `- ${n}`).join('\n')}`;
-      introHtml = `<p>Gratulálunk, ${recipientName}! ${registrantName} ${verb} téged és még az alábbi családtagokat is a(z) "${tourTitle}" táborra:</p><ul>${remainingNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+      intro = `Gratulálunk, ${recipientName}!\n\n${registrantName} ${verb} téged és még az alábbi családtagokat is a(z) "${tourTitle}" táborra:\n\n${remainingNames.map((n) => `- ${n}`).join('\n')}`;
+      introHtml = `<p>Gratulálunk, ${recipientName}!</p><p>${registrantName} ${verb} téged és még az alábbi családtagokat is a(z) "${tourTitle}" táborra:</p><ul>${remainingNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
     } else {
-      intro = `Gratulálunk, ${recipientName}! ${registrantName} ${verb} téged is a(z) "${tourTitle}" táborra.`;
-      introHtml = `<p>Gratulálunk, ${recipientName}! ${registrantName} ${verb} téged is a(z) "${tourTitle}" táborra.</p>`;
+      intro = `Gratulálunk, ${recipientName}!\n\n${registrantName} ${verb} téged is a(z) "${tourTitle}" táborra.`;
+      introHtml = `<p>Gratulálunk, ${recipientName}!</p><p>${registrantName} ${verb} téged is a(z) "${tourTitle}" táborra.</p>`;
     }
   }
 
