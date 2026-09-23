@@ -15,7 +15,13 @@ export interface ClubDocument {
 // Matches server/src/models/clubDocumentModel.js's DOCUMENT_CATEGORIES
 // exactly - kept here too since the client picks the upload form's
 // category dropdown before the server ever validates it.
-export const DOCUMENT_CATEGORIES = ['Alapdokumentumok', 'Éves hivatalos dokumentumok', 'Egyéb'];
+export const DOCUMENT_CATEGORIES = [
+  'Alapdokumentumok',
+  'Éves hivatalos dokumentumok',
+  '1%-os felajánlások',
+  'Számlák',
+  'Egyéb',
+];
 
 interface DocumentsResponse {
   status: string;

@@ -7,7 +7,13 @@ const { Schema } = mongoose;
 // upload form's category dropdown predictable, extensible later with
 // just a code change here (clubDocumentController.js validates against
 // this, not a schema-level enum).
-export const DOCUMENT_CATEGORIES = ['Alapdokumentumok', 'Éves hivatalos dokumentumok', 'Egyéb'];
+export const DOCUMENT_CATEGORIES = [
+  'Alapdokumentumok',
+  'Éves hivatalos dokumentumok',
+  '1%-os felajánlások',
+  'Számlák',
+  'Egyéb',
+];
 
 // A club document (alapító okirat, éves adóbevallás, etc.) - viewable/
 // downloadable by every logged-in member, but only an admin can upload or
