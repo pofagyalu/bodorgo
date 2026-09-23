@@ -8,6 +8,9 @@
       <th>Előleg</th>
       <th>Fizetendő</th>
       }
+      @if (hasOptionalPrograms) {
+      <th class="optional-col" title="Opciós programok - mindig helyben fizetendő, csak tájékoztató jellegű">Opciók</th>
+      }
       <th class="paid-col"></th>
       @if (isAdmin()) {
       <th></th>
@@ -36,6 +39,13 @@
       <td>{{ formatForint(a.totalPrice) }} Ft</td>
       <td>{{ formatForint(a.advance) }} Ft</td>
       <td>{{ formatForint(a.rest) }} Ft</td>
+      }
+      @if (hasOptionalPrograms) {
+      <td class="optional-col">
+        @if (a.optionalProgramsCost > 0) {
+        {{ formatForint(a.optionalProgramsCost) }} Ft
+        }
+      </td>
       }
 
       <td class="paid-col">
@@ -112,6 +122,11 @@
       <td class="family-value-cell"><span class="family-value">{{ formatForint(familySubtotal(group).advance) }} Ft</span></td>
       <td class="family-value-cell"><span class="family-value">{{ formatForint(familySubtotal(group).rest) }} Ft</span></td>
       }
+      @if (hasOptionalPrograms) {
+      <td class="optional-col family-value-cell">
+        <span class="family-value">{{ formatForint(familySubtotal(group).optionalProgramsCost) }} Ft</span>
+      </td>
+      }
       <td class="paid-col family-value-cell">
         <span class="family-value family-paid-count"
           >{{ familySubtotal(group).paidCount }}/{{ familySubtotal(group).memberCount }} fizetve</span
@@ -131,6 +146,9 @@
       <td>{{ formatForint(totals.totalPrice) }} Ft</td>
       <td>{{ formatForint(totals.advance) }} Ft</td>
       <td>{{ formatForint(totals.rest) }} Ft</td>
+      @if (hasOptionalPrograms) {
+      <td class="optional-col">{{ formatForint(totalOptionalProgramsCost) }} Ft</td>
+      }
       <td class="paid-col"></td>
       @if (isAdmin()) {
       <td></td>

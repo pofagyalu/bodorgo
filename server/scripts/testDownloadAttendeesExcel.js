@@ -34,6 +34,17 @@ if (leftover) {
   await Tour.deleteOne({ _id: leftover._id });
 }
 
+const familyId = new mongoose.Types.ObjectId();
+const zoltanId = new mongoose.Types.ObjectId();
+const ilonaId = new mongoose.Types.ObjectId();
+const soloId = new mongoose.Types.ObjectId();
+
+await User.create([
+  { _id: zoltanId, sub: `test-${zoltanId}`, name: 'Nagy Zoltán', role: 'member', familyId },
+  { _id: ilonaId, sub: `test-${ilonaId}`, name: 'Nagy Ilona', role: 'member', familyId },
+  { _id: soloId, sub: `test-${soloId}`, name: 'Kis Anna', role: 'member' },
+]);
+
 const tour = await Tour.create({
   order: TEST_ORDER,
   title: 'ZZ Test Tour (Excel export)',
@@ -46,18 +57,35 @@ const tour = await Tour.create({
   imageCover: `tour-${TEST_ORDER}-cover.jpg`,
   accommodationPricePerNight: 1000,
   advancePaymentPercentage: 20,
+  // Matches the real reported case: "Reggeli felnőtt" picked on two
+  // separate days should show as two separate columns (day 1 AND day 2),
+  // never merged into one - Zoltán joins both, Ilona and Anna join
+  // neither.
+  schedule: [
+    {
+      day: 1,
+      time: '08:00',
+      description: 'Reggeli felnőtt',
+      isOptional: true,
+      extraCost: 2600,
+      participants: [{ user: zoltanId, name: 'Nagy Zoltán' }],
+    },
+    {
+      day: 2,
+      time: '08:00',
+      description: 'Reggeli felnőtt',
+      isOptional: true,
+      extraCost: 2600,
+      participants: [{ user: zoltanId, name: 'Nagy Zoltán' }],
+    },
+    {
+      day: 1,
+      time: '09:00',
+      description: 'Szabadidő',
+      // Not optional - a plain schedule item, must never get its own column.
+    },
+  ],
 });
-
-const familyId = new mongoose.Types.ObjectId();
-const zoltanId = new mongoose.Types.ObjectId();
-const ilonaId = new mongoose.Types.ObjectId();
-const soloId = new mongoose.Types.ObjectId();
-
-await User.create([
-  { _id: zoltanId, sub: `test-${zoltanId}`, name: 'Nagy Zoltán', role: 'member', familyId },
-  { _id: ilonaId, sub: `test-${ilonaId}`, name: 'Nagy Ilona', role: 'member', familyId },
-  { _id: soloId, sub: `test-${soloId}`, name: 'Kis Anna', role: 'member' },
-]);
 
 const familyReservation = await Reservation.create({
   tour: tour._id,
@@ -112,7 +140,10 @@ try {
 
   // Row 4 is the column header row (1: title, 2: dates, 3: generated-at, 4: headers)
   const headerValues = sheet.getRow(4).values.filter(Boolean);
-  check('header row lists the expected columns, no "paid" column', headerValues.join('|') === 'Név|Család|Éjszakák|Teljes ár|Előleg|Fizetendő');
+  check(
+    'header row lists accommodation columns (no "paid" column) plus one column PER optional event occurrence, not merged by name',
+    headerValues.join('|') === 'Név|Család|Éjszakák|Teljes ár|Előleg|Fizetendő|Reggeli felnőtt (1. nap)|Reggeli felnőtt (2. nap)',
+  );
 
   // Find each attendee's own row and the family subtotal row by scanning column A.
   const rowsByName = new Map();
@@ -129,6 +160,15 @@ try {
   })());
   check('the solo attendee (Kis Anna) has no family label', rowsByName.get('Kis Anna').getCell(2).value === '');
 
+  check(
+    "Nagy Zoltán's row shows 2600 Ft in BOTH day columns (joined both occurrences)",
+    rowsByName.get('Nagy Zoltán').getCell(7).value === 2600 && rowsByName.get('Nagy Zoltán').getCell(8).value === 2600,
+  );
+  check(
+    "Nagy Ilona (didn't join either breakfast) has blank event columns, not 0",
+    rowsByName.get('Nagy Ilona').getCell(7).value == null && rowsByName.get('Nagy Ilona').getCell(8).value == null,
+  );
+
   const familySubtotalRow = rowsByName.get('Nagy család összesen');
   check('a family subtotal row exists for the 2-person family', !!familySubtotalRow);
   check(
@@ -136,6 +176,10 @@ try {
     familySubtotalRow.getCell(4).value === 1334 && familySubtotalRow.getCell(5).value === 268 && familySubtotalRow.getCell(6).value === 1066,
   );
   check('the family subtotal row is bold', familySubtotalRow.getCell(1).font?.bold === true);
+  check(
+    "the family's event columns sum only Zoltán's participation (2600 each), Ilona contributed nothing",
+    familySubtotalRow.getCell(7).value === 2600 && familySubtotalRow.getCell(8).value === 2600,
+  );
 
   check('no subtotal row was created for the solo attendee', !rowsByName.has('Kis Anna összesen') && !rowsByName.has('Egyedülálló összesen'));
 
@@ -144,6 +188,10 @@ try {
   check(
     'the grand total matches the tour\'s own declared totals (2000/400/1600), not the inflated sum of rounded-up rows',
     grandTotalRow.getCell(4).value === 2000 && grandTotalRow.getCell(5).value === 400 && grandTotalRow.getCell(6).value === 1600,
+  );
+  check(
+    'the grand total also sums each event column across every attendee (only Zoltán joined, so 2600 each)',
+    grandTotalRow.getCell(7).value === 2600 && grandTotalRow.getCell(8).value === 2600,
   );
 } finally {
   await User.deleteMany({ _id: { $in: [zoltanId, ilonaId, soloId] } });

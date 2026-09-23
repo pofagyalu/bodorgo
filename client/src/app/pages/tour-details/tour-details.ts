@@ -26,7 +26,7 @@ import { formatDrivingDuration } from '../../shared/format';
 import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
-import { AttendeeList } from './attendee-list/attendee-list';
+import { AttendeeList, AttendeeListRow as AttendeeListPayment } from './attendee-list/attendee-list';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 interface DayGroup {
@@ -181,12 +181,37 @@ export class TourDetails implements OnDestroy {
     return `assets/images/weather/${TourDetails.WEATHER_ICONS[condition]}`;
   }
 
+  // How much each attendee owes across every optional, extra-cost
+  // schedule event they joined (e.g. picking "Reggeli felnőtt" on both
+  // Friday and Saturday sums both occurrences) - purely informational
+  // (see attendee-list.ts's own optionalProgramsCost column), since these
+  // are always settled on-site in person, never through this app.
+  // Matched by userId (the linked account), not attendeeId (this
+  // reservation's own attendee subdocument id) - schedule participants
+  // are recorded per User, same person can be an attendee via different
+  // reservations across tours but always the same User underneath.
+  private optionalProgramsCostByUserId = computed<Map<string, number>>(() => {
+    const schedule = this.tour()?.schedule ?? [];
+    const costs = new Map<string, number>();
+    for (const event of schedule) {
+      if (!event.isOptional || !event.extraCost) continue;
+      for (const p of event.participants ?? []) {
+        costs.set(p.user, (costs.get(p.user) ?? 0) + event.extraCost);
+      }
+    }
+    return costs;
+  });
+
   // paid comes straight from the API now (see AttendeePayment's own
   // comment) - this specific person's own status, not the whole
-  // reservation's, so no merging needed here beyond the display sort.
-  allAttendees = computed<AttendeePayment[]>(() => {
+  // reservation's, so no merging needed here beyond the display sort and
+  // folding in each person's own optional-programs total above.
+  allAttendees = computed<AttendeeListPayment[]>(() => {
     if (!this.tour()?.reservations) return [];
-    return [...this.attendeePayments()].sort((a, b) => a.name.localeCompare(b.name, 'hu'));
+    const programCosts = this.optionalProgramsCostByUserId();
+    return [...this.attendeePayments()]
+      .map((p) => ({ ...p, optionalProgramsCost: (p.userId && programCosts.get(p.userId)) || 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'hu'));
   });
 
   // Every user id already registered as an attendee (by anyone's

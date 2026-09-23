@@ -40,10 +40,26 @@ function familyLabel(members) {
   return 'Család';
 }
 
+// Unlike the on-screen attendee list (which only shows one combined
+// "Opciók" total - see attendee-list.ts), the export gets one column per
+// optional event, matched by userId (the linked account), not attendeeId
+// (this reservation's own attendee subdocument id) - schedule
+// participants are recorded per User.
+function eventCostForAttendee(event, userId) {
+  if (!userId) return null;
+  const isParticipant = (event.participants ?? []).some((p) => String(p.user) === userId);
+  return isParticipant ? event.extraCost : null;
+}
+
+function eventColumnLabel(event) {
+  return `${event.description} (${event.day}. nap)`;
+}
+
 const MONEY_FORMAT = '#,##0" Ft"';
 const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF445A67' } };
 const FAMILY_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCEAF3' } };
 const TOTAL_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
+const BASE_COLUMNS = ['Név', 'Család', 'Éjszakák', 'Teljes ár', 'Előleg', 'Fizetendő'];
 
 // Admin-only - a real, self-contained spreadsheet meant to be handed to
 // the house owner: every attendee's own name/nights/price/advance/rest,
@@ -58,6 +74,12 @@ const TOTAL_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEE
 // definition, already settled their Előleg (advance) or been marked
 // exempt, since that's a precondition of attending at all. A per-row
 // "Fizetve: Igen" would just be constant noise, not real information.
+//
+// Unlike the accommodation columns, every optional schedule event (e.g.
+// an extra breakfast) gets its OWN column here rather than one combined
+// total - see eventCostForAttendee above - since the house owner needs
+// to know exactly what was ordered per person per day, not just a lump
+// sum.
 export const downloadAttendeesExcel = async (req, res) => {
   const query = mongoose.isValidObjectId(req.params.id) ? { _id: req.params.id } : { slug: req.params.id };
   const tour = await Tour.findOne(query).populate({
@@ -71,6 +93,10 @@ export const downloadAttendeesExcel = async (req, res) => {
   const { attendeePayments, totals } = computeAttendeePayments(tour, tour.reservations);
   const hasPricing = totals !== null;
   const families = groupByFamily(attendeePayments);
+  const optionalEvents = (tour.schedule ?? [])
+    .filter((e) => e.isOptional && e.extraCost)
+    .sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
+  const totalColumns = BASE_COLUMNS.length + optionalEvents.length;
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Bódorgó';
@@ -78,19 +104,19 @@ export const downloadAttendeesExcel = async (req, res) => {
 
   const sheet = workbook.addWorksheet('Résztvevők', { views: [{ state: 'frozen', ySplit: 4 }] });
 
-  sheet.mergeCells('A1:F1');
-  sheet.getCell('A1').value = tour.title;
-  sheet.getCell('A1').font = { bold: true, size: 14 };
+  sheet.mergeCells(1, 1, 1, totalColumns);
+  sheet.getCell(1, 1).value = tour.title;
+  sheet.getCell(1, 1).font = { bold: true, size: 14 };
 
-  sheet.mergeCells('A2:F2');
-  sheet.getCell('A2').value = `${formatHu(tour.startDate)} · ${tour.duration} nap / ${tour.duration - 1} éjszaka`;
-  sheet.getCell('A2').font = { color: { argb: 'FF666666' } };
+  sheet.mergeCells(2, 1, 2, totalColumns);
+  sheet.getCell(2, 1).value = `${formatHu(tour.startDate)} · ${tour.duration} nap / ${tour.duration - 1} éjszaka`;
+  sheet.getCell(2, 1).font = { color: { argb: 'FF666666' } };
 
-  sheet.mergeCells('A3:F3');
-  sheet.getCell('A3').value = `Készítve: ${formatHu(new Date())}`;
-  sheet.getCell('A3').font = { color: { argb: 'FF999999' }, size: 9 };
+  sheet.mergeCells(3, 1, 3, totalColumns);
+  sheet.getCell(3, 1).value = `Készítve: ${formatHu(new Date())}`;
+  sheet.getCell(3, 1).font = { color: { argb: 'FF999999' }, size: 9 };
 
-  const headerRow = sheet.addRow(['Név', 'Család', 'Éjszakák', 'Teljes ár', 'Előleg', 'Fizetendő']);
+  const headerRow = sheet.addRow([...BASE_COLUMNS, ...optionalEvents.map(eventColumnLabel)]);
   headerRow.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     cell.fill = HEADER_FILL;
@@ -103,7 +129,10 @@ export const downloadAttendeesExcel = async (req, res) => {
     { key: 'totalPrice', width: 14 },
     { key: 'advance', width: 14 },
     { key: 'rest', width: 14 },
+    ...optionalEvents.map((_, i) => ({ key: `event${i}`, width: 20 })),
   ];
+
+  const EVENT_COL_START = BASE_COLUMNS.length + 1;
 
   for (const members of families) {
     const label = familyLabel(members);
@@ -115,12 +144,16 @@ export const downloadAttendeesExcel = async (req, res) => {
         hasPricing ? r.totalPrice : null,
         hasPricing ? r.advance : null,
         hasPricing ? r.rest : null,
+        ...optionalEvents.map((event) => eventCostForAttendee(event, r.userId)),
       ]);
       if (hasPricing) {
         row.getCell(4).numFmt = MONEY_FORMAT;
         row.getCell(5).numFmt = MONEY_FORMAT;
         row.getCell(6).numFmt = MONEY_FORMAT;
       }
+      optionalEvents.forEach((_, i) => {
+        row.getCell(EVENT_COL_START + i).numFmt = MONEY_FORMAT;
+      });
     }
 
     if (members.length > 1) {
@@ -131,6 +164,10 @@ export const downloadAttendeesExcel = async (req, res) => {
         hasPricing ? members.reduce((sum, m) => sum + (m.totalPrice ?? 0), 0) : null,
         hasPricing ? members.reduce((sum, m) => sum + (m.advance ?? 0), 0) : null,
         hasPricing ? members.reduce((sum, m) => sum + (m.rest ?? 0), 0) : null,
+        ...optionalEvents.map((event) => {
+          const sum = members.reduce((s, m) => s + (eventCostForAttendee(event, m.userId) ?? 0), 0);
+          return sum > 0 ? sum : null;
+        }),
       ]);
       subtotalRow.eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FF1A4971' } };
@@ -141,11 +178,25 @@ export const downloadAttendeesExcel = async (req, res) => {
         subtotalRow.getCell(5).numFmt = MONEY_FORMAT;
         subtotalRow.getCell(6).numFmt = MONEY_FORMAT;
       }
+      optionalEvents.forEach((_, i) => {
+        subtotalRow.getCell(EVENT_COL_START + i).numFmt = MONEY_FORMAT;
+      });
     }
   }
 
   if (hasPricing) {
-    const grandTotalRow = sheet.addRow(['Mindösszesen', '', '', totals.totalPrice, totals.advance, totals.rest]);
+    const grandTotalRow = sheet.addRow([
+      'Mindösszesen',
+      '',
+      '',
+      totals.totalPrice,
+      totals.advance,
+      totals.rest,
+      ...optionalEvents.map((event) => {
+        const sum = attendeePayments.reduce((s, m) => s + (eventCostForAttendee(event, m.userId) ?? 0), 0);
+        return sum > 0 ? sum : null;
+      }),
+    ]);
     grandTotalRow.eachCell((cell) => {
       cell.font = { bold: true };
       cell.fill = TOTAL_FILL;
@@ -153,6 +204,9 @@ export const downloadAttendeesExcel = async (req, res) => {
     grandTotalRow.getCell(4).numFmt = MONEY_FORMAT;
     grandTotalRow.getCell(5).numFmt = MONEY_FORMAT;
     grandTotalRow.getCell(6).numFmt = MONEY_FORMAT;
+    optionalEvents.forEach((_, i) => {
+      grandTotalRow.getCell(EVENT_COL_START + i).numFmt = MONEY_FORMAT;
+    });
   }
 
   const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}-resztvevok.xlsx`;

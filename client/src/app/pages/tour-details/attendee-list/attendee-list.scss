@@ -45,6 +45,25 @@
   color: #ccc;
 }
 
+// Optional schedule events (e.g. an extra breakfast) - a genuinely
+// different kind of charge from the accommodation columns next to it
+// (Teljes ár/Előleg/Fizetendő): always settled on-site in person, never
+// through this app, so a distinct light-orange tint keeps it from being
+// read as part of the accommodation math. A stronger border-bottom than
+// the table's own default #eee, which nearly disappears against this
+// tint.
+.optional-col {
+  background: #fff3e0;
+  color: #c66900;
+}
+
+// Specificity needs to beat .attendee-table td's own border-bottom (0,1,1)
+// - a plain .optional-col rule (0,1,0) would lose that fight and the
+// default #eee (invisible against this tint) would win instead.
+.attendee-table .optional-col {
+  border-bottom-color: #ffcc80;
+}
+
 .totals-row td {
   font-weight: 700;
   color: #333;

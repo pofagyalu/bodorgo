@@ -24,6 +24,11 @@ export interface AttendeeListRow {
   // visibility below.
   paymentId: string | null;
   paymentMethod: 'stripe' | 'cash' | null;
+  // Sum of every optional, extra-cost schedule event this person joined
+  // (see tour-details.ts's own optionalProgramsCostByUserId) - always
+  // settled on-site in person, never through this app, so this is purely
+  // informational: 0 when they joined none, or the tour has none at all.
+  optionalProgramsCost: number;
 }
 
 // A row plus which alternating family "stripe" it belongs to (0 or 1),
@@ -50,6 +55,7 @@ export interface FamilySubtotal {
   rest: number;
   paidCount: number;
   memberCount: number;
+  optionalProgramsCost: number;
 }
 
 // The tour-details "Résztvevők" list, doing double duty: a plain roster
@@ -84,6 +90,17 @@ export class AttendeeList {
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   readonly formatForint = formatForint;
   hasPricing = computed(() => this.totals !== null);
+
+  // Only shown at all once at least one attendee actually owes something
+  // for an optional event - a tour with no such events (the common case)
+  // shouldn't carry an always-empty column.
+  get hasOptionalPrograms(): boolean {
+    return this.attendees.some((a) => a.optionalProgramsCost > 0);
+  }
+
+  get totalOptionalProgramsCost(): number {
+    return this.attendees.reduce((sum, a) => sum + a.optionalProgramsCost, 0);
+  }
 
   // Grouped by family (so relatives sit together and can find themselves
   // at a glance, and so payment status is easy to eyeball per family)
@@ -150,6 +167,7 @@ export class AttendeeList {
       rest: group.members.reduce((sum, m) => sum + (m.rest ?? 0), 0),
       paidCount: group.members.filter((m) => m.paid).length,
       memberCount: group.members.length,
+      optionalProgramsCost: group.members.reduce((sum, m) => sum + m.optionalProgramsCost, 0),
     };
   }
 
