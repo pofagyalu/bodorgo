@@ -465,6 +465,25 @@
   }
 }
 
+// A third, admin-only kind of action (bulk-emailing every eligible
+// attendee, not just yourself) - a blue tint keeps it visually distinct
+// from both the orange uploaded-file cards and the green self-service
+// featured cards above. Short label only (see tour-details.html) - the
+// full explanation lives in the title tooltip instead of a second caption
+// line, unlike the featured cards' own two-line style.
+.extra-doc-card--admin {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+
+  mat-icon {
+    color: #1565c0;
+  }
+
+  &:hover {
+    background: #bbdefb;
+  }
+}
+
 // Two-line label for the featured card: the feature name, then a smaller
 // muted "action" caption (icon + verb) instead of a hover-only tooltip -
 // discoverable without hovering, per the admin's request.

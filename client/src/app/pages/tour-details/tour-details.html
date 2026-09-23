@@ -253,7 +253,18 @@
           {{ emailingPdf() ? 'Küldés...' : 'email' }}</span
         >
       </button>
-      @if ((t.extraDocuments ?? []).length > 0) {
+      @if (auth.user()?.role === 'admin') {
+      <button
+        type="button"
+        class="extra-doc-card extra-doc-card--admin"
+        title="Programfüzet küldése e-mailben minden erre jogosult résztvevőnek"
+        [disabled]="emailingAttendees()"
+        (click)="askEmailAttendees()"
+      >
+        <mat-icon>forward_to_inbox</mat-icon>
+        <span>{{ emailingAttendees() ? 'Küldés...' : 'Küldés mindenkinek' }}</span>
+      </button>
+      } @if ((t.extraDocuments ?? []).length > 0) {
       <span class="extra-docs-divider"></span>
       }
       @for (doc of t.extraDocuments ?? []; track doc._id) {
@@ -290,17 +301,6 @@
       <span class="full-badge">Megtelt</span>
       }
       <span class="participants-heading-actions">
-        @if (auth.user()?.role === 'admin') {
-        <button
-          type="button"
-          class="icon-btn"
-          title="Programfüzet küldése e-mailben minden erre jogosult résztvevőnek"
-          [disabled]="emailingAttendees()"
-          (click)="askEmailAttendees()"
-        >
-          <mat-icon>forward_to_inbox</mat-icon>
-        </button>
-        }
         <button
           type="button"
           class="toggle-btn"
