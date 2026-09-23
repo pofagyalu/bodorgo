@@ -244,6 +244,7 @@ export const me = async (req, res) => {
     role: user.role,
     familyId: user.familyId,
     wantsEmailNotifications: user.wantsEmailNotifications,
+    address: user.address,
   });
 };
 

@@ -13,6 +13,7 @@ import {
   TourImage,
   AttendeePayment,
   PaymentTotals,
+  DistanceInfo,
   ExtraDocument,
   attendeeUserId,
   isInMyPaymentGroup,
@@ -82,6 +83,7 @@ export class TourDetails implements OnDestroy {
   // is simple and this is a rare admin action, not a hot path.
   attendeePayments = signal<AttendeePayment[]>([]);
   paymentTotals = signal<PaymentTotals | null>(null);
+  distanceInfo = signal<DistanceInfo | null>(null);
   loadError = signal<string | null>(null);
   signingUp = signal(false);
   signUpError = signal<string | null>(null);
@@ -316,6 +318,7 @@ export class TourDetails implements OnDestroy {
         this.participantCount.set(res.data.participantCount);
         this.attendeePayments.set(res.data.attendeePayments);
         this.paymentTotals.set(res.data.paymentTotals);
+        this.distanceInfo.set(res.data.distanceInfo);
       },
       error: () => {
         this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');

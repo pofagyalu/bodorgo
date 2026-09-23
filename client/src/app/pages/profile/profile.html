@@ -21,6 +21,30 @@
         <span class="toggle-thumb"></span>
       </button>
     </p>
+
+    <div class="address-form">
+      <h3 class="address-form-heading">
+        Otthoni cím
+        <span class="empty-note">(a táborok saját otthonodtól mért távolságához - üresen hagyva Budapest számít)</span>
+      </h3>
+      <div class="address-form-fields">
+        <input type="text" [(ngModel)]="myAddressForm.zipCode" placeholder="Irányítószám" />
+        <input type="text" [(ngModel)]="myAddressForm.city" placeholder="Város" />
+        <input type="text" [(ngModel)]="myAddressForm.street" placeholder="Utca, házszám" />
+        <input type="text" [(ngModel)]="myAddressForm.country" placeholder="Ország" />
+        <button type="button" class="btn btn--green" [disabled]="savingAddress()" (click)="saveAddress()">
+          {{ savingAddress() ? 'Mentés...' : 'Mentés' }}
+        </button>
+      </div>
+      @if (addressResolved() === true) {
+      <p class="address-resolved-note">✔ A cím sikeresen beazonosítva.</p>
+      } @else if (addressResolved() === false) {
+      <p class="address-unresolved-note">
+        ⚠ Nem sikerült pontosan beazonosítani ezt a címet - próbáld a hivatalos (pl. angol vagy román) városnevet is,
+        ha külföldi cím.
+      </p>
+      }
+    </div>
   </section>
 
   <section class="profile-section">
@@ -304,6 +328,18 @@
           }
           }
         </tr>
+        @if (editingUserId() === u._id) {
+        <tr class="address-edit-row">
+          <td colspan="10">
+            <div class="address-form-fields">
+              <input type="text" [(ngModel)]="editUserForm.address.zipCode" placeholder="Irányítószám" />
+              <input type="text" [(ngModel)]="editUserForm.address.city" placeholder="Város" />
+              <input type="text" [(ngModel)]="editUserForm.address.street" placeholder="Utca, házszám" />
+              <input type="text" [(ngModel)]="editUserForm.address.country" placeholder="Ország" />
+            </div>
+          </td>
+        </tr>
+        }
         }
       </tbody>
     </table>

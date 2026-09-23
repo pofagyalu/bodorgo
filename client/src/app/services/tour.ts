@@ -121,10 +121,11 @@ export interface Tour {
     address: string;
   };
   coordinates: string;
-  // Real road distance/estimated driving time from Budapest, computed
-  // server-side and cached (one routing API call gives both) - undefined
-  // until the server has a routing API key configured and this tour has
-  // been saved/updated at least once since.
+  // Raw, Budapest-specific cache computed server-side at tour save time
+  // (see tourModel.js) - NOT what should be shown to a viewer directly,
+  // since it's only the fallback for someone with no home address of
+  // their own. Use TourResponse's own distanceInfo for display instead,
+  // which already picks the right one.
   distanceFromBudapestKm?: number;
   drivingDurationFromBudapestMinutes?: number;
   startDate: string;
@@ -226,6 +227,19 @@ export interface PaymentTotals {
   rest: number;
 }
 
+// Distance/duration/wording for the info-line's directions_car row -
+// personalized to the logged-in viewer's own geocoded home address when
+// they have one (see userModel.js's address/location fields), otherwise
+// the tour's own cached figures from Budapest. Always use this instead of
+// Tour's own distanceFromBudapestKm/drivingDurationFromBudapestMinutes
+// for display - those two are the raw Budapest-specific cache the server
+// falls back to, not what should actually be shown to this viewer.
+export interface DistanceInfo {
+  distanceKm: number | null;
+  durationMinutes: number | null;
+  fromLabel: string;
+}
+
 export interface TourResponse {
   status: string;
   data: {
@@ -233,6 +247,7 @@ export interface TourResponse {
     participantCount: number;
     attendeePayments: AttendeePayment[];
     paymentTotals: PaymentTotals | null;
+    distanceInfo: DistanceInfo;
   };
 }
 

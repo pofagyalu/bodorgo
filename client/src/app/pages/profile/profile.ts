@@ -14,16 +14,32 @@ interface AttendanceRow {
   paymentMethod: 'stripe' | 'cash' | null;
 }
 
+// Structured rather than one free-text field specifically so `city` can
+// be used on its own for the tour page's "X-tól/-től" wording (see
+// server's hungarianGrammar.js) - mirrors userModel.js's own address
+// subdocument shape.
+interface AddressFormModel {
+  zipCode: string;
+  city: string;
+  street: string;
+  country: string;
+}
+
+function emptyAddressForm(): AddressFormModel {
+  return { zipCode: '', city: '', street: '', country: 'Magyarország' };
+}
+
 interface UserFormModel {
   name: string;
   email: string;
   familyId: string;
   birthday: string;
   gender: string;
+  address: AddressFormModel;
 }
 
 function emptyUserForm(): UserFormModel {
-  return { name: '', email: '', familyId: '', birthday: '', gender: '' };
+  return { name: '', email: '', familyId: '', birthday: '', gender: '', address: emptyAddressForm() };
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -144,6 +160,38 @@ export class Profile {
     });
   }
 
+  // Self-service home address (see userModel.js's address/location
+  // fields) - lets a tour's distance/duration be computed from this
+  // person's own home instead of the fixed Budapest reference point.
+  // Pre-filled once auth.user() actually resolves (see the constructor's
+  // effect below) - a plain mutable object, not a signal, same convention
+  // already used by addUserForm/editUserForm elsewhere on this page.
+  myAddressForm: AddressFormModel = emptyAddressForm();
+  private myAddressFormInitialized = false;
+  savingAddress = signal(false);
+  // Whether the address just saved actually geocoded - null before any
+  // save this session, or when there's no address at all to resolve. Told
+  // to the person directly rather than letting them find out later when a
+  // tour's distance quietly never changes from Budapest (see
+  // userController.js's updateMe).
+  addressResolved = signal<boolean | null>(null);
+
+  saveAddress() {
+    this.savingAddress.set(true);
+    this.userService.updateMe({ address: this.myAddressForm }).subscribe({
+      next: (res) => {
+        this.savingAddress.set(false);
+        this.addressResolved.set(res.data.addressResolved ?? null);
+        this.auth.patchCurrentUser({ address: res.data.user.address });
+        this.notifications.addSuccess('Cím mentve');
+      },
+      error: (err) => {
+        this.savingAddress.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
+      },
+    });
+  }
+
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   // 'admin' and 'member' are both real, dues-paying club members; only
   // 'guest' (a login-less dependent's own login, or an outside visitor)
@@ -189,6 +237,22 @@ export class Profile {
       if (role === 'admin' || role === 'member') {
         this.loadUsersList();
       }
+    });
+
+    // Same "wait for auth.user() to actually resolve" reasoning as above -
+    // pre-fills the address form from whatever's already on record exactly
+    // once, so it doesn't clobber an in-progress edit every time the
+    // signal happens to re-evaluate.
+    effect(() => {
+      const user = this.auth.user();
+      if (!user || this.myAddressFormInitialized) return;
+      this.myAddressFormInitialized = true;
+      this.myAddressForm = {
+        zipCode: user.address?.zipCode ?? '',
+        city: user.address?.city ?? '',
+        street: user.address?.street ?? '',
+        country: user.address?.country ?? 'Magyarország',
+      };
     });
   }
 
@@ -317,6 +381,12 @@ export class Profile {
       // timestamp the API returns.
       birthday: user.birthday ? user.birthday.slice(0, 10) : '',
       gender: user.gender ?? '',
+      address: {
+        zipCode: user.address?.zipCode ?? '',
+        city: user.address?.city ?? '',
+        street: user.address?.street ?? '',
+        country: user.address?.country ?? 'Magyarország',
+      },
     };
     // See restoreRowPosition()'s comment - entering/leaving edit mode can
     // shift this row (and others) on screen.
@@ -351,15 +421,22 @@ export class Profile {
         familyId: f.familyId.trim(),
         birthday: f.birthday,
         gender: f.gender,
+        address: f.address,
       })
       .subscribe({
-        next: () => {
+        next: (res) => {
           this.editUserSaving.set(false);
           this.editingUserId.set(null);
           // Reverting this row out of edit mode is itself a layout change,
           // so correct for it before the reload (below) causes another one.
           this.restoreRowPosition(row, prevTop);
-          this.notifications.addSuccess('Felhasználó mentve');
+          if (res.data.addressResolved === false) {
+            this.notifications.addError(
+              'A cím nem található be pontosan - próbáld a hivatalos (pl. angol vagy román) városnevet is, ha külföldi cím.',
+            );
+          } else {
+            this.notifications.addSuccess('Felhasználó mentve');
+          }
           this.loadUsersList(row ? { row, prevTop } : undefined);
         },
         error: (err) => {

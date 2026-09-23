@@ -2,6 +2,8 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import validator from 'validator';
 import crypto from 'crypto';
+import { geocodeAddress } from '../utils/distance.js';
+import logger from '../logger.js';
 
 const { Schema } = mongoose;
 
@@ -121,6 +123,29 @@ const userSchema = new Schema(
       type: Schema.Types.ObjectId,
       index: true,
     },
+    // Self-service (profile) or admin-set - structured rather than one
+    // free-text field specifically so `city` can be used on its own for
+    // the "X-tól/-től" ("from X") wording on the tour page/PDF (see
+    // hungarianGrammar.js) without having to guess which part of a
+    // comma-separated string is the city. country defaults to Hungary
+    // since most members are, but a friend elsewhere (e.g. Romania) can
+    // just fill it in - see the pre('save') hook below, which geocodes
+    // the combined address into `location` whenever it changes.
+    address: {
+      zipCode: { type: String, trim: true },
+      city: { type: String, trim: true },
+      street: { type: String, trim: true },
+      country: { type: String, trim: true, default: 'Magyarország' },
+    },
+    // Geocoded from `address` above (see pre('save') below) - undefined
+    // until a real address with at least a city has been saved and
+    // successfully resolved. Once set, lets a tour's distance/duration be
+    // computed from the viewer's own home instead of the fixed Budapest
+    // reference point (see tourController.js's getTour).
+    location: {
+      lat: { type: Number },
+      lng: { type: Number },
+    },
   },
   { timestamps: true },
 );
@@ -140,6 +165,37 @@ userSchema.pre('save', function (next) {
     this.passwordChangedAt = new Date(Date.now() - 1000);
   }
 
+  next();
+});
+
+// Re-geocodes whenever the address actually changes (not on every save) -
+// a failed/unresolvable address just leaves `location` unset rather than
+// blocking the profile save, same resilience as tourModel.js's own
+// distance pre('save') hook.
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('address')) {
+    return next();
+  }
+
+  const { zipCode, city, street, country } = this.address || {};
+  if (!city) {
+    // No city at all means no meaningful address to geocode - and if one
+    // existed before, it just got cleared, so any stale location has to
+    // go with it. `location` is a plain nested path, not a real
+    // subdocument - assigning `undefined` to the whole group doesn't
+    // reliably unset both leaves in Mongoose, so each is cleared
+    // explicitly instead.
+    this.set('location.lat', undefined);
+    this.set('location.lng', undefined);
+    return next();
+  }
+
+  try {
+    const text = [zipCode, city, street, country || 'Magyarország'].filter(Boolean).join(', ');
+    this.location = await geocodeAddress(text);
+  } catch (err) {
+    logger.error(`Failed to geocode address for user ${this._id}: ${err.message}`);
+  }
   next();
 });
 

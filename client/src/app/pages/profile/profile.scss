@@ -115,6 +115,59 @@
   right: 0.4rem;
 }
 
+// Self-service home address (see profile.ts's myAddressForm) - same
+// visual language as .user-form below, but sitting in the summary
+// section rather than the admin table.
+.address-form {
+  margin-top: 1rem;
+}
+
+.address-form-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+
+  .empty-note {
+    font-weight: 400;
+    font-size: 0.85rem;
+    margin-left: 0.4rem;
+  }
+}
+
+.address-form-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+
+  input {
+    flex: 1 1 160px;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font: inherit;
+  }
+}
+
+.address-resolved-note {
+  color: #2e7d32;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.address-unresolved-note {
+  color: #b8860b;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+// The admin table's per-row address sub-row (see profile.html) - no
+// border of its own so it visually reads as an extension of the row
+// above it, not a separate one.
+.address-edit-row td {
+  border-top: none;
+  padding-top: 0;
+}
+
 .error-note {
   color: #b00020;
 }

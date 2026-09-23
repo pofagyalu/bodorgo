@@ -3,6 +3,17 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+// Structured rather than one free-text field specifically so `city` can
+// be used on its own for the "X-tól/-től" ("from X") wording on the tour
+// page/PDF (see server's hungarianGrammar.js). country defaults to
+// "Magyarország" server-side when left blank.
+export interface UserAddress {
+  zipCode?: string;
+  city?: string;
+  street?: string;
+  country?: string;
+}
+
 export interface AdminUser {
   _id: string;
   name: string;
@@ -22,6 +33,12 @@ export interface AdminUser {
   // from Reservation.attendees, not stored on the user (see
   // userController.js's getAllUsers).
   toursAttended?: number;
+  address?: UserAddress;
+  // Geocoded from `address` server-side - present only once a real
+  // address has been successfully located (see userModel.js's
+  // pre('save') hook). Used to compute tour distance/duration from this
+  // person's own home instead of Budapest.
+  location?: { lat: number; lng: number };
 }
 
 export interface AdminUsersResponse {
@@ -90,12 +107,19 @@ export interface UpdateUserPayload {
   // Same "empty string clears it" convention as familyId above.
   birthday?: string;
   gender?: string;
+  address?: UserAddress;
 }
 
 export interface AdminUserResponse {
   status: string;
   data: {
     user: AdminUser;
+    // null when there's no address to resolve (no city set at all),
+    // otherwise whether it actually geocoded - see userController.js's
+    // updateMe/updateUser. Lets the UI tell the person outright whether
+    // their new address was actually located, rather than them only
+    // noticing later when a tour's distance quietly never changes.
+    addressResolved?: boolean | null;
   };
 }
 
@@ -103,6 +127,7 @@ export interface UpdateMePayload {
   name?: string;
   email?: string;
   wantsEmailNotifications?: boolean;
+  address?: UserAddress;
 }
 
 export interface JoinFamilyResponse {

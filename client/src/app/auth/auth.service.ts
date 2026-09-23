@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { UserAddress } from '../services/user';
 
 export interface CurrentUser {
   id: string;
@@ -10,6 +11,7 @@ export interface CurrentUser {
   role: string;
   familyId?: string;
   wantsEmailNotifications?: boolean;
+  address?: UserAddress;
 }
 
 interface MeResponse {
@@ -21,6 +23,7 @@ interface MeResponse {
   role?: string;
   familyId?: string;
   wantsEmailNotifications?: boolean;
+  address?: UserAddress;
 }
 
 @Injectable({
@@ -77,6 +80,7 @@ export class AuthService {
                   // Same default as the schema (userModel.js) - only ever
                   // false when explicitly turned off.
                   wantsEmailNotifications: res.wantsEmailNotifications !== false,
+                  address: res.address,
                 }
               : null,
           );

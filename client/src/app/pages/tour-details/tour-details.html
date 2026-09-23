@@ -84,20 +84,20 @@
         <mat-icon [style.color]="addressIconColor">home</mat-icon>
         <span class="empty-note">Cím: nincs megadva</span>
       </div>
-      } @if (t.distanceFromBudapestKm != null) {
+      } @if (distanceInfo()?.distanceKm != null) {
       <div class="info-line">
         <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
         <span
-          >{{ t.distanceFromBudapestKm }} km Budapesttől
-          @if (t.drivingDurationFromBudapestMinutes != null) {
-          ({{ formatDrivingDuration(t.drivingDurationFromBudapestMinutes) }})
+          >{{ distanceInfo()!.distanceKm }} km {{ distanceInfo()!.fromLabel }}
+          @if (distanceInfo()!.durationMinutes != null) {
+          ({{ formatDrivingDuration(distanceInfo()!.durationMinutes) }})
           }</span
         >
       </div>
-      } @else {
+      } @else if (distanceInfo()) {
       <div class="info-line">
         <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
-        <span class="empty-note">Táv Budapesttől: nincs kiszámítva</span>
+        <span class="empty-note">Táv {{ distanceInfo()!.fromLabel }}: nincs kiszámítva</span>
       </div>
       }
 

@@ -1,10 +1,12 @@
 import mongoose from 'mongoose';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
+import User from '../models/userModel.js';
 import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservationController.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
+import { resolveDistanceInfo } from '../utils/distance.js';
 import logger from '../logger.js';
 
 const WEATHER_REFETCH_HOURS = 6;
@@ -178,9 +180,18 @@ export const getTour = async (req, res, next) => {
     tour.reservations,
   );
 
+  // getTour is public (no requireAuth) so anonymous browsing still works -
+  // this only personalizes the distance/duration/wording when a real
+  // session is present, and falls back to the tour's own cached
+  // Budapest-based figures otherwise (see resolveDistanceInfo).
+  const viewer = req.session?.user?.id
+    ? await User.findById(req.session.user.id).select('location address')
+    : null;
+  const distanceInfo = await resolveDistanceInfo(tour, viewer);
+
   res.status(200).json({
     status: 'success',
-    data: { tour, participantCount, attendeePayments, paymentTotals },
+    data: { tour, participantCount, attendeePayments, paymentTotals, distanceInfo },
   });
 };
 

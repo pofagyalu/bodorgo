@@ -6,7 +6,7 @@ import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
 import sendResendEmail from '../utils/resendEmail.js';
-import { formatDrivingDuration } from '../utils/distance.js';
+import { formatDrivingDuration, resolveDistanceInfo } from '../utils/distance.js';
 import logger from '../logger.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
@@ -131,7 +131,7 @@ async function findTourByIdParam(idParam) {
 // (piped straight to the HTTP response vs. collected into a Buffer).
 // ownerName is passed in rather than read off req directly so this
 // function has no dependency on the request/response objects at all.
-async function renderTourPdfDocument(doc, tour, ownerName) {
+async function renderTourPdfDocument(doc, tour, ownerName, distanceInfo) {
   doc.registerFont('Body', FONT_REGULAR);
   doc.registerFont('Heading', FONT_BOLD);
   doc.registerFont('Icons', FONT_ICONS);
@@ -271,13 +271,11 @@ async function renderTourPdfDocument(doc, tour, ownerName) {
     infoColWidth,
     COLORS.blue,
     'directions_car',
-    tour.distanceFromBudapestKm != null
-      ? `Táv Budapesttől: ${tour.distanceFromBudapestKm} km${
-          tour.drivingDurationFromBudapestMinutes != null
-            ? ` (${formatDrivingDuration(tour.drivingDurationFromBudapestMinutes)})`
-            : ''
+    distanceInfo.distanceKm != null
+      ? `Táv ${distanceInfo.fromLabel}: ${distanceInfo.distanceKm} km${
+          distanceInfo.durationMinutes != null ? ` (${formatDrivingDuration(distanceInfo.durationMinutes)})` : ''
         }`
-      : 'Táv Budapesttől: nincs kiszámítva',
+      : `Táv ${distanceInfo.fromLabel}: nincs kiszámítva`,
   );
   doc.y += 6;
   infoLine(
@@ -512,6 +510,7 @@ async function renderTourPdfDocument(doc, tour, ownerName) {
 // row, and a footer on every page naming who downloaded it.
 export const downloadTourPdf = async (req, res) => {
   const tour = await findTourByIdParam(req.params.id);
+  const distanceInfo = await resolveDistanceInfo(tour, req.user);
 
   // bufferPages: true lets the footer (which needs to know the final page
   // count) be added to every page in one pass at the very end, rather
@@ -522,7 +521,7 @@ export const downloadTourPdf = async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   doc.pipe(res);
 
-  await renderTourPdfDocument(doc, tour, req.user.name);
+  await renderTourPdfDocument(doc, tour, req.user.name, distanceInfo);
 };
 
 // Builds the same PDF as downloadTourPdf, but collects it into a Buffer
@@ -530,14 +529,14 @@ export const downloadTourPdf = async (req, res) => {
 // mechanism already defers the actual byte-writing until doc.end() calls
 // flush internally, so attaching these 'data'/'end' listeners beforehand
 // is enough to capture every page regardless.
-function renderTourPdfToBuffer(tour, ownerName) {
+function renderTourPdfToBuffer(tour, ownerName, distanceInfo) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
-    renderTourPdfDocument(doc, tour, ownerName).catch(reject);
+    renderTourPdfDocument(doc, tour, ownerName, distanceInfo).catch(reject);
   });
 }
 
@@ -565,7 +564,8 @@ export const emailTourPdf = async (req, res) => {
     throw new AppError('A fiókodhoz nincs e-mail cím rendelve.', 400);
   }
 
-  const pdfBuffer = await renderTourPdfToBuffer(tour, req.user.name);
+  const distanceInfo = await resolveDistanceInfo(tour, req.user);
+  const pdfBuffer = await renderTourPdfToBuffer(tour, req.user.name, distanceInfo);
   const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
   const { subject, text, html } = programfuzetEmailBody(req.user.name, tour.title);
 
@@ -611,7 +611,7 @@ export const emailTourPdfToAttendees = async (req, res) => {
 
   const reservations = await Reservation.find({ tour: tour._id }).populate({
     path: 'attendees.user',
-    select: 'name email lastLoginAt wantsEmailNotifications',
+    select: 'name email lastLoginAt wantsEmailNotifications location address',
   });
 
   const recipientsById = new Map();
@@ -628,7 +628,8 @@ export const emailTourPdfToAttendees = async (req, res) => {
 
   const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
   for (const user of eligible) {
-    const pdfBuffer = await renderTourPdfToBuffer(tour, user.name);
+    const distanceInfo = await resolveDistanceInfo(tour, user);
+    const pdfBuffer = await renderTourPdfToBuffer(tour, user.name, distanceInfo);
     const { subject, text, html } = programfuzetEmailBody(user.name, tour.title);
     await sendResendEmail({ to: user.email, subject, text, html, attachments: [{ filename, content: pdfBuffer }] });
   }

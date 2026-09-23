@@ -139,17 +139,27 @@ export const updateMe = async (req, res, next) => {
     throw new AppError('This route is not for password update.', 400);
   }
 
-  const filteredBody = filterObj(req.body, 'name', 'email', 'wantsEmailNotifications');
+  const filteredBody = filterObj(req.body, 'name', 'email', 'wantsEmailNotifications', 'address');
 
-  const updatedUser = await User.findByIdAndUpdate(req.user._id, filteredBody, {
-    new: true,
-    runValidators: true,
-  });
+  // Loaded and .save()d rather than findByIdAndUpdate - specifically so
+  // userModel.js's address-geocoding pre('save') hook actually fires on
+  // an edit, not just on creation (findByIdAndUpdate skips document
+  // middleware entirely - same reasoning as tourController.js's
+  // updateTour).
+  const updatedUser = await User.findById(req.user._id);
+  Object.assign(updatedUser, filteredBody);
+  await updatedUser.save({ validateModifiedOnly: true });
 
   res.status(200).json({
     status: 'success',
     data: {
       user: updatedUser,
+      // null when there's no address to resolve at all (nothing to
+      // report), true/false once there's at least a city - lets the
+      // profile page tell the person outright whether their new address
+      // actually got located, instead of them only finding out later when
+      // a tour's distance quietly never changes from Budapest.
+      addressResolved: updatedUser.address?.city ? !!updatedUser.location : null,
     },
   });
 };
@@ -240,45 +250,36 @@ export const createUser = async (req, res) => {
   });
 };
 
-// Admin-only - edits name/email/familyId by hand. familyId as an empty
-// string explicitly removes the user from their family (rather than the
-// field being silently ignored), for undoing a mistaken assignment.
+// Admin-only - edits name/email/familyId/address by hand. familyId as an
+// empty string explicitly removes the user from their family (rather than
+// the field being silently ignored), for undoing a mistaken assignment.
+// Loaded and .save()d rather than findByIdAndUpdate - specifically so
+// userModel.js's address-geocoding pre('save') hook actually fires here
+// too (an admin fixing a dependent's address who can't set it themselves
+// is exactly the case that needs it), same reasoning as updateMe above.
 export const updateUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender } = req.body;
+  const { name, email, familyId, birthday, gender, address } = req.body;
 
-  const set = {};
-  const unset = {};
-  if (name !== undefined) set.name = name;
-  if (email !== undefined) set.email = email ? email.toLowerCase() : null;
-  if (familyId !== undefined) {
-    if (familyId) set.familyId = await resolveFamilyId(familyId);
-    else unset.familyId = 1;
-  }
-  if (birthday !== undefined) {
-    if (birthday) set.birthday = birthday;
-    else unset.birthday = 1;
-  }
-  if (gender !== undefined) {
-    if (gender) set.gender = gender;
-    else unset.gender = 1;
-  }
-
-  const ops = {};
-  if (Object.keys(set).length) ops.$set = set;
-  if (Object.keys(unset).length) ops.$unset = unset;
-
-  const user = await User.findByIdAndUpdate(req.params.id, ops, {
-    new: true,
-    runValidators: true,
-  });
-
+  const user = await User.findById(req.params.id);
   if (!user) {
     throw new AppError('No user found with that ID!', 404);
   }
 
+  if (name !== undefined) user.name = name;
+  if (email !== undefined) user.email = email ? email.toLowerCase() : undefined;
+  if (familyId !== undefined) user.familyId = familyId ? await resolveFamilyId(familyId) : undefined;
+  if (birthday !== undefined) user.birthday = birthday || undefined;
+  if (gender !== undefined) user.gender = gender || undefined;
+  if (address !== undefined) user.address = address;
+
+  await user.save({ validateModifiedOnly: true });
+
   res.status(200).json({
     status: 'success',
-    data: { user: { ...user.toObject(), age: computeAge(user.birthday) } },
+    data: {
+      user: { ...user.toObject(), age: computeAge(user.birthday) },
+      addressResolved: user.address?.city ? !!user.location : null,
+    },
   });
 };
 
