@@ -143,7 +143,11 @@
 
 .card__footer {
   flex-shrink: 0;
-  padding: 1.3rem 1rem 1.3rem 2rem;
+  // Top/bottom trimmed from 1.3rem to make room for the bigger .btn below
+  // without growing the footer's own height - the map link that used to
+  // fill this card's extra space is gone now, but the footer itself
+  // should stay the same size.
+  padding: 1rem 1rem 1rem 2rem;
   background-color: #f7f7f7;
   display: flex;
   justify-content: space-between;
@@ -162,16 +166,17 @@
 
 /* Shared .btn styling is defined per-component (Angular view encapsulation
    doesn't let ../tours.scss's copy reach into this component) - kept in
-   sync with tours.scss's toggle buttons, except sized down further per
-   request ("cut to half") since this button sits inside an already-shrunk
-   card. */
+   sync with tours.scss's toggle buttons. Sized back up roughly 1.5x from
+   its previous cut-to-half size, now that removing the card's map link
+   freed up room for it - see .card__footer's trimmed padding above,
+   which absorbs the extra height so the footer itself doesn't grow. */
 .btn {
   text-decoration: none;
-  padding: 0.3rem 0.7rem;
+  padding: 0.5rem 1rem;
   display: inline-block;
   border-radius: 10rem;
   transition: all 0.2s;
-  font-size: 0.75rem;
+  font-size: 1rem;
   cursor: pointer;
   border: none;
   font-weight: 600;
