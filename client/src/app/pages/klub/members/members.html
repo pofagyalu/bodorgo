@@ -24,17 +24,18 @@
       [class.active]="activeTab() === 'casual'"
       (click)="selectTab('casual')"
     >
-      Egyéb felhasználók <span class="tab-count">{{ casualUsers().length }}</span>
+      Egyéb felhasználók
+      <span class="tab-count">{{ casualUsers().length }}</span>
     </button>
   </div>
 
   @if (activeTab() === 'club') {
   <div role="tabpanel">
     @if (paymentNotice(); as notice) {
-    <p class="payment-notice" [class.error]="notice.kind === 'error'">{{ notice.text }}</p>
-    }
-
-    @if (me(); as mine) {
+    <p class="payment-notice" [class.error]="notice.kind === 'error'">
+      {{ notice.text }}
+    </p>
+    } @if (me(); as mine) {
     <section class="member-hero">
       <div>
         <div class="kicker">Saját tagságom · {{ mine.name }}</div>
@@ -42,8 +43,14 @@
         <p>Az éves befizetéseid áttekintése</p>
       </div>
       @if (myEarliestUnpaidYear(); as year) {
-      <button type="button" class="primary-btn" [disabled]="paying()" (click)="payMembership()">
-        {{ paying() ? 'Fizetés indítása…' : year + '. évi tagdíj befizetése →' }}
+      <button
+        type="button"
+        class="primary-btn"
+        [disabled]="paying()"
+        (click)="payMembership()"
+      >
+        {{ paying() ? 'Fizetés indítása…' : year + '. évi tagdíj befizetése →'
+        }}
       </button>
       }
     </section>
@@ -61,13 +68,9 @@
           [class.unpaid]="yearState(mine._id, y) === 'unpaid'"
           [class.na]="yearState(mine._id, y) === 'na'"
         >
-          {{
-            yearState(mine._id, y) === 'paid'
-              ? '✓ Fizetve'
-              : yearState(mine._id, y) === 'unpaid'
-                ? '○ Nincs befizetve'
-                : '— Nem volt tag'
-          }}
+          {{ yearState(mine._id, y) === 'paid' ? '✓ Fizetve' :
+          yearState(mine._id, y) === 'unpaid' ? '○ Nincs befizetve' : '— Nem
+          volt tag' }}
         </span>
       </div>
       } }
@@ -102,7 +105,10 @@
           <tbody>
             @if (!filteredClubMembers().length) {
             <tr>
-              <td [attr.colspan]="membershipYears().length + 2" class="empty-row">
+              <td
+                [attr.colspan]="membershipYears().length + 2"
+                class="empty-row"
+              >
                 Nincs ilyen nevű tag.
               </td>
             </tr>
@@ -113,7 +119,10 @@
                   <span class="person-avatar">{{ initials(m.name) }}</span>
                   <span>
                     <strong>{{ m.name }}</strong>
-                    <small>{{ m._id === myId() ? 'Te' : m.role === 'admin' ? 'Admin' : 'Klubtag' }}</small>
+                    <small
+                      >{{ m._id === myId() ? 'Te' : m.role === 'admin' ? 'Admin'
+                      : 'Klubtag' }}</small
+                    >
                   </span>
                 </div>
               </td>
@@ -125,19 +134,19 @@
                   [class.unpaid]="yearState(m._id, y) === 'unpaid'"
                   [class.na]="yearState(m._id, y) === 'na'"
                 >
-                  {{
-                    yearState(m._id, y) === 'paid'
-                      ? '✓ Fizetve'
-                      : yearState(m._id, y) === 'unpaid'
-                        ? '○ Nincs befizetve'
-                        : '— Nem volt tag'
-                  }}
+                  {{ yearState(m._id, y) === 'paid' ? '✓ Fizetve' :
+                  yearState(m._id, y) === 'unpaid' ? '○ Nincs befizetve' : '—
+                  Nem volt tag' }}
                 </span>
               </td>
               }
               <td>
                 @if (isAdmin()) {
-                <button type="button" class="link-btn" (click)="selectMember(m._id)">
+                <button
+                  type="button"
+                  class="link-btn"
+                  (click)="selectMember(m._id)"
+                >
                   Részletek →
                 </button>
                 }
@@ -151,13 +160,20 @@
 
     @if (selectedMember(); as detail) {
     <section class="panel membership-detail">
-      <h2>{{ detail._id === myId() ? 'Saját befizetések' : detail.name + ' befizetései' }}</h2>
+      <h2>
+        {{ detail._id === myId() ? 'Saját befizetések' : detail.name + '
+        befizetései' }}
+      </h2>
       <div>
         @for (y of membershipYears(); track y) {
         <div class="history-row">
           <strong>{{ y }}. évi tagdíj</strong>
-          @if (yearState(detail._id, y) === 'paid') { @if (paymentFor(detail._id, y); as payment) {
-          <span>{{ money(payment.amount, payment.currency) }} · {{ payment.date | date: 'yyyy. MM. dd.' }}</span>
+          @if (yearState(detail._id, y) === 'paid') { @if
+          (paymentFor(detail._id, y); as payment) {
+          <span
+            >{{ money(payment.amount, payment.currency) }} · {{ payment.date |
+            date: 'yyyy. MM. dd.' }}</span
+          >
           } } @else if (yearState(detail._id, y) === 'unpaid') {
           <span>Nincs befizetve</span>
           } @else {
@@ -170,15 +186,15 @@
     }
 
     <p class="member-note">
-      Mintaadatok még nincsenek feltöltve. A tagok egymás státuszát látják; a befizetés
-      részleteit csak a saját tag és az admin láthatja.
+      A tagok egymás státuszát látják; a befizetés részleteit csak a saját tag
+      és az admin láthatja.
     </p>
   </div>
   } @else {
   <div role="tabpanel">
     <div class="casual-intro">
-      Ők használhatják az alkalmazást, de nem klubtagok. Náluk nincs éves tagdíj vagy „nem
-      fizetett” státusz. A klubtagok statisztikájában sem szerepelnek.
+      Ők használhatják az alkalmazást, de nem klubtagok. Náluk nincs éves tagdíj
+      vagy „nem fizetett” státusz. A klubtagok statisztikájában sem szerepelnek.
     </div>
     <section class="panel member-panel">
       <div class="member-panel-head">
@@ -208,7 +224,9 @@
           <tbody>
             @if (!filteredCasualUsers().length) {
             <tr>
-              <td colspan="4" class="empty-row">Nincs ilyen nevű felhasználó.</td>
+              <td colspan="4" class="empty-row">
+                Nincs ilyen nevű felhasználó.
+              </td>
             </tr>
             } @else { @for (u of filteredCasualUsers(); track u._id) {
             <tr>
@@ -222,7 +240,11 @@
                 </div>
               </td>
               <td>
-                <span class="status" [class.paid]="isActive(u)" [class.na]="!isActive(u)">
+                <span
+                  class="status"
+                  [class.paid]="isActive(u)"
+                  [class.na]="!isActive(u)"
+                >
                   {{ isActive(u) ? '✓ Aktív' : '— Nem lépett be' }}
                 </span>
               </td>
@@ -235,7 +257,8 @@
       </div>
     </section>
     <p class="member-note">
-      A személyes elérhetőségek és a fiók beállításai továbbra is a saját profilban maradnak.
+      A személyes elérhetőségek és a fiók beállításai továbbra is a saját
+      profilban maradnak.
     </p>
   </div>
   }
