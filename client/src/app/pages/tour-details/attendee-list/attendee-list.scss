@@ -45,37 +45,6 @@
   color: #ccc;
 }
 
-// Sits next to .unpaid-icon, only for an admin - lets them record a
-// real-life cash handoff without the payer ever touching Stripe (see
-// attendee-list.ts's markCashPaid).
-.cash-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: #b8860b;
-  cursor: pointer;
-
-  mat-icon {
-    font-size: 1.1rem;
-    width: 1.1rem;
-    height: 1.1rem;
-  }
-
-  &:hover {
-    background: #fff3cd;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-}
-
 .totals-row td {
   font-weight: 700;
   color: #333;
@@ -137,15 +106,27 @@
   }
 }
 
-// Toggle, not a momentary action like edit/save/cancel above - muted
-// grey when off, a warm amber once this attendee is actually marked
-// exempt, so the row-actions cell itself hints at the state without
-// needing to read the badge next to the name.
+// Both cash and exempt below are toggles, not a momentary action like
+// edit/save/cancel above - same neutral grey while off (nothing to
+// distinguish yet), a distinct color once actually toggled on so the
+// row-actions cell itself hints at the state without needing to read the
+// badge next to the name or hover for the tooltip. Same .icon-btn family
+// as edit/save/cancel (size/shape/hover behavior), just a different
+// accent color per meaning.
+.icon-btn--cash,
 .icon-btn--exempt {
   background: #90a4ae;
 
   &:hover {
     background: #78909c;
+  }
+}
+
+.icon-btn--cash-active {
+  background: #1b6548;
+
+  &:hover {
+    background: #144d37;
   }
 }
 

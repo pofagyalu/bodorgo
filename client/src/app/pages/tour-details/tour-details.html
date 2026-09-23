@@ -306,7 +306,7 @@
           class="toggle-btn"
           [attr.aria-expanded]="showParticipants()"
           aria-label="Résztvevők listájának megjelenítése/elrejtése"
-          (click)="showParticipants.set(!showParticipants())"
+          (click)="toggleParticipants()"
         >
           <mat-icon
             >{{ showParticipants() ? 'expand_less' : 'expand_more' }}</mat-icon

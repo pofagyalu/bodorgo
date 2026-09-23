@@ -172,6 +172,32 @@ export const recordCashPayment = async (req, res) => {
   res.status(201).json({ status: 'success', data: { payment } });
 };
 
+// DELETE /payments/:id - requireAuth, restrictTo('admin'). Undoes a cash
+// entry made by mistake (wrong row clicked) - reverts every attendee it
+// covered back to unpaid and removes the record entirely. Deliberately
+// refuses anything that isn't method: 'cash' - a real Stripe payment
+// must never be reversible this way, since real money actually changed
+// hands and this app has no refund flow behind it.
+export const deleteCashPayment = async (req, res) => {
+  const payment = await Payment.findById(req.params.id);
+  if (!payment) {
+    throw new AppError('No payment found with that ID!', 404);
+  }
+  if (payment.method !== 'cash') {
+    throw new AppError('Csak készpénzes fizetés vonható vissza így.', 400);
+  }
+
+  for (const a of payment.attendees) {
+    await Reservation.updateOne(
+      { _id: a.reservationId, 'attendees._id': a.attendeeId },
+      { $set: { 'attendees.$.paid': false } },
+    );
+  }
+  await Payment.deleteOne({ _id: payment._id });
+
+  res.status(204).json({ status: 'success', data: null });
+};
+
 function formatForint(amount) {
   return Math.round(amount)
     .toString()

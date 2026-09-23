@@ -19,6 +19,11 @@ export interface AttendeeListRow {
   paid: boolean;
   // Admin-only override - see tour.ts's own AttendeePayment comment.
   feeExempt: boolean;
+  // Which real Payment (if any) backs this row - see tour.ts's own
+  // AttendeePayment comment. Drives the cash/exempt toggle buttons'
+  // visibility below.
+  paymentId: string | null;
+  paymentMethod: 'stripe' | 'cash' | null;
 }
 
 // A row plus which alternating family "stripe" it belongs to (0 or 1),
@@ -132,17 +137,36 @@ export class AttendeeList {
     });
   }
 
-  // Real case: a friend hands the admin cash instead of transferring the
-  // advance online - the admin marks it paid on their behalf right here,
-  // no Stripe involved (see paymentController.js's recordCashPayment).
-  // Tracked per attendeeId (not a single "saving" flag) so marking one
-  // person doesn't disable every other row's button while the request is
-  // in flight.
+  // A real toggle: a friend hands the admin cash instead of transferring
+  // the advance online (see paymentController.js's recordCashPayment),
+  // and clicking again undoes that exact entry (deleteCashPayment) for
+  // the real case of the wrong row getting clicked by mistake. Only ever
+  // offered/reversible when paymentMethod is 'cash' or the row is
+  // unpaid - never for a real Stripe payment (see the template's own
+  // visibility rules). Tracked per attendeeId, not a single "saving"
+  // flag, so acting on one person doesn't disable every other row's
+  // button while the request is in flight.
   markingCashPaidId = signal<string | null>(null);
 
-  markCashPaid(row: AttendeeListRow) {
+  toggleCashPaid(row: AttendeeListRow) {
     if (this.markingCashPaidId()) return;
     this.markingCashPaidId.set(row.attendeeId);
+
+    if (row.paymentMethod === 'cash' && row.paymentId) {
+      this.paymentService.deleteCashPayment(row.paymentId).subscribe({
+        next: () => {
+          this.markingCashPaidId.set(null);
+          this.notifications.addSuccess(`${row.name} készpénzes befizetése visszavonva.`);
+          this.nightsUpdated.emit();
+        },
+        error: (err) => {
+          this.notifications.addError(err?.error?.message ?? 'Hiba történt a visszavonás során.');
+          this.markingCashPaidId.set(null);
+        },
+      });
+      return;
+    }
+
     this.paymentService.recordCashPayment(this.tourId, [row.attendeeId]).subscribe({
       next: () => {
         this.markingCashPaidId.set(null);

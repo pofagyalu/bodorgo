@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
+import Payment from '../models/paymentModel.js';
 import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservationController.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
@@ -180,6 +181,31 @@ export const getTour = async (req, res, next) => {
     tour.reservations,
   );
 
+  // Which real Payment (if any) backs each attendee row - lets the admin
+  // attendee-list tell a genuine Stripe/cash payment apart from a plain
+  // paid flag with nothing behind it (legacy data, the 0%-advance
+  // auto-mark), and specifically whether a cash entry can be safely
+  // undone (see attendee-list.ts's cash toggle / paymentController.js's
+  // deleteCashPayment, which only ever touches method: 'cash'). Same idea
+  // as userController.js's getMyAttendance, just for every attendee on
+  // this tour rather than just the caller's own.
+  const tourPayments = await Payment.find({
+    tour: tour._id,
+    purpose: 'tourAdvance',
+    status: 'Succeeded',
+  }).select('_id method attendees.attendeeId');
+  const paymentByAttendeeId = new Map();
+  for (const payment of tourPayments) {
+    for (const a of payment.attendees) {
+      paymentByAttendeeId.set(String(a.attendeeId), { paymentId: String(payment._id), method: payment.method });
+    }
+  }
+  const attendeePaymentsWithMethod = attendeePayments.map((p) => ({
+    ...p,
+    paymentId: paymentByAttendeeId.get(p.attendeeId)?.paymentId ?? null,
+    paymentMethod: paymentByAttendeeId.get(p.attendeeId)?.method ?? null,
+  }));
+
   // getTour is public (no requireAuth) so anonymous browsing still works -
   // this only personalizes the distance/duration/wording when a real
   // session is present, and falls back to the tour's own cached
@@ -191,7 +217,7 @@ export const getTour = async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    data: { tour, participantCount, attendeePayments, paymentTotals, distanceInfo },
+    data: { tour, participantCount, attendeePayments: attendeePaymentsWithMethod, paymentTotals, distanceInfo },
   });
 };
 

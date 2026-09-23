@@ -41,6 +41,14 @@ export class PaymentService {
     return this.http.post<{ status: string }>(`${this.apiUrl}/cash`, { tourId, attendeeIds });
   }
 
+  // Admin-only - undoes a cash entry made by mistake (wrong row clicked),
+  // reverting the attendee(s) it covered back to unpaid. See
+  // paymentController.js's deleteCashPayment - it refuses anything that
+  // isn't method: 'cash', so this can never touch a real Stripe payment.
+  deleteCashPayment(paymentId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${paymentId}`);
+  }
+
   // Polled by the payment page once the browser is redirected back from
   // Stripe's Checkout page - reconciles with Stripe directly server-side,
   // so it's accurate even if the async webhook is delayed or (on a dev

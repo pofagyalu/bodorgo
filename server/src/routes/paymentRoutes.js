@@ -1,5 +1,5 @@
 import express from 'express';
-import { startPayment, recordCashPayment, getPaymentStatus, downloadReceipt } from '../controllers/paymentController.js';
+import { startPayment, recordCashPayment, deleteCashPayment, getPaymentStatus, downloadReceipt } from '../controllers/paymentController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -11,6 +11,7 @@ const router = express.Router();
 // own comment on that route.
 router.post('/start', requireAuth, startPayment);
 router.post('/cash', requireAuth, restrictTo('admin'), recordCashPayment);
+router.delete('/:id', requireAuth, restrictTo('admin'), deleteCashPayment);
 router.get('/:id/status', requireAuth, getPaymentStatus);
 router.get('/:id/receipt', requireAuth, downloadReceipt);
 

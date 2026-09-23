@@ -44,17 +44,6 @@
           <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
           } @else {
           <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">radio_button_unchecked</mat-icon>
-          @if (isAdmin() && a.advance != null) {
-          <button
-            type="button"
-            class="cash-btn"
-            title="Készpénzes befizetés rögzítése (pl. személyesen átadott előleg)"
-            [disabled]="markingCashPaidId() === a.attendeeId"
-            (click)="markCashPaid(a)"
-          >
-            <mat-icon>attach_money</mat-icon>
-          </button>
-          }
           }
         </span>
       </td>
@@ -76,18 +65,31 @@
         </button>
         } @else {
         <button type="button" class="icon-btn icon-btn--edit" title="Éjszakák szerkesztése" (click)="startEditNights(a)">
-          <mat-icon>edit</mat-icon>
+          <mat-icon>hotel</mat-icon>
         </button>
+        @if ((!a.paid && a.advance != null) || a.paymentMethod === 'cash') {
+        <button
+          type="button"
+          class="icon-btn icon-btn--cash"
+          [class.icon-btn--cash-active]="a.paymentMethod === 'cash'"
+          [title]="a.paymentMethod === 'cash' ? 'Készpénzes fizetés visszavonása' : 'Készpénzes fizetés'"
+          [disabled]="markingCashPaidId() === a.attendeeId"
+          (click)="toggleCashPaid(a)"
+        >
+          <mat-icon>attach_money</mat-icon>
+        </button>
+        } @if (!a.paid || a.feeExempt) {
         <button
           type="button"
           class="icon-btn icon-btn--exempt"
           [class.icon-btn--exempt-active]="a.feeExempt"
-          [title]="a.feeExempt ? 'Díjmentesség visszavonása' : 'Megjelölés díjmentesként (pl. csecsemő, ingyenes vendég)'"
+          [title]="a.feeExempt ? 'Díjmentesség visszavonása' : 'Megjelölés díjmentesként'"
           [disabled]="togglingFeeExemptId() === a.attendeeId"
           (click)="toggleFeeExempt(a)"
         >
-          <mat-icon>money_off</mat-icon>
+          <mat-icon>loyalty</mat-icon>
         </button>
+        }
         }
       </td>
       }

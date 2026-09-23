@@ -214,6 +214,14 @@ export interface AttendeePayment {
   totalPrice: number | null;
   advance: number | null;
   rest: number | null;
+  // Which real Payment (if any) backs this attendee - null when paid is
+  // false, or when it's true with nothing real behind it (legacy data,
+  // the 0%-advance auto-mark). Lets the admin attendee-list tell a
+  // genuine cash entry (safely undoable - see payment.ts's
+  // deleteCashPayment) apart from a real Stripe payment (never touchable
+  // here) or an untracked historical paid flag.
+  paymentId: string | null;
+  paymentMethod: 'stripe' | 'cash' | null;
 }
 
 // Whether this attendee row is the given logged-in user themselves, or
@@ -365,6 +373,11 @@ export class TourService {
   // navigate back to it, wiping its own signals, but this service is a
   // singleton that lives for the app's session.
   showAllPreference = false;
+
+  // Same reasoning, for the tour-details page's "Résztvevők" expand/
+  // collapse toggle - remembers whether it was last left open, instead of
+  // always resetting to collapsed when navigating back to a tour.
+  showParticipantsPreference = false;
 
   // A plain GET URL, not an HttpClient call - the browser navigates/
   // downloads directly (see tour-details.html's <a [href]>), same as any

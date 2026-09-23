@@ -88,7 +88,10 @@ export class TourDetails implements OnDestroy {
   signingUp = signal(false);
   signUpError = signal<string | null>(null);
   showMap = signal(false);
-  showParticipants = signal(false);
+  // Restores whatever expand/collapse choice was last made (see
+  // tour.ts's showParticipantsPreference), instead of always resetting to
+  // collapsed when navigating back to a tour.
+  showParticipants = signal(this.tourService.showParticipantsPreference);
   // Which day (its 1-indexed number, or null for none) currently has the
   // "add new event" form open - only one at a time, same pattern as
   // tour-event.ts's own single-event edit mode.
@@ -328,6 +331,12 @@ export class TourDetails implements OnDestroy {
 
   onAttendeeNightsUpdated() {
     this.loadTour(this.tourId);
+  }
+
+  toggleParticipants() {
+    const next = !this.showParticipants();
+    this.showParticipants.set(next);
+    this.tourService.showParticipantsPreference = next;
   }
 
   pdfUrl(tourId: string): string {
