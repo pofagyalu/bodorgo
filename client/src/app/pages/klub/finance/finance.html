@@ -6,14 +6,20 @@
       <p>Bevételek, kiadások és az egyenleg egy helyen.</p>
     </div>
     <div class="actions">
-      <select aria-label="Időszak" [value]="period()" (change)="period.set($any($event.target).value)">
+      <select
+        aria-label="Időszak"
+        [value]="period()"
+        (change)="period.set($any($event.target).value)"
+      >
         @for (y of availablePeriods(); track y) {
         <option [value]="y">{{ y }}. év</option>
         }
         <option value="all">Teljes történet</option>
       </select>
       @if (isAdmin()) {
-      <button class="primary-btn" type="button" (click)="openModal()">＋ Új tétel</button>
+      <button class="primary-btn" type="button" (click)="openModal()">
+        ＋ Új tétel
+      </button>
       }
     </div>
   </div>
@@ -21,15 +27,19 @@
   <section class="hero" aria-label="Nettó pénzmozgás">
     <div>
       <div class="label">
-        {{ period() === 'all' ? 'Nettó pénzmozgás · teljes történet' : period() + '. évi nettó pénzmozgás' }}
+        {{ period() === 'all' ? 'Nettó pénzmozgás · teljes történet' : period()
+        + '. évi nettó pénzmozgás' }}
       </div>
       <div class="balance">{{ money(balance()) }}</div>
-      <div class="hero-sub">Bevételek − kiadások · a nyitóegyenleget nem tartalmazza</div>
+      <div class="hero-sub">Bevételek − kiadások</div>
     </div>
     <div class="hero-note">
       <div class="mini">Rögzített tételek</div>
       <strong>{{ filteredTransactions().length }}</strong>
-      <span>{{ period() === 'all' ? 'A teljes történetben' : 'A(z) ' + period() + '. évben' }}</span>
+      <span
+        >{{ period() === 'all' ? 'A teljes történetben' : 'A(z) ' + period() +
+        '. évben' }}</span
+      >
     </div>
   </section>
 
@@ -103,7 +113,9 @@
             <span>{{ c.category }}</span>
             <strong>{{ money(c.amount) }}</strong>
           </div>
-          <div class="track"><div class="fill" [style.width.%]="c.pct"></div></div>
+          <div class="track">
+            <div class="fill" [style.width.%]="c.pct"></div>
+          </div>
         </div>
         } }
       </div>
@@ -133,7 +145,8 @@
           @if (!filteredTransactions().length) {
           <tr>
             <td colspan="5" class="empty-row">
-              {{ loading() ? 'Betöltés...' : 'Erre az időszakra még nincs rögzített tétel.' }}
+              {{ loading() ? 'Betöltés...' : 'Erre az időszakra még nincs
+              rögzített tétel.' }}
             </td>
           </tr>
           } @else { @for (t of filteredTransactions(); track t._id) {
@@ -142,12 +155,21 @@
             <td><strong>{{ t.name }}</strong></td>
             <td>{{ t.category }}</td>
             <td>
-              <span class="type" [class.in]="t.type === 'income'" [class.out]="t.type === 'expense'">
+              <span
+                class="type"
+                [class.in]="t.type === 'income'"
+                [class.out]="t.type === 'expense'"
+              >
                 {{ t.type === 'income' ? '↗ Bevétel' : '↘ Kiadás' }}
               </span>
             </td>
-            <td class="amount" [class.in]="t.type === 'income'" [class.out]="t.type === 'expense'">
-              {{ t.type === 'income' ? '+' : '−' }}{{ money(t.amount, t.currency) }}
+            <td
+              class="amount"
+              [class.in]="t.type === 'income'"
+              [class.out]="t.type === 'expense'"
+            >
+              {{ t.type === 'income' ? '+' : '−' }}{{ money(t.amount,
+              t.currency) }}
             </td>
           </tr>
           } }
@@ -156,19 +178,34 @@
     </div>
   </section>
 
-  <p class="footnote">A klub pénzügyei · minden bejelentkezett tag látja, tételt csak admin rögzíthet.</p>
+  <p class="footnote">
+    A klub pénzügyei · minden bejelentkezett tag látja, tételt csak admin
+    rögzíthet.
+  </p>
 </div>
 
 @if (showModal()) {
 <div class="modal-backdrop" (click)="closeModal()"></div>
-<div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="entryDialogTitle">
+<div
+  class="modal-dialog"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="entryDialogTitle"
+>
   <form (submit)="onSubmit($event)" novalidate>
     <div class="modal-head">
       <div>
         <div class="kicker">Adminisztráció</div>
         <h2 id="entryDialogTitle">Új pénzmozgás</h2>
       </div>
-      <button class="icon-btn" type="button" aria-label="Bezárás" (click)="closeModal()">✕</button>
+      <button
+        class="icon-btn"
+        type="button"
+        aria-label="Bezárás"
+        (click)="closeModal()"
+      >
+        ✕
+      </button>
     </div>
     <div class="modal-body">
       <div class="form-row">
@@ -252,10 +289,14 @@
       <p class="form-error">{{ formError() }}</p>
       }
 
-      <p class="demo-tip">A tétel azonnal bekerül a klub közös pénzügyi nyilvántartásába.</p>
+      <p class="demo-tip">
+        A tétel azonnal bekerül a klub közös pénzügyi nyilvántartásába.
+      </p>
 
       <div class="modal-actions">
-        <button class="outline-btn" type="button" (click)="closeModal()">Mégse</button>
+        <button class="outline-btn" type="button" (click)="closeModal()">
+          Mégse
+        </button>
         <button class="primary-btn" type="submit" [disabled]="saving()">
           {{ saving() ? 'Mentés...' : 'Tétel mentése' }}
         </button>
