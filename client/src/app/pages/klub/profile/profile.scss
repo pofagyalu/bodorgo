@@ -1,0 +1,328 @@
+// Same shared Klub look as finance.scss/members.scss/overview.scss/
+// documents.scss.
+:host {
+  display: block;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #23354a;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.content {
+  max-width: 1390px;
+  margin: auto;
+  padding: 38px clamp(22px, 4vw, 58px) 70px;
+}
+
+.heading {
+  margin-bottom: 24px;
+}
+
+.kicker {
+  color: #4c9184;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.heading h1 {
+  font-size: clamp(29px, 3vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+  margin: 6px 0 7px;
+  color: #193346;
+}
+
+.heading p {
+  margin: 0;
+  color: #7c8b94;
+  font-size: 14px;
+}
+
+.empty-note {
+  color: #83939a;
+  font-size: 14px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e7edea;
+  border-radius: 17px;
+  box-shadow: 0 5px 19px #213b4110;
+  padding: 24px;
+}
+
+.panel h2 {
+  margin: 0 0 5px;
+  font-size: 18px;
+  color: #203747;
+}
+
+.subtext {
+  margin: 0 0 20px;
+  color: #82939a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+// --- Banner ---
+
+.profile-banner {
+  background: #18384a;
+  border-radius: 19px;
+  color: #fff;
+  padding: 26px 30px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.profile-avatar {
+  width: 62px;
+  height: 62px;
+  flex: none;
+  border-radius: 16px;
+  background: #b9e6d6;
+  color: #20594f;
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.profile-banner h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  letter-spacing: -0.03em;
+}
+
+.profile-banner p {
+  margin: 0;
+  color: #b9d3d3;
+  font-size: 13px;
+}
+
+// --- Layout ---
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.profile-main {
+  display: grid;
+  gap: 18px;
+}
+
+.profile-side {
+  display: grid;
+  gap: 18px;
+}
+
+.address-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.address-note--ok {
+  color: #1a796c;
+}
+
+.address-note--warn {
+  color: #b5762a;
+}
+
+.actions-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.actions-row .primary-btn {
+  background: #1a796c;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 0 20px;
+  min-height: 42px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.actions-row .primary-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.profile-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #50636e;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #dce5e1;
+  border-radius: 9px;
+  background: white;
+  color: #283e49;
+  font-size: 13px;
+}
+
+.field input:disabled {
+  background: #f7faf8;
+  color: #6c8087;
+}
+
+.field small {
+  color: #8a9a9d;
+  font-size: 11px;
+}
+
+.field-with-action {
+  display: flex;
+  gap: 8px;
+}
+
+.field-with-action input {
+  flex: 1;
+}
+
+.field-with-action button {
+  flex: none;
+  background: #1a796c;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field-with-action button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+// --- Notification toggle (same shape as the old top-level Profil page) ---
+
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 13px 0;
+}
+
+.toggle-row strong {
+  font-size: 13px;
+  color: #304957;
+  display: block;
+}
+
+.toggle-row small {
+  font-size: 11px;
+  color: #84949c;
+  display: block;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 24px;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.switch span {
+  display: block;
+  background: #cfdbd6;
+  border-radius: 99px;
+  width: 42px;
+  height: 24px;
+  transition: background 0.15s;
+}
+
+.switch span:after {
+  content: '';
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  box-shadow: 0 1px 3px #0002;
+  transition: transform 0.15s;
+}
+
+.switch input:checked + span {
+  background: #2b9b84;
+}
+
+.switch input:checked + span:after {
+  transform: translateX(18px);
+}
+
+.switch input:disabled + span {
+  opacity: 0.6;
+}
+
+@media (max-width: 800px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 580px) {
+  .content {
+    padding: 24px 16px 50px;
+  }
+
+  .profile-banner {
+    padding: 20px;
+  }
+}

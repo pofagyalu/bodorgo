@@ -44,6 +44,23 @@ const userSchema = new Schema(
       default: false,
       select: false,
     },
+    // Self-service only (see userController.js's updateMe) - a personal
+    // handle distinct from `name` above, which comes from Authentik and
+    // nobody edits directly in this app. Meant to eventually be shown in
+    // place of the real name in places like the tour chat (see
+    // feed/post components) - not wired up there yet. Admin does not
+    // manage this field; it's the one piece of their own profile a user
+    // fully controls themselves.
+    username: {
+      type: String,
+      trim: true,
+      sparse: true,
+      unique: true,
+      match: [
+        /^[A-Za-z0-9._-]{3,40}$/,
+        'A felhasználónév 3-40 karakter lehet: betű, szám, pont, aláhúzás vagy kötőjel.',
+      ],
+    },
     // Neither is shown directly (birthday especially never renders in the
     // admin table - see userController.js's computeAge) - birthday only
     // exists to derive a displayed age, and to pre-fill the edit form.

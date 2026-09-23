@@ -1,0 +1,181 @@
+<div class="content">
+  <div class="heading">
+    <div>
+      <div class="kicker">Fiókom</div>
+      <h1>Saját profilom.</h1>
+      <p>Elérhetőségeid és beállításaid egy helyen.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+  <p class="empty-note">Betöltés...</p>
+  } @else if (profile(); as p) {
+  <div class="profile-banner">
+    <div class="profile-avatar">{{ initials() }}</div>
+    <div>
+      <h2>{{ p.name }}</h2>
+      <p>
+        @if (p.username) { &#64;{{ p.username }} } @else { Nincs beállítva felhasználónév }
+        @if (p.memberSince) { · Klubtag {{ p.memberSince }} óta }
+      </p>
+    </div>
+  </div>
+
+  <div class="profile-layout">
+    <div class="profile-main">
+    <section class="panel">
+      <h2>Személyes adatok</h2>
+      <p class="subtext">
+        Egyes adatokat csak az admin módosíthat - ha valami nem stimmel bennük, keresd meg.
+      </p>
+
+      <div class="profile-fields">
+        <div class="field">
+          <label for="pName">Név</label>
+          <input id="pName" type="text" [value]="p.name" disabled />
+        </div>
+
+        <div class="field">
+          <label for="pUsername">Felhasználónév</label>
+          <div class="field-with-action">
+            <input
+              id="pUsername"
+              type="text"
+              maxlength="40"
+              placeholder="pl. nagy.zoltan"
+              [value]="usernameDraft()"
+              (input)="usernameDraft.set($any($event.target).value)"
+            />
+            <button type="button" [disabled]="savingUsername()" (click)="saveUsername()">
+              {{ savingUsername() ? 'Mentés...' : 'Mentés' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="pEmail">E-mail cím</label>
+          <input id="pEmail" type="email" [value]="p.email ?? ''" disabled />
+        </div>
+
+        <div class="field">
+          <label for="pAge">Kor</label>
+          <input id="pAge" type="text" [value]="p.age != null ? p.age + ' év' : 'Nincs megadva'" disabled />
+        </div>
+
+        <div class="field">
+          <label for="pMemberSince">Tag kezdete</label>
+          <input
+            id="pMemberSince"
+            type="text"
+            [value]="p.memberSince ? p.memberSince + '. év' : 'Nincs megadva'"
+            disabled
+          />
+        </div>
+
+        <div class="field">
+          <label for="pLastLogin">Utolsó belépés</label>
+          <input
+            id="pLastLogin"
+            type="text"
+            [value]="p.lastLoginAt ? formatDateTime(p.lastLoginAt) : 'Még nem lépett be'"
+            disabled
+          />
+        </div>
+
+        <div class="field">
+          <label for="pTours">Táborok száma</label>
+          <input id="pTours" type="text" [value]="p.toursAttended + ' tábor'" disabled />
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Lakcím</h2>
+      <p class="subtext">
+        Ha megadod, ebből számoljuk a táborok távolságát/időtartamát Budapest helyett.
+      </p>
+
+      <div class="profile-fields">
+        <div class="field">
+          <label for="aZip">Irányítószám</label>
+          <input
+            id="aZip"
+            type="text"
+            [value]="address().zipCode"
+            (input)="updateAddress('zipCode', $any($event.target).value)"
+          />
+        </div>
+        <div class="field">
+          <label for="aCity">Település</label>
+          <input
+            id="aCity"
+            type="text"
+            [value]="address().city"
+            (input)="updateAddress('city', $any($event.target).value)"
+          />
+        </div>
+        <div class="field">
+          <label for="aStreet">Utca, házszám</label>
+          <input
+            id="aStreet"
+            type="text"
+            [value]="address().street"
+            (input)="updateAddress('street', $any($event.target).value)"
+          />
+        </div>
+        <div class="field">
+          <label for="aCountry">Ország</label>
+          <select
+            id="aCountry"
+            [value]="address().country"
+            (change)="updateAddress('country', $any($event.target).value)"
+          >
+            <option value="Magyarország">Magyarország</option>
+            <option value="Románia">Románia</option>
+            <option value="Egyesült Királyság">Egyesült Királyság</option>
+          </select>
+        </div>
+      </div>
+
+      @if (addressResolved() === true) {
+      <p class="address-note address-note--ok">✔ A cím sikeresen beazonosítva.</p>
+      } @else if (addressResolved() === false) {
+      <p class="address-note address-note--warn">
+        ⚠ Nem sikerült pontosan beazonosítani ezt a címet - próbáld a hivatalos (pl. angol vagy
+        román) városnevet is, ha külföldi cím.
+      </p>
+      }
+
+      <div class="actions-row">
+        <button type="button" class="primary-btn" [disabled]="savingAddress()" (click)="saveAddress()">
+          {{ savingAddress() ? 'Mentés...' : 'Mentés' }}
+        </button>
+      </div>
+    </section>
+    </div>
+
+    <div class="profile-side">
+      <section class="panel">
+        <h2>Értesítések</h2>
+        <p class="subtext">Te döntöd el, miről kérsz üzenetet.</p>
+        <div class="toggle-row">
+          <div>
+            <strong>E-mail értesítések</strong>
+            <small>Az összes klubos e-mail ki- vagy bekapcsolása</small>
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              [checked]="p.wantsEmailNotifications"
+              [disabled]="savingNotifications()"
+              (change)="toggleEmailNotifications()"
+              aria-label="E-mail értesítések"
+            />
+            <span></span>
+          </label>
+        </div>
+      </section>
+    </div>
+  </div>
+  }
+</div>

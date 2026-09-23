@@ -94,6 +94,26 @@ export interface MyFamilyResponse {
   };
 }
 
+// GET /users/me's own fixed field set for the Klub "Profilom" self-view -
+// deliberately never includes gender/familyId, even about yourself (see
+// userController.js's getMe).
+export interface MyProfile {
+  name: string;
+  username?: string;
+  email?: string;
+  age: number | null;
+  memberSince?: number;
+  lastLoginAt?: string;
+  toursAttended: number;
+  wantsEmailNotifications: boolean;
+  address?: UserAddress;
+}
+
+export interface MyProfileResponse {
+  status: string;
+  data: MyProfile;
+}
+
 export interface CreateUserPayload {
   name: string;
   email?: string;
@@ -134,8 +154,10 @@ export interface AdminUserResponse {
 }
 
 export interface UpdateMePayload {
-  name?: string;
-  email?: string;
+  // name/email are NOT self-editable - name comes from Authentik, email
+  // is admin-only (see UpdateUserPayload) - only username is the user's
+  // own to change (see userController.js's updateMe).
+  username?: string;
   wantsEmailNotifications?: boolean;
   address?: UserAddress;
 }
@@ -159,12 +181,22 @@ export class UserService {
     return this.http.get<AdminUsersResponse>(this.apiUrl);
   }
 
+  // Admin-only (see userRoutes.js) - one specific user's full editable
+  // record, for the Klub Felhasználók "Szerkesztés" page.
+  getUser(id: string): Observable<AdminUserResponse> {
+    return this.http.get<AdminUserResponse>(`${this.apiUrl}/${id}`);
+  }
+
   getMyAttendance(): Observable<MyAttendanceResponse> {
     return this.http.get<MyAttendanceResponse>(`${this.apiUrl}/me/attendance`);
   }
 
   getMyFamily(): Observable<MyFamilyResponse> {
     return this.http.get<MyFamilyResponse>(`${this.apiUrl}/me/family`);
+  }
+
+  getMe(): Observable<MyProfileResponse> {
+    return this.http.get<MyProfileResponse>(`${this.apiUrl}/me`);
   }
 
   createUser(payload: CreateUserPayload): Observable<AdminUserResponse> {

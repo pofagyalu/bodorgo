@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
 import { memberGuard } from './auth/member.guard';
+import { adminGuard } from './auth/admin.guard';
 
 // Home stays eager since it's the near-universal first page hit; every
 // other route is lazy so its own code (and whatever heavy libraries it
@@ -85,11 +86,20 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/klub/members/members').then((m) => m.Members),
       },
       {
+        path: 'felhasznalok/:id',
+        title: 'Tag szerkesztése',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/klub/member-edit/member-edit').then((m) => m.MemberEdit),
+      },
+      {
+        path: 'dokumentumok',
+        title: 'Klub dokumentumok',
+        loadComponent: () => import('./pages/klub/documents/documents').then((m) => m.Documents),
+      },
+      {
         path: 'profilom',
         title: 'Klub profilom',
-        data: { title: 'Profilom' },
-        loadComponent: () =>
-          import('./pages/klub/klub-placeholder/klub-placeholder').then((m) => m.KlubPlaceholder),
+        loadComponent: () => import('./pages/klub/profile/profile').then((m) => m.KlubProfile),
       },
     ],
   },

@@ -71,17 +71,18 @@ export async function resolveFamilyId(input) {
 
 // An admin gets the full roster with every management field, including
 // the "Táborok" column's tour count; a plain 'member' can also see the
-// whole list now (name/email/age/gender only - no familyId/role/
-// lastLoginAt/toursAttended, and no raw birthday, just the computed age),
-// but never the fields that back admin-only actions like editing or the
-// family/role/tour-count columns. A 'guest' still can't call this at all
-// (see userRoutes.js's restrictTo) - they only ever see their own family,
-// via getMyFamily.
+// whole list now (name/email/age only - no familyId/role/lastLoginAt/
+// toursAttended, no raw birthday - just the computed age - and no gender,
+// which nobody but admin ever sees, not even about themselves), but never
+// the fields that back admin-only actions like editing or the family/
+// role/tour-count columns. A 'guest' still can't call this at all (see
+// userRoutes.js's restrictTo) - they only ever see their own family, via
+// getMyFamily.
 export const getAllUsers = async (req, res) => {
   const isAdmin = req.user.role === 'admin';
   const selectFields = isAdmin
     ? 'name email familyId role sub lastLoginAt createdAt birthday gender memberSince'
-    : 'name email birthday gender';
+    : 'name email birthday';
 
   const users = await User.find().select(selectFields).sort('name').lean();
 
@@ -134,12 +135,20 @@ export const getMyFamily = async (req, res) => {
   res.status(200).json({ status: 'success', data: { members } });
 };
 
+// name/email are deliberately NOT self-editable: name comes from
+// Authentik (nobody edits it directly in this app), and email is
+// admin-only now (see userController.js's updateUser) - only username is
+// the user's own to change, alongside the pre-existing notification
+// preference and address.
 export const updateMe = async (req, res, next) => {
   if (req.body.password || req.body.passwordConfirm) {
     throw new AppError('This route is not for password update.', 400);
   }
 
-  const filteredBody = filterObj(req.body, 'name', 'email', 'wantsEmailNotifications', 'address');
+  const filteredBody = filterObj(req.body, 'username', 'wantsEmailNotifications', 'address');
+  if (typeof filteredBody.username === 'string') {
+    filteredBody.username = filteredBody.username.trim() || undefined;
+  }
 
   // Loaded and .save()d rather than findByIdAndUpdate - specifically so
   // userModel.js's address-geocoding pre('save') hook actually fires on
@@ -160,6 +169,40 @@ export const updateMe = async (req, res, next) => {
       // actually got located, instead of them only finding out later when
       // a tour's distance quietly never changes from Budapest.
       addressResolved: updatedUser.address?.city ? !!updatedUser.location : null,
+    },
+  });
+};
+
+// GET /users/me - requireAuth. Feeds the Klub "Profilom" page's own
+// self-view - deliberately separate from getAllUsers (a browsing/list
+// endpoint for admin and member alike) since this is "give me MY OWN
+// record," with its own fixed field set. Never includes gender or
+// familyId, even about the caller's own account - see the profile page's
+// access rules (only admin ever sees/edits those, via updateUser).
+export const getMe = async (req, res) => {
+  const user = await User.findById(req.user._id).select(
+    'name username email birthday memberSince lastLoginAt wantsEmailNotifications address',
+  );
+
+  const attendanceCounts = await Reservation.aggregate([
+    { $unwind: '$attendees' },
+    { $match: { 'attendees.user': user._id } },
+    { $group: { _id: '$tour' } },
+    { $count: 'toursAttended' },
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      age: computeAge(user.birthday),
+      memberSince: user.memberSince,
+      lastLoginAt: user.lastLoginAt,
+      toursAttended: attendanceCounts[0]?.toursAttended ?? 0,
+      wantsEmailNotifications: user.wantsEmailNotifications,
+      address: user.address,
     },
   });
 };
@@ -219,10 +262,34 @@ export const deleteMe = async (req, res, next) => {
   });
 };
 
-export const getUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'this route is not yet implemented',
+// GET /users/:id - requireAuth, restrictTo('admin') (see userRoutes.js).
+// The one specific user's full admin-editable record, powering the Klub
+// Felhasználók "Szerkesztés" page - not open to plain members (unlike
+// getAllUsers's member-visible subset), since this includes
+// gender/familyId/lastLoginAt, none of which a member should see about
+// anyone but never has to for their own account either (see getMe).
+export const getUser = async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    throw new AppError('No user found with that ID!', 404);
+  }
+
+  const attendanceCounts = await Reservation.aggregate([
+    { $unwind: '$attendees' },
+    { $match: { 'attendees.user': user._id } },
+    { $group: { _id: '$tour' } },
+    { $count: 'toursAttended' },
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      user: {
+        ...user.toObject(),
+        age: computeAge(user.birthday),
+        toursAttended: attendanceCounts[0]?.toursAttended ?? 0,
+      },
+    },
   });
 };
 

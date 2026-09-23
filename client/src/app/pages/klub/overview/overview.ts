@@ -64,14 +64,13 @@ export class Overview implements OnInit {
   );
   paidThisYear = computed(() => this.eligibleThisYear().filter((m) => this.isPaid(m, this.currentYear)));
 
-  currentYearTransactions = computed(() =>
-    this.transactions().filter((t) => t.date.startsWith(String(this.currentYear))),
-  );
-  netThisYear = computed(() =>
-    this.currentYearTransactions().reduce(
-      (sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount),
-      0,
-    ),
+  // "How much money does the club actually have right now" - all-time
+  // income minus all-time expenses, not just this year's - a single
+  // year's net flow (what used to be shown here) answers "how did this
+  // year go," not "what do we have," which is the more useful number at
+  // a glance.
+  totalBalance = computed(() =>
+    this.transactions().reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0),
   );
 
   yearProgress = computed(() =>
@@ -86,6 +85,11 @@ export class Overview implements OnInit {
       };
     }),
   );
+
+  // Oldest-first for the bar chart, so it reads left-to-right as a trend
+  // over time - membershipYears/yearProgress themselves stay newest-first
+  // (matches the demo's own table-column convention elsewhere in Klub).
+  yearProgressChart = computed(() => [...this.yearProgress()].reverse());
 
   recentActivity = computed(() =>
     [...this.transactions()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4),

@@ -4,7 +4,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { TourService, TourStatsResponse } from '../../services/tour';
 import { ToursMap } from '../../components/tours-map/tours-map';
 import { shuffledLogoColors } from '../../shared/logo-colors';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-homepage',
@@ -16,22 +15,16 @@ import { environment } from '../../../environments/environment';
 export class HomePage {
   private tourService = inject(TourService);
 
-  // Documents are served through a requireAuth-gated API route, not a
-  // plain public client asset - see server/src/controllers/documentController.js.
-  documentsUrl = `${environment.apiBaseUrl}/documents`;
-
   stats = signal<TourStatsResponse['data'] | null>(null);
 
   // Picked once per page view, one per icon off a shuffled copy of the 7
-  // logo colors - a permutation, so none of these 6 can repeat (there's
-  // exactly one color that won't be used on any given page view).
+  // logo colors - a permutation, so none of these 4 can repeat (there are
+  // 3 colors that won't be used on any given page view).
   private readonly iconColors = shuffledLogoColors();
   totalToursIconColor = this.iconColors[0];
   totalParticipantsIconColor = this.iconColors[1];
   mostAttendedIconColor = this.iconColors[2];
   bestRatedIconColor = this.iconColors[3];
-  documentIconColor1 = this.iconColors[4];
-  documentIconColor2 = this.iconColors[5];
 
   // Fixed rather than drawn from the shuffled logo-color pool - this is a
   // two-slice comparison chart with a conventional color meaning (blue for

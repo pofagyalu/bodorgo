@@ -76,6 +76,33 @@
       } }
     </div>
 
+    @if (selectedMember(); as detail) {
+    <section class="panel membership-detail">
+      <h2>
+        {{ detail._id === myId() ? 'Saját befizetések' : detail.name + '
+        befizetései' }}
+      </h2>
+      <div>
+        @for (y of membershipYears(); track y) {
+        <div class="history-row">
+          <strong>{{ y }}. évi tagdíj</strong>
+          @if (yearState(detail._id, y) === 'paid') { @if
+          (paymentFor(detail._id, y); as payment) {
+          <span
+            >{{ money(payment.amount, payment.currency) }} · {{ payment.date |
+            date: 'yyyy. MM. dd.' }}</span
+          >
+          } } @else if (yearState(detail._id, y) === 'unpaid') {
+          <span>Nincs befizetve</span>
+          } @else {
+          <span>Még nem volt tag</span>
+          }
+        </div>
+        }
+      </div>
+    </section>
+    }
+
     <section class="panel member-panel">
       <div class="member-panel-head">
         <div>
@@ -140,7 +167,7 @@
                 </span>
               </td>
               }
-              <td>
+              <td class="row-actions">
                 @if (isAdmin()) {
                 <button
                   type="button"
@@ -149,6 +176,14 @@
                 >
                   Részletek →
                 </button>
+                <a
+                  [routerLink]="['/klub/felhasznalok', m._id]"
+                  class="icon-btn icon-btn--edit"
+                  title="Szerkesztés"
+                  aria-label="Tag szerkesztése"
+                >
+                  <mat-icon>edit</mat-icon>
+                </a>
                 }
               </td>
             </tr>
@@ -157,33 +192,6 @@
         </table>
       </div>
     </section>
-
-    @if (selectedMember(); as detail) {
-    <section class="panel membership-detail">
-      <h2>
-        {{ detail._id === myId() ? 'Saját befizetések' : detail.name + '
-        befizetései' }}
-      </h2>
-      <div>
-        @for (y of membershipYears(); track y) {
-        <div class="history-row">
-          <strong>{{ y }}. évi tagdíj</strong>
-          @if (yearState(detail._id, y) === 'paid') { @if
-          (paymentFor(detail._id, y); as payment) {
-          <span
-            >{{ money(payment.amount, payment.currency) }} · {{ payment.date |
-            date: 'yyyy. MM. dd.' }}</span
-          >
-          } } @else if (yearState(detail._id, y) === 'unpaid') {
-          <span>Nincs befizetve</span>
-          } @else {
-          <span>Még nem volt tag</span>
-          }
-        </div>
-        }
-      </div>
-    </section>
-    }
 
     <p class="member-note">
       A tagok egymás státuszát látják; a befizetés részleteit csak a saját tag
@@ -219,12 +227,15 @@
               <th>Alkalmazás-hozzáférés</th>
               <th>Fiók létrehozva</th>
               <th>Klubtagság</th>
+              @if (isAdmin()) {
+              <th>Műveletek</th>
+              }
             </tr>
           </thead>
           <tbody>
             @if (!filteredCasualUsers().length) {
             <tr>
-              <td colspan="4" class="empty-row">
+              <td [attr.colspan]="isAdmin() ? 5 : 4" class="empty-row">
                 Nincs ilyen nevű felhasználó.
               </td>
             </tr>
@@ -250,6 +261,18 @@
               </td>
               <td>{{ u.createdAt | date: 'yyyy. MM. dd.' }}</td>
               <td><span class="status na">Nem klubtag</span></td>
+              @if (isAdmin()) {
+              <td class="row-actions">
+                <a
+                  [routerLink]="['/klub/felhasznalok', u._id]"
+                  class="icon-btn icon-btn--edit"
+                  title="Szerkesztés"
+                  aria-label="Felhasználó szerkesztése"
+                >
+                  <mat-icon>edit</mat-icon>
+                </a>
+              </td>
+              }
             </tr>
             } }
           </tbody>

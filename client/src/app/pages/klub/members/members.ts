@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../auth/auth.service';
 import { MembershipService, MemberUser } from '../../../services/membership';
 import { FinanceService, Transaction, TransactionCurrency } from '../../../services/finance';
@@ -18,7 +19,7 @@ const CLUB_FOUNDING_YEAR = 2019;
 
 @Component({
   selector: 'app-members',
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink, MatIconModule],
   templateUrl: './members.html',
   styleUrl: './members.scss',
 })

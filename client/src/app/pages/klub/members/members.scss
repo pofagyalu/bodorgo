@@ -343,6 +343,12 @@ td {
   background: #f0f4f3;
 }
 
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .link-btn {
   border: 0;
   background: transparent;
@@ -351,6 +357,38 @@ td {
   font-weight: 750;
   padding: 8px;
   white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.icon-btn--edit {
+  // Same colors as the old Profil page's own .icon-btn/.icon-btn--edit
+  // (profile.scss) - identical edit action everywhere in the app.
+  background: #445a67;
+  color: #fff;
+
+  &:hover {
+    background: #37474f;
+  }
 }
 
 .link-btn:hover {

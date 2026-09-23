@@ -40,26 +40,46 @@
       <small>Tag fizetett a jogosultak közül</small>
     </section>
     <section class="overview-stat">
-      <div class="label">{{ currentYear }}. évi nettó pénzmozgás</div>
-      <strong>{{ money(netThisYear()) }}</strong>
-      <small>Bevétel − kiadás</small>
+      <div class="label">Egyenleg</div>
+      <strong>{{ money(totalBalance()) }}</strong>
+      <small>A klub jelenlegi pénzeszköze - összes bevétel mínusz összes kiadás</small>
     </section>
   </div>
+
+  <section class="panel about-panel">
+    <dl class="about-list">
+      <div class="about-row">
+        <dt>Székhely</dt>
+        <dd>1038 Budapest, Hollós Korvin Lajos utca 4. szám 5. em. 50. ajtó</dd>
+      </div>
+      <div class="about-row">
+        <dt>Adószám</dt>
+        <dd>19168674-1-41</dd>
+      </div>
+      <div class="about-row">
+        <dt>Alapítás éve</dt>
+        <dd>2019</dd>
+      </div>
+    </dl>
+  </section>
 
   <div class="overview-grid">
     <section class="panel">
       <div class="panel-title">
-        <h2>Tagdíjak alakulása</h2>
+        <h2>Tagdíjak befizetésének alakulása</h2>
         <span>Évenként</span>
       </div>
-      <div>
-        @for (row of yearProgress(); track row.year) {
-        <div class="progress-year">
-          <span class="year-name">{{ row.year }}</span>
-          <div class="track">
-            <div class="fill" [style.width.%]="row.pct"></div>
+      <div class="year-chart" role="img" aria-label="Tagdíjak befizetésének aránya évenként">
+        @for (row of yearProgressChart(); track row.year) {
+        <div class="year-col">
+          <div class="bar-track">
+            <div
+              class="bar"
+              [style.height.%]="row.pct"
+              [title]="row.year + ': ' + row.done + ' / ' + row.due + ' fizetve'"
+            ></div>
           </div>
-          <span class="progress-value">{{ row.done }} / {{ row.due }}</span>
+          <span class="year-label">{{ row.year }}</span>
         </div>
         }
       </div>
@@ -73,7 +93,7 @@
         <h2>Legutóbbi pénzmozgások</h2>
         <span>Valós adatok</span>
       </div>
-      <div>
+      <div class="activity-list">
         @if (!recentActivity().length) {
         <p class="category-empty">Még nincs rögzített pénzmozgás.</p>
         } @else { @for (t of recentActivity(); track t._id) {

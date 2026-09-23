@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.patch('/updateMe', requireAuth, userController.updateMe);
 router.delete('/deleteMe', requireAuth, userController.deleteMe);
+router.get('/me', requireAuth, userController.getMe);
 router.get('/me/attendance', requireAuth, userController.getMyAttendance);
 router.get('/me/family', requireAuth, userController.getMyFamily);
 router.post('/join-family', requireAuth, restrictTo('admin'), userController.joinFamily);
@@ -16,7 +17,7 @@ router
   .post(requireAuth, restrictTo('admin'), userController.createUser);
 router
   .route('/:id')
-  .get(userController.getUser)
+  .get(requireAuth, restrictTo('admin'), userController.getUser)
   .patch(requireAuth, restrictTo('admin'), userController.updateUser)
   .delete(userController.deleteUser);
 

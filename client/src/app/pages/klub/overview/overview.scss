@@ -247,6 +247,64 @@
   font-size: 11px;
 }
 
+// --- A klubról ---
+// Same dark-hero treatment as .overview-hero above: solid navy background,
+// a large circle outline bleeding off one corner (a plain ::after,
+// positioned partly outside the box via negative offsets, sitting behind
+// the content via position:relative + z-index on the children), and
+// semi-transparent white-bordered inner cards - matches .intro-card's own
+// look elsewhere on this page.
+.about-panel {
+  margin: 18px 0;
+  background: #18384a;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.about-panel:after {
+  content: '';
+  position: absolute;
+  right: -70px;
+  top: -90px;
+  width: 240px;
+  height: 240px;
+  border: 1px solid #ffffff20;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.about-list {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.about-row {
+  background: #ffffff12;
+  border: 1px solid #ffffff22;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.about-row dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9bd9c8;
+  margin-bottom: 5px;
+}
+
+.about-row dd {
+  margin: 0;
+  font-weight: 700;
+  color: #fff;
+  font-size: 14px;
+}
+
 // --- Grid: progress + activity ---
 
 .overview-grid {
@@ -255,35 +313,71 @@
   gap: 18px;
 }
 
+// CSS Grid stretches both panels in a row to the same height by default,
+// but a plain-block panel's own content just sits at its natural height
+// inside that extra space, leaving the shorter panel's content looking
+// like it "floats" above empty space instead of reaching the bottom. Flex
+// column + the content area as the one flexible child fixes that - it
+// grows to fill whatever height the grid gave the panel, so the chart's
+// bars (anchored to the bottom of their own area) actually reach the
+// panel's true bottom, matching the taller sibling panel exactly.
 .overview-grid .panel {
   min-width: 0;
-}
-
-.progress-year {
   display: flex;
+  flex-direction: column;
+}
+
+.year-chart,
+.activity-list {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+// Horizontal bar chart, one bar per year - same visual language as
+// finance.scss's own monthly chart (bar heights, hover tooltips) so the
+// Klub area reads consistently. Scrolls sideways as years accumulate
+// instead of growing an ever-taller vertical list of near-identical bars
+// (which is what this replaced - past years are almost always ~100% paid
+// once backfilled, so a plain list just ended up tracking member count).
+.year-chart {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  min-height: 170px;
+  margin: 8px 0 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.year-col {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin: 19px 0;
+  gap: 8px;
+  flex: 0 0 34px;
+  height: 100%;
 }
 
-.progress-year .year-name {
-  font-size: 13px;
-  font-weight: 700;
-  width: 42px;
-  color: #3b5360;
+.bar-track {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  border-bottom: 1px solid #e8eeea;
 }
 
-.progress-year .track {
-  flex: 1;
-  height: 9px;
+.bar {
+  width: 60%;
+  min-height: 2px;
+  background: #54aa9a;
+  border-radius: 4px 4px 0 0;
 }
 
-.progress-year .progress-value {
-  font-size: 12px;
-  color: #5f737c;
-  width: 46px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.year-label {
+  font-size: 11px;
+  color: #89989e;
+  flex-shrink: 0;
 }
 
 .activity-item {
