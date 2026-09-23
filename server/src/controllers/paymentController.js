@@ -346,6 +346,38 @@ A Bódorgó csapata`;
   return { text, html };
 }
 
+// Membership-dues equivalent of receiptEmailBody above - each covered
+// member gets their own line with the specific year it paid off, since
+// (unlike a tour advance) a family payment can cover different years for
+// different people.
+function membershipReceiptEmailBody(payerName, members, total) {
+  const lines = members.map((m) => `- ${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft`).join('\n');
+  const text = `Kedves ${payerName}!
+
+Köszönjük a klubtagsági díj befizetését:
+
+${lines}
+
+Összesen: ${formatForint(total)} Ft
+
+A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.
+
+Jó bódorgást! 🏕️
+A Bódorgó csapata`;
+
+  const linesHtml = members
+    .map((m) => `<li>${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft</li>`)
+    .join('');
+  const html = `<p>Kedves ${payerName}!</p>
+<p>Köszönjük a klubtagsági díj befizetését:</p>
+<ul>${linesHtml}</ul>
+<p><strong>Összesen: ${formatForint(total)} Ft</strong></p>
+<p>A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.</p>
+<p>Jó bódorgást! 🏕️<br>A Bódorgó csapata</p>`;
+
+  return { text, html };
+}
+
 // Shared by the Stripe path (markPaymentSucceeded) and the cash path
 // (recordCashPayment) - the actual "this money has been received" effect
 // on the tour's own bookkeeping, independent of which payment method got
@@ -362,8 +394,9 @@ async function markAttendeesPaid(payment) {
 // membershipFee's own "money received" effect - one real Transaction per
 // covered member+year (see transactionModel.js's user/membershipYear
 // fields), so the Klub Pénzügyek/Felhasználók/Áttekintés pages
-// immediately reflect it. No receipt/email yet (unlike tourAdvance below)
-// - a dues-specific receipt template can follow later if wanted.
+// immediately reflect it - plus a receipt/email, same as tourAdvance
+// below, using the dues-specific wording (see paymentReceipt.js's
+// isMembership branch and membershipReceiptEmailBody above).
 async function markMembershipPaid(payment) {
   for (const m of payment.members) {
     await Transaction.create({
@@ -377,6 +410,29 @@ async function markMembershipPaid(payment) {
       user: m.user,
       membershipYear: m.membershipYear,
     });
+  }
+
+  // Same "don't fail the payment over a receipt/email hiccup" reasoning
+  // as markPaymentSucceeded's tourAdvance path - the Transactions above
+  // already stand regardless of what happens next.
+  try {
+    const payer = await User.findById(payment.createdBy).select('name email');
+    if (!payer?.email) return;
+
+    const filename = await generateReceiptPdf(payment, payer.name, null, null);
+    payment.receiptFilename = filename;
+    await payment.save();
+
+    const { text, html } = membershipReceiptEmailBody(payer.name, payment.members, payment.amount);
+    await sendResendEmail({
+      to: payer.email,
+      subject: 'Tagdíj befizetve - Bódorgó Klub',
+      text,
+      html,
+      attachments: [{ filename, content: fs.readFileSync(path.join(RECEIPTS_DIR, filename)) }],
+    });
+  } catch (err) {
+    logger.error(`Payment ${payment._id}: membership receipt/email failed after a successful payment: ${err.message}`);
   }
 }
 

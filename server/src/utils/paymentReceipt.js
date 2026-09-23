@@ -63,7 +63,12 @@ export function receiptFilenameFor(payment, payerName) {
 // Deliberately titled "Fizetési igazolás" (payment confirmation), not
 // "Számla" (invoice) - a real áfás számla has legal requirements (adószám,
 // sequential numbering, etc.) that don't apply to this club tracking its
-// own members' advance payments internally.
+// own members' advance/dues payments internally.
+//
+// tourTitle/tourStartDate are only meaningful for purpose:'tourAdvance' -
+// pass null/undefined for a membershipFee payment, which lists
+// payment.members (each with their own membershipYear) instead of
+// payment.attendees and skips the tour-specific lines entirely.
 export async function generateReceiptPdf(payment, payerName, tourTitle, tourStartDate) {
   fs.mkdirSync(RECEIPTS_DIR, { recursive: true });
   const filename = receiptFilenameFor(payment, payerName);
@@ -93,24 +98,30 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
     .text(`Kiállítva: ${formatHu(new Date(payment.createdAt ?? Date.now()))}`);
   doc.moveDown(1);
 
+  const isMembership = payment.purpose === 'membershipFee';
+  const rows = isMembership
+    ? payment.members.map((m) => ({ name: `${m.name} (${m.membershipYear})`, amount: m.amount }))
+    : payment.attendees;
+
   doc.font('Body').fontSize(11).fillColor('#000');
-  // Explicit, not left to be inferred from context - this receipt only
-  // ever covers a tour's accommodation advance (see paymentModel.js's
-  // purpose field; membershipFee payments aren't built yet, but will need
-  // their own wording once they exist).
-  doc.text(`Tárgy: `, { continued: true }).font('Heading').text('Szállás előleg befizetése');
+  doc
+    .text(`Tárgy: `, { continued: true })
+    .font('Heading')
+    .text(isMembership ? 'Klubtagsági díj befizetése' : 'Szállás előleg befizetése');
   doc.font('Body').text(`Befizető: `, { continued: true }).font('Heading').text(payerName);
-  doc.font('Body').text(`Tábor: `, { continued: true }).font('Heading').text(tourTitle);
-  if (tourStartDate) {
-    doc.font('Body').text(`Tábor időpontja: `, { continued: true }).font('Heading').text(formatHuDate(new Date(tourStartDate)));
+  if (!isMembership) {
+    doc.font('Body').text(`Tábor: `, { continued: true }).font('Heading').text(tourTitle);
+    if (tourStartDate) {
+      doc.font('Body').text(`Tábor időpontja: `, { continued: true }).font('Heading').text(formatHuDate(new Date(tourStartDate)));
+    }
   }
   doc.moveDown(1);
 
-  // Table: name | amount, one row per attendee this payment covered.
+  // Table: name | amount, one row per attendee/member this payment covered.
   const colNameX = 50;
   const colAmountX = 50 + contentWidth - 120;
   doc.font('Heading').fontSize(11).fillColor(DARK_GREEN);
-  doc.text('Résztvevő', colNameX, doc.y, { width: colAmountX - colNameX, continued: false });
+  doc.text(isMembership ? 'Tag' : 'Résztvevő', colNameX, doc.y, { width: colAmountX - colNameX, continued: false });
   doc.text('Összeg', colAmountX, doc.y - doc.currentLineHeight(), { width: 120, align: 'right' });
   doc.moveDown(0.3);
   doc
@@ -121,10 +132,10 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
   doc.moveDown(0.5);
 
   doc.font('Body').fontSize(11).fillColor('#000');
-  for (const attendee of payment.attendees) {
+  for (const row of rows) {
     const rowY = doc.y;
-    doc.text(attendee.name, colNameX, rowY, { width: colAmountX - colNameX });
-    doc.text(`${formatForint(attendee.amount)} Ft`, colAmountX, rowY, { width: 120, align: 'right' });
+    doc.text(row.name, colNameX, rowY, { width: colAmountX - colNameX });
+    doc.text(`${formatForint(row.amount)} Ft`, colAmountX, rowY, { width: 120, align: 'right' });
     doc.moveDown(0.4);
   }
 
@@ -148,9 +159,14 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
     .font('Body')
     .fontSize(9)
     .fillColor('#999')
-    .text('Ez a dokumentum a Bódorgó klub által kezelt előlegbefizetés visszaigazolása.', 50, doc.y, {
-      width: contentWidth,
-    });
+    .text(
+      isMembership
+        ? 'Ez a dokumentum a Bódorgó klub által kezelt tagdíjbefizetés visszaigazolása.'
+        : 'Ez a dokumentum a Bódorgó klub által kezelt előlegbefizetés visszaigazolása.',
+      50,
+      doc.y,
+      { width: contentWidth },
+    );
 
   doc.end();
 

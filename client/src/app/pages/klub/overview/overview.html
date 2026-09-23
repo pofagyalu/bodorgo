@@ -4,19 +4,24 @@
       <div class="kicker">Üdvözlünk a Bódorgó Klubban</div>
       <h1>Közös célok.<br />Közös történet.</h1>
       <p>
-        A Bódorgó Klub tagjai közösen szervezik programjaikat és alakítják a klub életét. Itt
-        követheted a tagság alakulását, a tagdíjakat és a közös pénzügyeket.
+        A Bódorgó Klub tagjai közösen szervezik programjaikat és alakítják a
+        klub életét. Itt követheted a tagság alakulását, a tagdíjakat és a közös
+        pénzügyeket.
       </p>
       <div class="overview-actions">
-        <a routerLink="/klub/felhasznalok" class="primary-btn">Tagok és tagdíjak →</a>
-        <a routerLink="/klub/penzugyek" class="outline-btn">Pénzügyek megnyitása</a>
+        <a routerLink="/klub/felhasznalok" class="primary-btn"
+          >Tagok és tagdíjak →</a
+        >
+        <a routerLink="/klub/penzugyek" class="outline-btn"
+          >Pénzügyek megnyitása</a
+        >
       </div>
     </div>
     <div class="intro-card">
       <strong>Nyitott klubélet</strong>
       <p>
-        A tagdíjak éves állapotát minden tag látja. A pénzügyi oldalon a klub bevételei és
-        kiadásai követhetők.
+        A tagdíjak éves állapotát minden tag látja. A pénzügyi oldalon a klub
+        bevételei és kiadásai követhetők.
       </p>
     </div>
   </section>
@@ -29,13 +34,15 @@
     </section>
     <section class="overview-stat">
       <div class="label">{{ currentYear }}. évi tagdíj rendezve</div>
-      <strong>{{ paidThisYear().length }} / {{ eligibleThisYear().length }}</strong>
+      <strong
+        >{{ paidThisYear().length }} / {{ eligibleThisYear().length }}</strong
+      >
       <small>Tag fizetett a jogosultak közül</small>
     </section>
     <section class="overview-stat">
       <div class="label">{{ currentYear }}. évi nettó pénzmozgás</div>
       <strong>{{ money(netThisYear()) }}</strong>
-      <small>Bevétel − kiadás, nyitóegyenleg nélkül</small>
+      <small>Bevétel − kiadás</small>
     </section>
   </div>
 
@@ -49,12 +56,16 @@
         @for (row of yearProgress(); track row.year) {
         <div class="progress-year">
           <span class="year-name">{{ row.year }}</span>
-          <div class="track"><div class="fill" [style.width.%]="row.pct"></div></div>
+          <div class="track">
+            <div class="fill" [style.width.%]="row.pct"></div>
+          </div>
           <span class="progress-value">{{ row.done }} / {{ row.due }}</span>
         </div>
         }
       </div>
-      <a routerLink="/klub/felhasznalok" class="link-btn">Összes tag megtekintése →</a>
+      <a routerLink="/klub/felhasznalok" class="link-btn"
+        >Összes tag megtekintése →</a
+      >
     </section>
 
     <section class="panel">
@@ -72,14 +83,19 @@
             <small>{{ t.date | date: 'yyyy. MM. dd.' }}</small>
           </div>
           <b [class.out]="t.type === 'expense'">
-            {{ t.type === 'income' ? '+' : '−' }}{{ money(t.amount, t.currency) }}
+            {{ t.type === 'income' ? '+' : '−' }}{{ money(t.amount, t.currency)
+            }}
           </b>
         </div>
         } }
       </div>
-      <a routerLink="/klub/penzugyek" class="link-btn">Teljes pénzügyi lista →</a>
+      <a routerLink="/klub/penzugyek" class="link-btn"
+        >Teljes pénzügyi lista →</a
+      >
     </section>
   </div>
 
-  <p class="footnote">A klub bemutatkozó szövege és statisztikái valós adatokból számolódnak.</p>
+  <p class="footnote">
+    A klub bemutatkozó szövege és statisztikái valós adatokból számolódnak.
+  </p>
 </div>
