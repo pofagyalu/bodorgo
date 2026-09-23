@@ -1,0 +1,392 @@
+// Ported from club-finances-demo.html's stylesheet, same as finance.scss -
+// scoped to this component so it can reuse the demo's class names.
+:host {
+  display: block;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #23354a;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.content {
+  max-width: 1390px;
+  margin: auto;
+  padding: 38px clamp(22px, 4vw, 58px) 70px;
+}
+
+.heading {
+  margin-bottom: 28px;
+}
+
+.kicker {
+  color: #4c9184;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.heading h1 {
+  font-size: clamp(29px, 3vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+  margin: 6px 0 7px;
+  color: #193346;
+}
+
+.heading p {
+  margin: 0;
+  color: #7c8b94;
+  font-size: 14px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e7edea;
+  border-radius: 17px;
+  box-shadow: 0 5px 19px #213b4110;
+}
+
+// --- Tabs ---
+
+.people-tabs {
+  display: flex;
+  gap: 7px;
+  border-bottom: 1px solid #dde8e3;
+  margin: 0 0 22px;
+  overflow-x: auto;
+}
+
+.people-tabs button {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #748891;
+  padding: 12px 17px;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.people-tabs button.active {
+  border-bottom-color: #258e79;
+  color: #205a50;
+}
+
+.tab-count {
+  background: #edf3f0;
+  border-radius: 6px;
+  padding: 3px 6px;
+  margin-left: 5px;
+  font-size: 11px;
+}
+
+.casual-intro {
+  background: #e9f4ef;
+  border-radius: 13px;
+  color: #486e64;
+  padding: 17px 20px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+// --- Klubtagok: hero + year strip ---
+
+.member-hero {
+  background: #18384a;
+  color: #fff;
+  border-radius: 20px;
+  padding: 28px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.member-hero .kicker {
+  color: #9adbc7;
+}
+
+.member-hero h2 {
+  font-size: 25px;
+  letter-spacing: -0.035em;
+  margin: 7px 0;
+}
+
+.member-hero p {
+  margin: 0;
+  color: #b7d0d3;
+  font-size: 13px;
+}
+
+// A single scrollable row of wider tiles rather than a wrapping grid - with
+// 8 years (2019-current) these would otherwise wrap to several rows; a
+// horizontal scroller keeps them all one comfortable width and keeps the
+// section's height predictable next to the dark hero above it.
+.year-strip {
+  display: flex;
+  gap: 12px;
+  margin: 18px 0 20px;
+  overflow-x: auto;
+  padding-bottom: 6px; // room for the scrollbar so it doesn't crowd the tiles
+
+  scrollbar-width: thin;
+  scrollbar-color: #b7cdc7 transparent;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #b7cdc7;
+    border-radius: 99px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #94b3ab;
+  }
+}
+
+.year-tile {
+  background: #fff;
+  border: 1px solid #e7edea;
+  border-radius: 14px;
+  padding: 17px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 0 0 150px;
+}
+
+.year-tile strong {
+  font-size: 17px;
+}
+
+// --- Member table ---
+
+.member-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.member-panel-head {
+  padding: 23px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.member-panel-head h2 {
+  margin: 0 0 5px;
+  font-size: 18px;
+}
+
+.member-panel-head p {
+  margin: 0;
+  font-size: 12px;
+  color: #819199;
+}
+
+.member-search {
+  width: min(260px, 100%);
+  border: 1px solid #dce6e3;
+  border-radius: 10px;
+  padding: 10px 13px;
+  background: #fff;
+  color: #26424e;
+  font-size: 13px;
+}
+
+.table-scroll {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.membership-table {
+  min-width: 1400px;
+}
+
+.casual-table {
+  min-width: 590px;
+}
+
+th {
+  padding: 13px 21px;
+  background: #f7faf8;
+  color: #7f9097;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+td {
+  padding: 17px 21px;
+  border-top: 1px solid #f0f2f0;
+  font-size: 13px;
+  color: #40535d;
+}
+
+.membership-table tbody tr.mine {
+  background: #f6fbf8;
+}
+
+.membership-table td:last-child,
+.casual-table td:last-child {
+  text-align: left;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.person-avatar {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #d9ede7;
+  color: #306b61;
+  font-weight: 750;
+  font-size: 12px;
+  flex: none;
+}
+
+.person small {
+  display: block;
+  color: #82939a;
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.status {
+  display: inline-block;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status.paid {
+  color: #267b66;
+  background: #e5f5ec;
+}
+
+.status.unpaid {
+  color: #aa6841;
+  background: #fff0e4;
+}
+
+.status.na {
+  color: #789098;
+  background: #f0f4f3;
+}
+
+.link-btn {
+  border: 0;
+  background: transparent;
+  color: #187e70;
+  font-size: 12px;
+  font-weight: 750;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.empty-row {
+  text-align: center;
+  padding: 35px;
+  color: #87969d;
+}
+
+// --- Detail panel ---
+
+.membership-detail {
+  margin-top: 18px;
+  padding: 24px;
+}
+
+.membership-detail h2 {
+  margin: 0 0 15px;
+  font-size: 17px;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 0;
+  border-top: 1px solid #edf1ee;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.history-row:first-child {
+  border-top: 0;
+}
+
+.history-row strong {
+  color: #254255;
+}
+
+.history-row span {
+  color: #778b94;
+  text-align: right;
+}
+
+.member-note {
+  margin-top: 17px;
+  color: #83939a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 580px) {
+  .content {
+    padding: 24px 16px 50px;
+  }
+
+  .member-hero {
+    padding: 23px;
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .member-panel-head {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .member-search {
+    width: 100%;
+  }
+}

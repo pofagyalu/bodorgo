@@ -190,7 +190,7 @@
             type="date"
             required
             [value]="formDate()"
-            (input)="formDate.set($any($event.target).value)"
+            (change)="formDate.set($any($event.target).value)"
           />
         </div>
       </div>

@@ -1,0 +1,235 @@
+<div class="content">
+  <div class="heading">
+    <div>
+      <div class="kicker">Közösség</div>
+      <h1>Felhasználók.</h1>
+      <p>A klubtagok és a többi alkalmazáshasználó külön nézetben.</p>
+    </div>
+  </div>
+
+  <div class="people-tabs" role="tablist" aria-label="Felhasználók típusa">
+    <button
+      role="tab"
+      type="button"
+      [attr.aria-selected]="activeTab() === 'club'"
+      [class.active]="activeTab() === 'club'"
+      (click)="selectTab('club')"
+    >
+      Klubtagok <span class="tab-count">{{ clubMembers().length }}</span>
+    </button>
+    <button
+      role="tab"
+      type="button"
+      [attr.aria-selected]="activeTab() === 'casual'"
+      [class.active]="activeTab() === 'casual'"
+      (click)="selectTab('casual')"
+    >
+      Egyéb felhasználók <span class="tab-count">{{ casualUsers().length }}</span>
+    </button>
+  </div>
+
+  @if (activeTab() === 'club') {
+  <div role="tabpanel">
+    @if (me(); as mine) {
+    <section class="member-hero">
+      <div>
+        <div class="kicker">Saját tagságom · {{ mine.name }}</div>
+        <h2>{{ myStatusSummary() }}</h2>
+        <p>Az éves befizetéseid áttekintése</p>
+      </div>
+    </section>
+    }
+
+    <div class="year-strip" aria-label="Saját éves tagdíjak">
+      @for (y of membershipYears(); track y) { @if (me(); as mine) {
+      <div class="year-tile">
+        <div>
+          <strong>{{ y }}</strong>
+        </div>
+        <span
+          class="status"
+          [class.paid]="yearState(mine._id, y) === 'paid'"
+          [class.unpaid]="yearState(mine._id, y) === 'unpaid'"
+          [class.na]="yearState(mine._id, y) === 'na'"
+        >
+          {{
+            yearState(mine._id, y) === 'paid'
+              ? '✓ Fizetve'
+              : yearState(mine._id, y) === 'unpaid'
+                ? '○ Nincs befizetve'
+                : '— Nem volt tag'
+          }}
+        </span>
+      </div>
+      } }
+    </div>
+
+    <section class="panel member-panel">
+      <div class="member-panel-head">
+        <div>
+          <h2>Tagok és éves befizetések</h2>
+          <p>A státuszok minden klubtag számára láthatók.</p>
+        </div>
+        <input
+          class="member-search"
+          type="search"
+          aria-label="Tag keresése"
+          placeholder="Tag keresése…"
+          [value]="clubSearch()"
+          (input)="clubSearch.set($any($event.target).value)"
+        />
+      </div>
+      <div class="table-scroll">
+        <table class="membership-table">
+          <thead>
+            <tr>
+              <th>Tag</th>
+              @for (y of membershipYears(); track y) {
+              <th>{{ y }}</th>
+              }
+              <th>Teendő</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (!filteredClubMembers().length) {
+            <tr>
+              <td [attr.colspan]="membershipYears().length + 2" class="empty-row">
+                Nincs ilyen nevű tag.
+              </td>
+            </tr>
+            } @else { @for (m of filteredClubMembers(); track m._id) {
+            <tr [class.mine]="m._id === myId()">
+              <td>
+                <div class="person">
+                  <span class="person-avatar">{{ initials(m.name) }}</span>
+                  <span>
+                    <strong>{{ m.name }}</strong>
+                    <small>{{ m._id === myId() ? 'Te' : m.role === 'admin' ? 'Admin' : 'Klubtag' }}</small>
+                  </span>
+                </div>
+              </td>
+              @for (y of membershipYears(); track y) {
+              <td>
+                <span
+                  class="status"
+                  [class.paid]="yearState(m._id, y) === 'paid'"
+                  [class.unpaid]="yearState(m._id, y) === 'unpaid'"
+                  [class.na]="yearState(m._id, y) === 'na'"
+                >
+                  {{
+                    yearState(m._id, y) === 'paid'
+                      ? '✓ Fizetve'
+                      : yearState(m._id, y) === 'unpaid'
+                        ? '○ Nincs befizetve'
+                        : '— Nem volt tag'
+                  }}
+                </span>
+              </td>
+              }
+              <td>
+                @if (isAdmin()) {
+                <button type="button" class="link-btn" (click)="selectMember(m._id)">
+                  Részletek →
+                </button>
+                }
+              </td>
+            </tr>
+            } }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    @if (selectedMember(); as detail) {
+    <section class="panel membership-detail">
+      <h2>{{ detail._id === myId() ? 'Saját befizetések' : detail.name + ' befizetései' }}</h2>
+      <div>
+        @for (y of membershipYears(); track y) {
+        <div class="history-row">
+          <strong>{{ y }}. évi tagdíj</strong>
+          <span>
+            {{
+              yearState(detail._id, y) === 'paid'
+                ? 'Fizetve'
+                : yearState(detail._id, y) === 'unpaid'
+                  ? 'Nincs befizetve'
+                  : 'Még nem volt tag'
+            }}
+          </span>
+        </div>
+        }
+      </div>
+    </section>
+    }
+
+    <p class="member-note">
+      Mintaadatok még nincsenek feltöltve. A tagok egymás státuszát látják; a befizetés
+      részleteit csak a saját tag és az admin láthatja.
+    </p>
+  </div>
+  } @else {
+  <div role="tabpanel">
+    <div class="casual-intro">
+      Ők használhatják az alkalmazást, de nem klubtagok. Náluk nincs éves tagdíj vagy „nem
+      fizetett” státusz. A klubtagok statisztikájában sem szerepelnek.
+    </div>
+    <section class="panel member-panel">
+      <div class="member-panel-head">
+        <div>
+          <h2>Egyéb felhasználók</h2>
+          <p>Csak a név és az alkalmazáshoz való hozzáférés látható itt.</p>
+        </div>
+        <input
+          class="member-search"
+          type="search"
+          aria-label="Egyéb felhasználó keresése"
+          placeholder="Felhasználó keresése…"
+          [value]="casualSearch()"
+          (input)="casualSearch.set($any($event.target).value)"
+        />
+      </div>
+      <div class="table-scroll">
+        <table class="casual-table">
+          <thead>
+            <tr>
+              <th>Felhasználó</th>
+              <th>Alkalmazás-hozzáférés</th>
+              <th>Fiók létrehozva</th>
+              <th>Klubtagság</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (!filteredCasualUsers().length) {
+            <tr>
+              <td colspan="4" class="empty-row">Nincs ilyen nevű felhasználó.</td>
+            </tr>
+            } @else { @for (u of filteredCasualUsers(); track u._id) {
+            <tr>
+              <td>
+                <div class="person">
+                  <span class="person-avatar">{{ initials(u.name) }}</span>
+                  <span>
+                    <strong>{{ u.name }}</strong>
+                    <small>Alkalmazás-felhasználó</small>
+                  </span>
+                </div>
+              </td>
+              <td>
+                <span class="status" [class.paid]="isActive(u)" [class.na]="!isActive(u)">
+                  {{ isActive(u) ? '✓ Aktív' : '— Nem lépett be' }}
+                </span>
+              </td>
+              <td>{{ u.createdAt | date: 'yyyy. MM. dd.' }}</td>
+              <td><span class="status na">Nem klubtag</span></td>
+            </tr>
+            } }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <p class="member-note">
+      A személyes elérhetőségek és a fiók beállításai továbbra is a saját profilban maradnak.
+    </p>
+  </div>
+  }
+</div>

@@ -205,6 +205,7 @@
             Táborok
             <mat-icon class="sort-icon">{{ sortIcon('toursAttended') }}</mat-icon>
           </th>
+          <th>Tag kezdete</th>
           <th>Utolsó belépés</th>
           <th></th>
           }
@@ -244,8 +245,23 @@
           <td>
             <input type="text" [(ngModel)]="editUserForm.familyId" placeholder="Család ID vagy annak vége" />
           </td>
-          <td>{{ roleLabel(u.role) }}</td>
+          <td class="age-edit-cell">
+            <select [(ngModel)]="editUserForm.role" title="Szerepkör - kézi felülírás, a következő bejelentkezéskor felülíródik">
+              <option value="admin">Admin</option>
+              <option value="member">Klubtag</option>
+              <option value="guest">Vendég</option>
+            </select>
+          </td>
           <td>{{ u.toursAttended }}</td>
+          <td class="age-edit-cell">
+            <input
+              type="number"
+              [(ngModel)]="editUserForm.memberSince"
+              [min]="clubFoundingYear"
+              [max]="currentYear"
+              placeholder="Tag kezdete (év)"
+            />
+          </td>
           <td>
             @if (u.lastLoginAt) {
             {{ formatDateTime(u.lastLoginAt) }}
@@ -306,6 +322,13 @@
           <td>{{ roleLabel(u.role) }}</td>
           <td>{{ u.toursAttended }}</td>
           <td>
+            @if (u.memberSince) {
+            {{ u.memberSince }}
+            } @else {
+            <span class="empty-note">—</span>
+            }
+          </td>
+          <td>
             @if (u.lastLoginAt) {
             {{ formatDateTime(u.lastLoginAt) }}
             } @else {
@@ -327,7 +350,7 @@
         </tr>
         @if (editingUserId() === u._id) {
         <tr class="address-edit-row">
-          <td colspan="10">
+          <td colspan="11">
             <div class="address-form-fields">
               <input type="text" [(ngModel)]="editUserForm.address.zipCode" placeholder="Irányítószám" />
               <input type="text" [(ngModel)]="editUserForm.address.city" placeholder="Város" />

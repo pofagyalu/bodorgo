@@ -80,7 +80,7 @@ export async function resolveFamilyId(input) {
 export const getAllUsers = async (req, res) => {
   const isAdmin = req.user.role === 'admin';
   const selectFields = isAdmin
-    ? 'name email familyId role sub lastLoginAt createdAt birthday gender'
+    ? 'name email familyId role sub lastLoginAt createdAt birthday gender memberSince'
     : 'name email birthday gender';
 
   const users = await User.find().select(selectFields).sort('name').lean();
@@ -230,8 +230,27 @@ export const getUser = (req, res) => {
 // by hand, same identity model as the family scripts (createFamily.js
 // etc.): omitting familyId starts a brand new family for this one person,
 // giving one joins them into that existing family directly.
+// The club has tracked membership dues since this year (see
+// userModel.js's memberSince) - also enforced here so a mistyped year
+// can't silently produce a nonsensical membership table column.
+const CLUB_FOUNDING_YEAR = 2019;
+
+function parseMemberSince(value) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const year = Number(value);
+  const currentYear = new Date().getFullYear();
+  if (!Number.isInteger(year) || year < CLUB_FOUNDING_YEAR || year > currentYear) {
+    throw new AppError(
+      `A tagság kezdete ${CLUB_FOUNDING_YEAR} és ${currentYear} között lehet.`,
+      400,
+    );
+  }
+  return year;
+}
+
 export const createUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender } = req.body;
+  const { name, email, familyId, birthday, gender, memberSince } = req.body;
   if (!name) {
     throw new AppError('A névnek nem lehet üres.', 400);
   }
@@ -242,6 +261,7 @@ export const createUser = async (req, res) => {
     familyId: familyId ? await resolveFamilyId(familyId) : new mongoose.Types.ObjectId(),
     birthday: birthday || undefined,
     gender: gender || undefined,
+    memberSince: parseMemberSince(memberSince) || undefined,
   });
 
   res.status(201).json({
@@ -250,6 +270,8 @@ export const createUser = async (req, res) => {
   });
 };
 
+const VALID_ROLES = ['admin', 'member', 'guest'];
+
 // Admin-only - edits name/email/familyId/address by hand. familyId as an
 // empty string explicitly removes the user from their family (rather than
 // the field being silently ignored), for undoing a mistaken assignment.
@@ -257,8 +279,15 @@ export const createUser = async (req, res) => {
 // userModel.js's address-geocoding pre('save') hook actually fires here
 // too (an admin fixing a dependent's address who can't set it themselves
 // is exactly the case that needs it), same reasoning as updateMe above.
+//
+// role here is a manual, immediate override (e.g. to fast-track someone
+// into "Klubtagok" before they've logged in themselves) - it does NOT
+// stick permanently: the next real Authentik login overwrites it again
+// with whatever bodorgo_role claim that login carries (see
+// authOidcController.js's callback). Use for a quick fix, not as the
+// long-term way to manage roles.
 export const updateUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, address } = req.body;
+  const { name, email, familyId, birthday, gender, address, memberSince, role } = req.body;
 
   const user = await User.findById(req.params.id);
   if (!user) {
@@ -271,6 +300,13 @@ export const updateUser = async (req, res) => {
   if (birthday !== undefined) user.birthday = birthday || undefined;
   if (gender !== undefined) user.gender = gender || undefined;
   if (address !== undefined) user.address = address;
+  if (memberSince !== undefined) user.memberSince = parseMemberSince(memberSince) ?? undefined;
+  if (role !== undefined) {
+    if (!VALID_ROLES.includes(role)) {
+      throw new AppError('Érvénytelen szerepkör.', 400);
+    }
+    user.role = role;
+  }
 
   await user.save({ validateModifiedOnly: true });
 

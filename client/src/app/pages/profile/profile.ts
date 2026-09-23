@@ -36,10 +36,25 @@ interface UserFormModel {
   birthday: string;
   gender: string;
   address: AddressFormModel;
+  // Plain string for the number input's [(ngModel)] - parsed to a number
+  // (or cleared) only when actually saved, see saveEditUser/saveNewUser.
+  memberSince: string;
+  // Manual, immediate override - see userController.js's updateUser
+  // comment on why this doesn't stick past the person's next real login.
+  role: string;
 }
 
 function emptyUserForm(): UserFormModel {
-  return { name: '', email: '', familyId: '', birthday: '', gender: '', address: emptyAddressForm() };
+  return {
+    name: '',
+    email: '',
+    familyId: '',
+    birthday: '',
+    gender: '',
+    address: emptyAddressForm(),
+    memberSince: '',
+    role: 'guest',
+  };
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -70,6 +85,11 @@ export class Profile {
   // birthday is in the future or before 1900).
   readonly minBirthday = '1900-01-01';
   readonly maxBirthday = new Date().toISOString().slice(0, 10);
+
+  // Bounds for the "Tag kezdete" (memberSince) number input - the club has
+  // tracked membership since 2019 (see userModel.js's memberSince).
+  readonly clubFoundingYear = 2019;
+  readonly currentYear = new Date().getFullYear();
 
   attendance = signal<AttendanceRow[]>([]);
   attendanceError = signal<string | null>(null);
@@ -357,6 +377,7 @@ export class Profile {
         familyId: f.familyId.trim() || undefined,
         birthday: f.birthday || undefined,
         gender: f.gender || undefined,
+        memberSince: f.memberSince ? Number(f.memberSince) : undefined,
       })
       .subscribe({
         next: () => {
@@ -381,6 +402,8 @@ export class Profile {
       // timestamp the API returns.
       birthday: user.birthday ? user.birthday.slice(0, 10) : '',
       gender: user.gender ?? '',
+      memberSince: user.memberSince != null ? String(user.memberSince) : '',
+      role: user.role,
       address: {
         zipCode: user.address?.zipCode ?? '',
         city: user.address?.city ?? '',
@@ -422,6 +445,8 @@ export class Profile {
         birthday: f.birthday,
         gender: f.gender,
         address: f.address,
+        memberSince: f.memberSince ? Number(f.memberSince) : null,
+        role: f.role,
       })
       .subscribe({
         next: (res) => {

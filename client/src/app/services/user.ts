@@ -29,6 +29,10 @@ export interface AdminUser {
   birthday?: string;
   gender?: string;
   age?: number | null;
+  // The calendar year this person officially became a club member -
+  // admin-set by hand (see profile.html's admin table), undefined until
+  // then. Drives the Klub "Felhasználók" page's per-year membership table.
+  memberSince?: number;
   // Admin-only, like familyId/role/lastLoginAt above - distinct tour count
   // from Reservation.attendees, not stored on the user (see
   // userController.js's getAllUsers).
@@ -96,6 +100,7 @@ export interface CreateUserPayload {
   familyId?: string;
   birthday?: string;
   gender?: string;
+  memberSince?: number | null;
 }
 
 export interface UpdateUserPayload {
@@ -108,6 +113,11 @@ export interface UpdateUserPayload {
   birthday?: string;
   gender?: string;
   address?: UserAddress;
+  // null explicitly clears it - see userController.js's parseMemberSince.
+  memberSince?: number | null;
+  // Manual override, not permanent - the next real Authentik login
+  // overwrites it again (see userController.js's updateUser).
+  role?: string;
 }
 
 export interface AdminUserResponse {

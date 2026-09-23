@@ -106,6 +106,16 @@ const userSchema = new Schema(
       enum: ['admin', 'member', 'guest'],
       default: 'guest',
     },
+    // The calendar year this person officially became a dues-paying club
+    // member - not tracked anywhere else (Authentik only knows the current
+    // role, not history), so an admin sets it by hand (see
+    // userController.js's updateUser/profile.html's admin table). Drives
+    // the Klub "Felhasználók" page's per-year membership table: a year
+    // before this one shows as "not a member yet" rather than unpaid.
+    // Undefined until an admin sets it.
+    memberSince: {
+      type: Number,
+    },
     passwordResetToken: String,
     passwordResetExpires: Date,
     active: {

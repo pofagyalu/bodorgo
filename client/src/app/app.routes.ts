@@ -84,9 +84,7 @@ export const routes: Routes = [
       {
         path: 'felhasznalok',
         title: 'Klub felhasználók',
-        data: { title: 'Felhasználók' },
-        loadComponent: () =>
-          import('./pages/klub/klub-placeholder/klub-placeholder').then((m) => m.KlubPlaceholder),
+        loadComponent: () => import('./pages/klub/members/members').then((m) => m.Members),
       },
       {
         path: 'profilom',
