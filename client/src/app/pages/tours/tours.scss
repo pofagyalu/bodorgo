@@ -38,34 +38,46 @@
   }
 }
 
+// Same grid formula as .card-container below (minmax(18rem, 20rem), same
+// gap) - with exactly 3 filters, this reads as one row of filter "cards"
+// the same width as the tour cards underneath, wrapping the same way on
+// narrower screens too.
 .filters {
-  display: flex;
-  flex-wrap: wrap; // 4 fields in one unbroken row don't fit on mobile - let them wrap instead
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 20rem));
+  justify-content: center;
+  gap: 1.8rem;
   margin: 2rem 0;
-  padding: 1rem;
-  background: #f7f7f7;
-  border-radius: 8px;
 }
 
+// Same card language as tour-card.scss's own .card (white background,
+// subtle shadow, gentle lift on hover) - a plain bordered input/select
+// looked out of place sitting right above a grid of actual cards.
 .filter-input {
-  padding: 0.8rem 1rem;
-  border: 1px solid #ddd;
+  padding: 0.9rem 1.1rem;
+  border: none;
   border-radius: 6px;
-  font-size: 1rem;
-  flex: 1 1 160px; // grow to fill the row on desktop, wrap once below ~160px each
-  min-width: 0; // don't let a select's long option text force it wider than its flex-basis
+  background: #fff;
+  box-shadow: 0 0.3rem 1rem rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
+  transition: box-shadow 0.2s;
+}
+
+.filter-input:hover {
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
 }
 
 .filter-input:focus {
   outline: none;
-  border-color: #55c57a;
+  box-shadow: 0 0 0 2px #55c57a;
 }
 
 /* Center the toggle button */
 .toggle-container {
   position: relative;
-  margin: 2rem 0 1rem 0;
+  // No top margin now that this sits first (above the filters) - .tours-page's
+  // own top padding already provides that spacing.
+  margin: 0 0 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;

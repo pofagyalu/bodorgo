@@ -1,4 +1,21 @@
 <div class="tours-page">
+  <div class="toggle-container">
+    @if (!showingAll()) {
+    <button class="btn btn--green" (click)="loadAllTours()">
+      Összes megjelenítése
+    </button>
+    } @else {
+    <button class="btn btn--grey" (click)="loadLast3()">
+      Csak az utolsó 3 megjelenítése
+    </button>
+    }
+    @if (auth.user()?.role === 'admin') {
+    <a routerLink="/taborok/uj" class="new-tour-btn">
+      <mat-icon>add</mat-icon> Új tábor
+    </a>
+    }
+  </div>
+
   <div class="filters">
     <!-- Search -->
     <input
@@ -16,17 +33,6 @@
       }
     </select>
 
-    <!-- Duration filter -->
-    <select
-      class="filter-input"
-      (change)="duration.set($any($event.target).value)"
-    >
-      <option value="">Összes időtartam</option>
-      <option value="1">1 napos</option>
-      <option value="2">2 napos</option>
-      <option value="3">3 napos</option>
-    </select>
-
     <select class="filter-input" (change)="sort.set($any($event.target).value)">
       <option value="">Rendezés...</option>
 
@@ -35,27 +41,7 @@
 
       <option value="title">Cím A → Z</option>
       <option value="-title">Cím Z → A</option>
-
-      <option value="order">Sorrend ↑</option>
-      <option value="-order">Sorrend ↓</option>
     </select>
-  </div>
-
-  <div class="toggle-container">
-    @if (!showingAll()) {
-    <button class="btn btn--green" (click)="loadAllTours()">
-      Összes megjelenítése
-    </button>
-    } @else {
-    <button class="btn btn--grey" (click)="loadLast3()">
-      Csak az utolsó 3 megjelenítése
-    </button>
-    }
-    @if (auth.user()?.role === 'admin') {
-    <a routerLink="/taborok/uj" class="new-tour-btn">
-      <mat-icon>add</mat-icon> Új tábor
-    </a>
-    }
   </div>
 
   <div class="card-container">

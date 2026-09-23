@@ -22,7 +22,6 @@ export class Tours implements OnInit {
   searchInput = signal(''); // instant changes
   searchTerm = signal(''); // debounced version
   private debounceTimer: any = null;
-  duration = signal('');
   year = signal('');
   sort = signal('');
 
@@ -77,7 +76,6 @@ export class Tours implements OnInit {
     let list = this.tours();
 
     const search = this.searchTerm().toLowerCase();
-    const duration = this.duration();
     const year = this.year();
     const sort = this.sort();
 
@@ -93,11 +91,6 @@ export class Tours implements OnInit {
     // YEAR filter
     if (year) {
       list = list.filter((t) => t.startDate.startsWith(year));
-    }
-
-    // DURATION filter
-    if (duration) {
-      list = list.filter((t) => t.duration === Number(duration));
     }
 
     // --- SORTING ---
