@@ -29,19 +29,7 @@
       <div class="card__data card__data--full">
         <mat-icon class="card__icon" color="primary">location_on</mat-icon>
 
-        <a
-          class="map-link"
-          target="_blank"
-          rel="noopener noreferrer"
-          [href]="
-            'https://www.google.com/maps?q=' +
-            tour().location.coordinates[1] +
-            ',' +
-            tour().location.coordinates[0]
-          "
-        >
-          {{ tour().location.description }}
-        </a>
+        <span>{{ tour().location.description }}</span>
       </div>
 
       <div class="card__data">
