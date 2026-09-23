@@ -13,6 +13,9 @@ export interface AttendeeListRow {
   name: string;
   nights: number;
   familyId: string | null;
+  // The linked User's own id - see tour.ts's own AttendeePayment comment.
+  // Used by tour-details.ts to build the schedule opt-in candidate list.
+  userId: string | null;
   totalPrice: number | null;
   advance: number | null;
   rest: number | null;

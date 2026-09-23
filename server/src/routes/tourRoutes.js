@@ -80,8 +80,8 @@ router
   .patch(requireAuth, restrictTo('admin'), updateAttendeeFeeExempt);
 
 router
-  .route('/:tourId/schedule/:eventId/toggle-participation')
-  .post(requireAuth, tourController.toggleScheduleParticipation);
+  .route('/:tourId/schedule/:eventId/participants')
+  .patch(requireAuth, tourController.updateScheduleEventParticipants);
 
 router
   .route('/:tourId/schedule')

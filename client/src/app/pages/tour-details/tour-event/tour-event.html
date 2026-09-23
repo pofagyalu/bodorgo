@@ -1,7 +1,7 @@
 @if (editing()) {
 <app-event-form
   [model]="editForm"
-  [saving]="saving()"
+  [saving]="editSaving()"
   [error]="editError()"
   (save)="saveEdit()"
   (cancel)="cancelEdit()"
@@ -25,15 +25,9 @@
 <div class="event-optin-row">
   @if (!auth.isLoggedIn()) {
   <span class="empty-note">Bejelentkezés szükséges a jelentkezéshez</span>
-  } @else {
-  <button
-    type="button"
-    class="optin-btn"
-    [class.optin-btn--joined]="isOptedIn()"
-    [disabled]="toggling()"
-    (click)="toggleOptIn()"
-  >
-    {{ isOptedIn() ? 'Visszalépek' : 'Jelentkezem' }}
+  } @else if (candidates.length > 0) {
+  <button type="button" class="optin-btn" [class.optin-btn--joined]="hasAnyOfMineJoined()" (click)="openPicker()">
+    {{ hasAnyOfMineJoined() ? 'Módosítás' : 'Jelentkezés' }}
   </button>
   }
 
@@ -48,10 +42,6 @@
   </button>
 </div>
 
-@if (toggleError()) {
-<p class="error-note">{{ toggleError() }}</p>
-}
-
 <div class="event-participants-collapse" [class.open]="expanded()">
   @if ((event.participants ?? []).length) {
   <ul class="event-participant-list">
@@ -62,5 +52,30 @@
   } @else {
   <p class="empty-note">Még senki nem jelentkezett.</p>
   }
+</div>
+}
+
+@if (pickerOpen()) {
+<div class="attendee-modal-backdrop" (click)="closePicker()">
+  <div class="attendee-modal" (click)="$event.stopPropagation()">
+    <button type="button" class="attendee-modal-close" aria-label="Bezárás" (click)="closePicker()">✖</button>
+    <p class="picker-label">Ki jelentkezzen: {{ event.description }}?</p>
+    <ul class="picker-list">
+      @for (c of candidates; track c._id) {
+      <li>
+        <label class="picker-option">
+          <input type="checkbox" [checked]="isCandidateSelected(c._id)" (change)="toggleCandidateSelected(c._id)" />
+          {{ c.name }}
+        </label>
+      </li>
+      }
+    </ul>
+    <button class="btn btn--green" [disabled]="saving()" (click)="savePicker()">
+      {{ saving() ? 'Mentés...' : 'Mentés' }}
+    </button>
+    @if (saveError()) {
+    <p class="error-note">{{ saveError() }}</p>
+    }
+  </div>
 </div>
 }

@@ -4,10 +4,19 @@ import { TourService, ScheduleEntry } from '../../../services/tour';
 import { AuthService } from '../../../auth/auth.service';
 import { EventForm, EventFormModel } from '../event-form/event-form';
 
+// One candidate the logged-in user could opt in/out of this event - see
+// tour-details.ts's myScheduleEventCandidates for who ends up in this
+// list (only real attendees of this tour: self + family, or - for an
+// admin - anyone attending).
+export interface ScheduleCandidate {
+  _id: string;
+  name: string;
+}
+
 // One schedule event row: display, opt-in/participants, and (admin-only)
 // the inline editor - split out of tour-details.ts once this grew to be
 // the densest part of that page. Never mutates its own @Input() directly;
-// a successful opt-in toggle or edit emits the fresh event so the parent
+// a successful opt-in save or edit emits the fresh event so the parent
 // can patch its own schedule array, keeping one-way data flow intact.
 @Component({
   selector: 'app-tour-event',
@@ -22,41 +31,79 @@ export class TourEvent {
 
   @Input({ required: true }) event!: ScheduleEntry;
   @Input({ required: true }) tourId!: string;
+  // Who the logged-in user is allowed to opt in/out of this event - self
+  // + family, or (admin) every real attendee. Empty for a guest with no
+  // family who isn't even attending - the opt-in row hides itself
+  // entirely in that case (see tour-event.html).
+  @Input() candidates: ScheduleCandidate[] = [];
   @Output() updated = new EventEmitter<ScheduleEntry>();
 
   expanded = signal(false);
-  toggling = signal(false);
-  toggleError = signal<string | null>(null);
+  saving = signal(false);
+  saveError = signal<string | null>(null);
 
   editing = signal(false);
-  saving = signal(false);
+  editSaving = signal(false);
   editError = signal<string | null>(null);
   editForm: EventFormModel = { time: '', description: '', isOptional: false, extraCost: null };
 
-  isOptedIn = computed(() => {
-    const uid = this.auth.user()?.id;
-    if (!uid) return false;
-    return (this.event.participants ?? []).some((p) => p.user === uid);
+  // Which of MY OWN candidates are currently participants - the button
+  // reads "Módosítás" once any of them has already joined, "Jelentkezés"
+  // when none has (see tour-event.html), and the picker pre-checks
+  // exactly this set when opened.
+  myJoinedCandidateIds = computed(() => {
+    const candidateIds = new Set(this.candidates.map((c) => c._id));
+    return new Set((this.event.participants ?? []).filter((p) => candidateIds.has(p.user)).map((p) => p.user));
   });
+
+  hasAnyOfMineJoined = computed(() => this.myJoinedCandidateIds().size > 0);
+
+  pickerOpen = signal(false);
+  selectedIds = signal<Set<string>>(new Set());
 
   toggleExpanded() {
     this.expanded.update((v) => !v);
   }
 
-  toggleOptIn() {
-    this.toggling.set(true);
-    this.toggleError.set(null);
+  openPicker() {
+    this.saveError.set(null);
+    this.selectedIds.set(new Set(this.myJoinedCandidateIds()));
+    this.pickerOpen.set(true);
+  }
 
-    this.tourService.toggleScheduleParticipation(this.tourId, this.event._id).subscribe({
+  closePicker() {
+    this.pickerOpen.set(false);
+  }
+
+  isCandidateSelected(id: string): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  toggleCandidateSelected(id: string) {
+    this.selectedIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  savePicker() {
+    this.saving.set(true);
+    this.saveError.set(null);
+
+    this.tourService.updateScheduleEventParticipants(this.tourId, this.event._id, [...this.selectedIds()]).subscribe({
       next: (res) => {
         this.updated.emit({ ...this.event, participants: res.data.participants });
-        this.toggling.set(false);
+        this.saving.set(false);
+        this.pickerOpen.set(false);
       },
       error: (err) => {
-        this.toggleError.set(
-          err?.error?.message ?? 'Hiba történt a jelentkezés módosítása során.',
-        );
-        this.toggling.set(false);
+        this.saveError.set(err?.error?.message ?? 'Hiba történt a jelentkezés módosítása során.');
+        this.saving.set(false);
       },
     });
   }
@@ -78,7 +125,7 @@ export class TourEvent {
   }
 
   saveEdit() {
-    this.saving.set(true);
+    this.editSaving.set(true);
     this.editError.set(null);
 
     const form = this.editForm;
@@ -92,12 +139,12 @@ export class TourEvent {
       .subscribe({
         next: (res) => {
           this.updated.emit(res.data.event);
-          this.saving.set(false);
+          this.editSaving.set(false);
           this.editing.set(false);
         },
         error: (err) => {
           this.editError.set(err?.error?.message ?? 'Hiba történt a mentés során.');
-          this.saving.set(false);
+          this.editSaving.set(false);
         },
       });
   }

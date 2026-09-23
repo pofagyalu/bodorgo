@@ -333,14 +333,28 @@ export const createScheduleEvent = async (req, res) => {
   res.status(201).json({ status: 'success', data: { event: created } });
 };
 
-// Lets the current user opt in or out of an optional schedule event
-// (e.g. a wine tasting with an extra cost) - anytime, either direction.
-// Never trusts a client-supplied identity, same principle as the chat
-// feature's create-post and the tour signup endpoint.
-export const toggleScheduleParticipation = async (req, res) => {
+// Lets the caller set exactly who among the people they're allowed to
+// speak for is opted into an optional schedule event (e.g. an extra
+// breakfast) - not just themselves: a member can cherry-pick specific
+// family members (the two kids for the kids' breakfast, the two adults
+// for the adults' one), same "self + same familyId" rule
+// resolvePayableAttendees/assertCanRegister already use elsewhere; an
+// admin can pick anyone actually attending this tour. Replaces exactly
+// the caller's own editable subset of participants with the given list -
+// anyone else's existing participation (outside that subset) is left
+// untouched, so one family opting in/out never affects another's.
+export const updateScheduleEventParticipants = async (req, res) => {
   const { tourId, eventId } = req.params;
+  const { userIds } = req.body;
 
-  const tour = await Tour.findById(tourId);
+  if (!Array.isArray(userIds)) {
+    throw new AppError('A userIds mezőnek tömbnek kell lennie.', 400);
+  }
+
+  const tour = await Tour.findById(tourId).populate({
+    path: 'reservations',
+    populate: [{ path: 'attendees.user', select: 'familyId' }],
+  });
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
   }
@@ -349,29 +363,51 @@ export const toggleScheduleParticipation = async (req, res) => {
   if (!event) {
     throw new AppError('No such schedule event!', 404);
   }
-
   if (!event.isOptional) {
     throw new AppError('This event does not require opting in.', 400);
   }
 
-  const existingIndex = event.participants.findIndex(
-    (p) => p.user.toString() === req.user._id.toString(),
-  );
-
-  let joined;
-  if (existingIndex >= 0) {
-    event.participants.splice(existingIndex, 1);
-    joined = false;
-  } else {
-    event.participants.push({ user: req.user._id, name: req.user.name });
-    joined = true;
+  // Every real attendee of this tour, deduped by user id - the
+  // denormalized name already on each attendee subdocument is reused
+  // here rather than re-fetching User docs just for a display name.
+  const attendeesById = new Map();
+  for (const reservation of tour.reservations) {
+    for (const a of reservation.attendees) {
+      if (!a.user?._id) continue;
+      const id = String(a.user._id);
+      attendeesById.set(id, { name: a.name, familyId: a.user.familyId ? String(a.user.familyId) : null });
+    }
   }
+
+  // Admin can toggle any real attendee; anyone else only themselves and
+  // same-familyId attendees - never someone outside their own family.
+  let editableIds;
+  if (req.user.role === 'admin') {
+    editableIds = new Set(attendeesById.keys());
+  } else {
+    const myFamilyId = req.user.familyId ? String(req.user.familyId) : null;
+    editableIds = new Set(
+      [...attendeesById.entries()]
+        .filter(([id, a]) => id === String(req.user._id) || (myFamilyId && a.familyId === myFamilyId))
+        .map(([id]) => id),
+    );
+  }
+
+  const requestedIds = [...new Set(userIds.map(String))];
+  const disallowed = requestedIds.filter((id) => !editableIds.has(id));
+  if (disallowed.length) {
+    throw new AppError('Csak saját magadat és a hozzátartozóidat jelentkeztetheted erre az eseményre.', 403);
+  }
+
+  const keptParticipants = event.participants.filter((p) => !editableIds.has(String(p.user)));
+  const newParticipants = requestedIds.map((id) => ({ user: id, name: attendeesById.get(id).name }));
+  event.participants = [...keptParticipants, ...newParticipants];
 
   await tour.save();
 
   res.status(200).json({
     status: 'success',
-    data: { joined, participants: event.participants },
+    data: { participants: event.participants },
   });
 };
 

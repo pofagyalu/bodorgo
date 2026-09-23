@@ -271,6 +271,20 @@ export class TourDetails implements OnDestroy {
     return options;
   });
 
+  // Who the logged-in user can opt in/out of an optional schedule event
+  // (e.g. a kids' breakfast) - only ever people actually attending this
+  // tour, since opting in someone who isn't even coming makes no sense.
+  // Admin: every real attendee; anyone else: just their own payment group
+  // (self + same familyId), same rule the payment page itself uses -
+  // mirrors updateScheduleEventParticipants' own server-side check.
+  myScheduleEventCandidates = computed<PickerOption[]>(() => {
+    const me = this.auth.user();
+    if (!me) return [];
+    const attendees = this.allAttendees().filter((a) => a.userId);
+    const pool = me.role === 'admin' ? attendees : attendees.filter((a) => isInMyPaymentGroup(a, me));
+    return pool.map((a) => ({ _id: a.userId!, name: a.name }));
+  });
+
   isFull = computed(() => {
     const t = this.tour();
     if (!t) return false;

@@ -27,10 +27,9 @@ export interface ScheduleEntry {
   participants?: EventParticipant[];
 }
 
-export interface ToggleParticipationResponse {
+export interface UpdateScheduleEventParticipantsResponse {
   status: string;
   data: {
-    joined: boolean;
     participants: EventParticipant[];
   };
 }
@@ -534,13 +533,19 @@ export class TourService {
     return this.http.get<TourStatsResponse>(`${this.apiUrl}/tour-stats`);
   }
 
-  toggleScheduleParticipation(
+  // Replaces exactly the caller's own editable subset of participants
+  // (self + family for a member/guest, anyone actually attending for an
+  // admin - see tourController.js's updateScheduleEventParticipants) -
+  // not a simple self-toggle, so a family can cherry-pick which specific
+  // members join (e.g. only the kids for a kids' breakfast).
+  updateScheduleEventParticipants(
     tourId: string,
     eventId: string,
-  ): Observable<ToggleParticipationResponse> {
-    return this.http.post<ToggleParticipationResponse>(
-      `${this.apiUrl}/${tourId}/schedule/${eventId}/toggle-participation`,
-      {},
+    userIds: string[],
+  ): Observable<UpdateScheduleEventParticipantsResponse> {
+    return this.http.patch<UpdateScheduleEventParticipantsResponse>(
+      `${this.apiUrl}/${tourId}/schedule/${eventId}/participants`,
+      { userIds },
     );
   }
 
