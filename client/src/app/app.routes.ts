@@ -10,6 +10,7 @@ import { LoginComponent } from './auth/login/login.component';
 import { Profile } from './pages/profile/profile';
 import { TourEdit } from './pages/tour-edit/tour-edit';
 import { Payment } from './pages/payment/payment';
+import { Klub } from './pages/klub/klub';
 
 export const routes: Routes = [
   { path: '', component: Home },
@@ -27,5 +28,6 @@ export const routes: Routes = [
   { path: 'versenyek', title: 'Bódorgó versenyek', component: Versenyek },
   { path: 'login', title: 'Bódorgó, gyere bé', component: LoginComponent },
   { path: 'profil', title: 'Profil', component: Profile },
+  { path: 'klub', title: 'Klub', component: Klub },
   { path: '**', component: NotFoundComponent },
 ];

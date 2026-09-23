@@ -102,7 +102,7 @@
 // Extra specificity (over the plain .menu-item rule below, which also sets
 // color) so this reliably wins regardless of source order.
 .menu-item.logout-item {
-  color: #f40e0d; // logo red
+  color: var(--logo-red);
 }
 
 /* -------------------- */
@@ -125,15 +125,6 @@
   .header-container {
     justify-content: flex-start;
     gap: 10px;
-  }
-}
-
-/* Between the mobile breakpoint and full desktop width, the menu is still
-   shown but there may not be room for "Szevasz Name!" without wrapping -
-   drop it rather than let it wrap onto a second line. */
-@media (max-width: 900px) {
-  .user-name {
-    display: none;
   }
 }
 
@@ -210,24 +201,38 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Individual colors. .red/.green/.orange are only still used by the
-   currently-hidden Szavazások/Versenyek links (see header.html) - left
-   untouched. .blue (Chat) is the actual blue sampled from the bódorgó logo
-   (transparent_color_logo.svg), not a generic Material blue. */
-.red {
-  color: #e53935; /* red */
+/* One fixed, deliberate color per menu item - drawn from the same 7-color
+   logo palette (src/styles.scss's :root) as everywhere else in the app,
+   each used exactly once here so no two menu items (active or currently
+   hidden - Szavazások/Versenyek in header.html) ever collide:
+   Táborok=green, Chat=blue, Klub=dark-green, Profil=orange,
+   Kijelentkezés=red, Szavazások=brown, Versenyek=yellow. */
+.green {
+  color: var(--logo-green);
 }
 
 .blue {
-  color: #096396; /* logo blue */
+  color: var(--logo-blue);
 }
 
-.green {
-  color: #2e7d32; /* dark green */
+.dark-green {
+  color: var(--logo-dark-green);
 }
 
 .orange {
-  color: #fb8c00; /* orange */
+  color: var(--logo-orange);
+}
+
+.red {
+  color: var(--logo-red);
+}
+
+.brown {
+  color: var(--logo-brown);
+}
+
+.yellow {
+  color: var(--logo-yellow);
 }
 
 .login-btn {
@@ -255,32 +260,48 @@
   background-color: #c40b0a;
 }
 
-.user-name {
+// Initials-in-a-circle, colored deterministically per person (see
+// header.ts's avatarColor) - replaces the old "Szevasz Name!" text
+// greeting, compact enough that (unlike that text) it never needs to
+// hide itself at in-between widths to avoid wrapping.
+.user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  color: #fff;
   font-family: 'Marhey', sans-serif;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: bold;
   margin-right: 12px;
-  color: #666;
-  white-space: nowrap;
+
+  // Marhey's own font metrics render glyphs high in their line box (see
+  // .menu-item's own padding comment above for the same quirk) - flexbox
+  // centering aligns the line box, not the visual glyph, so the initials
+  // still end up looking a little high without this nudge down. Applied
+  // to an inner span, not .user-avatar itself, so only the text shifts -
+  // the circle stays exactly where flexbox put it.
+  .user-avatar-text {
+    transform: translateY(0.1em);
+  }
 }
 
-// Mobile-only: just the name (no "Szevasz"/logout - those live in the
-// hamburger menu), pushed to the far right of the row by margin-left:auto.
-.mobile-user-name {
+// Mobile-only: just the avatar (no logout - that lives in the hamburger
+// menu), pushed to the far right of the row by margin-left:auto.
+.mobile-user-avatar {
   display: none;
-  font-family: 'Marhey', sans-serif;
-  // Smaller than the desktop .user-name so more of a long name fits before
-  // the ellipsis kicks in below.
-  font-size: 1rem;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 40%;
+  width: 1.9rem;
+  height: 1.9rem;
+  font-size: 0.8rem;
   margin-left: auto;
+  margin-right: 0;
 }
 
 @media (max-width: 768px) {
-  .mobile-user-name {
-    display: block;
+  .mobile-user-avatar {
+    display: inline-flex;
   }
 }

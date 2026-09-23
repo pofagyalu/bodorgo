@@ -24,12 +24,13 @@
   <!-- Middle: Menu (desktop only, hidden on mobile in favor of the hamburger) -->
   @if (auth.isLoggedIn()) {
   <nav class="menu">
-    <a routerLink="/taborok" routerLinkActive="active" class="menu-item">Táborok</a>
+    <a routerLink="/taborok" routerLinkActive="active" class="menu-item green">Táborok</a>
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
-    <a routerLink="/profil" routerLinkActive="active" class="menu-item">Profil</a>
+    <a routerLink="/klub" routerLinkActive="active" class="menu-item dark-green">Klub</a>
+    <a routerLink="/profil" routerLinkActive="active" class="menu-item orange">Profil</a>
     <!-- Hidden for now, still routable - not ready for public linking yet -->
-    <!-- <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item green">Szavazások</a> -->
-    <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item orange">Versenyek</a> -->
+    <!-- <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown">Szavazások</a> -->
+    <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item yellow">Versenyek</a> -->
   </nav>
 
   }
@@ -39,14 +40,18 @@
     @if (!auth.isLoggedIn()) {
     <button class="login-btn" (click)="login()">Gyere bé!</button>
     } @else {
-    <span class="user-name">Szevasz {{ auth.user()?.name }}!</span>
+    <span class="user-avatar" [style.background]="avatarColor(auth.user()?.name)" [title]="auth.user()?.name">
+      <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
+    </span>
     <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
     }
   </div>
 
-  <!-- Mobile only: just the name, no greeting/logout - those live in the hamburger menu -->
+  <!-- Mobile only: just the avatar, no logout - that lives in the hamburger menu -->
   @if (auth.isLoggedIn()) {
-  <span class="mobile-user-name">{{ auth.user()?.name }}</span>
+  <span class="user-avatar mobile-user-avatar" [style.background]="avatarColor(auth.user()?.name)" [title]="auth.user()?.name">
+    <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
+  </span>
   }
 </header>
 
@@ -68,7 +73,7 @@
       routerLink="/taborok"
       routerLinkActive="active"
       (click)="closeMobileMenu()"
-      class="menu-item"
+      class="menu-item green"
       >Táborok</a
     >
     <a
@@ -79,10 +84,17 @@
       >Chat</a
     >
     <a
+      routerLink="/klub"
+      routerLinkActive="active"
+      (click)="closeMobileMenu()"
+      class="menu-item dark-green"
+      >Klub</a
+    >
+    <a
       routerLink="/profil"
       routerLinkActive="active"
       (click)="closeMobileMenu()"
-      class="menu-item"
+      class="menu-item orange"
       >Profil</a
     >
     <!-- Hidden for now, still routable - not ready for public linking yet -->
@@ -90,14 +102,14 @@
       routerLink="/szavazasok"
       routerLinkActive="active"
       (click)="closeMobileMenu()"
-      class="menu-item green"
+      class="menu-item brown"
       >Szavazások</a
     > -->
     <!-- <a
       routerLink="/versenyek"
       routerLinkActive="active"
       (click)="closeMobileMenu()"
-      class="menu-item orange"
+      class="menu-item yellow"
       >Versenyek</a
     > -->
     <button class="menu-item logout-item" (click)="logout(); closeMobileMenu()">
