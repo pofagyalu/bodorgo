@@ -72,9 +72,7 @@ export const routes: Routes = [
       {
         path: 'attekintes',
         title: 'Klub áttekintés',
-        data: { title: 'Áttekintés' },
-        loadComponent: () =>
-          import('./pages/klub/klub-placeholder/klub-placeholder').then((m) => m.KlubPlaceholder),
+        loadComponent: () => import('./pages/klub/overview/overview').then((m) => m.Overview),
       },
       {
         path: 'penzugyek',

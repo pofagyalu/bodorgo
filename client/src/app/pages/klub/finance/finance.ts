@@ -58,11 +58,14 @@ export class Finance implements OnInit {
     this.formType() === 'income' ? this.incomeCategories : this.expenseCategories,
   );
 
+  // Always includes the current year, even before any transaction exists
+  // for it yet, so the page can default to it (see the period signal
+  // above) instead of silently falling back to whichever past year
+  // happens to have data.
   availablePeriods = computed(() => {
-    const years = [...new Set(this.transactions().map((t) => t.date.slice(0, 4)))].sort((a, b) =>
-      b.localeCompare(a),
-    );
-    return years.length ? years : [String(new Date().getFullYear())];
+    const years = new Set(this.transactions().map((t) => t.date.slice(0, 4)));
+    years.add(String(new Date().getFullYear()));
+    return [...years].sort((a, b) => b.localeCompare(a));
   });
 
   filteredTransactions = computed(() => {
@@ -122,13 +125,13 @@ export class Finance implements OnInit {
   });
 
   ngOnInit() {
+    // period already defaults to the current year (see its own signal
+    // above) and availablePeriods always includes it too, so no
+    // post-load override is needed - the page opens on the current year
+    // by default even before any transaction exists for it yet.
     this.financeService.getTransactions().subscribe({
       next: (res) => {
         this.transactions.set(res.data.transactions);
-        const years = this.availablePeriods();
-        if (years.length && !years.includes(this.period())) {
-          this.period.set(years[0]);
-        }
         this.loading.set(false);
       },
       error: (err) => {

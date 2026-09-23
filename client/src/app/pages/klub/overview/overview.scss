@@ -1,0 +1,355 @@
+// Ported from club-finances-demo.html's stylesheet, same as finance.scss/
+// members.scss - scoped to this component so it can reuse the demo's
+// class names.
+:host {
+  display: block;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #23354a;
+}
+
+.content {
+  max-width: 1390px;
+  margin: auto;
+  padding: 38px clamp(22px, 4vw, 58px) 70px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e7edea;
+  border-radius: 17px;
+  box-shadow: 0 5px 19px #213b4110;
+  padding: 24px;
+}
+
+.panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel h2 {
+  font-size: 17px;
+  letter-spacing: -0.025em;
+  margin: 0;
+  color: #203747;
+}
+
+.panel-title span {
+  font-size: 12px;
+  color: #84939b;
+}
+
+.primary-btn {
+  background: #1a796c;
+  color: white;
+  border: 1px solid #1a796c;
+  padding: 12px 18px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 750;
+  min-height: 44px;
+  box-shadow: 0 5px 13px #1a796c2b;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.primary-btn:hover {
+  background: #16675d;
+}
+
+.outline-btn {
+  background: white;
+  color: #254257;
+  border: 1px solid #dce6e3;
+  padding: 12px 15px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 650;
+  min-height: 44px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.link-btn {
+  border: 0;
+  background: transparent;
+  color: #187e70;
+  font-size: 12px;
+  font-weight: 750;
+  padding: 8px;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.track {
+  height: 7px;
+  background: #edf2ef;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: #54aa9a;
+  border-radius: 99px;
+}
+
+.category-empty {
+  color: #83939a;
+  font-size: 13px;
+}
+
+.footnote {
+  margin: 16px 2px 0;
+  color: #92a09f;
+  font-size: 11px;
+}
+
+// --- Hero ---
+
+.overview-hero {
+  background: #18384a;
+  border-radius: 20px;
+  color: #fff;
+  padding: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(225px, 0.8fr);
+  align-items: center;
+  gap: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.overview-hero:after {
+  content: '';
+  position: absolute;
+  right: -75px;
+  bottom: -170px;
+  width: 360px;
+  height: 360px;
+  border: 1px solid #ffffff20;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.overview-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.overview-hero .kicker {
+  color: #9bd9c8;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.overview-hero h1 {
+  font-size: clamp(30px, 3.6vw, 45px);
+  letter-spacing: -0.045em;
+  line-height: 1.14;
+  margin: 11px 0 17px;
+}
+
+.overview-hero p {
+  font-size: 14px;
+  color: #c5d9dc;
+  line-height: 1.7;
+  max-width: 575px;
+  margin: 0;
+}
+
+.overview-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 25px;
+}
+
+.overview-actions .primary-btn {
+  background: #b9e6d6;
+  border-color: #b9e6d6;
+  color: #153d3c;
+  box-shadow: none;
+}
+
+.overview-actions .primary-btn:hover {
+  background: #a2d9c5;
+}
+
+.overview-actions .outline-btn {
+  background: #ffffff13;
+  border-color: #ffffff3b;
+  color: #fff;
+}
+
+.intro-card {
+  background: #ffffff13;
+  border: 1px solid #ffffff22;
+  border-radius: 17px;
+  padding: 22px;
+}
+
+.intro-card strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.intro-card p {
+  font-size: 12px;
+}
+
+// --- Stats ---
+
+.overview-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 17px;
+  margin: 18px 0;
+}
+
+.overview-stat {
+  background: #fff;
+  border: 1px solid #e7edea;
+  border-radius: 16px;
+  padding: 23px;
+  box-shadow: 0 5px 19px #213b4110;
+}
+
+.overview-stat .label {
+  color: #73858c;
+  font-size: 12px;
+}
+
+.overview-stat strong {
+  display: block;
+  font-size: 27px;
+  letter-spacing: -0.035em;
+  margin: 11px 0 4px;
+  font-variant-numeric: tabular-nums;
+  color: #20394b;
+}
+
+.overview-stat small {
+  color: #8a9a9d;
+  font-size: 11px;
+}
+
+// --- Grid: progress + activity ---
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.overview-grid .panel {
+  min-width: 0;
+}
+
+.progress-year {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 19px 0;
+}
+
+.progress-year .year-name {
+  font-size: 13px;
+  font-weight: 700;
+  width: 42px;
+  color: #3b5360;
+}
+
+.progress-year .track {
+  flex: 1;
+  height: 9px;
+}
+
+.progress-year .progress-value {
+  font-size: 12px;
+  color: #5f737c;
+  width: 46px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.activity-item {
+  display: flex;
+  gap: 11px;
+  justify-content: space-between;
+  border-top: 1px solid #eff3ef;
+  padding: 13px 0;
+  font-size: 12px;
+}
+
+.activity-item:first-child {
+  border-top: 0;
+}
+
+.activity-item strong {
+  display: block;
+  color: #2c4551;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.activity-item small {
+  color: #8a9a9e;
+}
+
+.activity-item b {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: #287f6b;
+}
+
+.activity-item b.out {
+  color: #a9613e;
+}
+
+@media (max-width: 800px) {
+  .overview-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 580px) {
+  .content {
+    padding: 24px 16px 50px;
+  }
+
+  .overview-hero {
+    padding: 25px;
+  }
+
+  .overview-stats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .overview-stat {
+    padding: 17px;
+  }
+
+  .overview-stat strong {
+    font-size: 22px;
+    margin: 6px 0;
+  }
+}
