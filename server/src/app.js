@@ -17,6 +17,7 @@ import systemRouter from './routes/systemRoutes.js';
 import authOidcRouter from './routes/authOidcRoutes.js';
 import documentRouter from './routes/documentRoutes.js';
 import paymentRouter from './routes/paymentRoutes.js';
+import financeRouter from './routes/financeRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
@@ -109,6 +110,7 @@ export default function createApp(sessionMiddleware) {
   app.use('/tours', tourRouter);
   app.use('/users', userRouter);
   app.use('/payments', paymentRouter);
+  app.use('/finance', financeRouter);
   app.use('/health', systemRouter);
 
   app.use((req, res, next) => {

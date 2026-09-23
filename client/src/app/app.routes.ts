@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
+import { memberGuard } from './auth/member.guard';
 
 // Home stays eager since it's the near-universal first page hit; every
 // other route is lazy so its own code (and whatever heavy libraries it
@@ -64,8 +65,37 @@ export const routes: Routes = [
   },
   {
     path: 'klub',
-    title: 'Klub',
+    canActivate: [memberGuard],
     loadComponent: () => import('./pages/klub/klub').then((m) => m.Klub),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'attekintes' },
+      {
+        path: 'attekintes',
+        title: 'Klub áttekintés',
+        data: { title: 'Áttekintés' },
+        loadComponent: () =>
+          import('./pages/klub/klub-placeholder/klub-placeholder').then((m) => m.KlubPlaceholder),
+      },
+      {
+        path: 'penzugyek',
+        title: 'Klubpénzügyek',
+        loadComponent: () => import('./pages/klub/finance/finance').then((m) => m.Finance),
+      },
+      {
+        path: 'felhasznalok',
+        title: 'Klub felhasználók',
+        data: { title: 'Felhasználók' },
+        loadComponent: () =>
+          import('./pages/klub/klub-placeholder/klub-placeholder').then((m) => m.KlubPlaceholder),
+      },
+      {
+        path: 'profilom',
+        title: 'Klub profilom',
+        data: { title: 'Profilom' },
+        loadComponent: () =>
+          import('./pages/klub/klub-placeholder/klub-placeholder').then((m) => m.KlubPlaceholder),
+      },
+    ],
   },
   {
     path: '**',

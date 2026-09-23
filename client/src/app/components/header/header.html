@@ -26,7 +26,9 @@
   <nav class="menu">
     <a routerLink="/taborok" routerLinkActive="active" class="menu-item green">Táborok</a>
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
+    @if (auth.user()?.role === 'admin' || auth.user()?.role === 'member') {
     <a routerLink="/klub" routerLinkActive="active" class="menu-item dark-green">Klub</a>
+    }
     <a routerLink="/profil" routerLinkActive="active" class="menu-item orange">Profil</a>
     <!-- Hidden for now, still routable - not ready for public linking yet -->
     <!-- <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown">Szavazások</a> -->
@@ -83,6 +85,7 @@
       class="menu-item blue"
       >Chat</a
     >
+    @if (auth.user()?.role === 'admin' || auth.user()?.role === 'member') {
     <a
       routerLink="/klub"
       routerLinkActive="active"
@@ -90,6 +93,7 @@
       class="menu-item dark-green"
       >Klub</a
     >
+    }
     <a
       routerLink="/profil"
       routerLinkActive="active"

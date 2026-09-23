@@ -1,11 +1,162 @@
-.klub-page {
-  min-height: calc(100dvh - 80px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+// Same colors/layout as the club-finances-demo.html prototype's <aside> -
+// a persistent dark sidebar for switching between klub/* subpages, kept
+// separate from this app's own top header (that one stays as-is above it).
+:host {
+  display: block;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-.coming-soon {
-  font-size: 1.3rem;
-  color: #999;
+.klub-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: calc(100dvh - 80px);
+  background: #f5f7f5;
+}
+
+.klub-sidebar {
+  background: #142a3c;
+  color: #e7f0ee;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 46px;
+}
+
+.klub-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: #b9e6d6;
+  color: #183b43;
+  border-radius: 13px;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.brand-text strong {
+  font-size: 17px;
+  letter-spacing: -0.03em;
+}
+
+.brand-text small {
+  display: block;
+  color: #9eb5bf;
+  font-size: 11px;
+  margin-top: 2px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.klub-nav {
+  display: grid;
+  gap: 7px;
+}
+
+.klub-nav .nav-item {
+  padding: 13px 15px;
+  border-radius: 11px;
+  color: #a9bdc5;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+
+  &:hover:not(.active) {
+    background: #1c3548;
+  }
+
+  &.active {
+    background: #29485a;
+    color: #fff;
+    font-weight: 650;
+  }
+}
+
+.klub-main {
+  min-width: 0;
+}
+
+.klub-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 1050px) {
+  .klub-shell {
+    grid-template-columns: 82px 1fr;
+  }
+
+  .klub-sidebar {
+    padding: 22px 14px;
+  }
+
+  .klub-brand {
+    padding: 0;
+    justify-content: center;
+  }
+
+  .brand-text {
+    display: none;
+  }
+
+  .klub-nav .nav-item {
+    justify-content: center;
+    padding: 14px;
+  }
+
+  .klub-nav .nav-item span {
+    display: none;
+  }
+}
+
+@media (max-width: 580px) {
+  .klub-shell {
+    display: block;
+  }
+
+  .klub-sidebar {
+    display: none;
+  }
+
+  .klub-mobile-nav {
+    display: flex;
+    overflow-x: auto;
+    background: #fff;
+    border-bottom: 1px solid #e4eae7;
+    gap: 5px;
+    padding: 8px 10px;
+  }
+
+  .klub-mobile-nav a {
+    flex: none;
+    white-space: nowrap;
+    border-radius: 8px;
+    padding: 9px 10px;
+    color: #67808a;
+    font-weight: 700;
+    font-size: 12px;
+    text-decoration: none;
+
+    &.active {
+      background: #e8f3ee;
+      color: #196959;
+    }
+  }
 }

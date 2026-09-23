@@ -1,3 +1,33 @@
-<div class="klub-page">
-  <p class="coming-soon">Hamarosan...</p>
+<div class="klub-shell">
+  <aside class="klub-sidebar" aria-label="Klub navigáció">
+    <div class="klub-brand">
+      <div class="brand-mark">K</div>
+      <div class="brand-text"><strong>Bódorgó Klub</strong><small>Klub felület</small></div>
+    </div>
+    <nav class="klub-nav" aria-label="Klub főmenü">
+      <a routerLink="attekintes" routerLinkActive="active" class="nav-item">
+        <mat-icon>dashboard</mat-icon><span>Áttekintés</span>
+      </a>
+      <a routerLink="penzugyek" routerLinkActive="active" class="nav-item">
+        <mat-icon>account_balance_wallet</mat-icon><span>Pénzügyek</span>
+      </a>
+      <a routerLink="felhasznalok" routerLinkActive="active" class="nav-item">
+        <mat-icon>group</mat-icon><span>Felhasználók</span>
+      </a>
+      <a routerLink="profilom" routerLinkActive="active" class="nav-item">
+        <mat-icon>person</mat-icon><span>Profilom</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="klub-main">
+    <nav class="klub-mobile-nav" aria-label="Klub főmenü mobilon">
+      <a routerLink="attekintes" routerLinkActive="active">Áttekintés</a>
+      <a routerLink="penzugyek" routerLinkActive="active">Pénzügyek</a>
+      <a routerLink="felhasznalok" routerLinkActive="active">Felhasználók</a>
+      <a routerLink="profilom" routerLinkActive="active">Profil</a>
+    </nav>
+
+    <router-outlet />
+  </main>
 </div>
