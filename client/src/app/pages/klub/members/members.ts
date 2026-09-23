@@ -46,7 +46,13 @@ export class Members implements OnInit {
   activeTab = signal<'club' | 'casual'>('club');
   clubSearch = signal('');
   casualSearch = signal('');
-  selectedMemberId = signal<string | null>(null);
+
+  // Which club member's per-year payment history is expanded inline in the
+  // "Tagok és éves befizetések" table right now (admin-only - see
+  // toggleDetail below) - at most one at a time, matching the mockup the
+  // user approved. Distinct from "Saját befizetések" above the table,
+  // which always shows the viewer's own dues regardless of this.
+  expandedMemberId = signal<string | null>(null);
 
   // Set once the browser is redirected back from Stripe's Checkout page
   // (see the ?paymentId= query param, matching payment.ts's own
@@ -81,6 +87,13 @@ export class Members implements OnInit {
 
   me = computed(() => this.clubMembers().find((u) => u._id === this.myId()) ?? null);
 
+  // Newest year first (membershipYears() itself), so index 0 is always
+  // "this year" - drives the table's single always-visible status column.
+  currentMembershipYear = computed(() => this.membershipYears()[0]);
+
+  // Oldest-first, the order the mockup's dot-row reads left to right.
+  historyYears = computed(() => [...this.membershipYears()].reverse());
+
   // Myself plus any other real club member (admin/member) sharing my own
   // familyId - who a membership payment can cover in one go (see
   // payMembership below). Mirrors tour.ts's isInMyPaymentGroup spirit for
@@ -103,20 +116,10 @@ export class Members implements OnInit {
     return years.find((y) => this.yearState(mine._id, y) === 'unpaid') ?? null;
   });
 
-  // Every viewer (admin or plain member) starts out seeing their own dues
-  // at the bottom, same as the demo; only admin can then switch it via
-  // "Részletek →" (see selectMember below) - a plain member can never see
-  // anyone else's payment breakdown, only the paid/unpaid status column.
-  selectedMember = computed(() => {
-    const id = this.isAdmin() ? this.selectedMemberId() : this.myId();
-    return this.clubMembers().find((u) => u._id === id) ?? null;
-  });
-
   ngOnInit() {
     this.membershipService.getMembers().subscribe({
       next: (res) => {
         this.users.set(res.data.users);
-        this.selectedMemberId.set(this.myId());
         this.loading.set(false);
       },
       error: (err) => {
@@ -193,9 +196,27 @@ export class Members implements OnInit {
     this.activeTab.set(tab);
   }
 
-  selectMember(id: string) {
+  // Admin-only, one at a time - toggles a member's row open to show their
+  // full year-by-year payment history (amount/date) inline in the table,
+  // in place of the old fixed detail panel above it.
+  toggleDetail(id: string) {
     if (!this.isAdmin()) return;
-    this.selectedMemberId.set(id);
+    this.expandedMemberId.update((current) => (current === id ? null : id));
+  }
+
+  isExpanded(id: string): boolean {
+    return this.expandedMemberId() === id;
+  }
+
+  // "6/7 év fizetve" - counts only years this person was actually eligible
+  // for (excludes 'na' years before they joined), matching the dot-row
+  // shown right beside it.
+  historyFraction(userId: string): string {
+    const relevant = this.historyYears()
+      .map((y) => this.yearState(userId, y))
+      .filter((state) => state !== 'na');
+    const paidCount = relevant.filter((state) => state === 'paid').length;
+    return `${paidCount}/${relevant.length}`;
   }
 
   // 'na': before this person's own memberSince (or, if that's not set yet,

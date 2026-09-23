@@ -76,23 +76,28 @@
       } }
     </div>
 
-    @if (selectedMember(); as detail) {
+    @if (me(); as mine) {
     <section class="panel membership-detail">
-      <h2>
-        {{ detail._id === myId() ? 'Saját befizetések' : detail.name + '
-        befizetései' }}
-      </h2>
+      <h2>Saját befizetések</h2>
       <div>
         @for (y of membershipYears(); track y) {
         <div class="history-row">
-          <strong>{{ y }}. évi tagdíj</strong>
-          @if (yearState(detail._id, y) === 'paid') { @if
-          (paymentFor(detail._id, y); as payment) {
+          <div class="history-row-label">
+            <span
+              class="history-dot history-dot--lg"
+              [class.paid]="yearState(mine._id, y) === 'paid'"
+              [class.unpaid]="yearState(mine._id, y) === 'unpaid'"
+              [class.na]="yearState(mine._id, y) === 'na'"
+            ></span>
+            <strong>{{ y }}. évi tagdíj</strong>
+          </div>
+          @if (yearState(mine._id, y) === 'paid') { @if
+          (paymentFor(mine._id, y); as payment) {
           <span
             >{{ money(payment.amount, payment.currency) }} · {{ payment.date |
             date: 'yyyy. MM. dd.' }}</span
           >
-          } } @else if (yearState(detail._id, y) === 'unpaid') {
+          } } @else if (yearState(mine._id, y) === 'unpaid') {
           <span>Nincs befizetve</span>
           } @else {
           <span>Még nem volt tag</span>
@@ -119,25 +124,19 @@
         />
       </div>
       <div class="table-scroll">
-        <table class="membership-table">
+        <table class="membership-table membership-table--compact">
           <thead>
             <tr>
               <th>Tag</th>
-              @for (y of membershipYears(); track y) {
-              <th>{{ y }}</th>
-              }
+              <th>{{ currentMembershipYear() }}</th>
+              <th>Előzmény</th>
               <th>Teendő</th>
             </tr>
           </thead>
           <tbody>
             @if (!filteredClubMembers().length) {
             <tr>
-              <td
-                [attr.colspan]="membershipYears().length + 2"
-                class="empty-row"
-              >
-                Nincs ilyen nevű tag.
-              </td>
+              <td colspan="4" class="empty-row">Nincs ilyen nevű tag.</td>
             </tr>
             } @else { @for (m of filteredClubMembers(); track m._id) {
             <tr [class.mine]="m._id === myId()">
@@ -153,28 +152,44 @@
                   </span>
                 </div>
               </td>
-              @for (y of membershipYears(); track y) {
               <td>
                 <span
                   class="status"
-                  [class.paid]="yearState(m._id, y) === 'paid'"
-                  [class.unpaid]="yearState(m._id, y) === 'unpaid'"
-                  [class.na]="yearState(m._id, y) === 'na'"
+                  [class.paid]="yearState(m._id, currentMembershipYear()) === 'paid'"
+                  [class.unpaid]="yearState(m._id, currentMembershipYear()) === 'unpaid'"
+                  [class.na]="yearState(m._id, currentMembershipYear()) === 'na'"
                 >
-                  {{ yearState(m._id, y) === 'paid' ? '✓ Fizetve' :
-                  yearState(m._id, y) === 'unpaid' ? '○ Nincs befizetve' : '—
+                  {{ yearState(m._id, currentMembershipYear()) === 'paid' ? '✓ Fizetve' :
+                  yearState(m._id, currentMembershipYear()) === 'unpaid' ? '○ Nincs befizetve' : '—
                   Nem volt tag' }}
                 </span>
               </td>
-              }
+              <td>
+                <div class="history-summary">
+                  <div class="history-dots">
+                    @for (y of historyYears(); track y) {
+                    <span
+                      class="history-dot"
+                      [class.paid]="yearState(m._id, y) === 'paid'"
+                      [class.unpaid]="yearState(m._id, y) === 'unpaid'"
+                      [class.na]="yearState(m._id, y) === 'na'"
+                      [attr.title]="y"
+                    ></span>
+                    }
+                  </div>
+                  <span class="history-fraction"
+                    >{{ historyFraction(m._id) }} év fizetve</span
+                  >
+                </div>
+              </td>
               <td class="row-actions">
                 @if (isAdmin()) {
                 <button
                   type="button"
                   class="link-btn"
-                  (click)="selectMember(m._id)"
+                  (click)="toggleDetail(m._id)"
                 >
-                  Részletek →
+                  {{ isExpanded(m._id) ? 'Bezár' : 'Részletek →' }}
                 </button>
                 <a
                   [routerLink]="['/klub/felhasznalok', m._id]"
@@ -187,7 +202,38 @@
                 }
               </td>
             </tr>
-            } }
+            @if (isExpanded(m._id)) {
+            <tr class="history-expanded-row">
+              <td colspan="4">
+                <div class="history-expanded">
+                  @for (y of membershipYears(); track y) {
+                  <div class="history-row">
+                    <div class="history-row-label">
+                      <span
+                        class="history-dot history-dot--lg"
+                        [class.paid]="yearState(m._id, y) === 'paid'"
+                        [class.unpaid]="yearState(m._id, y) === 'unpaid'"
+                        [class.na]="yearState(m._id, y) === 'na'"
+                      ></span>
+                      <strong>{{ y }}. évi tagdíj</strong>
+                    </div>
+                    @if (yearState(m._id, y) === 'paid') { @if
+                    (paymentFor(m._id, y); as payment) {
+                    <span
+                      >{{ money(payment.amount, payment.currency) }} · {{
+                      payment.date | date: 'yyyy. MM. dd.' }}</span
+                    >
+                    } } @else if (yearState(m._id, y) === 'unpaid') {
+                    <span>Nincs befizetve</span>
+                    } @else {
+                    <span>Még nem volt tag</span>
+                    }
+                  </div>
+                  }
+                </div>
+              </td>
+            </tr>
+            } } }
           </tbody>
         </table>
       </div>
