@@ -343,6 +343,10 @@ export class TourDetails implements OnDestroy {
     return this.tourService.pdfUrl(tourId);
   }
 
+  attendeesExcelUrl(tourId: string): string {
+    return this.tourService.attendeesExcelUrl(tourId);
+  }
+
   // Same deep-link URLs as tourPdfController.js's Helyszín row - each
   // app handles the handoff itself (installed app on mobile, its own web
   // app on desktop), nothing platform-specific to detect here.

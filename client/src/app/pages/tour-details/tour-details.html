@@ -297,21 +297,31 @@
   <!-- Row 3: participants -->
   <section class="participants-section">
     <h2 class="section-heading participants-heading">
+      <button
+        type="button"
+        class="toggle-btn"
+        [attr.aria-expanded]="showParticipants()"
+        aria-label="Résztvevők listájának megjelenítése/elrejtése"
+        (click)="toggleParticipants()"
+      >
+        <mat-icon
+          >{{ showParticipants() ? 'expand_less' : 'expand_more' }}</mat-icon
+        >
+      </button>
       Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }}) @if (isFull()) {
       <span class="full-badge">Megtelt</span>
       }
       <span class="participants-heading-actions">
-        <button
-          type="button"
-          class="toggle-btn"
-          [attr.aria-expanded]="showParticipants()"
-          aria-label="Résztvevők listájának megjelenítése/elrejtése"
-          (click)="toggleParticipants()"
+        @if (auth.user()?.role === 'admin') {
+        <a
+          [href]="attendeesExcelUrl(t._id)"
+          class="excel-export-btn"
+          title="A teljes résztvevő lista Excel fájlba mentése - ki mennyit fizetett, ki mennyivel tartozik még"
         >
-          <mat-icon
-            >{{ showParticipants() ? 'expand_less' : 'expand_more' }}</mat-icon
-          >
-        </button>
+          <mat-icon>grid_on</mat-icon>
+          Mentés Excel fájlba
+        </a>
+        }
       </span>
     </h2>
 

@@ -60,7 +60,7 @@ const tourSchema = new Schema(
       required: [true, 'A tábornak kell legyen mérete'],
     },
     // The admin-only inputs behind each attendee's accommodation
-    // breakdown (Teljes ár/Foglaló/Maradék) - see
+    // breakdown (Teljes ár/Előleg/Fizetendő) - see
     // reservationController.js's computeAttendeePayments. All optional:
     // a tour with none of these set simply shows no payment breakdown yet.
     //
@@ -113,7 +113,7 @@ const tourSchema = new Schema(
     },
     // The director's one-off lump-sum contribution toward this tour's
     // accommodation, split equally across club-member attendees and
-    // deducted only from their Maradék (rest), never from Foglaló
+    // deducted only from their Fizetendő (rest), never from Előleg
     // (advance) - see computeAttendeePayments. Defaults to 0 ("no club
     // money this time") rather than being left unset, since that's the
     // common case.

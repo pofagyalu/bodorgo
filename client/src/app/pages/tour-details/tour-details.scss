@@ -206,9 +206,9 @@
   gap: 0.4rem;
 }
 
-// Groups the admin-only "email all attendees" trigger with the existing
-// expand/collapse toggle so they sit together at the row's right edge,
-// regardless of whether the admin-only button is even rendered.
+// Pushes the admin-only Excel export button to the row's right edge,
+// regardless of whether it's even rendered - the expand/collapse toggle
+// itself now sits at the opposite end, right before "Résztvevők".
 .participants-heading-actions {
   display: flex;
   align-items: center;
@@ -230,6 +230,33 @@
 
 .toggle-btn:hover {
   background: #f0f0f0;
+}
+
+// Admin-only, sits right before the expand/collapse toggle above - the
+// classic Excel green (distinct from this app's own brand green) makes
+// it instantly recognizable as "spreadsheet export" at a glance.
+.excel-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: #1d6f42;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  &:hover {
+    background: #16542f;
+  }
 }
 
 .schedule-section,

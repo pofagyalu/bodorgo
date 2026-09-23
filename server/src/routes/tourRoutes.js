@@ -4,6 +4,7 @@ import { signUpForTour, updateAttendeeNights, updateAttendeeFeeExempt } from '..
 import * as tourImageController from '../controllers/tourImageController.js';
 import * as reviewController from '../controllers/reviewController.js';
 import { downloadTourPdf, emailTourPdf, emailTourPdfToAttendees } from '../controllers/tourPdfController.js';
+import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
 import {
   loadTourForUpload,
   uploadMiddleware,
@@ -45,6 +46,7 @@ router
 router.route('/:id/pdf').get(requireAuth, downloadTourPdf);
 router.route('/:id/pdf/email').post(requireAuth, emailTourPdf);
 router.route('/:id/pdf/email-attendees').post(requireAuth, restrictTo('admin'), emailTourPdfToAttendees);
+router.route('/:id/attendees/export.xlsx').get(requireAuth, restrictTo('admin'), downloadAttendeesExcel);
 
 // Cover image - admin-only upload, replacing the old "type the filename
 // by hand" workflow. Viewing is the same plain, unauthenticated static

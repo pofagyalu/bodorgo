@@ -20,7 +20,7 @@
 }
 
 // Alternates per family group (not per row) - see attendee-list.ts's
-// groupedAttendees - so relatives visually cluster together and it's
+// groupedFamilies - so relatives visually cluster together and it's
 // obvious at a glance where one family ends and the next begins.
 .attendee-row--stripe {
   background: #f7f7f7;
@@ -50,6 +50,101 @@
   color: #333;
   border-top: 2px solid #ddd;
   border-bottom: none;
+}
+
+// One person paying for their whole family is the norm here, so seeing
+// "what's left for us as a family" at a glance matters - collapsed by
+// default (a slim, low-weight bar) so it doesn't compete with the roster
+// itself, but the whole row is clickable (see attendee-list.ts's
+// toggleFamilySubtotal), not just the small label inside it.
+.family-subtotal-row {
+  cursor: pointer;
+  background: #eef4f8;
+
+  &:hover {
+    background: #e2edf5;
+  }
+
+  td {
+    border-bottom: 1px solid #dbe6ee;
+  }
+}
+
+// Once opened, the numbers themselves get the same bold/emphasized
+// treatment as the grand .totals-row below the whole table, so a family
+// subtotal reads as "this is a sum", not just another attendee row.
+.family-subtotal-row--expanded {
+  background: #dceaf3;
+
+  &:hover {
+    background: #cfe1ee;
+  }
+
+  td {
+    font-weight: 700;
+    color: #1a4971;
+  }
+}
+
+.family-subtotal-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: #1a4971;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.family-paid-count {
+  font-size: 0.8rem;
+  color: #1a4971;
+  white-space: nowrap;
+}
+
+// The Előleg/Fizetendő/paid-count cells stay in the DOM at all times
+// (never conditionally removed) specifically so this transition can
+// animate them - clipped by the cell's own overflow:hidden.
+//
+// CSS applies whichever rule's own `transition` is in effect for the
+// state being transitioned TO, so the two directions can be timed
+// differently on purpose: collapsing uses THIS rule's transition (the
+// resting state), sliding the full -100% back to the left first and only
+// starting the fade once that slide has completely finished (delay
+// exactly matches the slide's own duration). Expanding uses the
+// --expanded rule below instead, where slide and fade simply run
+// together - the collapse's stricter "slide, then fade" order isn't
+// needed on the way in.
+.family-value-cell {
+  overflow: hidden;
+}
+
+.family-value {
+  display: inline-block;
+  // 100% of its own width - a genuinely complete slide off to the left,
+  // not just a small nudge.
+  transform: translateX(-100%);
+  opacity: 0;
+  transition:
+    transform 0.3s ease,
+    opacity 0.15s ease 0.3s;
+}
+
+.family-subtotal-row--expanded .family-value {
+  transform: translateX(0);
+  opacity: 1;
+  transition:
+    transform 0.3s ease,
+    opacity 0.2s ease;
 }
 
 .nights-edit-cell input {

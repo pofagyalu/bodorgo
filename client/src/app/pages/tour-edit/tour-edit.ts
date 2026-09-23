@@ -20,7 +20,7 @@ interface TourEditForm {
   description: string;
   imageCover: string;
   // The accommodation payment breakdown shown on the tour-details
-  // attendee list (Teljes ár/Foglaló/Maradék) - see
+  // attendee list (Teljes ár/Előleg/Fizetendő) - see
   // reservationController.js's computeAttendeePayments. All optional;
   // leaving them unset just means that breakdown isn't shown yet.
   // 'perHouse' (the default) treats accommodationPricePerNight as the

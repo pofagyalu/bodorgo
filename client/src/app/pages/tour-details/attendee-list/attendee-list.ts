@@ -28,15 +28,34 @@ export interface AttendeeListRow {
 
 // A row plus which alternating family "stripe" it belongs to (0 or 1),
 // for the alternating white/light-grey background per family - see
-// groupedAttendees below.
+// groupedFamilies below.
 export interface StripedAttendeeRow extends AttendeeListRow {
   familyStripe: 0 | 1;
+}
+
+// One family's own rows, grouped together - see groupedFamilies below.
+// key is a real familyId for an actual family, or a synthetic
+// "solo-<attendeeId>" one for a lone attendee with no family on record
+// (always exactly one member, so it never qualifies for a subtotal row).
+export interface FamilyGroup {
+  key: string;
+  familyId: string | null;
+  familyStripe: 0 | 1;
+  members: StripedAttendeeRow[];
+}
+
+export interface FamilySubtotal {
+  totalPrice: number;
+  advance: number;
+  rest: number;
+  paidCount: number;
+  memberCount: number;
 }
 
 // The tour-details "Résztvevők" list, doing double duty: a plain roster
 // for anyone looking at the tour, and (once an admin has set the tour's
 // accommodationPricePerNight/advancePaymentPercentage) each person's own
-// accommodation breakdown - Teljes ár/Foglaló/Maradék, visible to
+// accommodation breakdown - Teljes ár/Előleg/Fizetendő, visible to
 // everyone, not admin-only. Only the Éjszakák (nights) cell has an edit
 // affordance, and only for an admin - the rare correction for someone
 // leaving a night early.
@@ -71,10 +90,13 @@ export class AttendeeList {
   // instead of a flat alphabetical list - each family (or lone attendee
   // with no family on record, its own single-person "group") gets an
   // alternating white/light-grey background, see attendee-list.scss's
-  // .attendee-row--stripe. A plain getter (re-run every change-detection
-  // pass) rather than a computed signal, since `attendees` is a classic
-  // @Input(), not a signal input - fine for a roster this size.
-  get groupedAttendees(): StripedAttendeeRow[] {
+  // .attendee-row--stripe. Nested per family (rather than one flat
+  // list) so the template can insert a collapsible subtotal row after
+  // each real family's own rows - see familySubtotal/canSeeFamilySubtotal
+  // below. A plain getter (re-run every change-detection pass) rather
+  // than a computed signal, since `attendees` is a classic @Input(), not
+  // a signal input - fine for a roster this size.
+  get groupedFamilies(): FamilyGroup[] {
     const groups = new Map<string, AttendeeListRow[]>();
     for (const a of this.attendees) {
       // No family on record: each such attendee is its own group, keyed
@@ -96,11 +118,69 @@ export class AttendeeList {
     // Families ordered by their own first (alphabetically earliest)
     // member, so the roster still reads roughly alphabetically at a
     // glance rather than in arbitrary family-creation order.
-    const orderedGroups = [...groups.values()].sort((a, b) => a[0].name.localeCompare(b[0].name, 'hu'));
+    const orderedEntries = [...groups.entries()].sort((a, b) => a[1][0].name.localeCompare(b[1][0].name, 'hu'));
 
-    return orderedGroups.flatMap((members, i) =>
-      members.map((m) => ({ ...m, familyStripe: (i % 2) as 0 | 1 })),
-    );
+    return orderedEntries.map(([key, members], i) => {
+      const familyStripe = (i % 2) as 0 | 1;
+      return {
+        key,
+        familyId: members[0].familyId,
+        familyStripe,
+        members: members.map((m) => ({ ...m, familyStripe })),
+      };
+    });
+  }
+
+  // "Nagy család összesen" when every member shares the same first name
+  // token (Hungarian surname-first convention) - falls back to a plain
+  // "Család összesen" for a blended family or differing surnames, rather
+  // than guessing wrong.
+  familyLabel(group: FamilyGroup): string {
+    const surnames = new Set(group.members.map((m) => m.name.trim().split(/\s+/)[0]));
+    if (surnames.size === 1) {
+      return `${[...surnames][0]} család összesen`;
+    }
+    return 'Család összesen';
+  }
+
+  familySubtotal(group: FamilyGroup): FamilySubtotal {
+    return {
+      totalPrice: group.members.reduce((sum, m) => sum + (m.totalPrice ?? 0), 0),
+      advance: group.members.reduce((sum, m) => sum + (m.advance ?? 0), 0),
+      rest: group.members.reduce((sum, m) => sum + (m.rest ?? 0), 0),
+      paidCount: group.members.filter((m) => m.paid).length,
+      memberCount: group.members.length,
+    };
+  }
+
+  // Admin sees every family's subtotal; anyone else only ever sees their
+  // own - a solo "family" (no familyId at all) never reaches here since
+  // the caller already guards on members.length >= 2, and a group only
+  // ever has 2+ members when they share a real, non-null familyId.
+  canSeeFamilySubtotal(group: FamilyGroup): boolean {
+    if (this.isAdmin()) return true;
+    return group.familyId != null && group.familyId === this.auth.user()?.familyId;
+  }
+
+  // Collapsed by default for every family, on every fresh load - not
+  // persisted across navigation like tour.ts's own showParticipantsPreference,
+  // since this is a much more granular, per-tour-view choice.
+  expandedFamilyKeys = signal<Set<string>>(new Set());
+
+  isFamilySubtotalExpanded(key: string): boolean {
+    return this.expandedFamilyKeys().has(key);
+  }
+
+  toggleFamilySubtotal(key: string) {
+    this.expandedFamilyKeys.update((set) => {
+      const next = new Set(set);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   }
 
   editingAttendeeId = signal<string | null>(null);

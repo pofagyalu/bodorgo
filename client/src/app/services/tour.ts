@@ -390,6 +390,16 @@ export class TourService {
     return `${this.apiUrl}/${tourId}/pdf`;
   }
 
+  // Admin-only (see tourExcelController.js's downloadAttendeesExcel) - a
+  // real spreadsheet meant to be handed to the house owner: every
+  // attendee's price/advance/rest/paid status, grouped by family with an
+  // emphasized subtotal row per family, built from the exact same numbers
+  // the attendee list itself shows. A plain GET URL, not an HttpClient
+  // call, same as pdfUrl above.
+  attendeesExcelUrl(tourId: string): string {
+    return `${this.apiUrl}/${tourId}/attendees/export.xlsx`;
+  }
+
   // A plain static file URL, same as tour cover images - see
   // tourDocumentController.js's comment on why these aren't served
   // through a requireAuth-gated route.

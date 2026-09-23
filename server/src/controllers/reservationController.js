@@ -318,8 +318,8 @@ export function computeAttendeePayments(tour, reservations) {
   }
 
   // The director's lump-sum contribution is split equally across
-  // club-member attendees and only ever reduces their Maradék (rest),
-  // never their Foglaló (advance) - see tourModel.js's clubSubsidyAmount.
+  // club-member attendees and only ever reduces their Fizetendő (rest),
+  // never their Előleg (advance) - see tourModel.js's clubSubsidyAmount.
   // Floored, not ceiled: unlike totalPrice/advance below (money owed TO
   // the club, rounded in the club's favor), this is money the club GIVES
   // AWAY, so it must never round up past what was actually budgeted - the

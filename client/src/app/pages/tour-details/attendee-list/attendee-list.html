@@ -5,8 +5,8 @@
       <th>Éjszakák</th>
       @if (hasPricing()) {
       <th>Teljes ár</th>
-      <th>Foglaló</th>
-      <th>Maradék</th>
+      <th>Előleg</th>
+      <th>Fizetendő</th>
       }
       <th class="paid-col"></th>
       @if (isAdmin()) {
@@ -15,7 +15,7 @@
     </tr>
   </thead>
   <tbody>
-    @for (a of groupedAttendees; track a.attendeeId) {
+    @for (group of groupedFamilies; track group.key) { @for (a of group.members; track a.attendeeId) {
     <tr [class.attendee-row--stripe]="a.familyStripe === 1">
       <td>
         {{ a.name }}
@@ -94,7 +94,34 @@
       </td>
       }
     </tr>
-    }
+    } @if (group.members.length > 1 && canSeeFamilySubtotal(group)) {
+    <tr
+      class="family-subtotal-row"
+      [class.attendee-row--stripe]="group.familyStripe === 1"
+      [class.family-subtotal-row--expanded]="isFamilySubtotalExpanded(group.key)"
+      (click)="toggleFamilySubtotal(group.key)"
+    >
+      <td colspan="2">
+        <button type="button" class="family-subtotal-toggle">
+          <mat-icon>{{ isFamilySubtotalExpanded(group.key) ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+          {{ familyLabel(group) }}
+        </button>
+      </td>
+      @if (hasPricing()) {
+      <td class="family-value-cell"><span class="family-value">{{ formatForint(familySubtotal(group).totalPrice) }} Ft</span></td>
+      <td class="family-value-cell"><span class="family-value">{{ formatForint(familySubtotal(group).advance) }} Ft</span></td>
+      <td class="family-value-cell"><span class="family-value">{{ formatForint(familySubtotal(group).rest) }} Ft</span></td>
+      }
+      <td class="paid-col family-value-cell">
+        <span class="family-value family-paid-count"
+          >{{ familySubtotal(group).paidCount }}/{{ familySubtotal(group).memberCount }} fizetve</span
+        >
+      </td>
+      @if (isAdmin()) {
+      <td></td>
+      }
+    </tr>
+    } }
   </tbody>
   @if (hasPricing() && totals) {
   <tfoot>
