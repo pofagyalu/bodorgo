@@ -1,33 +1,75 @@
 import { Routes } from '@angular/router';
-import { Tours } from './pages/tours/tours';
-import { TourDetails } from './pages/tour-details/tour-details';
-import { Chat } from './pages/chat/chat';
-import { Szavazasok } from './pages/szavazasok/szavazasok';
-import { Versenyek } from './pages/versenyek/versenyek';
 import { Home } from './pages/home/home';
-import { NotFoundComponent } from './not-found/not-found.component';
-import { LoginComponent } from './auth/login/login.component';
-import { Profile } from './pages/profile/profile';
-import { TourEdit } from './pages/tour-edit/tour-edit';
-import { Payment } from './pages/payment/payment';
-import { Klub } from './pages/klub/klub';
 
+// Home stays eager since it's the near-universal first page hit; every
+// other route is lazy so its own code (and whatever heavy libraries it
+// pulls in - exceljs for TourDetails' export, socket.io-client for Chat,
+// etc.) only loads once someone actually navigates there, instead of all
+// being bundled into the app's initial chunk.
 export const routes: Routes = [
   { path: '', component: Home },
-  { path: 'taborok', title: 'Bódorgó táborok', component: Tours },
+  {
+    path: 'taborok',
+    title: 'Bódorgó táborok',
+    loadComponent: () => import('./pages/tours/tours').then((m) => m.Tours),
+  },
   // Both declared before the generic taborok/:id below, so "uj" and
   // ":id/szerkesztes" match here first rather than being swallowed as a
   // tour id/slug.
-  { path: 'taborok/uj', title: 'Új tábor', component: TourEdit },
-  { path: 'taborok/:id/szerkesztes', title: 'Tábor szerkesztése', component: TourEdit },
-  { path: 'taborok/:id/befizetes', title: 'Előleg befizetés', component: Payment },
-  { path: 'taborok/:id', title: 'Tábor részletei', component: TourDetails },
+  {
+    path: 'taborok/uj',
+    title: 'Új tábor',
+    loadComponent: () => import('./pages/tour-edit/tour-edit').then((m) => m.TourEdit),
+  },
+  {
+    path: 'taborok/:id/szerkesztes',
+    title: 'Tábor szerkesztése',
+    loadComponent: () => import('./pages/tour-edit/tour-edit').then((m) => m.TourEdit),
+  },
+  {
+    path: 'taborok/:id/befizetes',
+    title: 'Előleg befizetés',
+    loadComponent: () => import('./pages/payment/payment').then((m) => m.Payment),
+  },
+  {
+    path: 'taborok/:id',
+    title: 'Tábor részletei',
+    loadComponent: () => import('./pages/tour-details/tour-details').then((m) => m.TourDetails),
+  },
   // Chat/Szavazások/Versenyek are routed but still in early development
-  { path: 'chat', title: 'Bódorgó chat', component: Chat },
-  { path: 'szavazasok', title: 'Bódorgó szavazások', component: Szavazasok },
-  { path: 'versenyek', title: 'Bódorgó versenyek', component: Versenyek },
-  { path: 'login', title: 'Bódorgó, gyere bé', component: LoginComponent },
-  { path: 'profil', title: 'Profil', component: Profile },
-  { path: 'klub', title: 'Klub', component: Klub },
-  { path: '**', component: NotFoundComponent },
+  {
+    path: 'chat',
+    title: 'Bódorgó chat',
+    loadComponent: () => import('./pages/chat/chat').then((m) => m.Chat),
+  },
+  {
+    path: 'szavazasok',
+    title: 'Bódorgó szavazások',
+    loadComponent: () => import('./pages/szavazasok/szavazasok').then((m) => m.Szavazasok),
+  },
+  {
+    path: 'versenyek',
+    title: 'Bódorgó versenyek',
+    loadComponent: () => import('./pages/versenyek/versenyek').then((m) => m.Versenyek),
+  },
+  {
+    path: 'login',
+    title: 'Bódorgó, gyere bé',
+    loadComponent: () => import('./auth/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'profil',
+    title: 'Profil',
+    loadComponent: () => import('./pages/profile/profile').then((m) => m.Profile),
+  },
+  {
+    path: 'klub',
+    title: 'Klub',
+    loadComponent: () => import('./pages/klub/klub').then((m) => m.Klub),
+  },
+  {
+    path: '**',
+    loadComponent: () =>
+      import('./not-found/not-found.component').then((m) => m.NotFoundComponent),
+  },
 ];
