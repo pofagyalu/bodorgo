@@ -37,6 +37,21 @@ const attendeeSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  // Admin-only, set via updateAttendeeFeeExempt - a real but rare case
+  // where this specific person owes nothing at all for the
+  // accommodation, regardless of the tour's own pricing formula: an
+  // infant, a last-minute guest who joins for free because the whole
+  // house is already paid for, an invited guest the club is comping.
+  // Distinct from the tour's own age-based child discount
+  // (tourModel.js's childPricePerNight/childAgeLimitYears), which is a
+  // formula applied to everyone equally, not a case-by-case override.
+  // They're still a normal attendee otherwise - counted toward capacity,
+  // occupying nights, appearing in the schedule - just excluded from
+  // what's actually owed (see computeAttendeePayments).
+  feeExempt: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const reservationSchema = new Schema(

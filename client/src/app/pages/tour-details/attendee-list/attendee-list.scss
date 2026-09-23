@@ -137,6 +137,40 @@
   }
 }
 
+// Toggle, not a momentary action like edit/save/cancel above - muted
+// grey when off, a warm amber once this attendee is actually marked
+// exempt, so the row-actions cell itself hints at the state without
+// needing to read the badge next to the name.
+.icon-btn--exempt {
+  background: #90a4ae;
+
+  &:hover {
+    background: #78909c;
+  }
+}
+
+.icon-btn--exempt-active {
+  background: #e08e0b;
+
+  &:hover {
+    background: #c67a00;
+  }
+}
+
+// Sits right after the name when an attendee is marked exempt (see
+// attendee-list.ts's toggleFeeExempt) - same pill shape as profile.scss's
+// paid-badge/cash-badge family, just amber to match .icon-btn--exempt-
+// active above.
+.exempt-badge {
+  margin-left: 0.5rem;
+  background: #fff3e0;
+  color: #b8720b;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .attendee-table {
     font-size: 0.85rem;

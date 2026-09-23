@@ -206,6 +206,11 @@ export interface AttendeePayment {
   // attendeeSchema.paid) - not the whole reservation's, since a family
   // reservation can have some members paid and others not.
   paid: boolean;
+  // Admin-only override (see reservationModel.js's own comment) - an
+  // infant, a last-minute free guest, a comped invitee. Still a normal
+  // attendee (counted toward capacity/nights), just excluded from
+  // totalPrice/advance/rest below, which are always 0 when this is true.
+  feeExempt: boolean;
   totalPrice: number | null;
   advance: number | null;
   rest: number | null;
@@ -483,6 +488,22 @@ export class TourService {
     return this.http.patch<{ status: string; data: { attendee: Attendee } }>(
       `${this.apiUrl}/${tourId}/reservations/${reservationId}/attendees/${attendeeId}/nights`,
       { nights },
+    );
+  }
+
+  // Admin-only (see reservationController.js's updateAttendeeFeeExempt) -
+  // the real but rare case where a specific attendee owes nothing at all
+  // (an infant, a last-minute free guest, a comped invitee), regardless
+  // of the tour's own pricing formula.
+  updateAttendeeFeeExempt(
+    tourId: string,
+    reservationId: string,
+    attendeeId: string,
+    feeExempt: boolean,
+  ): Observable<{ status: string; data: { attendee: Attendee } }> {
+    return this.http.patch<{ status: string; data: { attendee: Attendee } }>(
+      `${this.apiUrl}/${tourId}/reservations/${reservationId}/attendees/${attendeeId}/fee-exempt`,
+      { feeExempt },
     );
   }
 

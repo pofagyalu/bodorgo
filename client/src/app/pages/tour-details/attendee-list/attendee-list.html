@@ -17,7 +17,12 @@
   <tbody>
     @for (a of groupedAttendees; track a.attendeeId) {
     <tr [class.attendee-row--stripe]="a.familyStripe === 1">
-      <td>{{ a.name }}</td>
+      <td>
+        {{ a.name }}
+        @if (a.feeExempt) {
+        <span class="exempt-badge" title="Nem kell fizetnie a szállásért">Ingyenes</span>
+        }
+      </td>
 
       @if (editingAttendeeId() === a.attendeeId) {
       <td class="nights-edit-cell">
@@ -72,6 +77,16 @@
         } @else {
         <button type="button" class="icon-btn icon-btn--edit" title="Éjszakák szerkesztése" (click)="startEditNights(a)">
           <mat-icon>edit</mat-icon>
+        </button>
+        <button
+          type="button"
+          class="icon-btn icon-btn--exempt"
+          [class.icon-btn--exempt-active]="a.feeExempt"
+          [title]="a.feeExempt ? 'Díjmentesség visszavonása' : 'Megjelölés díjmentesként (pl. csecsemő, ingyenes vendég)'"
+          [disabled]="togglingFeeExemptId() === a.attendeeId"
+          (click)="toggleFeeExempt(a)"
+        >
+          <mat-icon>money_off</mat-icon>
         </button>
         }
       </td>

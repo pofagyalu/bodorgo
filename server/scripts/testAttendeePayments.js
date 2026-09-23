@@ -394,6 +394,84 @@ function reservation(id, attendees) {
   );
 }
 
+// --- feeExempt (admin comp - an infant, a last-minute free guest since
+// the house is already paid for, an invited guest): perHouse mode - the
+// exempt person's own row is zeroed, but the fixed house cost is still
+// fully covered by the paying attendees, at a correspondingly higher
+// rate, not quietly undercollected. ---
+{
+  // House fee 3000 (1000/night * 3 nights). Alice/Bob pay for 3 nights
+  // each; Casey is comped for her 3 nights. If Casey's nights still
+  // counted in the split, the rate would dilute to 3000/9 = 333.33 and
+  // Alice+Bob would only cover 2000 total, short of the real 3000 cost -
+  // instead her nights are excluded, so the rate is 3000/6 = 500 and
+  // Alice+Bob together still cover the full 3000.
+  const tour = { startDate: '2024-01-01', duration: 4, accommodationPricePerNight: 1000, advancePaymentPercentage: 20, clubSubsidyAmount: 0 };
+  const reservations = [
+    reservation('r1', [
+      { name: 'Alice', nights: 3, user: { role: 'member' } },
+      { name: 'Bob', nights: 3, user: { role: 'member' } },
+      { name: 'Casey', nights: 3, feeExempt: true, user: { role: 'member' } },
+    ]),
+  ];
+  const { attendeePayments, totals } = computeAttendeePayments(tour, reservations);
+  const byName = Object.fromEntries(attendeePayments.map((p) => [p.name, p]));
+
+  check('Casey (exempt) owes nothing at all', byName.Casey.totalPrice === 0 && byName.Casey.advance === 0 && byName.Casey.rest === 0);
+  check('Casey is treated as paid regardless of her stored paid flag', byName.Casey.paid === true);
+  check('Casey is flagged feeExempt in the output row', byName.Casey.feeExempt === true);
+  check('a non-exempt row is explicitly flagged feeExempt: false', byName.Alice.feeExempt === false);
+  check(
+    'Alice and Bob together cover the FULL real house cost (1500 each, summing to the true 3000), not diluted by Casey\'s nights',
+    byName.Alice.totalPrice === 1500 && byName.Bob.totalPrice === 1500,
+  );
+  check('totals.totalPrice is still the tour\'s own real fixed cost (3000)', totals.totalPrice === 3000);
+}
+
+// --- feeExempt: perPerson mode - each attendee's charge is independent,
+// so a comped person simply contributes nothing; nobody else's own price
+// changes because of it (unlike perHouse's shared pot above). ---
+{
+  const tour = {
+    startDate: '2024-06-01',
+    duration: 4,
+    pricingMode: 'perPerson',
+    accommodationPricePerNight: 5000,
+    advancePaymentPercentage: 20,
+    clubSubsidyAmount: 0,
+  };
+  const reservations = [
+    reservation('r1', [
+      { name: 'Adult', nights: 3, user: { role: 'member', birthday: '1990-01-01' } },
+      { name: 'Comped Guest', nights: 3, feeExempt: true, user: { role: 'guest' } },
+    ]),
+  ];
+  const { attendeePayments, totals } = computeAttendeePayments(tour, reservations);
+  const byName = Object.fromEntries(attendeePayments.map((p) => [p.name, p]));
+
+  check('the comped guest owes nothing', byName['Comped Guest'].totalPrice === 0 && byName['Comped Guest'].advance === 0 && byName['Comped Guest'].rest === 0);
+  check(
+    'the paying adult\'s own price is completely unaffected by the comped guest (still exactly 3 * 5000 = 15000)',
+    byName.Adult.totalPrice === 15000,
+  );
+  check('totals correctly exclude the comped guest\'s zero contribution (just the adult\'s 15000, not more)', totals.totalPrice === 15000);
+}
+
+// --- feeExempt is carried through even when pricing isn't configured yet,
+// and defaults to false for existing data that predates the field. ---
+{
+  const tour = { startDate: '2024-01-01', duration: 3 };
+  const reservations = [
+    reservation('r1', [
+      { name: 'Exempt Before Pricing', nights: 2, feeExempt: true, user: { role: 'member' } },
+      { name: 'Old Data', nights: 2, user: { role: 'member' } }, // no feeExempt field at all
+    ]),
+  ];
+  const { attendeePayments } = computeAttendeePayments(tour, reservations);
+  check('feeExempt is carried through even with no pricing configured', attendeePayments[0].feeExempt === true);
+  check('missing feeExempt defaults to false, not undefined', attendeePayments[1].feeExempt === false);
+}
+
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed.`);
   process.exit(1);

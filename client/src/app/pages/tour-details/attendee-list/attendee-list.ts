@@ -17,6 +17,8 @@ export interface AttendeeListRow {
   advance: number | null;
   rest: number | null;
   paid: boolean;
+  // Admin-only override - see tour.ts's own AttendeePayment comment.
+  feeExempt: boolean;
 }
 
 // A row plus which alternating family "stripe" it belongs to (0 or 1),
@@ -150,6 +152,34 @@ export class AttendeeList {
       error: (err) => {
         this.notifications.addError(err?.error?.message ?? 'Hiba történt a rögzítés során.');
         this.markingCashPaidId.set(null);
+      },
+    });
+  }
+
+  // Real but rare cases: an infant, a last-minute guest joining for free
+  // since the whole house is already paid for, an invited guest the club
+  // is comping - they're still a normal attendee (counted toward
+  // capacity/nights), just excluded from what's owed (see
+  // reservationController.js's updateAttendeeFeeExempt/
+  // computeAttendeePayments). Tracked per attendeeId, same reasoning as
+  // markingCashPaidId above.
+  togglingFeeExemptId = signal<string | null>(null);
+
+  toggleFeeExempt(row: AttendeeListRow) {
+    if (this.togglingFeeExemptId()) return;
+    const next = !row.feeExempt;
+    this.togglingFeeExemptId.set(row.attendeeId);
+    this.tourService.updateAttendeeFeeExempt(this.tourId, row.reservationId, row.attendeeId, next).subscribe({
+      next: () => {
+        this.togglingFeeExemptId.set(null);
+        this.notifications.addSuccess(
+          next ? `${row.name} díjmentesnek jelölve - semmit sem kell fizetnie.` : `${row.name} díjmentessége visszavonva.`,
+        );
+        this.nightsUpdated.emit();
+      },
+      error: (err) => {
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a rögzítés során.');
+        this.togglingFeeExemptId.set(null);
       },
     });
   }

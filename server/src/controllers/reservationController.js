@@ -256,6 +256,10 @@ export function computeAttendeePayments(tour, reservations) {
       // attendee list's paid/unpaid icon and the advance-payment page
       // excluding whoever's already settled up.
       paid: a.paid ?? false,
+      // Admin-only override (see reservationModel.js's own comment) -
+      // still counted toward nights/capacity below, just excluded from
+      // what's actually owed.
+      feeExempt: a.feeExempt ?? false,
     })),
   );
 
@@ -265,7 +269,7 @@ export function computeAttendeePayments(tour, reservations) {
 
   if (!pricingConfigured) {
     return {
-      attendeePayments: rows.map(({ reservationId, attendeeId, name, nights, familyId, userId, paid }) => ({
+      attendeePayments: rows.map(({ reservationId, attendeeId, name, nights, familyId, userId, paid, feeExempt }) => ({
         reservationId,
         attendeeId,
         name,
@@ -273,6 +277,7 @@ export function computeAttendeePayments(tour, reservations) {
         familyId,
         userId,
         paid,
+        feeExempt,
         totalPrice: null,
         advance: null,
         rest: null,
@@ -297,7 +302,12 @@ export function computeAttendeePayments(tour, reservations) {
   // unset simply meaning nobody gets a discount. There's no shared pot to
   // split at all, so no proportional-split step here.
   const totalHouseFee = nightlyRate * (tour.duration - 1);
-  const totalPersonNights = rows.reduce((sum, r) => sum + r.nights, 0);
+  // feeExempt attendees' nights are excluded from the split - the house's
+  // fixed cost is already committed regardless of who's comped, so it
+  // still has to be fully covered by whoever IS paying, at a
+  // correspondingly higher per-person-night rate, rather than quietly
+  // undercollecting by exactly the exempt person's share.
+  const totalPersonNights = rows.reduce((sum, r) => sum + (r.feeExempt ? 0 : r.nights), 0);
   const pricePerPersonNight = totalPersonNights > 0 ? totalHouseFee / totalPersonNights : 0;
 
   function nightlyRateFor(row) {
@@ -337,6 +347,34 @@ export function computeAttendeePayments(tour, reservations) {
   let summedTotalPrice = 0;
   let summedAdvance = 0;
   const attendeePayments = rows.map((r) => {
+    // feeExempt bypasses the pricing formula entirely rather than
+    // computing normally and zeroing after - this person contributes
+    // nothing to summedTotalPrice/summedAdvance (perPerson's totals ARE
+    // that sum, so a comped person genuinely reduces what's actually
+    // expected) and consumes no club subsidy (leaving the whole subsidy
+    // pool available for attendees who do owe something). Their nights
+    // still counted toward totalPersonNights above though - they really
+    // are occupying the house for perHouse's own fixed-cost split, same
+    // as anyone else, just personally billed nothing for it.
+    if (r.feeExempt) {
+      return {
+        reservationId: r.reservationId,
+        attendeeId: r.attendeeId,
+        name: r.name,
+        nights: r.nights,
+        familyId: r.familyId,
+        userId: r.userId,
+        // Nothing left to collect, so treated as settled regardless of
+        // the stored paid flag - kept in sync with it by
+        // updateAttendeeFeeExempt itself, this is just defensive.
+        paid: true,
+        feeExempt: true,
+        totalPrice: 0,
+        advance: 0,
+        rest: 0,
+      };
+    }
+
     // Rounded up rather than to the nearest forint - a fractional split
     // should never leave the club collecting less than the real cost,
     // even by a few forints, so every attendee's share rounds in the
@@ -362,6 +400,7 @@ export function computeAttendeePayments(tour, reservations) {
       familyId: r.familyId,
       userId: r.userId,
       paid: r.paid,
+      feeExempt: false,
       totalPrice,
       advance,
       rest,
@@ -428,6 +467,44 @@ export const updateAttendeeNights = async (req, res) => {
   }
 
   attendee.nights = nights;
+  await reservation.save();
+
+  res.status(200).json({ status: 'success', data: { attendee } });
+};
+
+// Admin-only - marks one specific attendee as owing nothing at all for
+// this tour, regardless of the pricing formula (see reservationModel.js's
+// feeExempt field and computeAttendeePayments above for the real, rare
+// cases this covers - an infant, a last-minute guest joining for free
+// since the whole house is already paid for, an invited guest the club
+// is comping). Also flips their own paid flag to match - "exempt" means
+// there's nothing left to collect, and the profile page's own Fizetve/
+// Nincs kifizetve reads this field directly, not
+// computeAttendeePayments' derived value, so the two would otherwise
+// disagree. Turning it back off (correcting a mistake) reverts paid to
+// false too - a deliberate simple default for what's expected to be a
+// rare correction, not an attempt to reconstruct any real payment
+// history that might have existed before the exemption was set.
+export const updateAttendeeFeeExempt = async (req, res) => {
+  const { reservationId, attendeeId } = req.params;
+  const { feeExempt } = req.body;
+
+  if (typeof feeExempt !== 'boolean') {
+    throw new AppError('A feeExempt mezőnek logikai értéknek kell lennie.', 400);
+  }
+
+  const reservation = await Reservation.findById(reservationId);
+  if (!reservation) {
+    throw new AppError('Nincs ilyen foglalás.', 404);
+  }
+
+  const attendee = reservation.attendees.id(attendeeId);
+  if (!attendee) {
+    throw new AppError('Nincs ilyen résztvevő ebben a foglalásban.', 404);
+  }
+
+  attendee.feeExempt = feeExempt;
+  attendee.paid = feeExempt;
   await reservation.save();
 
   res.status(200).json({ status: 'success', data: { attendee } });
