@@ -33,6 +33,15 @@ export class PaymentService {
     return this.http.post<StartPaymentResponse>(`${this.apiUrl}/start`, { tourId, attendeeIds });
   }
 
+  // Pays each given club member's own earliest unpaid year (1000 Ft
+  // each, combined into one Checkout session) - the server looks up who's
+  // actually eligible and what they owe itself (self + same family, real
+  // club members only), never trusting amounts from here. Defaults to
+  // just the caller when userIds is omitted.
+  startMembershipPayment(userIds?: string[]): Observable<StartPaymentResponse> {
+    return this.http.post<StartPaymentResponse>(`${this.apiUrl}/membership/start`, { userIds });
+  }
+
   // Admin-only (see paymentRoutes.js's restrictTo('admin')) - for the real
   // case where someone hands an admin cash instead of paying online. No
   // Stripe involved, so this resolves immediately rather than returning a

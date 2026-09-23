@@ -12,6 +12,10 @@ export interface MemberUser {
   // then, in which case the member is treated as eligible for every
   // tracked year (see members.ts's yearState).
   memberSince?: number;
+  // Opaque grouping id - used to find "my own family's other club
+  // members" for the membership-dues payment (see members.ts's
+  // myFamilyClubMembers).
+  familyId?: string;
 }
 
 interface MembersResponse {

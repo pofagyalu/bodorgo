@@ -42,10 +42,21 @@ export class Overview implements OnInit {
     return !u.memberSince || year >= u.memberSince;
   }
 
-  // No real per-year payment records exist yet (see members.ts's identical
-  // note) - every eligible member currently counts as unpaid.
-  isPaid(_u: MemberUser, _year: number): boolean {
-    return false;
+  // "userId:year" pairs backed by a real Tagdíj income transaction (see
+  // server/src/models/transactionModel.js's user/membershipYear fields and
+  // members.ts's identical logic).
+  private paidPairs = computed(() => {
+    const pairs = new Set<string>();
+    for (const t of this.transactions()) {
+      if (t.type === 'income' && t.category === 'Tagdíj' && t.user && t.membershipYear) {
+        pairs.add(`${t.user}:${t.membershipYear}`);
+      }
+    }
+    return pairs;
+  });
+
+  isPaid(u: MemberUser, year: number): boolean {
+    return this.paidPairs().has(`${u._id}:${year}`);
   }
 
   eligibleThisYear = computed(() =>

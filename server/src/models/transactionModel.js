@@ -55,6 +55,20 @@ const transactionSchema = new Schema(
       ref: 'User',
       required: true,
     },
+    // Only set for category:'Tagdíj' income entries - which member this
+    // particular year's dues payment is for, so the Klub Felhasználók/
+    // Áttekintés pages can look up real paid/unpaid status per member per
+    // year (see members.ts/overview.ts's yearState) instead of every
+    // Tagdíj transaction just being an anonymous lump sum. Absent for
+    // every other transaction (e.g. a general "Éves tagdíjak" entry not
+    // tied to one specific member, or any expense).
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    membershipYear: {
+      type: Number,
+    },
   },
   { timestamps: true },
 );

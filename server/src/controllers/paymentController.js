@@ -4,6 +4,7 @@ import Payment from '../models/paymentModel.js';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
+import Transaction from '../models/transactionModel.js';
 import { computeAttendeePayments } from './reservationController.js';
 import { createCheckoutSession, retrieveCheckoutSession, constructWebhookEvent } from '../utils/stripe.js';
 import { generateReceiptPdf, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
@@ -71,6 +72,119 @@ export async function resolvePayableAttendeesForAdmin(tourId, attendeeIds) {
 
   return { tour, payable };
 }
+
+// Club membership dues: 1000 Ft/year, tracked as real Transaction entries
+// (see transactionModel.js's user/membershipYear fields) rather than
+// Reservation attendees - "paid" means a Tagdíj income transaction
+// already exists for that person+year (same rule members.ts/overview.ts
+// use client-side).
+const CLUB_FOUNDING_YEAR = 2019;
+const MEMBERSHIP_DUES_AMOUNT = 1000;
+
+// Same "self + same family" rule as resolvePayableAttendees, but for
+// membership dues rather than a tour advance - and instead of a client-
+// supplied amount, each person's own earliest unpaid year (and its fixed
+// amount) is looked up fresh here, never trusted from the request.
+async function resolvePayableMembers(userIds, user) {
+  const myFamilyId = user.familyId ? String(user.familyId) : null;
+
+  const candidates = await User.find({
+    role: { $in: ['admin', 'member'] },
+    $or: [{ _id: user._id }, ...(myFamilyId ? [{ familyId: myFamilyId }] : [])],
+  }).select('name memberSince');
+
+  const requested = new Set(userIds.map(String));
+  const selected = candidates.filter((c) => requested.has(String(c._id)));
+
+  const paidTransactions = await Transaction.find({
+    type: 'income',
+    category: 'Tagdíj',
+    user: { $in: selected.map((c) => c._id) },
+  }).select('user membershipYear');
+  const paidYearsByUser = new Map();
+  for (const t of paidTransactions) {
+    const key = String(t.user);
+    if (!paidYearsByUser.has(key)) paidYearsByUser.set(key, new Set());
+    paidYearsByUser.get(key).add(t.membershipYear);
+  }
+
+  const currentYear = new Date().getFullYear();
+  const payable = [];
+  for (const member of selected) {
+    const startYear = member.memberSince ?? CLUB_FOUNDING_YEAR;
+    const paidYears = paidYearsByUser.get(String(member._id)) ?? new Set();
+    let year = null;
+    for (let y = startYear; y <= currentYear; y++) {
+      if (!paidYears.has(y)) {
+        year = y;
+        break;
+      }
+    }
+    if (year !== null) {
+      payable.push({ _id: member._id, name: member.name, year, amount: MEMBERSHIP_DUES_AMOUNT });
+    }
+  }
+
+  if (payable.length === 0) {
+    throw new AppError('Nincs esedékes tagdíj a kiválasztott tagoknak.', 400);
+  }
+
+  return payable;
+}
+
+// POST /payments/membership/start - requireAuth. Same Stripe Checkout
+// machinery as startPayment below, just for a club member's own yearly
+// dues instead of a tour advance - one payment can cover several family
+// members at once, each their own earliest unpaid year. Defaults to just
+// the caller themselves when no userIds are given.
+export const startMembershipPayment = async (req, res) => {
+  const { userIds } = req.body;
+  const ids = Array.isArray(userIds) && userIds.length ? userIds : [String(req.user._id)];
+
+  const payable = await resolvePayableMembers(ids, req.user);
+  const amount = payable.reduce((sum, p) => sum + p.amount, 0);
+
+  const payment = await Payment.create({
+    purpose: 'membershipFee',
+    createdBy: req.user._id,
+    members: payable.map((p) => ({
+      user: p._id,
+      name: p.name,
+      amount: p.amount,
+      membershipYear: p.year,
+    })),
+    amount,
+  });
+
+  // Same origin-detection reasoning as startPayment below.
+  const requestOrigin = req.headers.origin;
+  const clientBase = config.corsOrigins.includes(requestOrigin)
+    ? requestOrigin
+    : config.oridzs.clientBaseUrl;
+  const returnUrl = `${clientBase.replace(/\/$/, '')}/klub/felhasznalok?paymentId=${payment._id}`;
+
+  let session;
+  try {
+    session = await createCheckoutSession({
+      referenceId: String(payment._id),
+      amount,
+      payerEmail: req.user.email,
+      successUrl: returnUrl,
+      cancelUrl: returnUrl,
+      description: `Tagdíj - ${payable.map((p) => `${p.name} (${p.year})`).join(', ')}`,
+    });
+  } catch (err) {
+    payment.status = 'Failed';
+    await payment.save();
+    throw new AppError('Nem sikerült elindítani a fizetést.', 502);
+  }
+
+  payment.providerPaymentId = session.id;
+  payment.status = 'Started';
+  await payment.save();
+
+  res.status(200).json({ status: 'success', data: { gatewayUrl: session.url, paymentId: payment._id } });
+};
 
 // POST /payments/start - requireAuth. Creates our own Payment record
 // first (so we have something to correlate Stripe's webhook against via
@@ -245,19 +359,42 @@ async function markAttendeesPaid(payment) {
   }
 }
 
-// Marks every attendee this payment covers as paid, and the payment
-// itself as Succeeded - shared by both the webhook and the user-facing
-// status check below, since either can be the one that first learns the
-// payment succeeded (whichever happens first wins; the other finds
-// status already updated and does nothing further).
-//
-// tourAdvance-specific (updates Reservation.attendees, generates a
-// receipt titled around "the tour's advance") - once membershipFee
-// payments exist (see paymentModel.js), this will need to branch on
-// payment.purpose instead.
+// membershipFee's own "money received" effect - one real Transaction per
+// covered member+year (see transactionModel.js's user/membershipYear
+// fields), so the Klub Pénzügyek/Felhasználók/Áttekintés pages
+// immediately reflect it. No receipt/email yet (unlike tourAdvance below)
+// - a dues-specific receipt template can follow later if wanted.
+async function markMembershipPaid(payment) {
+  for (const m of payment.members) {
+    await Transaction.create({
+      date: new Date(),
+      name: `${m.name} tagdíja (${m.membershipYear})`,
+      type: 'income',
+      category: 'Tagdíj',
+      amount: m.amount,
+      currency: payment.currency,
+      createdBy: payment.createdBy,
+      user: m.user,
+      membershipYear: m.membershipYear,
+    });
+  }
+}
+
+// Marks the payment itself as Succeeded and applies whichever purpose-
+// specific effect actually means "this money has been received" - shared
+// by both the webhook and the user-facing status check below, since
+// either can be the one that first learns the payment succeeded
+// (whichever happens first wins; the other finds status already updated
+// and does nothing further).
 async function markPaymentSucceeded(payment) {
   payment.status = 'Succeeded';
   await payment.save();
+
+  if (payment.purpose === 'membershipFee') {
+    await markMembershipPaid(payment);
+    return;
+  }
+
   await markAttendeesPaid(payment);
 
   // The receipt/email are a nice-to-have on top of the actual payment

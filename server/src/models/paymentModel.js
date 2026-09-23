@@ -54,20 +54,25 @@ const paymentSchema = new Schema(
         amount: { type: Number },
       },
     ],
-    // --- purpose: 'membershipFee' only (not implemented yet) ---
-    // Expected shape once built: which member(s) this covers (a family
-    // paying membership for several people at once, same "pay for your
-    // family" spirit as tourAdvance) and which year it's for - left
-    // undefined/unused until then rather than speculatively fleshed out
-    // now.
+    // --- purpose: 'membershipFee' only ---
+    // Which member(s) this covers - a family paying dues for several
+    // people at once, same "pay for your family" spirit as tourAdvance -
+    // and which single year each one is for (a family's members can each
+    // owe a different earliest-unpaid year, so this lives per-entry
+    // rather than once for the whole payment - see
+    // paymentController.js's resolvePayableMembers).
     members: [
       {
         _id: false,
         user: { type: Schema.Types.ObjectId, ref: 'User' },
         name: { type: String },
         amount: { type: Number },
+        membershipYear: { type: Number },
       },
     ],
+    // Unused by membershipFee (see members[].membershipYear above) -
+    // left in case a future purpose wants one shared year for a whole
+    // payment instead.
     membershipYear: {
       type: Number,
     },

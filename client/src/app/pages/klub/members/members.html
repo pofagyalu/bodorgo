@@ -30,6 +30,10 @@
 
   @if (activeTab() === 'club') {
   <div role="tabpanel">
+    @if (paymentNotice(); as notice) {
+    <p class="payment-notice" [class.error]="notice.kind === 'error'">{{ notice.text }}</p>
+    }
+
     @if (me(); as mine) {
     <section class="member-hero">
       <div>
@@ -37,6 +41,11 @@
         <h2>{{ myStatusSummary() }}</h2>
         <p>Az éves befizetéseid áttekintése</p>
       </div>
+      @if (myEarliestUnpaidYear(); as year) {
+      <button type="button" class="primary-btn" [disabled]="paying()" (click)="payMembership()">
+        {{ paying() ? 'Fizetés indítása…' : year + '. évi tagdíj befizetése →' }}
+      </button>
+      }
     </section>
     }
 
@@ -147,15 +156,13 @@
         @for (y of membershipYears(); track y) {
         <div class="history-row">
           <strong>{{ y }}. évi tagdíj</strong>
-          <span>
-            {{
-              yearState(detail._id, y) === 'paid'
-                ? 'Fizetve'
-                : yearState(detail._id, y) === 'unpaid'
-                  ? 'Nincs befizetve'
-                  : 'Még nem volt tag'
-            }}
-          </span>
+          @if (yearState(detail._id, y) === 'paid') { @if (paymentFor(detail._id, y); as payment) {
+          <span>{{ money(payment.amount, payment.currency) }} · {{ payment.date | date: 'yyyy. MM. dd.' }}</span>
+          } } @else if (yearState(detail._id, y) === 'unpaid') {
+          <span>Nincs befizetve</span>
+          } @else {
+          <span>Még nem volt tag</span>
+          }
         </div>
         }
       </div>

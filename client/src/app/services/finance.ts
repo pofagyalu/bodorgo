@@ -15,6 +15,11 @@ export interface Transaction {
   currency: TransactionCurrency;
   createdBy: string;
   createdAt: string;
+  // Only set on category:'Tagdíj' income entries created for one specific
+  // member's specific year (see server/src/models/transactionModel.js) -
+  // absent on general/unattributed entries.
+  user?: string;
+  membershipYear?: number;
 }
 
 export interface NewTransaction {

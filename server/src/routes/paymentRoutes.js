@@ -1,5 +1,12 @@
 import express from 'express';
-import { startPayment, recordCashPayment, deleteCashPayment, getPaymentStatus, downloadReceipt } from '../controllers/paymentController.js';
+import {
+  startPayment,
+  startMembershipPayment,
+  recordCashPayment,
+  deleteCashPayment,
+  getPaymentStatus,
+  downloadReceipt,
+} from '../controllers/paymentController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -10,6 +17,7 @@ const router = express.Router();
 // express.json() middleware would otherwise parse it away. See app.js's
 // own comment on that route.
 router.post('/start', requireAuth, startPayment);
+router.post('/membership/start', requireAuth, startMembershipPayment);
 router.post('/cash', requireAuth, restrictTo('admin'), recordCashPayment);
 router.delete('/:id', requireAuth, restrictTo('admin'), deleteCashPayment);
 router.get('/:id/status', requireAuth, getPaymentStatus);

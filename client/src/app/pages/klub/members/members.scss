@@ -128,6 +128,41 @@ button {
   font-size: 13px;
 }
 
+.member-hero .primary-btn {
+  background: #b9e6d6;
+  border: 1px solid #b9e6d6;
+  color: #153d3c;
+  padding: 12px 18px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 750;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.member-hero .primary-btn:hover:not(:disabled) {
+  background: #a2d9c5;
+}
+
+.member-hero .primary-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.payment-notice {
+  border-radius: 9px;
+  background: #ecf5f1;
+  color: #2b685a;
+  padding: 11px 14px;
+  font-size: 13px;
+  margin: 0 0 18px;
+}
+
+.payment-notice.error {
+  background: #fdeeea;
+  color: #a3402a;
+}
+
 // A single scrollable row of wider tiles rather than a wrapping grid - with
 // 8 years (2019-current) these would otherwise wrap to several rows; a
 // horizontal scroller keeps them all one comfortable width and keeps the
