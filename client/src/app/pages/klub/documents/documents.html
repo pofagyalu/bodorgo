@@ -34,7 +34,9 @@
           ✕
         </button>
         }
-        <span class="document-icon">📄</span>
+        <mat-icon class="document-icon" [class.document-icon--pdf]="icon(doc) === 'picture_as_pdf'">{{
+          icon(doc)
+        }}</mat-icon>
         <span class="document-name">{{ doc.name }}</span>
         @if (doc.year) {
         <span class="document-year">{{ doc.year }}. év</span>
@@ -100,15 +102,21 @@
       </div>
 
       <div class="field">
-        <label for="docFile">PDF fájl</label>
-        <input id="docFile" type="file" accept="application/pdf" required (change)="onFileSelected($event)" />
+        <label for="docFile">PDF vagy JPG fájl</label>
+        <input
+          id="docFile"
+          type="file"
+          accept="application/pdf,image/jpeg"
+          required
+          (change)="onFileSelected($event)"
+        />
       </div>
 
       @if (uploadError()) {
       <p class="form-error">{{ uploadError() }}</p>
       }
 
-      <p class="demo-tip">Csak PDF fájl tölthető fel, legfeljebb 15 MB méretben.</p>
+      <p class="demo-tip">Csak PDF vagy JPG fájl tölthető fel, legfeljebb 15 MB méretben.</p>
 
       <div class="modal-actions">
         <button class="outline-btn" type="button" (click)="closeUpload()">Mégse</button>

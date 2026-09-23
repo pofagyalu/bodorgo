@@ -13,10 +13,12 @@ const DOCUMENTS_DIR = path.join(path.resolve(), 'documents');
 export const getDocument = (req, res) => {
   const { filename } = req.params;
 
-  // Only a plain "name.pdf" shape is ever legitimate here - rejects
-  // anything trying to escape DOCUMENTS_DIR (../, absolute paths, etc.)
-  // since this reads straight off disk from a client-supplied name.
-  if (!/^[\w.-]+\.pdf$/i.test(filename)) {
+  // Only a plain "name.pdf"/"name.jpg" shape is ever legitimate here -
+  // rejects anything trying to escape DOCUMENTS_DIR (../, absolute paths,
+  // etc.) since this reads straight off disk from a client-supplied name.
+  // jpe?g covers clubDocumentController.js's own club-document uploads
+  // (a photographed paper document), alongside the original PDF-only case.
+  if (!/^[\w.-]+\.(pdf|jpe?g)$/i.test(filename)) {
     throw new AppError('Invalid document name', 400);
   }
 

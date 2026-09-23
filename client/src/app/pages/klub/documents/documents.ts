@@ -1,11 +1,12 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../auth/auth.service';
 import { ClubDocumentService, ClubDocument, DOCUMENT_CATEGORIES } from '../../../services/club-document';
 
 @Component({
   selector: 'app-klub-documents',
-  imports: [DatePipe],
+  imports: [DatePipe, MatIconModule],
   templateUrl: './documents.html',
   styleUrl: './documents.scss',
 })
@@ -66,6 +67,13 @@ export class Documents implements OnInit {
     return this.documentService.fileUrl(filename, download);
   }
 
+  // A photographed paper document (see uploadMiddleware's fileFilter) gets
+  // its own icon rather than the PDF one - same mat-icon names as
+  // tour-details.html's own extra-doc-card for the same PDF/JPEG split.
+  icon(doc: ClubDocument): string {
+    return /\.jpe?g$/i.test(doc.filename) ? 'image' : 'picture_as_pdf';
+  }
+
   openUpload() {
     this.formName.set('');
     this.formCategory.set(DOCUMENT_CATEGORIES[0]);
@@ -97,7 +105,7 @@ export class Documents implements OnInit {
     const name = this.formName().trim();
     const file = this.formFile();
     if (!name || !file) {
-      this.uploadError.set('Adj meg egy nevet és válassz ki egy PDF fájlt.');
+      this.uploadError.set('Adj meg egy nevet és válassz ki egy PDF vagy JPG fájlt.');
       return;
     }
 
