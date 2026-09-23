@@ -15,12 +15,161 @@
   height: calc(100dvh - 80px);
 }
 
-.chat-page {
+.chat-shell {
   max-width: 1300px; // matches tours.scss/tour-details.scss/homepage.scss
   margin: 0 auto;
   height: 100%;
   background: #fff;
   box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
+  display: flex;
+  overflow: hidden;
+}
+
+// Persistent rail (not an overlay drawer) - open by default, collapses to
+// an icon-only strip either automatically on narrow screens or manually
+// via .sidebar-toggle, so the tour list is always at least glanceable
+// instead of hidden behind a menu the user has to discover first.
+.chat-sidebar {
+  position: relative;
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid #eee;
+  padding: 2.6rem 0.8rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  overflow: hidden;
+  transition: width 0.25s ease;
+}
+
+.chat-sidebar.collapsed {
+  width: 64px;
+  padding: 2.6rem 0.4rem 1rem;
+}
+
+// Always the top-right corner of the rail in both states - the chevron
+// direction alone signals "this can be expanded/collapsed" without
+// needing separate icons or a text label.
+.sidebar-toggle {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: none;
+  border-radius: 50%;
+  background: #f7f7f7;
+  color: #445a67;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #ececec;
+  }
+
+  mat-icon {
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+}
+
+.chat-sidebar-title {
+  margin: 0;
+  color: #445a67;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.chat-sidebar.collapsed .chat-sidebar-title {
+  display: none;
+}
+
+.chat-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow-y: auto;
+}
+
+.chat-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #f7f7f7;
+  }
+
+  &.active {
+    background: #55c57a;
+    color: #fff;
+
+    .order-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #fff;
+    }
+  }
+}
+
+.chat-sidebar.collapsed .chat-sidebar-item {
+  justify-content: center;
+  padding: 0.6rem 0;
+}
+
+// Shown even when collapsed - a tour's number is at least a stable
+// reference someone can ask about, and expanding the rail (or the
+// button's own title tooltip) reveals the full name behind it.
+.order-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: #ececec;
+  color: #445a67;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.full-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-sidebar.collapsed .full-title {
+  display: none;
+}
+
+.chat-sidebar-empty {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.chat-sidebar.collapsed .chat-sidebar-empty {
+  display: none;
+}
+
+.chat-main {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -50,7 +199,7 @@ app-feed {
     background: #fff;
   }
 
-  .chat-page {
+  .chat-shell {
     box-shadow: none;
   }
 }

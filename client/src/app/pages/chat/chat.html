@@ -1,8 +1,43 @@
-<div class="chat-page">
-  @if (tour(); as t) {
-    <h2 class="chat-title">{{ t.title }} - Chat</h2>
-    <app-feed [tourId]="t._id" />
-  } @else {
+<div class="chat-shell">
+  <aside class="chat-sidebar" [class.collapsed]="sidebarCollapsed()">
+    <button
+      class="sidebar-toggle"
+      type="button"
+      [attr.aria-label]="sidebarCollapsed() ? 'Lista kibontása' : 'Lista összecsukása'"
+      (click)="toggleSidebar()"
+    >
+      <mat-icon>{{ sidebarCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+    </button>
+
+    <h3 class="chat-sidebar-title">Táborok</h3>
+
+    <nav class="chat-sidebar-list">
+      @for (t of visibleTours(); track t._id) {
+      <button
+        type="button"
+        class="chat-sidebar-item"
+        [class.active]="t._id === selectedTourId()"
+        [title]="t.title"
+        (click)="selectTour(t._id)"
+      >
+        <span class="order-badge">{{ t.order }}</span>
+        <span class="full-title">{{ t.title }}</span>
+      </button>
+      } @empty {
+      <p class="chat-sidebar-empty">Nincs elérhető tábor.</p>
+      }
+    </nav>
+  </aside>
+
+  <div class="chat-main">
+    @if (selectedTour(); as t) {
+    <h2 class="chat-title">{{ t.title }}</h2>
+    }
+
+    @if (feedKey().length) { @for (id of feedKey(); track id) {
+    <app-feed [tourId]="id" />
+    } } @else {
     <p class="chat-loading">Betöltés, vagy nincs elérhető tábor a csevegéshez...</p>
-  }
+    }
+  </div>
 </div>
