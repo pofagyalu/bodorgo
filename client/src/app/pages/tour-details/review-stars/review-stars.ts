@@ -41,6 +41,16 @@ export class ReviewStars implements OnInit {
   displayRating = computed(() => this.hoverRating() ?? this.savedRating());
 
   ngOnInit() {
+    this.refresh();
+  }
+
+  // Public so tour-details.ts can call it after a successful sign-up -
+  // isAttendee only ever gets checked once here (ngOnInit above), but
+  // signing up mid-visit changes the real answer without any of this
+  // component's own @Inputs changing value, so nothing would otherwise
+  // trigger a re-check and the "Értékelek" button stayed hidden until a
+  // full page reload.
+  refresh() {
     this.tourService.getMyReview(this.tourId).subscribe({
       next: (res) => {
         this.isAttendee.set(res.data.isAttendee);

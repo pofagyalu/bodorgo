@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnDestroy, ViewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -64,6 +64,13 @@ export class TourDetails implements OnDestroy {
   auth = inject(AuthService);
   environment = environment;
   readonly formatDrivingDuration = formatDrivingDuration;
+
+  // So doSignUp below can tell it to re-check "am I an attendee now" right
+  // after a successful sign-up - review-stars.ts only ever checks that
+  // once on its own (ngOnInit), and none of its @Inputs change value just
+  // because the viewer signed up, so nothing would otherwise trigger a
+  // re-check short of a full page reload.
+  @ViewChild(ReviewStars) reviewStars?: ReviewStars;
 
   // Picked once per page view (not reactive - these don't need to change
   // while looking at the same tour), one per icon off a shuffled copy of
@@ -188,6 +195,23 @@ export class TourDetails implements OnDestroy {
 
   weatherIconPath(condition: WeatherCondition): string {
     return `assets/images/weather/${TourDetails.WEATHER_ICONS[condition]}`;
+  }
+
+  // The weather pill's own tooltip (see tour-details.html) - used to just
+  // say "Tényleges időjárás"/"Előrejelzés" (forecast vs. actual), which
+  // never actually said what the weather itself was.
+  private static readonly WEATHER_LABELS: Record<WeatherCondition, string> = {
+    clear: 'Napos',
+    'partly-cloudy': 'Változóan felhős',
+    cloudy: 'Felhős',
+    fog: 'Ködös',
+    rain: 'Esős',
+    snow: 'Havazás',
+    thunderstorm: 'Zivataros',
+  };
+
+  weatherConditionLabel(condition: WeatherCondition): string {
+    return TourDetails.WEATHER_LABELS[condition];
   }
 
   // How much each attendee owes across every optional, extra-cost
@@ -858,6 +882,9 @@ export class TourDetails implements OnDestroy {
         // every derived total (participantCount, attendeePayments,
         // paymentTotals) genuinely in sync with the server.
         this.loadTour(t._id);
+        // loadTour's own tour reload doesn't cover this - see reviewStars's
+        // own comment on why signing up needs its own explicit nudge.
+        this.reviewStars?.refresh();
         this.selectedAttendeeIds.set(new Set());
         this.signingUp.set(false);
         // A successful submit always closes the picker - a no-op for the
