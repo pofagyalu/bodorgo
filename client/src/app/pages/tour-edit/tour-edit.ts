@@ -325,13 +325,14 @@ export class TourEdit implements OnInit, OnDestroy {
       next: (res) => {
         this.saving.set(false);
         this.notifications.addSuccess(wasEditMode ? 'Tábor mentése sikeres' : 'Tábor létrehozása sikeres');
-        if (wasEditMode || uploadedCoverFilename) {
+        if (wasEditMode) {
           this.router.navigate(['/taborok', res.data.tour.slug]);
         } else {
-          // A brand new tour with no cover picked - land on this same
-          // form in edit mode so uploading one afterward is just one more
-          // click, rather than having to find their way back here.
-          this.router.navigate(['/taborok', res.data.tour._id, 'szerkesztes']);
+          // A brand new tour always returns to the list, whether or not a
+          // cover was picked - previously a coverless creation stayed on
+          // this same form in edit mode instead, which read as "did this
+          // even save?" rather than a completed action.
+          this.router.navigate(['/taborok']);
         }
       },
       error: (err) => {

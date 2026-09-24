@@ -16,6 +16,7 @@ import {
   loadTourForCoverUpload,
   uploadCoverMiddleware,
   uploadTourCover,
+  assertOrderAvailableForCover,
   uploadCoverForOrderMiddleware,
   uploadCoverForOrder,
 } from '../controllers/tourCoverController.js';
@@ -65,7 +66,7 @@ router
 // collide with a real tour id.
 router
   .route('/cover/:order')
-  .post(requireAuth, restrictTo('admin'), uploadCoverForOrderMiddleware, uploadCoverForOrder);
+  .post(requireAuth, restrictTo('admin'), assertOrderAvailableForCover, uploadCoverForOrderMiddleware, uploadCoverForOrder);
 
 // Extra infók - admin-only upload/delete; viewing is a plain static file
 // URL under public/documents/tours/ (see tourDocumentController.js), same

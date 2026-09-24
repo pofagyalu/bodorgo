@@ -98,14 +98,34 @@ const orderCoverStorage = multer.diskStorage({
   },
 });
 
+// Runs before uploadCoverForOrderMiddleware below, so a duplicate order is
+// rejected before multer ever writes anything to disk - without this, the
+// file lands as tour-<order>-cover.<ext> regardless of whether that order
+// is already taken by a real tour, and the actual createTour call that
+// follows only fails afterward (own "sorszám már foglalt" check), leaving
+// the just-written file permanently orphaned (or worse, silently
+// clobbering that other tour's real cover file, since the filename is
+// purely order-based). Real bug this closed: a create attempt reusing an
+// already-taken order wrote a real cover file to disk with nothing ever
+// pointing to it once creation itself was rejected.
+export async function assertOrderAvailableForCover(req, res, next) {
+  if (!/^\d+$/.test(req.params.order)) {
+    throw new AppError('Érvénytelen sorszám.', 400);
+  }
+  const existing = await Tour.findOne({ order: Number(req.params.order) }).select('title');
+  if (existing) {
+    throw new AppError(
+      `A ${req.params.order}. sorszám már foglalt ("${existing.title}") - borítókép csak még nem használt sorszámhoz tölthető fel így.`,
+      400,
+    );
+  }
+  next();
+}
+
 export const uploadCoverForOrderMiddleware = multer({
   storage: orderCoverStorage,
   limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!/^\d+$/.test(req.params.order)) {
-      cb(new AppError('Érvénytelen sorszám.', 400));
-      return;
-    }
     if (!ALLOWED_MIME_TYPES[file.mimetype]) {
       cb(new AppError('Csak JPG vagy PNG fájl tölthető fel.', 400));
       return;
