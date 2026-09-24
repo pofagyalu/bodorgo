@@ -84,6 +84,10 @@ export class TourDetails implements OnDestroy {
   attendeePayments = signal<AttendeePayment[]>([]);
   paymentTotals = signal<PaymentTotals | null>(null);
   distanceInfo = signal<DistanceInfo | null>(null);
+  // Whether an admin has assigned a post-tour recap video (see
+  // tourController.js's getTour) - the actual file path never reaches the
+  // client, just this boolean plus the requireAuth-gated stream URL below.
+  hasVideo = signal(false);
   loadError = signal<string | null>(null);
   signingUp = signal(false);
   signUpError = signal<string | null>(null);
@@ -376,6 +380,7 @@ export class TourDetails implements OnDestroy {
         this.attendeePayments.set(res.data.attendeePayments);
         this.paymentTotals.set(res.data.paymentTotals);
         this.distanceInfo.set(res.data.distanceInfo);
+        this.hasVideo.set(res.data.hasVideo);
       },
       error: () => {
         this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');
@@ -399,6 +404,14 @@ export class TourDetails implements OnDestroy {
 
   attendeesExcelUrl(tourId: string): string {
     return this.tourService.attendeesExcelUrl(tourId);
+  }
+
+  videoUrl(tourId: string): string {
+    return this.tourService.videoUrl(tourId);
+  }
+
+  subtitlesUrl(tourId: string): string {
+    return this.tourService.subtitlesUrl(tourId);
   }
 
   // Same deep-link URLs as tourPdfController.js's Helyszín row - each

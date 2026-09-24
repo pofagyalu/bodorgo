@@ -151,19 +151,21 @@ export const getTour = async (req, res, next) => {
     ? { _id: req.params.id }
     : { slug: req.params.id };
 
-  const tour = await Tour.findOne(query).populate({
-    path: 'reservations',
-    populate: [
-      { path: 'bookedBy', select: 'name email' },
-      // role decides club-subsidy eligibility; birthday decides
-      // child/adult pricing in 'perPerson' mode; familyId lets the client
-      // group/stripe the attendee list by family (see
-      // computeAttendeePayments/attendee-list.ts) - name is already
-      // denormalized onto the attendee subdocument itself, no need to
-      // populate it too.
-      { path: 'attendees.user', select: 'role birthday familyId' },
-    ],
-  });
+  const tour = await Tour.findOne(query)
+    .select('+videoFile')
+    .populate({
+      path: 'reservations',
+      populate: [
+        { path: 'bookedBy', select: 'name email' },
+        // role decides club-subsidy eligibility; birthday decides
+        // child/adult pricing in 'perPerson' mode; familyId lets the client
+        // group/stripe the attendee list by family (see
+        // computeAttendeePayments/attendee-list.ts) - name is already
+        // denormalized onto the attendee subdocument itself, no need to
+        // populate it too.
+        { path: 'attendees.user', select: 'role birthday familyId' },
+      ],
+    });
 
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
@@ -215,9 +217,29 @@ export const getTour = async (req, res, next) => {
     : null;
   const distanceInfo = await resolveDistanceInfo(tour, viewer);
 
+  // videoFile was only selected above to compute this boolean and (for an
+  // admin, who needs it to pre-fill the tour-edit page's video picker) to
+  // report back directly - the raw NAS-relative path must never reach a
+  // public, unauthenticated response otherwise (same reasoning as
+  // sourceFolder/images - see tourModel.js). Actual playback always goes
+  // through the separate requireAuth-gated /tours/:id/video route (see
+  // tourVideoController.js), regardless of role.
+  const tourJson = tour.toObject();
+  const hasVideo = !!tourJson.videoFile;
+  if (req.session?.user?.role !== 'admin') {
+    delete tourJson.videoFile;
+  }
+
   res.status(200).json({
     status: 'success',
-    data: { tour, participantCount, attendeePayments: attendeePaymentsWithMethod, paymentTotals, distanceInfo },
+    data: {
+      tour: tourJson,
+      hasVideo,
+      participantCount,
+      attendeePayments: attendeePaymentsWithMethod,
+      paymentTotals,
+      distanceInfo,
+    },
   });
 };
 

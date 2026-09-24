@@ -1,4 +1,4 @@
-import { Component, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TourService, TourPayload } from '../../services/tour';
@@ -34,6 +34,9 @@ interface TourEditForm {
   childAgeLimitYears: number | null;
   advancePaymentPercentage: number | null;
   clubSubsidyAmount: number | null;
+  // Relative path under the NAS video library, picked from the dropdown
+  // below (see TourEdit.availableVideos) - '' means "no video assigned".
+  videoFile: string;
 }
 
 function emptyForm(): TourEditForm {
@@ -58,6 +61,7 @@ function emptyForm(): TourEditForm {
     // 0 ("no club money this time") is the common case, not an unusual
     // exception, so it starts filled in rather than blank.
     clubSubsidyAmount: 0,
+    videoFile: '',
   };
 }
 
@@ -80,7 +84,7 @@ function toDatetimeLocal(iso: string): string {
   templateUrl: './tour-edit.html',
   styleUrl: './tour-edit.scss',
 })
-export class TourEdit implements OnDestroy {
+export class TourEdit implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private tourService = inject(TourService);
@@ -95,6 +99,19 @@ export class TourEdit implements OnDestroy {
   saving = signal(false);
   error = signal<string | null>(null);
   form: TourEditForm = emptyForm();
+
+  // The actual files found under the NAS video library (see
+  // tourVideoController.js's listAvailableVideos) - populates the video
+  // picker's <select>, so an admin chooses a real file instead of typing a
+  // fragile path by hand.
+  availableVideos = signal<string[]>([]);
+
+  ngOnInit() {
+    this.tourService.getAvailableVideos().subscribe({
+      next: (res) => this.availableVideos.set(res.data.files),
+      error: () => this.notifications.addError('A videók listája nem tölthető be.'),
+    });
+  }
 
   get isEditMode(): boolean {
     return this.tourId !== null;
@@ -143,6 +160,7 @@ export class TourEdit implements OnDestroy {
           childAgeLimitYears: t.childAgeLimitYears ?? null,
           advancePaymentPercentage: t.advancePaymentPercentage ?? null,
           clubSubsidyAmount: t.clubSubsidyAmount ?? 0,
+          videoFile: t.videoFile ?? '',
         };
         this.loading.set(false);
       },
@@ -260,6 +278,9 @@ export class TourEdit implements OnDestroy {
       // anyway (see reservationController.js's CLUB_FOUNDING_DATE), but
       // there's no reason to persist a misleading number either.
       clubSubsidyAmount: this.subsidyAllowed ? f.clubSubsidyAmount ?? undefined : 0,
+      // '' explicitly clears it (see tourModel.js's videoFile) - not
+      // omitted, so removing a previously-assigned video actually saves.
+      videoFile: f.videoFile,
     };
 
     const wasEditMode = this.isEditMode;

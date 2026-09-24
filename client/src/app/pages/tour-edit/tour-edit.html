@@ -146,6 +146,20 @@
       }
     </div>
 
+    <label class="form-field-full"
+      >Tábori videó
+      <select [(ngModel)]="form.videoFile" name="videoFile">
+        <option value="">— Nincs videó —</option>
+        @for (file of availableVideos(); track file) {
+        <option [value]="file">{{ file }}</option>
+        }
+      </select>
+    </label>
+    <p class="field-note">
+      A NAS-on lévő videótár ("A bódorgó klán") fájljai közül választhatsz - a bejelentkezett
+      felhasználók itt tekinthetik meg a tábor videóját.
+    </p>
+
     @if (error()) {
     <p class="error-note">{{ error() }}</p>
     }

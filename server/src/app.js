@@ -49,7 +49,15 @@ export default function createApp(sessionMiddleware) {
       // server, surfacing client-side as a generic network error rather
       // than any response this app's own error handling could shape.
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      // Range lets the browser send byte-range requests for the tour
+      // recap <video> (see tourVideoController.js) - without it here, a
+      // cross-origin preflight (client/API are different subdomains)
+      // blocks seeking/scrubbing outright. The exposed headers are what
+      // the video element actually reads back to know a range request
+      // succeeded - none of the three are in a CORS response's default
+      // safelist.
+      allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
+      exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length'],
     }),
   );
 

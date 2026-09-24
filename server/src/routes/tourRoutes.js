@@ -2,6 +2,7 @@ import express from 'express';
 import * as tourController from '../controllers/tourController.js';
 import { signUpForTour, updateAttendeeNights, updateAttendeeFeeExempt } from '../controllers/reservationController.js';
 import * as tourImageController from '../controllers/tourImageController.js';
+import { getTourVideo, getTourSubtitles, listAvailableVideos } from '../controllers/tourVideoController.js';
 import * as reviewController from '../controllers/reviewController.js';
 import { downloadTourPdf, emailTourPdf, emailTourPdfToAttendees } from '../controllers/tourPdfController.js';
 import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
@@ -28,6 +29,10 @@ router
 
 router.route('/tour-stats').get(tourController.getTourStats);
 router.route('/montly-plan/:year').get(tourController.getMonthlyPlan);
+// Admin-only picker data for the tour-edit page - a plain top-level path
+// (not nested under /:id), same "no collision risk" reasoning as
+// /tour-stats above.
+router.route('/videos/available').get(requireAuth, restrictTo('admin'), listAvailableVideos);
 
 router
   .route('/')
@@ -110,6 +115,11 @@ router
   .route('/:tourId/images/:filename')
   .get(requireAuth, tourImageController.getTourImage)
   .patch(requireAuth, restrictTo('admin'), tourImageController.setImageRestricted);
+
+// Post-tour recap video - same "logged in, that's it, no role
+// restriction" bar as the gallery routes above (see getTour's hasVideo).
+router.route('/:tourId/video').get(requireAuth, getTourVideo);
+router.route('/:tourId/subtitles.vtt').get(requireAuth, getTourSubtitles);
 
 // Reviews - requireAuth only, not restrictTo('admin')/anything role-based;
 // the actual "who's allowed" check is attendance-based, enforced inside

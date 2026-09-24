@@ -66,6 +66,13 @@ const config = {
   // Windows-mapped-drive form instead (Z:\..., S:\...) in the local .env.
   photosRoot: process.env.PHOTOS_ROOT,
   thumbnailsRoot: process.env.THUMBNAILS_ROOT,
+  // The Jellyfin-organized "A bódorgó klán" video library, already on the
+  // NAS - streamed straight from there (see tourVideoController.js), never
+  // copied into this app's own storage. Same dual-form path split as
+  // photosRoot/thumbnailsRoot above: the live pm2 process needs the
+  // NAS-native absolute path, a dev machine running this by hand instead
+  // needs the Windows-mapped-drive form (Y:\...) in its own local .env.
+  videosRoot: process.env.VIDEOS_ROOT,
 };
 
 // Shared by Express's cors() middleware and Socket.IO's own cors option, so

@@ -294,6 +294,29 @@
     </div>
   </section>
 
+  <!-- Post-tour recap video (see tourVideoController.js) - only present
+       once an admin has picked one from the tour-edit page. -->
+  @if (hasVideo()) {
+  <section class="video-section">
+    <h2 class="section-heading">Tábori videó</h2>
+    <video
+      class="tour-video"
+      controls
+      preload="metadata"
+      [poster]="environment.assetUrl + '/img/tours/' + t.imageCover"
+    >
+      <source [src]="videoUrl(t._id)" type="video/mp4" />
+      <track
+        kind="subtitles"
+        srclang="hu"
+        label="Magyar"
+        [src]="subtitlesUrl(t._id)"
+        default
+      />
+    </video>
+  </section>
+  }
+
   <!-- Row 3: participants -->
   <section class="participants-section">
     <h2 class="section-heading participants-heading">
