@@ -848,16 +848,16 @@ export class TourDetails implements OnDestroy {
     this.signUpError.set(null);
 
     this.tourService.signUp(t._id, attendeeIds).subscribe({
-      next: (res) => {
-        this.tour.update((cur) =>
-          cur
-            ? {
-                ...cur,
-                reservations: [...(cur.reservations ?? []), res.data.reservation],
-              }
-            : cur,
-        );
-        this.participantCount.update((n) => n + attendeeIds.length);
+      next: () => {
+        // A full reload rather than patching tour.reservations/
+        // participantCount locally (which this used to do) - attendeePayments
+        // (what the list below actually renders) was never touched by that
+        // patch at all, so newly added attendees bumped the header count but
+        // never appeared in the list itself. Same "just refetch everything"
+        // reasoning as onAttendeeNightsUpdated above - simplest way to keep
+        // every derived total (participantCount, attendeePayments,
+        // paymentTotals) genuinely in sync with the server.
+        this.loadTour(t._id);
         this.selectedAttendeeIds.set(new Set());
         this.signingUp.set(false);
         // A successful submit always closes the picker - a no-op for the
