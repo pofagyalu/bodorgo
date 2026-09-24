@@ -26,10 +26,7 @@
   <nav class="menu">
     <a routerLink="/taborok" routerLinkActive="active" class="menu-item green">Táborok</a>
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
-    @if (auth.user()?.role === 'admin' || auth.user()?.role === 'member') {
     <a routerLink="/klub" routerLinkActive="active" class="menu-item dark-green">Klub</a>
-    }
-    <a routerLink="/profil" routerLinkActive="active" class="menu-item orange">Profil</a>
     <!-- Hidden for now, still routable - not ready for public linking yet -->
     <!-- <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown">Szavazások</a> -->
     <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item yellow">Versenyek</a> -->
@@ -42,18 +39,30 @@
     @if (!auth.isLoggedIn()) {
     <button class="login-btn" (click)="login()">Gyere bé!</button>
     } @else {
-    <span class="user-avatar" [style.background]="avatarColor(auth.user()?.name)" [title]="auth.user()?.name">
+    <a
+      routerLink="/klub/profilom"
+      routerLinkActive="active"
+      class="user-avatar"
+      [style.background]="avatarColor(auth.user()?.name)"
+      [title]="auth.user()?.name"
+    >
       <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
-    </span>
+    </a>
     <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
     }
   </div>
 
   <!-- Mobile only: just the avatar, no logout - that lives in the hamburger menu -->
   @if (auth.isLoggedIn()) {
-  <span class="user-avatar mobile-user-avatar" [style.background]="avatarColor(auth.user()?.name)" [title]="auth.user()?.name">
+  <a
+    routerLink="/klub/profilom"
+    routerLinkActive="active"
+    class="user-avatar mobile-user-avatar"
+    [style.background]="avatarColor(auth.user()?.name)"
+    [title]="auth.user()?.name"
+  >
     <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
-  </span>
+  </a>
   }
 </header>
 
@@ -85,21 +94,12 @@
       class="menu-item blue"
       >Chat</a
     >
-    @if (auth.user()?.role === 'admin' || auth.user()?.role === 'member') {
     <a
       routerLink="/klub"
       routerLinkActive="active"
       (click)="closeMobileMenu()"
       class="menu-item dark-green"
       >Klub</a
-    >
-    }
-    <a
-      routerLink="/profil"
-      routerLinkActive="active"
-      (click)="closeMobileMenu()"
-      class="menu-item orange"
-      >Profil</a
     >
     <!-- Hidden for now, still routable - not ready for public linking yet -->
     <!-- <a

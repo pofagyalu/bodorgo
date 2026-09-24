@@ -53,6 +53,11 @@ button {
   font-size: 14px;
 }
 
+.error-note {
+  color: #b00020;
+  font-size: 14px;
+}
+
 .panel {
   background: #fff;
   border: 1px solid #e7edea;
@@ -72,6 +77,26 @@ button {
   color: #82939a;
   font-size: 12px;
   line-height: 1.5;
+}
+
+// Lakcím lives in the same panel/save action as Személyes adatok (same
+// user document) but stays visually set apart as its own grouped block,
+// rather than just blending into the fields above it.
+.subsection {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid #eef2f0;
+}
+
+.subsection h3 {
+  margin: 0 0 5px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #203747;
+}
+
+.subsection .subtext {
+  margin-bottom: 16px;
 }
 
 // --- Banner ---
@@ -206,31 +231,6 @@ button {
   font-size: 11px;
 }
 
-.field-with-action {
-  display: flex;
-  gap: 8px;
-}
-
-.field-with-action input {
-  flex: 1;
-}
-
-.field-with-action button {
-  flex: none;
-  background: #1a796c;
-  color: #fff;
-  border: none;
-  border-radius: 9px;
-  padding: 0 16px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.field-with-action button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 // --- Notification toggle (same shape as the old top-level Profil page) ---
 
 .toggle-row {
@@ -305,6 +305,131 @@ button {
 
 .switch input:disabled + span {
   opacity: 0.6;
+}
+
+// --- Táboraim (moved here from the old top-level Profil page) ---
+
+.attendance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.attendance-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f7faf8;
+  border-radius: 11px;
+}
+
+.attendance-link {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1a796c;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.attendance-date {
+  color: #82939a;
+  font-size: 12px;
+}
+
+.status {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.status.paid {
+  color: #267b66;
+  background: #e5f5ec;
+}
+
+.status.unpaid {
+  color: #aa6841;
+  background: #fff0e4;
+}
+
+.receipt-btn,
+.cash-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.receipt-btn {
+  color: #1a796c;
+
+  &:hover {
+    background: #e5f5ec;
+  }
+}
+
+.cash-badge {
+  color: #8a6d00;
+}
+
+// --- Hozzátartozók ---
+
+.family-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.family-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.family-row strong {
+  display: block;
+  font-size: 13px;
+  color: #23354a;
+}
+
+.family-row small {
+  color: #82939a;
+  font-size: 11px;
+}
+
+// Same shape as members.scss's own .person-avatar.
+.person-avatar {
+  width: 35px;
+  height: 35px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #d9ede7;
+  color: #306b61;
+  font-weight: 750;
+  font-size: 12px;
 }
 
 @media (max-width: 800px) {

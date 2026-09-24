@@ -1,6 +1,16 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { UserService, MyProfile, UserAddress } from '../../../services/user';
+import { RouterLink } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { UserService, MyProfile, UserAddress, AttendedTour, FamilyMember } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { PaymentService } from '../../../services/payment';
+
+interface AttendanceRow {
+  tour: AttendedTour;
+  paid: boolean;
+  paymentId: string | null;
+  paymentMethod: 'stripe' | 'cash' | null;
+}
 
 function emptyAddress(): UserAddress {
   return { zipCode: '', city: '', street: '', country: 'Magyarország' };
@@ -15,22 +25,30 @@ function initials(name: string): string {
 
 @Component({
   selector: 'app-klub-profile',
-  imports: [],
+  imports: [RouterLink, MatIconModule],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
 export class KlubProfile implements OnInit {
   private userService = inject(UserService);
   private notifications = inject(NotificationsService);
+  private paymentService = inject(PaymentService);
 
   loading = signal(true);
   profile = signal<MyProfile | null>(null);
+
+  // Moved here from the old top-level Profil page (now removed) - every
+  // logged-in user's own tours and family roster, not just club members'.
+  attendance = signal<AttendanceRow[]>([]);
+  attendanceError = signal<string | null>(null);
+
+  family = signal<FamilyMember[]>([]);
+  familyError = signal<string | null>(null);
 
   // Signal-driven, matching the rest of the Klub area's own convention
   // (finance.ts/documents.ts/members.ts) rather than [(ngModel)] - keeps
   // this whole subtree free of a FormsModule dependency.
   usernameDraft = signal('');
-  savingUsername = signal(false);
 
   savingNotifications = signal(false);
 
@@ -39,7 +57,10 @@ export class KlubProfile implements OnInit {
   // person's own home instead of the fixed Budapest reference point when
   // no address is on record.
   address = signal<UserAddress>(emptyAddress());
-  savingAddress = signal(false);
+  // Username and address are both just fields on the same user document,
+  // so "Személyes adatok" and "Lakcím" share one panel and one Mentés
+  // button/save request (see saveProfile) rather than each having its own.
+  saving = signal(false);
   // Whether the address just saved actually geocoded - null before any
   // save this session, or when there's no address at all to resolve. Told
   // to the person directly rather than letting them find out later when a
@@ -48,6 +69,22 @@ export class KlubProfile implements OnInit {
 
   ngOnInit() {
     this.load();
+    this.loadAttendance();
+    this.loadFamily();
+  }
+
+  private loadAttendance() {
+    this.userService.getMyAttendance().subscribe({
+      next: (res) => this.attendance.set(res.data.tours),
+      error: () => this.attendanceError.set('A táboraid betöltése nem sikerült.'),
+    });
+  }
+
+  private loadFamily() {
+    this.userService.getMyFamily().subscribe({
+      next: (res) => this.family.set(res.data.members),
+      error: () => this.familyError.set('A hozzátartozók betöltése nem sikerült.'),
+    });
   }
 
   private load() {
@@ -74,43 +111,35 @@ export class KlubProfile implements OnInit {
     this.address.update((a) => ({ ...a, [field]: value }));
   }
 
-  saveAddress() {
-    this.savingAddress.set(true);
-    this.userService.updateMe({ address: this.address() }).subscribe({
-      next: (res) => {
-        this.savingAddress.set(false);
-        this.addressResolved.set(res.data.addressResolved ?? null);
-        this.notifications.addSuccess('Cím mentve');
-      },
-      error: (err) => {
-        this.savingAddress.set(false);
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
-      },
-    });
-  }
-
   initials(): string {
     const name = this.profile()?.name;
     return name ? initials(name) : '?';
   }
 
-  saveUsername() {
+  // Same helper, for a family member's own name rather than the logged-in
+  // user's (see the Hozzátartozók list).
+  initialsFor(name: string): string {
+    return initials(name);
+  }
+
+  saveProfile() {
     const username = this.usernameDraft().trim();
     if (!username) {
       this.notifications.addError('A felhasználónév nem lehet üres.');
       return;
     }
 
-    this.savingUsername.set(true);
-    this.userService.updateMe({ username }).subscribe({
-      next: () => {
+    this.saving.set(true);
+    this.userService.updateMe({ username, address: this.address() }).subscribe({
+      next: (res) => {
         this.profile.update((p) => (p ? { ...p, username } : p));
-        this.savingUsername.set(false);
-        this.notifications.addSuccess('Felhasználónév mentve');
+        this.addressResolved.set(res.data.addressResolved ?? null);
+        this.saving.set(false);
+        this.notifications.addSuccess('Profil mentve');
       },
       error: (err) => {
         this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
-        this.savingUsername.set(false);
+        this.saving.set(false);
       },
     });
   }
@@ -142,5 +171,17 @@ export class KlubProfile implements OnInit {
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(dateStr));
+  }
+
+  formatDate(dateStr: string): string {
+    return new Intl.DateTimeFormat('hu-HU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date(dateStr));
+  }
+
+  receiptUrl(paymentId: string): string {
+    return this.paymentService.receiptUrl(paymentId);
   }
 }

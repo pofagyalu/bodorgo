@@ -205,8 +205,9 @@
    logo palette (src/styles.scss's :root) as everywhere else in the app,
    each used exactly once here so no two menu items (active or currently
    hidden - Szavazások/Versenyek in header.html) ever collide:
-   Táborok=green, Chat=blue, Klub=dark-green, Profil=orange,
-   Kijelentkezés=red, Szavazások=brown, Versenyek=yellow. */
+   Táborok=green, Chat=blue, Klub=dark-green, Kijelentkezés=red,
+   Szavazások=brown, Versenyek=yellow. Orange (ex-Profil, now folded into
+   Klub Profilom) is unused for now, next in line for a future menu item. */
 .green {
   color: var(--logo-green);
 }
@@ -277,6 +278,10 @@
   font-size: 0.95rem;
   font-weight: bold;
   margin-right: 12px;
+  // It's an <a> now (links to Klub Profilom), not a bare <span> - undo the
+  // browser's default link underline/cursor-only styling.
+  text-decoration: none;
+  cursor: pointer;
 
   // Marhey's own font metrics render glyphs high in their line box (see
   // .menu-item's own padding comment above for the same quirk) - flexbox

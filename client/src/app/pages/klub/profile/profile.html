@@ -37,19 +37,14 @@
 
         <div class="field">
           <label for="pUsername">Felhasználónév</label>
-          <div class="field-with-action">
-            <input
-              id="pUsername"
-              type="text"
-              maxlength="40"
-              placeholder="pl. nagy.zoltan"
-              [value]="usernameDraft()"
-              (input)="usernameDraft.set($any($event.target).value)"
-            />
-            <button type="button" [disabled]="savingUsername()" (click)="saveUsername()">
-              {{ savingUsername() ? 'Mentés...' : 'Mentés' }}
-            </button>
-          </div>
+          <input
+            id="pUsername"
+            type="text"
+            maxlength="40"
+            placeholder="pl. nagy.zoltan"
+            [value]="usernameDraft()"
+            (input)="usernameDraft.set($any($event.target).value)"
+          />
         </div>
 
         <div class="field">
@@ -87,70 +82,110 @@
           <input id="pTours" type="text" [value]="p.toursAttended + ' tábor'" disabled />
         </div>
       </div>
+
+      <div class="subsection">
+        <h3>Lakcím</h3>
+        <p class="subtext">
+          Ha megadod, ebből számoljuk a táborok távolságát/időtartamát Budapest helyett.
+        </p>
+
+        <div class="profile-fields">
+          <div class="field">
+            <label for="aZip">Irányítószám</label>
+            <input
+              id="aZip"
+              type="text"
+              [value]="address().zipCode"
+              (input)="updateAddress('zipCode', $any($event.target).value)"
+            />
+          </div>
+          <div class="field">
+            <label for="aCity">Település</label>
+            <input
+              id="aCity"
+              type="text"
+              [value]="address().city"
+              (input)="updateAddress('city', $any($event.target).value)"
+            />
+          </div>
+          <div class="field">
+            <label for="aStreet">Utca, házszám</label>
+            <input
+              id="aStreet"
+              type="text"
+              [value]="address().street"
+              (input)="updateAddress('street', $any($event.target).value)"
+            />
+          </div>
+          <div class="field">
+            <label for="aCountry">Ország</label>
+            <select
+              id="aCountry"
+              [value]="address().country"
+              (change)="updateAddress('country', $any($event.target).value)"
+            >
+              <option value="Magyarország">Magyarország</option>
+              <option value="Románia">Románia</option>
+              <option value="Egyesült Királyság">Egyesült Királyság</option>
+            </select>
+          </div>
+        </div>
+
+        @if (addressResolved() === true) {
+        <p class="address-note address-note--ok">✔ A cím sikeresen beazonosítva.</p>
+        } @else if (addressResolved() === false) {
+        <p class="address-note address-note--warn">
+          ⚠ Nem sikerült pontosan beazonosítani ezt a címet - próbáld a hivatalos (pl. angol vagy
+          román) városnevet is, ha külföldi cím.
+        </p>
+        }
+      </div>
+
+      <div class="actions-row">
+        <button type="button" class="primary-btn" [disabled]="saving()" (click)="saveProfile()">
+          {{ saving() ? 'Mentés...' : 'Mentés' }}
+        </button>
+      </div>
     </section>
 
     <section class="panel">
-      <h2>Lakcím</h2>
-      <p class="subtext">
-        Ha megadod, ebből számoljuk a táborok távolságát/időtartamát Budapest helyett.
-      </p>
+      <h2>Táboraim</h2>
+      <p class="subtext">A táborok, amelyekre eddig jelentkeztél.</p>
 
-      <div class="profile-fields">
-        <div class="field">
-          <label for="aZip">Irányítószám</label>
-          <input
-            id="aZip"
-            type="text"
-            [value]="address().zipCode"
-            (input)="updateAddress('zipCode', $any($event.target).value)"
-          />
-        </div>
-        <div class="field">
-          <label for="aCity">Település</label>
-          <input
-            id="aCity"
-            type="text"
-            [value]="address().city"
-            (input)="updateAddress('city', $any($event.target).value)"
-          />
-        </div>
-        <div class="field">
-          <label for="aStreet">Utca, házszám</label>
-          <input
-            id="aStreet"
-            type="text"
-            [value]="address().street"
-            (input)="updateAddress('street', $any($event.target).value)"
-          />
-        </div>
-        <div class="field">
-          <label for="aCountry">Ország</label>
-          <select
-            id="aCountry"
-            [value]="address().country"
-            (change)="updateAddress('country', $any($event.target).value)"
+      @if (attendanceError()) {
+      <p class="error-note">{{ attendanceError() }}</p>
+      } @else if (attendance().length === 0) {
+      <p class="empty-note">Még nem jelentkeztél egyetlen táborra sem.</p>
+      } @else {
+      <ul class="attendance-list">
+        @for (row of attendance(); track row.tour._id) {
+        <li class="attendance-row">
+          <a [routerLink]="['/taborok', row.tour.slug]" class="attendance-link">
+            {{ row.tour.order }}. {{ row.tour.title }}
+          </a>
+          <span class="attendance-date">{{ formatDate(row.tour.startDate) }}</span>
+          @if (!row.paid) {
+          <span class="status unpaid">Nincs kifizetve</span>
+          } @else {
+          <span class="status paid">Fizetve</span>
+          @if (row.paymentMethod === 'cash') {
+          <span class="cash-badge" title="Az előleg készpénzben lett kifizetve">
+            <mat-icon>attach_money</mat-icon>
+          </span>
+          } @else if (row.paymentId) {
+          <a
+            [href]="receiptUrl(row.paymentId)"
+            target="_blank"
+            class="receipt-btn"
+            title="Fizetési igazolás letöltése (bankkártyás fizetés)"
           >
-            <option value="Magyarország">Magyarország</option>
-            <option value="Románia">Románia</option>
-            <option value="Egyesült Királyság">Egyesült Királyság</option>
-          </select>
-        </div>
-      </div>
-
-      @if (addressResolved() === true) {
-      <p class="address-note address-note--ok">✔ A cím sikeresen beazonosítva.</p>
-      } @else if (addressResolved() === false) {
-      <p class="address-note address-note--warn">
-        ⚠ Nem sikerült pontosan beazonosítani ezt a címet - próbáld a hivatalos (pl. angol vagy
-        román) városnevet is, ha külföldi cím.
-      </p>
+            <mat-icon>credit_card</mat-icon>
+          </a>
+          } }
+        </li>
+        }
+      </ul>
       }
-
-      <div class="actions-row">
-        <button type="button" class="primary-btn" [disabled]="savingAddress()" (click)="saveAddress()">
-          {{ savingAddress() ? 'Mentés...' : 'Mentés' }}
-        </button>
-      </div>
     </section>
     </div>
 
@@ -174,6 +209,34 @@
             <span></span>
           </label>
         </div>
+      </section>
+
+      <section class="panel">
+        <h2>Hozzátartozók</h2>
+        <p class="subtext">
+          Ezeket a személyeket az admin egy csoportba rendelte, hogy könnyebb legyen szállást
+          foglalni vagy akár előleget befizetni.
+        </p>
+
+        @if (familyError()) {
+        <p class="error-note">{{ familyError() }}</p>
+        } @else if (family().length === 0) {
+        <p class="empty-note">Még nincs hozzád rendelve hozzátartozó.</p>
+        } @else {
+        <ul class="family-list">
+          @for (m of family(); track m._id) {
+          <li class="family-row">
+            <span class="person-avatar">{{ initialsFor(m.name) }}</span>
+            <span>
+              <strong>{{ m.name }}</strong>
+              @if (m.email) {
+              <small>{{ m.email }}</small>
+              }
+            </span>
+          </li>
+          }
+        </ul>
+        }
       </section>
     </div>
   </div>

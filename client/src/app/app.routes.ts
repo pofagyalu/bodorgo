@@ -60,29 +60,29 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
-    path: 'profil',
-    title: 'Profil',
-    loadComponent: () => import('./pages/profile/profile').then((m) => m.Profile),
-  },
-  {
+    // No guard at the parent level any more - Profilom (below) is for every
+    // logged-in user, guest included. The member/admin-only subpages each
+    // carry their own memberGuard instead (see below).
     path: 'klub',
-    canActivate: [memberGuard],
     loadComponent: () => import('./pages/klub/klub').then((m) => m.Klub),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'attekintes' },
+      { path: '', pathMatch: 'full', redirectTo: 'profilom' },
       {
         path: 'attekintes',
         title: 'Klub áttekintés',
+        canActivate: [memberGuard],
         loadComponent: () => import('./pages/klub/overview/overview').then((m) => m.Overview),
       },
       {
         path: 'penzugyek',
         title: 'Klubpénzügyek',
+        canActivate: [memberGuard],
         loadComponent: () => import('./pages/klub/finance/finance').then((m) => m.Finance),
       },
       {
         path: 'felhasznalok',
         title: 'Klub felhasználók',
+        canActivate: [memberGuard],
         loadComponent: () => import('./pages/klub/members/members').then((m) => m.Members),
       },
       {
@@ -94,6 +94,7 @@ export const routes: Routes = [
       {
         path: 'dokumentumok',
         title: 'Klub dokumentumok',
+        canActivate: [memberGuard],
         loadComponent: () => import('./pages/klub/documents/documents').then((m) => m.Documents),
       },
       {

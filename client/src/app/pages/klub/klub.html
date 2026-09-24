@@ -5,6 +5,7 @@
       <div class="brand-text"><strong>Bódorgó Klub</strong><small>Klub felület</small></div>
     </div>
     <nav class="klub-nav" aria-label="Klub főmenü">
+      @if (isMember()) {
       <a routerLink="attekintes" routerLinkActive="active" class="nav-item">
         <mat-icon>dashboard</mat-icon><span>Áttekintés</span>
       </a>
@@ -17,6 +18,7 @@
       <a routerLink="dokumentumok" routerLinkActive="active" class="nav-item">
         <mat-icon>folder</mat-icon><span>Dokumentumok</span>
       </a>
+      }
       <a routerLink="profilom" routerLinkActive="active" class="nav-item">
         <mat-icon>person</mat-icon><span>Profilom</span>
       </a>
@@ -29,10 +31,12 @@
 
   <main class="klub-main">
     <nav class="klub-mobile-nav" aria-label="Klub főmenü mobilon">
+      @if (isMember()) {
       <a routerLink="attekintes" routerLinkActive="active">Áttekintés</a>
       <a routerLink="penzugyek" routerLinkActive="active">Pénzügyek</a>
       <a routerLink="felhasznalok" routerLinkActive="active">Felhasználók</a>
       <a routerLink="dokumentumok" routerLinkActive="active">Dokumentumok</a>
+      }
       <a routerLink="profilom" routerLinkActive="active">Profil</a>
     </nav>
 
