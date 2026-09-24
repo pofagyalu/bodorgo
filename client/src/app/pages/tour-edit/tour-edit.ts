@@ -196,6 +196,23 @@ export class TourEdit implements OnInit, OnDestroy {
   // doesn't leak object URLs across picks.
   coverPreviewUrl = signal<string | null>(null);
 
+  // Google Maps' own "copy coordinates" action puts "lat, lng" on the
+  // clipboard as one string (e.g. "48.06859220246361, 20.63202028475125")
+  // - pasting that as-is into a plain number input would just silently
+  // fail (a comma isn't a valid number), so this intercepts the paste on
+  // the lat field specifically and splits it into both fields at once
+  // when it looks like a coordinate pair, falling back to the browser's
+  // own default paste behavior otherwise (e.g. pasting just one number).
+  onCoordinatePaste(event: ClipboardEvent) {
+    const text = event.clipboardData?.getData('text') ?? '';
+    const match = text.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (!match) return;
+
+    event.preventDefault();
+    this.form.lat = Number(match[1]);
+    this.form.lng = Number(match[2]);
+  }
+
   onCoverFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;

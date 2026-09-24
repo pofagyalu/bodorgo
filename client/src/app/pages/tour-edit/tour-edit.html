@@ -21,7 +21,10 @@
     </div>
 
     <div class="form-row">
-      <label>Szélesség (lat)<input type="number" step="any" [(ngModel)]="form.lat" name="lat" /></label>
+      <label
+        >Szélesség (lat)
+        <input type="number" step="any" [(ngModel)]="form.lat" name="lat" (paste)="onCoordinatePaste($event)" />
+      </label>
       <label>Hosszúság (lng)<input type="number" step="any" [(ngModel)]="form.lng" name="lng" /></label>
     </div>
 
