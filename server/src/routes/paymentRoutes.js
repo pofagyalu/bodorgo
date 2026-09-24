@@ -6,6 +6,7 @@ import {
   deleteCashPayment,
   getPaymentStatus,
   downloadReceipt,
+  barionCallback,
 } from '../controllers/paymentController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
@@ -18,6 +19,10 @@ const router = express.Router();
 // own comment on that route.
 router.post('/start', requireAuth, startPayment);
 router.post('/membership/start', requireAuth, startMembershipPayment);
+// No auth, no signature to verify (see barionCallback's own comment) -
+// Barion calls this server-to-server, unlike the Stripe webhook it needs
+// no special raw-body handling since there's no payload to verify.
+router.get('/barion/callback', barionCallback);
 router.post('/cash', requireAuth, restrictTo('admin'), recordCashPayment);
 router.delete('/:id', requireAuth, restrictTo('admin'), deleteCashPayment);
 router.get('/:id/status', requireAuth, getPaymentStatus);

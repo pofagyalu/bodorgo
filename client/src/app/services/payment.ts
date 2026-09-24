@@ -3,8 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-// Mirrors paymentModel.js's own status enum - Stripe's own states,
-// derived server-side from the Checkout Session's payment_status/status.
+// Mirrors paymentModel.js's own status enum - derived server-side from
+// whichever gateway's own status (Stripe's Checkout Session, or Barion's
+// GetPaymentState).
 export type PaymentStatus = 'Prepared' | 'Started' | 'Succeeded' | 'Failed' | 'Canceled' | 'Expired';
 
 export interface StartPaymentResponse {
@@ -19,8 +20,9 @@ export interface PaymentStatusResponse {
 
 // This app has (at least) two things a payment can be for - a tour's
 // advance (implemented) and a club member's yearly membership fee
-// (planned, not built yet) - see paymentModel.js's own comment. Both go
-// through the same Stripe Checkout start/status machinery, hence one
+// (implemented) - see paymentModel.js's own comment. Both go through the
+// same gateway-agnostic start/status machinery server-side (Stripe or
+// Barion - see paymentController.js's startGatewayPayment), hence one
 // shared service rather than folding this into TourService.
 @Injectable({
   providedIn: 'root',
@@ -29,17 +31,29 @@ export class PaymentService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/payments`;
 
+  // method is hardcoded to 'barion' here rather than exposed as a client
+  // choice - the server fully supports Stripe too (see
+  // paymentController.js), it's just not offered on screen for now. Change
+  // these two literals (and payment.html's/members.html's own gateway
+  // copy) if that changes.
   startTourAdvancePayment(tourId: string, attendeeIds: string[]): Observable<StartPaymentResponse> {
-    return this.http.post<StartPaymentResponse>(`${this.apiUrl}/start`, { tourId, attendeeIds });
+    return this.http.post<StartPaymentResponse>(`${this.apiUrl}/start`, {
+      tourId,
+      attendeeIds,
+      method: 'barion',
+    });
   }
 
-  // Pays each given club member's own earliest unpaid year (1000 Ft
-  // each, combined into one Checkout session) - the server looks up who's
-  // actually eligible and what they owe itself (self + same family, real
-  // club members only), never trusting amounts from here. Defaults to
-  // just the caller when userIds is omitted.
-  startMembershipPayment(userIds?: string[]): Observable<StartPaymentResponse> {
-    return this.http.post<StartPaymentResponse>(`${this.apiUrl}/membership/start`, { userIds });
+  // Pays exactly the given person+year pairs (1000 Ft each, combined into
+  // one payment) - e.g. two different unpaid years for the same person, or
+  // one year each for several family members. The server re-validates
+  // every pair itself (self + same family, real club members only, really
+  // still unpaid) rather than trusting amounts from here.
+  startMembershipPayment(items: { userId: string; year: number }[]): Observable<StartPaymentResponse> {
+    return this.http.post<StartPaymentResponse>(`${this.apiUrl}/membership/start`, {
+      items,
+      method: 'barion',
+    });
   }
 
   // Admin-only (see paymentRoutes.js's restrictTo('admin')) - for the real
@@ -59,9 +73,9 @@ export class PaymentService {
   }
 
   // Polled by the payment page once the browser is redirected back from
-  // Stripe's Checkout page - reconciles with Stripe directly server-side,
-  // so it's accurate even if the async webhook is delayed or (on a dev
-  // machine) can never arrive at all.
+  // the gateway's own hosted page - reconciles with that gateway directly
+  // server-side, so it's accurate even if the async webhook/callback is
+  // delayed or (on a dev machine) can never arrive at all.
   getPaymentStatus(paymentId: string): Observable<PaymentStatusResponse> {
     return this.http.get<PaymentStatusResponse>(`${this.apiUrl}/${paymentId}/status`);
   }

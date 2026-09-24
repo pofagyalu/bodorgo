@@ -17,6 +17,13 @@ function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): str
 // rather than an arbitrary fixed window.
 const CLUB_FOUNDING_YEAR = 2019;
 
+// Mirrors utils/barion.js's own BARION_FEE_RATE server-side - shown here
+// purely so the confirmation dialog can display what the payer will
+// actually be charged before they ever reach Barion's page; the server
+// never trusts this figure, it computes the real charge itself the same
+// way (see paymentController.js's chargeableAmount).
+const BARION_FEE_RATE = 0.015;
+
 @Component({
   selector: 'app-members',
   imports: [DatePipe, RouterLink, MatIconModule],
@@ -54,12 +61,17 @@ export class Members implements OnInit {
   // which always shows the viewer's own dues regardless of this.
   expandedMemberId = signal<string | null>(null);
 
-  // Set once the browser is redirected back from Stripe's Checkout page
-  // (see the ?paymentId= query param, matching payment.ts's own
-  // returningPaymentId convention).
+  // Set once the browser is redirected back from the gateway's own
+  // checkout page (see the ?paymentId= query param, matching payment.ts's
+  // own returningPaymentId convention).
   private returningPaymentId = this.route.snapshot.queryParamMap.get('paymentId');
   paying = signal(false);
   paymentNotice = signal<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+  // Shown before ever redirecting to the payment gateway - who exactly is
+  // included and what it totals to, so a family payment doesn't silently
+  // charge for people the payer didn't mean to include this time.
+  showPayConfirm = signal(false);
 
   // Descending, e.g. [2026, 2025, ..., 2019] - matches the demo's own
   // newest-first column order.
@@ -106,15 +118,58 @@ export class Members implements OnInit {
     );
   });
 
-  // The earliest year I personally haven't paid yet, or null if I'm fully
-  // settled through the current year - drives the hero's pay button
-  // (same "oldest unpaid first" rule as the demo's own openPay(year)).
-  myEarliestUnpaidYear = computed(() => {
+  // Whether the hero's pay button should show at all - not just the
+  // caller's own dues, but anyone in their family, since paying covers
+  // whoever's picked in the confirmation step below, not just "myself".
+  hasUnpaidDues = computed(() => this.payBreakdown().length > 0);
+
+  // True once the caller's own dues are all settled but a family member's
+  // aren't - the button's label then says whose dues it's actually paying,
+  // rather than (misleadingly) implying it's still the caller's own.
+  payingOnlyForFamily = computed(() => {
     const mine = this.me();
-    if (!mine) return null;
-    const years = [...this.membershipYears()].sort((a, b) => a - b);
-    return years.find((y) => this.yearState(mine._id, y) === 'unpaid') ?? null;
+    if (!mine || !this.hasUnpaidDues()) return false;
+    return !this.payBreakdown().some((row) => row.userId === mine._id);
   });
+
+  // Every outstanding person+year pair across the family - one row per
+  // unpaid year per member (not just each person's earliest), 1000 Ft each
+  // (see MEMBERSHIP_DUES_AMOUNT server-side), oldest year first per person.
+  // The confirmation step lets the payer pick exactly which of these to
+  // actually include this time (see selectedPayIds below) - e.g. catching
+  // up two unpaid years for themselves and one for a family member, all in
+  // one payment.
+  payBreakdown = computed(() => {
+    const rows: { id: string; userId: string; name: string; year: number }[] = [];
+    for (const m of this.myFamilyClubMembers()) {
+      for (const year of this.historyYears()) {
+        if (this.yearState(m._id, year) === 'unpaid') {
+          rows.push({ id: `${m._id}:${year}`, userId: m._id, name: m.name, year });
+        }
+      }
+    }
+    return rows;
+  });
+
+  // Which of payBreakdown's rows are actually checked in the confirmation
+  // dialog - starts with everyone checked (openPayConfirm below), same
+  // "whole family by default" starting point as before, just now
+  // adjustable rather than fixed.
+  selectedPayIds = signal<Set<string>>(new Set());
+
+  selectedPayTotal = computed(
+    () => this.payBreakdown().filter((row) => this.selectedPayIds().has(row.id)).length * 1000,
+  );
+
+  // What Barion will actually charge, once its own ~1.5% fee is added on
+  // top (see BARION_FEE_RATE above) - rounded the same way the server
+  // rounds it, so this matches exactly rather than drifting a forint off.
+  selectedPayGrandTotal = computed(() => Math.round(this.selectedPayTotal() * (1 + BARION_FEE_RATE)));
+
+  // Just the fee portion, derived from the two totals above rather than
+  // computed separately, so it always reconciles exactly with them
+  // (selectedPayTotal + selectedPayFee === selectedPayGrandTotal).
+  selectedPayFee = computed(() => this.selectedPayGrandTotal() - this.selectedPayTotal());
 
   ngOnInit() {
     this.membershipService.getMembers().subscribe({
@@ -169,17 +224,48 @@ export class Members implements OnInit {
     });
   }
 
-  payMembership() {
-    if (this.paying() || this.myEarliestUnpaidYear() == null) return;
+  // Opens the confirmation step - the hero button no longer starts a
+  // payment directly (see confirmPay below for what actually does).
+  // Defaults to everyone selected, same starting point paying for the
+  // whole family always used to be - the payer can uncheck anyone they
+  // don't want to cover this time before confirming.
+  openPayConfirm() {
+    if (!this.hasUnpaidDues()) return;
+    this.paymentNotice.set(null);
+    this.selectedPayIds.set(new Set(this.payBreakdown().map((row) => row.id)));
+    this.showPayConfirm.set(true);
+  }
+
+  closePayConfirm() {
+    if (this.paying()) return;
+    this.showPayConfirm.set(false);
+  }
+
+  togglePaySelection(id: string) {
+    this.selectedPayIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  confirmPay() {
+    const items = this.payBreakdown()
+      .filter((row) => this.selectedPayIds().has(row.id))
+      .map((row) => ({ userId: row.userId, year: row.year }));
+    if (this.paying() || items.length === 0) return;
 
     this.paying.set(true);
     this.paymentNotice.set(null);
-    const userIds = this.myFamilyClubMembers().map((u) => u._id);
-    this.paymentService.startMembershipPayment(userIds).subscribe({
+    this.paymentService.startMembershipPayment(items).subscribe({
       next: (res) => {
         // A full navigation, not a client-side route change - same as
         // payment.ts's own tour-advance flow, leaving the site entirely
-        // for Stripe's hosted Checkout page.
+        // for the gateway's own hosted page.
         window.location.href = res.data.gatewayUrl;
       },
       error: (err) => {
@@ -188,6 +274,7 @@ export class Members implements OnInit {
           text: err?.error?.message ?? 'Hiba történt a fizetés indítása során.',
         });
         this.paying.set(false);
+        this.showPayConfirm.set(false);
       },
     });
   }

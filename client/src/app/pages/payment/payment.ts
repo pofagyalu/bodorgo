@@ -5,6 +5,13 @@ import { PaymentService, PaymentStatus } from '../../services/payment';
 import { AuthService } from '../../auth/auth.service';
 import { formatForint } from '../../shared/format';
 
+// Mirrors utils/barion.js's own BARION_FEE_RATE server-side - shown here
+// purely so the payer sees what they'll actually be charged before ever
+// reaching Barion's page; the server never trusts this figure, it computes
+// the real charge itself the same way (see paymentController.js's
+// chargeableAmount).
+const BARION_FEE_RATE = 0.015;
+
 // Advance-payment page for one family (or a lone attendee with no family
 // on record) at a time - reached via the tour-details page's "Előleg
 // befizetés" button, which only ever appears once the logged-in user is
@@ -15,12 +22,15 @@ import { formatForint } from '../../shared/format';
 // this lists everyone in the current user's own payment group (self +
 // same familyId), not just the caller themselves.
 //
-// Pays via Stripe Checkout (test mode for now - see server/src/config.js's
-// stripe block) - Stripe's own hosted page is where the payer actually
-// enters card details, so this page doesn't offer its own method choice
-// (an earlier mockup version did, with a fake "Revolut" option that had
-// no real equivalent on any gateway this project actually tried -
-// removed once this became a real integration rather than a stub).
+// Pays via Barion (sandbox for now - see server/src/config.js's barion
+// block) - the gateway's own hosted page is where the payer actually
+// enters card details, so this page doesn't offer its own method choice.
+// The server also fully supports Stripe (see paymentController.js's
+// startGatewayPayment) - it's just not surfaced here for now; see
+// PaymentService's own comment on where the 'barion' literal lives if
+// that changes. An earlier mockup version of this page had a fake
+// "Revolut" option with no real gateway behind it - removed once this
+// became a real integration.
 @Component({
   selector: 'app-payment',
   standalone: true,
@@ -41,9 +51,10 @@ export class Payment {
   tourTitle = signal('');
   tourSlug = signal('');
 
-  // Set once the browser is redirected back from Stripe's Checkout page
-  // (see the ?paymentId= query param) - while this has a value, the normal
-  // pick-who-to-pay form is replaced by a plain result banner.
+  // Set once the browser is redirected back from the gateway's own
+  // checkout page (see the ?paymentId= query param) - while this has a
+  // value, the normal pick-who-to-pay form is replaced by a plain result
+  // banner.
   returningPaymentId = this.route.snapshot.queryParamMap.get('paymentId');
   checkingResult = signal(false);
   resultStatus = signal<PaymentStatus | null>(null);
@@ -125,6 +136,15 @@ export class Payment {
       .reduce((sum, p) => sum + (p.advance ?? 0), 0);
   });
 
+  // What Barion will actually charge once its own ~1.5% fee is added on
+  // top - rounded the same way the server rounds it (chargeableAmount), so
+  // this matches exactly rather than drifting a forint off.
+  grandTotalToPay = computed(() => Math.round(this.totalToPay() * (1 + BARION_FEE_RATE)));
+
+  // Just the fee portion, derived from the two totals above so it always
+  // reconciles exactly (totalToPay + barionFee === grandTotalToPay).
+  barionFee = computed(() => this.grandTotalToPay() - this.totalToPay());
+
   canPay = computed(() => this.selectedAttendeeIds().size > 0);
 
   pay() {
@@ -135,9 +155,9 @@ export class Payment {
     this.paymentService.startTourAdvancePayment(this.tourId, [...this.selectedAttendeeIds()]).subscribe({
       next: (res) => {
         // A full navigation, not a client-side route change - the payer
-        // needs to actually leave the site for Stripe's own hosted
-        // Checkout page, then gets redirected straight back here
-        // (success_url/cancel_url, set server-side) once done.
+        // needs to actually leave the site for the gateway's own hosted
+        // page, then gets redirected straight back here (set server-side)
+        // once done.
         window.location.href = res.data.gatewayUrl;
       },
       error: (err) => {

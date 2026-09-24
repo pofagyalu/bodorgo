@@ -7,6 +7,7 @@ import User from '../models/userModel.js';
 import Transaction from '../models/transactionModel.js';
 import { computeAttendeePayments } from './reservationController.js';
 import { createCheckoutSession, retrieveCheckoutSession, constructWebhookEvent } from '../utils/stripe.js';
+import { createBarionPayment, getBarionPaymentState, BARION_FEE_RATE } from '../utils/barion.js';
 import { generateReceiptPdf, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import AppError from '../utils/appError.js';
@@ -82,24 +83,27 @@ const CLUB_FOUNDING_YEAR = 2019;
 const MEMBERSHIP_DUES_AMOUNT = 1000;
 
 // Same "self + same family" rule as resolvePayableAttendees, but for
-// membership dues rather than a tour advance - and instead of a client-
-// supplied amount, each person's own earliest unpaid year (and its fixed
-// amount) is looked up fresh here, never trusted from the request.
-async function resolvePayableMembers(userIds, user) {
+// membership dues rather than a tour advance - the payer picks exactly
+// which person+year pairs to cover (see members.ts's payBreakdown/
+// selectedPayIds, one checkbox per outstanding year per person, not just
+// each person's single earliest one), and each pair is re-validated fresh
+// here (real family member, real outstanding year, fixed amount) - never
+// trusted from the request as-is.
+async function resolvePayableMembers(items, user) {
   const myFamilyId = user.familyId ? String(user.familyId) : null;
+  const userIds = [...new Set(items.map((i) => String(i.userId)))];
 
   const candidates = await User.find({
+    _id: { $in: userIds },
     role: { $in: ['admin', 'member'] },
     $or: [{ _id: user._id }, ...(myFamilyId ? [{ familyId: myFamilyId }] : [])],
   }).select('name memberSince');
-
-  const requested = new Set(userIds.map(String));
-  const selected = candidates.filter((c) => requested.has(String(c._id)));
+  const candidateById = new Map(candidates.map((c) => [String(c._id), c]));
 
   const paidTransactions = await Transaction.find({
     type: 'income',
     category: 'Tagdíj',
-    user: { $in: selected.map((c) => c._id) },
+    user: { $in: userIds },
   }).select('user membershipYear');
   const paidYearsByUser = new Map();
   for (const t of paidTransactions) {
@@ -109,43 +113,78 @@ async function resolvePayableMembers(userIds, user) {
   }
 
   const currentYear = new Date().getFullYear();
+  const seen = new Set();
   const payable = [];
-  for (const member of selected) {
+  for (const { userId, year } of items) {
+    const member = candidateById.get(String(userId));
+    const y = Number(year);
+    if (!member || !Number.isInteger(y)) continue;
+
     const startYear = member.memberSince ?? CLUB_FOUNDING_YEAR;
+    if (y < startYear || y > currentYear) continue;
+
     const paidYears = paidYearsByUser.get(String(member._id)) ?? new Set();
-    let year = null;
-    for (let y = startYear; y <= currentYear; y++) {
-      if (!paidYears.has(y)) {
-        year = y;
-        break;
-      }
-    }
-    if (year !== null) {
-      payable.push({ _id: member._id, name: member.name, year, amount: MEMBERSHIP_DUES_AMOUNT });
-    }
+    if (paidYears.has(y)) continue;
+
+    const key = `${member._id}:${y}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    payable.push({ _id: member._id, name: member.name, year: y, amount: MEMBERSHIP_DUES_AMOUNT });
   }
 
   if (payable.length === 0) {
-    throw new AppError('Nincs esedékes tagdíj a kiválasztott tagoknak.', 400);
+    throw new AppError('Nincs esedékes tagdíj a kiválasztott tagoknak és évekre.', 400);
   }
 
   return payable;
 }
 
-// POST /payments/membership/start - requireAuth. Same Stripe Checkout
-// machinery as startPayment below, just for a club member's own yearly
-// dues instead of a tour advance - one payment can cover several family
-// members at once, each their own earliest unpaid year. Defaults to just
-// the caller themselves when no userIds are given.
-export const startMembershipPayment = async (req, res) => {
-  const { userIds } = req.body;
-  const ids = Array.isArray(userIds) && userIds.length ? userIds : [String(req.user._id)];
+// Starts the actual gateway-side payment for whichever method the client
+// chose (anything but 'barion' falls back to Stripe) - a thin,
+// gateway-agnostic wrapper so startPayment/startMembershipPayment below
+// don't each duplicate the branch. Both gateways return an object with
+// .id/.url either way (see utils/barion.js's own comment on why that
+// shape was chosen to mirror Stripe's Checkout Session exactly).
+function startGatewayPayment(method, { referenceId, amount, payerEmail, successUrl, description }) {
+  if (method === 'barion') {
+    return createBarionPayment({ referenceId, amount, payerEmail, successUrl, description });
+  }
+  return createCheckoutSession({ referenceId, amount, payerEmail, successUrl, cancelUrl: successUrl, description });
+}
 
-  const payable = await resolvePayableMembers(ids, req.user);
-  const amount = payable.reduce((sum, p) => sum + p.amount, 0);
+// Barion's own ~1.5% cut (see utils/barion.js's BARION_FEE_RATE) is passed
+// on to the payer rather than absorbed by the club - this is what actually
+// gets charged and stored as Payment.amount, while each covered
+// attendee/member still keeps their own real, un-surcharged amount (see
+// payable's .advance/.amount below) for the Reservation/Transaction records
+// created once the payment succeeds. Stripe's own fee isn't handled this
+// way (out of scope here), hence the method check.
+function chargeableAmount(subtotal, method) {
+  return method === 'barion' ? Math.round(subtotal * (1 + BARION_FEE_RATE)) : subtotal;
+}
+
+// POST /payments/membership/start - requireAuth. Same gateway-agnostic
+// start machinery as startPayment below (Stripe or Barion, see
+// startGatewayPayment), just for a club member's own yearly dues instead
+// of a tour advance - one payment can cover several outstanding
+// person+year pairs at once (several family members, and/or several
+// unpaid years for the same person), exactly as chosen in the confirm
+// dialog client-side.
+export const startMembershipPayment = async (req, res) => {
+  const { items } = req.body;
+  const method = req.body.method === 'barion' ? 'barion' : 'stripe';
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new AppError('Nincs kiválasztott tagdíj tétel.', 400);
+  }
+
+  const payable = await resolvePayableMembers(items, req.user);
+  const subtotal = payable.reduce((sum, p) => sum + p.amount, 0);
+  const amount = chargeableAmount(subtotal, method);
 
   const payment = await Payment.create({
     purpose: 'membershipFee',
+    method,
     createdBy: req.user._id,
     members: payable.map((p) => ({
       user: p._id,
@@ -163,14 +202,13 @@ export const startMembershipPayment = async (req, res) => {
     : config.oridzs.clientBaseUrl;
   const returnUrl = `${clientBase.replace(/\/$/, '')}/klub/felhasznalok?paymentId=${payment._id}`;
 
-  let session;
+  let gatewayPayment;
   try {
-    session = await createCheckoutSession({
+    gatewayPayment = await startGatewayPayment(method, {
       referenceId: String(payment._id),
       amount,
       payerEmail: req.user.email,
       successUrl: returnUrl,
-      cancelUrl: returnUrl,
       description: `Tagdíj - ${payable.map((p) => `${p.name} (${p.year})`).join(', ')}`,
     });
   } catch (err) {
@@ -179,28 +217,31 @@ export const startMembershipPayment = async (req, res) => {
     throw new AppError('Nem sikerült elindítani a fizetést.', 502);
   }
 
-  payment.providerPaymentId = session.id;
+  payment.providerPaymentId = gatewayPayment.id;
   payment.status = 'Started';
   await payment.save();
 
-  res.status(200).json({ status: 'success', data: { gatewayUrl: session.url, paymentId: payment._id } });
+  res.status(200).json({ status: 'success', data: { gatewayUrl: gatewayPayment.url, paymentId: payment._id } });
 };
 
 // POST /payments/start - requireAuth. Creates our own Payment record
-// first (so we have something to correlate Stripe's webhook against via
-// client_reference_id), then asks Stripe to actually start the Checkout
-// Session.
+// first (so we have something to correlate the gateway's webhook/callback
+// against), then asks the chosen gateway (Stripe or Barion, see
+// startGatewayPayment) to actually start the payment.
 export const startPayment = async (req, res) => {
   const { tourId, attendeeIds } = req.body;
+  const method = req.body.method === 'barion' ? 'barion' : 'stripe';
   if (!tourId || !Array.isArray(attendeeIds) || attendeeIds.length === 0) {
     throw new AppError('Hiányzó vagy hibás adatok.', 400);
   }
 
   const { tour, payable } = await resolvePayableAttendees(tourId, attendeeIds, req.user);
-  const amount = payable.reduce((sum, p) => sum + p.advance, 0);
+  const subtotal = payable.reduce((sum, p) => sum + p.advance, 0);
+  const amount = chargeableAmount(subtotal, method);
 
   const payment = await Payment.create({
     purpose: 'tourAdvance',
+    method,
     tour: tour._id,
     createdBy: req.user._id,
     attendees: payable.map((p) => ({
@@ -228,14 +269,13 @@ export const startPayment = async (req, res) => {
   // GET /payments/:id/status once it sees ?paymentId= on load.
   const returnUrl = `${clientBase.replace(/\/$/, '')}/taborok/${tour._id}/befizetes?paymentId=${payment._id}`;
 
-  let session;
+  let gatewayPayment;
   try {
-    session = await createCheckoutSession({
+    gatewayPayment = await startGatewayPayment(method, {
       referenceId: String(payment._id),
       amount,
       payerEmail: req.user.email,
       successUrl: returnUrl,
-      cancelUrl: returnUrl,
       description: `${tour.title} - előleg (${payable.map((p) => p.name).join(', ')})`,
     });
   } catch (err) {
@@ -244,11 +284,11 @@ export const startPayment = async (req, res) => {
     throw new AppError('Nem sikerült elindítani a fizetést.', 502);
   }
 
-  payment.providerPaymentId = session.id;
+  payment.providerPaymentId = gatewayPayment.id;
   payment.status = 'Started';
   await payment.save();
 
-  res.status(200).json({ status: 'success', data: { gatewayUrl: session.url, paymentId: payment._id } });
+  res.status(200).json({ status: 'success', data: { gatewayUrl: gatewayPayment.url, paymentId: payment._id } });
 };
 
 // POST /payments/cash - requireAuth, restrictTo('admin'). For the real
@@ -320,14 +360,19 @@ function formatForint(amount) {
 
 // A short, warm (not overly formal) confirmation - "Bódorgó" itself is
 // named after wandering/rambling around, hence the sign-off.
-function receiptEmailBody(payerName, tourTitle, attendees, total) {
+// feeAmount is the gap between the attendees' own advances and what was
+// actually charged (Barion's ~1.5% cut, passed on to the payer - see
+// chargeableAmount above) - 0 for a Stripe payment, so the line is skipped
+// entirely and the total just matches the rows as before.
+function receiptEmailBody(payerName, tourTitle, attendees, total, feeAmount = 0) {
   const lines = attendees.map((a) => `- ${a.name}: ${formatForint(a.amount)} Ft`).join('\n');
+  const feeLine = feeAmount > 0 ? `\nBarion díj (1,5%): ${formatForint(feeAmount)} Ft` : '';
   const text = `Kedves ${payerName}!
 
 Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${tourTitle}" táborhoz:
 
 ${lines}
-
+${feeLine}
 Összesen: ${formatForint(total)} Ft
 
 A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.
@@ -336,9 +381,10 @@ Jó bódorgást! 🏕️
 A Bódorgó csapata`;
 
   const linesHtml = attendees.map((a) => `<li>${a.name}: ${formatForint(a.amount)} Ft</li>`).join('');
+  const feeLineHtml = feeAmount > 0 ? `<li>Barion díj (1,5%): ${formatForint(feeAmount)} Ft</li>` : '';
   const html = `<p>Kedves ${payerName}!</p>
 <p>Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${tourTitle}" táborhoz:</p>
-<ul>${linesHtml}</ul>
+<ul>${linesHtml}${feeLineHtml}</ul>
 <p><strong>Összesen: ${formatForint(total)} Ft</strong></p>
 <p>A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.</p>
 <p>Jó bódorgást! 🏕️<br>A Bódorgó csapata</p>`;
@@ -350,14 +396,15 @@ A Bódorgó csapata`;
 // member gets their own line with the specific year it paid off, since
 // (unlike a tour advance) a family payment can cover different years for
 // different people.
-function membershipReceiptEmailBody(payerName, members, total) {
+function membershipReceiptEmailBody(payerName, members, total, feeAmount = 0) {
   const lines = members.map((m) => `- ${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft`).join('\n');
+  const feeLine = feeAmount > 0 ? `\nBarion díj (1,5%): ${formatForint(feeAmount)} Ft` : '';
   const text = `Kedves ${payerName}!
 
 Köszönjük a klubtagsági díj befizetését:
 
 ${lines}
-
+${feeLine}
 Összesen: ${formatForint(total)} Ft
 
 A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.
@@ -365,12 +412,13 @@ A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.
 Jó bódorgást! 🏕️
 A Bódorgó csapata`;
 
+  const feeLineHtml = feeAmount > 0 ? `<li>Barion díj (1,5%): ${formatForint(feeAmount)} Ft</li>` : '';
   const linesHtml = members
     .map((m) => `<li>${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft</li>`)
     .join('');
   const html = `<p>Kedves ${payerName}!</p>
 <p>Köszönjük a klubtagsági díj befizetését:</p>
-<ul>${linesHtml}</ul>
+<ul>${linesHtml}${feeLineHtml}</ul>
 <p><strong>Összesen: ${formatForint(total)} Ft</strong></p>
 <p>A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.</p>
 <p>Jó bódorgást! 🏕️<br>A Bódorgó csapata</p>`;
@@ -423,7 +471,9 @@ async function markMembershipPaid(payment) {
     payment.receiptFilename = filename;
     await payment.save();
 
-    const { text, html } = membershipReceiptEmailBody(payer.name, payment.members, payment.amount);
+    const subtotal = payment.members.reduce((sum, m) => sum + m.amount, 0);
+    const feeAmount = payment.amount - subtotal;
+    const { text, html } = membershipReceiptEmailBody(payer.name, payment.members, payment.amount, feeAmount);
     await sendResendEmail({
       to: payer.email,
       subject: 'Tagdíj befizetve - Bódorgó Klub',
@@ -469,7 +519,9 @@ async function markPaymentSucceeded(payment) {
     payment.receiptFilename = filename;
     await payment.save();
 
-    const { text, html } = receiptEmailBody(payer.name, tour?.title ?? 'tábor', payment.attendees, payment.amount);
+    const subtotal = payment.attendees.reduce((sum, a) => sum + a.amount, 0);
+    const feeAmount = payment.amount - subtotal;
+    const { text, html } = receiptEmailBody(payer.name, tour?.title ?? 'tábor', payment.attendees, payment.amount, feeAmount);
     await sendResendEmail({
       to: payer.email,
       subject: `Előleg befizetve - ${tour?.title ?? 'tábor'}`,
@@ -506,13 +558,44 @@ export const stripeWebhook = async (req, res) => {
   res.status(200).end();
 };
 
+// GET /payments/barion/callback?paymentId=... - no auth (Barion calls this
+// server-to-server), and unlike Stripe's webhook there's no signature to
+// verify at all - Barion's callback is just an unauthenticated "something
+// changed, go check" ping (see utils/barion.js's own comment). The real
+// status always comes from a fresh GetPaymentState call, never trusted
+// from this ping's own query string.
+export const barionCallback = async (req, res) => {
+  const paymentId = req.query.paymentId || req.query.PaymentId;
+  if (!paymentId) {
+    return res.status(400).end();
+  }
+
+  const payment = await Payment.findOne({ providerPaymentId: paymentId, method: 'barion' });
+  if (payment && payment.status !== 'Succeeded') {
+    try {
+      const state = await getBarionPaymentState(paymentId);
+      if (state.Status === 'Succeeded') {
+        await markPaymentSucceeded(payment);
+      } else if ((state.Status === 'Expired' || state.Status === 'Canceled') && payment.status !== 'Expired') {
+        payment.status = state.Status === 'Canceled' ? 'Canceled' : 'Expired';
+        await payment.save();
+      }
+    } catch (err) {
+      logger.error(`Barion callback: state check failed for payment ${payment._id}: ${err.message}`);
+    }
+  }
+
+  res.status(200).end();
+};
+
 // GET /payments/:id/status - requireAuth. Polled by the payment page once
-// the browser is redirected back from Stripe's Checkout page. Reconciles
-// with Stripe directly (not just returning whatever the webhook already
-// wrote) so the result shows correctly even if the async webhook is
-// delayed, fails to arrive, or (on a dev machine) can't reach us at all -
-// Stripe's servers have no way to POST to a local webhook endpoint, but
-// this endpoint asking Stripe itself still works from anywhere.
+// the browser is redirected back from the gateway's hosted checkout page.
+// Reconciles with the gateway directly (not just returning whatever the
+// webhook/callback already wrote) so the result shows correctly even if
+// that async notification is delayed, fails to arrive, or (on a dev
+// machine) can't reach us at all - neither gateway can POST/GET to a local
+// endpoint, but this endpoint asking the gateway itself still works from
+// anywhere.
 export const getPaymentStatus = async (req, res) => {
   const payment = await Payment.findById(req.params.id);
   if (!payment) {
@@ -523,12 +606,22 @@ export const getPaymentStatus = async (req, res) => {
   }
 
   if (payment.status === 'Started' && payment.providerPaymentId) {
-    const session = await retrieveCheckoutSession(payment.providerPaymentId);
-    if (session.payment_status === 'paid' && payment.status !== 'Succeeded') {
-      await markPaymentSucceeded(payment);
-    } else if (session.status === 'expired' && payment.status !== 'Expired') {
-      payment.status = 'Expired';
-      await payment.save();
+    if (payment.method === 'barion') {
+      const state = await getBarionPaymentState(payment.providerPaymentId);
+      if (state.Status === 'Succeeded' && payment.status !== 'Succeeded') {
+        await markPaymentSucceeded(payment);
+      } else if ((state.Status === 'Expired' || state.Status === 'Canceled') && payment.status !== 'Expired') {
+        payment.status = state.Status === 'Canceled' ? 'Canceled' : 'Expired';
+        await payment.save();
+      }
+    } else {
+      const session = await retrieveCheckoutSession(payment.providerPaymentId);
+      if (session.payment_status === 'paid' && payment.status !== 'Succeeded') {
+        await markPaymentSucceeded(payment);
+      } else if (session.status === 'expired' && payment.status !== 'Expired') {
+        payment.status = 'Expired';
+        await payment.save();
+      }
     }
   }
 

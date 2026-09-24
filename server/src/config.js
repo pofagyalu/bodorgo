@@ -43,6 +43,24 @@ const config = {
     secretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
+  // Second payment gateway alongside Stripe (see utils/barion.js) - a
+  // Hungarian one, offered as an alternative at checkout, not a
+  // replacement. Sandbox (api.test.barion.com) by default, same "test
+  // mode before going live" precedent as Stripe's own sk_test_ key; set
+  // BARION_ENV=production once ready to switch to the real barion.com API
+  // + a live POSKey. posKey/payeeEmail come from the Shop admin page on
+  // a Barion account that's a real registered Shop, not a personal wallet
+  // - a personal account has no POSKey at all.
+  barion: {
+    posKey: process.env.BARION_POS_KEY,
+    payeeEmail: process.env.BARION_PAYEE_EMAIL,
+    baseUrl: process.env.BARION_ENV === 'production' ? 'https://api.barion.com' : 'https://api.test.barion.com',
+  },
+  // This server's own public base URL - needed because Barion (unlike
+  // Stripe) has no dashboard-configured webhook; every single payment-
+  // start request has to tell it exactly where to call back (see
+  // utils/barion.js's createBarionPayment).
+  apiBaseUrl: process.env.API_BASE_URL,
   cookie: {
     secret: process.env.COOKIE_SECRET,
   },

@@ -24,14 +24,17 @@ const paymentSchema = new Schema(
       ref: 'User',
       required: true,
     },
-    // stripe: the normal self-service Checkout flow. cash: an admin
-    // recording money they were handed in person (see
-    // paymentController.js's recordCashPayment) - skips Stripe entirely,
-    // so providerPaymentId/receiptFilename stay unset and no email goes
-    // out. createdBy is the admin who recorded it, not the payer.
+    // stripe/barion: the two self-service Checkout-style flows, both
+    // driving providerPaymentId/status through the same shared
+    // markPaymentSucceeded machinery (see paymentController.js) despite
+    // being different gateways underneath. cash: an admin recording money
+    // they were handed in person (see recordCashPayment) - skips both
+    // gateways entirely, so providerPaymentId/receiptFilename stay unset
+    // and no email goes out. createdBy is the admin who recorded it, not
+    // the payer.
     method: {
       type: String,
-      enum: ['stripe', 'cash'],
+      enum: ['stripe', 'barion', 'cash'],
       default: 'stripe',
     },
     // --- purpose: 'tourAdvance' only ---
@@ -84,22 +87,21 @@ const paymentSchema = new Schema(
       type: String,
       default: 'HUF',
     },
-    // Stripe's own Checkout Session id (e.g. "cs_test_...") - null until
-    // the session is created. Indexed since the webhook looks a payment
-    // up by this, not our own _id (Stripe's webhook payload only ever
-    // carries its own session id, via client_reference_id round-tripping
-    // back to us separately - see paymentController.js).
+    // The gateway's own id for this payment - Stripe's Checkout Session id
+    // (e.g. "cs_test_...") or Barion's PaymentId (a GUID) - null until that
+    // session/payment is created. Indexed since both the Stripe webhook
+    // and the Barion callback look a payment up by this, not our own _id
+    // (see paymentController.js).
     providerPaymentId: {
       type: String,
       index: true,
     },
-    // Prepared: created locally, the Checkout Session not yet created
-    // (or creating it failed). Started: session created, waiting on
-    // Stripe's hosted page. Succeeded/Expired: derived from the session's
-    // own payment_status/status - see paymentController.js. Failed/
-    // Canceled are reachable in principle but Stripe Checkout's own UX
-    // mostly just lets the payer retry on the same page instead of
-    // surfacing those as terminal states the way Barion did.
+    // Prepared: created locally, the gateway session/payment not yet
+    // created (or creating it failed). Started: gateway session created,
+    // waiting on its hosted page. Succeeded/Expired/Canceled: derived from
+    // the gateway's own status - Stripe's payment_status/status for a
+    // Checkout Session, or Barion's own Status field via GetPaymentState -
+    // see paymentController.js.
     status: {
       type: String,
       enum: ['Prepared', 'Started', 'Succeeded', 'Failed', 'Canceled', 'Expired'],

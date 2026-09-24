@@ -48,14 +48,22 @@
   </ul>
 
   <div class="total-row">
-    <span>Fizetendő összesen</span>
-    <span class="total-amount">{{ formatForint(totalToPay()) }} Ft</span>
+    <span>Részösszeg</span>
+    <span>{{ formatForint(totalToPay()) }} Ft</span>
+  </div>
+  <div class="total-row total-row--fee">
+    <span>Barion díj (1,5%)</span>
+    <span>{{ formatForint(barionFee()) }} Ft</span>
+  </div>
+  <div class="total-row total-row--grand">
+    <span>Fizetendő végösszeg</span>
+    <span class="total-amount">{{ formatForint(grandTotalToPay()) }} Ft</span>
   </div>
 
-  <p class="field-note">A Fizetés gombra kattintva a Stripe biztonságos fizetési oldalára kerülsz.</p>
+  <p class="field-note">A Fizetés gombra kattintva a Barion biztonságos fizetési oldalára kerülsz.</p>
 
   <button type="button" class="btn btn--green" [disabled]="!canPay() || starting()" (click)="pay()">
-    {{ starting() ? 'Átirányítás...' : 'Fizetés (' + formatForint(totalToPay()) + ' Ft)' }}
+    {{ starting() ? 'Átirányítás...' : 'Fizetés (' + formatForint(grandTotalToPay()) + ' Ft)' }}
   </button>
   } } }
 </div>

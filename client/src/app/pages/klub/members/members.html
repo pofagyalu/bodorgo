@@ -42,15 +42,9 @@
         <h2>{{ myStatusSummary() }}</h2>
         <p>Az éves befizetéseid áttekintése</p>
       </div>
-      @if (myEarliestUnpaidYear(); as year) {
-      <button
-        type="button"
-        class="primary-btn"
-        [disabled]="paying()"
-        (click)="payMembership()"
-      >
-        {{ paying() ? 'Fizetés indítása…' : year + '. évi tagdíj befizetése →'
-        }}
+      @if (hasUnpaidDues()) {
+      <button type="button" class="primary-btn" (click)="openPayConfirm()">
+        {{ payingOnlyForFamily() ? 'Tagdíj befizetése hozzátartozónak' : 'Tagdíj befizetése' }} →
       </button>
       }
     </section>
@@ -333,3 +327,63 @@
   </div>
   }
 </div>
+
+@if (showPayConfirm()) {
+<div class="modal-backdrop" (click)="closePayConfirm()"></div>
+<div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="payConfirmTitle">
+  <div class="modal-head">
+    <h2 id="payConfirmTitle">Tagdíj befizetése</h2>
+    <button class="icon-btn" type="button" aria-label="Bezárás" [disabled]="paying()" (click)="closePayConfirm()">
+      ✕
+    </button>
+  </div>
+  <div class="modal-body">
+    <p class="subtext">A hozzátartozók tagságát is befizeted? Válaszd ki a listából.</p>
+    <ul class="pay-confirm-list">
+      @for (row of payBreakdown(); track row.id) {
+      <li class="pay-confirm-row">
+        <label class="pay-confirm-label">
+          <input
+            type="checkbox"
+            [checked]="selectedPayIds().has(row.id)"
+            (change)="togglePaySelection(row.id)"
+          />
+          <span>{{ row.name }}</span>
+        </label>
+        <span class="pay-confirm-detail">{{ row.year }}. év · 1000 Ft</span>
+      </li>
+      }
+    </ul>
+    <div class="pay-confirm-summary">
+      <div class="pay-confirm-summary-row">
+        <span>Részösszeg</span>
+        <span>{{ selectedPayTotal() }} Ft</span>
+      </div>
+      <div class="pay-confirm-summary-row pay-confirm-fee-row">
+        <span>Barion díj (1,5%)</span>
+        <span>{{ selectedPayFee() }} Ft</span>
+      </div>
+      <div class="pay-confirm-summary-row pay-confirm-grand-row">
+        <span>Végösszeg</span>
+        <strong>{{ selectedPayGrandTotal() }} Ft</strong>
+      </div>
+    </div>
+
+    @if (paymentNotice(); as notice) {
+    <p class="payment-notice" [class.error]="notice.kind === 'error'">{{ notice.text }}</p>
+    }
+
+    <div class="modal-actions">
+      <button class="outline-btn" type="button" [disabled]="paying()" (click)="closePayConfirm()">Mégse</button>
+      <button
+        class="primary-btn"
+        type="button"
+        [disabled]="paying() || selectedPayIds().size === 0"
+        (click)="confirmPay()"
+      >
+        {{ paying() ? 'Fizetés indítása…' : 'Fizetés a Barionnal (' + selectedPayGrandTotal() + ' Ft) →' }}
+      </button>
+    </div>
+  </div>
+</div>
+}

@@ -139,6 +139,18 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
     doc.moveDown(0.4);
   }
 
+  // The gap between what each row lists and payment.amount is Barion's own
+  // ~1.5% fee, passed on to the payer (see paymentController.js's
+  // chargeableAmount) - shown as its own line so the total above reconciles
+  // with what the rows list, rather than silently looking off by a few Ft.
+  const feeAmount = payment.amount - rows.reduce((sum, r) => sum + r.amount, 0);
+  if (feeAmount > 0) {
+    const rowY = doc.y;
+    doc.text('Barion díj (1,5%)', colNameX, rowY, { width: colAmountX - colNameX });
+    doc.text(`${formatForint(feeAmount)} Ft`, colAmountX, rowY, { width: 120, align: 'right' });
+    doc.moveDown(0.4);
+  }
+
   doc.moveDown(0.3);
   doc
     .moveTo(colNameX, doc.y)
