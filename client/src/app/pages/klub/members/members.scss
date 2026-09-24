@@ -297,6 +297,25 @@ td {
   background: #f6fbf8;
 }
 
+.membership-table tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+// Admin-only - clicking anywhere on the row now toggles its payment
+// history open/closed directly (see members.ts's toggleDetail), replacing
+// the old separate "Részletek →" text button.
+.membership-table tbody tr.row-clickable {
+  cursor: pointer;
+}
+
+.membership-table tbody tr.row-clickable:hover {
+  background: #eef6f2;
+}
+
+.membership-table tbody tr.row-clickable.mine:hover {
+  background: #e3f3ea;
+}
+
 .membership-table td:last-child,
 .casual-table td:last-child {
   text-align: left;
@@ -413,7 +432,28 @@ td {
   border-top: 0;
 }
 
+// Always rendered (not @if-toggled) so this can actually animate - an
+// element can't transition between "doesn't exist" and "exists". A single
+// grid row track sized 0fr -> 1fr animates smoothly to the row's own exact
+// content height, however many years are tracked - unlike a fixed
+// max-height cap, this needs no guess at how tall the content might get
+// and never looks too fast/slow for the real content size.
 .history-expanded {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s ease;
+}
+
+.history-expanded.open {
+  grid-template-rows: 1fr;
+}
+
+.history-expanded-inner {
+  // min-height:0 lets a grid item actually shrink below its content's
+  // natural height - without it the 0fr track above couldn't collapse to
+  // ~0px, and overflow:hidden clips the content while it's mid-collapse.
+  min-height: 0;
+  overflow: hidden;
   background: #fafcfb;
   border-top: 1px solid #f0f2f0;
   border-bottom: 1px solid #f0f2f0;
@@ -428,18 +468,6 @@ td {
   display: flex;
   align-items: center;
   gap: 2px;
-}
-
-.link-btn {
-  border: 0;
-  background: transparent;
-  color: #187e70;
-  font-size: 12px;
-  font-weight: 750;
-  padding: 8px;
-  white-space: nowrap;
-  text-decoration: none;
-  display: inline-block;
 }
 
 .icon-btn {
@@ -470,10 +498,6 @@ td {
   &:hover {
     background: #37474f;
   }
-}
-
-.link-btn:hover {
-  text-decoration: underline;
 }
 
 .empty-row {

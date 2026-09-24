@@ -139,7 +139,11 @@
               <td colspan="4" class="empty-row">Nincs ilyen nevű tag.</td>
             </tr>
             } @else { @for (m of filteredClubMembers(); track m._id) {
-            <tr [class.mine]="m._id === myId()">
+            <tr
+              [class.mine]="m._id === myId()"
+              [class.row-clickable]="isAdmin()"
+              (click)="toggleDetail(m._id)"
+            >
               <td>
                 <div class="person">
                   <span class="person-avatar">{{ initials(m.name) }}</span>
@@ -184,56 +188,51 @@
               </td>
               <td class="row-actions">
                 @if (isAdmin()) {
-                <button
-                  type="button"
-                  class="link-btn"
-                  (click)="toggleDetail(m._id)"
-                >
-                  {{ isExpanded(m._id) ? 'Bezár' : 'Részletek →' }}
-                </button>
                 <a
                   [routerLink]="['/klub/felhasznalok', m._id]"
                   class="icon-btn icon-btn--edit"
                   title="Szerkesztés"
                   aria-label="Tag szerkesztése"
+                  (click)="$event.stopPropagation()"
                 >
                   <mat-icon>edit</mat-icon>
                 </a>
                 }
               </td>
             </tr>
-            @if (isExpanded(m._id)) {
             <tr class="history-expanded-row">
               <td colspan="4">
-                <div class="history-expanded">
-                  @for (y of membershipYears(); track y) {
-                  <div class="history-row">
-                    <div class="history-row-label">
+                <div class="history-expanded" [class.open]="isExpanded(m._id)">
+                  <div class="history-expanded-inner">
+                    @for (y of membershipYears(); track y) {
+                    <div class="history-row">
+                      <div class="history-row-label">
+                        <span
+                          class="history-dot history-dot--lg"
+                          [class.paid]="yearState(m._id, y) === 'paid'"
+                          [class.unpaid]="yearState(m._id, y) === 'unpaid'"
+                          [class.na]="yearState(m._id, y) === 'na'"
+                        ></span>
+                        <strong>{{ y }}. évi tagdíj</strong>
+                      </div>
+                      @if (yearState(m._id, y) === 'paid') { @if
+                      (paymentFor(m._id, y); as payment) {
                       <span
-                        class="history-dot history-dot--lg"
-                        [class.paid]="yearState(m._id, y) === 'paid'"
-                        [class.unpaid]="yearState(m._id, y) === 'unpaid'"
-                        [class.na]="yearState(m._id, y) === 'na'"
-                      ></span>
-                      <strong>{{ y }}. évi tagdíj</strong>
+                        >{{ money(payment.amount, payment.currency) }} · {{
+                        payment.date | date: 'yyyy. MM. dd.' }}</span
+                      >
+                      } } @else if (yearState(m._id, y) === 'unpaid') {
+                      <span>Nincs befizetve</span>
+                      } @else {
+                      <span>Még nem volt tag</span>
+                      }
                     </div>
-                    @if (yearState(m._id, y) === 'paid') { @if
-                    (paymentFor(m._id, y); as payment) {
-                    <span
-                      >{{ money(payment.amount, payment.currency) }} · {{
-                      payment.date | date: 'yyyy. MM. dd.' }}</span
-                    >
-                    } } @else if (yearState(m._id, y) === 'unpaid') {
-                    <span>Nincs befizetve</span>
-                    } @else {
-                    <span>Még nem volt tag</span>
                     }
                   </div>
-                  }
                 </div>
               </td>
             </tr>
-            } } }
+            } }
           </tbody>
         </table>
       </div>
