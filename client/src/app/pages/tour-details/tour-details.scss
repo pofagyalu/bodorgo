@@ -282,17 +282,20 @@
   margin-bottom: 1rem;
 }
 
-// .day-weather floats left so the date text wraps AROUND it as plain
-// inline flow (same technique as tour-event.scss's .event-time) - only
-// narrowed while beside the pill; once past its height, later lines use
-// the row's full width. display:flow-root contains that float's height.
+// Flex (not float) - a float always top-aligns the text beside it, which
+// left the date sitting noticeably higher than the taller weather pill;
+// align-items:center here vertically centers the pill and the day-number/
+// date text against each other properly.
 .day-heading {
   position: relative;
   margin: 0 0 0.7rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #2e7d32;
-  display: flow-root;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
 }
 
 // Reserves a gutter on the right for the absolutely-positioned add-event
@@ -301,8 +304,23 @@
   padding-right: 2.4rem;
 }
 
+.day-heading-daynum,
 .day-heading-date {
   text-transform: capitalize;
+}
+
+.day-heading-daynum {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  // Forces the "– {label}" part onto its own full-width line while the
+  // weather pill + "N. nap" stay together on the first line - the exact
+  // split the user asked for, rather than letting the browser wrap
+  // wherever it likes.
+  .day-heading-date {
+    flex: 1 0 100%;
+  }
 }
 
 // Icon-only "add event" trigger - no text, a tooltip carries the meaning
@@ -590,8 +608,7 @@
 // since several icons (cloudy, fog, rain's cloud) are a near-white pastel
 // gradient that all but disappears on any light background.
 .day-weather {
-  float: left;
-  margin-right: 0.7rem;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
