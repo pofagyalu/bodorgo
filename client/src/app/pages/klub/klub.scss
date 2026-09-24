@@ -20,6 +20,12 @@
   display: flex;
   flex-direction: column;
   gap: 46px;
+  // Pinned below the site header (.header-container, itself sticky at
+  // top:0, 80px tall) instead of scrolling away with .klub-main's content.
+  position: sticky;
+  top: 80px;
+  height: calc(100dvh - 80px);
+  overflow-y: auto;
 }
 
 .klub-brand {
@@ -90,6 +96,25 @@
   }
 }
 
+// Same copy/look as the club-finances-demo.html prototype's .side-bottom -
+// sits at the sidebar's own bottom (margin-top:auto, in its flex column)
+// thanks to .klub-sidebar's fixed height above.
+.side-bottom {
+  margin-top: auto;
+  padding: 18px 14px;
+  background: #233f50;
+  border-radius: 15px;
+  font-size: 13px;
+  color: #c1d5d7;
+  line-height: 1.5;
+}
+
+.side-bottom strong {
+  color: #fff;
+  display: block;
+  margin-bottom: 5px;
+}
+
 .klub-main {
   min-width: 0;
 }
@@ -122,6 +147,12 @@
   }
 
   .klub-nav .nav-item span {
+    display: none;
+  }
+
+  // No room for this text once the sidebar collapses to an icon-only
+  // rail - same breakpoint the demo hides it at.
+  .side-bottom {
     display: none;
   }
 }
