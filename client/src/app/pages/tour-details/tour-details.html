@@ -308,6 +308,7 @@
         class="tour-video"
         controls
         preload="metadata"
+        crossorigin="use-credentials"
         (play)="videoStarted.set(true)"
       >
         <source [src]="videoUrl(t._id)" type="video/mp4" />
