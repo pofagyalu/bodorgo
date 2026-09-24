@@ -88,6 +88,45 @@ const tourSchema = new Schema(
       type: Number,
       min: [0, 'A szállásköltség nem lehet negatív'],
     },
+    // Which currency accommodationPricePerNight/childPricePerNight are
+    // actually quoted in - most accommodations are domestic and billed in
+    // HUF, but some foreign trips are quoted in EUR by the venue. Every
+    // downstream money figure (the advertised price, each attendee's
+    // billed amount) is still always shown/charged in HUF regardless of
+    // this - see eurHufExchangeRate and toHuf below.
+    accommodationCurrency: {
+      type: String,
+      enum: ['HUF', 'EUR'],
+      default: 'HUF',
+    },
+    // Required whenever accommodationCurrency is 'EUR' (see the validator
+    // below) - the admin's own manually-entered EUR->HUF rate as of when
+    // they configured this tour's pricing, used by toHuf to convert
+    // accommodationPricePerNight/childPricePerNight into HUF. Deliberately
+    // a fixed snapshot the admin sets once, not fetched live from an
+    // exchange-rate API - same spirit as clubSubsidyAmount being a fixed
+    // number rather than computed.
+    eurHufExchangeRate: {
+      type: Number,
+      // A plain `validate` alone would NOT catch a genuinely missing value
+      // - Mongoose only runs non-required custom validators when the path
+      // actually has a value, so "left blank while EUR is selected" needs
+      // its own conditional `required` (which Mongoose does special-case
+      // to run even against undefined) - `validate` below only covers "a
+      // value was given, but it's not usable" (zero/negative).
+      required: [
+        function () {
+          return this.accommodationCurrency === 'EUR';
+        },
+        'EUR pénznem esetén meg kell adni egy árfolyamot.',
+      ],
+      validate: {
+        validator: function (v) {
+          return v == null || v > 0;
+        },
+        message: 'Az árfolyamnak pozitív számnak kell lennie.',
+      },
+    },
     // Only meaningful when pricingMode is 'perPerson' - left unset simply
     // means every attendee is billed at the adult
     // (accommodationPricePerNight) rate regardless of age, a perfectly
@@ -396,15 +435,33 @@ tourSchema.pre('save', function (next) {
     this.accommodationPricePerNight != null &&
     (this.isModified('accommodationPricePerNight') ||
       this.isModified('maxCapacity') ||
-      this.isModified('pricingMode'))
+      this.isModified('pricingMode') ||
+      this.isModified('accommodationCurrency') ||
+      this.isModified('eurHufExchangeRate'))
   ) {
+    const nightlyRateHuf = toHuf(this, this.accommodationPricePerNight);
     this.price =
       this.pricingMode === 'perPerson'
-        ? this.accommodationPricePerNight
-        : Math.ceil(this.accommodationPricePerNight / this.maxCapacity);
+        ? nightlyRateHuf
+        : Math.ceil(nightlyRateHuf / this.maxCapacity);
   }
   next();
 });
+
+// Converts a raw accommodationPricePerNight/childPricePerNight value into
+// HUF - identity when the tour is quoted in HUF already (the common case),
+// or multiplied by the admin's own manually-entered eurHufExchangeRate
+// when it's EUR. Shared by this file's own pre('save') hook above (the
+// publicly advertised price) and reservationController.js's
+// computeAttendeePayments (real attendee billing), so both always agree on
+// the exact same converted figure - "amount" is nullable so callers can
+// pass tour.childPricePerNight straight through without a separate null
+// check (unset simply stays unset either way).
+export function toHuf(tour, amount) {
+  if (amount == null) return amount;
+  if (tour.accommodationCurrency !== 'EUR') return amount;
+  return amount * (tour.eurHufExchangeRate ?? 0);
+}
 
 // QUERY Middleware (this points to query because of 'find' hook)
 // Regular expression to hook all find methods such as findOne, findById, etc...

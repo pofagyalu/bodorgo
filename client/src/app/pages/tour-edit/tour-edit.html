@@ -61,11 +61,18 @@
     </p>
 
     <div class="form-row">
-      <label
-        >{{ form.pricingMode === 'perPerson' ? 'Felnőtt ár / fő / éjszaka (Ft)' : 'Szállás ára / éjszaka (Ft)' }}
+      <label class="currency-field"
+        >Pénznem
+        <select [(ngModel)]="form.accommodationCurrency" name="accommodationCurrency">
+          <option value="HUF">HUF</option>
+          <option value="EUR">EUR</option>
+        </select>
+      </label>
+      <label class="field-narrow"
+        >{{ form.pricingMode === 'perPerson' ? 'Felnőtt ár / fő / éjszaka' : 'Szállás ára / éjszaka' }}
         <input type="number" [(ngModel)]="form.accommodationPricePerNight" name="accommodationPricePerNight"
       /></label>
-      <label
+      <label class="field-tiny"
         >Előleg (%)
         <input
           type="number"
@@ -74,6 +81,48 @@
           min="0"
           max="100"
       /></label>
+      @if (form.pricingMode === 'perPerson') {
+      <label class="field-narrow"
+        >Gyermekár / fő / éjszaka
+        <input
+          type="number"
+          [(ngModel)]="form.childPricePerNight"
+          name="childPricePerNight"
+          placeholder="Ha üres, felnőttár"
+      /></label>
+      <label class="field-narrow"
+        >Gyermek életkorhatár (év)
+        <input type="number" [(ngModel)]="form.childAgeLimitYears" name="childAgeLimitYears" min="0" />
+      </label>
+      }
+      @if (form.accommodationCurrency === 'EUR') {
+      <label class="field-narrow"
+        >EUR/HUF árfolyam
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          [(ngModel)]="form.eurHufExchangeRate"
+          name="eurHufExchangeRate"
+          placeholder="pl. 395"
+      /></label>
+      }
+    </div>
+    @if (form.pricingMode === 'perPerson') {
+    <p class="field-note">
+      Az életkort a tábor kezdő napjára számoljuk ki, nem a mai napra - aki a tábor alatt még a korhatár alatt van,
+      gyerekárat fizet akkor is, ha közben időközben elmúlt idősebb.
+    </p>
+    }
+    @if (form.accommodationCurrency === 'EUR') {
+    <p class="field-note">
+      A megadott árfolyammal átváltva jelenik meg a tábor hirdetett ára, és ez alapján számoljuk ki forintban minden
+      résztvevő fizetendő összegét is - a résztvevők listája (Teljes ár/Előleg/Fizetendő) mindig forintban mutatja az
+      összegeket, függetlenül attól, hogy a szállást euróban árazták.
+    </p>
+    }
+
+    <div class="form-row">
       <label
         >Klub hozzájárulása (Ft)
         <input
@@ -86,27 +135,6 @@
     </div>
     @if (!subsidyAllowed) {
     <p class="field-note">A klub 2019-ben alakult, ezért korábbi táborokhoz nem rendelhető hozzájárulás.</p>
-    }
-
-    @if (form.pricingMode === 'perPerson') {
-    <div class="form-row">
-      <label
-        >Gyermekár / fő / éjszaka (Ft)
-        <input
-          type="number"
-          [(ngModel)]="form.childPricePerNight"
-          name="childPricePerNight"
-          placeholder="Ha üres, mindenki felnőttárat fizet"
-      /></label>
-      <label
-        >Gyermek életkorhatár (év, ennyi és ez alatt)
-        <input type="number" [(ngModel)]="form.childAgeLimitYears" name="childAgeLimitYears" min="0" />
-      </label>
-    </div>
-    <p class="field-note">
-      Az életkort a tábor kezdő napjára számoljuk ki, nem a mai napra - aki a tábor alatt még a korhatár alatt van,
-      gyerekárat fizet akkor is, ha közben időközben elmúlt idősebb.
-    </p>
     }
 
     <label class="form-field-full"

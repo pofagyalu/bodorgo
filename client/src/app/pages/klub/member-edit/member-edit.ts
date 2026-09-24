@@ -17,8 +17,15 @@ function emptyAddress(): AddressForm {
 // Admin-only (see the memberEditGuard on this route) - the full editable
 // record for one specific user, reached from Klub Felhasználók's
 // "Szerkesztés" action. Covers the same fields the old top-level Profil
-// page's admin table used to manage - name stays read-only here too
-// (it comes from Authentik, nobody edits it directly in this app).
+// page's admin table used to manage - name stays read-only here too when
+// editing (it comes from Authentik, nobody edits it directly in this app).
+//
+// Also doubles as the "add a new user" page (route 'felhasznalok/uj', no
+// :id - see app.routes.ts and isCreateMode below), reusing this exact same
+// form rather than a separate, smaller one - a manually pre-created person
+// (e.g. a family member with no Authentik login yet) needs the same fields
+// filled in either way, and name is the one field only editable here in
+// create mode, since there's no Authentik account yet to source it from.
 @Component({
   selector: 'app-member-edit',
   imports: [],
@@ -36,11 +43,17 @@ export class MemberEdit implements OnInit {
   readonly clubFoundingYear = 2019;
   readonly currentYear = new Date().getFullYear();
 
-  private userId = this.route.snapshot.paramMap.get('id')!;
-  loading = signal(true);
+  private userId = this.route.snapshot.paramMap.get('id');
+  isCreateMode = this.userId === null;
+
+  loading = signal(!this.isCreateMode);
   saving = signal(false);
   user = signal<AdminUser | null>(null);
 
+  // Only actually editable in create mode (see member-edit.html) - once a
+  // real person's own Authentik login exists, their name comes from there
+  // on every login, so nothing in this app lets it be typed over.
+  name = signal('');
   email = signal('');
   familyId = signal('');
   birthday = signal('');
@@ -51,10 +64,13 @@ export class MemberEdit implements OnInit {
   address = signal<AddressForm>(emptyAddress());
 
   ngOnInit() {
-    this.userService.getUser(this.userId).subscribe({
+    if (this.isCreateMode) return;
+
+    this.userService.getUser(this.userId!).subscribe({
       next: (res) => {
         const u = res.data.user;
         this.user.set(u);
+        this.name.set(u.name);
         this.email.set(u.email ?? '');
         this.familyId.set(u.familyId ?? '');
         this.birthday.set(u.birthday ? u.birthday.slice(0, 10) : '');
@@ -78,7 +94,7 @@ export class MemberEdit implements OnInit {
   }
 
   initials(): string {
-    const name = this.user()?.name ?? '';
+    const name = this.user()?.name ?? this.name();
     const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return '?';
     if (parts.length === 1) return parts[0][0].toUpperCase();
@@ -103,12 +119,61 @@ export class MemberEdit implements OnInit {
     }).format(new Date(dateStr));
   }
 
+  private handleSaveResult(res: { data: { user: AdminUser; addressResolved?: boolean | null } }, successMessage: string) {
+    this.saving.set(false);
+    if (res.data.addressResolved === false) {
+      this.notifications.addError(
+        'A cím nem található be pontosan - próbáld a hivatalos (pl. angol vagy román) városnevet is, ha külföldi cím.',
+      );
+    } else {
+      this.notifications.addSuccess(successMessage);
+    }
+  }
+
   save() {
     if (this.saving()) return;
 
+    if (this.isCreateMode) {
+      const name = this.name().trim();
+      if (!name) {
+        this.notifications.addError('A névnek nem lehet üres.');
+        return;
+      }
+
+      this.saving.set(true);
+      this.userService
+        .createUser({
+          name,
+          email: this.email().trim() || undefined,
+          familyId: this.familyId().trim() || undefined,
+          birthday: this.birthday() || undefined,
+          gender: this.gender() || undefined,
+          memberSince: this.memberSince() ? Number(this.memberSince()) : undefined,
+          role: this.role(),
+          retired: this.retired(),
+          address: this.address(),
+        })
+        .subscribe({
+          next: (res) => {
+            this.handleSaveResult(res, 'Felhasználó létrehozva');
+            // Back to the list, not this same page in edit mode - unlike
+            // tour-edit.ts's own "land in edit mode" pattern, there's
+            // nothing left here the create form doesn't already cover
+            // (role/retired/address included), so there's no reason to
+            // keep the admin on this page after a successful save.
+            this.back();
+          },
+          error: (err) => {
+            this.notifications.addError(err?.error?.message ?? 'Hiba történt a létrehozás során.');
+            this.saving.set(false);
+          },
+        });
+      return;
+    }
+
     this.saving.set(true);
     this.userService
-      .updateUser(this.userId, {
+      .updateUser(this.userId!, {
         email: this.email().trim(),
         familyId: this.familyId().trim(),
         birthday: this.birthday(),
@@ -121,14 +186,7 @@ export class MemberEdit implements OnInit {
       .subscribe({
         next: (res) => {
           this.user.set(res.data.user);
-          this.saving.set(false);
-          if (res.data.addressResolved === false) {
-            this.notifications.addError(
-              'A cím nem található be pontosan - próbáld a hivatalos (pl. angol vagy román) városnevet is, ha külföldi cím.',
-            );
-          } else {
-            this.notifications.addSuccess('Felhasználó mentve');
-          }
+          this.handleSaveResult(res, 'Felhasználó mentve');
         },
         error: (err) => {
           this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');

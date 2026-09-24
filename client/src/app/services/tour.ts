@@ -159,6 +159,15 @@ export interface Tour {
   // discount - see tourModel.js's own fields for the full reasoning.
   pricingMode?: 'perHouse' | 'perPerson';
   accommodationPricePerNight?: number;
+  // Which currency accommodationPricePerNight/childPricePerNight are
+  // quoted in - defaults to 'HUF' server-side. Everything actually shown
+  // to a non-admin (the advertised price, each attendee's billed amount)
+  // is still always converted to and shown in HUF (see tourModel.js's
+  // toHuf) - this only matters for the admin edit form itself.
+  accommodationCurrency?: 'HUF' | 'EUR';
+  // Only meaningful when accommodationCurrency is 'EUR' - the admin's own
+  // manually-entered EUR->HUF rate used for that conversion.
+  eurHufExchangeRate?: number;
   childPricePerNight?: number;
   childAgeLimitYears?: number;
   advancePaymentPercentage?: number;
@@ -293,6 +302,8 @@ export interface TourPayload {
   imageCover?: string;
   pricingMode?: 'perHouse' | 'perPerson';
   accommodationPricePerNight?: number;
+  accommodationCurrency?: 'HUF' | 'EUR';
+  eurHufExchangeRate?: number;
   childPricePerNight?: number;
   childAgeLimitYears?: number;
   advancePaymentPercentage?: number;

@@ -27,6 +27,16 @@
       Egyéb felhasználók
       <span class="tab-count">{{ casualUsers().length }}</span>
     </button>
+    @if (isAdmin()) {
+    <a
+      [routerLink]="['/klub/felhasznalok', 'uj']"
+      class="icon-btn icon-btn--add"
+      title="Új felhasználó hozzáadása"
+      aria-label="Új felhasználó hozzáadása"
+    >
+      <mat-icon>add</mat-icon>
+    </a>
+    }
   </div>
 
   @if (activeTab() === 'club') {

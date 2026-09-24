@@ -1,4 +1,4 @@
-import Tour from '../models/tourModel.js';
+import Tour, { toHuf } from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import AppError from '../utils/appError.js';
@@ -263,7 +263,11 @@ export function computeAttendeePayments(tour, reservations) {
     })),
   );
 
-  const nightlyRate = tour.accommodationPricePerNight;
+  // Converted to HUF up front (see tourModel.js's toHuf) - everything
+  // below operates on these already-HUF figures, so a tour quoted in EUR
+  // needs no further special-casing anywhere else in this function.
+  const nightlyRate = toHuf(tour, tour.accommodationPricePerNight);
+  const childPricePerNight = toHuf(tour, tour.childPricePerNight);
   const advancePct = tour.advancePaymentPercentage;
   const pricingConfigured = nightlyRate != null && advancePct != null;
 
@@ -314,7 +318,7 @@ export function computeAttendeePayments(tour, reservations) {
     if (!perPerson) return pricePerPersonNight;
     const age = computeAge(row.birthday, tour.startDate);
     const isChild = age != null && tour.childAgeLimitYears != null && age <= tour.childAgeLimitYears;
-    return isChild && tour.childPricePerNight != null ? tour.childPricePerNight : nightlyRate;
+    return isChild && childPricePerNight != null ? childPricePerNight : nightlyRate;
   }
 
   // The director's lump-sum contribution is split equally across

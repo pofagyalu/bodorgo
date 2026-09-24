@@ -127,6 +127,12 @@ export interface CreateUserPayload {
   birthday?: string;
   gender?: string;
   memberSince?: number | null;
+  // Same as UpdateUserPayload's own fields below - member-edit.ts/html
+  // uses one identical form for creating a brand new person and editing an
+  // existing one, so creation accepts everything editing does too.
+  address?: UserAddress;
+  role?: string;
+  retired?: boolean;
 }
 
 export interface UpdateUserPayload {

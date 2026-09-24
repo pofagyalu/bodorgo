@@ -30,6 +30,13 @@ interface TourEditForm {
   // tourModel.js's own fields for the full reasoning.
   pricingMode: 'perHouse' | 'perPerson';
   accommodationPricePerNight: number | null;
+  // Most accommodations are domestic HUF, but a foreign trip is sometimes
+  // quoted in EUR by the venue - eurHufExchangeRate (the admin's own
+  // manually-entered rate as of today) converts it, so the advertised
+  // price and every attendee's billed amount still always end up in HUF
+  // (see tourModel.js's toHuf). Only shown/required when this is 'EUR'.
+  accommodationCurrency: 'HUF' | 'EUR';
+  eurHufExchangeRate: number | null;
   childPricePerNight: number | null;
   childAgeLimitYears: number | null;
   advancePaymentPercentage: number | null;
@@ -55,6 +62,8 @@ function emptyForm(): TourEditForm {
     imageCover: '',
     pricingMode: 'perHouse',
     accommodationPricePerNight: null,
+    accommodationCurrency: 'HUF',
+    eurHufExchangeRate: null,
     childPricePerNight: null,
     childAgeLimitYears: null,
     advancePaymentPercentage: null,
@@ -156,6 +165,8 @@ export class TourEdit implements OnInit, OnDestroy {
           imageCover: t.imageCover ?? '',
           pricingMode: t.pricingMode ?? 'perHouse',
           accommodationPricePerNight: t.accommodationPricePerNight ?? null,
+          accommodationCurrency: t.accommodationCurrency ?? 'HUF',
+          eurHufExchangeRate: t.eurHufExchangeRate ?? null,
           childPricePerNight: t.childPricePerNight ?? null,
           childAgeLimitYears: t.childAgeLimitYears ?? null,
           advancePaymentPercentage: t.advancePaymentPercentage ?? null,
@@ -266,6 +277,13 @@ export class TourEdit implements OnInit, OnDestroy {
       imageCover: uploadedCoverFilename,
       pricingMode: f.pricingMode,
       accommodationPricePerNight: f.accommodationPricePerNight ?? undefined,
+      accommodationCurrency: f.accommodationCurrency,
+      // Only meaningful (and only shown/editable) while accommodationCurrency
+      // is 'EUR' - omitted rather than cleared while it's 'HUF', so a rate
+      // entered earlier survives toggling the currency back and forth
+      // instead of having to be retyped, same reasoning as childPricePerNight
+      // surviving a pricingMode toggle below.
+      eurHufExchangeRate: f.accommodationCurrency === 'EUR' ? f.eurHufExchangeRate ?? undefined : undefined,
       // Only meaningful (and only shown/editable) in perPerson mode -
       // simply omitted while in perHouse mode rather than cleared, so a
       // value entered earlier survives toggling the mode back and forth

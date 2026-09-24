@@ -58,10 +58,25 @@ button {
 
 .people-tabs {
   display: flex;
+  align-items: center;
   gap: 7px;
   border-bottom: 1px solid #dde8e3;
   margin: 0 0 22px;
   overflow-x: auto;
+}
+
+// A plain <a>, not a <button> - the .people-tabs button rule below never
+// touches it, so it keeps .icon-btn's own compact round look instead of
+// picking up the tab styling. Pushed to the row's far end (margin-left:
+// auto) rather than sitting right next to the tabs.
+.people-tabs .icon-btn--add {
+  margin-left: auto;
+  background: #1a796c;
+  color: #fff;
+
+  &:hover {
+    background: #16675d;
+  }
 }
 
 .people-tabs button {

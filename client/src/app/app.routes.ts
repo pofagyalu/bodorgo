@@ -86,6 +86,15 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/klub/members/members').then((m) => m.Members),
       },
       {
+        // Registered before felhasznalok/:id below - the router matches
+        // routes in array order, so this literal path has to come first or
+        // felhasznalok/:id would swallow it, treating "uj" as an id.
+        path: 'felhasznalok/uj',
+        title: 'Új felhasználó',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/klub/member-edit/member-edit').then((m) => m.MemberEdit),
+      },
+      {
         path: 'felhasznalok/:id',
         title: 'Tag szerkesztése',
         canActivate: [adminGuard],

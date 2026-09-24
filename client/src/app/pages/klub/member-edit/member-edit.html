@@ -2,7 +2,7 @@
   <div class="heading">
     <div>
       <div class="kicker">Klub · Felhasználók</div>
-      <h1>Tag szerkesztése.</h1>
+      <h1>{{ isCreateMode ? 'Új felhasználó.' : 'Tag szerkesztése.' }}</h1>
       <p>Csak admin láthatja és módosíthatja ezt az oldalt.</p>
     </div>
     <button type="button" class="outline-btn" (click)="back()">← Vissza a listához</button>
@@ -10,7 +10,8 @@
 
   @if (loading()) {
   <p class="empty-note">Betöltés...</p>
-  } @else if (user(); as u) {
+  } @else {
+  @if (user(); as u) {
   <div class="profile-banner">
     <div class="profile-avatar">{{ initials() }}</div>
     <div>
@@ -21,16 +22,25 @@
       </p>
     </div>
   </div>
+  }
 
   <div class="profile-layout">
     <section class="panel">
       <h2>Személyes adatok</h2>
-      <p class="subtext">A név az Authentik fiókból származik, itt nem módosítható.</p>
+      <p class="subtext">
+        @if (isCreateMode) { A név itt kerül rögzítésre - amint ez a személy először bejelentkezik az Authentik
+        fiókjával, a neve onnantól már azzal szinkronizálódik. } @else { A név az Authentik fiókból származik, itt nem
+        módosítható. }
+      </p>
 
       <div class="profile-fields">
         <div class="field">
           <label for="mName">Név</label>
-          <input id="mName" type="text" [value]="u.name" disabled />
+          @if (isCreateMode) {
+          <input id="mName" type="text" [value]="name()" (input)="name.set($any($event.target).value)" />
+          } @else {
+          <input id="mName" type="text" [value]="name()" disabled />
+          }
         </div>
 
         <div class="field">
@@ -165,11 +175,12 @@
 
       <div class="actions-row">
         <button type="button" class="primary-btn" [disabled]="saving()" (click)="save()">
-          {{ saving() ? 'Mentés...' : 'Mentés' }}
+          {{ isCreateMode ? (saving() ? 'Létrehozás...' : 'Létrehozás') : (saving() ? 'Mentés...' : 'Mentés') }}
         </button>
       </div>
     </section>
 
+    @if (user(); as u) {
     <div class="profile-side">
       <section class="panel">
         <h2>Áttekintés</h2>
@@ -191,6 +202,7 @@
         </div>
       </section>
     </div>
+    }
   </div>
   }
 </div>

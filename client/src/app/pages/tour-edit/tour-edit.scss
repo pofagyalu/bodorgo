@@ -47,10 +47,40 @@
 
 .form-row {
   display: flex;
+  // The accommodation-pricing row can hold up to 5 narrow fields at once
+  // (price/currency/advance, plus child price/age limit in perPerson mode)
+  // - wraps onto a second line on a narrower window instead of squeezing
+  // everything or overflowing, well before the mobile breakpoint below
+  // switches to a single column.
+  flex-wrap: wrap;
   gap: 1rem;
 
   label {
     flex: 1 1 0;
+  }
+
+  // A currency select never needs as much room as a price/percentage
+  // input next to it (see tour-edit.html's accommodationCurrency field) -
+  // sized to its content instead of stretching to an equal share of the row.
+  .currency-field {
+    flex: 0 0 auto;
+    min-width: 90px;
+  }
+
+  // Short numeric fields (a price, a percentage, an age) don't need to
+  // stretch to an equal share of the row either - narrow and left-aligned
+  // reads better than a wide input holding a 2-3 digit number. The label
+  // text itself is free to wrap onto two lines above it (see
+  // tour-edit.html's Felnőtt ár/Gyermekár/Gyermek életkorhatár/árfolyam
+  // fields) rather than forcing the field wider to fit it on one line.
+  .field-narrow {
+    flex: 0 0 140px;
+  }
+
+  // Előleg (%)'s own label/value are shorter still than field-narrow's
+  // other fields - 140px left it looking nearly twice as wide as it needed.
+  .field-tiny {
+    flex: 0 0 90px;
   }
 }
 

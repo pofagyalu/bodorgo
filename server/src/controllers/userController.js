@@ -316,10 +316,23 @@ function parseMemberSince(value) {
   return year;
 }
 
+const VALID_ROLES = ['admin', 'member', 'guest'];
+
+// Same field set as updateUser below (role/retired/address included) -
+// member-edit.ts/html uses one identical form for both creating a brand
+// new person and editing an existing one, so this accepts everything that
+// form can send, not just the original bare-minimum (name/email/familyId/
+// birthday/gender/memberSince). User.create() runs the same pre('save')
+// hooks a plain .save() would (address geocoding included), since it's
+// just `new User(doc).save()` under the hood - so a new user's address
+// resolves exactly the same way an edited one's does.
 export const createUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, memberSince } = req.body;
+  const { name, email, familyId, birthday, gender, memberSince, role, retired, address } = req.body;
   if (!name) {
     throw new AppError('A névnek nem lehet üres.', 400);
+  }
+  if (role !== undefined && !VALID_ROLES.includes(role)) {
+    throw new AppError('Érvénytelen szerepkör.', 400);
   }
 
   const user = await User.create({
@@ -329,15 +342,19 @@ export const createUser = async (req, res) => {
     birthday: birthday || undefined,
     gender: gender || undefined,
     memberSince: parseMemberSince(memberSince) || undefined,
+    role: role || undefined,
+    retired: !!retired,
+    address: address || undefined,
   });
 
   res.status(201).json({
     status: 'success',
-    data: { user: { ...user.toObject(), age: computeAge(user.birthday) } },
+    data: {
+      user: { ...user.toObject(), age: computeAge(user.birthday) },
+      addressResolved: user.address?.city ? !!user.location : null,
+    },
   });
 };
-
-const VALID_ROLES = ['admin', 'member', 'guest'];
 
 // Admin-only - edits name/email/familyId/address by hand. familyId as an
 // empty string explicitly removes the user from their family (rather than
