@@ -88,6 +88,11 @@ export class TourDetails implements OnDestroy {
   // tourController.js's getTour) - the actual file path never reaches the
   // client, just this boolean plus the requireAuth-gated stream URL below.
   hasVideo = signal(false);
+  // Drives the custom click-to-play overlay (see tour-details.html) -
+  // starts false on every fresh tour load and flips permanently true the
+  // first time the <video>'s own 'play' event fires, whether that's from
+  // clicking the overlay or the native controls once it's visible.
+  videoStarted = signal(false);
   loadError = signal<string | null>(null);
   signingUp = signal(false);
   signUpError = signal<string | null>(null);

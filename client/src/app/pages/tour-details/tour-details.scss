@@ -286,12 +286,54 @@
   margin-bottom: 3rem;
 }
 
+// Capped at roughly half this page's own content width/height, rather than
+// the previous full-width/70vh sizing that dwarfed everything else on the
+// page - position:relative so .video-overlay below can cover it exactly.
+.video-wrap {
+  position: relative;
+  max-width: 650px;
+}
+
 .tour-video {
   display: block;
   width: 100%;
-  max-height: 70vh;
+  max-height: 35vh;
   border-radius: 10px;
   background: #000;
+}
+
+// Stands in for a static poster image until playback actually starts (see
+// tour-details.ts's videoStarted) - a dark scrim plus a big, bold, partly
+// see-through play icon, closer to a "tap to watch" prompt than a plain
+// photo.
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 10px;
+  background: rgba(10, 20, 15, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+
+.video-overlay-icon {
+  font-size: 5rem;
+  width: 5rem;
+  height: 5rem;
+  opacity: 0.55;
+}
+
+.video-overlay-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 .empty-note {
