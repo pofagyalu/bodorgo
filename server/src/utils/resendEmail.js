@@ -14,7 +14,7 @@ function getClient() {
 }
 
 /**
- * @param {{to: string, subject: string, html: string, text?: string, attachments?: {filename: string, content: Buffer}[]}} options
+ * @param {{to: string | string[], subject: string, html: string, text?: string, attachments?: {filename: string, content: Buffer}[]}} options
  */
 const sendResendEmail = async ({ to, subject, html, text, attachments }) => {
   const { data, error } = await getClient().emails.send({

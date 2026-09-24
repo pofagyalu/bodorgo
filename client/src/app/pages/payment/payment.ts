@@ -10,7 +10,7 @@ import { formatForint } from '../../shared/format';
 // reaching Barion's page; the server never trusts this figure, it computes
 // the real charge itself the same way (see paymentController.js's
 // chargeableAmount).
-const BARION_FEE_RATE = 0.015;
+const BARION_FEE_RATE = 0.016;
 
 // Advance-payment page for one family (or a lone attendee with no family
 // on record) at a time - reached via the tour-details page's "Előleg
@@ -136,7 +136,7 @@ export class Payment {
       .reduce((sum, p) => sum + (p.advance ?? 0), 0);
   });
 
-  // What Barion will actually charge once its own ~1.5% fee is added on
+  // What Barion will actually charge once its own ~1.6% fee is added on
   // top - rounded the same way the server rounds it (chargeableAmount), so
   // this matches exactly rather than drifting a forint off.
   grandTotalToPay = computed(() => Math.round(this.totalToPay() * (1 + BARION_FEE_RATE)));

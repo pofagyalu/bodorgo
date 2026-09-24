@@ -18,6 +18,21 @@ export interface PaymentStatusResponse {
   data: { status: PaymentStatus; amount: number };
 }
 
+// Money collected via Barion sits in one of two separate wallets (see
+// server/src/config.js's barion.membership/.tour) - one per purpose,
+// matching Payment.purpose itself.
+export type WithdrawalPurpose = 'membershipFee' | 'tourAdvance';
+
+export interface WithdrawalStatusResponse {
+  status: string;
+  data: { configured: boolean };
+}
+
+export interface WithdrawResponse {
+  status: string;
+  data: { fee: number; net: number };
+}
+
 // This app has (at least) two things a payment can be for - a tour's
 // advance (implemented) and a club member's yearly membership fee
 // (implemented) - see paymentModel.js's own comment. Both go through the
@@ -88,5 +103,22 @@ export class PaymentService {
   // other requireAuth-gated downloads.
   receiptUrl(paymentId: string): string {
     return `${this.apiUrl}/${paymentId}/receipt`;
+  }
+
+  // Admin-only. Whether this wallet's WALLET_KEY/WITHDRAW_NAME/
+  // WITHDRAW_IBAN are all actually set server-side yet (see config.js) -
+  // drives the finance page's withdraw button being disabled ("inactive")
+  // until a real, live Barion wallet exists for that purpose.
+  getWithdrawalStatus(purpose: WithdrawalPurpose): Observable<WithdrawalStatusResponse> {
+    return this.http.get<WithdrawalStatusResponse>(`${this.apiUrl}/withdraw/${purpose}`);
+  }
+
+  // Admin-only - pulls real money out of the given wallet into its own
+  // fixed, preconfigured bank account (never a client-supplied one, see
+  // paymentController.js's withdrawFunds). Barion's own ~0.1%/min 70 Ft fee
+  // is deducted on their end; the response's fee/net are just for display,
+  // not something this call can influence.
+  withdraw(purpose: WithdrawalPurpose, amount: number): Observable<WithdrawResponse> {
+    return this.http.post<WithdrawResponse>(`${this.apiUrl}/withdraw`, { purpose, amount });
   }
 }

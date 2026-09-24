@@ -7,6 +7,8 @@ import {
   getPaymentStatus,
   downloadReceipt,
   barionCallback,
+  getWithdrawalStatus,
+  withdrawFunds,
 } from '../controllers/paymentController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
@@ -24,6 +26,8 @@ router.post('/membership/start', requireAuth, startMembershipPayment);
 // no special raw-body handling since there's no payload to verify.
 router.get('/barion/callback', barionCallback);
 router.post('/cash', requireAuth, restrictTo('admin'), recordCashPayment);
+router.get('/withdraw/:purpose', requireAuth, restrictTo('admin'), getWithdrawalStatus);
+router.post('/withdraw', requireAuth, restrictTo('admin'), withdrawFunds);
 router.delete('/:id', requireAuth, restrictTo('admin'), deleteCashPayment);
 router.get('/:id/status', requireAuth, getPaymentStatus);
 router.get('/:id/receipt', requireAuth, downloadReceipt);

@@ -51,10 +51,33 @@ const config = {
   // + a live POSKey. posKey/payeeEmail come from the Shop admin page on
   // a Barion account that's a real registered Shop, not a personal wallet
   // - a personal account has no POSKey at all.
+  // membership/tour below split where each purpose's money actually lands
+  // - one shop (the single posKey above) can still route a given
+  // transaction to any wallet just by naming a different Payee email (see
+  // utils/barion.js's own comment on createBarionPayment), so this doesn't
+  // need a second Shop/POSKey, just a second wallet. Each purpose's own
+  // walletKey/withdrawName/withdrawIban are ONLY used by the admin-
+  // triggered withdrawal feature (paymentController.js's withdrawFunds) -
+  // a wallet's own API key (from that wallet's own dashboard, NOT the
+  // shop's posKey above), needed to pull money out of it via Barion's
+  // /v3/Withdraw/BankTransfer. Falls back to the single legacy
+  // BARION_PAYEE_EMAIL for payeeEmail so existing payments keep working
+  // unchanged until a dedicated second wallet is actually configured.
   barion: {
     posKey: process.env.BARION_POS_KEY,
-    payeeEmail: process.env.BARION_PAYEE_EMAIL,
     baseUrl: process.env.BARION_ENV === 'production' ? 'https://api.barion.com' : 'https://api.test.barion.com',
+    membership: {
+      payeeEmail: process.env.BARION_MEMBERSHIP_PAYEE_EMAIL || process.env.BARION_PAYEE_EMAIL,
+      walletKey: process.env.BARION_MEMBERSHIP_WALLET_KEY,
+      withdrawName: process.env.BARION_MEMBERSHIP_WITHDRAW_NAME,
+      withdrawIban: process.env.BARION_MEMBERSHIP_WITHDRAW_IBAN,
+    },
+    tour: {
+      payeeEmail: process.env.BARION_TOUR_PAYEE_EMAIL || process.env.BARION_PAYEE_EMAIL,
+      walletKey: process.env.BARION_TOUR_WALLET_KEY,
+      withdrawName: process.env.BARION_TOUR_WITHDRAW_NAME,
+      withdrawIban: process.env.BARION_TOUR_WITHDRAW_IBAN,
+    },
   },
   // This server's own public base URL - needed because Barion (unlike
   // Stripe) has no dashboard-configured webhook; every single payment-

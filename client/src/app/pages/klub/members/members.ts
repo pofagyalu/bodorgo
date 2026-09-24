@@ -22,7 +22,7 @@ const CLUB_FOUNDING_YEAR = 2019;
 // actually be charged before they ever reach Barion's page; the server
 // never trusts this figure, it computes the real charge itself the same
 // way (see paymentController.js's chargeableAmount).
-const BARION_FEE_RATE = 0.015;
+const BARION_FEE_RATE = 0.016;
 
 @Component({
   selector: 'app-members',
@@ -161,7 +161,7 @@ export class Members implements OnInit {
     () => this.payBreakdown().filter((row) => this.selectedPayIds().has(row.id)).length * 1000,
   );
 
-  // What Barion will actually charge, once its own ~1.5% fee is added on
+  // What Barion will actually charge, once its own ~1.6% fee is added on
   // top (see BARION_FEE_RATE above) - rounded the same way the server
   // rounds it, so this matches exactly rather than drifting a forint off.
   selectedPayGrandTotal = computed(() => Math.round(this.selectedPayTotal() * (1 + BARION_FEE_RATE)));

@@ -1,12 +1,12 @@
 import config from '../config.js';
 
-// Barion keeps ~1.5% of every card payment as its own processing fee -
+// Barion keeps ~1.6% of every card payment as its own processing fee -
 // unlike Stripe (whose fee just comes out of what the club receives,
 // absorbed silently), this is passed on to the payer here, surfaced
 // up-front before they ever reach Barion's page (see paymentController.js's
 // startMembershipPayment/startPayment, and members.ts/payment.ts's own
 // mirrored client-side constant for the confirmation screens).
-export const BARION_FEE_RATE = 0.015;
+export const BARION_FEE_RATE = 0.016;
 
 function startUrl() {
   return `${config.barion.baseUrl}/v2/Payment/Start`;
@@ -29,7 +29,13 @@ function stateUrl(paymentId) {
 // Barion redirects to the same RedirectUrl regardless of outcome, with
 // the actual result only ever confirmed via getBarionPaymentState below,
 // same as Stripe's own retrieveCheckoutSession reconciliation.
-export async function createBarionPayment({ referenceId, amount, payerEmail, successUrl, description }) {
+//
+// payeeEmail is which wallet actually receives this transaction's money -
+// the shop (config.barion.posKey) stays the same either way, but
+// paymentController.js passes a different wallet email depending on
+// purpose (config.barion.membership.payeeEmail vs .tour.payeeEmail), so
+// dues and advances land in two separate Barion accounts.
+export async function createBarionPayment({ referenceId, amount, payerEmail, successUrl, description, payeeEmail }) {
   const callbackUrl = `${config.apiBaseUrl.replace(/\/$/, '')}/payments/barion/callback`;
 
   const res = await fetch(startUrl(), {
@@ -49,7 +55,7 @@ export async function createBarionPayment({ referenceId, amount, payerEmail, suc
       Transactions: [
         {
           POSTransactionId: referenceId,
-          Payee: config.barion.payeeEmail,
+          Payee: payeeEmail,
           Total: amount,
           Comment: description,
           // Barion requires at least one line item per transaction (a
@@ -92,4 +98,35 @@ export async function getBarionPaymentState(paymentId) {
     throw new Error(`Barion GetPaymentState failed: HTTP ${res.status}`);
   }
   return res.json();
+}
+
+// Wallet-level API, authenticated completely differently from
+// createBarionPayment above - via the wallet's OWN API key in an
+// x-api-key header, not the shop's POSKey in the request body. Used only
+// by the admin-triggered withdrawal feature (paymentController.js's
+// withdrawFunds) to pull real money out of one of the two wallets
+// (config.barion.membership/.tour) into its own fixed, preconfigured bank
+// account - never for accepting payments. HUF-only and domestic
+// (Country: 'HU') since that's this club's only real use case; revisit if
+// that ever changes.
+export async function createBarionWithdrawal({ walletKey, amount, recipientName, iban }) {
+  const res = await fetch(`${config.barion.baseUrl}/v3/Withdraw/BankTransfer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': walletKey },
+    body: JSON.stringify({
+      Amount: amount,
+      Currency: 'HUF',
+      Recipient: { Name: recipientName },
+      BankAccount: { Format: 'IBAN', AccountNumber: iban, Country: 'HU' },
+      Comment: 'Bodorgo Klub kiutalas',
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || (data.Errors && data.Errors.length > 0)) {
+    const message = data.Errors?.map((e) => e.Description || e.Title).join('; ') || `HTTP ${res.status}`;
+    throw new Error(`Barion withdrawal failed: ${message}`);
+  }
+
+  return data;
 }

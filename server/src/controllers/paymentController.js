@@ -7,7 +7,7 @@ import User from '../models/userModel.js';
 import Transaction from '../models/transactionModel.js';
 import { computeAttendeePayments } from './reservationController.js';
 import { createCheckoutSession, retrieveCheckoutSession, constructWebhookEvent } from '../utils/stripe.js';
-import { createBarionPayment, getBarionPaymentState, BARION_FEE_RATE } from '../utils/barion.js';
+import { createBarionPayment, getBarionPaymentState, createBarionWithdrawal, BARION_FEE_RATE } from '../utils/barion.js';
 import { generateReceiptPdf, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import AppError from '../utils/appError.js';
@@ -146,14 +146,14 @@ async function resolvePayableMembers(items, user) {
 // don't each duplicate the branch. Both gateways return an object with
 // .id/.url either way (see utils/barion.js's own comment on why that
 // shape was chosen to mirror Stripe's Checkout Session exactly).
-function startGatewayPayment(method, { referenceId, amount, payerEmail, successUrl, description }) {
+function startGatewayPayment(method, { referenceId, amount, payerEmail, successUrl, description, payeeEmail }) {
   if (method === 'barion') {
-    return createBarionPayment({ referenceId, amount, payerEmail, successUrl, description });
+    return createBarionPayment({ referenceId, amount, payerEmail, successUrl, description, payeeEmail });
   }
   return createCheckoutSession({ referenceId, amount, payerEmail, successUrl, cancelUrl: successUrl, description });
 }
 
-// Barion's own ~1.5% cut (see utils/barion.js's BARION_FEE_RATE) is passed
+// Barion's own ~1.6% cut (see utils/barion.js's BARION_FEE_RATE) is passed
 // on to the payer rather than absorbed by the club - this is what actually
 // gets charged and stored as Payment.amount, while each covered
 // attendee/member still keeps their own real, un-surcharged amount (see
@@ -210,6 +210,7 @@ export const startMembershipPayment = async (req, res) => {
       payerEmail: req.user.email,
       successUrl: returnUrl,
       description: `Tagdíj - ${payable.map((p) => `${p.name} (${p.year})`).join(', ')}`,
+      payeeEmail: config.barion.membership.payeeEmail,
     });
   } catch (err) {
     payment.status = 'Failed';
@@ -277,6 +278,7 @@ export const startPayment = async (req, res) => {
       payerEmail: req.user.email,
       successUrl: returnUrl,
       description: `${tour.title} - előleg (${payable.map((p) => p.name).join(', ')})`,
+      payeeEmail: config.barion.tour.payeeEmail,
     });
   } catch (err) {
     payment.status = 'Failed';
@@ -323,6 +325,15 @@ export const recordCashPayment = async (req, res) => {
   });
   await markAttendeesPaid(payment);
 
+  // Same "collection just completed" notification as the online-payment
+  // path (markPaymentSucceeded) - a cash handover recorded by an admin can
+  // just as easily be the last outstanding one for this tour.
+  try {
+    await notifyAdminsIfTourFullyPaid(String(tour._id), tour.title);
+  } catch (err) {
+    logger.error(`Payment ${payment._id}: admin full-payment notification failed: ${err.message}`);
+  }
+
   res.status(201).json({ status: 'success', data: { payment } });
 };
 
@@ -361,12 +372,12 @@ function formatForint(amount) {
 // A short, warm (not overly formal) confirmation - "Bódorgó" itself is
 // named after wandering/rambling around, hence the sign-off.
 // feeAmount is the gap between the attendees' own advances and what was
-// actually charged (Barion's ~1.5% cut, passed on to the payer - see
+// actually charged (Barion's ~1.6% cut, passed on to the payer - see
 // chargeableAmount above) - 0 for a Stripe payment, so the line is skipped
 // entirely and the total just matches the rows as before.
 function receiptEmailBody(payerName, tourTitle, attendees, total, feeAmount = 0) {
   const lines = attendees.map((a) => `- ${a.name}: ${formatForint(a.amount)} Ft`).join('\n');
-  const feeLine = feeAmount > 0 ? `\nBarion díj (1,5%): ${formatForint(feeAmount)} Ft` : '';
+  const feeLine = feeAmount > 0 ? `\nBarion díj (1,6%): ${formatForint(feeAmount)} Ft` : '';
   const text = `Kedves ${payerName}!
 
 Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${tourTitle}" táborhoz:
@@ -381,7 +392,7 @@ Jó bódorgást! 🏕️
 A Bódorgó csapata`;
 
   const linesHtml = attendees.map((a) => `<li>${a.name}: ${formatForint(a.amount)} Ft</li>`).join('');
-  const feeLineHtml = feeAmount > 0 ? `<li>Barion díj (1,5%): ${formatForint(feeAmount)} Ft</li>` : '';
+  const feeLineHtml = feeAmount > 0 ? `<li>Barion díj (1,6%): ${formatForint(feeAmount)} Ft</li>` : '';
   const html = `<p>Kedves ${payerName}!</p>
 <p>Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${tourTitle}" táborhoz:</p>
 <ul>${linesHtml}${feeLineHtml}</ul>
@@ -398,7 +409,7 @@ A Bódorgó csapata`;
 // different people.
 function membershipReceiptEmailBody(payerName, members, total, feeAmount = 0) {
   const lines = members.map((m) => `- ${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft`).join('\n');
-  const feeLine = feeAmount > 0 ? `\nBarion díj (1,5%): ${formatForint(feeAmount)} Ft` : '';
+  const feeLine = feeAmount > 0 ? `\nBarion díj (1,6%): ${formatForint(feeAmount)} Ft` : '';
   const text = `Kedves ${payerName}!
 
 Köszönjük a klubtagsági díj befizetését:
@@ -412,7 +423,7 @@ A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.
 Jó bódorgást! 🏕️
 A Bódorgó csapata`;
 
-  const feeLineHtml = feeAmount > 0 ? `<li>Barion díj (1,5%): ${formatForint(feeAmount)} Ft</li>` : '';
+  const feeLineHtml = feeAmount > 0 ? `<li>Barion díj (1,6%): ${formatForint(feeAmount)} Ft</li>` : '';
   const linesHtml = members
     .map((m) => `<li>${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft</li>`)
     .join('');
@@ -437,6 +448,66 @@ async function markAttendeesPaid(payment) {
       { $set: { 'attendees.$.paid': true } },
     );
   }
+}
+
+// Fires once collection for the current year genuinely completes - every
+// role admin/member user eligible for it (memberSince at or before this
+// year, same rule resolvePayableMembers itself uses) has a real Tagdíj
+// Transaction for it. Only ever true right after whichever payment happens
+// to be the last outstanding one, since resolvePayableMembers would refuse
+// to charge anyone again once they're already paid - so this naturally
+// notifies exactly once per year, no separate dedup bookkeeping needed.
+async function notifyAdminsIfMembershipFullyPaid() {
+  const currentYear = new Date().getFullYear();
+  const members = await User.find({ role: { $in: ['admin', 'member'] } }).select('memberSince');
+  const eligible = members.filter((m) => (m.memberSince ?? CLUB_FOUNDING_YEAR) <= currentYear);
+  if (eligible.length === 0) return;
+
+  const paidTransactions = await Transaction.find({
+    type: 'income',
+    category: 'Tagdíj',
+    membershipYear: currentYear,
+    user: { $in: eligible.map((m) => m._id) },
+  }).select('user');
+  const paidUserIds = new Set(paidTransactions.map((t) => String(t.user)));
+  const allPaid = eligible.every((m) => paidUserIds.has(String(m._id)));
+  if (!allPaid) return;
+
+  const admins = await User.find({ role: 'admin' }).select('email');
+  const adminEmails = admins.map((a) => a.email).filter(Boolean);
+  if (adminEmails.length === 0) return;
+
+  await sendResendEmail({
+    to: adminEmails,
+    subject: `Minden klubtag befizette a(z) ${currentYear}. évi tagdíjat`,
+    text: `Minden klubtag (${eligible.length} fő) befizette a(z) ${currentYear}. évi tagdíjat.`,
+    html: `<p>Minden klubtag (${eligible.length} fő) befizette a(z) <strong>${currentYear}</strong>. évi tagdíjat.</p>`,
+  });
+}
+
+// Tour-advance equivalent of notifyAdminsIfMembershipFullyPaid above - a
+// tour's own collection completes once every attendee who actually owes an
+// advance (same "advance != null && !paid" rule payment.ts itself filters
+// on client-side) has paid it. feeExempt attendees are always paid:true
+// with advance:0 already (see computeAttendeePayments), so they never
+// count as still owing.
+async function notifyAdminsIfTourFullyPaid(tourId, tourTitle) {
+  const { attendeePayments } = await loadAttendeePayments(tourId);
+  if (attendeePayments.length === 0) return;
+
+  const stillOwing = attendeePayments.some((p) => p.advance != null && !p.paid);
+  if (stillOwing) return;
+
+  const admins = await User.find({ role: 'admin' }).select('email');
+  const adminEmails = admins.map((a) => a.email).filter(Boolean);
+  if (adminEmails.length === 0) return;
+
+  await sendResendEmail({
+    to: adminEmails,
+    subject: `Mindenki befizette az előleget - ${tourTitle}`,
+    text: `A(z) "${tourTitle}" táborhoz mindenki (${attendeePayments.length} fő) befizette az előleget.`,
+    html: `<p>A(z) <strong>${tourTitle}</strong> táborhoz mindenki (${attendeePayments.length} fő) befizette az előleget.</p>`,
+  });
 }
 
 // membershipFee's own "money received" effect - one real Transaction per
@@ -483,6 +554,15 @@ async function markMembershipPaid(payment) {
     });
   } catch (err) {
     logger.error(`Payment ${payment._id}: membership receipt/email failed after a successful payment: ${err.message}`);
+  }
+
+  // Separate try/catch from the payer's own receipt above - one failing
+  // (e.g. Resend briefly down) shouldn't skip the other, and this check
+  // needs to run regardless of whether the payer even has an email on file.
+  try {
+    await notifyAdminsIfMembershipFullyPaid();
+  } catch (err) {
+    logger.error(`Payment ${payment._id}: admin full-payment notification failed: ${err.message}`);
   }
 }
 
@@ -531,6 +611,15 @@ async function markPaymentSucceeded(payment) {
     });
   } catch (err) {
     logger.error(`Payment ${payment._id}: receipt/email failed after a successful payment: ${err.message}`);
+  }
+
+  // Same isolation reasoning as markMembershipPaid's own admin-notify call
+  // above - independent of the payer's own receipt succeeding or failing.
+  try {
+    const tour = await Tour.findById(payment.tour).select('title');
+    if (tour) await notifyAdminsIfTourFullyPaid(String(payment.tour), tour.title);
+  } catch (err) {
+    logger.error(`Payment ${payment._id}: admin full-payment notification failed: ${err.message}`);
   }
 }
 
@@ -652,4 +741,77 @@ export const downloadReceipt = async (req, res) => {
   }
 
   res.download(filePath, payment.receiptFilename);
+};
+
+// Barion's own bank-transfer withdrawal fee: 0.1% of the amount, or 70 Ft,
+// whichever is bigger - the whole point of the withdrawal feature is that
+// this is far cheaper than any other way to move the club's collected
+// money to a real bank account, so it's shown to the admin up front the
+// same way the payer-facing BARION_FEE_RATE is (see members.ts/payment.ts).
+const WITHDRAWAL_FEE_RATE = 0.001;
+const WITHDRAWAL_MIN_FEE = 70;
+
+function withdrawalWalletConfigFor(purpose) {
+  return purpose === 'membershipFee' ? config.barion.membership : config.barion.tour;
+}
+
+function isWithdrawalConfigured(wallet) {
+  return !!(wallet.walletKey && wallet.withdrawName && wallet.withdrawIban);
+}
+
+// GET /payments/withdraw/:purpose - requireAuth, restrictTo('admin'). Lets
+// the Klub finance page show each wallet's withdraw button as inactive
+// until its own BARION_..._WALLET_KEY/WITHDRAW_NAME/WITHDRAW_IBAN are all
+// actually set (see config.js's own comment) - both wallets started out
+// unconfigured, since the withdrawal feature only makes sense once real,
+// live (non-sandbox) Barion wallets exist to hold real money.
+export const getWithdrawalStatus = async (req, res) => {
+  const purpose = req.params.purpose === 'membershipFee' ? 'membershipFee' : 'tourAdvance';
+  const configured = isWithdrawalConfigured(withdrawalWalletConfigFor(purpose));
+  res.status(200).json({ status: 'success', data: { configured } });
+};
+
+// POST /payments/withdraw - requireAuth, restrictTo('admin'). Pulls real
+// money out of one of the two Barion wallets (see config.js's
+// barion.membership/.tour) into that wallet's own fixed, preconfigured
+// bank account via Barion's /v3/Withdraw/BankTransfer - authenticated with
+// that specific wallet's own API key, never the shop's posKey (see
+// utils/barion.js's createBarionWithdrawal). The destination account is
+// deliberately not taken from the request at all (see the wallet config's
+// own comment) - an admin can only pick which wallet and how much, never
+// where the money actually goes, so a compromised admin session can't be
+// used to redirect a withdrawal to an arbitrary account.
+export const withdrawFunds = async (req, res) => {
+  const purpose = req.body.purpose === 'membershipFee' ? 'membershipFee' : 'tourAdvance';
+  const wallet = withdrawalWalletConfigFor(purpose);
+  if (!isWithdrawalConfigured(wallet)) {
+    throw new AppError('Ehhez a számlához még nincs beállítva a kiutalás.', 400);
+  }
+
+  const amount = Number(req.body.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new AppError('Érvénytelen összeg.', 400);
+  }
+
+  const fee = Math.max(Math.round(amount * WITHDRAWAL_FEE_RATE), WITHDRAWAL_MIN_FEE);
+  const net = amount - fee;
+
+  let result;
+  try {
+    result = await createBarionWithdrawal({
+      walletKey: wallet.walletKey,
+      amount,
+      recipientName: wallet.withdrawName,
+      iban: wallet.withdrawIban,
+    });
+  } catch (err) {
+    logger.error(`Withdrawal failed for ${purpose}: ${err.message}`);
+    throw new AppError('Nem sikerült elindítani a kiutalást.', 502);
+  }
+
+  logger.info(
+    `Withdrawal started by admin ${req.user._id} for ${purpose}: ${amount} HUF requested, ${fee} HUF fee, ${net} HUF net, Barion TransactionId ${result.TransactionId ?? 'n/a'}`,
+  );
+
+  res.status(200).json({ status: 'success', data: { fee, net } });
 };
