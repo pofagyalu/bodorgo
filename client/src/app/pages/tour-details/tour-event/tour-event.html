@@ -7,7 +7,7 @@
   (cancel)="cancelEdit()"
 />
 } @else {
-<div class="event-main">
+<div class="event-main" [class.event-main--admin]="auth.user()?.role === 'admin'">
   <span class="event-time">{{ event.time }}</span>
   <span class="event-desc">{{ event.description }}</span>
   @if (event.isOptional) {

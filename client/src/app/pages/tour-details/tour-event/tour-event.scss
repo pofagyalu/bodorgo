@@ -5,7 +5,21 @@
 // indented under the first line. display:flow-root makes .event-main
 // contain that float's height without a separate clearfix.
 .event-main {
+  position: relative;
   display: flow-root;
+  // display:flow-root sizes .event-main to its floated/inline content only,
+  // ignoring the absolutely-positioned edit button entirely - for a short
+  // one-line description that content is shorter than the button's own
+  // 2rem height, so without this the button overflowed past the row's
+  // bottom edge and touched the next row's button right below it.
+  min-height: 2rem;
+}
+
+// Reserves a gutter on the right for the absolutely-positioned edit button
+// below, on every line - not just the first - so the description text
+// never flows underneath it. Only added when that button actually renders.
+.event-main--admin {
+  padding-right: 2.4rem;
 }
 
 .event-time {
@@ -52,11 +66,12 @@
 }
 
 .icon-btn--edit {
-  // Sits inline right after the description text/badge (see .event-main's
-  // float layout above) rather than pinned to the row's far right.
-  display: inline-flex;
-  vertical-align: middle;
-  margin-left: 0.5rem;
+  // Pinned to the row's top-right corner, in the gutter .event-main--admin
+  // reserves above - stays at the rightmost edge regardless of how many
+  // lines the description wraps to.
+  position: absolute;
+  top: 0;
+  right: 0;
   // "Filled" look (a solid dark rounded-rectangle container, not just a
   // bare glyph) - same dark tone as tour-details.scss's day-weather pill
   // and .icon-btn--add, for a consistent admin-action look on this page.

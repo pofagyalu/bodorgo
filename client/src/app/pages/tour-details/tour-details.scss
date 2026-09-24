@@ -249,9 +249,9 @@
   white-space: nowrap;
 
   mat-icon {
-    font-size: 1.1rem;
-    width: 1.1rem;
-    height: 1.1rem;
+    font-size: 1.3rem;
+    width: 1.3rem;
+    height: 1.3rem;
   }
 
   &:hover {
@@ -282,33 +282,26 @@
   margin-bottom: 1rem;
 }
 
+// .day-weather floats left so the date text wraps AROUND it as plain
+// inline flow (same technique as tour-event.scss's .event-time) - only
+// narrowed while beside the pill; once past its height, later lines use
+// the row's full width. display:flow-root contains that float's height.
 .day-heading {
+  position: relative;
   margin: 0 0 0.7rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #2e7d32;
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
+  display: flow-root;
 }
 
-// The date text (+ admin's add-event button) as one wrapping group beside
-// the fixed-width weather pill - so the pill and the date stay on the same
-// line at any width and only the date text itself wraps, instead of the
-// whole date dropping to its own line on a narrow phone (same fix as
-// tour-event.scss's .event-content, for the same reason).
-.day-heading-content {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem 0.7rem;
+// Reserves a gutter on the right for the absolutely-positioned add-event
+// button below, on every line - only added when that button renders.
+.day-heading--admin {
+  padding-right: 2.4rem;
 }
 
 .day-heading-date {
-  flex: 1 1 120px;
-  min-width: 0;
   text-transform: capitalize;
 }
 
@@ -332,10 +325,13 @@
 }
 
 .icon-btn--add {
-  // Pushed all the way to the right of .day-heading's flex row (weather
-  // pill, date text), same margin-left:auto pattern as .icon-btn--edit in
-  // tour-event.scss.
-  margin-left: auto;
+  // Pinned to the row's top-right corner, in the gutter .day-heading--admin
+  // reserves above - stays at the rightmost edge regardless of how many
+  // lines the date text wraps to (same technique as tour-event.scss's
+  // .icon-btn--edit).
+  position: absolute;
+  top: 0;
+  right: 0;
   // "Filled" look (a solid dark rounded-rectangle container, not just a
   // bare glyph) - same dark tone as this page's day-weather pill, so the
   // icon reads clearly rather than blending into .day-block's light grey.
@@ -594,6 +590,8 @@
 // since several icons (cloudy, fog, rain's cloud) are a near-white pastel
 // gradient that all but disappears on any light background.
 .day-weather {
+  float: left;
+  margin-right: 0.7rem;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -603,7 +601,6 @@
   color: #fff;
   font-weight: 600;
   font-size: 0.95rem;
-  flex-shrink: 0;
 }
 
 .day-weather-icon {

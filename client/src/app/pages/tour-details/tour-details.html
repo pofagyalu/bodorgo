@@ -119,7 +119,7 @@
 
     @for (day of dayGroups(); track day.day) {
     <div class="day-block">
-      <h3 class="day-heading">
+      <h3 class="day-heading" [class.day-heading--admin]="auth.user()?.role === 'admin'">
         @if (day.weather; as w) {
         <span
           class="day-weather"
@@ -144,21 +144,19 @@
           >
         </span>
         }
-        <div class="day-heading-content">
-          <span class="day-heading-date"
-            >{{ day.day }}. nap – {{ day.label }}</span
-          >
-          @if (auth.user()?.role === 'admin') {
-          <button
-            type="button"
-            class="icon-btn icon-btn--add"
-            title="Esemény hozzáadása"
-            (click)="startAddEvent(day.day)"
-          >
-            <mat-icon>add</mat-icon>
-          </button>
-          }
-        </div>
+        <span class="day-heading-date"
+          >{{ day.day }}. nap – {{ day.label }}</span
+        >
+        @if (auth.user()?.role === 'admin') {
+        <button
+          type="button"
+          class="icon-btn icon-btn--add"
+          title="Esemény hozzáadása"
+          (click)="startAddEvent(day.day)"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+        }
       </h3>
 
       @if (addingEventForDay() === day.day) {
@@ -321,8 +319,8 @@
           class="excel-export-btn"
           title="A teljes résztvevő lista Excel fájlba mentése - ki mennyit fizetett, ki mennyivel tartozik még"
         >
-          <mat-icon>grid_on</mat-icon>
-          Mentés Excel fájlba
+          <mat-icon>download</mat-icon>
+          Excel
         </a>
         }
       </span>
