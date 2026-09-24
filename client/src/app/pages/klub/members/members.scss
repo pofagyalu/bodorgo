@@ -262,14 +262,36 @@ table {
   min-width: 680px;
 }
 
+// Explicit shares for every column (table-layout:fixed makes these exact,
+// not just a starting point auto-layout might override) - previously only
+// the year/Teendő columns had a fixed width, so the two flexible ones (Tag,
+// Előzmény) split whatever was left in whatever proportion their content
+// happened to want, landing on a ~1/3 Tag vs ~2/3 Előzmény split that had
+// nothing to do with either column's actual needs. Előzmény still gets the
+// single largest share on purpose - its dot-row only grows as more years
+// accumulate, the other columns never will.
+.membership-table--compact {
+  table-layout: fixed;
+}
+
+.membership-table--compact th:nth-child(1),
+.membership-table--compact td:nth-child(1) {
+  width: 24%;
+}
+
 .membership-table--compact th:nth-child(2),
 .membership-table--compact td:nth-child(2) {
-  width: 150px;
+  width: 14%;
+}
+
+.membership-table--compact th:nth-child(3),
+.membership-table--compact td:nth-child(3) {
+  width: 44%;
 }
 
 .membership-table--compact th:nth-child(4),
 .membership-table--compact td:nth-child(4) {
-  width: 150px;
+  width: 18%;
 }
 
 .casual-table {
@@ -325,7 +347,14 @@ td {
   display: flex;
   align-items: center;
   gap: 12px;
-  white-space: nowrap;
+}
+
+// Lets a long name wrap onto a second line within the narrower fixed
+// column width above, instead of overflowing past it (the old nowrap
+// only ever worked because this column had no fixed width to overflow).
+// .person-avatar (the other span here) already has flex:none, unaffected.
+.person > span:last-child {
+  min-width: 0;
 }
 
 .person-avatar {

@@ -127,7 +127,7 @@
         <table class="membership-table membership-table--compact">
           <thead>
             <tr>
-              <th>Tag</th>
+              <th>Tag neve</th>
               <th>{{ currentMembershipYear() }}</th>
               <th>Előzmény</th>
               <th>Műveletek</th>
@@ -270,8 +270,6 @@
             <tr>
               <th>Felhasználó</th>
               <th>Alkalmazás-hozzáférés</th>
-              <th>Fiók létrehozva</th>
-              <th>Klubtagság</th>
               @if (isAdmin()) {
               <th>Inaktív</th>
               <th>Műveletek</th>
@@ -281,7 +279,7 @@
           <tbody>
             @if (!filteredCasualUsers().length) {
             <tr>
-              <td [attr.colspan]="isAdmin() ? 6 : 4" class="empty-row">
+              <td [attr.colspan]="isAdmin() ? 4 : 2" class="empty-row">
                 Nincs ilyen nevű felhasználó.
               </td>
             </tr>
@@ -305,8 +303,6 @@
                   {{ isActive(u) ? '✓ Aktív' : '— Nem lépett be' }}
                 </span>
               </td>
-              <td>{{ u.createdAt | date: 'yyyy. MM. dd.' }}</td>
-              <td><span class="status na">Nem klubtag</span></td>
               @if (isAdmin()) {
               <td>
                 <span class="status" [class.unpaid]="u.retired" [class.na]="!u.retired">
