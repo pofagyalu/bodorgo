@@ -67,11 +67,11 @@ export class Documents implements OnInit {
     return this.documentService.fileUrl(filename, download);
   }
 
-  // A photographed paper document (see uploadMiddleware's fileFilter) gets
-  // its own icon rather than the PDF one - same mat-icon names as
-  // tour-details.html's own extra-doc-card for the same PDF/JPEG split.
+  // A photographed/screenshotted paper document (see uploadMiddleware's
+  // fileFilter) gets its own icon rather than the PDF one - same mat-icon
+  // names as tour-details.html's own extra-doc-card for the same split.
   icon(doc: ClubDocument): string {
-    return /\.jpe?g$/i.test(doc.filename) ? 'image' : 'picture_as_pdf';
+    return /\.(jpe?g|png)$/i.test(doc.filename) ? 'image' : 'picture_as_pdf';
   }
 
   openUpload() {
@@ -105,7 +105,7 @@ export class Documents implements OnInit {
     const name = this.formName().trim();
     const file = this.formFile();
     if (!name || !file) {
-      this.uploadError.set('Adj meg egy nevet és válassz ki egy PDF vagy JPG fájlt.');
+      this.uploadError.set('Adj meg egy nevet és válassz ki egy PDF, JPG vagy PNG fájlt.');
       return;
     }
 

@@ -19,25 +19,28 @@ const storage = multer.diskStorage({
   // Server-generated, not the original upload filename - guarantees no
   // collision and no unsafe characters, same reasoning as
   // tourDocumentController.js's own filename callback. Extension follows
-  // the actual upload (PDF or a phone photo of a paper document as JPEG),
-  // not hardcoded to .pdf - see fileFilter below for the allowed types.
+  // the actual upload (PDF, or a phone photo/screenshot of a paper
+  // document as JPEG/PNG), not hardcoded to .pdf - see fileFilter below
+  // for the allowed types.
   filename: (req, file, cb) => {
     const unique = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-    const ext = file.mimetype === 'image/jpeg' ? 'jpg' : 'pdf';
+    const ext = file.mimetype === 'image/jpeg' ? 'jpg' : file.mimetype === 'image/png' ? 'png' : 'pdf';
     cb(null, `klub-dok-${unique}.${ext}`);
   },
 });
 
+const ALLOWED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+
 // .single('file') - the upload form sends one file plus name/category/year
-// fields. PDF or JPEG only (a phone photo of a paper document is a common
-// case here), 15MB cap - generous for a scanned/photographed document, not
-// unbounded.
+// fields. PDF, JPEG or PNG (a phone photo or screenshot of a paper
+// document is a common case here), 15MB cap - generous for a scanned/
+// photographed document, not unbounded.
 export const uploadMiddleware = multer({
   storage,
   limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype !== 'application/pdf' && file.mimetype !== 'image/jpeg') {
-      cb(new AppError('Csak PDF vagy JPG fájl tölthető fel.', 400));
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(new AppError('Csak PDF, JPG vagy PNG fájl tölthető fel.', 400));
       return;
     }
     cb(null, true);

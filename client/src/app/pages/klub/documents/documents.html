@@ -102,11 +102,11 @@
       </div>
 
       <div class="field">
-        <label for="docFile">PDF vagy JPG fájl</label>
+        <label for="docFile">PDF, JPG vagy PNG fájl</label>
         <input
           id="docFile"
           type="file"
-          accept="application/pdf,image/jpeg"
+          accept="application/pdf,image/jpeg,image/png"
           required
           (change)="onFileSelected($event)"
         />
@@ -116,7 +116,7 @@
       <p class="form-error">{{ uploadError() }}</p>
       }
 
-      <p class="demo-tip">Csak PDF vagy JPG fájl tölthető fel, legfeljebb 15 MB méretben.</p>
+      <p class="demo-tip">Csak PDF, JPG vagy PNG fájl tölthető fel, legfeljebb 15 MB méretben.</p>
 
       <div class="modal-actions">
         <button class="outline-btn" type="button" (click)="closeUpload()">Mégse</button>
