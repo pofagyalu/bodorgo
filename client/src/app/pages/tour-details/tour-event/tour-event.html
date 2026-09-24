@@ -9,17 +9,15 @@
 } @else {
 <div class="event-main">
   <span class="event-time">{{ event.time }}</span>
-  <div class="event-content">
-    <span class="event-desc">{{ event.description }}</span>
-    @if (event.isOptional) {
-    <span class="event-extra-badge">+{{ event.extraCost }} Ft</span>
-    }
-    @if (auth.user()?.role === 'admin') {
-    <button type="button" class="icon-btn icon-btn--edit" title="Esemény szerkesztése" (click)="startEdit()">
-      <mat-icon>edit</mat-icon>
-    </button>
-    }
-  </div>
+  <span class="event-desc">{{ event.description }}</span>
+  @if (event.isOptional) {
+  <span class="event-extra-badge">+{{ event.extraCost }} Ft</span>
+  }
+  @if (auth.user()?.role === 'admin') {
+  <button type="button" class="icon-btn icon-btn--edit" title="Esemény szerkesztése" (click)="startEdit()">
+    <mat-icon>edit</mat-icon>
+  </button>
+  }
 </div>
 }
 

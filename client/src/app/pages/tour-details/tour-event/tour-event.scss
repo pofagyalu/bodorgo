@@ -1,35 +1,30 @@
+// .event-time floats left so the description text (a plain inline flow,
+// not a flex column) wraps AROUND it - only the first line or two is
+// narrowed by the time's width; once the text runs past the time's own
+// height, later lines expand to the row's full width instead of staying
+// indented under the first line. display:flow-root makes .event-main
+// contain that float's height without a separate clearfix.
 .event-main {
-  display: flex;
-  gap: 1rem;
-  align-items: baseline;
+  display: flow-root;
 }
 
 .event-time {
-  flex: 0 0 4.5rem;
+  float: left;
+  width: 3.6rem;
+  margin-right: 0.9rem;
   font-weight: 700;
   color: #1e88e5;
 }
 
-// Everything after the time (description, optional-cost badge, admin edit
-// button) as one wrapping group, so the description sits right beside the
-// time at any width and only its own text wraps - instead of the time and
-// description stacking into separate lines on narrow screens.
-.event-content {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem 0.75rem;
-}
-
 .event-desc {
-  flex: 1 1 160px;
-  min-width: 0;
   color: #444;
 }
 
 .event-extra-badge {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+  white-space: nowrap;
   font-size: 0.8rem;
   font-weight: 600;
   color: #fff;
@@ -57,9 +52,11 @@
 }
 
 .icon-btn--edit {
-  // Pushes the edit button to the far right of .event-main, which is
-  // otherwise a left-aligned flex row (time, description, badge).
-  margin-left: auto;
+  // Sits inline right after the description text/badge (see .event-main's
+  // float layout above) rather than pinned to the row's far right.
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 0.5rem;
   // "Filled" look (a solid dark rounded-rectangle container, not just a
   // bare glyph) - same dark tone as tour-details.scss's day-weather pill
   // and .icon-btn--add, for a consistent admin-action look on this page.
