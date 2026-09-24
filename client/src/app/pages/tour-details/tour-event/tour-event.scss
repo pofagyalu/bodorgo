@@ -2,7 +2,6 @@
   display: flex;
   gap: 1rem;
   align-items: baseline;
-  flex-wrap: wrap;
 }
 
 .event-time {
@@ -11,7 +10,22 @@
   color: #1e88e5;
 }
 
+// Everything after the time (description, optional-cost badge, admin edit
+// button) as one wrapping group, so the description sits right beside the
+// time at any width and only its own text wraps - instead of the time and
+// description stacking into separate lines on narrow screens.
+.event-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+
 .event-desc {
+  flex: 1 1 160px;
+  min-width: 0;
   color: #444;
 }
 
@@ -236,23 +250,3 @@
   }
 }
 
-@media (max-width: 768px) {
-  // .event-row itself is already column at every width (see
-  // tour-details.scss) - this collapses the inner time+description row
-  // too, matching .event-time's flex:none below (no more fixed-width
-  // column for the time to sit beside).
-  .event-main {
-    flex-direction: column;
-    gap: 0.2rem;
-  }
-
-  .event-time {
-    flex: none;
-  }
-
-  // No fixed-width time column to align under on mobile.
-  .event-optin-row,
-  .event-participants-collapse {
-    margin-left: 0;
-  }
-}

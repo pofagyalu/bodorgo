@@ -289,11 +289,26 @@
   color: #2e7d32;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.7rem;
 }
 
+// The date text (+ admin's add-event button) as one wrapping group beside
+// the fixed-width weather pill - so the pill and the date stay on the same
+// line at any width and only the date text itself wraps, instead of the
+// whole date dropping to its own line on a narrow phone (same fix as
+// tour-event.scss's .event-content, for the same reason).
+.day-heading-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.7rem;
+}
+
 .day-heading-date {
+  flex: 1 1 120px;
+  min-width: 0;
   text-transform: capitalize;
 }
 

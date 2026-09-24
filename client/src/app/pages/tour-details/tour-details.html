@@ -144,19 +144,21 @@
           >
         </span>
         }
-        <span class="day-heading-date"
-          >{{ day.day }}. nap – {{ day.label }}</span
-        >
-        @if (auth.user()?.role === 'admin') {
-        <button
-          type="button"
-          class="icon-btn icon-btn--add"
-          title="Esemény hozzáadása"
-          (click)="startAddEvent(day.day)"
-        >
-          <mat-icon>add</mat-icon>
-        </button>
-        }
+        <div class="day-heading-content">
+          <span class="day-heading-date"
+            >{{ day.day }}. nap – {{ day.label }}</span
+          >
+          @if (auth.user()?.role === 'admin') {
+          <button
+            type="button"
+            class="icon-btn icon-btn--add"
+            title="Esemény hozzáadása"
+            (click)="startAddEvent(day.day)"
+          >
+            <mat-icon>add</mat-icon>
+          </button>
+          }
+        </div>
       </h3>
 
       @if (addingEventForDay() === day.day) {
