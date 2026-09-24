@@ -140,10 +140,19 @@
 .info-line {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.7rem;
   font-size: 1.05rem;
   color: #444;
   flex-wrap: wrap;
+
+  // The place icon on its own default (smaller) size stood out against the
+  // navigate/edit icons right beside it, now all a matching 2rem square so
+  // the whole line reads as one aligned row instead of a mismatched one.
+  > mat-icon:first-child {
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+  }
 }
 
 // .map-link is a <button> (it opens the map modal, not a link), reset to
@@ -164,21 +173,26 @@
 }
 
 // Tap-to-navigate app icons right after the place name - real app icons
-// (provided directly), so no color/style overrides beyond sizing.
+// (provided directly), so no color/style overrides beyond sizing. Sized to
+// match .icon-btn--edit-tour's own 2rem circle right after them, with
+// extra margin on top of .info-line's own gap, specifically so icons this
+// close together are still easy to tell apart and hit individually on a
+// phone.
 .navigate-icon {
   display: inline-flex;
   line-height: 0;
   opacity: 0.85;
   transition: opacity 0.15s;
+  margin: 0 0.15rem;
 
   &:hover {
     opacity: 1;
   }
 
   img {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 6px;
   }
 }
 
