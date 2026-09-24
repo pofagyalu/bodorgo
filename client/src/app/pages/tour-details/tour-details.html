@@ -144,8 +144,8 @@
           >
         </span>
         }
-        <span class="day-heading-daynum">{{ day.day }}. nap</span>
-        <span class="day-heading-date">– {{ day.label }}</span>
+        <span class="day-heading-daynum">{{ day.day }}. nap –</span>
+        <span class="day-heading-date">{{ day.label }}</span>
         @if (auth.user()?.role === 'admin') {
         <button
           type="button"

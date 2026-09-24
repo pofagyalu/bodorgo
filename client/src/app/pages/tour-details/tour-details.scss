@@ -314,10 +314,10 @@
 }
 
 @media (max-width: 768px) {
-  // Forces the "– {label}" part onto its own full-width line while the
-  // weather pill + "N. nap" stay together on the first line - the exact
-  // split the user asked for, rather than letting the browser wrap
-  // wherever it likes.
+  // Forces the date label onto its own full-width line while the weather
+  // pill + "N. nap –" stay together on the first line - the exact split
+  // the user asked for, rather than letting the browser wrap wherever it
+  // likes.
   .day-heading-date {
     flex: 1 0 100%;
   }
