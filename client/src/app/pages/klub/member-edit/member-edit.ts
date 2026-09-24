@@ -47,6 +47,7 @@ export class MemberEdit implements OnInit {
   gender = signal('');
   memberSince = signal('');
   role = signal('guest');
+  retired = signal(false);
   address = signal<AddressForm>(emptyAddress());
 
   ngOnInit() {
@@ -60,6 +61,7 @@ export class MemberEdit implements OnInit {
         this.gender.set(u.gender ?? '');
         this.memberSince.set(u.memberSince != null ? String(u.memberSince) : '');
         this.role.set(u.role);
+        this.retired.set(!!u.retired);
         this.address.set({
           zipCode: u.address?.zipCode ?? '',
           city: u.address?.city ?? '',
@@ -113,6 +115,7 @@ export class MemberEdit implements OnInit {
         gender: this.gender(),
         memberSince: this.memberSince() ? Number(this.memberSince()) : null,
         role: this.role(),
+        retired: this.retired(),
         address: this.address(),
       })
       .subscribe({

@@ -140,6 +140,19 @@ const userSchema = new Schema(
       default: true,
       select: false,
     },
+    // Admin-set only (see userController.js's updateUser) - for someone who
+    // attended a few tours and then stopped, kept for history (member
+    // lists, stats, past attendance) exactly like anyone else. The ONE
+    // place this actually changes anything is that an admin building a new
+    // reservation or a schedule-event opt-in list won't see them offered as
+    // a candidate any more. Deliberately a different field from `active`
+    // above, which hides a user from literally every query app-wide
+    // (self-service account deletion) - this is a narrow, reversible flag,
+    // not a soft delete.
+    retired: {
+      type: Boolean,
+      default: false,
+    },
     // Groups a real account together with the login-less dependents (and
     // any other real accounts, e.g. a spouse) it shares tour attendance
     // with - lets a logged-in parent's signup dropdown be scoped to

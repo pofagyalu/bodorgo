@@ -242,20 +242,29 @@ export class TourDetails implements OnDestroy {
     return this.attendeePayments().some((p) => p.advance != null && !p.paid && isInMyPaymentGroup(p, me));
   });
 
+  // Someone an admin marked "retired" (member-edit.ts) - attended in the
+  // past, kept for history everywhere, just never offered again as a
+  // candidate for a new reservation or schedule-event opt-in (below).
+  retiredUserIds = computed<Set<string>>(
+    () => new Set(this.allUsers().filter((u) => u.retired).map((u) => u._id)),
+  );
+
   // Who the logged-in user can still pick to register for this tour -
   // guest: just themselves (if not already registered); member: themselves
   // plus any not-yet-registered family member; admin: anyone at all not
-  // yet registered. Mirrors reservationController.js's assertCanRegister,
-  // purely so the picker doesn't offer choices the server would reject -
-  // the server is still the actual source of truth for who's allowed.
+  // yet registered (and not retired). Mirrors reservationController.js's
+  // assertCanRegister, purely so the picker doesn't offer choices the
+  // server would reject - the server is still the actual source of truth
+  // for who's allowed.
   pickerOptions = computed<PickerOption[]>(() => {
     const user = this.auth.user();
     if (!user) return [];
     const already = this.attendeeUserIds();
 
     if (user.role === 'admin') {
+      const retired = this.retiredUserIds();
       return this.allUsers()
-        .filter((u) => !already.has(u._id))
+        .filter((u) => !already.has(u._id) && !retired.has(u._id))
         .map((u) => ({ _id: u._id, name: u.name }));
     }
 
@@ -274,14 +283,20 @@ export class TourDetails implements OnDestroy {
   // Who the logged-in user can opt in/out of an optional schedule event
   // (e.g. a kids' breakfast) - only ever people actually attending this
   // tour, since opting in someone who isn't even coming makes no sense.
-  // Admin: every real attendee; anyone else: just their own payment group
-  // (self + same familyId), same rule the payment page itself uses -
-  // mirrors updateScheduleEventParticipants' own server-side check.
+  // Admin: every real attendee except a retired one (see retiredUserIds
+  // above - they may well be a real historical attendee of this exact
+  // tour, but an admin still shouldn't be offered them going forward);
+  // anyone else: just their own payment group (self + same familyId), same
+  // rule the payment page itself uses - mirrors
+  // updateScheduleEventParticipants' own server-side check.
   myScheduleEventCandidates = computed<PickerOption[]>(() => {
     const me = this.auth.user();
     if (!me) return [];
     const attendees = this.allAttendees().filter((a) => a.userId);
-    const pool = me.role === 'admin' ? attendees : attendees.filter((a) => isInMyPaymentGroup(a, me));
+    const pool =
+      me.role === 'admin'
+        ? attendees.filter((a) => !this.retiredUserIds().has(a.userId!))
+        : attendees.filter((a) => isInMyPaymentGroup(a, me));
     return pool.map((a) => ({ _id: a.userId!, name: a.name }));
   });
 

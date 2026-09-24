@@ -151,7 +151,7 @@
                     <strong>{{ m.name }}</strong>
                     <small
                       >{{ m._id === myId() ? 'Te' : m.role === 'admin' ? 'Admin'
-                      : 'Klubtag' }}</small
+                      : 'Klubtag' }}{{ m.retired ? ' · Inaktív' : '' }}</small
                     >
                   </span>
                 </div>
@@ -273,6 +273,7 @@
               <th>Fiók létrehozva</th>
               <th>Klubtagság</th>
               @if (isAdmin()) {
+              <th>Inaktív</th>
               <th>Műveletek</th>
               }
             </tr>
@@ -280,7 +281,7 @@
           <tbody>
             @if (!filteredCasualUsers().length) {
             <tr>
-              <td [attr.colspan]="isAdmin() ? 5 : 4" class="empty-row">
+              <td [attr.colspan]="isAdmin() ? 6 : 4" class="empty-row">
                 Nincs ilyen nevű felhasználó.
               </td>
             </tr>
@@ -307,6 +308,11 @@
               <td>{{ u.createdAt | date: 'yyyy. MM. dd.' }}</td>
               <td><span class="status na">Nem klubtag</span></td>
               @if (isAdmin()) {
+              <td>
+                <span class="status" [class.unpaid]="u.retired" [class.na]="!u.retired">
+                  {{ u.retired ? 'Inaktív' : '—' }}
+                </span>
+              </td>
               <td class="row-actions">
                 <a
                   [routerLink]="['/klub/felhasznalok', u._id]"

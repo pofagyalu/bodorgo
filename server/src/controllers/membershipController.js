@@ -13,7 +13,7 @@ import User from '../models/userModel.js';
 // member's name/role/status open-book.
 export const getMembers = async (req, res) => {
   const users = await User.find()
-    .select('name role lastLoginAt createdAt memberSince familyId')
+    .select('name role lastLoginAt createdAt memberSince familyId retired')
     .sort('name')
     .lean();
 

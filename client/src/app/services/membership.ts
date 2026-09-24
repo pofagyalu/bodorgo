@@ -16,6 +16,12 @@ export interface MemberUser {
   // members" for the membership-dues payment (see members.ts's
   // myFamilyClubMembers).
   familyId?: string;
+  // Admin-set (see member-edit.ts) - attended in the past, kept for
+  // history, just no longer offered as a candidate for a new reservation
+  // or schedule-event opt-in (see tour-details.ts). Shown here as a small
+  // status tag, same "open-book" visibility as role/lastLoginAt already
+  // have on this list.
+  retired?: boolean;
 }
 
 interface MembersResponse {

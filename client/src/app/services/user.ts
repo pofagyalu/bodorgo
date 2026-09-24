@@ -37,6 +37,12 @@ export interface AdminUser {
   // from Reservation.attendees, not stored on the user (see
   // userController.js's getAllUsers).
   toursAttended?: number;
+  // Admin-set (see member-edit.ts) - someone who attended in the past but
+  // is done for good, kept for history everywhere except one thing: an
+  // admin building a new reservation or schedule-event opt-in list won't
+  // see them offered as a candidate any more (see tour-details.ts's
+  // pickerOptions/myScheduleEventCandidates).
+  retired?: boolean;
   address?: UserAddress;
   // Geocoded from `address` server-side - present only once a real
   // address has been successfully located (see userModel.js's
@@ -138,6 +144,7 @@ export interface UpdateUserPayload {
   // Manual override, not permanent - the next real Authentik login
   // overwrites it again (see userController.js's updateUser).
   role?: string;
+  retired?: boolean;
 }
 
 export interface AdminUserResponse {

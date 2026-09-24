@@ -81,7 +81,7 @@ export async function resolveFamilyId(input) {
 export const getAllUsers = async (req, res) => {
   const isAdmin = req.user.role === 'admin';
   const selectFields = isAdmin
-    ? 'name email familyId role sub lastLoginAt createdAt birthday gender memberSince'
+    ? 'name email familyId role sub lastLoginAt createdAt birthday gender memberSince retired'
     : 'name email birthday';
 
   const users = await User.find().select(selectFields).sort('name').lean();
@@ -354,7 +354,7 @@ const VALID_ROLES = ['admin', 'member', 'guest'];
 // authOidcController.js's callback). Use for a quick fix, not as the
 // long-term way to manage roles.
 export const updateUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, address, memberSince, role } = req.body;
+  const { name, email, familyId, birthday, gender, address, memberSince, role, retired } = req.body;
 
   const user = await User.findById(req.params.id);
   if (!user) {
@@ -374,6 +374,7 @@ export const updateUser = async (req, res) => {
     }
     user.role = role;
   }
+  if (retired !== undefined) user.retired = !!retired;
 
   await user.save({ validateModifiedOnly: true });
 
