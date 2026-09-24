@@ -19,6 +19,7 @@ import documentRouter from './routes/documentRoutes.js';
 import paymentRouter from './routes/paymentRoutes.js';
 import financeRouter from './routes/financeRoutes.js';
 import membershipRouter from './routes/membershipRoutes.js';
+import pollRouter from './routes/pollRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
@@ -121,6 +122,7 @@ export default function createApp(sessionMiddleware) {
   app.use('/payments', paymentRouter);
   app.use('/finance', financeRouter);
   app.use('/membership', membershipRouter);
+  app.use('/polls', pollRouter);
   app.use('/health', systemRouter);
 
   app.use((req, res, next) => {

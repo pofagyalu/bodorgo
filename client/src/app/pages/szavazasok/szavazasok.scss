@@ -1,0 +1,385 @@
+// Same grey-backdrop + white-panel treatment as tours.scss/tour-details.scss
+// /homepage.scss/chat.scss, for visual consistency across the site's
+// top-level (non-Klub) pages.
+:host {
+  display: block;
+  background: #ececec;
+  min-height: calc(100dvh - 80px);
+}
+
+.szavazasok-page {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  background: #fff;
+  box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.8rem;
+}
+
+.page-title {
+  margin: 0 0 0.3rem;
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.page-subtitle {
+  margin: 0;
+  color: #777;
+  font-size: 0.95rem;
+}
+
+.empty-note {
+  color: #999;
+  font-style: italic;
+}
+
+.poll-list {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.poll-card {
+  background: #fafafa;
+  border: 1px solid #e4e4e4;
+  border-radius: 12px;
+  padding: 1.3rem 1.5rem;
+}
+
+.poll-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.poll-tour {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #2e7d32;
+}
+
+.poll-question {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.poll-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.status {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status.open {
+  color: #1b6548;
+  background: #e8f5e9;
+}
+
+.status.closed {
+  color: #789098;
+  background: #eef1f0;
+}
+
+.poll-closes {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #666;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #eee;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.icon-btn--danger:hover:not(:disabled) {
+  background: #fdeeee;
+  color: #b23b3b;
+}
+
+// --- Ballot (not yet voted, still open) ---
+
+.poll-options {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.poll-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.92rem;
+
+  &:has(input:checked) {
+    border-color: #55c57a;
+    background: #f2faf4;
+  }
+}
+
+.poll-option input {
+  accent-color: #2e7d32;
+  width: 16px;
+  height: 16px;
+}
+
+.poll-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// --- Results (voted, or closed) ---
+
+.poll-results {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.poll-result-row.mine .poll-result-text {
+  color: #1b6548;
+}
+
+.poll-result-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.poll-result-text {
+  font-weight: 650;
+  color: #333;
+}
+
+.poll-my-vote {
+  margin-left: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1b6548;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.poll-result-count {
+  color: #888;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.poll-result-track {
+  height: 8px;
+  background: #eee;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.poll-result-fill {
+  height: 100%;
+  background: #55c57a;
+  border-radius: 999px;
+}
+
+.poll-total {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+// --- Buttons (same shapes as tour-edit.scss) ---
+
+.btn {
+  text-decoration: none;
+  padding: 0.7rem 1.8rem;
+  display: inline-block;
+  border: none;
+  border-radius: 10rem;
+  font-size: 1rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.btn--green {
+  background-color: #55c57a;
+  color: #fff;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: default;
+  }
+}
+
+.btn--grey {
+  background-color: #eee;
+  color: #555;
+}
+
+.btn--small {
+  padding: 0.5rem 1.2rem;
+  font-size: 0.9rem;
+}
+
+.link-btn {
+  border: 0;
+  background: transparent;
+  color: #2e7d32;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.4rem 0;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// --- Admin create/edit modal (same shape as documents.scss's own) ---
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0c2537a3;
+  z-index: 29999;
+}
+
+.modal-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30000;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 20px 80px #10253655;
+  width: min(480px, calc(100vw - 30px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  color: #213b4a;
+}
+
+.modal-head {
+  padding: 26px 28px 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.modal-head h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.modal-body {
+  padding: 10px 28px 26px;
+  display: grid;
+  gap: 15px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #50636e;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #dce5e1;
+  border-radius: 9px;
+  background: white;
+  color: #283e49;
+  font-size: 14px;
+  font: inherit;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.option-row input {
+  flex: 1;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.error-note {
+  color: #b00020;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  :host {
+    background: #fff;
+    min-height: 0;
+  }
+
+  .szavazasok-page {
+    padding: 1.2rem 1rem 3rem;
+    box-shadow: none;
+  }
+
+  .poll-card-head {
+    flex-direction: column;
+  }
+}
