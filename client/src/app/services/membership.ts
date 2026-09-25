@@ -22,7 +22,7 @@ export interface MemberUser {
   // status tag, same "open-book" visibility as role/lastLoginAt already
   // have on this list.
   retired?: boolean;
-  age: number;
+  age: number | null;
   toursAttended: number;
 }
 
