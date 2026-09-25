@@ -9,9 +9,11 @@ console.log('✓ Synced dist → S:/bodorgo');
 // documents/ holds files served only through the requireAuth-gated
 // /documents route (see documentController.js) - not part of dist/, so it
 // needs its own copy step, same reasoning as why public/img isn't just
-// bundled into dist either. documents/payments/ is excluded - unlike the
-// rest of this folder (real, permanent, admin-curated club records this
-// repo tracks in git), those are auto-generated per-payment receipts
+// bundled into dist either. Not tracked in git (see .gitignore) - this
+// copy is the only way a document uploaded through the local app reaches
+// production. documents/payments/ is excluded - unlike the rest of this
+// folder (admin-uploaded club records), those are auto-generated
+// per-payment receipts
 // containing personal financial details, per-environment dynamic data
 // that must never be pushed from this dev machine over production's own
 // real ones (or vice versa) - see .gitignore's own comment on the same
