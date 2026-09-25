@@ -1,9 +1,14 @@
 import Post from '../models/postModel.js';
 import logger from '../logger.js';
+import { setIo, tourRoom } from './tourEvents.js';
 
-const room = (tourId) => `tour:${tourId}`;
-
+// One Socket.IO connection per open browser tab, shared by the tour chat
+// and its Szobabeosztás panel (see the client's TourSocketService): joining
+// a tour puts the socket in that tour's room, which carries both new chat
+// posts and "rooms-changed" pushes (see tourEvents.js's emitToTour).
 export default function registerChatHandlers(io) {
+  setIo(io);
+
   io.on('connection', (socket) => {
     const sessionUser = socket.request.session?.user;
 
@@ -13,17 +18,23 @@ export default function registerChatHandlers(io) {
       }
       if (!tourId) return;
 
-      socket.join(room(tourId));
+      socket.join(tourRoom(tourId));
 
       try {
         const posts = await Post.find({ tourId })
           .sort('createdAt')
           .populate('creator', 'name');
-        socket.emit('initial-posts', posts);
+        socket.emit('initial-posts', { tourId, posts });
       } catch (err) {
         logger.error(`chat: failed to load posts for tour ${tourId}: ${err}`);
         socket.emit('chat-error', 'Could not load chat history.');
       }
+    });
+
+    // Switching to another tour on the chat page - stop getting this one's
+    // posts/room changes on the same connection.
+    socket.on('leave-tour-chat', ({ tourId }) => {
+      if (tourId) socket.leave(tourRoom(tourId));
     });
 
     socket.on('create-post', async ({ tourId, text }) => {
@@ -39,7 +50,7 @@ export default function registerChatHandlers(io) {
           text: text.trim(),
         });
         const populated = await post.populate('creator', 'name');
-        io.to(room(tourId)).emit('new-post', populated);
+        io.to(tourRoom(tourId)).emit('new-post', populated);
       } catch (err) {
         logger.error(`chat: failed to save post for tour ${tourId}: ${err}`);
         socket.emit('chat-error', 'Could not send message.');

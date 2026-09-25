@@ -37,12 +37,33 @@ export class AccommodationEditor {
   // admin has actually tried to save, not while still typing.
   showErrors = signal(false);
 
+  // How many people the Szobabeosztás has in each (saved) room - so
+  // deleting an occupied room/house warns first (its people go back to
+  // "no room" once saved - see accommodationController.js).
+  private occupantsByRoom = signal<Record<string, number>>({});
+
   constructor() {
     // (Re)loaded whenever the parent hands over the tour's saved state.
     effect(() => {
       this.houses.set(copyHouses(this.initialHouses()));
       this.dirty.set(false);
     });
+    effect(() => {
+      this.tourService.getRoomBoard(this.tourId()).subscribe({
+        next: (res) => {
+          const counts: Record<string, number> = {};
+          for (const p of res.data.people) {
+            if (p.roomId) counts[p.roomId] = (counts[p.roomId] ?? 0) + 1;
+          }
+          this.occupantsByRoom.set(counts);
+        },
+      });
+    });
+  }
+
+  private occupantsIn(roomIds: (string | undefined)[]): number {
+    const counts = this.occupantsByRoom();
+    return roomIds.reduce((sum, id) => sum + (id ? counts[id] ?? 0 : 0), 0);
   }
 
   totals = computed(() => {
@@ -81,7 +102,14 @@ export class AccommodationEditor {
 
   removeHouse(hi: number) {
     const house = this.houses()[hi];
-    if (house.rooms.length && !confirm(`Biztosan törlöd a(z) "${house.name || 'névtelen'}" házat a szobáival együtt?`)) {
+    const people = this.occupantsIn(house.rooms.map((r) => r._id));
+    const warning = people
+      ? `\n\nA szobáiban ${people} ember van beosztva - mentés után visszakerülnek a "még nincs szobája" listába.`
+      : '';
+    if (
+      house.rooms.length &&
+      !confirm(`Biztosan törlöd a(z) "${house.name || 'névtelen'}" házat a szobáival együtt?${warning}`)
+    ) {
       return;
     }
     this.change((hs) => hs.splice(hi, 1));
@@ -96,6 +124,16 @@ export class AccommodationEditor {
   }
 
   removeRoom(hi: number, ri: number) {
+    const room = this.houses()[hi].rooms[ri];
+    const people = this.occupantsIn([room._id]);
+    if (
+      people &&
+      !confirm(
+        `A(z) "${room.name}" szobában ${people} ember van beosztva - mentés után visszakerülnek a "még nincs szobája" listába. Törlöd?`,
+      )
+    ) {
+      return;
+    }
     this.change((hs) => hs[hi].rooms.splice(ri, 1));
   }
 

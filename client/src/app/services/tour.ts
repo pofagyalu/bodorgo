@@ -26,6 +26,27 @@ export interface AccommodationResponse {
   data: { accommodation: { houses: AccommodationHouse[] } };
 }
 
+// One registered person on the Szobabeosztás board. attendeeId is their
+// registration entry (what gets moved); roomId null = no room yet.
+export interface RoomBoardPerson {
+  attendeeId: string;
+  userId: string | null;
+  name: string;
+  username: string | null;
+  photoUpdatedAt: string | null;
+  familyId: string | null;
+  roomId: string | null;
+}
+
+export interface RoomBoardResponse {
+  status: string;
+  data: {
+    houses: AccommodationHouse[];
+    finalized: boolean;
+    people: RoomBoardPerson[];
+  };
+}
+
 export interface TickerResponse {
   status: string;
   data: {
@@ -563,6 +584,21 @@ export class TourService {
   // go, separately from the rest of the tour.
   updateAccommodation(tourId: string, houses: AccommodationHouse[]): Observable<AccommodationResponse> {
     return this.http.put<AccommodationResponse>(`${this.apiUrl}/${tourId}/accommodation`, { houses });
+  }
+
+  // Szobabeosztás - see roomAllocationController.js.
+  getRoomBoard(tourId: string): Observable<RoomBoardResponse> {
+    return this.http.get<RoomBoardResponse>(`${this.apiUrl}/${tourId}/rooms`);
+  }
+
+  // Admin-only. roomId null = take the person out of their room.
+  assignRoom(tourId: string, attendeeId: string, roomId: string | null): Observable<unknown> {
+    return this.http.put(`${this.apiUrl}/${tourId}/rooms/assignment`, { attendeeId, roomId });
+  }
+
+  // Admin-only.
+  setRoomsFinalized(tourId: string, finalized: boolean): Observable<unknown> {
+    return this.http.put(`${this.apiUrl}/${tourId}/rooms/finalized`, { finalized });
   }
 
   getTicker(): Observable<TickerResponse> {

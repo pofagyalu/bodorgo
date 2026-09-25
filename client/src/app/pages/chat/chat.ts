@@ -1,4 +1,6 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, inject, signal, computed, viewChild } from '@angular/core';
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { TourSocketService } from '../../services/tour-socket';
 import { MatIconModule } from '@angular/material/icon';
 import { Feed } from '../../components/feed/feed';
 import { RoomBoard } from './room-board/room-board';
@@ -8,6 +10,30 @@ import { TourService, Tour } from '../../services/tour';
 // build/test the chat feature stays reachable even though it's long past -
 // no need to keep every other past tour's (empty) chat around too.
 const TEST_TOUR_ORDER = 11;
+
+// The Szobabeosztás panel's width next to the chat, in px (see
+// startResize) - remembered per browser, just a convenience.
+const ROOMS_DEFAULT_WIDTH = 380;
+const ROOMS_MIN_WIDTH = 320;
+const CHAT_MIN_WIDTH = 360;
+const ROOMS_WIDTH_KEY = 'bodorgo.chat.roomsWidth';
+
+function readStoredRoomsWidth(): number {
+  try {
+    const stored = Number(localStorage.getItem(ROOMS_WIDTH_KEY));
+    return stored >= ROOMS_MIN_WIDTH ? stored : ROOMS_DEFAULT_WIDTH;
+  } catch {
+    return ROOMS_DEFAULT_WIDTH;
+  }
+}
+
+function storeRoomsWidth(width: number) {
+  try {
+    localStorage.setItem(ROOMS_WIDTH_KEY, String(width));
+  } catch {
+    // Storage unavailable (private mode...) - just not remembered.
+  }
+}
 
 function finishDate(t: Tour): Date {
   const finish = new Date(t.startDate);
@@ -29,12 +55,13 @@ function isChatOpen(t: Tour): boolean {
 // side on a very wide screen, otherwise as two tabs.
 @Component({
   selector: 'app-chat',
-  imports: [Feed, MatIconModule, RoomBoard],
+  imports: [Feed, MatIconModule, RoomBoard, CdkScrollable],
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
 })
-export class Chat implements OnInit {
+export class Chat implements OnInit, OnDestroy {
   private tourService = inject(TourService);
+  private tourSocket = inject(TourSocketService);
 
   selectedTourId = signal<string | null>(null);
   visibleTours = signal<Tour[]>([]);
@@ -48,8 +75,8 @@ export class Chat implements OnInit {
     () => this.visibleTours().find((t) => t._id === this.selectedTourId()) ?? null,
   );
 
-  // Forces <app-feed> to fully destroy/recreate (fresh socket connection,
-  // fresh join-tour-chat, fresh history fetch) whenever the selected tour
+  // Forces <app-feed> to fully destroy/recreate (fresh join-tour-chat on
+  // the shared connection, fresh history) whenever the selected tour
   // changes, instead of Angular just patching its tourId input in place.
   feedKey = computed(() => (this.selectedTourId() ? [this.selectedTourId()!] : []));
 
@@ -68,6 +95,46 @@ export class Chat implements OnInit {
         this.loaded.set(true);
       },
     });
+  }
+
+  // Off the chat page: stop getting this tour's live posts/room changes.
+  ngOnDestroy() {
+    this.tourSocket.leaveTour();
+  }
+
+  // --- Resizable Szobabeosztás panel (side-by-side layout only) ---
+  // Each browser remembers its own width; it never affects anyone else.
+  private panes = viewChild<ElementRef<HTMLElement>>('panes');
+  roomsWidth = signal(readStoredRoomsWidth());
+  resizing = signal(false);
+
+  startResize(event: PointerEvent) {
+    const panes = this.panes()?.nativeElement;
+    if (!panes) return;
+    event.preventDefault();
+    this.resizing.set(true);
+    const box = panes.getBoundingClientRect();
+
+    const onMove = (e: PointerEvent) => {
+      // The panel's width is the distance from the pointer to the right
+      // edge - never below its minimum, and always leaving the chat
+      // room to stay usable.
+      const max = Math.max(ROOMS_MIN_WIDTH, box.width - CHAT_MIN_WIDTH);
+      this.roomsWidth.set(Math.round(Math.min(Math.max(box.right - e.clientX, ROOMS_MIN_WIDTH), max)));
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      this.resizing.set(false);
+      storeRoomsWidth(this.roomsWidth());
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  resetRoomsWidth() {
+    this.roomsWidth.set(ROOMS_DEFAULT_WIDTH);
+    storeRoomsWidth(ROOMS_DEFAULT_WIDTH);
   }
 
   selectTour(id: string) {

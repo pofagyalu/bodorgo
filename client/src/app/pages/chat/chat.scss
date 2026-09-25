@@ -228,7 +228,27 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  // --rooms-width is set from chat.ts (the draggable .pane-resizer).
+  grid-template-columns: minmax(0, 1fr) 6px var(--rooms-width, 380px);
+
+  // While dragging the resizer: no accidental text selection, and the
+  // resize cursor even when the pointer runs ahead of the thin bar.
+  &.resizing {
+    cursor: col-resize;
+    user-select: none;
+  }
+}
+
+.pane-resizer {
+  cursor: col-resize;
+  background: #e4eae7;
+  transition: background 0.15s;
+  touch-action: none;
+
+  &:hover,
+  .resizing & {
+    background: #9cc9b8;
+  }
 }
 
 .pane {
@@ -246,10 +266,13 @@
   }
 }
 
+// cdkScrollable (chat.html): dragging a person near its top/bottom edge
+// auto-scrolls it, so someone at the bottom can reach a room at the top.
+// No bottom padding: room-board's "Még nincs szobája" tray sticks flush to
+// the panel's bottom edge.
 .pane-rooms {
-  border-left: 1px solid #e4eae7;
   overflow-y: auto;
-  padding: 18px 20px;
+  padding: 18px 20px 0;
 }
 
 .chat-empty {
@@ -270,12 +293,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .pane.inactive {
+  .pane.inactive,
+  .pane-resizer {
     display: none;
-  }
-
-  .pane-rooms {
-    border-left: 0;
   }
 }
 

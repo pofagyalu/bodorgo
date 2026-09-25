@@ -64,14 +64,30 @@
       </div>
     </header>
 
-    <div class="chat-panes">
+    <div class="chat-panes" #panes [style.--rooms-width.px]="roomsWidth()" [class.resizing]="resizing()">
       <section class="pane pane-chat" [class.inactive]="activePane() !== 'chat'" aria-label="Chat">
         @for (id of feedKey(); track id) {
         <app-feed [tourId]="id" />
         }
       </section>
 
-      <section class="pane pane-rooms" [class.inactive]="activePane() !== 'rooms'" aria-label="Szobabeosztás">
+      <!-- Side-by-side only: drag to resize the Szobabeosztás panel, double-click to reset -->
+      <div
+        class="pane-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Szobabeosztás szélessége"
+        title="Húzd a szélesség állításához (dupla kattintás: alaphelyzet)"
+        (pointerdown)="startResize($event)"
+        (dblclick)="resetRoomsWidth()"
+      ></div>
+
+      <section
+        class="pane pane-rooms"
+        cdkScrollable
+        [class.inactive]="activePane() !== 'rooms'"
+        aria-label="Szobabeosztás"
+      >
         <app-room-board [tour]="t" />
       </section>
     </div>

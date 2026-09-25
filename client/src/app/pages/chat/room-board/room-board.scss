@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 4px;
+  margin-bottom: 10px;
 
   h3 {
     display: flex;
@@ -46,11 +46,76 @@
   }
 }
 
+// --- Final / not final ---
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f0f4f3;
+  color: #587079;
+  font-size: 13px;
+  font-weight: 650;
+
+  mat-icon {
+    font-size: 19px;
+    width: 19px;
+    height: 19px;
+  }
+
+  span {
+    flex: 1;
+  }
+
+  &.status--final {
+    background: #e5f5ec;
+    color: #1f6f5c;
+  }
+}
+
+.status-btn {
+  flex: none;
+  padding: 5px 10px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+// Where "I" (and my family) sleep.
+.mine {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff8e6;
+  color: #6b5210;
+  font-size: 13px;
+  display: grid;
+  gap: 2px;
+}
+
 .board-sub {
-  margin: 0 0 14px;
+  margin: 10px 0 12px;
   color: #82939a;
   font-size: 12px;
+
+  .hint {
+    color: #1a796c;
+  }
 }
+
+// --- Houses and rooms ---
 
 .house {
   margin-bottom: 14px;
@@ -60,11 +125,26 @@
   background: #fafbfa;
 }
 
+// Masonry: the room cards stack brick-style in as many columns as the
+// panel's width allows (it can be widened with the chat page's resizer),
+// each card only as tall as its own room - no gaps next to a small room
+// the way a strict grid row would leave.
+.rooms {
+  columns: 230px;
+  column-gap: 8px;
+
+  > .room,
+  > .empty-note {
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+}
+
 .house-head {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 
   mat-icon {
     color: #1a796c;
@@ -85,12 +165,43 @@ small {
   font-size: 12px;
 }
 
+// Title on its own line, then the people (and, while someone is dragged in,
+// their ghost chip), then the free places - in that order, whatever order
+// CDK happens to insert its placeholder in.
 .room {
-  margin-top: 8px;
   padding: 10px;
   border-radius: 10px;
   background: #fff;
-  border: 1px solid #edf1ef;
+  border: 1.5px solid #edf1ef;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 70px;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+
+  > .room-head {
+    flex-basis: 100%;
+    order: 0;
+    margin-bottom: 2px;
+  }
+
+  > .person {
+    order: 1;
+  }
+
+  > .place {
+    order: 2;
+  }
+
+  // CDK adds this while something is being dragged over the room.
+  &.cdk-drop-list-receiving,
+  &.cdk-drop-list-dragging {
+    border-color: #9cc9b8;
+    background: #f4fbf8;
+  }
 }
 
 .room-head {
@@ -115,14 +226,75 @@ small {
   font-weight: 700;
 }
 
+.room--full .room-count {
+  background: #e5f5ec;
+  color: #1f6f5c;
+}
+
 .places {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+  min-height: 32px;
 }
 
-// An empty place - later a person's avatar sits here instead.
+// A person: avatar + name chip. Draggable for an admin.
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 10px 2px 2px;
+  border-radius: 999px;
+  background: #f2f5f4;
+  color: #254257;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: default;
+
+  &:not(.cdk-drag-disabled) {
+    cursor: grab;
+  }
+
+  &.person--me {
+    background: #fff1c9;
+  }
+}
+
+.person-avatar {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  background: #b9e6d6;
+  color: #20594f;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.person-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// The chip while it's being dragged (rendered at the body level by CDK).
+.cdk-drag-preview.person {
+  box-shadow: 0 8px 24px rgba(16, 37, 54, 0.25);
+  cursor: grabbing;
+}
+
+// The ghost chip: where the dragged person will land - in a room, it
+// takes the next free place.
+.cdk-drag-placeholder {
+  opacity: 0.6;
+  outline: 1.5px dashed #1a796c;
+  outline-offset: 1px;
+  background: #e5f5ec;
+}
+
+// A free place in a room.
 .place {
   width: 30px;
   height: 30px;
@@ -139,6 +311,39 @@ small {
   }
 }
 
+// A tray stuck to the bottom of the (scrolling) Szobabeosztás panel: the
+// people still without a room are always in view, the rooms scroll above
+// them. At most about a third of the screen tall - beyond that (a big
+// tour) it scrolls on its own. Spans the panel's full width (the negative
+// margins undo the panel's own side padding - see chat.scss's .pane-rooms,
+// which also has no bottom padding for this to sit flush against).
+.unassigned {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 4px -20px 0;
+  padding: 10px 20px 12px;
+  max-height: 34vh;
+  overflow-y: auto;
+  background: #fff;
+  border-top: 1.5px solid #dce6e3;
+  box-shadow: 0 -6px 16px rgba(16, 37, 54, 0.08);
+
+  h4 {
+    margin: 0;
+    font-size: 13px;
+    color: #587079;
+  }
+}
+
+.unassigned-list {
+  &.cdk-drop-list-receiving,
+  &.cdk-drop-list-dragging {
+    background: #f7f9f8;
+    border-radius: 10px;
+  }
+}
+
 .empty-note {
   margin: 4px 0 0;
   color: #999;
@@ -150,7 +355,7 @@ small {
   display: grid;
   place-items: center;
   gap: 6px;
-  margin-top: 12px;
+  margin: 12px 0 18px;
   padding: 36px 16px;
   border: 2px dashed #dce6e3;
   border-radius: 16px;
@@ -172,4 +377,86 @@ small {
   .hint {
     font-size: 12px;
   }
+}
+
+// --- "Hová kerüljön?" room picker (admin tap) ---
+
+.pick-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 29999;
+  background: #0c2537a3;
+}
+
+.pick-sheet {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30000;
+  width: min(380px, calc(100vw - 24px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 80px #10253655;
+
+  h4 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    color: #203747;
+  }
+}
+
+.pick-list {
+  display: grid;
+  gap: 6px;
+
+  button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #dce6e3;
+    border-radius: 10px;
+    background: #fff;
+    color: #254257;
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #f4fbf8;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    &.current {
+      border-color: #1a796c;
+      background: #e5f5ec;
+    }
+  }
+
+  .pick-none {
+    color: #a4513a;
+  }
+}
+
+.pick-cancel {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  border: 0;
+  border-radius: 10px;
+  background: #f0f4f3;
+  color: #587079;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
 }

@@ -52,6 +52,15 @@ const attendeeSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  // Szobabeosztás: which room of the tour's accommodation this person
+  // sleeps in - the _id of a room inside tour.accommodation.houses[].rooms
+  // (see tourModel.js). Absent = no room yet. Lives here, on the
+  // registration itself, so cancelling a registration frees the place
+  // automatically; a deleted room's people are cleared back to "no room"
+  // by accommodationController.js.
+  room: {
+    type: Schema.Types.ObjectId,
+  },
 });
 
 const reservationSchema = new Schema(

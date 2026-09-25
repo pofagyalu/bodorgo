@@ -240,8 +240,15 @@ const tourSchema = new Schema(
     // plain "HH:mm" string rather than a Date, since it's the same every
     // year the tour repeats and doesn't need its own date component.
     // See houseSchema/roomSchema above. Empty until an admin sets it up.
+    // finalized: the admin has marked the Szobabeosztás (who sleeps where -
+    // see reservationModel.js's attendee room) as final; while set, nobody
+    // can be moved until it's unlocked again (see roomAllocationController.js).
     accommodation: {
       houses: [houseSchema],
+      finalized: {
+        type: Boolean,
+        default: false,
+      },
     },
     schedule: [
       {
