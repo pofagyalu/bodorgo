@@ -23,7 +23,7 @@ export default function registerChatHandlers(io) {
       try {
         const posts = await Post.find({ tourId })
           .sort('createdAt')
-          .populate('creator', 'name');
+          .populate('creator', 'name username');
         socket.emit('initial-posts', { tourId, posts });
       } catch (err) {
         logger.error(`chat: failed to load posts for tour ${tourId}: ${err}`);
@@ -49,11 +49,55 @@ export default function registerChatHandlers(io) {
           creator: sessionUser.id,
           text: text.trim(),
         });
-        const populated = await post.populate('creator', 'name');
+        const populated = await post.populate('creator', 'name username');
         io.to(tourRoom(tourId)).emit('new-post', populated);
       } catch (err) {
         logger.error(`chat: failed to save post for tour ${tourId}: ${err}`);
         socket.emit('chat-error', 'Could not send message.');
+      }
+    });
+
+    // Editing/deleting: only ever the author's own, not-yet-deleted post.
+    // Everyone in the tour's room gets the changed post ('post-updated').
+    const loadOwnPost = async (postId) => {
+      if (!sessionUser || !postId) return null;
+      const post = await Post.findById(postId);
+      if (!post || post.deletedAt || String(post.creator) !== sessionUser.id) return null;
+      return post;
+    };
+
+    socket.on('edit-post', async ({ postId, text }) => {
+      try {
+        const post = await loadOwnPost(postId);
+        if (!post || !text?.trim()) {
+          return socket.emit('chat-error', 'Ezt az üzenetet nem szerkesztheted.');
+        }
+        post.text = text.trim();
+        post.editedAt = new Date();
+        await post.save();
+        const populated = await post.populate('creator', 'name username');
+        io.to(tourRoom(post.tourId)).emit('post-updated', populated);
+      } catch (err) {
+        logger.error(`chat: failed to edit post ${postId}: ${err}`);
+        socket.emit('chat-error', 'Could not edit message.');
+      }
+    });
+
+    socket.on('delete-post', async ({ postId }) => {
+      try {
+        const post = await loadOwnPost(postId);
+        if (!post) {
+          return socket.emit('chat-error', 'Ezt az üzenetet nem törölheted.');
+        }
+        post.text = '';
+        post.image = null;
+        post.deletedAt = new Date();
+        await post.save();
+        const populated = await post.populate('creator', 'name username');
+        io.to(tourRoom(post.tourId)).emit('post-updated', populated);
+      } catch (err) {
+        logger.error(`chat: failed to delete post ${postId}: ${err}`);
+        socket.emit('chat-error', 'Could not delete message.');
       }
     });
   });

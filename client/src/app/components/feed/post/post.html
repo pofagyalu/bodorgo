@@ -1,17 +1,103 @@
-<div class="post-card">
-  <div class="post-header">
-    <span class="creator" [style.color]="nameColor">{{ creator() }}</span>
-  </div>
+<!-- The author's name above the bubble, plain text (Messenger-style) -->
+<span class="creator" [style.color]="nameColor">{{ creator() }}</span>
 
-  <div class="post-content">
-    <p class="text">{{ text() }}</p>
-
-    @if (imageUrl()) {
-    <img class="post-image" [src]="imageUrl()" alt="Post image" />
+<div
+  class="post-card"
+  [class.post-card--deleted]="deleted"
+  [class.pressed]="sheetOpen()"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="cancelPress()"
+  (pointercancel)="cancelPress()"
+  (contextmenu)="onContextMenu($event)"
+>
+  <!-- Desktop: beside the bubble, only while hovered - never taking any
+       height: the date, and on my own messages the edit/delete buttons
+       stacked next to it. Left of my own bubbles, right of others'. (On a
+       phone these live in the long-press menu below instead.) -->
+  <div class="side">
+    <small class="post-date" [title]="fullTimestamp()">
+      <span>{{ dayLabel() }}</span>
+      <span>{{ timeLabel() }}</span>
+      @if (edited && !deleted) { <span class="edited">szerkesztve</span> }
+    </small>
+    @if (isOwn && !deleted && !editing() && !confirmingDelete()) {
+    <div class="own-actions">
+      <button type="button" class="icon-action" title="Szerkesztés" aria-label="Üzenet szerkesztése" (click)="startEdit()">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button type="button" class="icon-action" title="Törlés" aria-label="Üzenet törlése" (click)="askDelete()">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
     }
   </div>
 
-  <div class="post-footer">
-    <small>{{ readableTimestamp() }}</small>
+  @if (deleted) {
+  <p class="text text--deleted"><mat-icon>block</mat-icon>Hozzászólás törölve</p>
+  } @else if (editing()) {
+  <textarea
+    #editBox
+    class="edit-box"
+    rows="3"
+    [value]="draft()"
+    (input)="draft.set($any($event.target).value)"
+    (keydown)="onEditKeydown($event)"
+    aria-label="Üzenet szerkesztése"
+  ></textarea>
+  <div class="edit-actions">
+    <span class="edit-hint">Enter: mentés · Esc: mégse</span>
+    <button type="button" class="mini-btn" (click)="cancelEdit()">Mégse</button>
+    <button type="button" class="mini-btn mini-btn--primary" [disabled]="!draft().trim()" (click)="saveEdit()">
+      Mentés
+    </button>
   </div>
+  } @else {
+  <p class="text">{{ text() }}</p>
+
+  @if (imageUrl()) {
+  <img class="post-image" [src]="imageUrl()" alt="Post image" />
+  }
+  }
+
+  @if (confirmingDelete()) {
+  <div class="confirm">
+    Törlöd?
+    <button type="button" class="mini-btn mini-btn--danger" (click)="confirmDelete()">Igen</button>
+    <button type="button" class="mini-btn" (click)="confirmingDelete.set(false)">Mégse</button>
+  </div>
+  }
 </div>
+
+<!-- Phone: the long-press menu, sliding up from the bottom of the screen.
+     A list of actions, so more can be added later (reply, react...). -->
+@if (sheetOpen()) {
+<div class="sheet-backdrop" (click)="closeSheet()"></div>
+<div class="sheet" role="dialog" aria-modal="true" aria-label="Üzenet műveletek">
+  <div class="sheet-handle"></div>
+  <p class="sheet-date">
+    {{ fullTimestamp() }}@if (edited && !deleted) { · szerkesztve }
+  </p>
+
+  @if (sheetConfirmingDelete()) {
+  <p class="sheet-question">Biztosan törlöd ezt az üzenetet?</p>
+  <button type="button" class="sheet-item sheet-item--danger" (click)="sheetConfirmDelete()">
+    <mat-icon>delete</mat-icon>Igen, törlöm
+  </button>
+  <button type="button" class="sheet-item" (click)="sheetConfirmingDelete.set(false)">
+    <mat-icon>arrow_back</mat-icon>Mégse
+  </button>
+  } @else {
+  @if (!deleted) {
+  <button type="button" class="sheet-item" (click)="copyText()"><mat-icon>content_copy</mat-icon>Szöveg másolása</button>
+  }
+  @if (isOwn && !deleted) {
+  <button type="button" class="sheet-item" (click)="sheetEdit()"><mat-icon>edit</mat-icon>Szerkesztés</button>
+  <button type="button" class="sheet-item sheet-item--danger" (click)="sheetConfirmingDelete.set(true)">
+    <mat-icon>delete</mat-icon>Törlés
+  </button>
+  }
+  <button type="button" class="sheet-item sheet-item--cancel" (click)="closeSheet()">Mégse</button>
+  }
+</div>
+}
