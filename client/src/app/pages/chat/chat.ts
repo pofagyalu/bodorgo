@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Feed } from '../../components/feed/feed';
+import { RoomBoard } from './room-board/room-board';
 import { TourService, Tour } from '../../services/tour';
 
 // Exempted from the close-after-14-days rule below so the tour we used to
@@ -28,7 +29,7 @@ function isChatOpen(t: Tour): boolean {
 // side on a very wide screen, otherwise as two tabs.
 @Component({
   selector: 'app-chat',
-  imports: [Feed, MatIconModule],
+  imports: [Feed, MatIconModule, RoomBoard],
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
 })

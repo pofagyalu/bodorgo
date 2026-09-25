@@ -4,6 +4,28 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { CurrentUser } from '../auth/auth.service';
 
+// A tour's accommodation (see tourModel.js's houseSchema/roomSchema).
+// _id is absent only for a house/room just added in the editor and not
+// saved yet - the server assigns one, and keeps it across later edits.
+export interface AccommodationRoom {
+  _id?: string;
+  name: string;
+  description: string;
+  beds: number;
+}
+
+export interface AccommodationHouse {
+  _id?: string;
+  name: string;
+  description: string;
+  rooms: AccommodationRoom[];
+}
+
+export interface AccommodationResponse {
+  status: string;
+  data: { accommodation: { houses: AccommodationHouse[] } };
+}
+
 export interface TickerResponse {
   status: string;
   data: {
@@ -157,6 +179,9 @@ export interface Tour {
   // TourService.coverUrl).
   coverUpdatedAt?: string;
   images: string[];
+  // Houses -> rooms -> places, set up by an admin (see tour-edit's
+  // Szállás section). Absent/empty until then.
+  accommodation?: { houses: AccommodationHouse[] };
   // Only populated on the single-tour endpoint (getTour), not the list one.
   schedule?: ScheduleEntry[];
   dailyWeather?: DailyWeather[];
@@ -534,6 +559,12 @@ export class TourService {
 
   // The landing page ticker's one line - the only tour data available
   // without logging in (see tourController.js's getTicker).
+  // Admin-only - replaces the tour's whole Szállás (houses -> rooms) in one
+  // go, separately from the rest of the tour.
+  updateAccommodation(tourId: string, houses: AccommodationHouse[]): Observable<AccommodationResponse> {
+    return this.http.put<AccommodationResponse>(`${this.apiUrl}/${tourId}/accommodation`, { houses });
+  }
+
   getTicker(): Observable<TickerResponse> {
     return this.http.get<TickerResponse>(`${this.apiUrl}/ticker`);
   }

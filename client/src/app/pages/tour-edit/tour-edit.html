@@ -194,6 +194,17 @@
       }
     </div>
   </form>
+
+  @if (isEditMode) {
+  <app-accommodation-editor
+    [tourId]="tourId!"
+    [initialHouses]="accommodationHouses()"
+    [maxCapacity]="form.maxCapacity"
+    (saved)="accommodationHouses.set($event)"
+  />
+  } @else {
+  <p class="field-note accommodation-later">A szállás (házak, szobák, férőhelyek) a tábor létrehozása után állítható be.</p>
+  }
   }
 </div>
 }

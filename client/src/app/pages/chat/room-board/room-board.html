@@ -1,0 +1,55 @@
+<div class="board-head">
+  <h3><mat-icon>bed</mat-icon>Szobabeosztás</h3>
+  @if (isAdmin()) {
+  <a class="setup-link" [routerLink]="['/taborok', tour().slug, 'szerkesztes']" title="A tábor szerkesztő oldalán, a Szállás résznél">
+    <mat-icon>tune</mat-icon>Szállás beállítása
+  </a>
+  }
+</div>
+
+@if (houses().length) {
+<p class="board-sub">{{ houses().length }} ház · {{ totalBeds() }} férőhely</p>
+
+@for (h of houses(); track h._id) {
+<div class="house">
+  <div class="house-head">
+    <mat-icon>home</mat-icon>
+    <div>
+      <strong>{{ h.name }}</strong>
+      @if (h.description) {
+      <small>{{ h.description }}</small>
+      }
+    </div>
+  </div>
+
+  @for (r of h.rooms; track r._id) {
+  <div class="room">
+    <div class="room-head">
+      <div>
+        <strong>{{ r.name }}</strong>
+        @if (r.description) {
+        <small>{{ r.description }}</small>
+        }
+      </div>
+      <span class="room-count">0/{{ r.beds }}</span>
+    </div>
+    <div class="places">
+      @for (p of places(r.beds); track p) {
+      <span class="place" title="Szabad hely"><mat-icon>bed</mat-icon></span>
+      }
+    </div>
+  </div>
+  } @empty {
+  <p class="empty-note">Ebben a házban még nincs szoba.</p>
+  }
+</div>
+}
+} @else {
+<div class="board-empty">
+  <mat-icon>holiday_village</mat-icon>
+  <p>Ehhez a táborhoz még nincs megadva szállás.</p>
+  @if (isAdmin()) {
+  <p class="hint">A házakat és szobákat a tábor szerkesztő oldalán, a <strong>Szállás</strong> résznél adhatod meg.</p>
+  }
+</div>
+}

@@ -1,11 +1,12 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { TourService, TourPayload } from '../../services/tour';
+import { TourService, TourPayload, AccommodationHouse } from '../../services/tour';
 import { AuthService } from '../../auth/auth.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { environment } from '../../../environments/environment';
 import { CropDialog } from '../../components/crop-dialog/crop-dialog';
+import { AccommodationEditor } from './accommodation-editor/accommodation-editor';
 
 interface TourEditForm {
   order: number | null;
@@ -92,7 +93,7 @@ function toDatetimeLocal(iso: string): string {
 @Component({
   selector: 'app-tour-edit',
   standalone: true,
-  imports: [FormsModule, RouterLink, CropDialog],
+  imports: [FormsModule, RouterLink, CropDialog, AccommodationEditor],
   templateUrl: './tour-edit.html',
   styleUrl: './tour-edit.scss',
 })
@@ -108,6 +109,9 @@ export class TourEdit implements OnInit, OnDestroy {
   // tour-details.ts) - null means create mode.
   tourId: string | null = null;
   loading = signal(false);
+  // The tour's saved Szállás, handed to the separately-saved
+  // accommodation editor under the form (edit mode only).
+  accommodationHouses = signal<AccommodationHouse[]>([]);
   saving = signal(false);
   error = signal<string | null>(null);
   form: TourEditForm = emptyForm();
@@ -153,6 +157,7 @@ export class TourEdit implements OnInit, OnDestroy {
     this.tourService.getTour(id).subscribe({
       next: (res) => {
         const t = res.data.tour;
+        this.accommodationHouses.set(t.accommodation?.houses ?? []);
         this.form = {
           order: t.order,
           title: t.title,

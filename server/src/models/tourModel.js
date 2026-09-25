@@ -5,6 +5,46 @@ import logger from '../logger.js';
 
 const { Schema } = mongoose;
 
+// The tour's accommodation, set up by an admin (see
+// accommodationController.js) - usually well after the tour itself, once
+// the actual houses/rooms are known. Houses -> rooms -> number of places;
+// the kind of bed ("franciaágy"...) just goes in a room's description.
+// Every house and room keeps its own _id across edits, so the
+// Szobabeosztás (who sleeps where) can point at a room by id and survive
+// renames.
+const roomSchema = new Schema({
+  name: {
+    type: String,
+    required: [true, 'Minden szobának kell legyen neve'],
+    trim: true,
+  },
+  description: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  beds: {
+    type: Number,
+    required: [true, 'Minden szobának meg kell adni a férőhelyek számát'],
+    min: [1, 'Egy szobában legalább 1 férőhely kell legyen'],
+    max: [20, 'Egy szobában legfeljebb 20 férőhely lehet'],
+  },
+});
+
+const houseSchema = new Schema({
+  name: {
+    type: String,
+    required: [true, 'Minden háznak kell legyen neve'],
+    trim: true,
+  },
+  description: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  rooms: [roomSchema],
+});
+
 const tourSchema = new Schema(
   {
     order: {
@@ -199,6 +239,10 @@ const tourSchema = new Schema(
     // Day-by-day agenda. day is 1-indexed (1 = startDate itself); time is a
     // plain "HH:mm" string rather than a Date, since it's the same every
     // year the tour repeats and doesn't need its own date component.
+    // See houseSchema/roomSchema above. Empty until an admin sets it up.
+    accommodation: {
+      houses: [houseSchema],
+    },
     schedule: [
       {
         day: {

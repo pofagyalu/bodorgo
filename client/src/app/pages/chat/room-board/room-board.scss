@@ -1,0 +1,175 @@
+:host {
+  display: block;
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 16px;
+    color: #203747;
+
+    mat-icon {
+      color: #1a796c;
+    }
+  }
+}
+
+.setup-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: #eef8f4;
+  color: #1a796c;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+
+  &:hover {
+    background: #dff2ea;
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.board-sub {
+  margin: 0 0 14px;
+  color: #82939a;
+  font-size: 12px;
+}
+
+.house {
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid #e4eae7;
+  border-radius: 14px;
+  background: #fafbfa;
+}
+
+.house-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  mat-icon {
+    color: #1a796c;
+    flex: none;
+  }
+
+  strong {
+    display: block;
+    color: #203747;
+    font-size: 15px;
+  }
+}
+
+small {
+  display: block;
+  margin-top: 1px;
+  color: #82939a;
+  font-size: 12px;
+}
+
+.room {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #edf1ef;
+}
+
+.room-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+
+  strong {
+    font-size: 13px;
+    color: #254257;
+  }
+}
+
+.room-count {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f0f4f3;
+  color: #587079;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.places {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+// An empty place - later a person's avatar sits here instead.
+.place {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed #c9d8d3;
+  border-radius: 50%;
+  color: #c9d8d3;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.empty-note {
+  margin: 4px 0 0;
+  color: #999;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.board-empty {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 36px 16px;
+  border: 2px dashed #dce6e3;
+  border-radius: 16px;
+  color: #82939a;
+  text-align: center;
+  font-size: 13px;
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: #b9e6d6;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  .hint {
+    font-size: 12px;
+  }
+}
