@@ -72,11 +72,7 @@
       </section>
 
       <section class="pane pane-rooms" [class.inactive]="activePane() !== 'rooms'" aria-label="Szobabeosztás">
-        <h3 class="rooms-title"><mat-icon>bed</mat-icon>Szobabeosztás</h3>
-        <div class="rooms-placeholder">
-          <mat-icon>holiday_village</mat-icon>
-          <p>Hamarosan itt látod majd, ki melyik házban és szobában alszik.</p>
-        </div>
+        <app-room-board [tour]="t" />
       </section>
     </div>
     } @else if (loaded()) {

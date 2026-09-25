@@ -1,0 +1,233 @@
+// Visually its own block under the tour form (it's saved separately) -
+// same input/button look as tour-edit.scss.
+.acc {
+  margin-top: 2.5rem;
+  padding-top: 1.8rem;
+  border-top: 2px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.acc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  h2 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+}
+
+.acc-sub {
+  margin: 0.3rem 0 0;
+  color: #888;
+  font-size: 0.85rem;
+  max-width: 44rem;
+}
+
+.acc-totals {
+  margin: 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.acc-max {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.acc-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  background: #fff6db;
+  color: #8a6400;
+  font-size: 0.9rem;
+
+  .material-icons {
+    font-size: 1.2rem;
+  }
+}
+
+.acc-empty {
+  margin: 0;
+  color: #999;
+  font-style: italic;
+}
+
+.house {
+  border: 1px solid #e3e8e6;
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: #fafbfa;
+}
+
+.house-row,
+.room-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rooms {
+  margin: 0.6rem 0 0 1.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row-icon {
+  flex: none;
+  color: #1a796c;
+}
+
+input {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+  color: #333;
+  min-width: 0;
+
+  &.invalid {
+    border-color: #d33;
+    background: #fff4f4;
+  }
+}
+
+.house-row .in-name {
+  font-weight: 700;
+}
+
+.in-name {
+  flex: 1 1 12rem;
+}
+
+.in-desc {
+  flex: 2 1 16rem;
+}
+
+.in-beds {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #666;
+  font-size: 0.85rem;
+
+  input {
+    width: 4.2rem;
+  }
+}
+
+.icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #f3e3dc;
+  color: #a4513a;
+
+  &:hover {
+    background: #ecd0c4;
+  }
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.add-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.9rem 0.4rem 0.6rem;
+  border: 1px dashed #9cc9b8;
+  border-radius: 999px;
+  background: #fff;
+  color: #1a796c;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #eef8f4;
+  }
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.acc-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.acc-unsaved {
+  color: #b07a00;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn {
+  padding: 0.7rem 1.8rem;
+  border-radius: 10rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+}
+
+.btn--green {
+  background-color: #55c57a;
+  color: #fff;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.btn--grey {
+  background-color: #eee;
+  color: #555;
+}
+
+// Phone: each row's fields wrap under each other instead of squeezing.
+@media (max-width: 640px) {
+  .house-row,
+  .room-row {
+    flex-wrap: wrap;
+  }
+
+  .rooms {
+    margin-left: 0.4rem;
+  }
+
+  .in-name,
+  .in-desc {
+    flex-basis: 100%;
+  }
+}

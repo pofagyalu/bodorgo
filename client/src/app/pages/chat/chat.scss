@@ -252,42 +252,6 @@
   padding: 18px 20px;
 }
 
-.rooms-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 16px;
-  font-size: 16px;
-  color: #203747;
-
-  mat-icon {
-    color: #1a796c;
-  }
-}
-
-.rooms-placeholder {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  padding: 40px 16px;
-  border: 2px dashed #dce6e3;
-  border-radius: 16px;
-  color: #82939a;
-  text-align: center;
-  font-size: 13px;
-
-  mat-icon {
-    font-size: 40px;
-    width: 40px;
-    height: 40px;
-    color: #b9e6d6;
-  }
-
-  p {
-    margin: 0;
-  }
-}
-
 .chat-empty {
   padding: 40px 24px;
   color: #82939a;

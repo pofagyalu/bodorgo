@@ -1,0 +1,100 @@
+<section class="acc" id="szallas">
+  <div class="acc-head">
+    <div>
+      <h2>Szállás</h2>
+      <p class="acc-sub">
+        Házak, szobák és férőhelyek - külön mentés, a tábor többi adatától függetlenül. Az ágy típusát (pl.
+        franciaágy) a szoba leírásába írd.
+      </p>
+    </div>
+    <p class="acc-totals">
+      {{ totals().houses }} ház · {{ totals().rooms }} szoba · <strong>{{ totals().beds }} férőhely</strong>
+      @if (maxCapacity()) { <span class="acc-max">(max. létszám: {{ maxCapacity() }})</span> }
+    </p>
+  </div>
+
+  @if (tooFewBeds()) {
+  <p class="acc-warning">
+    <span class="material-icons" aria-hidden="true">warning</span>
+    Kevesebb a férőhely ({{ totals().beds }}), mint a tábor maximális létszáma ({{ maxCapacity() }}).
+  </p>
+  }
+
+  @for (h of houses(); track $index; let hi = $index) {
+  <div class="house">
+    <div class="house-row">
+      <mat-icon class="row-icon">home</mat-icon>
+      <input
+        class="in-name"
+        type="text"
+        placeholder="Ház neve, pl. Nagy ház"
+        [class.invalid]="showErrors() && !h.name.trim()"
+        [value]="h.name"
+        (input)="setHouse(hi, 'name', $any($event.target).value)"
+      />
+      <input
+        class="in-desc"
+        type="text"
+        placeholder="Leírás, pl. itt van a buliszoba"
+        [value]="h.description"
+        (input)="setHouse(hi, 'description', $any($event.target).value)"
+      />
+      <button type="button" class="icon-btn icon-btn--remove" title="Ház törlése" (click)="removeHouse(hi)">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+
+    <div class="rooms">
+      @for (r of h.rooms; track $index; let ri = $index) {
+      <div class="room-row">
+        <mat-icon class="row-icon">bed</mat-icon>
+        <input
+          class="in-name"
+          type="text"
+          placeholder="Szoba neve, pl. 2-es szoba"
+          [class.invalid]="showErrors() && !r.name.trim()"
+          [value]="r.name"
+          (input)="setRoom(hi, ri, 'name', $any($event.target).value)"
+        />
+        <input
+          class="in-desc"
+          type="text"
+          placeholder="Leírás, pl. van hűtő, franciaágy"
+          [value]="r.description"
+          (input)="setRoom(hi, ri, 'description', $any($event.target).value)"
+        />
+        <label class="in-beds" title="Férőhelyek száma">
+          <input
+            type="number"
+            min="1"
+            max="20"
+            [class.invalid]="showErrors() && (!(r.beds >= 1) || r.beds > 20)"
+            [value]="r.beds"
+            (input)="setBeds(hi, ri, $any($event.target).value)"
+          />
+          <span>hely</span>
+        </label>
+        <button type="button" class="icon-btn icon-btn--remove" title="Szoba törlése" (click)="removeRoom(hi, ri)">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+      <button type="button" class="add-btn add-btn--room" (click)="addRoom(hi)"><mat-icon>add</mat-icon>Szoba</button>
+    </div>
+  </div>
+  } @empty {
+  <p class="acc-empty">Még nincs megadva szállás.</p>
+  }
+
+  <button type="button" class="add-btn" (click)="addHouse()"><mat-icon>add</mat-icon>Ház</button>
+
+  <div class="acc-actions">
+    <button type="button" class="btn btn--green" [disabled]="saving() || !dirty()" (click)="save()">
+      {{ saving() ? 'Mentés...' : 'Szállás mentése' }}
+    </button>
+    @if (dirty() && !saving()) {
+    <button type="button" class="btn btn--grey" (click)="reset()">Változások elvetése</button>
+    <span class="acc-unsaved">Nem mentett változások</span>
+    }
+  </div>
+</section>

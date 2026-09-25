@@ -13,6 +13,7 @@ import {
   deleteTourDocument,
 } from '../controllers/tourDocumentController.js';
 import { uploadCoverMiddleware, uploadTourCover, getTourCover } from '../controllers/tourCoverController.js';
+import { updateAccommodation } from '../controllers/accommodationController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -58,6 +59,11 @@ router
   .route('/:id/cover')
   .get(requireAuth, getTourCover)
   .post(requireAuth, restrictTo('admin'), uploadCoverMiddleware, uploadTourCover);
+
+// Szállás (houses -> rooms -> places) - saved on its own, separately from
+// the rest of the tour (see accommodationController.js). Read as part of
+// GET /tours/:id.
+router.route('/:id/accommodation').put(requireAuth, restrictTo('admin'), updateAccommodation);
 
 // Extra infók - admin-only upload/delete; viewing is a plain static file
 // URL under public/documents/tours/ (see tourDocumentController.js), same
