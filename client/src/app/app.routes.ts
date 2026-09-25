@@ -48,6 +48,7 @@ export const routes: Routes = [
   {
     path: 'chat',
     title: 'Bódorgó chat',
+    canActivate: [authGuard],
     loadComponent: () => import('./pages/chat/chat').then((m) => m.Chat),
   },
   {

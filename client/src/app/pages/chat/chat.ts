@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Feed } from '../../components/feed/feed';
 import { TourService, Tour } from '../../services/tour';
@@ -7,11 +7,6 @@ import { TourService, Tour } from '../../services/tour';
 // build/test the chat feature stays reachable even though it's long past -
 // no need to keep every other past tour's (empty) chat around too.
 const TEST_TOUR_ORDER = 11;
-
-// Below this width the sidebar defaults to its compact, icon-only rail -
-// matches the app's other mobile breakpoints closely enough while still
-// leaving room for a real two-column layout on small tablets.
-const NARROW_QUERY = '(max-width: 700px)';
 
 function finishDate(t: Tour): Date {
   const finish = new Date(t.startDate);
@@ -26,6 +21,11 @@ function isChatOpen(t: Tour): boolean {
   return new Date() <= closesAt;
 }
 
+// Laid out like the Klub area: a dark tour list on the left (full names
+// on a wide screen, round cover thumbnails below 1050px, a scrolling row
+// of names on a phone - all pure CSS, see chat.scss), then the selected
+// tour's chat and its Szobabeosztás (room allocation) panel - side by
+// side on a very wide screen, otherwise as two tabs.
 @Component({
   selector: 'app-chat',
   imports: [Feed, MatIconModule],
@@ -37,12 +37,11 @@ export class Chat implements OnInit {
 
   selectedTourId = signal<string | null>(null);
   visibleTours = signal<Tour[]>([]);
+  loaded = signal(false);
 
-  sidebarCollapsed = signal(this.matchesNarrow());
-  // Once the user manually toggles the sidebar, stop overriding their
-  // choice on resize - only the untouched, auto-computed default reacts
-  // to window width from then on.
-  private userToggledSidebar = false;
+  // Which of the two panes is shown while they're tabs (narrower screens)
+  // - ignored when both fit side by side.
+  activePane = signal<'chat' | 'rooms'>('chat');
 
   selectedTour = computed(
     () => this.visibleTours().find((t) => t._id === this.selectedTourId()) ?? null,
@@ -61,29 +60,29 @@ export class Chat implements OnInit {
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
         this.visibleTours.set(list);
         this.selectedTourId.set(list[0]?._id ?? null);
+        this.loaded.set(true);
       },
-      error: (err) => console.error('Failed to load tours for chat', err),
+      error: (err) => {
+        console.error('Failed to load tours for chat', err);
+        this.loaded.set(true);
+      },
     });
   }
 
   selectTour(id: string) {
     this.selectedTourId.set(id);
-    this.sidebarCollapsed.set(true);
+    this.activePane.set('chat');
   }
 
-  toggleSidebar() {
-    this.userToggledSidebar = true;
-    this.sidebarCollapsed.update((v) => !v);
+  coverUrl(t: Tour): string | null {
+    return this.tourService.coverUrl(t);
   }
 
-  @HostListener('window:resize')
-  onResize() {
-    if (!this.userToggledSidebar) {
-      this.sidebarCollapsed.set(this.matchesNarrow());
-    }
-  }
-
-  private matchesNarrow(): boolean {
-    return typeof window !== 'undefined' && window.matchMedia(NARROW_QUERY).matches;
+  // "2026. okt. 22." - Intl rather than the date pipe, since this app has
+  // no Hungarian locale data registered (see tour-card.ts).
+  formatDate(t: Tour): string {
+    return new Intl.DateTimeFormat('hu-HU', { year: 'numeric', month: 'short', day: 'numeric' }).format(
+      new Date(t.startDate),
+    );
   }
 }

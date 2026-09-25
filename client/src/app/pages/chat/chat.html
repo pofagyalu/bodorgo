@@ -1,43 +1,88 @@
 <div class="chat-shell">
-  <aside class="chat-sidebar" [class.collapsed]="sidebarCollapsed()">
-    <button
-      class="sidebar-toggle"
-      type="button"
-      [attr.aria-label]="sidebarCollapsed() ? 'Lista kibontása' : 'Lista összecsukása'"
-      (click)="toggleSidebar()"
-    >
-      <mat-icon>{{ sidebarCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-    </button>
+  <aside class="chat-sidebar" aria-label="Táborok chatjei">
+    <div class="chat-brand">
+      <div class="brand-mark"><mat-icon>forum</mat-icon></div>
+      <div class="brand-text"><strong>Chat</strong><small>Táboronként</small></div>
+    </div>
 
-    <h3 class="chat-sidebar-title">Táborok</h3>
-
-    <nav class="chat-sidebar-list">
+    <nav class="chat-nav" aria-label="Táborok">
       @for (t of visibleTours(); track t._id) {
       <button
         type="button"
-        class="chat-sidebar-item"
+        class="nav-item"
         [class.active]="t._id === selectedTourId()"
-        [title]="t.title"
+        [title]="t.order + '. ' + t.title"
         (click)="selectTour(t._id)"
       >
-        <span class="order-badge">{{ t.order }}</span>
-        <span class="full-title">{{ t.title }}</span>
+        <span class="tour-thumb">
+          @if (coverUrl(t); as url) {
+          <img [src]="url" alt="" />
+          }
+          <span class="tour-order">{{ t.order }}</span>
+        </span>
+        <span class="tour-text">
+          <strong>{{ t.title }}</strong>
+          <small>{{ formatDate(t) }}</small>
+        </span>
       </button>
-      } @empty {
-      <p class="chat-sidebar-empty">Nincs elérhető tábor.</p>
       }
     </nav>
   </aside>
 
-  <div class="chat-main">
-    @if (selectedTour(); as t) {
-    <h2 class="chat-title">{{ t.title }}</h2>
-    }
+  <main class="chat-main">
+    <!-- Phone only: the tour list as a scrolling row, like Klub's mobile nav -->
+    <nav class="chat-mobile-nav" aria-label="Táborok mobilon">
+      @for (t of visibleTours(); track t._id) {
+      <button type="button" [class.active]="t._id === selectedTourId()" (click)="selectTour(t._id)">
+        {{ t.order }}. {{ t.title }}
+      </button>
+      }
+    </nav>
 
-    @if (feedKey().length) { @for (id of feedKey(); track id) {
-    <app-feed [tourId]="id" />
-    } } @else {
-    <p class="chat-loading">Betöltés, vagy nincs elérhető tábor a csevegéshez...</p>
+    @if (selectedTour(); as t) {
+    <header class="chat-header">
+      <h2>{{ t.order }}. {{ t.title }}</h2>
+      <div class="pane-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          [class.active]="activePane() === 'chat'"
+          [attr.aria-selected]="activePane() === 'chat'"
+          (click)="activePane.set('chat')"
+        >
+          <mat-icon>chat</mat-icon>Chat
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [class.active]="activePane() === 'rooms'"
+          [attr.aria-selected]="activePane() === 'rooms'"
+          (click)="activePane.set('rooms')"
+        >
+          <mat-icon>bed</mat-icon>Szobabeosztás
+        </button>
+      </div>
+    </header>
+
+    <div class="chat-panes">
+      <section class="pane pane-chat" [class.inactive]="activePane() !== 'chat'" aria-label="Chat">
+        @for (id of feedKey(); track id) {
+        <app-feed [tourId]="id" />
+        }
+      </section>
+
+      <section class="pane pane-rooms" [class.inactive]="activePane() !== 'rooms'" aria-label="Szobabeosztás">
+        <h3 class="rooms-title"><mat-icon>bed</mat-icon>Szobabeosztás</h3>
+        <div class="rooms-placeholder">
+          <mat-icon>holiday_village</mat-icon>
+          <p>Hamarosan itt látod majd, ki melyik házban és szobában alszik.</p>
+        </div>
+      </section>
+    </div>
+    } @else if (loaded()) {
+    <p class="chat-empty">Nincs elérhető tábor a csevegéshez.</p>
+    } @else {
+    <p class="chat-empty">Betöltés...</p>
     }
-  </div>
+  </main>
 </div>
