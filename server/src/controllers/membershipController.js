@@ -16,7 +16,7 @@ import { computeAge } from './userController.js';
 export const getMembers = async (req, res) => {
   const users = await User.find()
     .select(
-      'name role lastLoginAt createdAt memberSince familyId retired birthday',
+      'name email role lastLoginAt createdAt memberSince familyId retired birthday',
     )
     .sort('name')
     .lean();
@@ -32,6 +32,11 @@ export const getMembers = async (req, res) => {
   );
 
   const usersWithAttendance = users.map((user) => {
+    // The raw birthday never goes out on this members-visible list - just
+    // the computed age. The email does (shown under each name, and no
+    // email = no account of their own, see members.ts's userStatus) - the
+    // whole page is members/admins-only, same as getAllUsers, which
+    // already shows members everyone's email.
     const { birthday, ...rest } = user;
 
     return {

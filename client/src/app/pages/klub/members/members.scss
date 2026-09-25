@@ -280,7 +280,7 @@ table {
 }
 
 .membership-table {
-  min-width: 680px;
+  min-width: 820px;
 }
 
 // Explicit shares for every column (table-layout:fixed makes these exact,
@@ -300,33 +300,27 @@ table {
   width: 20%;
 }
 
-.membership-table--compact th:nth-child(2),
-.membership-table--compact td:nth-child(2) {
-  width: 10%;
-}
-
-.membership-table--compact th:nth-child(3),
-.membership-table--compact td:nth-child(3) {
-  width: 5%;
-}
-
-.membership-table--compact th:nth-child(4),
-.membership-table--compact td:nth-child(4) {
-  width: 15%;
-}
-
 .membership-table--compact th:nth-child(5),
 .membership-table--compact td:nth-child(5) {
-  width: 40%;
+  width: 15%;
 }
 
 .membership-table--compact th:nth-child(6),
 .membership-table--compact td:nth-child(6) {
-  width: 10%;
+  width: 35%;
+}
+
+.membership-table--compact th:nth-child(7),
+.membership-table--compact td:nth-child(7) {
+  width: 12%;
 }
 
 .casual-table {
-  min-width: 590px;
+  // Every column gets an equal share of the width (no explicit widths
+  // anywhere in this table), and it shrinks with the screen instead of
+  // scrolling sideways - names and headers just wrap. See the mobile
+  // block at the bottom for the phone-width split.
+  table-layout: fixed;
 }
 
 th {
@@ -337,6 +331,35 @@ th {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+// Táborok/Kor in the member table - only ever a 1-2 digit number, so just
+// wide enough for the header label + sort arrow, with tighter side padding
+// than the other columns. Fixed px so it holds in its table-layout:fixed
+// (the remaining % columns there share whatever is left).
+.membership-table th.num-col,
+.membership-table td.num-col {
+  padding-left: 12px;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
+.membership-table th.num-col:nth-of-type(2) {
+  width: 104px;
+}
+
+.membership-table th.num-col:nth-of-type(3) {
+  width: 68px;
+}
+
+// Státusz in the member table - one fixed-width badge column, sized for
+// the longest label ("— Nincs fiókja").
+.membership-table th.status-col,
+.membership-table td.status-col {
+  width: 150px;
+  padding-left: 12px;
+  padding-right: 12px;
+  white-space: nowrap;
 }
 
 // Header of a sortable column - looks like the plain th text, just clickable.
@@ -397,9 +420,16 @@ td {
   background: #e3f3ea;
 }
 
-.membership-table td:last-child,
-.casual-table td:last-child {
-  text-align: left;
+// Műveletek sits flush against the right edge of both tables - the
+// header text right-aligned, and the buttons pushed right (.row-actions
+// is itself a flex container, see below).
+.membership-table th:last-child,
+.casual-table th:last-child {
+  text-align: right;
+}
+
+.row-actions {
+  justify-content: flex-end;
 }
 
 .person {
@@ -434,6 +464,9 @@ td {
   color: #82939a;
   margin-top: 3px;
   font-size: 11px;
+  // A long email address has no spaces to wrap at - break it anywhere
+  // rather than overflowing the (narrow, fixed-width) name column.
+  overflow-wrap: anywhere;
 }
 
 .status {
@@ -555,7 +588,7 @@ td {
 .row-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
 }
 
 .icon-btn {
@@ -586,6 +619,29 @@ td {
   &:hover {
     background: #37474f;
   }
+}
+
+.icon-btn--archive {
+  background: #f3e3dc;
+  color: #a4513a;
+
+  &:hover {
+    background: #ecd0c4;
+  }
+}
+
+.icon-btn--restore {
+  background: #e5f5ec;
+  color: #267b66;
+
+  &:hover {
+    background: #d2ecdf;
+  }
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .empty-row {
@@ -659,6 +715,15 @@ td {
 .primary-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.danger-btn {
+  background: #b5533a;
+  border-color: #b5533a;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: #9c442e;
 }
 
 .outline-btn {
@@ -820,5 +885,67 @@ td {
 
   .member-search {
     width: 100%;
+  }
+
+  .person {
+    gap: 8px;
+  }
+
+  th,
+  td {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  // The member table still scrolls sideways on a phone, but narrowed so
+  // that at least Név + Táborok + Kor (~315px) fit in view without
+  // scrolling: a fixed-width name column the name just wraps inside.
+  .membership-table th.num-col,
+  .membership-table td.num-col {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .membership-table--compact th:nth-child(1),
+  .membership-table--compact td:nth-child(1) {
+    width: 170px;
+  }
+
+  .membership-table th.num-col:nth-of-type(2) {
+    width: 88px;
+  }
+
+  .membership-table th.num-col:nth-of-type(3) {
+    width: 56px;
+  }
+
+  .membership-table th.status-col,
+  .membership-table td.status-col {
+    width: 136px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  // The other-users table fits the screen outright: the name (avatar +
+  // up to two lines) gets about a third, the rest split the remainder
+  // equally, with tight padding, and headers/badges/buttons allowed to
+  // wrap rather than overflow.
+  .casual-table th,
+  .casual-table td {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .casual-table th:nth-child(1) {
+    width: 34%;
+  }
+
+  .casual-table .status {
+    white-space: normal;
+  }
+
+  .casual-table .row-actions {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 }

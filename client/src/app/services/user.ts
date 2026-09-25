@@ -132,7 +132,6 @@ export interface CreateUserPayload {
   // existing one, so creation accepts everything editing does too.
   address?: UserAddress;
   role?: string;
-  retired?: boolean;
 }
 
 export interface UpdateUserPayload {
@@ -150,7 +149,6 @@ export interface UpdateUserPayload {
   // Manual override, not permanent - the next real Authentik login
   // overwrites it again (see userController.js's updateUser).
   role?: string;
-  retired?: boolean;
 }
 
 export interface AdminUserResponse {
@@ -222,6 +220,16 @@ export class UserService {
 
   updateMe(payload: UpdateMePayload): Observable<AdminUserResponse> {
     return this.http.patch<AdminUserResponse>(`${this.apiUrl}/updateMe`, payload);
+  }
+
+  // Never actually deletes - marks the user retired, reversible via
+  // restoreUser (see userController.js's archiveUser).
+  archiveUser(id: string): Observable<unknown> {
+    return this.http.delete(`${this.apiUrl}/${id}`);
+  }
+
+  restoreUser(id: string): Observable<unknown> {
+    return this.http.patch(`${this.apiUrl}/${id}/restore`, {});
   }
 
   joinFamily(userIds: string[]): Observable<JoinFamilyResponse> {

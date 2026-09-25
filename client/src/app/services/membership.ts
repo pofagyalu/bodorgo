@@ -16,12 +16,14 @@ export interface MemberUser {
   // members" for the membership-dues payment (see members.ts's
   // myFamilyClubMembers).
   familyId?: string;
-  // Admin-set (see member-edit.ts) - attended in the past, kept for
-  // history, just no longer offered as a candidate for a new reservation
-  // or schedule-event opt-in (see tour-details.ts). Shown here as a small
-  // status tag, same "open-book" visibility as role/lastLoginAt already
-  // have on this list.
+  // Admin-set via this page's archive/restore button - attended in the
+  // past, kept for history, just no longer offered as a candidate for a
+  // new reservation or schedule-event opt-in (see tour-details.ts). Wins
+  // over the login-based status (see members.ts's userStatus).
   retired?: boolean;
+  // Shown under each name on both tables. No email = no account of their
+  // own: can't be invited through Authentik, so can never log in.
+  email?: string;
   age: number | null;
   toursAttended: number;
 }

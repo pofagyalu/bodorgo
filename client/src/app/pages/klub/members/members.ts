@@ -6,6 +6,8 @@ import { AuthService } from '../../../auth/auth.service';
 import { MembershipService, MemberUser } from '../../../services/membership';
 import { FinanceService, Transaction, TransactionCurrency } from '../../../services/finance';
 import { PaymentService } from '../../../services/payment';
+import { UserService } from '../../../services/user';
+import { NotificationsService } from '../../../notifications/notifications.service';
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
   const formatted = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount);
@@ -24,7 +26,47 @@ const CLUB_FOUNDING_YEAR = 2019;
 // way (see paymentController.js's chargeableAmount).
 const BARION_FEE_RATE = 0.016;
 
-type ClubSortKey = 'name' | 'toursAttended' | 'age';
+type SortKey = 'name' | 'toursAttended' | 'age' | 'status';
+
+// The one activity status shown per user on both tables - derived, never
+// stored, from the only two real facts: whether an admin archived them
+// (retired, always wins - a later login doesn't undo it) and whether
+// they've ever logged in. Someone with no email has no account of their
+// own at all (can't be invited through Authentik), so "never logged in"
+// isn't something they could ever change.
+export type UserStatus = 'active' | 'inactive' | 'noAccount' | 'retired';
+
+export function userStatus(u: MemberUser): UserStatus {
+  if (u.retired) return 'retired';
+  if (u.lastLoginAt) return 'active';
+  return u.email ? 'inactive' : 'noAccount';
+}
+
+// Also the ascending sort order of the Státusz column.
+const STATUS_ORDER: UserStatus[] = ['active', 'inactive', 'noAccount', 'retired'];
+type SortState = { key: SortKey; dir: 'asc' | 'desc' };
+
+// Shared by both tables' sortable Név/Táborok/Kor columns. Ties on the
+// numbers fall back to the name, and a missing age (no birthday recorded)
+// always sorts to the bottom, whichever direction.
+function sortUsers(users: MemberUser[], { key, dir }: SortState): MemberUser[] {
+  const sign = dir === 'asc' ? 1 : -1;
+  const byName = (a: MemberUser, b: MemberUser) => a.name.localeCompare(b.name, 'hu');
+  return [...users].sort((a, b) => {
+    if (key === 'name') return sign * byName(a, b);
+    if (key === 'status') {
+      const diff = STATUS_ORDER.indexOf(userStatus(a)) - STATUS_ORDER.indexOf(userStatus(b));
+      return sign * diff || byName(a, b);
+    }
+    if (key === 'age') {
+      if (a.age == null || b.age == null) {
+        return a.age == null && b.age == null ? byName(a, b) : a.age == null ? 1 : -1;
+      }
+      return sign * (a.age - b.age) || byName(a, b);
+    }
+    return sign * (a.toursAttended - b.toursAttended) || byName(a, b);
+  });
+}
 
 @Component({
   selector: 'app-members',
@@ -36,6 +78,8 @@ export class Members implements OnInit {
   private membershipService = inject(MembershipService);
   private financeService = inject(FinanceService);
   private paymentService = inject(PaymentService);
+  private userService = inject(UserService);
+  private notifications = inject(NotificationsService);
   private route = inject(ActivatedRoute);
   private auth = inject(AuthService);
 
@@ -89,33 +133,28 @@ export class Members implements OnInit {
   );
   casualUsers = computed(() => this.users().filter((u) => u.role === 'guest'));
 
-  // Sortable columns of the "Tagok" table - clicking a header sorts by it,
-  // clicking the same one again flips the direction (see sortBy below).
-  clubSort = signal<{ key: ClubSortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' });
+  // Sortable Név/Táborok/Kor columns of each table - clicking a header
+  // sorts by it, clicking the same one again flips the direction (see
+  // sortBy below).
+  sorts = {
+    club: signal<SortState>({ key: 'name', dir: 'asc' }),
+    casual: signal<SortState>({ key: 'name', dir: 'asc' }),
+  };
 
   filteredClubMembers = computed(() => {
     const q = this.clubSearch().trim().toLocaleLowerCase('hu');
-    const { key, dir } = this.clubSort();
-    const sign = dir === 'asc' ? 1 : -1;
-    const byName = (a: MemberUser, b: MemberUser) => a.name.localeCompare(b.name, 'hu');
-    return this.clubMembers()
-      .filter((u) => u.name.toLocaleLowerCase('hu').includes(q))
-      .sort((a, b) => {
-        if (key === 'name') return sign * byName(a, b);
-        if (key === 'age') {
-          // No birthday recorded - always at the bottom, whichever direction.
-          if (a.age == null || b.age == null) {
-            return a.age == null && b.age == null ? byName(a, b) : a.age == null ? 1 : -1;
-          }
-          return sign * (a.age - b.age) || byName(a, b);
-        }
-        return sign * (a.toursAttended - b.toursAttended) || byName(a, b);
-      });
+    return sortUsers(
+      this.clubMembers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q)),
+      this.sorts.club(),
+    );
   });
 
   filteredCasualUsers = computed(() => {
     const q = this.casualSearch().trim().toLocaleLowerCase('hu');
-    return this.casualUsers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q));
+    return sortUsers(
+      this.casualUsers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q)),
+      this.sorts.casual(),
+    );
   });
 
   me = computed(() => this.clubMembers().find((u) => u._id === this.myId()) ?? null);
@@ -305,18 +344,18 @@ export class Members implements OnInit {
   }
 
   // Same column again flips the direction; a new column starts A→Z for
-  // the name, but most-first for Táborok/Kor - the more useful end of a
-  // number column.
-  sortBy(key: ClubSortKey) {
-    this.clubSort.update((s) =>
+  // the name and Aktív-first for Státusz, but most-first for Táborok/Kor -
+  // the more useful end of a number column.
+  sortBy(table: 'club' | 'casual', key: SortKey) {
+    this.sorts[table].update((s) =>
       s.key === key
         ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: key === 'name' ? 'asc' : 'desc' },
+        : { key, dir: key === 'name' || key === 'status' ? 'asc' : 'desc' },
     );
   }
 
-  ariaSort(key: ClubSortKey): 'ascending' | 'descending' | 'none' {
-    const s = this.clubSort();
+  ariaSort(table: 'club' | 'casual', key: SortKey): 'ascending' | 'descending' | 'none' {
+    const s = this.sorts[table]();
     if (s.key !== key) return 'none';
     return s.dir === 'asc' ? 'ascending' : 'descending';
   }
@@ -364,8 +403,68 @@ export class Members implements OnInit {
     return formatMoney(amount, currency);
   }
 
-  isActive(u: MemberUser): boolean {
-    return !!u.lastLoginAt;
+  status(u: MemberUser): UserStatus {
+    return userStatus(u);
+  }
+
+  statusLabel(u: MemberUser): string {
+    switch (userStatus(u)) {
+      case 'active':
+        return '✓ Aktív';
+      case 'inactive':
+        return '○ Inaktív';
+      case 'noAccount':
+        return '— Nincs fiókja';
+      case 'retired':
+        return 'Felfüggesztett';
+    }
+  }
+
+  // Admin-only "delete" - never actually removes anyone (see
+  // userController.js's archiveUser), so restore is always one click away.
+  // Confirmed in an in-app modal (same one as the dues payment's below)
+  // rather than the browser's own confirm(), same reasoning as
+  // tour-details.ts's document delete.
+  archivingId = signal<string | null>(null);
+  userPendingDelete = signal<MemberUser | null>(null);
+
+  archive(u: MemberUser) {
+    if (this.archivingId()) return;
+    this.userPendingDelete.set(u);
+  }
+
+  cancelArchive() {
+    if (this.archivingId()) return;
+    this.userPendingDelete.set(null);
+  }
+
+  confirmArchive() {
+    const u = this.userPendingDelete();
+    if (u) this.setRetired(u, true);
+  }
+
+  restore(u: MemberUser) {
+    if (this.archivingId()) return;
+    this.setRetired(u, false);
+  }
+
+  private setRetired(u: MemberUser, retired: boolean) {
+    this.archivingId.set(u._id);
+    const request = retired ? this.userService.archiveUser(u._id) : this.userService.restoreUser(u._id);
+    request.subscribe({
+      next: () => {
+        this.users.update((list) => list.map((x) => (x._id === u._id ? { ...x, retired } : x)));
+        this.archivingId.set(null);
+        this.userPendingDelete.set(null);
+        this.notifications.addSuccess(retired ? `${u.name} felfüggesztve` : `${u.name} visszaállítva`);
+      },
+      error: (err) => {
+        this.notifications.addError(
+          err?.error?.message ?? 'Nem sikerült módosítani a felhasználó állapotát.',
+        );
+        this.archivingId.set(null);
+      },
+    });
   }
 
   initials(name: string): string {
