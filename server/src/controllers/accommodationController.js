@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
+import { clearDeletedRooms } from './roomAllocationController.js';
 
 // PUT /tours/:id/accommodation - admin-only. Replaces the tour's whole
 // houses -> rooms list in one go, saved separately from the rest of the
@@ -23,8 +24,11 @@ export const updateAccommodation = async (req, res) => {
   }
 
   const keepId = (id) => (id && mongoose.isValidObjectId(id) ? { _id: id } : {});
-  tour.accommodation = {
-    houses: houses.map((h) => ({
+  // Only the houses are replaced - the finalized flag of the Szobabeosztás
+  // (see roomAllocationController.js) stays as it was.
+  tour.set(
+    'accommodation.houses',
+    houses.map((h) => ({
       ...keepId(h._id),
       name: h.name,
       description: h.description ?? '',
@@ -35,11 +39,15 @@ export const updateAccommodation = async (req, res) => {
         beds: r.beds,
       })),
     })),
-  };
+  );
 
   // Validation errors (empty name, 0 beds...) come back as a 400 through
   // the global error handler, with the schema's Hungarian messages.
   await tour.save({ validateModifiedOnly: true });
+
+  // A deleted room's people go back to "no room"; everyone with the chat
+  // page open gets the new layout live.
+  await clearDeletedRooms(tour);
 
   res.status(200).json({ status: 'success', data: { accommodation: tour.accommodation } });
 };

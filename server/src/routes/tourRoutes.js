@@ -14,6 +14,7 @@ import {
 } from '../controllers/tourDocumentController.js';
 import { uploadCoverMiddleware, uploadTourCover, getTourCover } from '../controllers/tourCoverController.js';
 import { updateAccommodation } from '../controllers/accommodationController.js';
+import { getRoomBoard, assignRoom, setFinalized } from '../controllers/roomAllocationController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
@@ -64,6 +65,11 @@ router
 // the rest of the tour (see accommodationController.js). Read as part of
 // GET /tours/:id.
 router.route('/:id/accommodation').put(requireAuth, restrictTo('admin'), updateAccommodation);
+
+// Szobabeosztás (who sleeps where) - see roomAllocationController.js.
+router.route('/:id/rooms').get(requireAuth, getRoomBoard);
+router.route('/:id/rooms/assignment').put(requireAuth, restrictTo('admin'), assignRoom);
+router.route('/:id/rooms/finalized').put(requireAuth, restrictTo('admin'), setFinalized);
 
 // Extra infók - admin-only upload/delete; viewing is a plain static file
 // URL under public/documents/tours/ (see tourDocumentController.js), same

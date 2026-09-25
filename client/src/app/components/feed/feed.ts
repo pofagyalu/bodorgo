@@ -10,9 +10,8 @@ import {
   afterRenderEffect,
   ElementRef,
 } from '@angular/core';
-import { io, Socket } from 'socket.io-client';
-import { environment } from '../../../environments/environment';
 import { AuthService } from '../../auth/auth.service';
+import { TourSocketService } from '../../services/tour-socket';
 import { Compose } from './compose/compose';
 import { Post } from './post/post';
 
@@ -40,7 +39,8 @@ export class Feed implements OnInit, OnDestroy {
   currentUserId = computed(() => this.authService.user()?.id);
 
   posts = signal<IPost[]>([]);
-  private socket!: Socket;
+  private tourSocket = inject(TourSocketService);
+  private unsubscribers: (() => void)[] = [];
 
   private feedContainer = viewChild<ElementRef<HTMLDivElement>>('feedContainer');
 
@@ -65,39 +65,35 @@ export class Feed implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.socket = io(environment.apiBaseUrl, { withCredentials: true });
-
-    // Re-join on every (re)connect, not just the first one, so a dropped
-    // network connection recovers cleanly instead of silently going stale.
-    this.socket.on('connect', () => {
-      this.socket.emit('join-tour-chat', { tourId: this.tourId() });
-    });
-
-    this.socket.on('initial-posts', (data: IPost[]) => {
-      this.posts.set(data);
-      this.scrollTrigger.update((n) => n + 1);
-    });
-
-    this.socket.on('new-post', (post: IPost) => {
-      this.posts.update((p) => [...p, post]);
-      if (post.creator._id === this.currentUserId()) {
+    // The shared connection (see TourSocketService) - events are checked
+    // against this feed's own tour, since the same connection may just
+    // have switched over from another tour.
+    this.unsubscribers = [
+      this.tourSocket.on<{ tourId: string; posts: IPost[] }>('initial-posts', (data) => {
+        if (data.tourId !== this.tourId()) return;
+        this.posts.set(data.posts);
         this.scrollTrigger.update((n) => n + 1);
-      }
-    });
-
-    this.socket.on('chat-error', (message: string) => {
-      console.error('Chat error:', message);
-    });
+      }),
+      this.tourSocket.on<IPost>('new-post', (post) => {
+        if (String(post.tourId) !== this.tourId()) return;
+        this.posts.update((p) => [...p, post]);
+        if (post.creator._id === this.currentUserId()) {
+          this.scrollTrigger.update((n) => n + 1);
+        }
+      }),
+      this.tourSocket.on<string>('chat-error', (message) => console.error('Chat error:', message)),
+    ];
+    this.tourSocket.joinTour(this.tourId());
   }
 
   onCompose(data: { text: string }) {
-    this.socket.emit('create-post', {
+    this.tourSocket.emit('create-post', {
       tourId: this.tourId(),
       text: data.text,
     });
   }
 
   ngOnDestroy() {
-    this.socket?.disconnect();
+    this.unsubscribers.forEach((off) => off());
   }
 }
