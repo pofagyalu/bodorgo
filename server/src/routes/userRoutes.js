@@ -5,7 +5,6 @@ import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 const router = express.Router();
 
 router.patch('/updateMe', requireAuth, userController.updateMe);
-router.delete('/deleteMe', requireAuth, userController.deleteMe);
 router.get('/me', requireAuth, userController.getMe);
 router.get('/me/attendance', requireAuth, userController.getMyAttendance);
 router.get('/me/family', requireAuth, userController.getMyFamily);
@@ -19,6 +18,7 @@ router
   .route('/:id')
   .get(requireAuth, restrictTo('admin'), userController.getUser)
   .patch(requireAuth, restrictTo('admin'), userController.updateUser)
-  .delete(userController.deleteUser);
+  .delete(requireAuth, restrictTo('admin'), userController.archiveUser);
+router.patch('/:id/restore', requireAuth, restrictTo('admin'), userController.restoreUser);
 
 export default router;

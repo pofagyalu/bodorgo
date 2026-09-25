@@ -60,7 +60,6 @@ export class MemberEdit implements OnInit {
   gender = signal('');
   memberSince = signal('');
   role = signal('guest');
-  retired = signal(false);
   address = signal<AddressForm>(emptyAddress());
 
   ngOnInit() {
@@ -77,7 +76,6 @@ export class MemberEdit implements OnInit {
         this.gender.set(u.gender ?? '');
         this.memberSince.set(u.memberSince != null ? String(u.memberSince) : '');
         this.role.set(u.role);
-        this.retired.set(!!u.retired);
         this.address.set({
           zipCode: u.address?.zipCode ?? '',
           city: u.address?.city ?? '',
@@ -150,7 +148,6 @@ export class MemberEdit implements OnInit {
           gender: this.gender() || undefined,
           memberSince: this.memberSince() ? Number(this.memberSince()) : undefined,
           role: this.role(),
-          retired: this.retired(),
           address: this.address(),
         })
         .subscribe({
@@ -159,7 +156,7 @@ export class MemberEdit implements OnInit {
             // Back to the list, not this same page in edit mode - unlike
             // tour-edit.ts's own "land in edit mode" pattern, there's
             // nothing left here the create form doesn't already cover
-            // (role/retired/address included), so there's no reason to
+            // (role/address included), so there's no reason to
             // keep the admin on this page after a successful save.
             this.back();
           },
@@ -180,7 +177,6 @@ export class MemberEdit implements OnInit {
         gender: this.gender(),
         memberSince: this.memberSince() ? Number(this.memberSince()) : null,
         role: this.role(),
-        retired: this.retired(),
         address: this.address(),
       })
       .subscribe({

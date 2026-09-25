@@ -135,23 +135,21 @@ const userSchema = new Schema(
     },
     passwordResetToken: String,
     passwordResetExpires: Date,
-    active: {
-      type: Boolean,
-      default: true,
-      select: false,
-    },
-    // Admin-set only (see userController.js's updateUser) - for someone who
-    // attended a few tours and then stopped, kept for history (member
-    // lists, stats, past attendance) exactly like anyone else. The ONE
-    // place this actually changes anything is that an admin building a new
-    // reservation or a schedule-event opt-in list won't see them offered as
-    // a candidate any more. Deliberately a different field from `active`
-    // above, which hides a user from literally every query app-wide
-    // (self-service account deletion) - this is a narrow, reversible flag,
-    // not a soft delete.
+    // Admin-set only, via the Klub "Felhasználók" page's archive/restore
+    // button (see userController.js's archiveUser/restoreUser) - the app's
+    // "delete": someone who attended a few tours and then stopped, kept for
+    // history (member lists, stats, past attendance, payments) exactly like
+    // anyone else, never actually removed. The ONE place this actually
+    // changes anything is that an admin building a new reservation or a
+    // schedule-event opt-in list won't see them offered as a candidate any
+    // more. Overrides the login-based Aktív/Inaktív status shown on that
+    // page (see members.ts's userStatus) - a later login doesn't undo it.
     retired: {
       type: Boolean,
       default: false,
+    },
+    retiredAt: {
+      type: Date,
     },
     // Groups a real account together with the login-less dependents (and
     // any other real accounts, e.g. a spouse) it shares tour attendance
@@ -236,11 +234,6 @@ userSchema.pre('save', async function (next) {
   } catch (err) {
     logger.error(`Failed to geocode address for user ${this._id}: ${err.message}`);
   }
-  next();
-});
-
-userSchema.pre(/^find/, function (next) {
-  this.find({ active: { $ne: false } });
   next();
 });
 

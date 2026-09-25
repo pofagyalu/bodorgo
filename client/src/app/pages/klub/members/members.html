@@ -135,9 +135,14 @@
               @for (col of [
                 { key: 'name', label: 'Tag neve' },
                 { key: 'toursAttended', label: 'Táborok' },
-                { key: 'age', label: 'Kor' }
+                { key: 'age', label: 'Kor' },
+                { key: 'status', label: 'Státusz' }
               ]; track col.key) {
-              <th [attr.aria-sort]="ariaSort('club', $any(col.key))" [class.num-col]="col.key !== 'name'">
+              <th
+                [attr.aria-sort]="ariaSort('club', $any(col.key))"
+                [class.num-col]="col.key === 'toursAttended' || col.key === 'age'"
+                [class.status-col]="col.key === 'status'"
+              >
                 <button type="button" class="sort-btn" (click)="sortBy('club', $any(col.key))">
                   {{ col.label }}
                   <span class="sort-arrow" [class.active]="sorts.club().key === col.key">
@@ -154,7 +159,7 @@
           <tbody>
             @if (!filteredClubMembers().length) {
             <tr>
-              <td colspan="6" class="empty-row">Nincs ilyen nevű tag.</td>
+              <td colspan="7" class="empty-row">Nincs ilyen nevű tag.</td>
             </tr>
             } @else { @for (m of filteredClubMembers(); track m._id) {
             <tr
@@ -168,14 +173,23 @@
                   <span>
                     <strong>{{ m.name }}</strong>
                     <small
-                      >{{ m._id === myId() ? 'Te' : m.role === 'admin' ? 'Admin'
-                      : 'Klubtag' }}{{ m.retired ? ' · Inaktív' : '' }}</small
+                      >{{ m.role === 'admin' ? 'Admin · ' : '' }}{{ m.email || 'Meghívott' }}</small
                     >
                   </span>
                 </div>
               </td>
               <td class="num-col">{{ m.toursAttended }}</td>
               <td class="num-col">{{ m.age ?? '-' }}</td>
+              <td class="status-col">
+                <span
+                  class="status"
+                  [class.paid]="status(m) === 'active'"
+                  [class.unpaid]="status(m) === 'retired'"
+                  [class.na]="status(m) === 'inactive' || status(m) === 'noAccount'"
+                >
+                  {{ statusLabel(m) }}
+                </span>
+              </td>
               <td>
                 <span
                   class="status"
@@ -217,11 +231,34 @@
                 >
                   <mat-icon>edit</mat-icon>
                 </a>
+                @if (status(m) === 'retired') {
+                <button
+                  type="button"
+                  class="icon-btn icon-btn--restore"
+                  title="Visszaállítás"
+                  aria-label="Felhasználó visszaállítása"
+                  [disabled]="archivingId() === m._id"
+                  (click)="$event.stopPropagation(); restore(m)"
+                >
+                  <mat-icon>restore_from_trash</mat-icon>
+                </button>
+                } @else {
+                <button
+                  type="button"
+                  class="icon-btn icon-btn--archive"
+                  title="Felfüggesztés"
+                  aria-label="Felhasználó felfüggesztése"
+                  [disabled]="archivingId() === m._id"
+                  (click)="$event.stopPropagation(); archive(m)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+                }
                 }
               </td>
             </tr>
             <tr class="history-expanded-row">
-              <td colspan="6">
+              <td colspan="7">
                 <div class="history-expanded" [class.open]="isExpanded(m._id)">
                   <div class="history-expanded-inner">
                     @for (y of membershipYears(); track y) {
@@ -289,11 +326,16 @@
           <thead>
             <tr>
               @for (col of [
-                { key: 'name', label: 'Felhasználó' },
+                { key: 'name', label: 'Felhasználó neve' },
                 { key: 'toursAttended', label: 'Táborok' },
-                { key: 'age', label: 'Kor' }
+                { key: 'age', label: 'Kor' },
+                { key: 'status', label: 'Státusz' }
               ]; track col.key) {
-              <th [attr.aria-sort]="ariaSort('casual', $any(col.key))" [class.num-col]="col.key !== 'name'">
+              <th
+                [attr.aria-sort]="ariaSort('casual', $any(col.key))"
+                [class.num-col]="col.key === 'toursAttended' || col.key === 'age'"
+                [class.status-col]="col.key === 'status'"
+              >
                 <button type="button" class="sort-btn" (click)="sortBy('casual', $any(col.key))">
                   {{ col.label }}
                   <span class="sort-arrow" [class.active]="sorts.casual().key === col.key">
@@ -302,9 +344,7 @@
                 </button>
               </th>
               }
-              <th>Alkalmazás-hozzáférés</th>
               @if (isAdmin()) {
-              <th>Inaktív</th>
               <th>Műveletek</th>
               }
             </tr>
@@ -312,7 +352,7 @@
           <tbody>
             @if (!filteredCasualUsers().length) {
             <tr>
-              <td [attr.colspan]="isAdmin() ? 6 : 4" class="empty-row">
+              <td [attr.colspan]="isAdmin() ? 5 : 4" class="empty-row">
                 Nincs ilyen nevű felhasználó.
               </td>
             </tr>
@@ -323,31 +363,23 @@
                   <span class="person-avatar">{{ initials(u.name) }}</span>
                   <span>
                     <strong>{{ u.name }}</strong>
-                    <small>Alkalmazás-felhasználó</small>
+                    <small>{{ u.email || 'Meghívott' }}</small>
                   </span>
                 </div>
               </td>
               <td class="num-col">{{ u.toursAttended }}</td>
               <td class="num-col">{{ u.age ?? '-' }}</td>
-              <td>
+              <td class="status-col">
                 <span
                   class="status"
-                  [class.paid]="isActive(u)"
-                  [class.na]="!isActive(u)"
+                  [class.paid]="status(u) === 'active'"
+                  [class.unpaid]="status(u) === 'retired'"
+                  [class.na]="status(u) === 'inactive' || status(u) === 'noAccount'"
                 >
-                  {{ isActive(u) ? '✓ Aktív' : '— Nem lépett be' }}
+                  {{ statusLabel(u) }}
                 </span>
               </td>
               @if (isAdmin()) {
-              <td>
-                <span
-                  class="status"
-                  [class.unpaid]="u.retired"
-                  [class.na]="!u.retired"
-                >
-                  {{ u.retired ? 'Inaktív' : '—' }}
-                </span>
-              </td>
               <td class="row-actions">
                 <a
                   [routerLink]="['/klub/felhasznalok', u._id]"
@@ -357,6 +389,29 @@
                 >
                   <mat-icon>edit</mat-icon>
                 </a>
+                @if (status(u) === 'retired') {
+                <button
+                  type="button"
+                  class="icon-btn icon-btn--restore"
+                  title="Visszaállítás"
+                  aria-label="Felhasználó visszaállítása"
+                  [disabled]="archivingId() === u._id"
+                  (click)="restore(u)"
+                >
+                  <mat-icon>restore_from_trash</mat-icon>
+                </button>
+                } @else {
+                <button
+                  type="button"
+                  class="icon-btn icon-btn--archive"
+                  title="Felfüggesztés"
+                  aria-label="Felhasználó felfüggesztése"
+                  [disabled]="archivingId() === u._id"
+                  (click)="archive(u)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+                }
               </td>
               }
             </tr>
@@ -450,6 +505,48 @@
       >
         {{ paying() ? 'Fizetés indítása…' : 'Fizetés a Barionnal (' +
         selectedPayGrandTotal() + ' Ft) →' }}
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+@if (userPendingDelete(); as u) {
+<div class="modal-backdrop" (click)="cancelArchive()"></div>
+<div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteUserTitle">
+  <div class="modal-head">
+    <h2 id="deleteUserTitle">Felhasználó felfüggesztése</h2>
+    <button
+      class="icon-btn"
+      type="button"
+      aria-label="Bezárás"
+      [disabled]="archivingId() === u._id"
+      (click)="cancelArchive()"
+    >
+      ✕
+    </button>
+  </div>
+  <div class="modal-body">
+    <p>Biztosan felfüggeszted: <strong>{{ u.name }}</strong>?</p>
+    <p class="subtext">
+      A korábbi adatai (táborok, tagdíjak) megmaradnak, és később visszaállítható.
+    </p>
+    <div class="modal-actions">
+      <button
+        class="outline-btn"
+        type="button"
+        [disabled]="archivingId() === u._id"
+        (click)="cancelArchive()"
+      >
+        Mégse
+      </button>
+      <button
+        class="primary-btn danger-btn"
+        type="button"
+        [disabled]="archivingId() === u._id"
+        (click)="confirmArchive()"
+      >
+        {{ archivingId() === u._id ? 'Felfüggesztés…' : 'Felfüggesztés' }}
       </button>
     </div>
   </div>

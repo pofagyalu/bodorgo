@@ -253,15 +253,6 @@ export const getMyAttendance = async (req, res) => {
   res.status(200).json({ status: 'success', data: { tours } });
 };
 
-export const deleteMe = async (req, res, next) => {
-  await User.findByIdAndUpdate(req.user._id, { active: false });
-
-  res.status(204).json({
-    status: 'success',
-    data: null,
-  });
-};
-
 // GET /users/:id - requireAuth, restrictTo('admin') (see userRoutes.js).
 // The one specific user's full admin-editable record, powering the Klub
 // Felhasználók "Szerkesztés" page - not open to plain members (unlike
@@ -318,7 +309,7 @@ function parseMemberSince(value) {
 
 const VALID_ROLES = ['admin', 'member', 'guest'];
 
-// Same field set as updateUser below (role/retired/address included) -
+// Same field set as updateUser below (role/address included) -
 // member-edit.ts/html uses one identical form for both creating a brand
 // new person and editing an existing one, so this accepts everything that
 // form can send, not just the original bare-minimum (name/email/familyId/
@@ -327,7 +318,7 @@ const VALID_ROLES = ['admin', 'member', 'guest'];
 // just `new User(doc).save()` under the hood - so a new user's address
 // resolves exactly the same way an edited one's does.
 export const createUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, memberSince, role, retired, address } = req.body;
+  const { name, email, familyId, birthday, gender, memberSince, role, address } = req.body;
   if (!name) {
     throw new AppError('A névnek nem lehet üres.', 400);
   }
@@ -343,7 +334,6 @@ export const createUser = async (req, res) => {
     gender: gender || undefined,
     memberSince: parseMemberSince(memberSince) || undefined,
     role: role || undefined,
-    retired: !!retired,
     address: address || undefined,
   });
 
@@ -371,7 +361,7 @@ export const createUser = async (req, res) => {
 // authOidcController.js's callback). Use for a quick fix, not as the
 // long-term way to manage roles.
 export const updateUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, address, memberSince, role, retired } = req.body;
+  const { name, email, familyId, birthday, gender, address, memberSince, role } = req.body;
 
   const user = await User.findById(req.params.id);
   if (!user) {
@@ -391,7 +381,6 @@ export const updateUser = async (req, res) => {
     }
     user.role = role;
   }
-  if (retired !== undefined) user.retired = !!retired;
 
   await user.save({ validateModifiedOnly: true });
 
@@ -447,9 +436,32 @@ export const joinFamily = async (req, res) => {
   res.status(200).json({ status: 'success', data: { users: withAge, familyId } });
 };
 
-export const deleteUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'this route is not yet implemented',
-  });
+// Admin-only - the Klub "Felhasználók" page's archive ("delete") button.
+// Never actually deletes: reservations, payments and attendance history
+// all reference the user, so it just marks them retired (see userModel.js's
+// retired) - reversible via restoreUser below.
+export const archiveUser = async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { retired: true, retiredAt: new Date() },
+    { new: true },
+  );
+  if (!user) {
+    throw new AppError('No user found with that ID!', 404);
+  }
+
+  res.status(200).json({ status: 'success', data: { user: { _id: user._id, retired: true } } });
+};
+
+export const restoreUser = async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { retired: false, $unset: { retiredAt: 1 } },
+    { new: true },
+  );
+  if (!user) {
+    throw new AppError('No user found with that ID!', 404);
+  }
+
+  res.status(200).json({ status: 'success', data: { user: { _id: user._id, retired: false } } });
 };

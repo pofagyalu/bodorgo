@@ -95,22 +95,6 @@
           <small>Kézi felülírás - a következő bejelentkezéskor Authentik felülírja.</small>
         </div>
 
-        <div class="field field-checkbox">
-          <label for="mRetired">
-            <input
-              id="mRetired"
-              type="checkbox"
-              [checked]="retired()"
-              (change)="retired.set($any($event.target).checked)"
-            />
-            Inaktív tag
-          </label>
-          <small
-            >Nem jelenik meg új foglalásnál vagy program jelentkezésnél - a korábbi adatai
-            (táborok, tagdíjak) megmaradnak.</small
-          >
-        </div>
-
         @if (role() !== 'guest') {
         <div class="field">
           <label for="mMemberSince">Tagság kezdete</label>
