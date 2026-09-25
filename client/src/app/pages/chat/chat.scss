@@ -172,22 +172,15 @@
   display: none;
 }
 
+// Only the Chat | Szobabeosztás tabs - no tour title: the highlighted tour
+// in the sidebar (or the phone's tour row) already says which one it is.
+// Not shown at all when both panes fit side by side (see below).
 .chat-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 16px 24px;
+  padding: 8px 16px;
   background: #fff;
   border-bottom: 1px solid #e4eae7;
-
-  h2 {
-    margin: 0;
-    font-size: 19px;
-    letter-spacing: -0.02em;
-    color: #203747;
-  }
 }
 
 .pane-tabs {
@@ -280,9 +273,10 @@
   color: #82939a;
 }
 
-// Wide enough for both panes: the tabs aren't needed.
+// Wide enough for both panes: the tabs (the header's only content) aren't
+// needed - the chat starts right at the top.
 @media (min-width: 1300px) {
-  .pane-tabs {
+  .chat-header {
     display: none;
   }
 }
@@ -371,10 +365,6 @@
   }
 
   .chat-header {
-    padding: 10px 12px;
-
-    h2 {
-      font-size: 16px;
-    }
+    padding: 6px 10px;
   }
 }

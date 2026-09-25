@@ -17,12 +17,14 @@ import { Post } from './post/post';
 
 interface IPost {
   _id: string;
-  creator: { _id: string; name: string };
+  creator: { _id: string; name: string; username?: string };
   text: string;
   image?: string;
   createdAt: string;
   updatedAt: string;
   tourId: string;
+  editedAt?: string;
+  deletedAt?: string;
 }
 
 @Component({
@@ -81,6 +83,11 @@ export class Feed implements OnInit, OnDestroy {
           this.scrollTrigger.update((n) => n + 1);
         }
       }),
+      // Someone edited or deleted a post - swap in the new version.
+      this.tourSocket.on<IPost>('post-updated', (post) => {
+        if (String(post.tourId) !== this.tourId()) return;
+        this.posts.update((list) => list.map((p) => (p._id === post._id ? post : p)));
+      }),
       this.tourSocket.on<string>('chat-error', (message) => console.error('Chat error:', message)),
     ];
     this.tourSocket.joinTour(this.tourId());
@@ -91,6 +98,16 @@ export class Feed implements OnInit, OnDestroy {
       tourId: this.tourId(),
       text: data.text,
     });
+  }
+
+  // Own posts only - the server checks it too, and answers everyone in the
+  // tour with 'post-updated'.
+  onEdit(postId: string, text: string) {
+    this.tourSocket.emit('edit-post', { postId, text });
+  }
+
+  onDelete(postId: string) {
+    this.tourSocket.emit('delete-post', { postId });
   }
 
   ngOnDestroy() {

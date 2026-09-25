@@ -13,7 +13,7 @@
   background: #f0f2f5;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px; // compact - the date only shows on hover, floating over this gap
 }
 
 app-compose {

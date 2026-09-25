@@ -2,11 +2,15 @@
   <div class="feed-container" #feedContainer>
     @for (post of posts(); track post._id) {
     <app-post
-      [creatorInput]="post.creator.name"
+      [creatorInput]="post.creator.username || post.creator.name"
       [textInput]="post.text"
       [timestampInput]="post.createdAt"
       [imageUrlInput]="post.image"
       [isOwn]="post.creator._id === currentUserId()"
+      [edited]="!!post.editedAt"
+      [deleted]="!!post.deletedAt"
+      (editSaved)="onEdit(post._id, $event)"
+      (deleteConfirmed)="onDelete(post._id)"
     />
     }
   </div>
