@@ -16,6 +16,7 @@ import userRouter from './routes/userRoutes.js';
 import systemRouter from './routes/systemRoutes.js';
 import authOidcRouter from './routes/authOidcRoutes.js';
 import documentRouter from './routes/documentRoutes.js';
+import requireAuth from './auth/requireAuth.js';
 import paymentRouter from './routes/paymentRoutes.js';
 import financeRouter from './routes/financeRoutes.js';
 import membershipRouter from './routes/membershipRoutes.js';
@@ -100,14 +101,19 @@ export default function createApp(sessionMiddleware) {
   // TODO: old solution try to dins some replacement
   // app.use(mongoSanitize());
 
-  // Registered before the public static middleware below (which serves
-  // everything under public/ with zero auth) so a same-named path could
-  // never accidentally fall through to an unauthenticated public file -
-  // documentRoutes.js's files live outside public/ entirely anyway, but
-  // this keeps the auth check first no matter what.
+  // Members-only app: nothing under public/ is served to everyone any
+  // more (tour covers moved into the database - see tourCoverModel.js).
+  // The one thing still read from there is each tour's "Extra infók"
+  // uploads (see tourDocumentController.js), and only for a logged-in
+  // user. Registered before the club documents router below, whose own
+  // '/:filename' route would otherwise never match these deeper paths
+  // anyway.
+  app.use(
+    '/documents/tours',
+    requireAuth,
+    express.static(path.join(rootDir, 'public', 'documents', 'tours')),
+  );
   app.use('/documents', documentRouter);
-
-  app.use(express.static(path.join(rootDir, 'public')));
 
   app.use((req, res, next) => {
     req.requestTime = new Date().toISOString();

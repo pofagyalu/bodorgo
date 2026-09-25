@@ -81,6 +81,38 @@ async function refreshTourWeather(tour) {
   }
 }
 
+// GET /tours/ticker - the only tour data a logged-out visitor ever gets:
+// the landing page ticker's one line. The soonest tour that hasn't fully
+// ended yet (start + duration still ahead) is "Következő"; if every tour
+// has ended, the most recently started one is "Legutóbbi". Just the
+// fields the ticker prints, nothing else.
+export const getTicker = async (req, res) => {
+  const tours = await Tour.find()
+    .select('order title startDate duration location.description')
+    .lean();
+
+  const now = Date.now();
+  const endOf = (t) => new Date(t.startDate).getTime() + (t.duration ?? 0) * 24 * 60 * 60 * 1000;
+  const byStart = (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+
+  const upcoming = tours.filter((t) => t.startDate && endOf(t) > now).sort(byStart)[0];
+  const latest = tours.filter((t) => t.startDate).sort(byStart).at(-1);
+  const featured = upcoming ?? latest;
+
+  res.status(200).json({
+    status: 'success',
+    data: featured
+      ? {
+          label: upcoming ? 'Következő' : 'Legutóbbi',
+          order: featured.order,
+          title: featured.title,
+          place: featured.location?.description ?? '',
+          startDate: featured.startDate,
+        }
+      : null,
+  });
+};
+
 export const aliasLastTours = async (req, res, next) => {
   res.locals.queryOverride = {
     limit: 3,

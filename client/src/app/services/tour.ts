@@ -4,6 +4,17 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { CurrentUser } from '../auth/auth.service';
 
+export interface TickerResponse {
+  status: string;
+  data: {
+    label: 'Következő' | 'Legutóbbi';
+    order: number;
+    title: string;
+    place: string;
+    startDate: string;
+  } | null;
+}
+
 export interface ToursResponse {
   status: string;
   results: number;
@@ -141,10 +152,10 @@ export interface Tour {
   price?: number;
   summary: string;
   description: string;
-  // Optional since the server no longer requires it at creation time - a
-  // brand new tour has none until its cover is uploaded (see
-  // tourCoverController.js).
-  imageCover?: string;
+  // When the cover image last changed - absent until one is uploaded (see
+  // tourCoverController.js). Also its cache-busting version (see
+  // TourService.coverUrl).
+  coverUpdatedAt?: string;
   images: string[];
   // Only populated on the single-tour endpoint (getTour), not the list one.
   schedule?: ScheduleEntry[];
@@ -305,7 +316,6 @@ export interface TourPayload {
   price?: number;
   summary?: string;
   description?: string;
-  imageCover?: string;
   pricingMode?: 'perHouse' | 'perPerson';
   accommodationPricePerNight?: number;
   accommodationCurrency?: 'HUF' | 'EUR';
@@ -504,28 +514,28 @@ export class TourService {
     return this.http.patch<TourResponse>(`${this.apiUrl}/${id}`, payload);
   }
 
-  // Replaces an existing tour's cover image - the server names the saved
-  // file itself (tour-<order>-cover.<ext>), not whatever the uploaded
-  // file was originally called, so there's nothing else to send but the
-  // file.
-  uploadCoverImage(tourId: string, file: File): Observable<TourResponse> {
+  // The cover image, served only to a logged-in browser (the session
+  // cookie goes along with the <img> request - bodorgo.hu and
+  // api.bodorgo.hu are the same site). ?v= changes with every new upload,
+  // so the old one can be cached forever. null = no cover yet.
+  coverUrl(tour: { _id: string; coverUpdatedAt?: string }): string | null {
+    return tour.coverUpdatedAt
+      ? `${this.apiUrl}/${tour._id}/cover?v=${encodeURIComponent(tour.coverUpdatedAt)}`
+      : null;
+  }
+
+  // Sets/replaces a tour's cover - the JPEG the crop dialog already
+  // produced in the browser (3:2, at most 1000x667 - see tour-edit.ts).
+  uploadCoverImage(tourId: string, cover: Blob): Observable<TourResponse> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', cover, 'cover.jpg');
     return this.http.post<TourResponse>(`${this.apiUrl}/${tourId}/cover`, formData);
   }
 
-  // For a tour that doesn't exist yet - the filename convention only ever
-  // depended on order (which the admin already typed in before saving),
-  // not the tour's _id, so the cover can be uploaded before the tour is
-  // actually created. Returns the filename to send as imageCover in the
-  // createTour call that follows.
-  uploadCoverImageForOrder(order: number, file: File): Observable<{ status: string; data: { filename: string } }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    return this.http.post<{ status: string; data: { filename: string } }>(
-      `${this.apiUrl}/cover/${order}`,
-      formData,
-    );
+  // The landing page ticker's one line - the only tour data available
+  // without logging in (see tourController.js's getTicker).
+  getTicker(): Observable<TickerResponse> {
+    return this.http.get<TickerResponse>(`${this.apiUrl}/ticker`);
   }
 
   // attendeeIds is who to register in this one reservation - who the
@@ -611,7 +621,7 @@ export class TourService {
   // Plain URLs, not Observables - these back <img>/<a> src/href attributes
   // directly. Auth rides on the session cookie (bodorgo.hu/api.bodorgo.hu
   // share a registrable domain, so it's same-site for cookie purposes even
-  // though it's cross-origin - same reasoning imageCover already relies on).
+  // though it's cross-origin - same reasoning coverUrl above relies on).
   tourImageThumbUrl(tourId: string, filename: string): string {
     return `${this.apiUrl}/${tourId}/images/${encodeURIComponent(filename)}/thumb`;
   }

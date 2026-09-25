@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
 import { memberGuard } from './auth/member.guard';
 import { adminGuard } from './auth/admin.guard';
+import { authGuard } from './auth/auth.guard';
 
 // Home stays eager since it's the near-universal first page hit; every
 // other route is lazy so its own code (and whatever heavy libraries it
@@ -13,6 +14,7 @@ export const routes: Routes = [
   {
     path: 'taborok',
     title: 'Bódorgó táborok',
+    canActivate: [authGuard],
     loadComponent: () => import('./pages/tours/tours').then((m) => m.Tours),
   },
   // Both declared before the generic taborok/:id below, so "uj" and
@@ -21,21 +23,25 @@ export const routes: Routes = [
   {
     path: 'taborok/uj',
     title: 'Új tábor',
+    canActivate: [adminGuard],
     loadComponent: () => import('./pages/tour-edit/tour-edit').then((m) => m.TourEdit),
   },
   {
     path: 'taborok/:id/szerkesztes',
     title: 'Tábor szerkesztése',
+    canActivate: [adminGuard],
     loadComponent: () => import('./pages/tour-edit/tour-edit').then((m) => m.TourEdit),
   },
   {
     path: 'taborok/:id/befizetes',
     title: 'Előleg befizetés',
+    canActivate: [authGuard],
     loadComponent: () => import('./pages/payment/payment').then((m) => m.Payment),
   },
   {
     path: 'taborok/:id',
     title: 'Tábor részletei',
+    canActivate: [authGuard],
     loadComponent: () => import('./pages/tour-details/tour-details').then((m) => m.TourDetails),
   },
   // Chat/Szavazások/Versenyek are routed but still in early development

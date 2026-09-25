@@ -4,7 +4,7 @@
   <div class="hero-row">
     <div class="hero-image-wrap">
       <img
-        [src]="environment.assetUrl + '/img/tours/' + t.imageCover"
+        [src]="coverUrl(t)"
         [alt]="t.title"
         class="hero-image"
         (click)="openCoverGallery()"

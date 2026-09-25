@@ -470,6 +470,11 @@ export class TourDetails implements OnDestroy {
   newDocumentTitle = '';
   private selectedDocumentFile: File | null = null;
 
+  // The login-only cover image URL ('' for a tour with no cover yet).
+  coverUrl(t: Tour): string {
+    return this.tourService.coverUrl(t) ?? '';
+  }
+
   documentUrl(tourId: string, filename: string): string {
     return this.tourService.documentUrl(tourId, filename);
   }
