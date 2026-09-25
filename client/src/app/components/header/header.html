@@ -46,7 +46,11 @@
       [style.background]="avatarColor(auth.user()?.name)"
       [title]="auth.user()?.name"
     >
-      <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
+      @if (photoUrl(); as url) {
+    <img class="user-avatar-photo" [src]="url" alt="" />
+    } @else {
+    <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
+    }
     </a>
     <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
     }
@@ -61,7 +65,11 @@
     [style.background]="avatarColor(auth.user()?.name)"
     [title]="auth.user()?.name"
   >
+    @if (photoUrl(); as url) {
+    <img class="user-avatar-photo" [src]="url" alt="" />
+    } @else {
     <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
+    }
   </a>
   }
 </header>

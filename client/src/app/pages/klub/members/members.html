@@ -169,7 +169,7 @@
             >
               <td>
                 <div class="person">
-                  <span class="person-avatar">{{ initials(m.name) }}</span>
+                  <app-avatar class="person-avatar" [name]="m.name" [userId]="m._id" [photoVersion]="m.photoUpdatedAt" />
                   <span>
                     <strong>{{ m.name }}</strong>
                     <small
@@ -362,7 +362,7 @@
             <tr>
               <td>
                 <div class="person">
-                  <span class="person-avatar">{{ initials(u.name) }}</span>
+                  <app-avatar class="person-avatar" [name]="u.name" [userId]="u._id" [photoVersion]="u.photoUpdatedAt" />
                   <span>
                     <strong>{{ u.name }}</strong>
                     <small>{{ u.email || 'Meghívott' }}</small>

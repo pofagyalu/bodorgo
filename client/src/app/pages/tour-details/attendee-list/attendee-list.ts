@@ -6,6 +6,7 @@ import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { formatForint } from '../../../shared/format';
+import { Avatar } from '../../../components/avatar/avatar';
 
 export interface AttendeeListRow {
   reservationId: string;
@@ -71,7 +72,7 @@ export interface FamilySubtotal {
 @Component({
   selector: 'app-attendee-list',
   standalone: true,
-  imports: [FormsModule, MatIconModule],
+  imports: [FormsModule, MatIconModule, Avatar],
   templateUrl: './attendee-list.html',
   styleUrl: './attendee-list.scss',
 })
@@ -84,6 +85,8 @@ export class AttendeeList {
   @Input({ required: true }) tourId!: string;
   @Input({ required: true }) attendees!: AttendeeListRow[];
   @Input() totals: PaymentTotals | null = null;
+  // { userId: photoUpdatedAt } - see tour-details.ts's userPhotos.
+  @Input() userPhotos: Record<string, string> = {};
   // Fires after a nights edit (or a cash payment gets recorded) saves
   // successfully - the parent reloads the whole tour rather than this
   // component recomputing totals itself, keeping the payment formula in

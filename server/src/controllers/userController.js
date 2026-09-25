@@ -129,7 +129,7 @@ export const getMyFamily = async (req, res) => {
     familyId: req.user.familyId,
     _id: { $ne: req.user._id },
   })
-    .select('name email role')
+    .select('name email role photoUpdatedAt')
     .sort('name');
 
   res.status(200).json({ status: 'success', data: { members } });
@@ -181,7 +181,7 @@ export const updateMe = async (req, res, next) => {
 // access rules (only admin ever sees/edits those, via updateUser).
 export const getMe = async (req, res) => {
   const user = await User.findById(req.user._id).select(
-    'name username email birthday memberSince lastLoginAt wantsEmailNotifications address',
+    'name username email birthday memberSince lastLoginAt wantsEmailNotifications address photoUpdatedAt photoSetBy',
   );
 
   const attendanceCounts = await Reservation.aggregate([
@@ -194,6 +194,7 @@ export const getMe = async (req, res) => {
   res.status(200).json({
     status: 'success',
     data: {
+      _id: user._id,
       name: user.name,
       username: user.username,
       email: user.email,
@@ -203,6 +204,8 @@ export const getMe = async (req, res) => {
       toursAttended: attendanceCounts[0]?.toursAttended ?? 0,
       wantsEmailNotifications: user.wantsEmailNotifications,
       address: user.address,
+      photoUpdatedAt: user.photoUpdatedAt ?? null,
+      photoSetBy: user.photoSetBy ?? null,
     },
   });
 };

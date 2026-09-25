@@ -21,6 +21,9 @@ export interface MemberUser {
   // new reservation or schedule-event opt-in (see tour-details.ts). Wins
   // over the login-based status (see members.ts's userStatus).
   retired?: boolean;
+  // When the profile photo last changed (null/absent = no photo) - also
+  // the cache-busting version in its URL (see UserService.photoUrl).
+  photoUpdatedAt?: string | null;
   // Shown under each name on both tables. No email = no account of their
   // own: can't be invited through Authentik, so can never log in.
   email?: string;

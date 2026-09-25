@@ -8,6 +8,7 @@ import { FinanceService, Transaction, TransactionCurrency } from '../../../servi
 import { PaymentService } from '../../../services/payment';
 import { UserService } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { Avatar } from '../../../components/avatar/avatar';
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
   const formatted = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount);
@@ -70,7 +71,7 @@ function sortUsers(users: MemberUser[], { key, dir }: SortState): MemberUser[] {
 
 @Component({
   selector: 'app-members',
-  imports: [DatePipe, RouterLink, MatIconModule],
+  imports: [DatePipe, RouterLink, MatIconModule, Avatar],
   templateUrl: './members.html',
   styleUrl: './members.scss',
 })

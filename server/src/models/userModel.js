@@ -87,8 +87,18 @@ const userSchema = new Schema(
       type: Boolean,
       default: true,
     },
-    photo: {
+    // Profile photo - the image itself lives in its own collection (see
+    // userPhotoModel.js); this is just when it last changed, doubling as
+    // the client's cache-busting version (?v=...) and as "has a photo".
+    photoUpdatedAt: {
+      type: Date,
+    },
+    // Who last set (or removed) the photo. Once the user has done it
+    // themselves ('self'), an admin can no longer change or remove it -
+    // see userPhotoController.js's loadTargetForAdmin.
+    photoSetBy: {
       type: String,
+      enum: ['admin', 'self'],
     },
     password: {
       type: String,

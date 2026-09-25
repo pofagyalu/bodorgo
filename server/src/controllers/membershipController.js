@@ -16,7 +16,7 @@ import { computeAge } from './userController.js';
 export const getMembers = async (req, res) => {
   const users = await User.find()
     .select(
-      'name email role lastLoginAt createdAt memberSince familyId retired birthday',
+      'name email role lastLoginAt createdAt memberSince familyId retired birthday photoUpdatedAt',
     )
     .sort('name')
     .lean();

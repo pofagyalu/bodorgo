@@ -12,6 +12,9 @@ export interface CurrentUser {
   familyId?: string;
   wantsEmailNotifications?: boolean;
   address?: UserAddress;
+  // Profile photo version (null = none) - the header's avatar; kept in
+  // sync after an upload via patchCurrentUser.
+  photoUpdatedAt?: string | null;
 }
 
 interface MeResponse {
@@ -24,6 +27,7 @@ interface MeResponse {
   familyId?: string;
   wantsEmailNotifications?: boolean;
   address?: UserAddress;
+  photoUpdatedAt?: string | null;
 }
 
 @Injectable({
@@ -81,6 +85,7 @@ export class AuthService {
                   // false when explicitly turned off.
                   wantsEmailNotifications: res.wantsEmailNotifications !== false,
                   address: res.address,
+                  photoUpdatedAt: res.photoUpdatedAt ?? null,
                 }
               : null,
           );

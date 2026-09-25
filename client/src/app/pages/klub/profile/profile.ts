@@ -4,6 +4,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { UserService, MyProfile, UserAddress, AttendedTour, FamilyMember } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { PaymentService } from '../../../services/payment';
+import { AuthService } from '../../../auth/auth.service';
+import { Avatar } from '../../../components/avatar/avatar';
+import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 
 interface AttendanceRow {
   tour: AttendedTour;
@@ -16,16 +19,9 @@ function emptyAddress(): UserAddress {
   return { zipCode: '', city: '', street: '', country: 'Magyarország' };
 }
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 @Component({
   selector: 'app-klub-profile',
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, Avatar, PhotoEditor],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
@@ -33,6 +29,7 @@ export class KlubProfile implements OnInit {
   private userService = inject(UserService);
   private notifications = inject(NotificationsService);
   private paymentService = inject(PaymentService);
+  private auth = inject(AuthService);
 
   loading = signal(true);
   profile = signal<MyProfile | null>(null);
@@ -111,15 +108,10 @@ export class KlubProfile implements OnInit {
     this.address.update((a) => ({ ...a, [field]: value }));
   }
 
-  initials(): string {
-    const name = this.profile()?.name;
-    return name ? initials(name) : '?';
-  }
-
-  // Same helper, for a family member's own name rather than the logged-in
-  // user's (see the Hozzátartozók list).
-  initialsFor(name: string): string {
-    return initials(name);
+  onPhotoChanged(change: PhotoChange) {
+    this.profile.update((p) => (p ? { ...p, ...change } : p));
+    // The header's own avatar too, without waiting for a reload.
+    this.auth.patchCurrentUser({ photoUpdatedAt: change.photoUpdatedAt });
   }
 
   saveProfile() {

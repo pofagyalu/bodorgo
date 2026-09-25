@@ -37,6 +37,22 @@
     [attr.aria-expanded]="expanded()"
     (click)="toggleExpanded()"
   >
+    @if (!expanded() && (event.participants ?? []).length) {
+    <span class="participant-stack" aria-hidden="true">
+      @for (p of (event.participants ?? []).slice(0, stackSize); track p.user) {
+      <app-avatar
+        class="stack-avatar"
+        [name]="p.name"
+        [userId]="p.user"
+        [photoVersion]="userPhotos[p.user]"
+        [preview]="false"
+      />
+      }
+      @if ((event.participants ?? []).length > stackSize) {
+      <span class="stack-more">+{{ (event.participants ?? []).length - stackSize }}</span>
+      }
+    </span>
+    }
     {{ (event.participants ?? []).length }} jelentkező
     <mat-icon>{{ expanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
   </button>
@@ -46,7 +62,10 @@
   @if ((event.participants ?? []).length) {
   <ul class="event-participant-list">
     @for (p of event.participants ?? []; track p.user) {
-    <li>{{ p.name }}</li>
+    <li [title]="p.name">
+      <app-avatar class="participant-avatar" [name]="p.name" [userId]="p.user" [photoVersion]="userPhotos[p.user]" />
+      {{ usernames[p.user] || p.name }}
+    </li>
     }
   </ul>
   } @else {

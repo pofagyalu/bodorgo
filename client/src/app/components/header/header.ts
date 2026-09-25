@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
+import { UserService } from '../../services/user';
 
 // Same 7 colors sampled from the bódorgó logo as shared/logo-colors.ts's
 // shuffledLogoColors, but picked deterministically per person here rather
@@ -26,6 +27,16 @@ export class Header {
   isMobileMenuOpen = false;
 
   constructor(public auth: AuthService) {}
+
+  private userService = inject(UserService);
+
+  // The logged-in user's own photo in place of the colored initials, once
+  // they have one. No hover preview here - it's their own face, and the
+  // avatar is a link to their profile anyway.
+  photoUrl = computed(() => {
+    const u = this.auth.user();
+    return u?.id && u.photoUpdatedAt ? this.userService.photoUrl(u.id, u.photoUpdatedAt) : null;
+  });
 
   login() {
     this.auth.login();

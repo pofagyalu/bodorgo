@@ -13,7 +13,7 @@
   } @else {
   @if (user(); as u) {
   <div class="profile-banner">
-    <div class="profile-avatar">{{ initials() }}</div>
+    <app-avatar class="profile-avatar" [name]="u.name" [userId]="u._id" [photoVersion]="u.photoUpdatedAt" />
     <div>
       <h2>{{ u.name }}</h2>
       <p>
@@ -34,6 +34,18 @@
       </p>
 
       <div class="profile-fields">
+        @if (user(); as u) {
+        <div class="field field-photo">
+          <span class="field-label">Profilkép</span>
+          <app-photo-editor
+            [userId]="u._id"
+            [hasPhoto]="!!u.photoUpdatedAt"
+            [locked]="photoLocked()"
+            (changed)="onPhotoChanged($event)"
+          />
+        </div>
+        }
+
         <div class="field">
           <label for="mName">Név</label>
           @if (isCreateMode) {

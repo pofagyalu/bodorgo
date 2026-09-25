@@ -245,6 +245,8 @@ export const me = async (req, res) => {
     familyId: user.familyId,
     wantsEmailNotifications: user.wantsEmailNotifications,
     address: user.address,
+    // The header's own avatar (see header.html).
+    photoUpdatedAt: user.photoUpdatedAt ?? null,
   });
 };
 

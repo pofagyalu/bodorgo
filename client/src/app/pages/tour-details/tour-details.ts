@@ -91,6 +91,10 @@ export class TourDetails implements OnDestroy {
   attendeePayments = signal<AttendeePayment[]>([]);
   paymentTotals = signal<PaymentTotals | null>(null);
   distanceInfo = signal<DistanceInfo | null>(null);
+  // Profile photo versions of everyone on this page (attendee list, program
+  // sign-ups) - passed down to their avatars.
+  userPhotos = signal<Record<string, string>>({});
+  usernames = signal<Record<string, string>>({});
   // Whether an admin has assigned a post-tour recap video (see
   // tourController.js's getTour) - the actual file path never reaches the
   // client, just this boolean plus the requireAuth-gated stream URL below.
@@ -410,6 +414,8 @@ export class TourDetails implements OnDestroy {
         this.paymentTotals.set(res.data.paymentTotals);
         this.distanceInfo.set(res.data.distanceInfo);
         this.hasVideo.set(res.data.hasVideo);
+        this.userPhotos.set(res.data.userPhotos ?? {});
+        this.usernames.set(res.data.usernames ?? {});
       },
       error: () => {
         this.loadError.set('A tábor nem található, vagy hiba történt a betöltés során.');

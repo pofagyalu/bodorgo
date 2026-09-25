@@ -11,7 +11,7 @@
   <p class="empty-note">Betöltés...</p>
   } @else if (profile(); as p) {
   <div class="profile-banner">
-    <div class="profile-avatar">{{ initials() }}</div>
+    <app-avatar class="profile-avatar" [name]="p.name" [userId]="p._id" [photoVersion]="p.photoUpdatedAt" />
     <div>
       <h2>{{ p.name }}</h2>
       <p>
@@ -30,6 +30,11 @@
       </p>
 
       <div class="profile-fields">
+        <div class="field field-photo">
+          <span class="field-label">Profilkép</span>
+          <app-photo-editor [hasPhoto]="!!p.photoUpdatedAt" (changed)="onPhotoChanged($event)" />
+        </div>
+
         <div class="field">
           <label for="pName">Név</label>
           <input id="pName" type="text" [value]="p.name" disabled />
@@ -226,7 +231,7 @@
         <ul class="family-list">
           @for (m of family(); track m._id) {
           <li class="family-row">
-            <span class="person-avatar">{{ initialsFor(m.name) }}</span>
+            <app-avatar class="person-avatar" [name]="m.name" [userId]="m._id" [photoVersion]="m.photoUpdatedAt" />
             <span>
               <strong>{{ m.name }}</strong>
               @if (m.email) {

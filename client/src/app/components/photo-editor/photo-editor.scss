@@ -1,0 +1,114 @@
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.photo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid #dce6e3;
+  background: #fff;
+  color: #254257;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+
+  &.disabled,
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.photo-btn--remove {
+  color: #a4513a;
+}
+
+.photo-btn--primary {
+  background: #1a796c;
+  border-color: #1a796c;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: #16675d;
+  }
+}
+
+.photo-locked {
+  margin: 0;
+  color: #82939a;
+  font-size: 12px;
+}
+
+.photo-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0c2537a3;
+  z-index: 29999;
+}
+
+.photo-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30000;
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 20px 80px #10253655;
+  color: #213b4a;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 19px;
+  }
+}
+
+.photo-hint {
+  margin: 0 0 14px;
+  color: #82939a;
+  font-size: 12px;
+}
+
+.photo-cropper {
+  // A fixed square work area on every screen size - the cropper scales
+  // the picked photo to fit inside it.
+  height: min(360px, 70vw);
+  background: #f0f4f3;
+  border-radius: 12px;
+  overflow: hidden;
+
+  image-cropper {
+    height: 100%;
+  }
+}
+
+.photo-zoom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #587079;
+
+  input {
+    flex: 1;
+    accent-color: #1a796c;
+  }
+}
+
+.photo-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
