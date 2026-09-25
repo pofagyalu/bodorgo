@@ -1,14 +1,10 @@
-import { Component, inject, input, output, signal, viewChild } from '@angular/core';
-import { ImageCropperComponent, ImageTransform } from 'ngx-image-cropper';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { UserService } from '../../services/user';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { CropDialog } from '../crop-dialog/crop-dialog';
 
-// The browser does all the resizing: whatever photo is picked (even a
-// 12MB phone photo) is cropped to a square the user positions and zooms,
-// and exported as a 320x320 JPEG (~30KB) - the only thing ever uploaded.
-// 320px is enough for the small avatar circle on a sharp screen and for
-// the 160px hover/tap preview (see components/avatar). No server-side
-// resizing on purpose: sharp isn't available on the production NAS.
+// 320px square is enough for the small avatar circle on a sharp screen and
+// for the 160px hover/tap preview (see components/avatar).
 const OUTPUT_SIZE = 320;
 
 export interface PhotoChange {
@@ -16,14 +12,15 @@ export interface PhotoChange {
   photoSetBy: 'admin' | 'self' | null;
 }
 
-// Upload/replace/remove buttons plus the crop dialog. userId null = the
-// logged-in user's own photo (Profil page); otherwise an admin editing
-// someone else's (member-edit page), which the parent disables via
-// `locked` once that person has set their own.
+// Upload/replace/remove buttons for a profile photo. Picking a photo opens
+// the shared crop dialog (square frame), and only its 320x320 JPEG result
+// is uploaded. userId null = the logged-in user's own photo (Profil page);
+// otherwise an admin editing someone else's (member-edit page), which the
+// parent disables via `locked` once that person has set their own.
 @Component({
   selector: 'app-photo-editor',
   standalone: true,
-  imports: [ImageCropperComponent],
+  imports: [CropDialog],
   templateUrl: './photo-editor.html',
   styleUrl: './photo-editor.scss',
 })
@@ -36,25 +33,16 @@ export class PhotoEditor {
   locked = input(false);
   changed = output<PhotoChange>();
 
-  private cropper = viewChild(ImageCropperComponent);
+  readonly outputSize = OUTPUT_SIZE;
 
   file = signal<File | null>(null);
-  ready = signal(false);
   saving = signal(false);
-  transform = signal<ImageTransform>({ scale: 1, translateUnit: 'px' });
 
   onFileChosen(e: Event) {
     const inputEl = e.target as HTMLInputElement;
     const picked = inputEl.files?.[0] ?? null;
     inputEl.value = ''; // picking the same file again should reopen the dialog
-    if (!picked) return;
-    this.ready.set(false);
-    this.transform.set({ scale: 1, translateUnit: 'px' });
-    this.file.set(picked);
-  }
-
-  setZoom(value: string) {
-    this.transform.update((t) => ({ ...t, scale: Number(value) }));
+    if (picked) this.file.set(picked);
   }
 
   onLoadFailed() {
@@ -62,22 +50,9 @@ export class PhotoEditor {
     this.notifications.addError('Ezt a képet nem sikerült megnyitni - válassz JPG vagy PNG képet.');
   }
 
-  cancel() {
-    if (this.saving()) return;
-    this.file.set(null);
-  }
-
-  async save() {
-    const cropper = this.cropper();
-    if (!cropper || this.saving()) return;
+  upload(photo: Blob) {
     this.saving.set(true);
-    const result = await cropper.crop('blob');
-    if (!result?.blob) {
-      this.saving.set(false);
-      this.notifications.addError('Nem sikerült a képet kivágni.');
-      return;
-    }
-    this.userService.uploadPhoto(this.userId(), result.blob).subscribe({
+    this.userService.uploadPhoto(this.userId(), photo).subscribe({
       next: (res) => {
         this.saving.set(false);
         this.file.set(null);
@@ -106,6 +81,4 @@ export class PhotoEditor {
       },
     });
   }
-
-  readonly outputSize = OUTPUT_SIZE;
 }

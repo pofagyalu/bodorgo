@@ -12,24 +12,22 @@ import {
   uploadTourDocument,
   deleteTourDocument,
 } from '../controllers/tourDocumentController.js';
-import {
-  loadTourForCoverUpload,
-  uploadCoverMiddleware,
-  uploadTourCover,
-  assertOrderAvailableForCover,
-  uploadCoverForOrderMiddleware,
-  uploadCoverForOrder,
-} from '../controllers/tourCoverController.js';
+import { uploadCoverMiddleware, uploadTourCover, getTourCover } from '../controllers/tourCoverController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
 const router = express.Router();
 
+// Everything about tours needs a login - it's a members-only app. The one
+// exception is /ticker: just the next (or latest) tour's number, title,
+// place and date for the logged-out landing page's scrolling ticker.
+router.route('/ticker').get(tourController.getTicker);
+
 router
   .route('/last-3')
-  .get(tourController.aliasLastTours, tourController.getAlltours);
+  .get(requireAuth, tourController.aliasLastTours, tourController.getAlltours);
 
-router.route('/tour-stats').get(tourController.getTourStats);
-router.route('/montly-plan/:year').get(tourController.getMonthlyPlan);
+router.route('/tour-stats').get(requireAuth, tourController.getTourStats);
+router.route('/montly-plan/:year').get(requireAuth, tourController.getMonthlyPlan);
 // Admin-only picker data for the tour-edit page - a plain top-level path
 // (not nested under /:id), same "no collision risk" reasoning as
 // /tour-stats above.
@@ -37,12 +35,12 @@ router.route('/videos/available').get(requireAuth, restrictTo('admin'), listAvai
 
 router
   .route('/')
-  .get(tourController.getAlltours) // public: browsing tours needs no login
+  .get(requireAuth, tourController.getAlltours)
   .post(requireAuth, restrictTo('admin'), tourController.createTour);
 
 router
   .route('/:id')
-  .get(tourController.getTour)
+  .get(requireAuth, tourController.getTour)
   .patch(requireAuth, restrictTo('admin'), tourController.updateTour)
   .delete(requireAuth, restrictTo('admin'), tourController.deleteTour);
 
@@ -54,19 +52,12 @@ router.route('/:id/pdf/email').post(requireAuth, emailTourPdf);
 router.route('/:id/pdf/email-attendees').post(requireAuth, restrictTo('admin'), emailTourPdfToAttendees);
 router.route('/:id/attendees/export.xlsx').get(requireAuth, restrictTo('admin'), downloadAttendeesExcel);
 
-// Cover image - admin-only upload, replacing the old "type the filename
-// by hand" workflow. Viewing is the same plain, unauthenticated static
-// file URL under public/img/tours/ as always (see tour-details.html), so
-// no GET route is needed here.
+// Cover image - stored in the database (see tourCoverModel.js), viewable
+// by any logged-in user, uploadable by an admin.
 router
   .route('/:id/cover')
-  .post(requireAuth, restrictTo('admin'), loadTourForCoverUpload, uploadCoverMiddleware, uploadTourCover);
-// Pre-creation cover upload (see tourCoverController.js's own comment) -
-// a plain "cover" first-segment, not "/:id/cover" above, so it can never
-// collide with a real tour id.
-router
-  .route('/cover/:order')
-  .post(requireAuth, restrictTo('admin'), assertOrderAvailableForCover, uploadCoverForOrderMiddleware, uploadCoverForOrder);
+  .get(requireAuth, getTourCover)
+  .post(requireAuth, restrictTo('admin'), uploadCoverMiddleware, uploadTourCover);
 
 // Extra infók - admin-only upload/delete; viewing is a plain static file
 // URL under public/documents/tours/ (see tourDocumentController.js), same

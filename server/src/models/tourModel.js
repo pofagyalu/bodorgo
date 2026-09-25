@@ -289,8 +289,13 @@ const tourSchema = new Schema(
     // it), then its cover gets uploaded separately right after (see
     // tourCoverController.js) via the tour-edit page, not typed in by
     // hand alongside everything else.
-    imageCover: {
-      type: String,
+    // Cover image - the JPEG itself lives in its own collection (see
+    // tourCoverModel.js); this is when it last changed, doubling as the
+    // client's cache-busting version (?v=...) and as "has a cover". (The
+    // old imageCover filename field pointed at public/img/tours/, which is
+    // no longer served at all - see scripts/migrateCoversToDb.js.)
+    coverUpdatedAt: {
+      type: Date,
     },
     // Gallery photos, synced from a NAS folder by scripts/syncTourImages.js
     // (append-only, so an already-recorded photo never shifts position on

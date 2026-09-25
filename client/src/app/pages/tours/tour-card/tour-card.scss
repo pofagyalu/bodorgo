@@ -35,6 +35,12 @@
   clip-path: polygon(0 0, 100% 0, 100% 90%, 0 100%);
 }
 
+// A tour with no cover uploaded yet - a plain soft-green block instead of
+// a broken image.
+.card__picture-img--empty {
+  background: linear-gradient(to right bottom, #d9ede7, #b9e6d6);
+}
+
 .card__badge {
   position: absolute;
   top: -0.7rem;

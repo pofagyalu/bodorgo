@@ -1,9 +1,8 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, input, computed, inject } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { Tour } from '../../../services/tour';
-import { environment } from '../../../../environments/environment';
+import { Tour, TourService } from '../../../services/tour';
 import { formatForint } from '../../../shared/format';
 
 @Component({
@@ -16,8 +15,11 @@ import { formatForint } from '../../../shared/format';
 export class TourCard {
   tour = input.required<Tour>();
   priority = input(false);
-  environment = environment;
   readonly formatForint = formatForint;
+
+  private tourService = inject(TourService);
+  // null for a tour with no cover yet - the card shows a plain placeholder.
+  coverUrl = computed(() => this.tourService.coverUrl(this.tour()));
 
   // Intl.DateTimeFormat rather than Angular's `date` pipe - this app
   // doesn't register Hungarian locale data, so the pipe's month names

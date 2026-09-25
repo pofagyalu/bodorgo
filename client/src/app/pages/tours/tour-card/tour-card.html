@@ -2,14 +2,18 @@
   <!-- HEADER -->
   <div class="card__header">
     <div class="card__picture">
+      @if (coverUrl(); as url) {
       <img
-        [ngSrc]="environment.assetUrl + '/img/tours/' + tour().imageCover"
+        [ngSrc]="url"
         [alt]="tour().title"
         class="card__picture-img"
         width="500"
         height="333"
         [priority]="priority()"
       />
+      } @else {
+      <div class="card__picture-img card__picture-img--empty"></div>
+      }
     </div>
 
     <div class="card__badge">

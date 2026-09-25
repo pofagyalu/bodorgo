@@ -5,6 +5,7 @@ import { TourService, TourPayload } from '../../services/tour';
 import { AuthService } from '../../auth/auth.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { environment } from '../../../environments/environment';
+import { CropDialog } from '../../components/crop-dialog/crop-dialog';
 
 interface TourEditForm {
   order: number | null;
@@ -18,7 +19,9 @@ interface TourEditForm {
   maxCapacity: number | null;
   summary: string;
   description: string;
-  imageCover: string;
+  // The current (already uploaded) cover's URL, for the preview - '' if
+  // there's none yet.
+  existingCoverUrl: string;
   // The accommodation payment breakdown shown on the tour-details
   // attendee list (Teljes ár/Előleg/Fizetendő) - see
   // reservationController.js's computeAttendeePayments. All optional;
@@ -59,7 +62,7 @@ function emptyForm(): TourEditForm {
     maxCapacity: null,
     summary: '',
     description: '',
-    imageCover: '',
+    existingCoverUrl: '',
     pricingMode: 'perHouse',
     accommodationPricePerNight: null,
     accommodationCurrency: 'HUF',
@@ -89,7 +92,7 @@ function toDatetimeLocal(iso: string): string {
 @Component({
   selector: 'app-tour-edit',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, CropDialog],
   templateUrl: './tour-edit.html',
   styleUrl: './tour-edit.scss',
 })
@@ -162,7 +165,7 @@ export class TourEdit implements OnInit, OnDestroy {
           maxCapacity: t.maxCapacity,
           summary: t.summary,
           description: t.description,
-          imageCover: t.imageCover ?? '',
+          existingCoverUrl: this.tourService.coverUrl(t) ?? '',
           pricingMode: t.pricingMode ?? 'perHouse',
           accommodationPricePerNight: t.accommodationPricePerNight ?? null,
           accommodationCurrency: t.accommodationCurrency ?? 'HUF',
@@ -182,15 +185,20 @@ export class TourEdit implements OnInit, OnDestroy {
     });
   }
 
-  // Cover image upload - a real file, not a hand-typed filename. Can be
-  // picked right away even while creating a brand new tour (nothing
-  // stops you choosing the file first) - the server just needs a real
-  // tour _id to name the saved file after (tour-<order>-cover.<ext>), so
-  // in create mode the actual upload request happens automatically right
-  // after the tour itself is created (see save() below), not on a
-  // separate click.
-  uploadingCover = signal(false);
-  private selectedCoverFile: File | null = null;
+  // Cover image - any photo can be picked (straight from a phone/camera);
+  // it goes through the shared crop dialog first, a fixed 3:2 frame the
+  // admin positions/zooms, and only the result (a JPEG at most 1000x667,
+  // i.e. twice the 500x333 the cards/tour page show it at, so it stays
+  // sharp on high-density screens) is kept, and uploaded together with the
+  // tour's own Mentés - for a new tour right after it's created, for an
+  // existing one right after it's saved (see doSave() below). No separate
+  // upload button: one of those was easy to miss, leaving a picked cover
+  // silently unsaved.
+  readonly coverAspectRatio = 3 / 2;
+  readonly coverWidth = 1000;
+  // The picked, not-yet-cropped file - while set, the crop dialog is open.
+  coverToCrop = signal<File | null>(null);
+  private selectedCoverFile: Blob | null = null;
   // A local, instant preview of whatever was just picked (before any
   // upload even starts) - revoked/replaced on every new selection so this
   // doesn't leak object URLs across picks.
@@ -216,60 +224,33 @@ export class TourEdit implements OnInit, OnDestroy {
   onCoverFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
-    this.selectedCoverFile = file;
+    input.value = ''; // picking the same file again should reopen the dialog
+    if (file) this.coverToCrop.set(file);
+  }
+
+  onCoverCropFailed() {
+    this.coverToCrop.set(null);
+    this.notifications.addError('Ezt a képet nem sikerült megnyitni - válassz JPG vagy PNG képet.');
+  }
+
+  // The crop dialog's result becomes the cover to upload (and to preview).
+  onCoverCropped(cover: Blob) {
+    this.coverToCrop.set(null);
+    this.selectedCoverFile = cover;
 
     const previous = this.coverPreviewUrl();
     if (previous) URL.revokeObjectURL(previous);
-    this.coverPreviewUrl.set(file ? URL.createObjectURL(file) : null);
+    this.coverPreviewUrl.set(URL.createObjectURL(cover));
   }
 
-  // Edit mode only (create mode uploads automatically on save - see
-  // above) - the tour already exists, so a cover change doesn't need to
-  // wait for the rest of the form to be resubmitted too.
-  uploadCover() {
-    if (!this.selectedCoverFile || !this.tourId) return;
-
-    this.uploadingCover.set(true);
-    this.tourService.uploadCoverImage(this.tourId, this.selectedCoverFile).subscribe({
-      next: (res) => {
-        this.form.imageCover = res.data.tour.imageCover ?? '';
-        this.selectedCoverFile = null;
-        this.uploadingCover.set(false);
-        this.notifications.addSuccess('Borítókép feltöltve');
-      },
-      error: (err) => {
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a feltöltés során.');
-        this.uploadingCover.set(false);
-      },
-    });
-  }
 
   save() {
     this.error.set(null);
-
-    // Create mode with a cover already picked: upload it first (using
-    // just the order the admin already typed in - see
-    // uploadCoverImageForOrder's own comment on why the tour doesn't need
-    // to exist yet for that), then include the resulting filename
-    // directly in the createTour call below - one request creates the
-    // tour with its cover already set, instead of two separate steps with
-    // their own partial-failure states to juggle.
-    if (!this.isEditMode && this.selectedCoverFile) {
-      this.saving.set(true);
-      this.tourService.uploadCoverImageForOrder(this.form.order!, this.selectedCoverFile).subscribe({
-        next: (res) => this.doSave(res.data.filename),
-        error: (err) => {
-          this.notifications.addError(err?.error?.message ?? 'Hiba történt a borítókép feltöltése során.');
-          this.saving.set(false);
-        },
-      });
-    } else {
-      this.saving.set(true);
-      this.doSave();
-    }
+    this.saving.set(true);
+    this.doSave();
   }
 
-  private doSave(uploadedCoverFilename?: string) {
+  private doSave() {
     const f = this.form;
     const payload: TourPayload = {
       order: f.order ?? undefined,
@@ -288,10 +269,6 @@ export class TourEdit implements OnInit, OnDestroy {
       // as "Nincs adat" on the tour card) until then.
       summary: f.summary,
       description: f.description,
-      // Only ever set here for a brand new tour whose cover was already
-      // uploaded (see save() above) - an existing tour's cover changes
-      // exclusively through uploadCover() below, its own separate request.
-      imageCover: uploadedCoverFilename,
       pricingMode: f.pricingMode,
       accommodationPricePerNight: f.accommodationPricePerNight ?? undefined,
       accommodationCurrency: f.accommodationCurrency,
@@ -323,17 +300,32 @@ export class TourEdit implements OnInit, OnDestroy {
 
     request.subscribe({
       next: (res) => {
-        this.saving.set(false);
         this.notifications.addSuccess(wasEditMode ? 'Tábor mentése sikeres' : 'Tábor létrehozása sikeres');
-        if (wasEditMode) {
-          this.router.navigate(['/taborok', res.data.tour.slug]);
-        } else {
-          // A brand new tour always returns to the list, whether or not a
-          // cover was picked - previously a coverless creation stayed on
-          // this same form in edit mode instead, which read as "did this
-          // even save?" rather than a completed action.
-          this.router.navigate(['/taborok']);
+        // An edited tour goes to its own page; a brand new one always
+        // returns to the list, whether or not a cover was picked (a
+        // coverless creation used to stay on this form, which read as "did
+        // this even save?").
+        const leave = () => {
+          this.saving.set(false);
+          this.router.navigate(wasEditMode ? ['/taborok', res.data.tour.slug] : ['/taborok']);
+        };
+        if (!this.selectedCoverFile) {
+          leave();
+          return;
         }
+        // A picked (cropped) cover is uploaded as part of saving, in both
+        // modes - against the tour that was just created/saved. The tour
+        // itself is already saved even if this upload fails, and the cover
+        // can then be picked again from its edit page.
+        this.tourService.uploadCoverImage(res.data.tour._id, this.selectedCoverFile).subscribe({
+          next: leave,
+          error: (err) => {
+            this.notifications.addError(
+              err?.error?.message ?? 'A tábor elmentve, de a borítókép feltöltése nem sikerült.',
+            );
+            leave();
+          },
+        });
       },
       error: (err) => {
         this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');

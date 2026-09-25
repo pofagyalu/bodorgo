@@ -152,29 +152,17 @@
 
     <div class="form-field-full cover-upload">
       <span class="cover-upload-label">Borítókép</span>
-      @if (coverPreviewUrl() || form.imageCover) {
+      @if (coverPreviewUrl() || form.existingCoverUrl) {
       <img
         class="cover-preview"
-        [src]="coverPreviewUrl() ?? environment.assetUrl + '/img/tours/' + form.imageCover"
+        [src]="coverPreviewUrl() ?? form.existingCoverUrl"
         alt="Borítókép előnézet"
       />
       }
       <div class="cover-upload-row">
-        <input type="file" accept="image/jpeg,image/png" (change)="onCoverFileSelected($event)" />
-        @if (isEditMode) {
-        <button
-          type="button"
-          class="btn btn--green btn--small"
-          [disabled]="uploadingCover()"
-          (click)="uploadCover()"
-        >
-          {{ uploadingCover() ? 'Feltöltés...' : 'Feltöltés' }}
-        </button>
-        }
+        <input type="file" accept="image/*" (change)="onCoverFileSelected($event)" />
       </div>
-      @if (!isEditMode) {
       <p class="field-note">A kiválasztott kép a tábor mentésekor kerül feltöltésre.</p>
-      }
     </div>
 
     <label class="form-field-full"
@@ -208,4 +196,16 @@
   </form>
   }
 </div>
+}
+
+@if (coverToCrop(); as f) {
+<app-crop-dialog
+  [file]="f"
+  title="Borítókép kivágása"
+  [aspectRatio]="coverAspectRatio"
+  [outputWidth]="coverWidth"
+  (cropped)="onCoverCropped($event)"
+  (cancelled)="coverToCrop.set(null)"
+  (failed)="onCoverCropFailed()"
+/>
 }

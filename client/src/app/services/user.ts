@@ -71,7 +71,7 @@ export interface AttendedTour {
   slug: string;
   order: number;
   startDate: string;
-  imageCover: string;
+  coverUpdatedAt?: string;
 }
 
 export interface MyAttendanceResponse {
