@@ -24,7 +24,26 @@ const CLUB_FOUNDING_YEAR = 2019;
 // way (see paymentController.js's chargeableAmount).
 const BARION_FEE_RATE = 0.016;
 
-type ClubSortKey = 'name' | 'toursAttended' | 'age';
+type SortKey = 'name' | 'toursAttended' | 'age';
+type SortState = { key: SortKey; dir: 'asc' | 'desc' };
+
+// Shared by both tables' sortable Név/Táborok/Kor columns. Ties on the
+// numbers fall back to the name, and a missing age (no birthday recorded)
+// always sorts to the bottom, whichever direction.
+function sortUsers(users: MemberUser[], { key, dir }: SortState): MemberUser[] {
+  const sign = dir === 'asc' ? 1 : -1;
+  const byName = (a: MemberUser, b: MemberUser) => a.name.localeCompare(b.name, 'hu');
+  return [...users].sort((a, b) => {
+    if (key === 'name') return sign * byName(a, b);
+    if (key === 'age') {
+      if (a.age == null || b.age == null) {
+        return a.age == null && b.age == null ? byName(a, b) : a.age == null ? 1 : -1;
+      }
+      return sign * (a.age - b.age) || byName(a, b);
+    }
+    return sign * (a.toursAttended - b.toursAttended) || byName(a, b);
+  });
+}
 
 @Component({
   selector: 'app-members',
@@ -89,33 +108,28 @@ export class Members implements OnInit {
   );
   casualUsers = computed(() => this.users().filter((u) => u.role === 'guest'));
 
-  // Sortable columns of the "Tagok" table - clicking a header sorts by it,
-  // clicking the same one again flips the direction (see sortBy below).
-  clubSort = signal<{ key: ClubSortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' });
+  // Sortable Név/Táborok/Kor columns of each table - clicking a header
+  // sorts by it, clicking the same one again flips the direction (see
+  // sortBy below).
+  sorts = {
+    club: signal<SortState>({ key: 'name', dir: 'asc' }),
+    casual: signal<SortState>({ key: 'name', dir: 'asc' }),
+  };
 
   filteredClubMembers = computed(() => {
     const q = this.clubSearch().trim().toLocaleLowerCase('hu');
-    const { key, dir } = this.clubSort();
-    const sign = dir === 'asc' ? 1 : -1;
-    const byName = (a: MemberUser, b: MemberUser) => a.name.localeCompare(b.name, 'hu');
-    return this.clubMembers()
-      .filter((u) => u.name.toLocaleLowerCase('hu').includes(q))
-      .sort((a, b) => {
-        if (key === 'name') return sign * byName(a, b);
-        if (key === 'age') {
-          // No birthday recorded - always at the bottom, whichever direction.
-          if (a.age == null || b.age == null) {
-            return a.age == null && b.age == null ? byName(a, b) : a.age == null ? 1 : -1;
-          }
-          return sign * (a.age - b.age) || byName(a, b);
-        }
-        return sign * (a.toursAttended - b.toursAttended) || byName(a, b);
-      });
+    return sortUsers(
+      this.clubMembers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q)),
+      this.sorts.club(),
+    );
   });
 
   filteredCasualUsers = computed(() => {
     const q = this.casualSearch().trim().toLocaleLowerCase('hu');
-    return this.casualUsers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q));
+    return sortUsers(
+      this.casualUsers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q)),
+      this.sorts.casual(),
+    );
   });
 
   me = computed(() => this.clubMembers().find((u) => u._id === this.myId()) ?? null);
@@ -307,16 +321,16 @@ export class Members implements OnInit {
   // Same column again flips the direction; a new column starts A→Z for
   // the name, but most-first for Táborok/Kor - the more useful end of a
   // number column.
-  sortBy(key: ClubSortKey) {
-    this.clubSort.update((s) =>
+  sortBy(table: 'club' | 'casual', key: SortKey) {
+    this.sorts[table].update((s) =>
       s.key === key
         ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
         : { key, dir: key === 'name' ? 'asc' : 'desc' },
     );
   }
 
-  ariaSort(key: ClubSortKey): 'ascending' | 'descending' | 'none' {
-    const s = this.clubSort();
+  ariaSort(table: 'club' | 'casual', key: SortKey): 'ascending' | 'descending' | 'none' {
+    const s = this.sorts[table]();
     if (s.key !== key) return 'none';
     return s.dir === 'asc' ? 'ascending' : 'descending';
   }

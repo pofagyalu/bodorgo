@@ -137,11 +137,11 @@
                 { key: 'toursAttended', label: 'Táborok' },
                 { key: 'age', label: 'Kor' }
               ]; track col.key) {
-              <th [attr.aria-sort]="ariaSort($any(col.key))">
-                <button type="button" class="sort-btn" (click)="sortBy($any(col.key))">
+              <th [attr.aria-sort]="ariaSort('club', $any(col.key))" [class.num-col]="col.key !== 'name'">
+                <button type="button" class="sort-btn" (click)="sortBy('club', $any(col.key))">
                   {{ col.label }}
-                  <span class="sort-arrow" [class.active]="clubSort().key === col.key">
-                    {{ clubSort().key === col.key && clubSort().dir === 'desc' ? '▼' : '▲' }}
+                  <span class="sort-arrow" [class.active]="sorts.club().key === col.key">
+                    {{ sorts.club().key === col.key && sorts.club().dir === 'desc' ? '▼' : '▲' }}
                   </span>
                 </button>
               </th>
@@ -174,14 +174,8 @@
                   </span>
                 </div>
               </td>
-              <td>
-                <div>
-                  <span>{{ m.toursAttended }}</span>
-                </div>
-              </td>
-              <td>
-                <span>{{ m.age ?? '-' }}</span>
-              </td>
+              <td class="num-col">{{ m.toursAttended }}</td>
+              <td class="num-col">{{ m.age ?? '-' }}</td>
               <td>
                 <span
                   class="status"
@@ -294,7 +288,20 @@
         <table class="casual-table">
           <thead>
             <tr>
-              <th>Felhasználó</th>
+              @for (col of [
+                { key: 'name', label: 'Felhasználó' },
+                { key: 'toursAttended', label: 'Táborok' },
+                { key: 'age', label: 'Kor' }
+              ]; track col.key) {
+              <th [attr.aria-sort]="ariaSort('casual', $any(col.key))" [class.num-col]="col.key !== 'name'">
+                <button type="button" class="sort-btn" (click)="sortBy('casual', $any(col.key))">
+                  {{ col.label }}
+                  <span class="sort-arrow" [class.active]="sorts.casual().key === col.key">
+                    {{ sorts.casual().key === col.key && sorts.casual().dir === 'desc' ? '▼' : '▲' }}
+                  </span>
+                </button>
+              </th>
+              }
               <th>Alkalmazás-hozzáférés</th>
               @if (isAdmin()) {
               <th>Inaktív</th>
@@ -305,7 +312,7 @@
           <tbody>
             @if (!filteredCasualUsers().length) {
             <tr>
-              <td [attr.colspan]="isAdmin() ? 4 : 2" class="empty-row">
+              <td [attr.colspan]="isAdmin() ? 6 : 4" class="empty-row">
                 Nincs ilyen nevű felhasználó.
               </td>
             </tr>
@@ -320,6 +327,8 @@
                   </span>
                 </div>
               </td>
+              <td class="num-col">{{ u.toursAttended }}</td>
+              <td class="num-col">{{ u.age ?? '-' }}</td>
               <td>
                 <span
                   class="status"

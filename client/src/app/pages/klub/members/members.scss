@@ -300,16 +300,6 @@ table {
   width: 20%;
 }
 
-.membership-table--compact th:nth-child(2),
-.membership-table--compact td:nth-child(2) {
-  width: 10%;
-}
-
-.membership-table--compact th:nth-child(3),
-.membership-table--compact td:nth-child(3) {
-  width: 5%;
-}
-
 .membership-table--compact th:nth-child(4),
 .membership-table--compact td:nth-child(4) {
   width: 15%;
@@ -326,7 +316,7 @@ table {
 }
 
 .casual-table {
-  min-width: 590px;
+  min-width: 700px;
 }
 
 th {
@@ -337,6 +327,25 @@ th {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+// Táborok/Kor in both tables - only ever a 1-2 digit number, so just wide
+// enough for the header label + sort arrow, with tighter side padding than
+// the other columns. Fixed px so it holds in the table-layout:fixed member
+// table too (the remaining % columns there share whatever is left).
+th.num-col,
+td.num-col {
+  padding-left: 12px;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
+th.num-col:nth-of-type(2) {
+  width: 104px;
+}
+
+th.num-col:nth-of-type(3) {
+  width: 68px;
 }
 
 // Header of a sortable column - looks like the plain th text, just clickable.
@@ -820,5 +829,39 @@ td {
 
   .member-search {
     width: 100%;
+  }
+
+  // Both tables still scroll sideways on a phone, but narrowed so that at
+  // least Név + Táborok + Kor (~315px) fit in view without scrolling:
+  // tighter cell padding, and a fixed-width name column the name just
+  // wraps inside, next to the avatar.
+  .person {
+    gap: 8px;
+  }
+
+  th,
+  td {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  th.num-col,
+  td.num-col {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .membership-table--compact th:nth-child(1),
+  .membership-table--compact td:nth-child(1),
+  .casual-table th:nth-child(1) {
+    width: 170px;
+  }
+
+  th.num-col:nth-of-type(2) {
+    width: 88px;
+  }
+
+  th.num-col:nth-of-type(3) {
+    width: 56px;
   }
 }
