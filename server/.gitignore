@@ -5,13 +5,14 @@ config.env
 dist/
 logs/
 
-# Auto-generated per-payment receipt PDFs (see paymentController.js) -
-# unlike the rest of documents/ (real, permanent, admin-curated club
-# records meant to be committed), these are per-environment dynamic data
-# containing personal financial details, same "never committed, never
-# synced between dev/prod" treatment as public/ - just physically nested
-# under documents/ per the admin's own preferred folder layout.
-documents/payments/
+# Club documents uploaded through the Klub "Dokumentumok" page (invoices,
+# contracts, founding papers...) and the auto-generated per-payment
+# receipts under documents/payments/ - real club data, some of it
+# financial/personal, never committed. They live on disk only: the
+# uploads land here and are copied to production by sync.js (the local
+# app and production share one database, so its records point at these
+# files), except documents/payments/, which sync.js never copies.
+documents/
 
 # One-off JSON files for scripts/addTour.js, scripts/addSchedule.js and
 # scripts/importAttendance.js - working data, not permanent seed data,
