@@ -203,10 +203,17 @@ button {
   gap: 6px;
 }
 
-.field label {
+.field label,
+.field-label {
   font-size: 12px;
   font-weight: 700;
   color: #50636e;
+}
+
+// Profilkép row (upload/replace/remove, see components/photo-editor) -
+// spans the whole width above the two-column fields.
+.field-photo {
+  grid-column: 1 / -1;
 }
 
 .field input,

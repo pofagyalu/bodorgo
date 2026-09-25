@@ -43,6 +43,12 @@ export interface AdminUser {
   // see them offered as a candidate any more (see tour-details.ts's
   // pickerOptions/myScheduleEventCandidates).
   retired?: boolean;
+  // When the profile photo last changed (null/absent = no photo) - also
+  // the cache-busting version in its URL (see UserService.photoUrl).
+  photoUpdatedAt?: string | null;
+  // Who last set/removed the photo - once 'self', an admin can no longer
+  // change it (see userPhotoController.js).
+  photoSetBy?: 'admin' | 'self' | null;
   address?: UserAddress;
   // Geocoded from `address` server-side - present only once a real
   // address has been successfully located (see userModel.js's
@@ -91,6 +97,7 @@ export interface FamilyMember {
   name: string;
   email?: string;
   role: string;
+  photoUpdatedAt?: string | null;
 }
 
 export interface MyFamilyResponse {
@@ -104,6 +111,7 @@ export interface MyFamilyResponse {
 // deliberately never includes gender/familyId, even about yourself (see
 // userController.js's getMe).
 export interface MyProfile {
+  _id: string;
   name: string;
   username?: string;
   email?: string;
@@ -113,6 +121,13 @@ export interface MyProfile {
   toursAttended: number;
   wantsEmailNotifications: boolean;
   address?: UserAddress;
+  photoUpdatedAt: string | null;
+  photoSetBy: 'admin' | 'self' | null;
+}
+
+export interface PhotoResponse {
+  status: string;
+  data: { photoUpdatedAt: string | null; photoSetBy: 'admin' | 'self' | null };
 }
 
 export interface MyProfileResponse {
@@ -187,6 +202,25 @@ export interface JoinFamilyResponse {
 export class UserService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/users`;
+
+  // Only ever loaded by a logged-in browser (the session cookie goes along
+  // with the <img> request - bodorgo.hu and api.bodorgo.hu are the same
+  // site). ?v= changes with every new upload, so the old one can be
+  // cached forever.
+  photoUrl(userId: string, version: string): string {
+    return `${this.apiUrl}/${userId}/photo?v=${encodeURIComponent(version)}`;
+  }
+
+  // userId null = the logged-in user's own photo.
+  uploadPhoto(userId: string | null, photo: Blob): Observable<PhotoResponse> {
+    const body = new FormData();
+    body.append('file', photo, 'photo.jpg');
+    return this.http.put<PhotoResponse>(`${this.apiUrl}/${userId ?? 'me'}/photo`, body);
+  }
+
+  deletePhoto(userId: string | null): Observable<PhotoResponse> {
+    return this.http.delete<PhotoResponse>(`${this.apiUrl}/${userId ?? 'me'}/photo`);
+  }
 
   getAllUsers(): Observable<AdminUsersResponse> {
     return this.http.get<AdminUsersResponse>(this.apiUrl);

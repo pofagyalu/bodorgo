@@ -2,6 +2,9 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserService, AdminUser } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { AuthService } from '../../../auth/auth.service';
+import { Avatar } from '../../../components/avatar/avatar';
+import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 
 interface AddressForm {
   zipCode: string;
@@ -28,7 +31,7 @@ function emptyAddress(): AddressForm {
 // create mode, since there's no Authentik account yet to source it from.
 @Component({
   selector: 'app-member-edit',
-  imports: [],
+  imports: [Avatar, PhotoEditor],
   templateUrl: './member-edit.html',
   styleUrl: './member-edit.scss',
 })
@@ -37,6 +40,7 @@ export class MemberEdit implements OnInit {
   private router = inject(Router);
   private userService = inject(UserService);
   private notifications = inject(NotificationsService);
+  private auth = inject(AuthService);
 
   readonly minBirthday = '1900-01-01';
   readonly maxBirthday = new Date().toISOString().slice(0, 10);
@@ -91,12 +95,20 @@ export class MemberEdit implements OnInit {
     });
   }
 
-  initials(): string {
-    const name = this.user()?.name ?? this.name();
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return '?';
-    if (parts.length === 1) return parts[0][0].toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  // Once someone has set (or removed) their own photo, it's theirs - the
+  // server refuses an admin change too (see userPhotoController.js). An
+  // admin's own record is never locked for themselves.
+  photoLocked(): boolean {
+    const u = this.user();
+    return !!u && u.photoSetBy === 'self' && u._id !== this.auth.user()?.id;
+  }
+
+  onPhotoChanged(change: PhotoChange) {
+    this.user.update((u) => (u ? { ...u, ...change } : u));
+    // An admin editing their own record here - keep the header in sync.
+    if (this.user()?._id === this.auth.user()?.id) {
+      this.auth.patchCurrentUser({ photoUpdatedAt: change.photoUpdatedAt });
+    }
   }
 
   updateAddress(field: keyof AddressForm, value: string) {

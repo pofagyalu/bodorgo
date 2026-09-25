@@ -209,6 +209,30 @@ export const getTour = async (req, res, next) => {
     paymentMethod: paymentByAttendeeId.get(p.attendeeId)?.method ?? null,
   }));
 
+  // Profile photo versions (see userModel.js's photoUpdatedAt) for everyone
+  // shown on this tour's page - the attendee list and each program's
+  // sign-ups - as one small { userId: photoUpdatedAt } lookup, only for
+  // those who actually have a photo. One query here instead of populating
+  // it separately into every attendee/participant subdocument.
+  const shownUserIds = new Set(attendeePayments.map((p) => p.userId).filter(Boolean));
+  for (const event of tour.schedule ?? []) {
+    for (const p of event.participants ?? []) {
+      if (p.user) shownUserIds.add(String(p.user));
+    }
+  }
+  // Same lookup also returns usernames - the program sign-up chips show
+  // someone's username instead of their full name when they've set one.
+  const shownUsers = await User.find({
+    _id: { $in: [...shownUserIds] },
+    $or: [{ photoUpdatedAt: { $exists: true } }, { username: { $exists: true, $ne: '' } }],
+  }).select('photoUpdatedAt username');
+  const userPhotos = Object.fromEntries(
+    shownUsers.filter((u) => u.photoUpdatedAt).map((u) => [String(u._id), u.photoUpdatedAt]),
+  );
+  const usernames = Object.fromEntries(
+    shownUsers.filter((u) => u.username).map((u) => [String(u._id), u.username]),
+  );
+
   // getTour is public (no requireAuth) so anonymous browsing still works -
   // this only personalizes the distance/duration/wording when a real
   // session is present, and falls back to the tour's own cached
@@ -240,6 +264,8 @@ export const getTour = async (req, res, next) => {
       attendeePayments: attendeePaymentsWithMethod,
       paymentTotals,
       distanceInfo,
+      userPhotos,
+      usernames,
     },
   });
 };

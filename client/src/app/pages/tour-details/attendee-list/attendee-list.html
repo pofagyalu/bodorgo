@@ -21,7 +21,15 @@
     @for (group of groupedFamilies; track group.key) { @for (a of group.members; track a.attendeeId) {
     <tr [class.attendee-row--stripe]="a.familyStripe === 1">
       <td>
-        {{ a.name }}
+        <span class="attendee-name">
+          <app-avatar
+            class="attendee-avatar"
+            [name]="a.name"
+            [userId]="a.userId"
+            [photoVersion]="a.userId ? userPhotos[a.userId] : null"
+          />
+          {{ a.name }}
+        </span>
         @if (a.feeExempt) {
         <span class="exempt-badge" title="Nem kell fizetnie a szállásért">Ingyenes</span>
         }

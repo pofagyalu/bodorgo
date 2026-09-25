@@ -279,6 +279,12 @@ export interface TourResponse {
     attendeePayments: AttendeePayment[];
     paymentTotals: PaymentTotals | null;
     distanceInfo: DistanceInfo;
+    // { userId: photoUpdatedAt } for everyone shown on the page (attendees,
+    // program sign-ups) who has a profile photo - see tourController.js.
+    userPhotos: Record<string, string>;
+    // { userId: username } for those of them who've set one - shown
+    // instead of the full name on the program sign-up chips.
+    usernames: Record<string, string>;
   };
 }
 

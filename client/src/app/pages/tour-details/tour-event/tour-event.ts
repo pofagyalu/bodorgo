@@ -3,6 +3,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { TourService, ScheduleEntry } from '../../../services/tour';
 import { AuthService } from '../../../auth/auth.service';
 import { EventForm, EventFormModel } from '../event-form/event-form';
+import { Avatar } from '../../../components/avatar/avatar';
+
+// How many faces the collapsed sign-up row shows before "+N".
+const STACK_SIZE = 5;
 
 // One candidate the logged-in user could opt in/out of this event - see
 // tour-details.ts's myScheduleEventCandidates for who ends up in this
@@ -21,7 +25,7 @@ export interface ScheduleCandidate {
 @Component({
   selector: 'app-tour-event',
   standalone: true,
-  imports: [MatIconModule, EventForm],
+  imports: [MatIconModule, EventForm, Avatar],
   templateUrl: './tour-event.html',
   styleUrl: './tour-event.scss',
 })
@@ -36,7 +40,14 @@ export class TourEvent {
   // family who isn't even attending - the opt-in row hides itself
   // entirely in that case (see tour-event.html).
   @Input() candidates: ScheduleCandidate[] = [];
+  // { userId: photoUpdatedAt } - see tour-details.ts's userPhotos.
+  @Input() userPhotos: Record<string, string> = {};
+  // { userId: username } - a chip shows this instead of the full name
+  // when the person has one (the full name stays as its tooltip).
+  @Input() usernames: Record<string, string> = {};
   @Output() updated = new EventEmitter<ScheduleEntry>();
+
+  readonly stackSize = STACK_SIZE;
 
   expanded = signal(false);
   saving = signal(false);

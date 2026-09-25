@@ -142,18 +142,77 @@
 }
 
 .event-participants-collapse.open {
-  max-height: 400px;
+  // Rows are avatar-height now - room for a long sign-up list.
+  max-height: 1500px;
 }
 
+// Side by side, wrapping onto more lines as needed - one small
+// avatar + name chip per person.
 .event-participant-list {
   list-style: none;
   margin: 0.4rem 0 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.9rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.85rem;
   color: #444;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.65rem 0.2rem 0.2rem;
+    border-radius: 999px;
+    background: #f2f5f4;
+    white-space: nowrap;
+  }
+}
+
+// Shared look for every avatar on this card - photo, or initials (see
+// components/avatar). The initials circle uses the Profil header's
+// stronger mint, not the Klub lists' paler one: on the light-grey chips
+// below, the paler fill blended into the chip and made an initials circle
+// look smaller than a same-size photo right next to it.
+.participant-avatar,
+.stack-avatar {
+  border-radius: 50%;
+  background: #b9e6d6;
+  color: #20594f;
+  font-weight: 800;
+  flex: none;
+}
+
+.participant-avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+}
+
+// Collapsed: a compact row of overlapping faces before the count.
+.participant-stack {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.35rem;
+}
+
+.stack-avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+  border: 2px solid #fff;
+  margin-left: -7px;
+
+  &:first-child {
+    margin-left: 0;
+  }
+}
+
+.stack-more {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7f86;
 }
 
 .empty-note {

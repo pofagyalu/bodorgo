@@ -1,0 +1,62 @@
+@if (locked()) {
+<p class="photo-locked">A profilképet a felhasználó saját maga állította be - azt már nem lehet módosítani.</p>
+} @else {
+<div class="photo-actions">
+  <label class="photo-btn" [class.disabled]="saving()">
+    <input type="file" accept="image/*" hidden [disabled]="saving()" (change)="onFileChosen($event)" />
+    {{ hasPhoto() ? 'Profilkép cseréje' : 'Profilkép feltöltése' }}
+  </label>
+  @if (hasPhoto()) {
+  <button type="button" class="photo-btn photo-btn--remove" [disabled]="saving()" (click)="remove()">
+    Profilkép törlése
+  </button>
+  }
+</div>
+}
+
+@if (file(); as f) {
+<div class="photo-backdrop" (click)="cancel()"></div>
+<div class="photo-dialog" role="dialog" aria-modal="true" aria-labelledby="photoDialogTitle">
+  <h2 id="photoDialogTitle">Profilkép kivágása</h2>
+  <p class="photo-hint">Húzd a képet vagy a keretet a helyére, és nagyíts a csúszkával.</p>
+
+  <div class="photo-cropper">
+    <image-cropper
+      [imageFile]="f"
+      [maintainAspectRatio]="true"
+      [aspectRatio]="1"
+      [resizeToWidth]="outputSize"
+      [onlyScaleDown]="true"
+      format="jpeg"
+      [imageQuality]="85"
+      output="blob"
+      [autoCrop]="false"
+      [allowMoveImage]="true"
+      [transform]="transform()"
+      (transformChange)="transform.set($event)"
+      (cropperReady)="ready.set(true)"
+      (loadImageFailed)="onLoadFailed()"
+    ></image-cropper>
+  </div>
+
+  <label class="photo-zoom">
+    <span>Nagyítás</span>
+    <input
+      type="range"
+      min="1"
+      max="4"
+      step="0.01"
+      [value]="transform().scale ?? 1"
+      [disabled]="!ready()"
+      (input)="setZoom($any($event.target).value)"
+    />
+  </label>
+
+  <div class="photo-dialog-actions">
+    <button type="button" class="photo-btn photo-btn--outline" [disabled]="saving()" (click)="cancel()">Mégse</button>
+    <button type="button" class="photo-btn photo-btn--primary" [disabled]="!ready() || saving()" (click)="save()">
+      {{ saving() ? 'Mentés…' : 'Mentés' }}
+    </button>
+  </div>
+</div>
+}

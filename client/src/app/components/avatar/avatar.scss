@@ -1,0 +1,56 @@
+// Size, shape and initials styling all come from the parent's class on
+// <app-avatar> - this only makes the photo fill that same box.
+:host {
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.avatar-inner {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+    display: block;
+  }
+}
+
+.avatar-preview {
+  position: fixed;
+  z-index: 30001; // above the app's own modals/fullscreen map (30000)
+  object-fit: cover;
+  border-radius: 16px;
+  border: 3px solid #fff;
+  box-shadow: 0 12px 40px rgba(16, 37, 54, 0.35);
+  pointer-events: none;
+
+  // Fades and zooms in out of the avatar's side (bottom edge when shown
+  // above it, top edge when below) - duration matches avatar.ts's FADE_MS.
+  opacity: 0;
+  transform: scale(0.85);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+
+  &.below {
+    transform-origin: 50% 0;
+  }
+
+  &.shown {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    transform: none;
+  }
+}
