@@ -339,6 +339,34 @@ th {
   letter-spacing: 0.06em;
 }
 
+// Header of a sortable column - looks like the plain th text, just clickable.
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: #23354a;
+  }
+}
+
+.sort-arrow {
+  font-size: 9px;
+  opacity: 0.3;
+
+  &.active {
+    opacity: 1;
+  }
+}
+
 td {
   padding: 17px 21px;
   border-top: 1px solid #f0f2f0;

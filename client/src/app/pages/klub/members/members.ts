@@ -24,6 +24,8 @@ const CLUB_FOUNDING_YEAR = 2019;
 // way (see paymentController.js's chargeableAmount).
 const BARION_FEE_RATE = 0.016;
 
+type ClubSortKey = 'name' | 'toursAttended' | 'age';
+
 @Component({
   selector: 'app-members',
   imports: [DatePipe, RouterLink, MatIconModule],
@@ -87,9 +89,28 @@ export class Members implements OnInit {
   );
   casualUsers = computed(() => this.users().filter((u) => u.role === 'guest'));
 
+  // Sortable columns of the "Tagok" table - clicking a header sorts by it,
+  // clicking the same one again flips the direction (see sortBy below).
+  clubSort = signal<{ key: ClubSortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' });
+
   filteredClubMembers = computed(() => {
     const q = this.clubSearch().trim().toLocaleLowerCase('hu');
-    return this.clubMembers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q));
+    const { key, dir } = this.clubSort();
+    const sign = dir === 'asc' ? 1 : -1;
+    const byName = (a: MemberUser, b: MemberUser) => a.name.localeCompare(b.name, 'hu');
+    return this.clubMembers()
+      .filter((u) => u.name.toLocaleLowerCase('hu').includes(q))
+      .sort((a, b) => {
+        if (key === 'name') return sign * byName(a, b);
+        if (key === 'age') {
+          // No birthday recorded - always at the bottom, whichever direction.
+          if (a.age == null || b.age == null) {
+            return a.age == null && b.age == null ? byName(a, b) : a.age == null ? 1 : -1;
+          }
+          return sign * (a.age - b.age) || byName(a, b);
+        }
+        return sign * (a.toursAttended - b.toursAttended) || byName(a, b);
+      });
   });
 
   filteredCasualUsers = computed(() => {
@@ -281,6 +302,23 @@ export class Members implements OnInit {
 
   selectTab(tab: 'club' | 'casual') {
     this.activeTab.set(tab);
+  }
+
+  // Same column again flips the direction; a new column starts A→Z for
+  // the name, but most-first for Táborok/Kor - the more useful end of a
+  // number column.
+  sortBy(key: ClubSortKey) {
+    this.clubSort.update((s) =>
+      s.key === key
+        ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: key === 'name' ? 'asc' : 'desc' },
+    );
+  }
+
+  ariaSort(key: ClubSortKey): 'ascending' | 'descending' | 'none' {
+    const s = this.clubSort();
+    if (s.key !== key) return 'none';
+    return s.dir === 'asc' ? 'ascending' : 'descending';
   }
 
   // Admin-only, one at a time - toggles a member's row open to show their
