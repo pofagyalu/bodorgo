@@ -1,0 +1,6 @@
+{
+  // Only reformat the lines actually changed on save, not the whole file -
+  // most of the client code predates any Prettier config, so formatting a
+  // whole file rewraps dozens of untouched lines.
+  "editor.formatOnSaveMode": "modificationsIfAvailable"
+}

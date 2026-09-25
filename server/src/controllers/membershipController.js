@@ -1,4 +1,6 @@
 import User from '../models/userModel.js';
+import Reservation from '../models/reservationModel.js';
+import { computeAge } from './userController.js';
 
 // GET /membership/users - requireAuth, restrictTo('admin', 'member'). Feeds
 // the Klub "Felhasználók" page's Klubtagok/Egyéb felhasználók split (done
@@ -13,9 +15,34 @@ import User from '../models/userModel.js';
 // member's name/role/status open-book.
 export const getMembers = async (req, res) => {
   const users = await User.find()
-    .select('name role lastLoginAt createdAt memberSince familyId retired')
+    .select(
+      'name role lastLoginAt createdAt memberSince familyId retired birthday',
+    )
     .sort('name')
     .lean();
 
-  res.status(200).json({ status: 'success', data: { users } });
+  const attendanceCounts = await Reservation.aggregate([
+    { $unwind: '$attendees' },
+    { $group: { _id: '$attendees.user', tours: { $addToSet: '$tour' } } },
+    { $project: { toursAttended: { $size: '$tours' } } },
+  ]);
+
+  const toursAttendedById = new Map(
+    attendanceCounts.map((a) => [String(a._id), a.toursAttended]),
+  );
+
+  const usersWithAttendance = users.map((user) => {
+    const { birthday, ...rest } = user;
+
+    return {
+      ...rest,
+      age: computeAge(birthday),
+      toursAttended: toursAttendedById.get(String(user._id)) ?? 0,
+    };
+  });
+
+  res.status(200).json({
+    status: 'success',
+    data: { users: usersWithAttendance },
+  });
 };
