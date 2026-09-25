@@ -132,9 +132,20 @@
         <table class="membership-table membership-table--compact">
           <thead>
             <tr>
-              <th>Tag neve</th>
-              <th>Táborok</th>
-              <th>Kor</th>
+              @for (col of [
+                { key: 'name', label: 'Tag neve' },
+                { key: 'toursAttended', label: 'Táborok' },
+                { key: 'age', label: 'Kor' }
+              ]; track col.key) {
+              <th [attr.aria-sort]="ariaSort($any(col.key))">
+                <button type="button" class="sort-btn" (click)="sortBy($any(col.key))">
+                  {{ col.label }}
+                  <span class="sort-arrow" [class.active]="clubSort().key === col.key">
+                    {{ clubSort().key === col.key && clubSort().dir === 'desc' ? '▼' : '▲' }}
+                  </span>
+                </button>
+              </th>
+              }
               <th>{{ currentMembershipYear() }}</th>
               <th>Előzmény</th>
               <th>Műveletek</th>
