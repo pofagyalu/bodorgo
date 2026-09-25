@@ -54,7 +54,8 @@
       </div>
       @if (hasUnpaidDues()) {
       <button type="button" class="primary-btn" (click)="openPayConfirm()">
-        {{ payingOnlyForFamily() ? 'Tagdíj befizetése hozzátartozónak' : 'Tagdíj befizetése' }} →
+        {{ payingOnlyForFamily() ? 'Tagdíj befizetése hozzátartozónak' : 'Tagdíj
+        befizetése' }} →
       </button>
       }
     </section>
@@ -95,8 +96,8 @@
             ></span>
             <strong>{{ y }}. évi tagdíj</strong>
           </div>
-          @if (yearState(mine._id, y) === 'paid') { @if
-          (paymentFor(mine._id, y); as payment) {
+          @if (yearState(mine._id, y) === 'paid') { @if (paymentFor(mine._id,
+          y); as payment) {
           <span
             >{{ money(payment.amount, payment.currency) }} · {{ payment.date |
             date: 'yyyy. MM. dd.' }}</span
@@ -132,6 +133,8 @@
           <thead>
             <tr>
               <th>Tag neve</th>
+              <th>Táborok</th>
+              <th>Kor</th>
               <th>{{ currentMembershipYear() }}</th>
               <th>Előzmény</th>
               <th>Műveletek</th>
@@ -161,15 +164,23 @@
                 </div>
               </td>
               <td>
+                <div>
+                  <span>{{ m.toursAttended }}</span>
+                </div>
+              </td>
+              <td>
+                <span>{{ m.age ?? '-' }}</span>
+              </td>
+              <td>
                 <span
                   class="status"
                   [class.paid]="yearState(m._id, currentMembershipYear()) === 'paid'"
                   [class.unpaid]="yearState(m._id, currentMembershipYear()) === 'unpaid'"
                   [class.na]="yearState(m._id, currentMembershipYear()) === 'na'"
                 >
-                  {{ yearState(m._id, currentMembershipYear()) === 'paid' ? '✓ Fizetve' :
-                  yearState(m._id, currentMembershipYear()) === 'unpaid' ? '○ Nincs befizetve' : '—
-                  Nem volt tag' }}
+                  {{ yearState(m._id, currentMembershipYear()) === 'paid' ? '✓
+                  Fizetve' : yearState(m._id, currentMembershipYear()) ===
+                  'unpaid' ? '○ Nincs befizetve' : '— Nem volt tag' }}
                 </span>
               </td>
               <td>
@@ -309,7 +320,11 @@
               </td>
               @if (isAdmin()) {
               <td>
-                <span class="status" [class.unpaid]="u.retired" [class.na]="!u.retired">
+                <span
+                  class="status"
+                  [class.unpaid]="u.retired"
+                  [class.na]="!u.retired"
+                >
                   {{ u.retired ? 'Inaktív' : '—' }}
                 </span>
               </td>
@@ -340,15 +355,28 @@
 
 @if (showPayConfirm()) {
 <div class="modal-backdrop" (click)="closePayConfirm()"></div>
-<div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="payConfirmTitle">
+<div
+  class="modal-dialog"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="payConfirmTitle"
+>
   <div class="modal-head">
     <h2 id="payConfirmTitle">Tagdíj befizetése</h2>
-    <button class="icon-btn" type="button" aria-label="Bezárás" [disabled]="paying()" (click)="closePayConfirm()">
+    <button
+      class="icon-btn"
+      type="button"
+      aria-label="Bezárás"
+      [disabled]="paying()"
+      (click)="closePayConfirm()"
+    >
       ✕
     </button>
   </div>
   <div class="modal-body">
-    <p class="subtext">A hozzátartozók tagságát is befizeted? Válaszd ki a listából.</p>
+    <p class="subtext">
+      A hozzátartozók tagságát is befizeted? Válaszd ki a listából.
+    </p>
     <ul class="pay-confirm-list">
       @for (row of payBreakdown(); track row.id) {
       <li class="pay-confirm-row">
@@ -380,18 +408,28 @@
     </div>
 
     @if (paymentNotice(); as notice) {
-    <p class="payment-notice" [class.error]="notice.kind === 'error'">{{ notice.text }}</p>
+    <p class="payment-notice" [class.error]="notice.kind === 'error'">
+      {{ notice.text }}
+    </p>
     }
 
     <div class="modal-actions">
-      <button class="outline-btn" type="button" [disabled]="paying()" (click)="closePayConfirm()">Mégse</button>
+      <button
+        class="outline-btn"
+        type="button"
+        [disabled]="paying()"
+        (click)="closePayConfirm()"
+      >
+        Mégse
+      </button>
       <button
         class="primary-btn"
         type="button"
         [disabled]="paying() || selectedPayIds().size === 0"
         (click)="confirmPay()"
       >
-        {{ paying() ? 'Fizetés indítása…' : 'Fizetés a Barionnal (' + selectedPayGrandTotal() + ' Ft) →' }}
+        {{ paying() ? 'Fizetés indítása…' : 'Fizetés a Barionnal (' +
+        selectedPayGrandTotal() + ' Ft) →' }}
       </button>
     </div>
   </div>

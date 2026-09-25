@@ -22,6 +22,8 @@ export interface MemberUser {
   // status tag, same "open-book" visibility as role/lastLoginAt already
   // have on this list.
   retired?: boolean;
+  age: number;
+  toursAttended: number;
 }
 
 interface MembersResponse {
