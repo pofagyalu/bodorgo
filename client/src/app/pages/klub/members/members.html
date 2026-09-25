@@ -220,41 +220,43 @@
                   >
                 </div>
               </td>
-              <td class="row-actions">
-                @if (isAdmin()) {
-                <a
-                  [routerLink]="['/klub/felhasznalok', m._id]"
-                  class="icon-btn icon-btn--edit"
-                  title="Szerkesztés"
-                  aria-label="Tag szerkesztése"
-                  (click)="$event.stopPropagation()"
-                >
-                  <mat-icon>edit</mat-icon>
-                </a>
-                @if (status(m) === 'retired') {
-                <button
-                  type="button"
-                  class="icon-btn icon-btn--restore"
-                  title="Visszaállítás"
-                  aria-label="Felhasználó visszaállítása"
-                  [disabled]="archivingId() === m._id"
-                  (click)="$event.stopPropagation(); restore(m)"
-                >
-                  <mat-icon>restore_from_trash</mat-icon>
-                </button>
-                } @else {
-                <button
-                  type="button"
-                  class="icon-btn icon-btn--archive"
-                  title="Felfüggesztés"
-                  aria-label="Felhasználó felfüggesztése"
-                  [disabled]="archivingId() === m._id"
-                  (click)="$event.stopPropagation(); archive(m)"
-                >
-                  <mat-icon>delete</mat-icon>
-                </button>
-                }
-                }
+              <td class="actions-cell">
+                <div class="row-actions">
+                  @if (isAdmin()) {
+                  <a
+                    [routerLink]="['/klub/felhasznalok', m._id]"
+                    class="icon-btn icon-btn--edit"
+                    title="Szerkesztés"
+                    aria-label="Tag szerkesztése"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </a>
+                  @if (status(m) === 'retired') {
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--restore"
+                    title="Visszaállítás"
+                    aria-label="Felhasználó visszaállítása"
+                    [disabled]="archivingId() === m._id"
+                    (click)="$event.stopPropagation(); restore(m)"
+                  >
+                    <mat-icon>restore_from_trash</mat-icon>
+                  </button>
+                  } @else {
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--archive"
+                    title="Felfüggesztés"
+                    aria-label="Felhasználó felfüggesztése"
+                    [disabled]="archivingId() === m._id"
+                    (click)="$event.stopPropagation(); archive(m)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                  }
+                  }
+                </div>
               </td>
             </tr>
             <tr class="history-expanded-row">
@@ -380,38 +382,40 @@
                 </span>
               </td>
               @if (isAdmin()) {
-              <td class="row-actions">
-                <a
-                  [routerLink]="['/klub/felhasznalok', u._id]"
-                  class="icon-btn icon-btn--edit"
-                  title="Szerkesztés"
-                  aria-label="Felhasználó szerkesztése"
-                >
-                  <mat-icon>edit</mat-icon>
-                </a>
-                @if (status(u) === 'retired') {
-                <button
-                  type="button"
-                  class="icon-btn icon-btn--restore"
-                  title="Visszaállítás"
-                  aria-label="Felhasználó visszaállítása"
-                  [disabled]="archivingId() === u._id"
-                  (click)="restore(u)"
-                >
-                  <mat-icon>restore_from_trash</mat-icon>
-                </button>
-                } @else {
-                <button
-                  type="button"
-                  class="icon-btn icon-btn--archive"
-                  title="Felfüggesztés"
-                  aria-label="Felhasználó felfüggesztése"
-                  [disabled]="archivingId() === u._id"
-                  (click)="archive(u)"
-                >
-                  <mat-icon>delete</mat-icon>
-                </button>
-                }
+              <td class="actions-cell">
+                <div class="row-actions">
+                  <a
+                    [routerLink]="['/klub/felhasznalok', u._id]"
+                    class="icon-btn icon-btn--edit"
+                    title="Szerkesztés"
+                    aria-label="Felhasználó szerkesztése"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </a>
+                  @if (status(u) === 'retired') {
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--restore"
+                    title="Visszaállítás"
+                    aria-label="Felhasználó visszaállítása"
+                    [disabled]="archivingId() === u._id"
+                    (click)="restore(u)"
+                  >
+                    <mat-icon>restore_from_trash</mat-icon>
+                  </button>
+                  } @else {
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--archive"
+                    title="Felfüggesztés"
+                    aria-label="Felhasználó felfüggesztése"
+                    [disabled]="archivingId() === u._id"
+                    (click)="archive(u)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                  }
+                </div>
               </td>
               }
             </tr>

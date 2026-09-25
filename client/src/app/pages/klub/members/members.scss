@@ -421,15 +421,14 @@ td {
 }
 
 // Műveletek sits flush against the right edge of both tables - the
-// header text right-aligned, and the buttons pushed right (.row-actions
-// is itself a flex container, see below).
+// header text right-aligned, and the buttons pushed right inside their
+// cell. The <td> itself stays a normal table cell (the flex container is
+// a div inside it, .row-actions below) - a display:flex <td> drops out of
+// the table's column layout, which is what knocked the buttons out of
+// line with the header.
 .membership-table th:last-child,
 .casual-table th:last-child {
   text-align: right;
-}
-
-.row-actions {
-  justify-content: flex-end;
 }
 
 .person {
@@ -588,6 +587,7 @@ td {
 .row-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
