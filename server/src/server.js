@@ -41,7 +41,7 @@ mongoose
     registerChatHandlers(io);
 
     server.listen(PORT, () => {
-      logger.info(`App is listening on ${PORT}`);
+      logger.info(`App is listening on ${PORT} (Node ${process.version})`);
     });
 
     // Every 12 hours (and a few minutes after each start): e-mail the

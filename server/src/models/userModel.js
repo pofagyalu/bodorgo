@@ -195,31 +195,29 @@ const userSchema = new Schema(
   { timestamps: true },
 );
 
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   if (this.isModified('password') && this.password) {
     this.password = await bcrypt.hash(this.password, 12);
     this.passwordConfirm = undefined;
   }
 
-  next();
 });
 
-userSchema.pre('save', function (next) {
+userSchema.pre('save', function () {
   if (this.isModified('password') && !this.isNew) {
     //  Guarantee that passwordChangedAt is before jwt token iat
     this.passwordChangedAt = new Date(Date.now() - 1000);
   }
 
-  next();
 });
 
 // Re-geocodes whenever the address actually changes (not on every save) -
 // a failed/unresolvable address just leaves `location` unset rather than
 // blocking the profile save, same resilience as tourModel.js's own
 // distance pre('save') hook.
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   if (!this.isModified('address')) {
-    return next();
+    return;
   }
 
   const { zipCode, city, street, country } = this.address || {};
@@ -232,7 +230,7 @@ userSchema.pre('save', async function (next) {
     // explicitly instead.
     this.set('location.lat', undefined);
     this.set('location.lng', undefined);
-    return next();
+    return;
   }
 
   try {
@@ -241,7 +239,6 @@ userSchema.pre('save', async function (next) {
   } catch (err) {
     logger.error(`Failed to geocode address for user ${this._id}: ${err.message}`);
   }
-  next();
 });
 
 userSchema.methods.correctPassword = async function (

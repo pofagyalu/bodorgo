@@ -472,7 +472,7 @@ export const archiveUser = async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { retired: true, retiredAt: new Date() },
-    { new: true },
+    { returnDocument: 'after' },
   );
   if (!user) {
     throw new AppError('No user found with that ID!', 404);
@@ -485,7 +485,7 @@ export const restoreUser = async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { retired: false, $unset: { retiredAt: 1 } },
-    { new: true },
+    { returnDocument: 'after' },
   );
   if (!user) {
     throw new AppError('No user found with that ID!', 404);

@@ -398,16 +398,15 @@ const tourSchema = new Schema(
 );
 
 // DOCUMENT Middleware, runs before .save() and .create(), .this points to document
-tourSchema.pre('save', function (next) {
+tourSchema.pre('save', function () {
   this.slug = slugify(this.title, { lower: true });
-  next();
 });
 
 // Covers Tour.create() and any explicit .save() call - tourController.js's
 // updateTour loads and .save()s rather than using findByIdAndUpdate
 // specifically so this (and the dailyWeather hook below) actually fire on
 // an edit, not just on creation.
-tourSchema.pre('save', async function (next) {
+tourSchema.pre('save', async function () {
   if (
     this.isModified('location.coordinates') &&
     this.location?.coordinates?.length === 2
@@ -423,7 +422,6 @@ tourSchema.pre('save', async function (next) {
       logger.error(`Failed to compute distance/duration from Budapest: ${err.message}`);
     }
   }
-  next();
 });
 
 // tourController.js's refreshTourWeather caches weather per day number and
@@ -438,7 +436,7 @@ tourSchema.pre('save', async function (next) {
 // showing identical weather that never updated once the real per-tour
 // dates were edited in). Clearing it here forces a fresh fetch on the
 // next view. A no-op on creation, since dailyWeather starts empty anyway.
-tourSchema.pre('save', function (next) {
+tourSchema.pre('save', function () {
   if (
     this.isModified('startDate') ||
     this.isModified('duration') ||
@@ -446,7 +444,6 @@ tourSchema.pre('save', function (next) {
   ) {
     this.dailyWeather = [];
   }
-  next();
 });
 
 // Recomputes the public ratingsAverage/ratingsQuantity from the real
@@ -455,13 +452,12 @@ tourSchema.pre('save', function (next) {
 // actually display, `reviews` itself is select:false and never exposed.
 // Only recomputes once there's at least one real review; an unreviewed
 // tour keeps the schema's 4.5/0 placeholder rather than dropping to 0.
-tourSchema.pre('save', function (next) {
+tourSchema.pre('save', function () {
   if (this.isModified('reviews') && this.reviews.length > 0) {
     const sum = this.reviews.reduce((acc, r) => acc + r.rating, 0);
     this.ratingsAverage = Math.round((sum / this.reviews.length) * 10) / 10;
     this.ratingsQuantity = this.reviews.length;
   }
-  next();
 });
 
 // Once an admin sets accommodationPricePerNight, the tour's advertised
@@ -482,7 +478,7 @@ tourSchema.pre('save', function (next) {
 // In 'perPerson' mode, accommodationPricePerNight already directly IS the
 // adult per-person-per-night rate (see the field's own comment) - nothing
 // to average, it's shown as-is.
-tourSchema.pre('save', function (next) {
+tourSchema.pre('save', function () {
   if (
     this.accommodationPricePerNight != null &&
     (this.isModified('accommodationPricePerNight') ||
@@ -497,7 +493,6 @@ tourSchema.pre('save', function (next) {
         ? nightlyRateHuf
         : Math.ceil(nightlyRateHuf / this.maxCapacity);
   }
-  next();
 });
 
 // Converts a raw accommodationPricePerNight/childPricePerNight value into
@@ -517,10 +512,9 @@ export function toHuf(tour, amount) {
 
 // QUERY Middleware (this points to query because of 'find' hook)
 // Regular expression to hook all find methods such as findOne, findById, etc...
-tourSchema.pre(/^find/, function (next) {
+tourSchema.pre(/^find/, function () {
   this.find({ secretTour: { $ne: true } });
   // this.start = Date.now();
-  next();
 });
 
 // Virtual populate: all reservations that belong to this tour
