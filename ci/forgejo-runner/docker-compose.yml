@@ -31,6 +31,12 @@ services:
     # data/config.yml's container.options.
     extra_hosts:
       - 'forgejo.terfotozas.hu:192.168.1.81'
+    # The LAN's own DNS servers (AdGuard + Pi-hole/Unbound) - the NAS's
+    # default resolver inside containers timed out on lookups like
+    # data.forgejo.org (where the checkout/cache steps come from).
+    dns:
+      - 192.168.1.82
+      - 192.168.1.12
     environment:
       FORGEJO_INSTANCE: https://forgejo.terfotozas.hu
       # The registration code from Forgejo -> Site Administration ->

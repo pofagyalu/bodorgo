@@ -31,7 +31,8 @@ container:
   # doesn't support --cpus - "NanoCPUs can not be set") - and, like the
   # runner itself, Forgejo's public name pointed at its LAN address so the
   # job can check out the code.
-  options: --memory=2g --add-host=forgejo.terfotozas.hu:192.168.1.81
+  # The LAN's own DNS servers too (AdGuard + Pi-hole/Unbound).
+  options: --memory=2g --add-host=forgejo.terfotozas.hu:192.168.1.81 --dns=192.168.1.82 --dns=192.168.1.12
   # A fresh network per job.
   network: ''
   privileged: false
