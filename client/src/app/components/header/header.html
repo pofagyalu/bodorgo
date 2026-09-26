@@ -19,14 +19,47 @@
 
   <!-- Middle: Menu (desktop only, hidden on mobile in favor of the hamburger) -->
   @if (auth.isLoggedIn()) {
-    <nav class="menu">
-      <a routerLink="/taborok" routerLinkActive="active" class="menu-item green">Táborok</a>
+    <nav class="menu" #menu (mouseleave)="hoverItem(null)">
+      <!-- One bubble for the whole menu: it floats over to whichever item the
+      mouse is on, and back to the selected one (header.ts placeBubble). -->
+      <span class="menu-bubble" #bubble aria-hidden="true"
+        ><span class="menu-bubble-skin"></span
+      ></span>
+      <a
+        routerLink="/taborok"
+        routerLinkActive="active"
+        (mouseenter)="hoverItem($event.currentTarget)"
+        class="menu-item green"
+        >Táborok</a
+      >
       @if (isMember()) {
-        <a routerLink="/media" routerLinkActive="active" class="menu-item orange">Média</a>
+        <a
+          routerLink="/media"
+          routerLinkActive="active"
+          (mouseenter)="hoverItem($event.currentTarget)"
+          class="menu-item orange"
+          >Média</a
+        >
       }
-      <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
-      <a routerLink="/klub" routerLinkActive="active" class="menu-item dark-green">Klub</a>
-      <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown"
+      <a
+        routerLink="/chat"
+        routerLinkActive="active"
+        (mouseenter)="hoverItem($event.currentTarget)"
+        class="menu-item blue"
+        >Chat</a
+      >
+      <a
+        routerLink="/klub"
+        routerLinkActive="active"
+        (mouseenter)="hoverItem($event.currentTarget)"
+        class="menu-item dark-green"
+        >Klub</a
+      >
+      <a
+        routerLink="/szavazasok"
+        routerLinkActive="active"
+        (mouseenter)="hoverItem($event.currentTarget)"
+        class="menu-item brown"
         >Szavazások
         @if (pendingPolls()) {
           <span class="menu-badge" [title]="pendingPolls() + ' szavazás vár rád'">{{
@@ -35,7 +68,9 @@
         }
       </a>
       <!-- Hidden for now, still routable - not ready for public linking yet -->
-      <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item yellow">Versenyek</a> -->
+      <!-- <a routerLink="/versenyek" routerLinkActive="active"
+        (mouseenter)="hoverItem($event.currentTarget)"
+        class="menu-item yellow">Versenyek</a> -->
     </nav>
   }
 

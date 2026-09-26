@@ -1,3 +1,5 @@
+@use '../../shared/sidebar-nav' as nav;
+
 // Same layout and colors as the Klub shell (klub.scss) - a persistent dark
 // sidebar beside the page - plus an indented sub-menu for the video
 // categories.
@@ -14,7 +16,7 @@
 
 .media-shell {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: nav.$sidebar-width minmax(0, 1fr);
   min-height: calc(100dvh - 80px);
   background: #f5f7f5;
 }
@@ -28,7 +30,7 @@
   gap: 46px;
   // Pinned below the site header, like the Klub sidebar.
   position: sticky;
-  top: 80px;
+  top: 0;
   height: calc(100dvh - 80px);
   overflow-y: auto;
 }
@@ -87,7 +89,7 @@
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  transition: background 0.15s ease;
+  @include nav.nav-item-glow;
 
   mat-icon {
     width: 18px;
@@ -95,13 +97,7 @@
     font-size: 18px;
   }
 
-  &:hover:not(.active) {
-    background: #1c3548;
-  }
-
   &.active {
-    background: #29485a;
-    color: #fff;
     font-weight: 650;
   }
 }
@@ -136,15 +132,9 @@
   color: #a9bdc5;
   font-size: 13px;
   text-decoration: none;
-  transition: background 0.15s ease;
-
-  &:hover:not(.active) {
-    background: #1c3548;
-  }
+  @include nav.nav-item-glow;
 
   &.active {
-    background: #29485a;
-    color: #fff;
     font-weight: 650;
   }
 }

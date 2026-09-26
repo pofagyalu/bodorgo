@@ -1,7 +1,11 @@
 <app-header></app-header>
 
-<div [@routeAnimations]="getRouteAnimationData()">
-  <router-outlet></router-outlet>
-</div>
+<!-- The page scrolls here, below the header - not the whole window - so
+     its scrollbar starts under the main menu too. -->
+<main class="page-body">
+  <div [@routeAnimations]="getRouteAnimationData()">
+    <router-outlet></router-outlet>
+  </div>
+</main>
 
 <app-notification-list></app-notification-list>

@@ -192,9 +192,100 @@
   transition: 0.2s ease;
 }
 
-/* Highlight box - the rectangle alone marks the selected item, so its
-   text keeps its own color instead of switching to black. */
-.menu-item.active {
+/* The desktop menu's items sit above its bubble (below). */
+.menu .menu-item {
+  z-index: 1;
+}
+
+/* The soap bubble marking the selected item (and the hovered one) - one
+   element for the whole menu, moved and resized by header.ts's
+   placeBubble(). The springy easing (it overshoots a little, then settles)
+   is what makes it float rather than slide; the size lagging slightly
+   behind the position makes it stretch on the way. */
+.menu-bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 0 0;
+  transition:
+    transform 0.55s cubic-bezier(0.34, 1.4, 0.55, 1),
+    width 0.65s cubic-bezier(0.34, 1.5, 0.55, 1),
+    height 0.65s cubic-bezier(0.34, 1.5, 0.55, 1),
+    opacity 0.3s ease;
+
+  &.shown {
+    opacity: 1;
+  }
+
+  // Appearing from nowhere - no flying in, it just fades in in place.
+  &.instant {
+    transition: opacity 0.3s ease;
+  }
+}
+
+/* The bubble itself: the old white-rimmed highlight box, plus a faint
+   soap-film shimmer - a highlight top-left and pastel colors slowly
+   swirling across it. Wobbled (scaled) separately from the outer
+   element's move. */
+.menu-bubble-skin {
+  position: absolute;
+  inset: 0;
+  border: 2px solid white;
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      120% 100% at 28% 12%,
+      rgba(255, 255, 255, 0.9),
+      rgba(255, 255, 255, 0.35) 40%,
+      rgba(255, 255, 255, 0) 75%
+    ),
+    linear-gradient(
+      115deg,
+      rgba(255, 160, 215, 0.2),
+      rgba(160, 215, 255, 0.22) 30%,
+      rgba(185, 255, 205, 0.2) 55%,
+      rgba(255, 225, 150, 0.22) 80%,
+      rgba(255, 160, 215, 0.2)
+    );
+  background-size:
+    100% 100%,
+    300% 100%;
+  box-shadow:
+    0 1px 5px 1px #ddd,
+    inset 0 0 8px rgba(140, 180, 255, 0.28);
+  animation: soap-swirl 7s ease-in-out infinite alternate;
+}
+
+@keyframes soap-swirl {
+  from {
+    background-position:
+      0 0,
+      0% 0;
+  }
+  to {
+    background-position:
+      0 0,
+      100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-bubble,
+  .menu-bubble.instant {
+    transition: opacity 0.2s ease;
+  }
+
+  .menu-bubble-skin {
+    animation: none;
+  }
+}
+
+/* Mobile slide-in menu: a plain highlight box on the selected item - the
+   rectangle alone marks it, so its text keeps its own color instead of
+   switching to black. */
+.mobile-nav .menu-item.active {
   border: 2px solid white;
   box-shadow: 0 1px 5px 1px #ddd;
   border-radius: 14px;

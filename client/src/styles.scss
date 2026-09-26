@@ -18,6 +18,13 @@
   --logo-yellow: #f6b528;
 }
 
+/* The window never scrolls - the page does, below the header (see
+   app.component.css). */
+html,
+body {
+  overflow: hidden;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

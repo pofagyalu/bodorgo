@@ -70,12 +70,15 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
   busy = computed(() => this.sending() || this.sendingTest());
 
   // The page behind the dialog stays put while it's open (restored in
-  // ngOnDestroy).
+  // ngOnDestroy) - it scrolls in app.component's .page-body, not the window.
+  private pageBody = document.querySelector<HTMLElement>('.page-body');
   private previousBodyOverflow = '';
 
   ngAfterViewInit() {
-    this.previousBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (this.pageBody) {
+      this.previousBodyOverflow = this.pageBody.style.overflow;
+      this.pageBody.style.overflow = 'hidden';
+    }
 
     this.quill = new Quill(this.editorEl.nativeElement, {
       theme: 'snow',
@@ -233,6 +236,6 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     clearTimeout(this.saveTimer);
-    document.body.style.overflow = this.previousBodyOverflow;
+    if (this.pageBody) this.pageBody.style.overflow = this.previousBodyOverflow;
   }
 }
