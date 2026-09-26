@@ -103,3 +103,21 @@
     }
   }
 }
+
+// 📊 - start a poll, left of the text box.
+.poll-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d9e4df;
+  border-radius: 50%;
+  background: #fff;
+  color: #1a796c;
+  cursor: pointer;
+
+  &:hover {
+    background: #eef6f2;
+  }
+}

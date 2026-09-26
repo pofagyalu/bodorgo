@@ -110,3 +110,17 @@ export async function notifyChatPost(io, post) {
 export function notifyChatPostInBackground(io, post) {
   notifyChatPost(io, post).catch((err) => logger.error(`chat push for post ${post._id} failed: ${err.message}`));
 }
+
+// A tour's attendees who can get a notification about it - everyone signed
+// up, minus `except` (e.g. whoever caused it). Used for polls, which always
+// buzz (they ask for action), unlike ordinary chat messages above.
+export async function tourAttendeeIds(tourId, except = []) {
+  const reservations = await Reservation.find({ tour: tourId }).select('attendees.user');
+  const skip = new Set(except.map(String));
+  return [...new Set(reservations.flatMap((r) => r.attendees.map((a) => String(a.user))))].filter((id) => !skip.has(id));
+}
+
+export function pushInBackground(userIds, payload) {
+  if (!userIds.length) return;
+  sendPushToUsers(userIds, payload).catch((err) => logger.error(`push failed: ${err.message}`));
+}

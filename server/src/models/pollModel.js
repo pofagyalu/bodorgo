@@ -57,6 +57,22 @@ const pollSchema = new Schema(
     // getPoll explicitly opting back in with +votes) so it's never
     // accidentally sent to the client as-is. Only ever leaves this model
     // through buildPollView's aggregate counts.
+    // 'open' (Nyílt): everyone sees who voted for what, all the time -
+    // for "who's coming?". 'secret' (Titkos): only counts, and only once
+    // you voted or it closed - for "where do we eat?".
+    visibility: { type: String, enum: ['open', 'secret'], default: 'secret' },
+    // Optional "at least N on this answer" - e.g. the museum only opens
+    // for 5. minimumReachedAt: when it got there (told once).
+    minimum: {
+      option: { type: Schema.Types.ObjectId },
+      count: { type: Number, min: 1 },
+    },
+    minimumReachedAt: { type: Date, default: null },
+    // The chat message it was started from, if it was (see
+    // pollController.js's createTourPoll).
+    post: { type: Schema.Types.ObjectId, ref: 'Post', default: null },
+    // The "closes in 2 hours" reminder went out (see pollReminders.js).
+    reminderSentAt: { type: Date, default: null },
     votes: {
       type: [voteSchema],
       default: [],

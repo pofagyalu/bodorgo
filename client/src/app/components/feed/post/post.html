@@ -4,6 +4,7 @@
 <div
   class="post-card"
   [class.post-card--deleted]="deleted"
+  [class.post-card--poll]="!!pollId && !deleted"
   [class.pressed]="sheetOpen()"
   (pointerdown)="onPointerDown($event)"
   (pointermove)="onPointerMove($event)"
@@ -21,7 +22,7 @@
       <span>{{ timeLabel() }}</span>
       @if (edited && !deleted) { <span class="edited">szerkesztve</span> }
     </small>
-    @if (isOwn && !deleted && !editing() && !confirmingDelete()) {
+    @if (isOwn && !deleted && !pollId && !editing() && !confirmingDelete()) {
     <div class="own-actions">
       <button type="button" class="icon-action" title="Szerkesztés" aria-label="Üzenet szerkesztése" (click)="startEdit()">
         <mat-icon>edit</mat-icon>
@@ -52,6 +53,9 @@
       Mentés
     </button>
   </div>
+  } @else if (pollId) {
+  <!-- A poll started in the chat: its live card instead of text. -->
+  <app-poll-card [pollId]="pollId" [live]="true" />
   } @else {
   <!-- One line on purpose: .text keeps whitespace (pre-wrap). -->
   <p class="text">@for (part of textParts(); track $index) {@if (part.mention) {<span class="mention" [class.mention--me]="part.me">{{ part.text }}</span>} @else {{{ part.text }}}}</p>

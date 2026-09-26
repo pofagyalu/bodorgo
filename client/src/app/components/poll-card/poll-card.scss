@@ -1,0 +1,244 @@
+// A poll, the same in the chat bubble and on Szavazások.
+:host {
+  display: block;
+}
+
+.poll {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #dfe8e4;
+  border-radius: 14px;
+  background: #fff;
+  color: #1c2d38;
+
+  &.loading {
+    color: #56666e;
+    font-size: 0.9rem;
+  }
+}
+
+.poll-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 0.78rem;
+  color: #56666e;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.kind,
+.visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
+}
+
+.kind {
+  color: #1a796c;
+}
+
+.deadline {
+  margin-left: auto;
+}
+
+.tour-line {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4c9184;
+}
+
+.question {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.3;
+}
+
+.options {
+  display: grid;
+  gap: 6px;
+}
+
+// Each answer is one button - its bar fills behind it once counts show.
+.option {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #d9e4df;
+  border-radius: 10px;
+  background: #f8fbf9;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: #1a796c;
+  }
+
+  &.mine {
+    border-color: #1a796c;
+    background: #eef7f3;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #d8efe4;
+  transition: width 0.3s ease;
+  pointer-events: none;
+
+  .mine & {
+    background: #bfe5d3;
+  }
+}
+
+.option-main {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check {
+  flex: none;
+  font-size: 19px;
+  width: 19px;
+  height: 19px;
+  color: #90a4ae;
+
+  .mine & {
+    color: #1a796c;
+  }
+}
+
+.option-text {
+  flex: 1;
+  font-weight: 600;
+}
+
+.option-count {
+  font-weight: 800;
+  color: #1a796c;
+}
+
+.voters {
+  position: relative;
+  padding-left: 27px;
+  font-size: 0.78rem;
+  color: #4a5b63;
+}
+
+// "3 / 5 fő – még 2 kell", green once it's reached.
+.minimum {
+  display: grid;
+  gap: 5px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #8a5a00;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.reached {
+    color: #1b6548;
+  }
+}
+
+.minimum-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #f3e6cf;
+  overflow: hidden;
+
+  .reached & {
+    background: #d8efe4;
+  }
+}
+
+.minimum-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #e08e0b;
+  transition: width 0.3s ease;
+
+  .reached & {
+    background: #2e8b57;
+  }
+}
+
+.poll-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  font-size: 0.78rem;
+  color: #56666e;
+}
+
+.foot-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.foot-link {
+  color: #1a796c;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.foot-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #4a5b63;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &.danger {
+    color: #a3402a;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #a3402a;
+  font-weight: 700;
+}

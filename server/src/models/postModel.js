@@ -26,6 +26,14 @@ const PostSchema = new Schema(
       default: null,
     },
 
+    // A poll started from the chat - the message shows its live card
+    // instead of plain text (text holds the question, for notifications).
+    poll: {
+      type: Schema.Types.ObjectId,
+      ref: 'Poll',
+      default: null,
+    },
+
     // Set when the author edits the text afterwards - shown as
     // "(szerkesztve)" next to the time (see chatSocket.js's edit-post).
     editedAt: {

@@ -84,6 +84,9 @@ export default function registerChatHandlers(io) {
       if (!sessionUser || !postId) return null;
       const post = await Post.findById(postId);
       if (!post || post.deletedAt || String(post.creator) !== sessionUser.id) return null;
+      // A poll's message is managed from its card (close/delete - see
+      // pollController.js), not edited like text.
+      if (post.poll) return null;
       return post;
     };
 

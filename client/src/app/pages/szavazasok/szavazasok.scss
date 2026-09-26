@@ -383,3 +383,62 @@
     flex-direction: column;
   }
 }
+
+// --- Poll cards (components/poll-card) in two sections ---
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0 10px;
+  font-size: 1rem;
+  color: #203747;
+}
+
+.section-count {
+  font-size: 0.75rem;
+  background: #edf4f1;
+  color: #4a5b63;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.poll-item {
+  position: relative;
+}
+
+// Admin's edit button, in the card's top-right corner.
+.edit-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #dfe8e4;
+  border-radius: 50%;
+  background: #fff;
+  color: #4a5b63;
+  cursor: pointer;
+  box-shadow: 0 2px 6px #0000001a;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+  }
+}
+
+.visibility-choice {
+  display: grid;
+  gap: 6px;
+  font-weight: 400;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}

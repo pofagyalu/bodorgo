@@ -1,23 +1,50 @@
+import mongoose from 'mongoose';
 import Poll from '../models/pollModel.js';
+import Post from '../models/postModel.js';
+import Tour from '../models/tourModel.js';
+import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
+import { emitToTour } from '../chat/tourEvents.js';
+import { pushInBackground, tourAttendeeIds } from '../chat/chatNotifications.js';
 
 const TOUR_SELECT = 'title slug order';
 
-// Shapes one poll for one specific viewer - the whole point of this
-// function existing (rather than just returning the Mongoose doc) is that
-// the same poll looks different depending on who's asking and whether they
-// voted yet: the raw per-user votes list (loaded via +votes) never leaves
-// this function as-is, only the aggregate counts below do, and only once
-// the viewer has earned seeing them.
-function buildPollView(poll, userId) {
+// Loads a poll the way buildPollView needs it: votes (with voter names,
+// for open polls), the tour, and who started it.
+function loadPoll(id) {
+  return Poll.findById(id)
+    .select('+votes')
+    .populate({ path: 'tour', select: TOUR_SELECT })
+    .populate({ path: 'votes.user', select: 'name username' })
+    .populate({ path: 'createdBy', select: 'name username' });
+}
+
+const isAdmin = (user) => user.role === 'admin';
+const refId = (ref) => String(ref?._id ?? ref);
+
+// Shapes one poll for one specific viewer - the same poll looks different
+// depending on who's asking and whether they voted:
+// - open ('Nyílt'): everyone sees the counts and who voted for what, all
+//   the time ("who's coming?");
+// - secret ('Titkos'): only counts, and only once you voted or it closed.
+// The raw votes list never leaves this function as-is.
+function buildPollView(poll, user) {
+  const userId = refId(user);
   const isClosed = poll.closesAt.getTime() <= Date.now();
-  const myVote = poll.votes.find((v) => String(v.user) === String(userId));
+  const myVote = poll.votes.find((v) => refId(v.user) === userId);
   const hasVoted = !!myVote;
-  // The one rule beyond what the admin asked for (confirmed with them):
-  // once a poll closes, results open up to everyone, not just people who
-  // voted - otherwise someone who forgot to vote could never see the
-  // outcome even long after it was decided.
-  const canSeeResults = hasVoted || isClosed;
+  const isOpen = poll.visibility === 'open';
+  const canSeeResults = isOpen || hasVoted || isClosed;
+
+  const countFor = (optionId) => poll.votes.filter((v) => String(v.option) === String(optionId)).length;
+  const minimum = poll.minimum?.option
+    ? {
+        optionId: poll.minimum.option,
+        count: poll.minimum.count,
+        current: countFor(poll.minimum.option),
+        reached: countFor(poll.minimum.option) >= poll.minimum.count,
+      }
+    : null;
 
   const base = {
     _id: poll._id,
@@ -28,6 +55,12 @@ function buildPollView(poll, userId) {
     isClosed,
     hasVoted,
     myOptionId: myVote ? myVote.option : null,
+    visibility: poll.visibility,
+    minimum,
+    post: poll.post ?? null,
+    createdBy: poll.createdBy?._id ? { _id: poll.createdBy._id, name: poll.createdBy.username || poll.createdBy.name } : null,
+    // The one who started it, or an admin, may close or delete it.
+    canManage: isAdmin(user) || refId(poll.createdBy) === userId,
     createdAt: poll.createdAt,
   };
 
@@ -35,15 +68,9 @@ function buildPollView(poll, userId) {
     return { ...base, totalVotes: null, results: null };
   }
 
-  const counts = new Map(poll.options.map((o) => [String(o._id), 0]));
-  for (const vote of poll.votes) {
-    const key = String(vote.option);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-
   const totalVotes = poll.votes.length;
   const results = poll.options.map((o) => {
-    const count = counts.get(String(o._id)) ?? 0;
+    const count = countFor(o._id);
     return {
       _id: o._id,
       text: o.text,
@@ -52,6 +79,14 @@ function buildPollView(poll, userId) {
       // toFixed(1), so a whole-number percentage doesn't grow a
       // pointless ".0" (see the client's own display of this value).
       percentage: totalVotes > 0 ? Math.round((count / totalVotes) * 1000) / 10 : 0,
+      // Open polls only: who picked this one.
+      ...(isOpen
+        ? {
+            voters: poll.votes
+              .filter((v) => String(v.option) === String(o._id))
+              .map((v) => ({ _id: refId(v.user), name: v.user?.username || v.user?.name || '?' })),
+          }
+        : {}),
     };
   });
 
@@ -63,56 +98,119 @@ function cleanOptionTexts(options) {
   return options.map((o) => (typeof o === 'string' ? o.trim() : '')).filter(Boolean);
 }
 
+// The parts a new poll is built from - shared by the admin's
+// Szavazások form and a chat-started poll. minimumCount applies to the
+// first answer ("Igen": at least N people).
+function pollFields(body) {
+  const options = cleanOptionTexts(body.options);
+  if (!options || options.length < 2) {
+    throw new AppError('Legalább 2 válaszlehetőség szükséges.', 400);
+  }
+  const question = String(body.question ?? '').trim();
+  if (!question) throw new AppError('A szavazásnak kell legyen kérdése.', 400);
+  const closesAt = new Date(body.closesAt);
+  if (Number.isNaN(closesAt.getTime())) throw new AppError('Adj meg egy záró időpontot.', 400);
+  const minimumCount = body.minimumCount ? Number(body.minimumCount) : null;
+  if (minimumCount !== null && (!Number.isInteger(minimumCount) || minimumCount < 1 || minimumCount > 500)) {
+    throw new AppError('A minimum létszám 1 és 500 közötti egész szám lehet.', 400);
+  }
+  return {
+    question,
+    options: options.map((text) => ({ text })),
+    closesAt,
+    visibility: body.visibility === 'open' ? 'open' : 'secret',
+    minimumCount,
+  };
+}
+
+function applyMinimum(poll, minimumCount) {
+  poll.minimum = minimumCount ? { option: poll.options[0]._id, count: minimumCount } : undefined;
+}
+
+// Everyone looking at the tour's chat re-fetches the poll (each gets their
+// own view of it - see buildPollView).
+function announcePollChanged(poll) {
+  emitToTour(refId(poll.tour), 'poll-updated', { pollId: String(poll._id), tourId: refId(poll.tour) });
+}
+
 // GET /polls - requireAuth (any logged-in role, see pollRoutes.js). Every
-// poll for every tour, newest first - no per-tour scoping (yet); this app
-// has no notion of "which tours a given member cares about" beyond
-// attendance, and a club-wide poll list is simple and transparent, same
-// spirit as the Klub Felhasználók list.
+// poll for every tour, newest first - a club-wide list is simple and
+// transparent, same spirit as the Klub Felhasználók list.
 export const getAllPolls = async (req, res) => {
   const polls = await Poll.find()
     .select('+votes')
     .sort('-createdAt')
-    .populate({ path: 'tour', select: TOUR_SELECT });
+    .populate({ path: 'tour', select: TOUR_SELECT })
+    .populate({ path: 'votes.user', select: 'name username' })
+    .populate({ path: 'createdBy', select: 'name username' });
 
-  res.status(200).json({
-    status: 'success',
-    data: { polls: polls.map((p) => buildPollView(p, req.user._id)) },
+  res.status(200).json({ status: 'success', data: { polls: polls.map((p) => buildPollView(p, req.user)) } });
+};
+
+// GET /polls/pending - how many open polls on my tours are still waiting
+// for my vote (the Szavazások menu's badge).
+export const getPendingCount = async (req, res) => {
+  const tourIds = await Reservation.distinct('tour', { 'attendees.user': req.user._id });
+  const count = await Poll.countDocuments({
+    tour: { $in: tourIds },
+    closesAt: { $gt: new Date() },
+    'votes.user': { $ne: req.user._id },
   });
+  res.status(200).json({ status: 'success', data: { count } });
 };
 
 // GET /polls/:id - requireAuth.
 export const getPoll = async (req, res) => {
-  const poll = await Poll.findById(req.params.id)
-    .select('+votes')
-    .populate({ path: 'tour', select: TOUR_SELECT });
-
-  if (!poll) {
-    throw new AppError('Nincs ilyen szavazás.', 404);
-  }
-
-  res.status(200).json({ status: 'success', data: { poll: buildPollView(poll, req.user._id) } });
+  const poll = await loadPoll(req.params.id);
+  if (!poll) throw new AppError('Nincs ilyen szavazás.', 404);
+  res.status(200).json({ status: 'success', data: { poll: buildPollView(poll, req.user) } });
 };
 
-// POST /polls - admin-only (see pollRoutes.js).
+// POST /polls - admin-only (see pollRoutes.js): the Szavazások page's form.
 export const createPoll = async (req, res) => {
-  const { tour, question, closesAt } = req.body;
-  const options = cleanOptionTexts(req.body.options);
+  const fields = pollFields(req.body);
+  const poll = new Poll({ ...fields, tour: req.body.tour, createdBy: req.user._id });
+  applyMinimum(poll, fields.minimumCount);
+  await poll.save();
+  res.status(201).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+};
 
-  if (!options || options.length < 2) {
-    throw new AppError('Legalább 2 válaszlehetőség szükséges.', 400);
+// POST /tours/:tourId/polls - a poll started from the tour's chat, by
+// anyone signed up for the tour (or an admin). It's a normal poll (it
+// shows on Szavazások too), plus a chat message carrying its live card;
+// the tour's attendees get a notification - a poll asks for action, so it
+// always buzzes.
+export const createTourPoll = async (req, res) => {
+  const { tourId } = req.params;
+  if (!mongoose.isValidObjectId(tourId)) throw new AppError('Nincs ilyen tábor.', 404);
+  const tour = await Tour.findById(tourId).select('title order');
+  if (!tour) throw new AppError('Nincs ilyen tábor.', 404);
+  if (!isAdmin(req.user) && !(await Reservation.exists({ tour: tourId, 'attendees.user': req.user._id }))) {
+    throw new AppError('Csak a tábor résztvevői indíthatnak szavazást.', 403);
   }
 
-  const poll = await Poll.create({
-    tour,
-    question,
-    options: options.map((text) => ({ text })),
-    closesAt,
-    createdBy: req.user._id,
+  const fields = pollFields(req.body);
+  if (fields.closesAt.getTime() <= Date.now()) throw new AppError('A záró időpont a jövőben legyen.', 400);
+
+  const poll = new Poll({ ...fields, tour: tourId, createdBy: req.user._id });
+  applyMinimum(poll, fields.minimumCount);
+  const post = await Post.create({ tourId, creator: req.user._id, text: fields.question, poll: poll._id });
+  poll.post = post._id;
+  await poll.save();
+
+  await post.populate('creator', 'name username');
+  emitToTour(tourId, 'new-post', post);
+
+  const author = req.user.username || req.user.name;
+  pushInBackground(await tourAttendeeIds(tourId, [req.user._id]), {
+    title: `${tour.order ? `${tour.order}. ` : ''}${tour.title} – szavazás`,
+    body: `${author}: ${fields.question} – szavazz!`,
+    tag: `poll-${poll._id}`,
+    url: `/chat?tabor=${tourId}`,
+    renotify: true,
   });
 
-  await poll.populate({ path: 'tour', select: TOUR_SELECT });
-
-  res.status(201).json({ status: 'success', data: { poll: buildPollView(poll, req.user._id) } });
+  res.status(201).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
 };
 
 // PATCH /polls/:id - admin-only. Once a poll has at least one real vote,
@@ -126,7 +224,7 @@ export const updatePoll = async (req, res) => {
     throw new AppError('Nincs ilyen szavazás.', 404);
   }
 
-  const { tour, question, closesAt } = req.body;
+  const { tour, question, closesAt, visibility } = req.body;
   const hasVotes = poll.votes.length > 0;
 
   // Compares actual values, not just "was this key present in the body" -
@@ -151,6 +249,14 @@ export const updatePoll = async (req, res) => {
 
   if (tour !== undefined) poll.tour = tour;
   if (closesAt !== undefined) poll.closesAt = closesAt;
+  // Secret → open would reveal how people voted in secret - only before
+  // anyone voted.
+  if (visibility === 'open' || visibility === 'secret') {
+    if (hasVotes && visibility !== poll.visibility) {
+      throw new AppError('Szavazatok után már nem lehet nyílt és titkos között váltani.', 400);
+    }
+    poll.visibility = visibility;
+  }
 
   if (questionChanged) {
     poll.question = question.trim();
@@ -160,29 +266,63 @@ export const updatePoll = async (req, res) => {
       throw new AppError('Legalább 2 válaszlehetőség szükséges.', 400);
     }
     poll.options = newOptions.map((text) => ({ text }));
+    if (poll.minimum?.option) poll.minimum.option = poll.options[0]._id;
+  }
+  if (req.body.minimumCount !== undefined) {
+    const m = req.body.minimumCount ? Number(req.body.minimumCount) : null;
+    if (m !== null && (!Number.isInteger(m) || m < 1 || m > 500)) {
+      throw new AppError('A minimum létszám 1 és 500 közötti egész szám lehet.', 400);
+    }
+    applyMinimum(poll, m);
   }
 
   await poll.save();
-  await poll.populate({ path: 'tour', select: TOUR_SELECT });
-
-  res.status(200).json({ status: 'success', data: { poll: buildPollView(poll, req.user._id) } });
+  announcePollChanged(poll);
+  res.status(200).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
 };
 
-// DELETE /polls/:id - admin-only.
+// POST /polls/:id/close - whoever started it, or an admin: closes it now.
+export const closePoll = async (req, res) => {
+  const poll = await Poll.findById(req.params.id);
+  if (!poll) throw new AppError('Nincs ilyen szavazás.', 404);
+  if (!isAdmin(req.user) && refId(poll.createdBy) !== String(req.user._id)) {
+    throw new AppError('Csak az indítója vagy egy admin zárhatja le.', 403);
+  }
+  if (poll.closesAt.getTime() > Date.now()) {
+    poll.closesAt = new Date();
+    await poll.save();
+    announcePollChanged(poll);
+  }
+  res.status(200).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+};
+
+// DELETE /polls/:id - whoever started it, or an admin. Its chat message
+// stays as a "Hozzászólás törölve" placeholder, like a deleted message.
 export const deletePoll = async (req, res) => {
-  const poll = await Poll.findByIdAndDelete(req.params.id);
+  const poll = await Poll.findById(req.params.id);
   if (!poll) {
     throw new AppError('Nincs ilyen szavazás.', 404);
+  }
+  if (!isAdmin(req.user) && refId(poll.createdBy) !== String(req.user._id)) {
+    throw new AppError('Csak az indítója vagy egy admin törölheti.', 403);
+  }
+  await poll.deleteOne();
+  if (poll.post) {
+    const post = await Post.findByIdAndUpdate(
+      poll.post,
+      { text: '', poll: null, deletedAt: new Date() },
+      { new: true },
+    ).populate('creator', 'name username');
+    if (post) emitToTour(refId(poll.tour), 'post-updated', post);
   }
   res.status(204).json({ status: 'success', data: null });
 };
 
-// POST /polls/:id/vote - requireAuth, any role, once per poll. The option
-// picked is never revealed back to anyone but tallied into the aggregate
-// counts buildPollView computes - see pollModel.js's own comment on why
-// `votes` is select:false everywhere else.
+// POST /polls/:id/vote - requireAuth, any role, while it's open. Voting
+// again changes the vote. When a minimum ("at least 5 yes") is first
+// reached, those who picked that answer are told.
 export const voteOnPoll = async (req, res) => {
-  const poll = await Poll.findById(req.params.id).select('+votes');
+  const poll = await Poll.findById(req.params.id).select('+votes').populate({ path: 'tour', select: TOUR_SELECT });
   if (!poll) {
     throw new AppError('Nincs ilyen szavazás.', 404);
   }
@@ -191,19 +331,39 @@ export const voteOnPoll = async (req, res) => {
     throw new AppError('Ez a szavazás már lezárult.', 400);
   }
 
-  const alreadyVoted = poll.votes.some((v) => String(v.user) === String(req.user._id));
-  if (alreadyVoted) {
-    throw new AppError('Már szavaztál ezen a szavazáson.', 400);
-  }
-
-  const option = poll.options.id(req.body.optionId);
+  const option = mongoose.isValidObjectId(req.body.optionId) ? poll.options.id(req.body.optionId) : null;
   if (!option) {
     throw new AppError('Érvénytelen válasz.', 400);
   }
 
-  poll.votes.push({ user: req.user._id, option: option._id });
-  await poll.save();
-  await poll.populate({ path: 'tour', select: TOUR_SELECT });
+  const mine = poll.votes.find((v) => String(v.user) === String(req.user._id));
+  if (mine) {
+    mine.option = option._id;
+    mine.votedAt = new Date();
+  } else {
+    poll.votes.push({ user: req.user._id, option: option._id });
+  }
 
-  res.status(200).json({ status: 'success', data: { poll: buildPollView(poll, req.user._id) } });
+  const minimumOption = poll.minimum?.option ? String(poll.minimum.option) : null;
+  const onMinimum = minimumOption ? poll.votes.filter((v) => String(v.option) === minimumOption) : [];
+  const justReached = !!minimumOption && !poll.minimumReachedAt && onMinimum.length >= poll.minimum.count;
+  if (justReached) poll.minimumReachedAt = new Date();
+  await poll.save();
+
+  announcePollChanged(poll);
+  if (justReached) {
+    const answer = poll.options.id(minimumOption)?.text ?? '';
+    pushInBackground(
+      onMinimum.map((v) => String(v.user)),
+      {
+        title: `Összejött! – ${poll.tour?.title ?? 'szavazás'}`,
+        body: `${poll.question} – megvan a ${poll.minimum.count} fő („${answer}”).`,
+        tag: `poll-${poll._id}`,
+        url: poll.post ? `/chat?tabor=${refId(poll.tour)}` : '/szavazasok',
+        renotify: true,
+      },
+    );
+  }
+
+  res.status(200).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
 };

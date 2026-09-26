@@ -53,7 +53,7 @@ describe('polls', () => {
     expect((await poll({ options: ['csak egy'] })).res.status).toBe(400);
   });
 
-  it('results are hidden until I vote; one vote each; no votes after closing', async () => {
+  it('results are hidden until I vote; voting again changes it; no votes after closing', async () => {
     const { id, res } = await poll();
     const voter = await createMember();
     const before = await request(app).get(`/polls/${id}`).set(asUser(voter));
@@ -62,7 +62,10 @@ describe('polls', () => {
     const voted = await request(app).post(`/polls/${id}/vote`).set(asUser(voter)).send({ optionId });
     expect(voted.body.data.poll).toMatchObject({ hasVoted: true, totalVotes: 1 });
     expect(voted.body.data.poll.results[0]).toMatchObject({ count: 1, percentage: 100 });
-    expect((await request(app).post(`/polls/${id}/vote`).set(asUser(voter)).send({ optionId })).status).toBe(400);
+    // Changing my mind: still one vote, now on the other answer.
+    const otherId = res.body.data.poll.options[1]._id;
+    const changed = await request(app).post(`/polls/${id}/vote`).set(asUser(voter)).send({ optionId: otherId });
+    expect(changed.body.data.poll).toMatchObject({ totalVotes: 1, myOptionId: otherId });
     expect((await request(app).post(`/polls/${id}/vote`).set(asUser(await createMember())).send({ optionId: 'nope' })).status).toBe(400);
 
     const closed = await poll({ closesAt: new Date(Date.now() - 1000).toISOString() });

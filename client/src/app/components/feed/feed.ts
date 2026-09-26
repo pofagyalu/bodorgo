@@ -15,6 +15,7 @@ import { TourSocketService } from '../../services/tour-socket';
 import { Compose, Mentionable } from './compose/compose';
 import { TourService } from '../../services/tour';
 import { Post } from './post/post';
+import { PollCreate } from '../poll-create/poll-create';
 import { usernameKey } from '../../shared/usernames';
 
 interface IPost {
@@ -27,12 +28,14 @@ interface IPost {
   tourId: string;
   editedAt?: string;
   deletedAt?: string;
+  // A poll started in the chat (see components/poll-card).
+  poll?: string | null;
 }
 
 @Component({
   selector: 'app-feed',
   standalone: true,
-  imports: [Compose, Post],
+  imports: [Compose, Post, PollCreate],
   templateUrl: './feed.html',
   styleUrls: ['./feed.scss'],
 })
@@ -43,6 +46,8 @@ export class Feed implements OnInit, OnDestroy {
   currentUserId = computed(() => this.authService.user()?.id);
 
   posts = signal<IPost[]>([]);
+  // The "Új szavazás" form (the 📊 button in compose).
+  creatingPoll = signal(false);
   private tourSocket = inject(TourSocketService);
   private tourService = inject(TourService);
 

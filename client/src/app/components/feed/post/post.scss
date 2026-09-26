@@ -384,3 +384,12 @@
     height: 16px;
   }
 }
+
+// A poll message: the card is the bubble - no green/white bubble around it,
+// and a little wider than text messages.
+.post-card--poll {
+  padding: 0;
+  background: none !important;
+  box-shadow: none;
+  width: min(420px, 78vw);
+}
