@@ -1,4 +1,12 @@
-import { trigger, style, animate, transition, query, animateChild, group } from '@angular/animations';
+import {
+  trigger,
+  style,
+  animate,
+  transition,
+  query,
+  animateChild,
+  group,
+} from '@angular/animations';
 
 // A movie-style cross-dissolve: the leaving page fades out while the
 // entering page fades in on top of it, both overlapping in place (no

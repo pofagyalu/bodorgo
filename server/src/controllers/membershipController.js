@@ -27,9 +27,7 @@ export const getMembers = async (req, res) => {
     { $project: { toursAttended: { $size: '$tours' } } },
   ]);
 
-  const toursAttendedById = new Map(
-    attendanceCounts.map((a) => [String(a._id), a.toursAttended]),
-  );
+  const toursAttendedById = new Map(attendanceCounts.map((a) => [String(a._id), a.toursAttended]));
 
   const usersWithAttendance = users.map((user) => {
     // The raw birthday never goes out on this members-visible list - just

@@ -9,7 +9,9 @@ import { checkPollReminders } from '../../src/chat/pollReminders.js';
 
 const inHours = (h) => new Date(Date.now() + h * 3600 * 1000).toISOString();
 const pushedTo = () =>
-  vi.mocked(webpush.sendNotification).mock.calls.map(([sub, body]) => [sub.endpoint, JSON.parse(body)]);
+  vi
+    .mocked(webpush.sendNotification)
+    .mock.calls.map(([sub, body]) => [sub.endpoint, JSON.parse(body)]);
 
 async function setup() {
   const tour = await createTour({ order: 25, title: 'Sarud' });
@@ -47,7 +49,11 @@ describe('polls started from the chat', () => {
     const res = await startPoll(tour, anna);
     expect(res.status).toBe(201);
     const poll = res.body.data.poll;
-    expect(poll).toMatchObject({ visibility: 'open', canManage: true, minimum: { count: 2, current: 0, reached: false } });
+    expect(poll).toMatchObject({
+      visibility: 'open',
+      canManage: true,
+      minimum: { count: 2, current: 0, reached: false },
+    });
 
     const post = await Post.findById(poll.post);
     expect(String(post.poll)).toBe(poll._id);
@@ -72,18 +78,24 @@ describe('polls started from the chat', () => {
     const { tour, anna, bela, cili } = await setup();
     const { _id: id, options } = (await startPoll(tour, anna)).body.data.poll;
     vi.mocked(webpush.sendNotification).mockClear();
-    const vote = (u, i) => request(app).post(`/polls/${id}/vote`).set(asUser(u)).send({ optionId: options[i]._id });
+    const vote = (u, i) =>
+      request(app).post(`/polls/${id}/vote`).set(asUser(u)).send({ optionId: options[i]._id });
 
     await vote(anna, 0);
     const beforeBela = await request(app).get(`/polls/${id}`).set(asUser(bela));
     // Open: Béla sees results and names before voting.
-    expect(beforeBela.body.data.poll.results[0].voters).toEqual([expect.objectContaining({ name: 'anna' })]);
+    expect(beforeBela.body.data.poll.results[0].voters).toEqual([
+      expect.objectContaining({ name: 'anna' }),
+    ]);
     expect(pushedTo()).toHaveLength(0);
 
     const reached = await vote(bela, 0);
     expect(reached.body.data.poll.minimum).toMatchObject({ current: 2, reached: true });
     await vi.waitFor(() =>
-      expect(pushedTo().map(([, p]) => p.title)).toEqual(['Összejött! – Sarud', 'Összejött! – Sarud']),
+      expect(pushedTo().map(([, p]) => p.title)).toEqual([
+        'Összejött! – Sarud',
+        'Összejött! – Sarud',
+      ]),
     );
 
     await vote(cili, 0);
@@ -92,10 +104,16 @@ describe('polls started from the chat', () => {
 
   it('secret poll: no names, counts only after voting', async () => {
     const { tour, anna, bela } = await setup();
-    const { _id: id, options } = (await startPoll(tour, anna, { visibility: 'secret', minimumCount: null })).body.data
-      .poll;
-    await request(app).post(`/polls/${id}/vote`).set(asUser(anna)).send({ optionId: options[1]._id });
-    expect((await request(app).get(`/polls/${id}`).set(asUser(bela))).body.data.poll.results).toBeNull();
+    const { _id: id, options } = (
+      await startPoll(tour, anna, { visibility: 'secret', minimumCount: null })
+    ).body.data.poll;
+    await request(app)
+      .post(`/polls/${id}/vote`)
+      .set(asUser(anna))
+      .send({ optionId: options[1]._id });
+    expect(
+      (await request(app).get(`/polls/${id}`).set(asUser(bela))).body.data.poll.results,
+    ).toBeNull();
     const mine = await request(app).get(`/polls/${id}`).set(asUser(anna));
     expect(mine.body.data.poll.results[1]).toMatchObject({ count: 1 });
     expect(mine.body.data.poll.results[1].voters).toBeUndefined();
@@ -119,9 +137,13 @@ describe('polls started from the chat', () => {
     const { tour, anna, bela } = await setup();
     const { _id: id, options } = (await startPoll(tour, anna)).body.data.poll;
     await startPoll(tour, anna, { question: 'Hol együnk?' });
-    const count = async (u) => (await request(app).get('/polls/pending').set(asUser(u))).body.data.count;
+    const count = async (u) =>
+      (await request(app).get('/polls/pending').set(asUser(u))).body.data.count;
     expect(await count(bela)).toBe(2);
-    await request(app).post(`/polls/${id}/vote`).set(asUser(bela)).send({ optionId: options[0]._id });
+    await request(app)
+      .post(`/polls/${id}/vote`)
+      .set(asUser(bela))
+      .send({ optionId: options[0]._id });
     expect(await count(bela)).toBe(1);
     expect(await count(await createMember())).toBe(0); // not on the tour
   });
@@ -130,14 +152,18 @@ describe('polls started from the chat', () => {
 describe('the 2-hour reminder', () => {
   it('reminds those who have not voted, once; skips a poll started less than 2 hours before', async () => {
     const { tour, anna, bela } = await setup();
-    const { _id: id, options } = (await startPoll(tour, anna, { closesAt: inHours(1.5) })).body.data.poll;
+    const { _id: id, options } = (await startPoll(tour, anna, { closesAt: inHours(1.5) })).body.data
+      .poll;
     // Pretend it was started a day ago (straight to the collection -
     // Mongoose won't change createdAt).
     await Poll.collection.updateOne(
       { _id: new Poll({ _id: id })._id },
       { $set: { createdAt: new Date(Date.now() - 24 * 3600 * 1000) } },
     );
-    await request(app).post(`/polls/${id}/vote`).set(asUser(anna)).send({ optionId: options[0]._id });
+    await request(app)
+      .post(`/polls/${id}/vote`)
+      .set(asUser(anna))
+      .send({ optionId: options[0]._id });
 
     const [reminder] = await checkPollReminders();
     expect(reminder.users).toHaveLength(2); // Béla and Cili - Anna voted

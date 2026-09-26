@@ -1,14 +1,23 @@
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createAdmin, createGuest, createMember, createReservation, createTour } from '../helpers/factories.js';
+import {
+  createAdmin,
+  createGuest,
+  createMember,
+  createReservation,
+  createTour,
+} from '../helpers/factories.js';
 import Tour from '../../src/models/tourModel.js';
 import Reservation from '../../src/models/reservationModel.js';
 import { fetchForecast, fetchHistorical } from '../../src/utils/weather.js';
 
 describe('reading tours', () => {
   it('a tour page carries payments, attendee photos and usernames', async () => {
-    const tour = await createTour({ accommodationPricePerNight: 1000, advancePaymentPercentage: 20 });
+    const tour = await createTour({
+      accommodationPricePerNight: 1000,
+      advancePaymentPercentage: 20,
+    });
     const withPhoto = await createMember({ photoUpdatedAt: new Date(), username: 'fotos' });
     const plain = await createMember();
     await createReservation(tour, [withPhoto, plain]);
@@ -22,16 +31,29 @@ describe('reading tours', () => {
   });
 
   it('404s for an unknown tour', async () => {
-    const res = await request(app).get('/tours/nincs-ilyen').set(asUser(await createMember()));
+    const res = await request(app)
+      .get('/tours/nincs-ilyen')
+      .set(asUser(await createMember()));
     expect(res.status).toBe(404);
     // Every answer tells search engines to stay away.
     expect(res.headers['x-robots-tag']).toBe('noindex, nofollow');
   });
 
   it('fills in the weather: forecast for upcoming days, final history for past days', async () => {
-    vi.mocked(fetchForecast).mockResolvedValue({ condition: 'clear', tempDayC: 25, tempNightC: 12 });
-    vi.mocked(fetchHistorical).mockResolvedValue({ condition: 'rain', tempDayC: 15, tempNightC: 8 });
-    const soon = await createTour({ startDate: new Date(Date.now() + 2 * 24 * 3600 * 1000), duration: 2 });
+    vi.mocked(fetchForecast).mockResolvedValue({
+      condition: 'clear',
+      tempDayC: 25,
+      tempNightC: 12,
+    });
+    vi.mocked(fetchHistorical).mockResolvedValue({
+      condition: 'rain',
+      tempDayC: 15,
+      tempNightC: 8,
+    });
+    const soon = await createTour({
+      startDate: new Date(Date.now() + 2 * 24 * 3600 * 1000),
+      duration: 2,
+    });
     const past = await createTour({ startDate: new Date('2023-05-01'), duration: 2 });
     const member = await createMember();
     await request(app).get(`/tours/${soon._id}`).set(asUser(member));
@@ -43,7 +65,10 @@ describe('reading tours', () => {
     expect(savedPast.dailyWeather.every((w) => w.isFinal)).toBe(true);
     // Day 1 is the tour's own start date - not the day before (the old
     // UTC conversion shifted every day back by one in Hungarian time).
-    const askedDates = vi.mocked(fetchHistorical).mock.calls.map(([, , date]) => date).sort();
+    const askedDates = vi
+      .mocked(fetchHistorical)
+      .mock.calls.map(([, , date]) => date)
+      .sort();
     expect(askedDates).toEqual(['2023-05-01', '2023-05-02']);
     // Past days are final: never fetched again.
     vi.mocked(fetchHistorical).mockClear();
@@ -57,7 +82,9 @@ describe('reading tours', () => {
     const last3 = await request(app).get('/tours/last-3').set(asUser(member));
     expect(last3.body.data.tours).toHaveLength(3);
     expect((await request(app).get('/tours/tour-stats').set(asUser(member))).status).toBe(200);
-    expect((await request(app).get('/tours/montly-plan/2024').set(asUser(member))).status).toBe(200);
+    expect((await request(app).get('/tours/montly-plan/2024').set(asUser(member))).status).toBe(
+      200,
+    );
     expect((await request(app).get('/tours/tour-stats')).status).toBe(401);
   });
 
@@ -67,7 +94,9 @@ describe('reading tours', () => {
     const member = await createMember();
     // (Bracket filters like duration[gte]=3 aren't parsed by Express 5's
     // default query parser - unused by the app, so not tested here.)
-    const res = await request(app).get('/tours?duration=5&sort=-duration&fields=title,duration&page=1&limit=5').set(asUser(member));
+    const res = await request(app)
+      .get('/tours?duration=5&sort=-duration&fields=title,duration&page=1&limit=5')
+      .set(asUser(member));
     expect(res.status).toBe(200);
     expect(res.body.data.tours.map((t) => t.title)).toEqual(['B']);
   });
@@ -78,19 +107,34 @@ describe('editing and deleting tours (admin)', () => {
     const admin = await createAdmin();
     const a = await createTour();
     const b = await createTour();
-    const res = await request(app).patch(`/tours/${a._id}`).set(asUser(admin)).send({ title: 'Átnevezve' });
+    const res = await request(app)
+      .patch(`/tours/${a._id}`)
+      .set(asUser(admin))
+      .send({ title: 'Átnevezve' });
     expect(res.status).toBe(200);
     expect(res.body.data.tour.title).toBe('Átnevezve');
-    const clash = await request(app).patch(`/tours/${a._id}`).set(asUser(admin)).send({ order: b.order });
+    const clash = await request(app)
+      .patch(`/tours/${a._id}`)
+      .set(asUser(admin))
+      .send({ order: b.order });
     expect(clash.status).toBe(400);
-    expect((await request(app).patch('/tours/000000000000000000000000').set(asUser(admin)).send({})).status).toBe(404);
+    expect(
+      (await request(app).patch('/tours/000000000000000000000000').set(asUser(admin)).send({}))
+        .status,
+    ).toBe(404);
   });
 
   it('marks everyone paid when the advance is set to exactly 0%', async () => {
     const admin = await createAdmin();
-    const tour = await createTour({ accommodationPricePerNight: 1000, advancePaymentPercentage: 20 });
+    const tour = await createTour({
+      accommodationPricePerNight: 1000,
+      advancePaymentPercentage: 20,
+    });
     await createReservation(tour, [await createMember(), await createMember()]);
-    await request(app).patch(`/tours/${tour._id}`).set(asUser(admin)).send({ advancePaymentPercentage: 0 });
+    await request(app)
+      .patch(`/tours/${tour._id}`)
+      .set(asUser(admin))
+      .send({ advancePaymentPercentage: 0 });
     const r = await Reservation.findOne({ tour: tour._id });
     expect(r.attendees.every((a) => a.paid)).toBe(true);
   });
@@ -98,9 +142,14 @@ describe('editing and deleting tours (admin)', () => {
   it('refuses a duplicate order number when creating', async () => {
     const admin = await createAdmin();
     const existing = await createTour();
-    const res = await request(app).post('/tours').set(asUser(admin)).send({ order: existing.order, title: 'x' });
+    const res = await request(app)
+      .post('/tours')
+      .set(asUser(admin))
+      .send({ order: existing.order, title: 'x' });
     expect(res.status).toBe(400);
-    expect((await request(app).post('/tours').set(asUser(admin)).send({ title: 'no order' })).status).toBe(400);
+    expect(
+      (await request(app).post('/tours').set(asUser(admin)).send({ title: 'no order' })).status,
+    ).toBe(400);
   });
 
   it('deletes a tour', async () => {
@@ -116,10 +165,13 @@ describe('program schedule', () => {
   async function tourWithOptionalEvent() {
     const admin = await createAdmin();
     const tour = await createTour();
-    const created = await request(app)
-      .post(`/tours/${tour._id}/schedule`)
-      .set(asUser(admin))
-      .send({ day: 2, time: '17:00', description: 'Borkóstoló', isOptional: true, extraCost: 3000 });
+    const created = await request(app).post(`/tours/${tour._id}/schedule`).set(asUser(admin)).send({
+      day: 2,
+      time: '17:00',
+      description: 'Borkóstoló',
+      isOptional: true,
+      extraCost: 3000,
+    });
     return { admin, tour, event: created.body.data.event, status: created.status };
   }
 
@@ -127,7 +179,10 @@ describe('program schedule', () => {
     const { admin, tour, event, status } = await tourWithOptionalEvent();
     expect(status).toBe(201);
     expect(event).toMatchObject({ day: 2, isOptional: true, extraCost: 3000 });
-    const bad = await request(app).post(`/tours/${tour._id}/schedule`).set(asUser(admin)).send({ day: 1 });
+    const bad = await request(app)
+      .post(`/tours/${tour._id}/schedule`)
+      .set(asUser(admin))
+      .send({ day: 1 });
     expect(bad.status).toBe(400);
     const edited = await request(app)
       .patch(`/tours/${tour._id}/schedule/${event._id}`)
@@ -135,7 +190,14 @@ describe('program schedule', () => {
       .send({ time: '18:00', isOptional: false });
     expect(edited.body.data.event).toMatchObject({ time: '18:00', isOptional: false });
     expect(edited.body.data.event.extraCost).toBeUndefined();
-    expect((await request(app).patch(`/tours/${tour._id}/schedule/000000000000000000000000`).set(asUser(admin)).send({})).status).toBe(404);
+    expect(
+      (
+        await request(app)
+          .patch(`/tours/${tour._id}/schedule/000000000000000000000000`)
+          .set(asUser(admin))
+          .send({})
+      ).status,
+    ).toBe(404);
   });
 
   it('a member signs up themselves and family, not strangers', async () => {
@@ -146,14 +208,25 @@ describe('program schedule', () => {
     await createReservation(tour, [member, kid]);
     await createReservation(tour, [stranger]);
     const url = `/tours/${tour._id}/schedule/${event._id}/participants`;
-    const ok = await request(app).patch(url).set(asUser(member)).send({ userIds: [String(member._id), String(kid._id)] });
+    const ok = await request(app)
+      .patch(url)
+      .set(asUser(member))
+      .send({ userIds: [String(member._id), String(kid._id)] });
     expect(ok.status).toBe(200);
     expect(ok.body.data.participants).toHaveLength(2);
-    const no = await request(app).patch(url).set(asUser(member)).send({ userIds: [String(stranger._id)] });
+    const no = await request(app)
+      .patch(url)
+      .set(asUser(member))
+      .send({ userIds: [String(stranger._id)] });
     expect(no.status).toBe(403);
-    expect((await request(app).patch(url).set(asUser(member)).send({ userIds: 'x' })).status).toBe(400);
+    expect((await request(app).patch(url).set(asUser(member)).send({ userIds: 'x' })).status).toBe(
+      400,
+    );
     // The stranger's own sign-up leaves the family's in place.
-    await request(app).patch(url).set(asUser(stranger)).send({ userIds: [String(stranger._id)] });
+    await request(app)
+      .patch(url)
+      .set(asUser(stranger))
+      .send({ userIds: [String(stranger._id)] });
     const saved = (await Tour.findById(tour._id)).schedule.id(event._id);
     expect(saved.participants).toHaveLength(3);
   });

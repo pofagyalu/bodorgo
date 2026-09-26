@@ -103,7 +103,8 @@
 
 .seg-lit {
   fill: var(--led);
-  filter: drop-shadow(0 0 1.5px var(--led-hot)) drop-shadow(0 0 5px var(--led-glow)) drop-shadow(0 0 11px #ff6a0066);
+  filter: drop-shadow(0 0 1.5px var(--led-hot)) drop-shadow(0 0 5px var(--led-glow))
+    drop-shadow(0 0 11px #ff6a0066);
 }
 
 // ÉLŐ: room above the digits for the accents, and a once-a-second pulse.

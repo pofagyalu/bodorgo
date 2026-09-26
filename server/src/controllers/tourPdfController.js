@@ -126,7 +126,16 @@ function infoLine(doc, x, width, color, iconName, text) {
 // room in two columns of their own. Everything is sized by `scale`.
 // With draw = false nothing is drawn and no page is added - it just
 // returns the total height, so the caller can pick a scale that fits.
-function layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, pageBottom, { columns, scale }, draw) {
+function layoutRoomAllocation(
+  doc,
+  tour,
+  namesByRoom,
+  contentWidth,
+  startY,
+  pageBottom,
+  { columns, scale },
+  draw,
+) {
   const s = (n) => n * scale;
   const GAP = s(10);
   const PAD = s(7);
@@ -144,7 +153,8 @@ function layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, page
   const topY = doc.page.margins.top;
   let y = startY;
 
-  const heightOf = (font, size, text, width) => doc.font(font).fontSize(size).heightOfString(text, { width });
+  const heightOf = (font, size, text, width) =>
+    doc.font(font).fontSize(size).heightOfString(text, { width });
 
   // The viewer's own name stands out: bold, in the highlight color.
   const nameFont = (n) => (n.me ? 'Heading' : 'Body');
@@ -182,16 +192,31 @@ function layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, page
       .font('Body')
       .fontSize(s(8.5))
       .fillColor('#666')
-      .text(`${names.length}/${room.beds} fő`, x + PAD, top + PAD + s(1), { width: inner, align: 'right' });
-    doc.font('Heading').fontSize(s(10.5)).fillColor('#333').text(room.name, x + PAD, top + PAD, { width: inner - COUNT_WIDTH });
+      .text(`${names.length}/${room.beds} fő`, x + PAD, top + PAD + s(1), {
+        width: inner,
+        align: 'right',
+      });
+    doc
+      .font('Heading')
+      .fontSize(s(10.5))
+      .fillColor('#333')
+      .text(room.name, x + PAD, top + PAD, { width: inner - COUNT_WIDTH });
     let ly = top + PAD + heightOf('Heading', s(10.5), room.name, inner - COUNT_WIDTH);
     if (room.description) {
-      doc.font('Italic').fontSize(s(8.5)).fillColor('#666').text(room.description, x + PAD, ly, { width: inner });
+      doc
+        .font('Italic')
+        .fontSize(s(8.5))
+        .fillColor('#666')
+        .text(room.description, x + PAD, ly, { width: inner });
       ly += heightOf('Italic', s(8.5), room.description, inner);
     }
     ly += s(3);
     if (!names.length) {
-      doc.font('Body').fontSize(s(9.5)).fillColor('#999').text('(üres)', x + PAD + INDENT, ly, { width: inner - INDENT });
+      doc
+        .font('Body')
+        .fontSize(s(9.5))
+        .fillColor('#999')
+        .text('(üres)', x + PAD + INDENT, ly, { width: inner - INDENT });
       return;
     }
     for (const row of nameRows(names)) {
@@ -238,7 +263,9 @@ function layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, page
     const boxed = y + houseH <= pageBottom;
     if (draw) {
       if (boxed) {
-        doc.roundedRect(PAGE_MARGIN, y, contentWidth, houseH, s(8)).fillAndStroke('#eaf2ed', '#c9d9ce');
+        doc
+          .roundedRect(PAGE_MARGIN, y, contentWidth, houseH, s(8))
+          .fillAndStroke('#eaf2ed', '#c9d9ce');
       }
       // Measured before setting the description's font - heightOf switches fonts.
       const descY = y + HOUSE_PAD + heightOf('Heading', s(12.5), house.name, roomsWidth);
@@ -248,14 +275,19 @@ function layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, page
         .fillColor('#333')
         .text(house.name, roomsX, y + HOUSE_PAD, { width: roomsWidth });
       if (house.description) {
-        doc.font('Body').fontSize(s(9.5)).fillColor('#666').text(house.description, roomsX, descY, { width: roomsWidth });
+        doc
+          .font('Body')
+          .fontSize(s(9.5))
+          .fillColor('#666')
+          .text(house.description, roomsX, descY, { width: roomsWidth });
       }
     }
     const roomsTop = y + HOUSE_PAD + headH;
 
     if (!draw || boxed) {
       if (draw) {
-        for (const { room, c, top, h } of placed) drawRoom(room, roomsX + c * (boxWidth + GAP), roomsTop + top, h);
+        for (const { room, c, top, h } of placed)
+          drawRoom(room, roomsX + c * (boxWidth + GAP), roomsTop + top, h);
       }
       y += houseH + HOUSE_GAP;
       continue;
@@ -281,7 +313,9 @@ function layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, page
 // The finalized Szobabeosztás on a page of its own: per house, its rooms
 // with who sleeps where (see layoutRoomAllocation), shrunk to fit one page.
 async function renderRoomAllocationPage(doc, tour, contentWidth, viewer) {
-  const reservations = await Reservation.find({ tour: tour._id }).select('attendees.name attendees.room attendees.user');
+  const reservations = await Reservation.find({ tour: tour._id }).select(
+    'attendees.name attendees.room attendees.user',
+  );
   const viewerId = viewer?._id ? String(viewer._id) : null;
   // Per room id: { name, me } - `me` marks the person this copy is for.
   const namesByRoom = new Map();
@@ -294,9 +328,13 @@ async function renderRoomAllocationPage(doc, tour, contentWidth, viewer) {
   for (const names of namesByRoom.values()) names.sort((a, b) => collator.compare(a.name, b.name));
 
   doc.addPage();
-  doc.font('Heading').fontSize(16).fillColor(COLORS.darkGreen).text('Tervezett szobabeosztás', PAGE_MARGIN, doc.y, {
-    width: contentWidth,
-  });
+  doc
+    .font('Heading')
+    .fontSize(16)
+    .fillColor(COLORS.darkGreen)
+    .text('Tervezett szobabeosztás', PAGE_MARGIN, doc.y, {
+      width: contentWidth,
+    });
   doc.moveDown(0.3);
   doc
     .font('Italic')
@@ -313,7 +351,8 @@ async function renderRoomAllocationPage(doc, tour, contentWidth, viewer) {
 
   const pageBottom = doc.page.height - PAGE_MARGIN - 40; // clear of the footer
   const startY = doc.y;
-  const layout = (option, draw) => layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, pageBottom, option, draw);
+  const layout = (option, draw) =>
+    layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, pageBottom, option, draw);
   // Measured first (nothing drawn): the roomiest layout that fits the
   // whole Szobabeosztás on this one page - two rooms side by side, then
   // three, then shrinking. Only a really big accommodation still runs
@@ -325,12 +364,15 @@ async function renderRoomAllocationPage(doc, tour, contentWidth, viewer) {
     { columns: 3, scale: 0.85 },
     { columns: 3, scale: 0.8 },
   ];
-  const chosen = options.find((o) => startY + layout(o, false) + 20 <= pageBottom) ?? options.at(-1);
+  const chosen =
+    options.find((o) => startY + layout(o, false) + 20 <= pageBottom) ?? options.at(-1);
   layout(chosen, true);
   doc.x = PAGE_MARGIN;
 
   // Anyone registered but left out of every room (or in a since-deleted one).
-  const validRooms = new Set(tour.accommodation.houses.flatMap((h) => h.rooms.map((r) => String(r._id))));
+  const validRooms = new Set(
+    tour.accommodation.houses.flatMap((h) => h.rooms.map((r) => String(r._id))),
+  );
   const unplaced = [...namesByRoom.entries()]
     .filter(([roomId]) => !roomId || !validRooms.has(roomId))
     .flatMap(([, names]) => names.map((n) => n.name))
@@ -491,13 +533,24 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
         navX += iconSize + 2;
       }
       // Points to the footnote at the bottom of this page.
-      doc.font('Body').fontSize(11).fillColor('#666').text('*', navX, startY - 2, { lineBreak: false });
+      doc
+        .font('Body')
+        .fontSize(11)
+        .fillColor('#666')
+        .text('*', navX, startY - 2, { lineBreak: false });
     }
 
     doc.x = infoColX;
     doc.y = startY + 16;
   }
-  infoLine(doc, infoColX, infoColWidth, COLORS.orange, 'home', `Cím: ${tour.location?.address || 'nincs megadva'}`);
+  infoLine(
+    doc,
+    infoColX,
+    infoColWidth,
+    COLORS.orange,
+    'home',
+    `Cím: ${tour.location?.address || 'nincs megadva'}`,
+  );
   doc.y += 6;
   infoLine(
     doc,
@@ -507,7 +560,9 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
     'directions_car',
     distanceInfo.distanceKm != null
       ? `Táv ${distanceInfo.fromLabel}: ${distanceInfo.distanceKm} km${
-          distanceInfo.durationMinutes != null ? ` (${formatDrivingDuration(distanceInfo.durationMinutes)})` : ''
+          distanceInfo.durationMinutes != null
+            ? ` (${formatDrivingDuration(distanceInfo.durationMinutes)})`
+            : ''
         }`
       : `Táv ${distanceInfo.fromLabel}: nincs kiszámítva`,
   );
@@ -538,9 +593,13 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
   // condition icon) as tour-details.ts's dayGroups, reimplemented here
   // since the PDF is generated server-side with no access to that
   // client-side computed signal.
-  doc.font('Heading').fontSize(16).fillColor(COLORS.darkGreen).text('Programterv', PAGE_MARGIN, doc.y, {
-    width: contentWidth,
-  });
+  doc
+    .font('Heading')
+    .fontSize(16)
+    .fillColor(COLORS.darkGreen)
+    .text('Programterv', PAGE_MARGIN, doc.y, {
+      width: contentWidth,
+    });
   doc.x = PAGE_MARGIN;
   doc.moveDown(0.5);
 
@@ -571,7 +630,10 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
     );
     const HEADING_GAP = 4;
     doc.font('Body').fontSize(10);
-    const linesHeight = lines.reduce((sum, l) => sum + doc.heightOfString(l.text, { width: contentWidth - 15 }), 0);
+    const linesHeight = lines.reduce(
+      (sum, l) => sum + doc.heightOfString(l.text, { width: contentWidth - 15 }),
+      0,
+    );
     const blockHeight = headingHeight + HEADING_GAP + linesHeight;
 
     const boxPadding = 8;
@@ -582,7 +644,8 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
     const pageBottom = Math.min(doc.page.height - PAGE_MARGIN - 40, doc.page.maxY() - 10);
     // A day that doesn't fit the rest of this page starts on the next one
     // rather than splitting - unless it wouldn't fit a whole page either.
-    const fitsOnePage = blockHeight + boxPadding + bottomPadding <= pageBottom - doc.page.margins.top;
+    const fitsOnePage =
+      blockHeight + boxPadding + bottomPadding <= pageBottom - doc.page.margins.top;
     if (doc.y + blockHeight + bottomPadding > pageBottom && (fitsOnePage || doc.y > 700)) {
       doc.addPage();
     }
@@ -650,18 +713,27 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
   // cards, which link straight to each file.
   if (tour.extraDocuments?.length > 0) {
     if (doc.y > 700) doc.addPage();
-    doc.font('Heading').fontSize(16).fillColor(COLORS.darkGreen).text('Extrák', PAGE_MARGIN, doc.y, {
-      width: contentWidth,
-    });
+    doc
+      .font('Heading')
+      .fontSize(16)
+      .fillColor(COLORS.darkGreen)
+      .text('Extrák', PAGE_MARGIN, doc.y, {
+        width: contentWidth,
+      });
     doc.x = PAGE_MARGIN;
     doc.moveDown(0.5);
     doc
       .font('Body')
       .fontSize(10)
       .fillColor('#666')
-      .text('A táborhoz tartoznak kiegészítő file-ok is, de ahhoz be kell lépned:', PAGE_MARGIN, doc.y, {
-        width: contentWidth,
-      });
+      .text(
+        'A táborhoz tartoznak kiegészítő file-ok is, de ahhoz be kell lépned:',
+        PAGE_MARGIN,
+        doc.y,
+        {
+          width: contentWidth,
+        },
+      );
     doc.x = PAGE_MARGIN;
     doc.moveDown(0.4);
     for (const document of tour.extraDocuments) {
@@ -723,10 +795,15 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
       .font('Body')
       .fontSize(8)
       .fillColor('#999')
-      .text(`Letöltve: ${formatHu(new Date(), LONG_DATE)} · ${i - range.start + 1}/${range.count}. oldal`, PAGE_MARGIN, footerY, {
-        width: contentWidth / 2,
-        lineBreak: false,
-      });
+      .text(
+        `Letöltve: ${formatHu(new Date(), LONG_DATE)} · ${i - range.start + 1}/${range.count}. oldal`,
+        PAGE_MARGIN,
+        footerY,
+        {
+          width: contentWidth / 2,
+          lineBreak: false,
+        },
+      );
     doc.y = footerY;
     doc
       .font('Body')
@@ -804,7 +881,8 @@ export function renderTourPdfToBuffer(tour, viewer, distanceInfo) {
 // send-only address (see terfotozas.hu's own MX - no-reply@ has no
 // mailbox, so a reply would just bounce).
 function programfuzetEmailBody(recipientName, tourTitle) {
-  const noReplyNote = 'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
+  const noReplyNote =
+    'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
   return {
     subject: `Programfüzet - ${tourTitle}`,
     text: `Szia ${recipientName}!\n\nCsatolva küldjük a(z) "${tourTitle}" tábor programfüzetét.\n\nÜdvözlettel,\nBódorgó\n\n${noReplyNote}`,
@@ -826,7 +904,13 @@ export const emailTourPdf = async (req, res) => {
   const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
   const { subject, text, html } = programfuzetEmailBody(req.user.name, tour.title);
 
-  await sendResendEmail({ to: req.user.email, subject, text, html, attachments: [{ filename, content: pdfBuffer }] });
+  await sendResendEmail({
+    to: req.user.email,
+    subject,
+    text,
+    html,
+    attachments: [{ filename, content: pdfBuffer }],
+  });
 
   res.status(200).json({ status: 'success', data: { sentTo: req.user.email } });
 };
@@ -855,4 +939,3 @@ export function partitionAttendeesByEmailEligibility(users) {
   }
   return { eligible, skipped };
 }
-

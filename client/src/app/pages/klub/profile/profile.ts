@@ -1,7 +1,13 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { UserService, MyProfile, UserAddress, AttendedTour, FamilyMember } from '../../../services/user';
+import {
+  UserService,
+  MyProfile,
+  UserAddress,
+  AttendedTour,
+  FamilyMember,
+} from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
@@ -45,7 +51,11 @@ export class KlubProfile implements OnInit {
   // past ones become small chips grouped by year, newest first.
   private isOver = (row: AttendanceRow) => {
     const start = new Date(row.tour.startDate);
-    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + (row.tour.duration ?? 1));
+    const end = new Date(
+      start.getFullYear(),
+      start.getMonth(),
+      start.getDate() + (row.tour.duration ?? 1),
+    );
     return end.getTime() <= Date.now();
   };
   upcomingTours = computed(() =>
@@ -132,7 +142,9 @@ export class KlubProfile implements OnInit {
     this.push.sendTest().subscribe({
       next: () => {
         this.pushBusy.set(false);
-        this.notifications.addSuccess('Próbaértesítés elküldve - pár másodpercen belül meg kell jelennie.');
+        this.notifications.addSuccess(
+          'Próbaértesítés elküldve - pár másodpercen belül meg kell jelennie.',
+        );
       },
       error: (err) => {
         this.pushBusy.set(false);

@@ -9,7 +9,13 @@ import sendResendEmail from '../utils/resendEmail.js';
 import { partitionAttendeesByEmailEligibility } from './tourPdfController.js';
 import logger from '../logger.js';
 import { findSubtitlePath, resolveVideoPath, srtToVtt } from '../utils/videoFiles.js';
-import { decodeVideoId, findVideoThumb, scanTourVideos, tourVideoList, tourVideosRoot } from '../utils/tourVideos.js';
+import {
+  decodeVideoId,
+  findVideoThumb,
+  scanTourVideos,
+  tourVideoList,
+  tourVideosRoot,
+} from '../utils/tourVideos.js';
 
 // The tour recap videos - matched to tours by their file names (see
 // utils/tourVideos.js), streamed straight from the NAS. Any logged-in
@@ -71,7 +77,8 @@ export const getTourVideoSubtitles = async (req, res) => {
 // programfuzetEmailBody - no separate branded template exists yet for any
 // of this app's emails.
 function videoReadyEmailBody(recipientName, tourTitle, videoPageUrl) {
-  const noReplyNote = 'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
+  const noReplyNote =
+    'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
   return {
     subject: `Elkészült a videó - ${tourTitle}`,
     text: `Szia ${recipientName}!\n\nElkészült a(z) "${tourTitle}" tábor videója, itt nézheted meg: ${videoPageUrl}\n\nÜdvözlettel,\nBódorgó\n\n${noReplyNote}`,
@@ -127,7 +134,9 @@ export async function checkForNewTourVideos() {
   if (!withVideo.length) return { notified: [], seeded: 0 };
 
   const firstRun = !(await Tour.exists({ videoNotifiedAt: { $ne: null } }));
-  const fresh = await Tour.find({ order: { $in: withVideo }, videoNotifiedAt: null }).select('order title slug');
+  const fresh = await Tour.find({ order: { $in: withVideo }, videoNotifiedAt: null }).select(
+    'order title slug',
+  );
 
   const notified = [];
   for (const tour of fresh) {
@@ -141,8 +150,10 @@ export async function checkForNewTourVideos() {
       logger.error(`Tour ${tour._id}: video-ready notification batch failed: ${err.message}`);
     }
   }
-  if (firstRun) logger.info(`Tour videos: marked ${fresh.length} existing videos as already announced`);
-  else if (notified.length) logger.info(`Tour videos: announced new videos for tours ${notified.join(', ')}`);
+  if (firstRun)
+    logger.info(`Tour videos: marked ${fresh.length} existing videos as already announced`);
+  else if (notified.length)
+    logger.info(`Tour videos: announced new videos for tours ${notified.join(', ')}`);
   return { notified, seeded: firstRun ? fresh.length : 0 };
 }
 

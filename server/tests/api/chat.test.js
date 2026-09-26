@@ -33,7 +33,10 @@ afterEach(() => {
 afterAll(() => new Promise((resolve) => server.close(resolve)));
 
 async function connect(user) {
-  const socket = ioClient(url, { extraHeaders: user ? asUser(user) : {}, transports: ['websocket', 'polling'] });
+  const socket = ioClient(url, {
+    extraHeaders: user ? asUser(user) : {},
+    transports: ['websocket', 'polling'],
+  });
   sockets.push(socket);
   await new Promise((resolve) => socket.on('connect', resolve));
   return socket;
@@ -56,7 +59,7 @@ describe('tour chat', () => {
     expect(await error).toContain('Not authenticated');
   });
 
-  it('delivers a new message to everyone in that tour, with the author\'s username', async () => {
+  it("delivers a new message to everyone in that tour, with the author's username", async () => {
     const tour = await createTour();
     const alice = await createMember({ username: 'aliz' });
     const bob = await createMember();
@@ -118,7 +121,7 @@ describe('tour chat', () => {
     expect(await error).toContain('nem szerkesztheted');
   });
 
-  it('nobody can edit or delete someone else\'s message', async () => {
+  it("nobody can edit or delete someone else's message", async () => {
     const tour = await createTour();
     const alice = await createMember();
     const mallory = await createMember();

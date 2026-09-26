@@ -6,8 +6,17 @@ import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import Transaction from '../models/transactionModel.js';
 import { computeAttendeePayments } from './reservationController.js';
-import { createCheckoutSession, retrieveCheckoutSession, constructWebhookEvent } from '../utils/stripe.js';
-import { createBarionPayment, getBarionPaymentState, createBarionWithdrawal, BARION_FEE_RATE } from '../utils/barion.js';
+import {
+  createCheckoutSession,
+  retrieveCheckoutSession,
+  constructWebhookEvent,
+} from '../utils/stripe.js';
+import {
+  createBarionPayment,
+  getBarionPaymentState,
+  createBarionWithdrawal,
+  BARION_FEE_RATE,
+} from '../utils/barion.js';
 import { generateReceiptPdf, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import AppError from '../utils/appError.js';
@@ -66,7 +75,9 @@ export async function resolvePayableAttendeesForAdmin(tourId, attendeeIds) {
   const { tour, attendeePayments } = await loadAttendeePayments(tourId);
 
   const requested = new Set(attendeeIds.map(String));
-  const payable = attendeePayments.filter((p) => requested.has(p.attendeeId) && p.advance != null && !p.paid);
+  const payable = attendeePayments.filter(
+    (p) => requested.has(p.attendeeId) && p.advance != null && !p.paid,
+  );
 
   if (payable.length === 0) {
     throw new AppError('Nincs kiválasztható, még ki nem fizetett előleg.', 400);
@@ -150,11 +161,28 @@ async function resolvePayableMembers(items, user) {
 // don't each duplicate the branch. Both gateways return an object with
 // .id/.url either way (see utils/barion.js's own comment on why that
 // shape was chosen to mirror Stripe's Checkout Session exactly).
-function startGatewayPayment(method, { referenceId, amount, payerEmail, successUrl, description, payeeEmail }) {
+function startGatewayPayment(
+  method,
+  { referenceId, amount, payerEmail, successUrl, description, payeeEmail },
+) {
   if (method === 'barion') {
-    return createBarionPayment({ referenceId, amount, payerEmail, successUrl, description, payeeEmail });
+    return createBarionPayment({
+      referenceId,
+      amount,
+      payerEmail,
+      successUrl,
+      description,
+      payeeEmail,
+    });
   }
-  return createCheckoutSession({ referenceId, amount, payerEmail, successUrl, cancelUrl: successUrl, description });
+  return createCheckoutSession({
+    referenceId,
+    amount,
+    payerEmail,
+    successUrl,
+    cancelUrl: successUrl,
+    description,
+  });
 }
 
 // Barion's own ~1.6% cut (see utils/barion.js's BARION_FEE_RATE) is passed
@@ -226,7 +254,9 @@ export const startMembershipPayment = async (req, res) => {
   payment.status = 'Started';
   await payment.save();
 
-  res.status(200).json({ status: 'success', data: { gatewayUrl: gatewayPayment.url, paymentId: payment._id } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { gatewayUrl: gatewayPayment.url, paymentId: payment._id } });
 };
 
 // POST /payments/start - requireAuth. Creates our own Payment record
@@ -294,7 +324,9 @@ export const startPayment = async (req, res) => {
   payment.status = 'Started';
   await payment.save();
 
-  res.status(200).json({ status: 'success', data: { gatewayUrl: gatewayPayment.url, paymentId: payment._id } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { gatewayUrl: gatewayPayment.url, paymentId: payment._id } });
 };
 
 // POST /payments/cash - requireAuth, restrictTo('admin'). For the real
@@ -395,8 +427,11 @@ A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.
 Jó bódorgást! 🏕️
 A Bódorgó csapata`;
 
-  const linesHtml = attendees.map((a) => `<li>${a.name}: ${formatForint(a.amount)} Ft</li>`).join('');
-  const feeLineHtml = feeAmount > 0 ? `<li>Barion díj (1,6%): ${formatForint(feeAmount)} Ft</li>` : '';
+  const linesHtml = attendees
+    .map((a) => `<li>${a.name}: ${formatForint(a.amount)} Ft</li>`)
+    .join('');
+  const feeLineHtml =
+    feeAmount > 0 ? `<li>Barion díj (1,6%): ${formatForint(feeAmount)} Ft</li>` : '';
   const html = `<p>Kedves ${payerName}!</p>
 <p>Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${tourTitle}" táborhoz:</p>
 <ul>${linesHtml}${feeLineHtml}</ul>
@@ -412,7 +447,9 @@ A Bódorgó csapata`;
 // (unlike a tour advance) a family payment can cover different years for
 // different people.
 function membershipReceiptEmailBody(payerName, members, total, feeAmount = 0) {
-  const lines = members.map((m) => `- ${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft`).join('\n');
+  const lines = members
+    .map((m) => `- ${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft`)
+    .join('\n');
   const feeLine = feeAmount > 0 ? `\nBarion díj (1,6%): ${formatForint(feeAmount)} Ft` : '';
   const text = `Kedves ${payerName}!
 
@@ -427,7 +464,8 @@ A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.
 Jó bódorgást! 🏕️
 A Bódorgó csapata`;
 
-  const feeLineHtml = feeAmount > 0 ? `<li>Barion díj (1,6%): ${formatForint(feeAmount)} Ft</li>` : '';
+  const feeLineHtml =
+    feeAmount > 0 ? `<li>Barion díj (1,6%): ${formatForint(feeAmount)} Ft</li>` : '';
   const linesHtml = members
     .map((m) => `<li>${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft</li>`)
     .join('');
@@ -548,7 +586,12 @@ async function markMembershipPaid(payment) {
 
     const subtotal = payment.members.reduce((sum, m) => sum + m.amount, 0);
     const feeAmount = payment.amount - subtotal;
-    const { text, html } = membershipReceiptEmailBody(payer.name, payment.members, payment.amount, feeAmount);
+    const { text, html } = membershipReceiptEmailBody(
+      payer.name,
+      payment.members,
+      payment.amount,
+      feeAmount,
+    );
     await sendResendEmail({
       to: payer.email,
       subject: 'Tagdíj befizetve - Bódorgó Klub',
@@ -557,7 +600,9 @@ async function markMembershipPaid(payment) {
       attachments: [{ filename, content: fs.readFileSync(path.join(RECEIPTS_DIR, filename)) }],
     });
   } catch (err) {
-    logger.error(`Payment ${payment._id}: membership receipt/email failed after a successful payment: ${err.message}`);
+    logger.error(
+      `Payment ${payment._id}: membership receipt/email failed after a successful payment: ${err.message}`,
+    );
   }
 
   // Separate try/catch from the payer's own receipt above - one failing
@@ -599,13 +644,24 @@ async function markPaymentSucceeded(payment) {
     ]);
     if (!payer?.email) return;
 
-    const filename = await generateReceiptPdf(payment, payer.name, tour?.title ?? 'tábor', tour?.startDate);
+    const filename = await generateReceiptPdf(
+      payment,
+      payer.name,
+      tour?.title ?? 'tábor',
+      tour?.startDate,
+    );
     payment.receiptFilename = filename;
     await payment.save();
 
     const subtotal = payment.attendees.reduce((sum, a) => sum + a.amount, 0);
     const feeAmount = payment.amount - subtotal;
-    const { text, html } = receiptEmailBody(payer.name, tour?.title ?? 'tábor', payment.attendees, payment.amount, feeAmount);
+    const { text, html } = receiptEmailBody(
+      payer.name,
+      tour?.title ?? 'tábor',
+      payment.attendees,
+      payment.amount,
+      feeAmount,
+    );
     await sendResendEmail({
       to: payer.email,
       subject: `Előleg befizetve - ${tour?.title ?? 'tábor'}`,
@@ -614,7 +670,9 @@ async function markPaymentSucceeded(payment) {
       attachments: [{ filename, content: fs.readFileSync(path.join(RECEIPTS_DIR, filename)) }],
     });
   } catch (err) {
-    logger.error(`Payment ${payment._id}: receipt/email failed after a successful payment: ${err.message}`);
+    logger.error(
+      `Payment ${payment._id}: receipt/email failed after a successful payment: ${err.message}`,
+    );
   }
 
   // Same isolation reasoning as markMembershipPaid's own admin-notify call
@@ -669,12 +727,17 @@ export const barionCallback = async (req, res) => {
       const state = await getBarionPaymentState(paymentId);
       if (state.Status === 'Succeeded') {
         await markPaymentSucceeded(payment);
-      } else if ((state.Status === 'Expired' || state.Status === 'Canceled') && payment.status !== 'Expired') {
+      } else if (
+        (state.Status === 'Expired' || state.Status === 'Canceled') &&
+        payment.status !== 'Expired'
+      ) {
         payment.status = state.Status === 'Canceled' ? 'Canceled' : 'Expired';
         await payment.save();
       }
     } catch (err) {
-      logger.error(`Barion callback: state check failed for payment ${payment._id}: ${err.message}`);
+      logger.error(
+        `Barion callback: state check failed for payment ${payment._id}: ${err.message}`,
+      );
     }
   }
 
@@ -703,7 +766,10 @@ export const getPaymentStatus = async (req, res) => {
       const state = await getBarionPaymentState(payment.providerPaymentId);
       if (state.Status === 'Succeeded' && payment.status !== 'Succeeded') {
         await markPaymentSucceeded(payment);
-      } else if ((state.Status === 'Expired' || state.Status === 'Canceled') && payment.status !== 'Expired') {
+      } else if (
+        (state.Status === 'Expired' || state.Status === 'Canceled') &&
+        payment.status !== 'Expired'
+      ) {
         payment.status = state.Status === 'Canceled' ? 'Canceled' : 'Expired';
         await payment.save();
       }
@@ -718,7 +784,9 @@ export const getPaymentStatus = async (req, res) => {
     }
   }
 
-  res.status(200).json({ status: 'success', data: { status: payment.status, amount: payment.amount } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { status: payment.status, amount: payment.amount } });
 };
 
 // GET /payments/:id/receipt - requireAuth. Only the person who made the

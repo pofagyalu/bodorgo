@@ -50,7 +50,9 @@ mongoose
     // dev server shares the same database and must not send them too.
     if (config.tourVideoEmails) {
       const checkVideos = () =>
-        checkForNewTourVideos().catch((err) => logger.error(`Tour video check failed: ${err.message}`));
+        checkForNewTourVideos().catch((err) =>
+          logger.error(`Tour video check failed: ${err.message}`),
+        );
       setTimeout(checkVideos, 5 * 60 * 1000);
       setInterval(checkVideos, 12 * 60 * 60 * 1000);
     }
@@ -60,7 +62,10 @@ mongoose
     // (BACKGROUND_JOBS=on) - the reminders must go out once.
     if (config.backgroundJobs) {
       setInterval(
-        () => checkPollReminders().catch((err) => logger.error(`Poll reminders failed: ${err.message}`)),
+        () =>
+          checkPollReminders().catch((err) =>
+            logger.error(`Poll reminders failed: ${err.message}`),
+          ),
         10 * 60 * 1000,
       );
     }

@@ -58,7 +58,8 @@ async function refreshTourWeather(tour) {
       // One last fetch of what actually happened, then freeze forever.
       tasks.push(
         fetchHistorical(lat, lng, toDateStr(date)).then((result) => {
-          if (result) upsertDailyWeather(tour, day, { ...result, isFinal: true, fetchedAt: new Date() });
+          if (result)
+            upsertDailyWeather(tour, day, { ...result, isFinal: true, fetchedAt: new Date() });
         }),
       );
       continue;
@@ -74,7 +75,8 @@ async function refreshTourWeather(tour) {
 
     tasks.push(
       fetchForecast(lat, lng, toDateStr(date)).then((result) => {
-        if (result) upsertDailyWeather(tour, day, { ...result, isFinal: false, fetchedAt: new Date() });
+        if (result)
+          upsertDailyWeather(tour, day, { ...result, isFinal: false, fetchedAt: new Date() });
       }),
     );
   }
@@ -100,7 +102,10 @@ export const getTicker = async (req, res) => {
   const byStart = (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
 
   const upcoming = tours.filter((t) => t.startDate && endOf(t) > now).sort(byStart)[0];
-  const latest = tours.filter((t) => t.startDate).sort(byStart).at(-1);
+  const latest = tours
+    .filter((t) => t.startDate)
+    .sort(byStart)
+    .at(-1);
   const featured = upcoming ?? latest;
 
   res.status(200).json({
@@ -153,10 +158,7 @@ export const getAlltours = async (req, res) => {
   const totalDocuments = await Tour.countDocuments();
 
   const toursWithCounts = tours.map((tour) => {
-    const participantCount = tour.reservations.reduce(
-      (sum, r) => sum + r.attendees.length,
-      0,
-    );
+    const participantCount = tour.reservations.reduce((sum, r) => sum + r.attendees.length, 0);
 
     // The advertised card price ("Ft/fő/éj") is normally a pre-
     // registration assumption (tourModel.js's pre('save') hook) - once
@@ -188,20 +190,19 @@ export const getTour = async (req, res, next) => {
     ? { _id: req.params.id }
     : { slug: req.params.id };
 
-  const tour = await Tour.findOne(query)
-    .populate({
-      path: 'reservations',
-      populate: [
-        { path: 'bookedBy', select: 'name email' },
-        // role decides club-subsidy eligibility; birthday decides
-        // child/adult pricing in 'perPerson' mode; familyId lets the client
-        // group/stripe the attendee list by family (see
-        // computeAttendeePayments/attendee-list.ts) - name is already
-        // denormalized onto the attendee subdocument itself, no need to
-        // populate it too.
-        { path: 'attendees.user', select: 'role birthday familyId' },
-      ],
-    });
+  const tour = await Tour.findOne(query).populate({
+    path: 'reservations',
+    populate: [
+      { path: 'bookedBy', select: 'name email' },
+      // role decides club-subsidy eligibility; birthday decides
+      // child/adult pricing in 'perPerson' mode; familyId lets the client
+      // group/stripe the attendee list by family (see
+      // computeAttendeePayments/attendee-list.ts) - name is already
+      // denormalized onto the attendee subdocument itself, no need to
+      // populate it too.
+      { path: 'attendees.user', select: 'role birthday familyId' },
+    ],
+  });
 
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
@@ -209,10 +210,7 @@ export const getTour = async (req, res, next) => {
 
   await refreshTourWeather(tour);
 
-  const participantCount = tour.reservations.reduce(
-    (sum, r) => sum + r.attendees.length,
-    0,
-  );
+  const participantCount = tour.reservations.reduce((sum, r) => sum + r.attendees.length, 0);
 
   const { attendeePayments, totals: paymentTotals } = computeAttendeePayments(
     tour,
@@ -235,7 +233,10 @@ export const getTour = async (req, res, next) => {
   const paymentByAttendeeId = new Map();
   for (const payment of tourPayments) {
     for (const a of payment.attendees) {
-      paymentByAttendeeId.set(String(a.attendeeId), { paymentId: String(payment._id), method: payment.method });
+      paymentByAttendeeId.set(String(a.attendeeId), {
+        paymentId: String(payment._id),
+        method: payment.method,
+      });
     }
   }
   const attendeePaymentsWithMethod = attendeePayments.map((p) => ({
@@ -356,7 +357,8 @@ export const updateTour = async (req, res) => {
   // all) distinct from "not yet configured" (null/undefined) - see
   // markAllAttendeesPaidForTour's own comment on why that's worth an
   // automatic side effect.
-  const advanceBecameZero = tour.isModified('advancePaymentPercentage') && tour.advancePaymentPercentage === 0;
+  const advanceBecameZero =
+    tour.isModified('advancePaymentPercentage') && tour.advancePaymentPercentage === 0;
 
   await tour.save();
 
@@ -454,7 +456,10 @@ export const updateScheduleEventParticipants = async (req, res) => {
     for (const a of reservation.attendees) {
       if (!a.user?._id) continue;
       const id = String(a.user._id);
-      attendeesById.set(id, { name: a.name, familyId: a.user.familyId ? String(a.user.familyId) : null });
+      attendeesById.set(id, {
+        name: a.name,
+        familyId: a.user.familyId ? String(a.user.familyId) : null,
+      });
     }
   }
 
@@ -467,7 +472,9 @@ export const updateScheduleEventParticipants = async (req, res) => {
     const myFamilyId = req.user.familyId ? String(req.user.familyId) : null;
     editableIds = new Set(
       [...attendeesById.entries()]
-        .filter(([id, a]) => id === String(req.user._id) || (myFamilyId && a.familyId === myFamilyId))
+        .filter(
+          ([id, a]) => id === String(req.user._id) || (myFamilyId && a.familyId === myFamilyId),
+        )
         .map(([id]) => id),
     );
   }
@@ -475,11 +482,17 @@ export const updateScheduleEventParticipants = async (req, res) => {
   const requestedIds = [...new Set(userIds.map(String))];
   const disallowed = requestedIds.filter((id) => !editableIds.has(id));
   if (disallowed.length) {
-    throw new AppError('Csak saját magadat és a hozzátartozóidat jelentkeztetheted erre az eseményre.', 403);
+    throw new AppError(
+      'Csak saját magadat és a hozzátartozóidat jelentkeztetheted erre az eseményre.',
+      403,
+    );
   }
 
   const keptParticipants = event.participants.filter((p) => !editableIds.has(String(p.user)));
-  const newParticipants = requestedIds.map((id) => ({ user: id, name: attendeesById.get(id).name }));
+  const newParticipants = requestedIds.map((id) => ({
+    user: id,
+    name: attendeesById.get(id).name,
+  }));
   event.participants = [...keptParticipants, ...newParticipants];
 
   await tour.save();

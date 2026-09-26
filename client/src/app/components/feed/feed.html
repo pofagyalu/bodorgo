@@ -1,26 +1,30 @@
 <div class="feed-wrapper">
   <div class="feed-container" #feedContainer>
     @for (post of posts(); track post._id) {
-    <app-post
-      [creatorInput]="post.creator.username || post.creator.name"
-      [textInput]="post.text"
-      [timestampInput]="post.createdAt"
-      [imageUrlInput]="post.image"
-      [isOwn]="post.creator._id === currentUserId()"
-      [edited]="!!post.editedAt"
-      [deleted]="!!post.deletedAt"
-      [pollId]="post.poll ?? null"
-      [knownUsernamesInput]="knownUsernames()"
-      [myUsernameInput]="myUsername()"
-      (editSaved)="onEdit(post._id, $event)"
-      (deleteConfirmed)="onDelete(post._id)"
-    />
+      <app-post
+        [creatorInput]="post.creator.username || post.creator.name"
+        [textInput]="post.text"
+        [timestampInput]="post.createdAt"
+        [imageUrlInput]="post.image"
+        [isOwn]="post.creator._id === currentUserId()"
+        [edited]="!!post.editedAt"
+        [deleted]="!!post.deletedAt"
+        [pollId]="post.poll ?? null"
+        [knownUsernamesInput]="knownUsernames()"
+        [myUsernameInput]="myUsername()"
+        (editSaved)="onEdit(post._id, $event)"
+        (deleteConfirmed)="onDelete(post._id)"
+      />
     }
   </div>
 
-  <app-compose [mentionables]="mentionables()" (send)="onCompose($event)" (pollRequested)="creatingPoll.set(true)"></app-compose>
+  <app-compose
+    [mentionables]="mentionables()"
+    (send)="onCompose($event)"
+    (pollRequested)="creatingPoll.set(true)"
+  ></app-compose>
 
   @if (creatingPoll()) {
-  <app-poll-create [tourId]="tourId()" (closed)="creatingPoll.set(false)" />
+    <app-poll-create [tourId]="tourId()" (closed)="creatingPoll.set(false)" />
   }
 </div>

@@ -6,7 +6,10 @@ import AppError from '../utils/appError.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import { resolveDistanceInfo } from '../utils/distance.js';
 import { cleanMailHtml, escapeHtml, isBlankMailHtml, mailHtmlToText } from '../utils/mailHtml.js';
-import { partitionAttendeesByEmailEligibility, renderTourPdfToBuffer } from './tourPdfController.js';
+import {
+  partitionAttendeesByEmailEligibility,
+  renderTourPdfToBuffer,
+} from './tourPdfController.js';
 import logger from '../logger.js';
 
 // Letters to a tour's attendees, written by an admin on the tour page:
@@ -45,7 +48,8 @@ async function attendeeRecipients(tour) {
 // The e-mail itself: the greeting, the admin's letter, a line about the
 // attachment when there is one, and the usual closing.
 function letterEmail(recipientName, letterHtml, withPdf, tourTitle) {
-  const noReplyNote = 'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
+  const noReplyNote =
+    'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
   const pdfLine = withPdf ? `Csatolva küldjük a(z) "${tourTitle}" tábor programfüzetét.` : '';
   const html =
     `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#222;">` +
@@ -55,7 +59,13 @@ function letterEmail(recipientName, letterHtml, withPdf, tourTitle) {
     `<p>Üdvözlettel,<br>Bódorgó</p>` +
     `<p style="color:#888;font-size:0.85em;">${noReplyNote}</p>` +
     `</div>`;
-  const text = [`Szia ${recipientName}!`, mailHtmlToText(letterHtml), pdfLine, 'Üdvözlettel,\nBódorgó', noReplyNote]
+  const text = [
+    `Szia ${recipientName}!`,
+    mailHtmlToText(letterHtml),
+    pdfLine,
+    'Üdvözlettel,\nBódorgó',
+    noReplyNote,
+  ]
     .filter(Boolean)
     .join('\n\n');
   return { html, text };
@@ -66,7 +76,10 @@ async function sendLetter(tour, user, { subject, html, withPdf }) {
   const attachments = [];
   if (withPdf) {
     const distanceInfo = await resolveDistanceInfo(tour, user);
-    attachments.push({ filename: pdfFilename(tour), content: await renderTourPdfToBuffer(tour, user, distanceInfo) });
+    attachments.push({
+      filename: pdfFilename(tour),
+      content: await renderTourPdfToBuffer(tour, user, distanceInfo),
+    });
   }
   await sendResendEmail({ to: user.email, subject, text, html: body, attachments });
 }
@@ -95,7 +108,12 @@ export const getMailings = async (req, res) => {
     status: 'success',
     data: {
       draft: draft
-        ? { subject: draft.subject, html: draft.html, delta: draft.delta, updatedAt: draft.updatedAt }
+        ? {
+            subject: draft.subject,
+            html: draft.html,
+            delta: draft.delta,
+            updatedAt: draft.updatedAt,
+          }
         : null,
       sent: sent.map(publicMailing),
       recipients: { eligible: eligible.map((u) => u.name), skipped },
@@ -156,7 +174,8 @@ export const sendToAttendees = async (req, res) => {
   const withPdf = !!req.body?.withPdf;
   const subject = draft.subject || defaultSubject(tour);
   const { eligible, skipped } = await attendeeRecipients(tour);
-  if (!eligible.length) throw new AppError('Nincs olyan résztvevő, akinek e-mailt lehetne küldeni.', 400);
+  if (!eligible.length)
+    throw new AppError('Nincs olyan résztvevő, akinek e-mailt lehetne küldeni.', 400);
 
   // Marked sent before the e-mails go out, so a second click can't send
   // it twice.

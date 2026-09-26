@@ -18,7 +18,14 @@ interface PollFormModel {
 }
 
 function emptyForm(): PollFormModel {
-  return { tour: '', question: '', options: ['', ''], closesAtLocal: '', visibility: 'secret', minimumCount: null };
+  return {
+    tour: '',
+    question: '',
+    options: ['', ''],
+    closesAtLocal: '',
+    visibility: 'secret',
+    minimumCount: null,
+  };
 }
 
 // datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not
@@ -175,7 +182,9 @@ export class Szavazasok implements OnInit {
     this.saving.set(true);
     this.formError.set(null);
     const editId = this.editingId();
-    const request = editId ? this.pollService.updatePoll(editId, payload) : this.pollService.createPoll(payload);
+    const request = editId
+      ? this.pollService.updatePoll(editId, payload)
+      : this.pollService.createPoll(payload);
 
     request.subscribe({
       next: (res) => {

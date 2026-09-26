@@ -13,9 +13,7 @@ const consoleOptions = {
   ),
 };
 
-const logFormat = printf(
-  (info) => `[${info.timestamp}] ${info.level}: ${info.message}`,
-);
+const logFormat = printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`);
 
 const logger = createLogger({
   exitOnError: false,

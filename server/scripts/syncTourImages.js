@@ -135,7 +135,10 @@ export async function syncOneTour(tour) {
       removedImages.length === 1 ? 'y' : 'ies'
     } (${tour.images.length} total), generated ${thumbsGenerated} thumbnail(s)${
       thumbFailures ? `, ${thumbFailures} failure(s)` : ''
-    }.` + (removedImages.length > 0 ? `\nRemoved (file no longer in folder): ${removedImages.map((i) => i.filename).join(', ')}` : '');
+    }.` +
+    (removedImages.length > 0
+      ? `\nRemoved (file no longer in folder): ${removedImages.map((i) => i.filename).join(', ')}`
+      : '');
 
   return { message, subfolderNotices };
 }

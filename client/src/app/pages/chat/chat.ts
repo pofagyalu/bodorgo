@@ -1,4 +1,14 @@
-import { Component, ElementRef, OnDestroy, OnInit, inject, signal, computed, effect, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  inject,
+  signal,
+  computed,
+  effect,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { TourSocketService } from '../../services/tour-socket';
@@ -128,7 +138,9 @@ export class Chat implements OnInit, OnDestroy {
       // edge - never below its minimum, and always leaving the chat
       // room to stay usable.
       const max = Math.max(ROOMS_MIN_WIDTH, box.width - CHAT_MIN_WIDTH);
-      this.roomsWidth.set(Math.round(Math.min(Math.max(box.right - e.clientX, ROOMS_MIN_WIDTH), max)));
+      this.roomsWidth.set(
+        Math.round(Math.min(Math.max(box.right - e.clientX, ROOMS_MIN_WIDTH), max)),
+      );
     };
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
@@ -172,7 +184,11 @@ export class Chat implements OnInit, OnDestroy {
     this.chatMuted.set(next);
     this.push.setChatMuted(tourId, next).subscribe({
       next: () =>
-        this.notifications.addSuccess(next ? 'Ennek a chatnek az értesítései némítva.' : 'Értesítések ebből a chatből bekapcsolva.'),
+        this.notifications.addSuccess(
+          next
+            ? 'Ennek a chatnek az értesítései némítva.'
+            : 'Értesítések ebből a chatből bekapcsolva.',
+        ),
       error: () => {
         this.chatMuted.set(!next);
         this.notifications.addError('Nem sikerült menteni.');
@@ -187,8 +203,10 @@ export class Chat implements OnInit, OnDestroy {
   // "2026. okt. 22." - Intl rather than the date pipe, since this app has
   // no Hungarian locale data registered (see tour-card.ts).
   formatDate(t: Tour): string {
-    return new Intl.DateTimeFormat('hu-HU', { year: 'numeric', month: 'short', day: 'numeric' }).format(
-      new Date(t.startDate),
-    );
+    return new Intl.DateTimeFormat('hu-HU', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(t.startDate));
   }
 }

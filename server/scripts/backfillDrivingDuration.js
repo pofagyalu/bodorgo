@@ -30,7 +30,9 @@ for (const tour of tours) {
     lng: tour.location.coordinates[0],
   });
   if (!route) {
-    console.log(`✗ Could not compute a route for "${tour.title}" (order ${tour.order}) - left as-is.`);
+    console.log(
+      `✗ Could not compute a route for "${tour.title}" (order ${tour.order}) - left as-is.`,
+    );
     failed++;
     continue;
   }

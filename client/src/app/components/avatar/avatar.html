@@ -6,22 +6,22 @@
   (click)="onClick($event)"
 >
   @if (photoUrl(); as url) {
-  <img [src]="url" alt="" (error)="onImageError()" />
+    <img [src]="url" alt="" (error)="onImageError()" />
   } @else {
-  {{ initials() }}
+    {{ initials() }}
   }
 </span>
 
 @if (previewPos(); as pos) {
-<img
-  class="avatar-preview"
-  [class.shown]="previewShown()"
-  [class.below]="!pos.above"
-  [src]="photoUrl()"
-  alt=""
-  [style.top.px]="pos.top"
-  [style.left.px]="pos.left"
-  [style.width.px]="previewSize"
-  [style.height.px]="previewSize"
-/>
+  <img
+    class="avatar-preview"
+    [class.shown]="previewShown()"
+    [class.below]="!pos.above"
+    [src]="photoUrl()"
+    alt=""
+    [style.top.px]="pos.top"
+    [style.left.px]="pos.left"
+    [style.width.px]="previewSize"
+    [style.height.px]="previewSize"
+  />
 }

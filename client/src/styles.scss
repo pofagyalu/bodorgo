@@ -112,7 +112,9 @@ h1 {
   cursor: pointer;
   opacity: 0.6;
   border: 2px solid transparent;
-  transition: opacity 0.15s ease, border-color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .pswp__thumbnails-strip-item:hover {

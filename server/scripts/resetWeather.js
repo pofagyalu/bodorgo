@@ -32,7 +32,10 @@ await mongoose.connect(config.db.testUri);
 // fetched or classified (see utils/weather.js), since past days are
 // frozen and would otherwise never be fetched again.
 if (identifier === '--all') {
-  const result = await Tour.updateMany({ 'dailyWeather.0': { $exists: true } }, { $set: { dailyWeather: [] } });
+  const result = await Tour.updateMany(
+    { 'dailyWeather.0': { $exists: true } },
+    { $set: { dailyWeather: [] } },
+  );
   console.log(
     `Cleared the weather of ${result.modifiedCount} tour(s). Each is fetched fresh the next time its page is opened.`,
   );

@@ -36,7 +36,8 @@ function buildPollView(poll, user) {
   const isOpen = poll.visibility === 'open';
   const canSeeResults = isOpen || hasVoted || isClosed;
 
-  const countFor = (optionId) => poll.votes.filter((v) => String(v.option) === String(optionId)).length;
+  const countFor = (optionId) =>
+    poll.votes.filter((v) => String(v.option) === String(optionId)).length;
   const minimum = poll.minimum?.option
     ? {
         optionId: poll.minimum.option,
@@ -58,7 +59,9 @@ function buildPollView(poll, user) {
     visibility: poll.visibility,
     minimum,
     post: poll.post ?? null,
-    createdBy: poll.createdBy?._id ? { _id: poll.createdBy._id, name: poll.createdBy.username || poll.createdBy.name } : null,
+    createdBy: poll.createdBy?._id
+      ? { _id: poll.createdBy._id, name: poll.createdBy.username || poll.createdBy.name }
+      : null,
     // The one who started it, or an admin, may close or delete it.
     canManage: isAdmin(user) || refId(poll.createdBy) === userId,
     createdAt: poll.createdAt,
@@ -111,7 +114,10 @@ function pollFields(body) {
   const closesAt = new Date(body.closesAt);
   if (Number.isNaN(closesAt.getTime())) throw new AppError('Adj meg egy záró időpontot.', 400);
   const minimumCount = body.minimumCount ? Number(body.minimumCount) : null;
-  if (minimumCount !== null && (!Number.isInteger(minimumCount) || minimumCount < 1 || minimumCount > 500)) {
+  if (
+    minimumCount !== null &&
+    (!Number.isInteger(minimumCount) || minimumCount < 1 || minimumCount > 500)
+  ) {
     throw new AppError('A minimum létszám 1 és 500 közötti egész szám lehet.', 400);
   }
   return {
@@ -130,7 +136,10 @@ function applyMinimum(poll, minimumCount) {
 // Everyone looking at the tour's chat re-fetches the poll (each gets their
 // own view of it - see buildPollView).
 function announcePollChanged(poll) {
-  emitToTour(refId(poll.tour), 'poll-updated', { pollId: String(poll._id), tourId: refId(poll.tour) });
+  emitToTour(refId(poll.tour), 'poll-updated', {
+    pollId: String(poll._id),
+    tourId: refId(poll.tour),
+  });
 }
 
 // GET /polls - requireAuth (any logged-in role, see pollRoutes.js). Every
@@ -144,7 +153,9 @@ export const getAllPolls = async (req, res) => {
     .populate({ path: 'votes.user', select: 'name username' })
     .populate({ path: 'createdBy', select: 'name username' });
 
-  res.status(200).json({ status: 'success', data: { polls: polls.map((p) => buildPollView(p, req.user)) } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { polls: polls.map((p) => buildPollView(p, req.user)) } });
 };
 
 // GET /polls/pending - how many open polls on my tours are still waiting
@@ -172,7 +183,9 @@ export const createPoll = async (req, res) => {
   const poll = new Poll({ ...fields, tour: req.body.tour, createdBy: req.user._id });
   applyMinimum(poll, fields.minimumCount);
   await poll.save();
-  res.status(201).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+  res
+    .status(201)
+    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
 };
 
 // POST /tours/:tourId/polls - a poll started from the tour's chat, by
@@ -185,16 +198,25 @@ export const createTourPoll = async (req, res) => {
   if (!mongoose.isValidObjectId(tourId)) throw new AppError('Nincs ilyen tábor.', 404);
   const tour = await Tour.findById(tourId).select('title order');
   if (!tour) throw new AppError('Nincs ilyen tábor.', 404);
-  if (!isAdmin(req.user) && !(await Reservation.exists({ tour: tourId, 'attendees.user': req.user._id }))) {
+  if (
+    !isAdmin(req.user) &&
+    !(await Reservation.exists({ tour: tourId, 'attendees.user': req.user._id }))
+  ) {
     throw new AppError('Csak a tábor résztvevői indíthatnak szavazást.', 403);
   }
 
   const fields = pollFields(req.body);
-  if (fields.closesAt.getTime() <= Date.now()) throw new AppError('A záró időpont a jövőben legyen.', 400);
+  if (fields.closesAt.getTime() <= Date.now())
+    throw new AppError('A záró időpont a jövőben legyen.', 400);
 
   const poll = new Poll({ ...fields, tour: tourId, createdBy: req.user._id });
   applyMinimum(poll, fields.minimumCount);
-  const post = await Post.create({ tourId, creator: req.user._id, text: fields.question, poll: poll._id });
+  const post = await Post.create({
+    tourId,
+    creator: req.user._id,
+    text: fields.question,
+    poll: poll._id,
+  });
   poll.post = post._id;
   await poll.save();
 
@@ -210,7 +232,9 @@ export const createTourPoll = async (req, res) => {
     renotify: true,
   });
 
-  res.status(201).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+  res
+    .status(201)
+    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
 };
 
 // PATCH /polls/:id - admin-only. Once a poll has at least one real vote,
@@ -234,11 +258,13 @@ export const updatePoll = async (req, res) => {
   // votes at all, including just extending the deadline. Re-submitting the
   // same question/options unchanged is fine even with votes already cast;
   // only a genuine change to either is blocked.
-  const newOptions = req.body.options !== undefined ? cleanOptionTexts(req.body.options) : undefined;
+  const newOptions =
+    req.body.options !== undefined ? cleanOptionTexts(req.body.options) : undefined;
   const questionChanged = question !== undefined && question.trim() !== poll.question;
   const optionsChanged =
     newOptions !== undefined &&
-    (newOptions.length !== poll.options.length || newOptions.some((text, i) => text !== poll.options[i]?.text));
+    (newOptions.length !== poll.options.length ||
+      newOptions.some((text, i) => text !== poll.options[i]?.text));
 
   if (hasVotes && (questionChanged || optionsChanged)) {
     throw new AppError(
@@ -278,7 +304,9 @@ export const updatePoll = async (req, res) => {
 
   await poll.save();
   announcePollChanged(poll);
-  res.status(200).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
 };
 
 // POST /polls/:id/close - whoever started it, or an admin: closes it now.
@@ -293,7 +321,9 @@ export const closePoll = async (req, res) => {
     await poll.save();
     announcePollChanged(poll);
   }
-  res.status(200).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
 };
 
 // DELETE /polls/:id - whoever started it, or an admin. Its chat message
@@ -322,7 +352,9 @@ export const deletePoll = async (req, res) => {
 // again changes the vote. When a minimum ("at least 5 yes") is first
 // reached, those who picked that answer are told.
 export const voteOnPoll = async (req, res) => {
-  const poll = await Poll.findById(req.params.id).select('+votes').populate({ path: 'tour', select: TOUR_SELECT });
+  const poll = await Poll.findById(req.params.id)
+    .select('+votes')
+    .populate({ path: 'tour', select: TOUR_SELECT });
   if (!poll) {
     throw new AppError('Nincs ilyen szavazás.', 404);
   }
@@ -331,7 +363,9 @@ export const voteOnPoll = async (req, res) => {
     throw new AppError('Ez a szavazás már lezárult.', 400);
   }
 
-  const option = mongoose.isValidObjectId(req.body.optionId) ? poll.options.id(req.body.optionId) : null;
+  const option = mongoose.isValidObjectId(req.body.optionId)
+    ? poll.options.id(req.body.optionId)
+    : null;
   if (!option) {
     throw new AppError('Érvénytelen válasz.', 400);
   }
@@ -345,8 +379,11 @@ export const voteOnPoll = async (req, res) => {
   }
 
   const minimumOption = poll.minimum?.option ? String(poll.minimum.option) : null;
-  const onMinimum = minimumOption ? poll.votes.filter((v) => String(v.option) === minimumOption) : [];
-  const justReached = !!minimumOption && !poll.minimumReachedAt && onMinimum.length >= poll.minimum.count;
+  const onMinimum = minimumOption
+    ? poll.votes.filter((v) => String(v.option) === minimumOption)
+    : [];
+  const justReached =
+    !!minimumOption && !poll.minimumReachedAt && onMinimum.length >= poll.minimum.count;
   if (justReached) poll.minimumReachedAt = new Date();
   await poll.save();
 
@@ -365,5 +402,7 @@ export const voteOnPoll = async (req, res) => {
     );
   }
 
-  res.status(200).json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
 };

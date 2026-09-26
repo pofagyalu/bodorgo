@@ -21,7 +21,11 @@ export async function checkPollReminders(now = new Date()) {
 
     const voted = poll.votes.map((v) => v.user);
     const users = await tourAttendeeIds(poll.tour._id, voted);
-    const time = poll.closesAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Budapest' });
+    const time = poll.closesAt.toLocaleTimeString('hu-HU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Budapest',
+    });
     pushInBackground(users, {
       title: `Még nem szavaztál – ${poll.tour.title}`,
       body: `${poll.question} – ${time}-kor lezárul.`,

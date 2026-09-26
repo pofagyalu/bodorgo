@@ -1,28 +1,41 @@
 @if (locked()) {
-<p class="photo-locked">A profilképet a felhasználó saját maga állította be - azt már nem lehet módosítani.</p>
+  <p class="photo-locked">
+    A profilképet a felhasználó saját maga állította be - azt már nem lehet módosítani.
+  </p>
 } @else {
-<div class="photo-actions">
-  <label class="photo-btn" [class.disabled]="saving()">
-    <input type="file" accept="image/*" hidden [disabled]="saving()" (change)="onFileChosen($event)" />
-    {{ hasPhoto() ? 'Profilkép cseréje' : 'Profilkép feltöltése' }}
-  </label>
-  @if (hasPhoto()) {
-  <button type="button" class="photo-btn photo-btn--remove" [disabled]="saving()" (click)="remove()">
-    Profilkép törlése
-  </button>
-  }
-</div>
+  <div class="photo-actions">
+    <label class="photo-btn" [class.disabled]="saving()">
+      <input
+        type="file"
+        accept="image/*"
+        hidden
+        [disabled]="saving()"
+        (change)="onFileChosen($event)"
+      />
+      {{ hasPhoto() ? 'Profilkép cseréje' : 'Profilkép feltöltése' }}
+    </label>
+    @if (hasPhoto()) {
+      <button
+        type="button"
+        class="photo-btn photo-btn--remove"
+        [disabled]="saving()"
+        (click)="remove()"
+      >
+        Profilkép törlése
+      </button>
+    }
+  </div>
 }
 
 @if (file(); as f) {
-<app-crop-dialog
-  [file]="f"
-  title="Profilkép kivágása"
-  [aspectRatio]="1"
-  [outputWidth]="outputSize"
-  [busy]="saving()"
-  (cropped)="upload($event)"
-  (cancelled)="file.set(null)"
-  (failed)="onLoadFailed()"
-/>
+  <app-crop-dialog
+    [file]="f"
+    title="Profilkép kivágása"
+    [aspectRatio]="1"
+    [outputWidth]="outputSize"
+    [busy]="saving()"
+    (cropped)="upload($event)"
+    (cancelled)="file.set(null)"
+    (failed)="onLoadFailed()"
+  />
 }

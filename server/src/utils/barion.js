@@ -35,7 +35,14 @@ function stateUrl(paymentId) {
 // paymentController.js passes a different wallet email depending on
 // purpose (config.barion.membership.payeeEmail vs .tour.payeeEmail), so
 // dues and advances land in two separate Barion accounts.
-export async function createBarionPayment({ referenceId, amount, payerEmail, successUrl, description, payeeEmail }) {
+export async function createBarionPayment({
+  referenceId,
+  amount,
+  payerEmail,
+  successUrl,
+  description,
+  payeeEmail,
+}) {
   const callbackUrl = `${config.apiBaseUrl.replace(/\/$/, '')}/payments/barion/callback`;
 
   const res = await fetch(startUrl(), {
@@ -79,7 +86,8 @@ export async function createBarionPayment({ referenceId, amount, payerEmail, suc
 
   const data = await res.json();
   if (!res.ok || (data.Errors && data.Errors.length > 0)) {
-    const message = data.Errors?.map((e) => e.Description || e.Title).join('; ') || `HTTP ${res.status}`;
+    const message =
+      data.Errors?.map((e) => e.Description || e.Title).join('; ') || `HTTP ${res.status}`;
     throw new Error(`Barion payment start failed: ${message}`);
   }
 
@@ -124,7 +132,8 @@ export async function createBarionWithdrawal({ walletKey, amount, recipientName,
 
   const data = await res.json();
   if (!res.ok || (data.Errors && data.Errors.length > 0)) {
-    const message = data.Errors?.map((e) => e.Description || e.Title).join('; ') || `HTTP ${res.status}`;
+    const message =
+      data.Errors?.map((e) => e.Description || e.Title).join('; ') || `HTTP ${res.status}`;
     throw new Error(`Barion withdrawal failed: ${message}`);
   }
 

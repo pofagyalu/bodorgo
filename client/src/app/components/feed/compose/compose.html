@@ -1,24 +1,30 @@
 <form class="compose-container" (ngSubmit)="submit()">
   <!-- "@" suggestions: the tour's attendees with a username. -->
   @if (suggestions().length) {
-  <ul class="mention-list" role="listbox" aria-label="Megemlíthető résztvevők">
-    @for (m of suggestions(); track m.username; let i = $index) {
-    <li
-      role="option"
-      [class.active]="i === highlighted()"
-      [attr.aria-selected]="i === highlighted()"
-      (mousedown)="$event.preventDefault(); pick(m)"
-      (mouseenter)="highlighted.set(i)"
-    >
-      <strong>&#64;{{ m.username }}</strong>
-      <span>{{ m.name }}</span>
-    </li>
-    }
-  </ul>
+    <ul class="mention-list" role="listbox" aria-label="Megemlíthető résztvevők">
+      @for (m of suggestions(); track m.username; let i = $index) {
+        <li
+          role="option"
+          [class.active]="i === highlighted()"
+          [attr.aria-selected]="i === highlighted()"
+          (mousedown)="$event.preventDefault(); pick(m)"
+          (mouseenter)="highlighted.set(i)"
+        >
+          <strong>&#64;{{ m.username }}</strong>
+          <span>{{ m.name }}</span>
+        </li>
+      }
+    </ul>
   }
 
   <!-- Start a poll in this chat (see poll-create). -->
-  <button type="button" class="poll-btn" title="Szavazás indítása" aria-label="Szavazás indítása" (click)="pollRequested.emit()">
+  <button
+    type="button"
+    class="poll-btn"
+    title="Szavazás indítása"
+    aria-label="Szavazás indítása"
+    (click)="pollRequested.emit()"
+  >
     <mat-icon>poll</mat-icon>
   </button>
 

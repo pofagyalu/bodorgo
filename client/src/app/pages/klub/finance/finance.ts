@@ -22,7 +22,18 @@ function withdrawalFee(amount: number): number {
 }
 
 const MONTH_LABELS = [
-  'jan', 'feb', 'márc', 'ápr', 'máj', 'jún', 'júl', 'aug', 'szept', 'okt', 'nov', 'dec',
+  'jan',
+  'feb',
+  'márc',
+  'ápr',
+  'máj',
+  'jún',
+  'júl',
+  'aug',
+  'szept',
+  'okt',
+  'nov',
+  'dec',
 ];
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
@@ -72,7 +83,9 @@ export class Finance implements OnInit {
     const amount = this.membershipWithdrawAmount();
     return amount ? withdrawalFee(amount) : 0;
   });
-  membershipWithdrawNet = computed(() => (this.membershipWithdrawAmount() ?? 0) - this.membershipWithdrawFee());
+  membershipWithdrawNet = computed(
+    () => (this.membershipWithdrawAmount() ?? 0) - this.membershipWithdrawFee(),
+  );
 
   tourWithdrawFee = computed(() => {
     const amount = this.tourWithdrawAmount();
@@ -203,7 +216,12 @@ export class Finance implements OnInit {
   // Shared by withdrawMembership/withdrawTour below - the two rows are
   // otherwise fully independent (own amount/busy signals, own wallet), but
   // the actual API call and success/error handling is identical either way.
-  private runWithdrawal(purpose: WithdrawalPurpose, amount: number | null, busy: WritableSignal<boolean>, amountSignal: WritableSignal<number | null>) {
+  private runWithdrawal(
+    purpose: WithdrawalPurpose,
+    amount: number | null,
+    busy: WritableSignal<boolean>,
+    amountSignal: WritableSignal<number | null>,
+  ) {
     if (!amount || amount <= 0 || busy()) return;
 
     busy.set(true);
@@ -228,11 +246,21 @@ export class Finance implements OnInit {
   }
 
   withdrawMembership() {
-    this.runWithdrawal('membershipFee', this.membershipWithdrawAmount(), this.membershipWithdrawing, this.membershipWithdrawAmount);
+    this.runWithdrawal(
+      'membershipFee',
+      this.membershipWithdrawAmount(),
+      this.membershipWithdrawing,
+      this.membershipWithdrawAmount,
+    );
   }
 
   withdrawTour() {
-    this.runWithdrawal('tourAdvance', this.tourWithdrawAmount(), this.tourWithdrawing, this.tourWithdrawAmount);
+    this.runWithdrawal(
+      'tourAdvance',
+      this.tourWithdrawAmount(),
+      this.tourWithdrawing,
+      this.tourWithdrawAmount,
+    );
   }
 
   openModal() {
@@ -254,9 +282,7 @@ export class Finance implements OnInit {
 
   onTypeChange(type: TransactionType) {
     this.formType.set(type);
-    this.formCategory.set(
-      (type === 'income' ? this.incomeCategories : this.expenseCategories)[0],
-    );
+    this.formCategory.set((type === 'income' ? this.incomeCategories : this.expenseCategories)[0]);
   }
 
   // Plain native (submit) rather than Angular's (ngSubmit) - the latter is

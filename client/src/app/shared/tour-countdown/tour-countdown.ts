@@ -75,7 +75,10 @@ function glyph(ch: string): Glyph {
   return { lit, dark: DIGIT_SEGMENTS.filter((s) => !lit.includes(s)) };
 }
 
-const group = (label: string, text: string): Group => ({ label, glyphs: text.split('').map(glyph) });
+const group = (label: string, text: string): Group => ({
+  label,
+  glyphs: text.split('').map(glyph),
+});
 
 type Mode = 'countdown' | 'live' | 'idle';
 
@@ -102,7 +105,9 @@ export class TourCountdown implements OnDestroy {
   tour = computed<Tour | null>(() => {
     const now = this.now();
     const tours = this.tours();
-    const live = tours.find((t) => tourStartTime(t).getTime() <= now && now < tourEndTime(t).getTime());
+    const live = tours.find(
+      (t) => tourStartTime(t).getTime() <= now && now < tourEndTime(t).getTime(),
+    );
     if (live) return live;
     return (
       tours
@@ -145,7 +150,9 @@ export class TourCountdown implements OnDestroy {
     }
   });
 
-  headLabel = computed(() => ({ countdown: 'Indulásig', live: 'Most zajlik', idle: 'Következő tábor' })[this.mode()]);
+  headLabel = computed(
+    () => ({ countdown: 'Indulásig', live: 'Most zajlik', idle: 'Következő tábor' })[this.mode()],
+  );
   headTitle = computed(() => {
     const t = this.tour();
     return t ? `${t.order}. ${t.title}` : 'még nincs kiírva';

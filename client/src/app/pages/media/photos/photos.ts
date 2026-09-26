@@ -19,7 +19,13 @@ import { MatIconModule } from '@angular/material/icon';
   styles: `
     :host {
       display: block;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        'Segoe UI',
+        sans-serif;
       color: #23354a;
     }
     .content {

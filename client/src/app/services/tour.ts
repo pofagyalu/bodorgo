@@ -118,13 +118,7 @@ export interface CreateScheduleEventResponse {
 }
 
 export type WeatherCondition =
-  | 'clear'
-  | 'partly-cloudy'
-  | 'cloudy'
-  | 'fog'
-  | 'rain'
-  | 'snow'
-  | 'thunderstorm';
+  'clear' | 'partly-cloudy' | 'cloudy' | 'fog' | 'rain' | 'snow' | 'thunderstorm';
 
 export interface DailyWeather {
   day: number;
@@ -567,9 +561,12 @@ export class TourService {
 
   // The saved draft to the admin themselves only.
   sendMailTest(tourId: string, withPdf: boolean) {
-    return this.http.post<{ status: string; data: { sentTo: string } }>(`${this.apiUrl}/${tourId}/mailings/test`, {
-      withPdf,
-    });
+    return this.http.post<{ status: string; data: { sentTo: string } }>(
+      `${this.apiUrl}/${tourId}/mailings/test`,
+      {
+        withPdf,
+      },
+    );
   }
 
   // The saved draft to every attendee who can get an e-mail - it then
@@ -629,8 +626,13 @@ export class TourService {
   // without logging in (see tourController.js's getTicker).
   // Admin-only - replaces the tour's whole Szállás (houses -> rooms) in one
   // go, separately from the rest of the tour.
-  updateAccommodation(tourId: string, houses: AccommodationHouse[]): Observable<AccommodationResponse> {
-    return this.http.put<AccommodationResponse>(`${this.apiUrl}/${tourId}/accommodation`, { houses });
+  updateAccommodation(
+    tourId: string,
+    houses: AccommodationHouse[],
+  ): Observable<AccommodationResponse> {
+    return this.http.put<AccommodationResponse>(`${this.apiUrl}/${tourId}/accommodation`, {
+      houses,
+    });
   }
 
   // Szobabeosztás - see roomAllocationController.js.
@@ -693,11 +695,12 @@ export class TourService {
   // "Lemondás" - takes one person off the tour (see
   // reservationController.js's withdrawAttendee for who may withdraw whom).
   withdrawAttendee(tourId: string, reservationId: string, attendeeId: string, reason: string) {
-    return this.http.request<{ status: string; data: { wasPaid: boolean; roomsReopened: boolean } }>(
-      'DELETE',
-      `${this.apiUrl}/${tourId}/reservations/${reservationId}/attendees/${attendeeId}`,
-      { body: { reason } },
-    );
+    return this.http.request<{
+      status: string;
+      data: { wasPaid: boolean; roomsReopened: boolean };
+    }>('DELETE', `${this.apiUrl}/${tourId}/reservations/${reservationId}/attendees/${attendeeId}`, {
+      body: { reason },
+    });
   }
 
   // Admin-only - the tour's "Lemondások" list, newest first.
@@ -742,7 +745,10 @@ export class TourService {
     tourId: string,
     payload: CreateScheduleEventPayload,
   ): Observable<CreateScheduleEventResponse> {
-    return this.http.post<CreateScheduleEventResponse>(`${this.apiUrl}/${tourId}/schedule`, payload);
+    return this.http.post<CreateScheduleEventResponse>(
+      `${this.apiUrl}/${tourId}/schedule`,
+      payload,
+    );
   }
 
   getTourImages(tourId: string): Observable<TourImagesResponse> {

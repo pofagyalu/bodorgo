@@ -2,7 +2,13 @@ import { Component, OnDestroy, computed, effect, inject, input, signal } from '@
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
-import { Tour, TourService, AccommodationHouse, AccommodationRoom, RoomBoardPerson } from '../../../services/tour';
+import {
+  Tour,
+  TourService,
+  AccommodationHouse,
+  AccommodationRoom,
+  RoomBoardPerson,
+} from '../../../services/tour';
 import { AuthService } from '../../../auth/auth.service';
 import { TourSocketService } from '../../../services/tour-socket';
 import { NotificationsService } from '../../../notifications/notifications.service';
@@ -181,7 +187,9 @@ export class RoomBoard implements OnDestroy {
   // Moved on screen right away; put back (by reloading) if the server says no.
   private move(person: RoomBoardPerson, roomId: string | null) {
     const tourId = this.tour()._id;
-    this.people.update((list) => list.map((p) => (p.attendeeId === person.attendeeId ? { ...p, roomId } : p)));
+    this.people.update((list) =>
+      list.map((p) => (p.attendeeId === person.attendeeId ? { ...p, roomId } : p)),
+    );
     this.tourService.assignRoom(tourId, person.attendeeId, roomId).subscribe({
       error: (err) => {
         this.notifications.addError(err?.error?.message ?? 'Nem sikerült áthelyezni.');
@@ -197,7 +205,9 @@ export class RoomBoard implements OnDestroy {
       next: () => {
         this.busy.set(false);
         this.finalized.set(next);
-        this.notifications.addSuccess(next ? 'Szobabeosztás véglegesítve' : 'Véglegesítés feloldva');
+        this.notifications.addSuccess(
+          next ? 'Szobabeosztás véglegesítve' : 'Véglegesítés feloldva',
+        );
       },
       error: (err) => {
         this.busy.set(false);

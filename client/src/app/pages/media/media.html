@@ -17,11 +17,16 @@
       </a>
       <div class="sub-nav">
         @for (c of media.categories(); track c.key) {
-        <a [routerLink]="['videok', c.key]" routerLinkActive="active" class="sub-item" [title]="c.title">
-          <mat-icon [style.color]="categoryColor(c.key)">{{ categoryIcon(c.key) }}</mat-icon>
-          <span class="sub-title">{{ c.title }}</span>
-          <span class="sub-count">{{ c.videos.length }}</span>
-        </a>
+          <a
+            [routerLink]="['videok', c.key]"
+            routerLinkActive="active"
+            class="sub-item"
+            [title]="c.title"
+          >
+            <mat-icon [style.color]="categoryColor(c.key)">{{ categoryIcon(c.key) }}</mat-icon>
+            <span class="sub-title">{{ c.title }}</span>
+            <span class="sub-count">{{ c.videos.length }}</span>
+          </a>
         }
       </div>
 

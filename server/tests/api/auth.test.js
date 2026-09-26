@@ -45,7 +45,12 @@ describe('login', () => {
   });
 
   it('creates a new user on first login, with the role from Authentik', async () => {
-    const res = await loginAs({ sub: 'sub-1', email: 'uj@test.local', name: 'Új Tag', bodorgo_role: 'member' });
+    const res = await loginAs({
+      sub: 'sub-1',
+      email: 'uj@test.local',
+      name: 'Új Tag',
+      bodorgo_role: 'member',
+    });
     expect(res.status).toBe(302);
     const user = await User.findOne({ sub: 'sub-1' });
     expect(user).toMatchObject({ email: 'uj@test.local', role: 'member' });
@@ -54,7 +59,12 @@ describe('login', () => {
 
   it('links an existing record (added by an admin) by email on first login', async () => {
     const existing = await createMember({ email: 'meglevo@test.local', role: 'guest' });
-    await loginAs({ sub: 'sub-2', email: 'meglevo@test.local', name: 'Meglévő', bodorgo_role: 'admin' });
+    await loginAs({
+      sub: 'sub-2',
+      email: 'meglevo@test.local',
+      name: 'Meglévő',
+      bodorgo_role: 'admin',
+    });
     const user = await User.findById(existing._id);
     expect(user).toMatchObject({ sub: 'sub-2', role: 'admin', name: 'Meglévő' });
     expect(await User.countDocuments({ email: 'meglevo@test.local' })).toBe(1);
@@ -90,11 +100,15 @@ describe('who am I', () => {
   it('a deleted user is logged out', async () => {
     const member = await createMember();
     await User.deleteOne({ _id: member._id });
-    expect((await request(app).get('/auth/me').set(asUser(member))).body).toEqual({ loggedIn: false });
+    expect((await request(app).get('/auth/me').set(asUser(member))).body).toEqual({
+      loggedIn: false,
+    });
   });
 
-  it('logout redirects to Authentik\'s end-session page', async () => {
-    const res = await request(app).get('/auth/logout').set(asUser(await createMember()));
+  it("logout redirects to Authentik's end-session page", async () => {
+    const res = await request(app)
+      .get('/auth/logout')
+      .set(asUser(await createMember()));
     expect(res.status).toBe(302);
   });
 });

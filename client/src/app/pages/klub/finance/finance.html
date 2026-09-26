@@ -12,14 +12,12 @@
         (change)="period.set($any($event.target).value)"
       >
         @for (y of availablePeriods(); track y) {
-        <option [value]="y">{{ y }}. év</option>
+          <option [value]="y">{{ y }}. év</option>
         }
         <option value="all">Teljes történet</option>
       </select>
       @if (isAdmin()) {
-      <button class="primary-btn" type="button" (click)="openModal()">
-        ＋ Új tétel
-      </button>
+        <button class="primary-btn" type="button" (click)="openModal()">＋ Új tétel</button>
       }
     </div>
   </div>
@@ -27,8 +25,11 @@
   <section class="hero" aria-label="Nettó pénzmozgás">
     <div>
       <div class="label">
-        {{ period() === 'all' ? 'Nettó pénzmozgás · teljes történet' : period()
-        + '. évi nettó pénzmozgás' }}
+        {{
+          period() === 'all'
+            ? 'Nettó pénzmozgás · teljes történet'
+            : period() + '. évi nettó pénzmozgás'
+        }}
       </div>
       <div class="balance">{{ money(balance()) }}</div>
       <div class="hero-sub">Bevételek − kiadások</div>
@@ -36,10 +37,14 @@
     <div class="hero-note">
       <div class="mini">Rögzített tételek</div>
       <strong>{{ filteredTransactions().length }}</strong>
-      <span
-        >{{ period() === 'all' ? 'A teljes történetben' : 'A ' + period() + '.
-        évben' }}</span
-      >
+      <span>{{
+        period() === 'all'
+          ? 'A teljes történetben'
+          : 'A ' +
+            period() +
+            '.
+        évben'
+      }}</span>
     </div>
   </section>
 
@@ -61,87 +66,93 @@
   </div>
 
   @if (isAdmin()) {
-  <section class="panel withdraw-panel">
-    <div class="panel-title">
-      <h2>Kiutalás Barionból</h2>
-      <span>0,1% díj, min. 70 Ft</span>
-    </div>
-    <p class="withdraw-note">
-      A Barion-fiókokban összegyűlt pénz innen utalható ki a klub valódi bankszámlájára, nagyon alacsony díjjal.
-    </p>
+    <section class="panel withdraw-panel">
+      <div class="panel-title">
+        <h2>Kiutalás Barionból</h2>
+        <span>0,1% díj, min. 70 Ft</span>
+      </div>
+      <p class="withdraw-note">
+        A Barion-fiókokban összegyűlt pénz innen utalható ki a klub valódi bankszámlájára, nagyon
+        alacsony díjjal.
+      </p>
 
-    @if (withdrawNotice(); as notice) {
-    <p class="withdraw-notice" [class.error]="notice.kind === 'error'">{{ notice.text }}</p>
-    }
+      @if (withdrawNotice(); as notice) {
+        <p class="withdraw-notice" [class.error]="notice.kind === 'error'">{{ notice.text }}</p>
+      }
 
-    <div class="withdraw-row">
-      <div class="withdraw-row-head">
-        <strong>Tagdíjak számlája</strong>
-        @if (!membershipWithdrawConfigured()) {
-        <span class="withdraw-inactive-badge">Még nincs beállítva</span>
-        }
+      <div class="withdraw-row">
+        <div class="withdraw-row-head">
+          <strong>Tagdíjak számlája</strong>
+          @if (!membershipWithdrawConfigured()) {
+            <span class="withdraw-inactive-badge">Még nincs beállítva</span>
+          }
+        </div>
+        <div class="withdraw-row-body">
+          <input
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Összeg (Ft)"
+            aria-label="Kiutalandó összeg a tagdíjak számlájáról"
+            [disabled]="!membershipWithdrawConfigured() || membershipWithdrawing()"
+            [value]="membershipWithdrawAmount()"
+            (input)="membershipWithdrawAmount.set($any($event.target).valueAsNumber || null)"
+          />
+          @if (membershipWithdrawAmount()) {
+            <span class="withdraw-preview">
+              Díj: {{ money(membershipWithdrawFee()) }} · Nettó:
+              {{ money(membershipWithdrawNet()) }}
+            </span>
+          }
+          <button
+            class="primary-btn"
+            type="button"
+            [disabled]="
+              !membershipWithdrawConfigured() ||
+              !membershipWithdrawAmount() ||
+              membershipWithdrawing()
+            "
+            (click)="withdrawMembership()"
+          >
+            {{ membershipWithdrawing() ? 'Kiutalás...' : 'Kiutalás' }}
+          </button>
+        </div>
       </div>
-      <div class="withdraw-row-body">
-        <input
-          type="number"
-          min="1"
-          step="1"
-          placeholder="Összeg (Ft)"
-          aria-label="Kiutalandó összeg a tagdíjak számlájáról"
-          [disabled]="!membershipWithdrawConfigured() || membershipWithdrawing()"
-          [value]="membershipWithdrawAmount()"
-          (input)="membershipWithdrawAmount.set($any($event.target).valueAsNumber || null)"
-        />
-        @if (membershipWithdrawAmount()) {
-        <span class="withdraw-preview">
-          Díj: {{ money(membershipWithdrawFee()) }} · Nettó: {{ money(membershipWithdrawNet()) }}
-        </span>
-        }
-        <button
-          class="primary-btn"
-          type="button"
-          [disabled]="!membershipWithdrawConfigured() || !membershipWithdrawAmount() || membershipWithdrawing()"
-          (click)="withdrawMembership()"
-        >
-          {{ membershipWithdrawing() ? 'Kiutalás...' : 'Kiutalás' }}
-        </button>
-      </div>
-    </div>
 
-    <div class="withdraw-row">
-      <div class="withdraw-row-head">
-        <strong>Előlegek számlája</strong>
-        @if (!tourWithdrawConfigured()) {
-        <span class="withdraw-inactive-badge">Még nincs beállítva</span>
-        }
+      <div class="withdraw-row">
+        <div class="withdraw-row-head">
+          <strong>Előlegek számlája</strong>
+          @if (!tourWithdrawConfigured()) {
+            <span class="withdraw-inactive-badge">Még nincs beállítva</span>
+          }
+        </div>
+        <div class="withdraw-row-body">
+          <input
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Összeg (Ft)"
+            aria-label="Kiutalandó összeg az előlegek számlájáról"
+            [disabled]="!tourWithdrawConfigured() || tourWithdrawing()"
+            [value]="tourWithdrawAmount()"
+            (input)="tourWithdrawAmount.set($any($event.target).valueAsNumber || null)"
+          />
+          @if (tourWithdrawAmount()) {
+            <span class="withdraw-preview">
+              Díj: {{ money(tourWithdrawFee()) }} · Nettó: {{ money(tourWithdrawNet()) }}
+            </span>
+          }
+          <button
+            class="primary-btn"
+            type="button"
+            [disabled]="!tourWithdrawConfigured() || !tourWithdrawAmount() || tourWithdrawing()"
+            (click)="withdrawTour()"
+          >
+            {{ tourWithdrawing() ? 'Kiutalás...' : 'Kiutalás' }}
+          </button>
+        </div>
       </div>
-      <div class="withdraw-row-body">
-        <input
-          type="number"
-          min="1"
-          step="1"
-          placeholder="Összeg (Ft)"
-          aria-label="Kiutalandó összeg az előlegek számlájáról"
-          [disabled]="!tourWithdrawConfigured() || tourWithdrawing()"
-          [value]="tourWithdrawAmount()"
-          (input)="tourWithdrawAmount.set($any($event.target).valueAsNumber || null)"
-        />
-        @if (tourWithdrawAmount()) {
-        <span class="withdraw-preview">
-          Díj: {{ money(tourWithdrawFee()) }} · Nettó: {{ money(tourWithdrawNet()) }}
-        </span>
-        }
-        <button
-          class="primary-btn"
-          type="button"
-          [disabled]="!tourWithdrawConfigured() || !tourWithdrawAmount() || tourWithdrawing()"
-          (click)="withdrawTour()"
-        >
-          {{ tourWithdrawing() ? 'Kiutalás...' : 'Kiutalás' }}
-        </button>
-      </div>
-    </div>
-  </section>
+    </section>
   }
 
   <div class="middle">
@@ -164,21 +175,21 @@
         "
       >
         @for (m of monthlyChart(); track m.label) {
-        <div class="month">
-          <div class="bars">
-            <div
-              class="bar in"
-              [style.height.%]="m.incomePct"
-              [title]="m.label + ': bevétel ' + money(m.income)"
-            ></div>
-            <div
-              class="bar out"
-              [style.height.%]="m.expensePct"
-              [title]="m.label + ': kiadás ' + money(m.expense)"
-            ></div>
+          <div class="month">
+            <div class="bars">
+              <div
+                class="bar in"
+                [style.height.%]="m.incomePct"
+                [title]="m.label + ': bevétel ' + money(m.income)"
+              ></div>
+              <div
+                class="bar out"
+                [style.height.%]="m.expensePct"
+                [title]="m.label + ': kiadás ' + money(m.expense)"
+              ></div>
+            </div>
+            <span class="month-label">{{ m.label }}</span>
           </div>
-          <span class="month-label">{{ m.label }}</span>
-        </div>
         }
       </div>
     </section>
@@ -190,18 +201,20 @@
       </div>
       <div class="category-list">
         @if (!categoryBreakdown().length) {
-        <p class="category-empty">Ebben az időszakban nincs kiadás.</p>
-        } @else { @for (c of categoryBreakdown(); track c.category) {
-        <div>
-          <div class="category-head">
-            <span>{{ c.category }}</span>
-            <strong>{{ money(c.amount) }}</strong>
-          </div>
-          <div class="track">
-            <div class="fill" [style.width.%]="c.pct"></div>
-          </div>
-        </div>
-        } }
+          <p class="category-empty">Ebben az időszakban nincs kiadás.</p>
+        } @else {
+          @for (c of categoryBreakdown(); track c.category) {
+            <div>
+              <div class="category-head">
+                <span>{{ c.category }}</span>
+                <strong>{{ money(c.amount) }}</strong>
+              </div>
+              <div class="track">
+                <div class="fill" [style.width.%]="c.pct"></div>
+              </div>
+            </div>
+          }
+        }
       </div>
     </section>
   </div>
@@ -227,165 +240,157 @@
         </thead>
         <tbody>
           @if (!filteredTransactions().length) {
-          <tr>
-            <td colspan="5" class="empty-row">
-              {{ loading() ? 'Betöltés...' : 'Erre az időszakra még nincs
-              rögzített tétel.' }}
-            </td>
-          </tr>
-          } @else { @for (t of filteredTransactions(); track t._id) {
-          <tr>
-            <td>{{ t.date | date: 'yyyy. MM. dd.' }}</td>
-            <td><strong>{{ t.name }}</strong></td>
-            <td>{{ t.category }}</td>
-            <td>
-              <span
-                class="type"
-                [class.in]="t.type === 'income'"
-                [class.out]="t.type === 'expense'"
-              >
-                {{ t.type === 'income' ? '↗ Bevétel' : '↘ Kiadás' }}
-              </span>
-            </td>
-            <td
-              class="amount"
-              [class.in]="t.type === 'income'"
-              [class.out]="t.type === 'expense'"
-            >
-              {{ t.type === 'income' ? '+' : '−' }}{{ money(t.amount,
-              t.currency) }}
-            </td>
-          </tr>
-          } }
+            <tr>
+              <td colspan="5" class="empty-row">
+                {{
+                  loading()
+                    ? 'Betöltés...'
+                    : 'Erre az időszakra még nincs
+              rögzített tétel.'
+                }}
+              </td>
+            </tr>
+          } @else {
+            @for (t of filteredTransactions(); track t._id) {
+              <tr>
+                <td>{{ t.date | date: 'yyyy. MM. dd.' }}</td>
+                <td>
+                  <strong>{{ t.name }}</strong>
+                </td>
+                <td>{{ t.category }}</td>
+                <td>
+                  <span
+                    class="type"
+                    [class.in]="t.type === 'income'"
+                    [class.out]="t.type === 'expense'"
+                  >
+                    {{ t.type === 'income' ? '↗ Bevétel' : '↘ Kiadás' }}
+                  </span>
+                </td>
+                <td
+                  class="amount"
+                  [class.in]="t.type === 'income'"
+                  [class.out]="t.type === 'expense'"
+                >
+                  {{ t.type === 'income' ? '+' : '−' }}{{ money(t.amount, t.currency) }}
+                </td>
+              </tr>
+            }
+          }
         </tbody>
       </table>
     </div>
   </section>
 
   <p class="footnote">
-    A klub pénzügyei · minden bejelentkezett tag látja, tételt csak admin
-    rögzíthet.
+    A klub pénzügyei · minden bejelentkezett tag látja, tételt csak admin rögzíthet.
   </p>
 </div>
 
 @if (showModal()) {
-<div class="modal-backdrop" (click)="closeModal()"></div>
-<div
-  class="modal-dialog"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="entryDialogTitle"
->
-  <form (submit)="onSubmit($event)" novalidate>
-    <div class="modal-head">
-      <div>
-        <div class="kicker">Adminisztráció</div>
-        <h2 id="entryDialogTitle">Új pénzmozgás</h2>
-      </div>
-      <button
-        class="icon-btn"
-        type="button"
-        aria-label="Bezárás"
-        (click)="closeModal()"
-      >
-        ✕
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="form-row">
-        <div class="field">
-          <label for="entryType">Típus</label>
-          <select
-            id="entryType"
-            [value]="formType()"
-            (change)="onTypeChange($any($event.target).value)"
-          >
-            <option value="income">Bevétel</option>
-            <option value="expense">Kiadás</option>
-          </select>
+  <div class="modal-backdrop" (click)="closeModal()"></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="entryDialogTitle">
+    <form (submit)="onSubmit($event)" novalidate>
+      <div class="modal-head">
+        <div>
+          <div class="kicker">Adminisztráció</div>
+          <h2 id="entryDialogTitle">Új pénzmozgás</h2>
         </div>
-        <div class="field">
-          <label for="entryDate">Dátum</label>
-          <input
-            id="entryDate"
-            type="date"
-            required
-            [value]="formDate()"
-            (change)="formDate.set($any($event.target).value)"
-          />
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="entryName">Megnevezés</label>
-        <input
-          id="entryName"
-          type="text"
-          maxlength="80"
-          required
-          placeholder="Pl. tagdíj vagy szállásköltség"
-          [value]="formName()"
-          (input)="formName.set($any($event.target).value)"
-        />
-      </div>
-
-      <div class="field">
-        <label for="entryCategory">Kategória</label>
-        <select
-          id="entryCategory"
-          [value]="formCategory()"
-          (change)="formCategory.set($any($event.target).value)"
-        >
-          @for (c of formCategoryOptions(); track c) {
-          <option [value]="c">{{ c }}</option>
-          }
-        </select>
-      </div>
-
-      <div class="form-row">
-        <div class="field">
-          <label for="entryAmount">Összeg</label>
-          <input
-            id="entryAmount"
-            type="number"
-            min="1"
-            step="1"
-            required
-            placeholder="0"
-            [value]="formAmount()"
-            (input)="formAmount.set($any($event.target).valueAsNumber)"
-          />
-        </div>
-        <div class="field">
-          <label for="entryCurrency">Pénznem</label>
-          <select
-            id="entryCurrency"
-            [value]="formCurrency()"
-            (change)="formCurrency.set($any($event.target).value)"
-          >
-            <option value="HUF">HUF</option>
-            <option value="EUR">EUR</option>
-          </select>
-        </div>
-      </div>
-
-      @if (formError()) {
-      <p class="form-error">{{ formError() }}</p>
-      }
-
-      <p class="demo-tip">
-        A tétel azonnal bekerül a klub közös pénzügyi nyilvántartásába.
-      </p>
-
-      <div class="modal-actions">
-        <button class="outline-btn" type="button" (click)="closeModal()">
-          Mégse
-        </button>
-        <button class="primary-btn" type="submit" [disabled]="saving()">
-          {{ saving() ? 'Mentés...' : 'Tétel mentése' }}
+        <button class="icon-btn" type="button" aria-label="Bezárás" (click)="closeModal()">
+          ✕
         </button>
       </div>
-    </div>
-  </form>
-</div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="field">
+            <label for="entryType">Típus</label>
+            <select
+              id="entryType"
+              [value]="formType()"
+              (change)="onTypeChange($any($event.target).value)"
+            >
+              <option value="income">Bevétel</option>
+              <option value="expense">Kiadás</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="entryDate">Dátum</label>
+            <input
+              id="entryDate"
+              type="date"
+              required
+              [value]="formDate()"
+              (change)="formDate.set($any($event.target).value)"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="entryName">Megnevezés</label>
+          <input
+            id="entryName"
+            type="text"
+            maxlength="80"
+            required
+            placeholder="Pl. tagdíj vagy szállásköltség"
+            [value]="formName()"
+            (input)="formName.set($any($event.target).value)"
+          />
+        </div>
+
+        <div class="field">
+          <label for="entryCategory">Kategória</label>
+          <select
+            id="entryCategory"
+            [value]="formCategory()"
+            (change)="formCategory.set($any($event.target).value)"
+          >
+            @for (c of formCategoryOptions(); track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="entryAmount">Összeg</label>
+            <input
+              id="entryAmount"
+              type="number"
+              min="1"
+              step="1"
+              required
+              placeholder="0"
+              [value]="formAmount()"
+              (input)="formAmount.set($any($event.target).valueAsNumber)"
+            />
+          </div>
+          <div class="field">
+            <label for="entryCurrency">Pénznem</label>
+            <select
+              id="entryCurrency"
+              [value]="formCurrency()"
+              (change)="formCurrency.set($any($event.target).value)"
+            >
+              <option value="HUF">HUF</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <p class="form-error">{{ formError() }}</p>
+        }
+
+        <p class="demo-tip">A tétel azonnal bekerül a klub közös pénzügyi nyilvántartásába.</p>
+
+        <div class="modal-actions">
+          <button class="outline-btn" type="button" (click)="closeModal()">Mégse</button>
+          <button class="primary-btn" type="submit" [disabled]="saving()">
+            {{ saving() ? 'Mentés...' : 'Tétel mentése' }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
 }

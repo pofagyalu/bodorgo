@@ -3,16 +3,16 @@
   <div class="card__header">
     <div class="card__picture">
       @if (coverUrl(); as url) {
-      <img
-        [ngSrc]="url"
-        [alt]="tour().title"
-        class="card__picture-img"
-        width="500"
-        height="333"
-        [priority]="priority()"
-      />
+        <img
+          [ngSrc]="url"
+          [alt]="tour().title"
+          class="card__picture-img"
+          width="500"
+          height="333"
+          [priority]="priority()"
+        />
       } @else {
-      <div class="card__picture-img card__picture-img--empty"></div>
+        <div class="card__picture-img card__picture-img--empty"></div>
       }
     </div>
 
@@ -54,9 +54,9 @@
       <div class="card__data">
         <mat-icon class="card__icon" color="primary">attach_money</mat-icon>
         @if (tour().price != null) {
-        <span>{{ formatForint(tour().price!) }} Ft/fő/éj</span>
+          <span>{{ formatForint(tour().price!) }} Ft/fő/éj</span>
         } @else {
-        <span>Nincs adat</span>
+          <span>Nincs adat</span>
         }
       </div>
     </div>
@@ -66,9 +66,7 @@
   <div class="card__footer">
     <p class="card__ratings">
       <span class="card__footer-value">{{ tour().ratingsAverage }}/10</span>
-      <span class="card__footer-text">
-        értékelés ({{ tour().ratingsQuantity }})
-      </span>
+      <span class="card__footer-text"> értékelés ({{ tour().ratingsQuantity }}) </span>
     </p>
 
     <a class="btn btn--green btn--small" [routerLink]="['/taborok', tour().slug]">Részletek</a>

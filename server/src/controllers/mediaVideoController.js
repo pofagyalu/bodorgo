@@ -2,7 +2,12 @@ import fs from 'fs';
 import path from 'path';
 import AppError from '../utils/appError.js';
 import config from '../config.js';
-import { VIDEO_EXTENSIONS, findSubtitlePath, resolveVideoPath, srtToVtt } from '../utils/videoFiles.js';
+import {
+  VIDEO_EXTENSIONS,
+  findSubtitlePath,
+  resolveVideoPath,
+  srtToVtt,
+} from '../utils/videoFiles.js';
 
 // The club's own videos that don't belong to any one tour - Média → Videók.
 // Nothing is stored in the database: each category is a Jellyfin-organized
@@ -26,13 +31,28 @@ export const MEDIA_VIDEO_CATEGORIES = [
     title: 'Bódorgó TV különkiadások',
     description: 'A Bódorgó TV rendkívüli adásai.',
   },
-  { key: 'farsang', folder: 'farsang', title: 'Farsangok', description: 'Jelmezek, amikre jobb nem emlékezni.' },
-  { key: 'reklam', folder: 'reklam', title: 'Reklámok', description: 'Termékek, amiket sehol nem lehet megvenni.' },
+  {
+    key: 'farsang',
+    folder: 'farsang',
+    title: 'Farsangok',
+    description: 'Jelmezek, amikre jobb nem emlékezni.',
+  },
+  {
+    key: 'reklam',
+    folder: 'reklam',
+    title: 'Reklámok',
+    description: 'Termékek, amiket sehol nem lehet megvenni.',
+  },
 ];
 
 // Jellyfin's cover images: a video's own "<name>-thumb.jpg" next to it,
 // and folder.jpg/.png for a whole category.
-const COVER_TYPES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
+const COVER_TYPES = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
 
 function categoryOf(key) {
   const category = MEDIA_VIDEO_CATEGORIES.find((c) => c.key === key);
@@ -48,7 +68,8 @@ function categoryRoot(category) {
 // A video's id is its path inside the category folder, base64url-encoded -
 // safe in a URL, and resolved back through resolveVideoPath, which refuses
 // anything that would step outside that folder.
-const encodeId = (relPath) => Buffer.from(relPath.replace(/\\/g, '/'), 'utf8').toString('base64url');
+const encodeId = (relPath) =>
+  Buffer.from(relPath.replace(/\\/g, '/'), 'utf8').toString('base64url');
 const decodeId = (id) => Buffer.from(id, 'base64url').toString('utf8');
 
 // Every video file in the category folder and its season subfolders.
@@ -106,7 +127,10 @@ function findFolderCover(root) {
 }
 
 function sendCover(res, filePath) {
-  res.setHeader('Content-Type', COVER_TYPES[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream');
+  res.setHeader(
+    'Content-Type',
+    COVER_TYPES[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream',
+  );
   // Covers change rarely; a short cache still picks up a replaced one soon.
   res.setHeader('Cache-Control', 'private, max-age=3600');
   res.sendFile(filePath);

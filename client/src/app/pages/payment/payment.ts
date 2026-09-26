@@ -152,18 +152,20 @@ export class Payment {
 
     this.starting.set(true);
     this.error.set(null);
-    this.paymentService.startTourAdvancePayment(this.tourId, [...this.selectedAttendeeIds()]).subscribe({
-      next: (res) => {
-        // A full navigation, not a client-side route change - the payer
-        // needs to actually leave the site for the gateway's own hosted
-        // page, then gets redirected straight back here (set server-side)
-        // once done.
-        window.location.href = res.data.gatewayUrl;
-      },
-      error: (err) => {
-        this.error.set(err?.error?.message ?? 'Hiba történt a fizetés indítása során.');
-        this.starting.set(false);
-      },
-    });
+    this.paymentService
+      .startTourAdvancePayment(this.tourId, [...this.selectedAttendeeIds()])
+      .subscribe({
+        next: (res) => {
+          // A full navigation, not a client-side route change - the payer
+          // needs to actually leave the site for the gateway's own hosted
+          // page, then gets redirected straight back here (set server-side)
+          // once done.
+          window.location.href = res.data.gatewayUrl;
+        },
+        error: (err) => {
+          this.error.set(err?.error?.message ?? 'Hiba történt a fizetés indítása során.');
+          this.starting.set(false);
+        },
+      });
   }
 }

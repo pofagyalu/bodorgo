@@ -1,4 +1,13 @@
-import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -147,7 +156,9 @@ export class AttendeeList implements OnInit {
     // Families ordered by their own first (alphabetically earliest)
     // member, so the roster still reads roughly alphabetically at a
     // glance rather than in arbitrary family-creation order.
-    const orderedEntries = [...groups.entries()].sort((a, b) => a[1][0].name.localeCompare(b[1][0].name, 'hu'));
+    const orderedEntries = [...groups.entries()].sort((a, b) =>
+      a[1][0].name.localeCompare(b[1][0].name, 'hu'),
+    );
 
     return orderedEntries.map(([key, members], i) => {
       const familyStripe = (i % 2) as 0 | 1;
@@ -233,18 +244,20 @@ export class AttendeeList implements OnInit {
     }
 
     this.savingNights.set(true);
-    this.tourService.updateAttendeeNights(this.tourId, row.reservationId, row.attendeeId, this.editNights).subscribe({
-      next: () => {
-        this.savingNights.set(false);
-        this.editingAttendeeId.set(null);
-        this.notifications.addSuccess('Éjszakák száma mentve');
-        this.nightsUpdated.emit();
-      },
-      error: (err) => {
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
-        this.savingNights.set(false);
-      },
-    });
+    this.tourService
+      .updateAttendeeNights(this.tourId, row.reservationId, row.attendeeId, this.editNights)
+      .subscribe({
+        next: () => {
+          this.savingNights.set(false);
+          this.editingAttendeeId.set(null);
+          this.notifications.addSuccess('Éjszakák száma mentve');
+          this.nightsUpdated.emit();
+        },
+        error: (err) => {
+          this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
+          this.savingNights.set(false);
+        },
+      });
   }
 
   // A real toggle: a friend hands the admin cash instead of transferring
@@ -303,19 +316,23 @@ export class AttendeeList implements OnInit {
     if (this.togglingFeeExemptId()) return;
     const next = !row.feeExempt;
     this.togglingFeeExemptId.set(row.attendeeId);
-    this.tourService.updateAttendeeFeeExempt(this.tourId, row.reservationId, row.attendeeId, next).subscribe({
-      next: () => {
-        this.togglingFeeExemptId.set(null);
-        this.notifications.addSuccess(
-          next ? `${row.name} díjmentesnek jelölve - semmit sem kell fizetnie.` : `${row.name} díjmentessége visszavonva.`,
-        );
-        this.nightsUpdated.emit();
-      },
-      error: (err) => {
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a rögzítés során.');
-        this.togglingFeeExemptId.set(null);
-      },
-    });
+    this.tourService
+      .updateAttendeeFeeExempt(this.tourId, row.reservationId, row.attendeeId, next)
+      .subscribe({
+        next: () => {
+          this.togglingFeeExemptId.set(null);
+          this.notifications.addSuccess(
+            next
+              ? `${row.name} díjmentesnek jelölve - semmit sem kell fizetnie.`
+              : `${row.name} díjmentessége visszavonva.`,
+          );
+          this.nightsUpdated.emit();
+        },
+        error: (err) => {
+          this.notifications.addError(err?.error?.message ?? 'Hiba történt a rögzítés során.');
+          this.togglingFeeExemptId.set(null);
+        },
+      });
   }
 
   // --- Lemondás (withdrawing someone from the tour) ---
@@ -353,22 +370,24 @@ export class AttendeeList implements OnInit {
     const row = this.withdrawing();
     if (!row || this.withdrawBusy()) return;
     this.withdrawBusy.set(true);
-    this.tourService.withdrawAttendee(this.tourId, row.reservationId, row.attendeeId, this.withdrawReason).subscribe({
-      next: (res) => {
-        this.withdrawBusy.set(false);
-        this.withdrawing.set(null);
-        this.notifications.addSuccess(
-          `${row.name} jelentkezése lemondva.` +
-            (res.data.roomsReopened ? ' A szobabeosztás újra szerkeszthető.' : ''),
-        );
-        this.loadCancellations();
-        this.nightsUpdated.emit();
-      },
-      error: (err) => {
-        this.withdrawBusy.set(false);
-        this.notifications.addError(err?.error?.message ?? 'A lemondás nem sikerült.');
-      },
-    });
+    this.tourService
+      .withdrawAttendee(this.tourId, row.reservationId, row.attendeeId, this.withdrawReason)
+      .subscribe({
+        next: (res) => {
+          this.withdrawBusy.set(false);
+          this.withdrawing.set(null);
+          this.notifications.addSuccess(
+            `${row.name} jelentkezése lemondva.` +
+              (res.data.roomsReopened ? ' A szobabeosztás újra szerkeszthető.' : ''),
+          );
+          this.loadCancellations();
+          this.nightsUpdated.emit();
+        },
+        error: (err) => {
+          this.withdrawBusy.set(false);
+          this.notifications.addError(err?.error?.message ?? 'A lemondás nem sikerült.');
+        },
+      });
   }
 
   // Admin-only: the tour's "Lemondások" list.

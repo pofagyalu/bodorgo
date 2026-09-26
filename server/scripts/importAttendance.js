@@ -93,7 +93,8 @@ async function ensureFamily(memberDefs) {
     // backfills the email onto it, instead of silently creating a
     // disconnected duplicate that "attended" this tour under a different
     // identity than their other tours.
-    const existing = (def.email && (await findByAnchor(def.email))) || (await findByAnchor(def.name));
+    const existing =
+      (def.email && (await findByAnchor(def.email))) || (await findByAnchor(def.name));
     matches.push({ def, existing });
   }
 
@@ -166,7 +167,9 @@ if (!tour) {
 
 if (replace) {
   const deleted = await Reservation.deleteMany({ tour: tour._id });
-  console.log(`--replace: removed ${deleted.deletedCount} existing reservation(s) for "${tour.title}".`);
+  console.log(
+    `--replace: removed ${deleted.deletedCount} existing reservation(s) for "${tour.title}".`,
+  );
 }
 
 const alreadyRegisteredIds = new Set(

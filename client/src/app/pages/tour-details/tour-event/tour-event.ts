@@ -64,7 +64,9 @@ export class TourEvent {
   // exactly this set when opened.
   myJoinedCandidateIds = computed(() => {
     const candidateIds = new Set(this.candidates.map((c) => c._id));
-    return new Set((this.event.participants ?? []).filter((p) => candidateIds.has(p.user)).map((p) => p.user));
+    return new Set(
+      (this.event.participants ?? []).filter((p) => candidateIds.has(p.user)).map((p) => p.user),
+    );
   });
 
   hasAnyOfMineJoined = computed(() => this.myJoinedCandidateIds().size > 0);
@@ -106,17 +108,19 @@ export class TourEvent {
     this.saving.set(true);
     this.saveError.set(null);
 
-    this.tourService.updateScheduleEventParticipants(this.tourId, this.event._id, [...this.selectedIds()]).subscribe({
-      next: (res) => {
-        this.updated.emit({ ...this.event, participants: res.data.participants });
-        this.saving.set(false);
-        this.pickerOpen.set(false);
-      },
-      error: (err) => {
-        this.saveError.set(err?.error?.message ?? 'Hiba történt a jelentkezés módosítása során.');
-        this.saving.set(false);
-      },
-    });
+    this.tourService
+      .updateScheduleEventParticipants(this.tourId, this.event._id, [...this.selectedIds()])
+      .subscribe({
+        next: (res) => {
+          this.updated.emit({ ...this.event, participants: res.data.participants });
+          this.saving.set(false);
+          this.pickerOpen.set(false);
+        },
+        error: (err) => {
+          this.saveError.set(err?.error?.message ?? 'Hiba történt a jelentkezés módosítása során.');
+          this.saving.set(false);
+        },
+      });
   }
 
   startEdit() {

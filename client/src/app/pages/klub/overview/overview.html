@@ -4,24 +4,19 @@
       <div class="kicker">Üdvözlünk a Bódorgó Klubban</div>
       <h1>Közös célok.<br />Közös történet.</h1>
       <p>
-        A Bódorgó Klub tagjai közösen szervezik programjaikat és alakítják a
-        klub életét. Itt követheted a tagság alakulását, a tagdíjakat és a közös
-        pénzügyeket.
+        A Bódorgó Klub tagjai közösen szervezik programjaikat és alakítják a klub életét. Itt
+        követheted a tagság alakulását, a tagdíjakat és a közös pénzügyeket.
       </p>
       <div class="overview-actions">
-        <a routerLink="/klub/felhasznalok" class="primary-btn"
-          >Tagok és tagdíjak →</a
-        >
-        <a routerLink="/klub/penzugyek" class="outline-btn"
-          >Pénzügyek megnyitása</a
-        >
+        <a routerLink="/klub/felhasznalok" class="primary-btn">Tagok és tagdíjak →</a>
+        <a routerLink="/klub/penzugyek" class="outline-btn">Pénzügyek megnyitása</a>
       </div>
     </div>
     <div class="intro-card">
       <strong>Nyitott klubélet</strong>
       <p>
-        A tagdíjak éves állapotát minden tag látja. A pénzügyi oldalon a klub
-        bevételei és kiadásai követhetők.
+        A tagdíjak éves állapotát minden tag látja. A pénzügyi oldalon a klub bevételei és kiadásai
+        követhetők.
       </p>
     </div>
   </section>
@@ -34,9 +29,7 @@
     </section>
     <section class="overview-stat">
       <div class="label">{{ currentYear }}. évi tagdíj rendezve</div>
-      <strong
-        >{{ paidThisYear().length }} / {{ eligibleThisYear().length }}</strong
-      >
+      <strong>{{ paidThisYear().length }} / {{ eligibleThisYear().length }}</strong>
       <small>Tag fizetett a jogosultak közül</small>
     </section>
     <section class="overview-stat">
@@ -71,21 +64,19 @@
       </div>
       <div class="year-chart" role="img" aria-label="Tagdíjak befizetésének aránya évenként">
         @for (row of yearProgressChart(); track row.year) {
-        <div class="year-col">
-          <div class="bar-track">
-            <div
-              class="bar"
-              [style.height.%]="row.pct"
-              [title]="row.year + ': ' + row.done + ' / ' + row.due + ' fizetve'"
-            ></div>
+          <div class="year-col">
+            <div class="bar-track">
+              <div
+                class="bar"
+                [style.height.%]="row.pct"
+                [title]="row.year + ': ' + row.done + ' / ' + row.due + ' fizetve'"
+              ></div>
+            </div>
+            <span class="year-label">{{ row.year }}</span>
           </div>
-          <span class="year-label">{{ row.year }}</span>
-        </div>
         }
       </div>
-      <a routerLink="/klub/felhasznalok" class="link-btn"
-        >Összes tag megtekintése →</a
-      >
+      <a routerLink="/klub/felhasznalok" class="link-btn">Összes tag megtekintése →</a>
     </section>
 
     <section class="panel">
@@ -95,27 +86,24 @@
       </div>
       <div class="activity-list">
         @if (!recentActivity().length) {
-        <p class="category-empty">Még nincs rögzített pénzmozgás.</p>
-        } @else { @for (t of recentActivity(); track t._id) {
-        <div class="activity-item">
-          <div>
-            <strong>{{ t.name }}</strong>
-            <small>{{ t.date | date: 'yyyy. MM. dd.' }}</small>
-          </div>
-          <b [class.out]="t.type === 'expense'">
-            {{ t.type === 'income' ? '+' : '−' }}{{ money(t.amount, t.currency)
-            }}
-          </b>
-        </div>
-        } }
+          <p class="category-empty">Még nincs rögzített pénzmozgás.</p>
+        } @else {
+          @for (t of recentActivity(); track t._id) {
+            <div class="activity-item">
+              <div>
+                <strong>{{ t.name }}</strong>
+                <small>{{ t.date | date: 'yyyy. MM. dd.' }}</small>
+              </div>
+              <b [class.out]="t.type === 'expense'">
+                {{ t.type === 'income' ? '+' : '−' }}{{ money(t.amount, t.currency) }}
+              </b>
+            </div>
+          }
+        }
       </div>
-      <a routerLink="/klub/penzugyek" class="link-btn"
-        >Teljes pénzügyi lista →</a
-      >
+      <a routerLink="/klub/penzugyek" class="link-btn">Teljes pénzügyi lista →</a>
     </section>
   </div>
 
-  <p class="footnote">
-    A klub bemutatkozó szövege és statisztikái valós adatokból számolódnak.
-  </p>
+  <p class="footnote">A klub bemutatkozó szövege és statisztikái valós adatokból számolódnak.</p>
 </div>

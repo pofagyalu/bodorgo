@@ -7,8 +7,7 @@ import { hungarianFromSuffix } from './hungarianGrammar.js';
 // domain is down to 10% quota since 2026-08-27 and shuts down entirely on
 // 2026-09-28. Everything else (api_key param, request/response shape) is
 // unchanged, per the migration announcement.
-const ORS_DIRECTIONS_URL =
-  'https://api.heigit.org/openrouteservice/v2/directions/driving-car';
+const ORS_DIRECTIONS_URL = 'https://api.heigit.org/openrouteservice/v2/directions/driving-car';
 
 // Same api.openrouteservice.org -> api.heigit.org migration as the
 // directions endpoint above, but geocoding moved under its own "pelias"
@@ -82,7 +81,9 @@ export async function geocodeAddress(text) {
     const data = await res.json();
     const coords = data?.features?.[0]?.geometry?.coordinates; // GeoJSON order: [lng, lat]
     if (!Array.isArray(coords) || coords.length !== 2) {
-      logger.error(`OpenRouteService geocoding response had no match for "${text}": ${JSON.stringify(data)}`);
+      logger.error(
+        `OpenRouteService geocoding response had no match for "${text}": ${JSON.stringify(data)}`,
+      );
       return undefined;
     }
 
@@ -110,9 +111,7 @@ export async function computeDrivingRoute(from, to) {
 
     const res = await fetch(url);
     if (!res.ok) {
-      logger.error(
-        `OpenRouteService request failed: ${res.status} ${await res.text()}`,
-      );
+      logger.error(`OpenRouteService request failed: ${res.status} ${await res.text()}`);
       return undefined;
     }
 
@@ -121,9 +120,7 @@ export async function computeDrivingRoute(from, to) {
     const meters = segment?.distance;
     const seconds = segment?.duration;
     if (typeof meters !== 'number' || typeof seconds !== 'number') {
-      logger.error(
-        `OpenRouteService response missing distance/duration: ${JSON.stringify(data)}`,
-      );
+      logger.error(`OpenRouteService response missing distance/duration: ${JSON.stringify(data)}`);
       return undefined;
     }
 

@@ -24,7 +24,9 @@ export interface MembershipFeesResponse {
 // The fee for one year: the latest row that has started by then - same
 // rule as the server's feeForYear.
 export function feeForYear(fees: MembershipFee[], year: number): number | null {
-  const row = [...fees].filter((f) => f.fromYear <= year).sort((a, b) => b.fromYear - a.fromYear)[0];
+  const row = [...fees]
+    .filter((f) => f.fromYear <= year)
+    .sort((a, b) => b.fromYear - a.fromYear)[0];
   return row ? row.amount : null;
 }
 
@@ -39,8 +41,11 @@ export class SettingsService {
 
   // Admin-only - replaces the whole table.
   updateMembershipFees(fees: MembershipFee[]) {
-    return this.http.put<{ status: string; data: { fees: MembershipFee[] } }>(`${this.apiUrl}/membership-fees`, {
-      fees,
-    });
+    return this.http.put<{ status: string; data: { fees: MembershipFee[] } }>(
+      `${this.apiUrl}/membership-fees`,
+      {
+        fees,
+      },
+    );
   }
 }

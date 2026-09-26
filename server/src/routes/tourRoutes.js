@@ -8,10 +8,19 @@ import {
   getCancellations,
 } from '../controllers/reservationController.js';
 import * as tourImageController from '../controllers/tourImageController.js';
-import { getTourVideo, getTourVideoCover, getTourVideoSubtitles } from '../controllers/tourVideoController.js';
+import {
+  getTourVideo,
+  getTourVideoCover,
+  getTourVideoSubtitles,
+} from '../controllers/tourVideoController.js';
 import * as reviewController from '../controllers/reviewController.js';
 import { downloadTourPdf, emailTourPdf } from '../controllers/tourPdfController.js';
-import { getMailings, saveDraft, sendTest, sendToAttendees } from '../controllers/mailingController.js';
+import {
+  getMailings,
+  saveDraft,
+  sendTest,
+  sendToAttendees,
+} from '../controllers/mailingController.js';
 import { createTourPoll } from '../controllers/pollController.js';
 import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
 import {
@@ -20,7 +29,11 @@ import {
   uploadTourDocument,
   deleteTourDocument,
 } from '../controllers/tourDocumentController.js';
-import { uploadCoverMiddleware, uploadTourCover, getTourCover } from '../controllers/tourCoverController.js';
+import {
+  uploadCoverMiddleware,
+  uploadTourCover,
+  getTourCover,
+} from '../controllers/tourCoverController.js';
 import { updateAccommodation } from '../controllers/accommodationController.js';
 import { getRoomBoard, assignRoom, setFinalized } from '../controllers/roomAllocationController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
@@ -32,9 +45,7 @@ const router = express.Router();
 // place and date for the logged-out landing page's scrolling ticker.
 router.route('/ticker').get(tourController.getTicker);
 
-router
-  .route('/last-3')
-  .get(requireAuth, tourController.aliasLastTours, tourController.getAlltours);
+router.route('/last-3').get(requireAuth, tourController.aliasLastTours, tourController.getAlltours);
 
 router.route('/tour-stats').get(requireAuth, tourController.getTourStats);
 router.route('/montly-plan/:year').get(requireAuth, tourController.getMonthlyPlan);
@@ -60,7 +71,9 @@ router.route('/:id/mailings').get(requireAuth, restrictTo('admin'), getMailings)
 router.route('/:id/mailings/draft').put(requireAuth, restrictTo('admin'), saveDraft);
 router.route('/:id/mailings/test').post(requireAuth, restrictTo('admin'), sendTest);
 router.route('/:id/mailings/send').post(requireAuth, restrictTo('admin'), sendToAttendees);
-router.route('/:id/attendees/export.xlsx').get(requireAuth, restrictTo('admin'), downloadAttendeesExcel);
+router
+  .route('/:id/attendees/export.xlsx')
+  .get(requireAuth, restrictTo('admin'), downloadAttendeesExcel);
 
 // Cover image - stored in the database (see tourCoverModel.js), viewable
 // by any logged-in user, uploadable by an admin.
@@ -86,7 +99,9 @@ router.route('/:id/rooms/finalized').put(requireAuth, restrictTo('admin'), setFi
 router
   .route('/:tourId/documents')
   .post(requireAuth, restrictTo('admin'), loadTourForUpload, uploadMiddleware, uploadTourDocument);
-router.route('/:tourId/documents/:documentId').delete(requireAuth, restrictTo('admin'), deleteTourDocument);
+router
+  .route('/:tourId/documents/:documentId')
+  .delete(requireAuth, restrictTo('admin'), deleteTourDocument);
 
 router.route('/:tourId/signup').post(requireAuth, signUpForTour);
 router
@@ -97,7 +112,9 @@ router
   .patch(requireAuth, restrictTo('admin'), updateAttendeeFeeExempt);
 // "Lemondás" - taking one person off the tour (see withdrawAttendee for
 // who may withdraw whom), and the admins' list of them.
-router.route('/:tourId/reservations/:reservationId/attendees/:attendeeId').delete(requireAuth, withdrawAttendee);
+router
+  .route('/:tourId/reservations/:reservationId/attendees/:attendeeId')
+  .delete(requireAuth, withdrawAttendee);
 router.route('/:tourId/cancellations').get(requireAuth, restrictTo('admin'), getCancellations);
 // A poll started from the tour's chat - by any attendee (see pollController.js).
 router.route('/:tourId/polls').post(requireAuth, createTourPoll);

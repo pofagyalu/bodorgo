@@ -67,7 +67,10 @@ const config = {
   // unchanged until a dedicated second wallet is actually configured.
   barion: {
     posKey: process.env.BARION_POS_KEY,
-    baseUrl: process.env.BARION_ENV === 'production' ? 'https://api.barion.com' : 'https://api.test.barion.com',
+    baseUrl:
+      process.env.BARION_ENV === 'production'
+        ? 'https://api.barion.com'
+        : 'https://api.test.barion.com',
     membership: {
       payeeEmail: process.env.BARION_MEMBERSHIP_PAYEE_EMAIL || process.env.BARION_PAYEE_EMAIL,
       walletKey: process.env.BARION_MEMBERSHIP_WALLET_KEY,
@@ -121,7 +124,8 @@ const config = {
   // (see mediaVideoController.js). The tests point each at its own
   // temporary folder instead (VIDEOS_ROOT / MEDIA_VIDEOS_ROOT).
   videosRoot:
-    process.env.VIDEOS_ROOT || (process.env.MEDIA_ROOT ? path.join(process.env.MEDIA_ROOT, 'a-bodorgo-klan') : undefined),
+    process.env.VIDEOS_ROOT ||
+    (process.env.MEDIA_ROOT ? path.join(process.env.MEDIA_ROOT, 'a-bodorgo-klan') : undefined),
   mediaVideosRoot: process.env.MEDIA_VIDEOS_ROOT || process.env.MEDIA_ROOT,
   // The 12-hourly "your tour's video is ready" e-mails (see server.js) -
   // switched on in the live server's .env only.
@@ -142,9 +146,7 @@ const config = {
 
 // Shared by Express's cors() middleware and Socket.IO's own cors option, so
 // both always agree on the same allow-list.
-config.corsOrigins = (
-  config.clientOrigin || 'https://bodorgo.hu,http://localhost:4200'
-)
+config.corsOrigins = (config.clientOrigin || 'https://bodorgo.hu,http://localhost:4200')
   .split(',')
   .map((origin) => origin.trim());
 

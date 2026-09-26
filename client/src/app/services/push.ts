@@ -21,17 +21,28 @@ export class PushService {
   readonly state = signal<PushState>('off');
 
   private get supported(): boolean {
-    return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    return (
+      typeof window !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window &&
+      'Notification' in window
+    );
   }
 
   // iPhone/iPad Safari only allows web push from a site added to the home
   // screen (and opened from there).
   get isIos(): boolean {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
   }
 
   private get standalone(): boolean {
-    return window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    return (
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
+    );
   }
 
   private registration(): Promise<ServiceWorkerRegistration> {
@@ -67,7 +78,10 @@ export class PushService {
     const reg = await this.registration();
     const sub =
       (await reg.pushManager.getSubscription()) ??
-      (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToBytes(publicKey) }));
+      (await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToBytes(publicKey),
+      }));
     await firstValueFrom(this.http.post(`${this.apiUrl}/subscriptions`, sub.toJSON()));
     this.state.set('on');
   }
@@ -75,7 +89,11 @@ export class PushService {
   async disable(): Promise<void> {
     const sub = await (await this.registration()).pushManager.getSubscription();
     if (sub) {
-      await firstValueFrom(this.http.request('DELETE', `${this.apiUrl}/subscriptions`, { body: { endpoint: sub.endpoint } }));
+      await firstValueFrom(
+        this.http.request('DELETE', `${this.apiUrl}/subscriptions`, {
+          body: { endpoint: sub.endpoint },
+        }),
+      );
       await sub.unsubscribe();
     }
     this.state.set('off');
@@ -90,13 +108,17 @@ export class PushService {
   }
 
   setChatMuted(tourId: string, muted: boolean) {
-    return this.http.put<{ data: { muted: boolean } }>(`${this.apiUrl}/chat-mutes/${tourId}`, { muted });
+    return this.http.put<{ data: { muted: boolean } }>(`${this.apiUrl}/chat-mutes/${tourId}`, {
+      muted,
+    });
   }
 }
 
 // The server's VAPID public key (base64url) as the bytes subscribe() wants.
 function urlBase64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
-  const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4))
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
   const raw = atob(padded);
   const bytes = new Uint8Array(new ArrayBuffer(raw.length));
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);

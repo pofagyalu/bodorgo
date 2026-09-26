@@ -1,69 +1,98 @@
 <div class="payment-page">
   @if (loading()) {
-  <p class="loading-note">Betöltés...</p>
+    <p class="loading-note">Betöltés...</p>
   } @else if (error()) {
-  <p class="error-note">{{ error() }}</p>
+    <p class="error-note">{{ error() }}</p>
   } @else {
-  <h1 class="page-title">Előleg befizetés</h1>
-  <p class="tour-subtitle">
-    <a [routerLink]="['/taborok', tourSlug()]">{{ tourTitle() }}</a>
-  </p>
+    <h1 class="page-title">Előleg befizetés</h1>
+    <p class="tour-subtitle">
+      <a [routerLink]="['/taborok', tourSlug()]">{{ tourTitle() }}</a>
+    </p>
 
-  @if (returningPaymentId) {
-  <!-- Landed back here from Stripe's own Checkout page - show the result
+    @if (returningPaymentId) {
+      <!-- Landed back here from Stripe's own Checkout page - show the result
        instead of the pick-who-to-pay form, which no longer applies (the
        payment this page started has already been decided one way or
        another by now). -->
-  @if (checkingResult()) {
-  <p class="loading-note">A fizetés eredményének ellenőrzése...</p>
-  } @else if (resultStatus() === 'Succeeded') {
-  <p class="result-banner result-banner--success">✔ A fizetés sikeres volt, köszönjük!</p>
-  <a [routerLink]="['/taborok', tourSlug()]" class="btn btn--green">Vissza a tábor oldalára</a>
-  } @else if (resultStatus() === 'Failed' || resultStatus() === 'Canceled' || resultStatus() === 'Expired') {
-  <p class="result-banner result-banner--failed">✘ A fizetés nem sikerült ({{ resultStatus() }}). Próbáld meg újra.</p>
-  <a [routerLink]="['/taborok', tourSlug(), 'befizetes']" class="btn btn--green">Vissza a fizetéshez</a>
-  } @else {
-  <p class="result-banner">A fizetés még feldolgozás alatt van, kérjük próbáld frissíteni az oldalt kicsit később.</p>
-  <a [routerLink]="['/taborok', tourSlug()]" class="btn btn--green">Vissza a tábor oldalára</a>
-  } } @else {
-  <!-- Normal pick-who-to-pay form. -->
-  @if (myGroup().length === 0) {
-  <p class="empty-note">Nincs kifizetendő előleg ehhez a táborhoz.</p>
-  } @else {
-  <p class="field-note">
-    Az alábbi listában a családod (vagy te magad) közül azok szerepelnek, akiknek még nincs kifizetve az előlege. Ha
-    valakiért most nem szeretnél fizetni, vedd ki a pipát mellőle - őt majd később is befizetheted.
-  </p>
+      @if (checkingResult()) {
+        <p class="loading-note">A fizetés eredményének ellenőrzése...</p>
+      } @else if (resultStatus() === 'Succeeded') {
+        <p class="result-banner result-banner--success">✔ A fizetés sikeres volt, köszönjük!</p>
+        <a [routerLink]="['/taborok', tourSlug()]" class="btn btn--green"
+          >Vissza a tábor oldalára</a
+        >
+      } @else if (
+        resultStatus() === 'Failed' || resultStatus() === 'Canceled' || resultStatus() === 'Expired'
+      ) {
+        <p class="result-banner result-banner--failed">
+          ✘ A fizetés nem sikerült ({{ resultStatus() }}). Próbáld meg újra.
+        </p>
+        <a [routerLink]="['/taborok', tourSlug(), 'befizetes']" class="btn btn--green"
+          >Vissza a fizetéshez</a
+        >
+      } @else {
+        <p class="result-banner">
+          A fizetés még feldolgozás alatt van, kérjük próbáld frissíteni az oldalt kicsit később.
+        </p>
+        <a [routerLink]="['/taborok', tourSlug()]" class="btn btn--green"
+          >Vissza a tábor oldalára</a
+        >
+      }
+    } @else {
+      <!-- Normal pick-who-to-pay form. -->
+      @if (myGroup().length === 0) {
+        <p class="empty-note">Nincs kifizetendő előleg ehhez a táborhoz.</p>
+      } @else {
+        <p class="field-note">
+          Az alábbi listában a családod (vagy te magad) közül azok szerepelnek, akiknek még nincs
+          kifizetve az előlege. Ha valakiért most nem szeretnél fizetni, vedd ki a pipát mellőle -
+          őt majd később is befizetheted.
+        </p>
 
-  <ul class="payer-list">
-    @for (p of myGroup(); track p.attendeeId) {
-    <li class="payer-row">
-      <label class="payer-checkbox">
-        <input type="checkbox" [checked]="isSelected(p.attendeeId)" (change)="toggleSelected(p.attendeeId)" />
-        {{ p.name }}
-      </label>
-      <span class="payer-amount">{{ formatForint(p.advance) }} Ft</span>
-    </li>
+        <ul class="payer-list">
+          @for (p of myGroup(); track p.attendeeId) {
+            <li class="payer-row">
+              <label class="payer-checkbox">
+                <input
+                  type="checkbox"
+                  [checked]="isSelected(p.attendeeId)"
+                  (change)="toggleSelected(p.attendeeId)"
+                />
+                {{ p.name }}
+              </label>
+              <span class="payer-amount">{{ formatForint(p.advance) }} Ft</span>
+            </li>
+          }
+        </ul>
+
+        <div class="total-row">
+          <span>Részösszeg</span>
+          <span>{{ formatForint(totalToPay()) }} Ft</span>
+        </div>
+        <div class="total-row total-row--fee">
+          <span>Barion díj (1,6%)</span>
+          <span>{{ formatForint(barionFee()) }} Ft</span>
+        </div>
+        <div class="total-row total-row--grand">
+          <span>Fizetendő végösszeg</span>
+          <span class="total-amount">{{ formatForint(grandTotalToPay()) }} Ft</span>
+        </div>
+
+        <p class="field-note">
+          A Fizetés gombra kattintva a Barion biztonságos fizetési oldalára kerülsz.
+        </p>
+
+        <button
+          type="button"
+          class="btn btn--green"
+          [disabled]="!canPay() || starting()"
+          (click)="pay()"
+        >
+          {{
+            starting() ? 'Átirányítás...' : 'Fizetés (' + formatForint(grandTotalToPay()) + ' Ft)'
+          }}
+        </button>
+      }
     }
-  </ul>
-
-  <div class="total-row">
-    <span>Részösszeg</span>
-    <span>{{ formatForint(totalToPay()) }} Ft</span>
-  </div>
-  <div class="total-row total-row--fee">
-    <span>Barion díj (1,6%)</span>
-    <span>{{ formatForint(barionFee()) }} Ft</span>
-  </div>
-  <div class="total-row total-row--grand">
-    <span>Fizetendő végösszeg</span>
-    <span class="total-amount">{{ formatForint(grandTotalToPay()) }} Ft</span>
-  </div>
-
-  <p class="field-note">A Fizetés gombra kattintva a Barion biztonságos fizetési oldalára kerülsz.</p>
-
-  <button type="button" class="btn btn--green" [disabled]="!canPay() || starting()" (click)="pay()">
-    {{ starting() ? 'Átirányítás...' : 'Fizetés (' + formatForint(grandTotalToPay()) + ' Ft)' }}
-  </button>
-  } } }
+  }
 </div>

@@ -14,7 +14,14 @@ const stripe = new Stripe(config.stripe.secretKey);
 // it's only special-cased for *payouts*, not charges), unlike genuinely
 // zero-decimal currencies like JPY. Getting this wrong would silently
 // charge 100x too much or too little.
-export async function createCheckoutSession({ referenceId, amount, payerEmail, successUrl, cancelUrl, description }) {
+export async function createCheckoutSession({
+  referenceId,
+  amount,
+  payerEmail,
+  successUrl,
+  cancelUrl,
+  description,
+}) {
   return stripe.checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],

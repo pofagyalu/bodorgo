@@ -1,215 +1,264 @@
 @if (auth.user()?.role !== 'admin') {
-<div class="tour-edit-page">
-  <p class="denied-note">Nincs jogosultságod ehhez az oldalhoz.</p>
-</div>
+  <div class="tour-edit-page">
+    <p class="denied-note">Nincs jogosultságod ehhez az oldalhoz.</p>
+  </div>
 } @else {
-<div class="tour-edit-page">
-  <h1 class="page-title">{{ isEditMode ? 'Tábor szerkesztése' : 'Új tábor létrehozása' }}</h1>
+  <div class="tour-edit-page">
+    <h1 class="page-title">{{ isEditMode ? 'Tábor szerkesztése' : 'Új tábor létrehozása' }}</h1>
 
-  @if (loading()) {
-  <p class="loading-note">Betöltés...</p>
-  } @else {
-  <form class="tour-form" (ngSubmit)="save()">
-    <div class="form-row">
-      <label>Sorszám<input type="number" [(ngModel)]="form.order" name="order" required /></label>
-      <label>Cím<input type="text" [(ngModel)]="form.title" name="title" required /></label>
-    </div>
+    @if (loading()) {
+      <p class="loading-note">Betöltés...</p>
+    } @else {
+      <form class="tour-form" (ngSubmit)="save()">
+        <div class="form-row">
+          <label
+            >Sorszám<input type="number" [(ngModel)]="form.order" name="order" required
+          /></label>
+          <label>Cím<input type="text" [(ngModel)]="form.title" name="title" required /></label>
+        </div>
 
-    <div class="form-row">
-      <label>Helyszín neve<input type="text" [(ngModel)]="form.placeName" name="placeName" /></label>
-      <label>Cím (utca, város)<input type="text" [(ngModel)]="form.address" name="address" /></label>
-    </div>
+        <div class="form-row">
+          <label
+            >Helyszín neve<input type="text" [(ngModel)]="form.placeName" name="placeName"
+          /></label>
+          <label
+            >Cím (utca, város)<input type="text" [(ngModel)]="form.address" name="address"
+          /></label>
+        </div>
 
-    <div class="form-row">
-      <label
-        >Szélesség (lat)
-        <input type="number" step="any" [(ngModel)]="form.lat" name="lat" (paste)="onCoordinatePaste($event)" />
-      </label>
-      <label>Hosszúság (lng)<input type="number" step="any" [(ngModel)]="form.lng" name="lng" /></label>
-    </div>
+        <div class="form-row">
+          <label
+            >Szélesség (lat)
+            <input
+              type="number"
+              step="any"
+              [(ngModel)]="form.lat"
+              name="lat"
+              (paste)="onCoordinatePaste($event)"
+            />
+          </label>
+          <label
+            >Hosszúság (lng)<input type="number" step="any" [(ngModel)]="form.lng" name="lng"
+          /></label>
+        </div>
 
-    <div class="form-row">
-      <label
-        >Kezdés
-        <input type="datetime-local" [(ngModel)]="form.startDateLocal" name="startDateLocal" required
-      /></label>
-      <label>Időtartam (nap)<input type="number" [(ngModel)]="form.duration" name="duration" required /></label>
-    </div>
+        <div class="form-row">
+          <label
+            >Kezdés
+            <input
+              type="datetime-local"
+              [(ngModel)]="form.startDateLocal"
+              name="startDateLocal"
+              required
+          /></label>
+          <label
+            >Időtartam (nap)<input
+              type="number"
+              [(ngModel)]="form.duration"
+              name="duration"
+              required
+          /></label>
+        </div>
 
-    <div class="form-row">
-      <label
-        >Maximum létszám
-        <input type="number" [(ngModel)]="form.maxCapacity" name="maxCapacity" required
-      /></label>
-    </div>
+        <div class="form-row">
+          <label
+            >Maximum létszám
+            <input type="number" [(ngModel)]="form.maxCapacity" name="maxCapacity" required
+          /></label>
+        </div>
 
-    <!-- The accommodation payment breakdown shown per-attendee on the
+        <!-- The accommodation payment breakdown shown per-attendee on the
          tour-details page (Teljes ár/Előleg/Fizetendő) - all optional, see
          reservationController.js's computeAttendeePayments. The tour's
          advertised price (Ár) is no longer edited here at all - it's
          server-derived from these once accommodationPricePerNight is set
          (see tourModel.js's pre('save') hook), and shown on the tour card
          instead, not on this admin form. -->
-    <label class="form-field-full"
-      >Árazás típusa
-      <select [(ngModel)]="form.pricingMode" name="pricingMode">
-        <option value="perHouse">Egész házra (fix ár/éjszaka)</option>
-        <option value="perPerson">Személyenként (fő/éjszaka, gyerekárral)</option>
-      </select>
-    </label>
-    <p class="field-note">
-      @if (form.pricingMode === 'perHouse') { A megadott ár a teljes szállás egy éjszakára eső ára - ez oszlik el a
-      résztvevők között az éjszakáik arányában. } @else { A megadott ár egy felnőtt egy éjszakájának ára - a gyerekár
-      és az életkorhatár alább külön állítható be. }
-    </p>
+        <label class="form-field-full"
+          >Árazás típusa
+          <select [(ngModel)]="form.pricingMode" name="pricingMode">
+            <option value="perHouse">Egész házra (fix ár/éjszaka)</option>
+            <option value="perPerson">Személyenként (fő/éjszaka, gyerekárral)</option>
+          </select>
+        </label>
+        <p class="field-note">
+          @if (form.pricingMode === 'perHouse') {
+            A megadott ár a teljes szállás egy éjszakára eső ára - ez oszlik el a résztvevők között
+            az éjszakáik arányában.
+          } @else {
+            A megadott ár egy felnőtt egy éjszakájának ára - a gyerekár és az életkorhatár alább
+            külön állítható be.
+          }
+        </p>
 
-    <div class="form-row">
-      <label class="currency-field"
-        >Pénznem
-        <select [(ngModel)]="form.accommodationCurrency" name="accommodationCurrency">
-          <option value="HUF">HUF</option>
-          <option value="EUR">EUR</option>
-        </select>
-      </label>
-      <label class="field-narrow"
-        >{{ form.pricingMode === 'perPerson' ? 'Felnőtt ár / fő / éjszaka' : 'Szállás ára / éjszaka' }}
-        <input type="number" [(ngModel)]="form.accommodationPricePerNight" name="accommodationPricePerNight"
-      /></label>
-      <label class="field-tiny"
-        >Előleg (%)
-        <input
-          type="number"
-          [(ngModel)]="form.advancePaymentPercentage"
-          name="advancePaymentPercentage"
-          min="0"
-          max="100"
-      /></label>
-      @if (form.pricingMode === 'perPerson') {
-      <label class="field-narrow"
-        >Gyermekár / fő / éjszaka
-        <input
-          type="number"
-          [(ngModel)]="form.childPricePerNight"
-          name="childPricePerNight"
-          placeholder="Ha üres, felnőttár"
-      /></label>
-      <label class="field-narrow"
-        >Gyermek életkorhatár (év)
-        <input type="number" [(ngModel)]="form.childAgeLimitYears" name="childAgeLimitYears" min="0" />
-      </label>
-      }
-      @if (form.accommodationCurrency === 'EUR') {
-      <label class="field-narrow"
-        >EUR/HUF árfolyam
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          [(ngModel)]="form.eurHufExchangeRate"
-          name="eurHufExchangeRate"
-          placeholder="pl. 395"
-      /></label>
-      }
-    </div>
-    @if (form.pricingMode === 'perPerson') {
-    <p class="field-note">
-      Az életkort a tábor kezdő napjára számoljuk ki, nem a mai napra - aki a tábor alatt még a korhatár alatt van,
-      gyerekárat fizet akkor is, ha közben időközben elmúlt idősebb.
-    </p>
-    }
-    @if (form.accommodationCurrency === 'EUR') {
-    <p class="field-note">
-      A megadott árfolyammal átváltva jelenik meg a tábor hirdetett ára, és ez alapján számoljuk ki forintban minden
-      résztvevő fizetendő összegét is - a résztvevők listája (Teljes ár/Előleg/Fizetendő) mindig forintban mutatja az
-      összegeket, függetlenül attól, hogy a szállást euróban árazták.
-    </p>
-    }
+        <div class="form-row">
+          <label class="currency-field"
+            >Pénznem
+            <select [(ngModel)]="form.accommodationCurrency" name="accommodationCurrency">
+              <option value="HUF">HUF</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </label>
+          <label class="field-narrow"
+            >{{
+              form.pricingMode === 'perPerson'
+                ? 'Felnőtt ár / fő / éjszaka'
+                : 'Szállás ára / éjszaka'
+            }}
+            <input
+              type="number"
+              [(ngModel)]="form.accommodationPricePerNight"
+              name="accommodationPricePerNight"
+          /></label>
+          <label class="field-tiny"
+            >Előleg (%)
+            <input
+              type="number"
+              [(ngModel)]="form.advancePaymentPercentage"
+              name="advancePaymentPercentage"
+              min="0"
+              max="100"
+          /></label>
+          @if (form.pricingMode === 'perPerson') {
+            <label class="field-narrow"
+              >Gyermekár / fő / éjszaka
+              <input
+                type="number"
+                [(ngModel)]="form.childPricePerNight"
+                name="childPricePerNight"
+                placeholder="Ha üres, felnőttár"
+            /></label>
+            <label class="field-narrow"
+              >Gyermek életkorhatár (év)
+              <input
+                type="number"
+                [(ngModel)]="form.childAgeLimitYears"
+                name="childAgeLimitYears"
+                min="0"
+              />
+            </label>
+          }
+          @if (form.accommodationCurrency === 'EUR') {
+            <label class="field-narrow"
+              >EUR/HUF árfolyam
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                [(ngModel)]="form.eurHufExchangeRate"
+                name="eurHufExchangeRate"
+                placeholder="pl. 395"
+            /></label>
+          }
+        </div>
+        @if (form.pricingMode === 'perPerson') {
+          <p class="field-note">
+            Az életkort a tábor kezdő napjára számoljuk ki, nem a mai napra - aki a tábor alatt még
+            a korhatár alatt van, gyerekárat fizet akkor is, ha közben időközben elmúlt idősebb.
+          </p>
+        }
+        @if (form.accommodationCurrency === 'EUR') {
+          <p class="field-note">
+            A megadott árfolyammal átváltva jelenik meg a tábor hirdetett ára, és ez alapján
+            számoljuk ki forintban minden résztvevő fizetendő összegét is - a résztvevők listája
+            (Teljes ár/Előleg/Fizetendő) mindig forintban mutatja az összegeket, függetlenül attól,
+            hogy a szállást euróban árazták.
+          </p>
+        }
 
-    <div class="form-row">
-      <label
-        >Klub hozzájárulása (Ft)
-        <input
-          type="number"
-          [(ngModel)]="form.clubSubsidyAmount"
-          name="clubSubsidyAmount"
-          [disabled]="!subsidyAllowed"
-          [title]="subsidyAllowed ? '' : 'A klub 2019-ben alakult, korábbi táborhoz nem járulhatott hozzá.'"
-      /></label>
-    </div>
-    @if (!subsidyAllowed) {
-    <p class="field-note">A klub 2019-ben alakult, ezért korábbi táborokhoz nem rendelhető hozzájárulás.</p>
-    }
+        <div class="form-row">
+          <label
+            >Klub hozzájárulása (Ft)
+            <input
+              type="number"
+              [(ngModel)]="form.clubSubsidyAmount"
+              name="clubSubsidyAmount"
+              [disabled]="!subsidyAllowed"
+              [title]="
+                subsidyAllowed
+                  ? ''
+                  : 'A klub 2019-ben alakult, korábbi táborhoz nem járulhatott hozzá.'
+              "
+          /></label>
+        </div>
+        @if (!subsidyAllowed) {
+          <p class="field-note">
+            A klub 2019-ben alakult, ezért korábbi táborokhoz nem rendelhető hozzájárulás.
+          </p>
+        }
 
-    <label class="form-field-full"
-      >Rövid összefoglaló
-      <input type="text" [(ngModel)]="form.summary" name="summary" />
-    </label>
+        <label class="form-field-full"
+          >Rövid összefoglaló
+          <input type="text" [(ngModel)]="form.summary" name="summary" />
+        </label>
 
-    <label class="form-field-full"
-      >Leírás
-      <textarea [(ngModel)]="form.description" name="description" rows="5" required></textarea>
-    </label>
+        <label class="form-field-full"
+          >Leírás
+          <textarea [(ngModel)]="form.description" name="description" rows="5" required></textarea>
+        </label>
 
-    <div class="form-field-full cover-upload">
-      <span class="cover-upload-label">Borítókép</span>
-      @if (coverPreviewUrl() || form.existingCoverUrl) {
-      <img
-        class="cover-preview"
-        [src]="coverPreviewUrl() ?? form.existingCoverUrl"
-        alt="Borítókép előnézet"
-      />
-      }
-      <div class="cover-upload-row">
-        <input type="file" accept="image/*" (change)="onCoverFileSelected($event)" />
-      </div>
-      <p class="field-note">A kiválasztott kép a tábor mentésekor kerül feltöltésre.</p>
-    </div>
+        <div class="form-field-full cover-upload">
+          <span class="cover-upload-label">Borítókép</span>
+          @if (coverPreviewUrl() || form.existingCoverUrl) {
+            <img
+              class="cover-preview"
+              [src]="coverPreviewUrl() ?? form.existingCoverUrl"
+              alt="Borítókép előnézet"
+            />
+          }
+          <div class="cover-upload-row">
+            <input type="file" accept="image/*" (change)="onCoverFileSelected($event)" />
+          </div>
+          <p class="field-note">A kiválasztott kép a tábor mentésekor kerül feltöltésre.</p>
+        </div>
 
-    <p class="field-note">
-      <strong>Tábori videó:</strong> automatikusan megjelenik, amint a NAS-on az
-      <em>a-bodorgo-klan</em> mappába kerül egy fájl, aminek a neve a tábor sorszámával kezdődik
-      (pl. „10 - Sarud (2017) S06E01.mp4”). Több változatnál az évszám és az epizódkód közötti
-      szöveg a változat neve (pl. „Directors Cut”).
-    </p>
+        <p class="field-note">
+          <strong>Tábori videó:</strong> automatikusan megjelenik, amint a NAS-on az
+          <em>a-bodorgo-klan</em> mappába kerül egy fájl, aminek a neve a tábor sorszámával kezdődik
+          (pl. „10 - Sarud (2017) S06E01.mp4”). Több változatnál az évszám és az epizódkód közötti
+          szöveg a változat neve (pl. „Directors Cut”).
+        </p>
 
-    @if (error()) {
-    <p class="error-note">{{ error() }}</p>
-    }
+        @if (error()) {
+          <p class="error-note">{{ error() }}</p>
+        }
 
-    <div class="form-actions">
-      <button type="submit" class="btn btn--green" [disabled]="saving()">
-        {{ saving() ? 'Mentés...' : 'Mentés' }}
-      </button>
+        <div class="form-actions">
+          <button type="submit" class="btn btn--green" [disabled]="saving()">
+            {{ saving() ? 'Mentés...' : 'Mentés' }}
+          </button>
+          @if (isEditMode) {
+            <a [routerLink]="['/taborok', tourId]" class="btn btn--grey">Mégse</a>
+          } @else {
+            <a routerLink="/taborok" class="btn btn--grey">Mégse</a>
+          }
+        </div>
+      </form>
+
       @if (isEditMode) {
-      <a [routerLink]="['/taborok', tourId]" class="btn btn--grey">Mégse</a>
+        <app-accommodation-editor
+          [tourId]="tourId!"
+          [initialHouses]="accommodationHouses()"
+          [maxCapacity]="form.maxCapacity"
+          (saved)="accommodationHouses.set($event)"
+        />
       } @else {
-      <a routerLink="/taborok" class="btn btn--grey">Mégse</a>
+        <p class="field-note accommodation-later">
+          A szállás (házak, szobák, férőhelyek) a tábor létrehozása után állítható be.
+        </p>
       }
-    </div>
-  </form>
-
-  @if (isEditMode) {
-  <app-accommodation-editor
-    [tourId]="tourId!"
-    [initialHouses]="accommodationHouses()"
-    [maxCapacity]="form.maxCapacity"
-    (saved)="accommodationHouses.set($event)"
-  />
-  } @else {
-  <p class="field-note accommodation-later">A szállás (házak, szobák, férőhelyek) a tábor létrehozása után állítható be.</p>
-  }
-  }
-</div>
+    }
+  </div>
 }
 
 @if (coverToCrop(); as f) {
-<app-crop-dialog
-  [file]="f"
-  title="Borítókép kivágása"
-  [aspectRatio]="coverAspectRatio"
-  [outputWidth]="coverWidth"
-  (cropped)="onCoverCropped($event)"
-  (cancelled)="coverToCrop.set(null)"
-  (failed)="onCoverCropFailed()"
-/>
+  <app-crop-dialog
+    [file]="f"
+    title="Borítókép kivágása"
+    [aspectRatio]="coverAspectRatio"
+    [outputWidth]="coverWidth"
+    (cropped)="onCoverCropped($event)"
+    (cancelled)="coverToCrop.set(null)"
+    (failed)="onCoverCropFailed()"
+  />
 }

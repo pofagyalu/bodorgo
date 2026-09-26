@@ -23,7 +23,9 @@ export class Videos {
   media = inject(MediaService);
   private route = inject(ActivatedRoute);
 
-  private categoryKey = toSignal(this.route.paramMap.pipe(map((p) => p.get('category'))), { initialValue: null });
+  private categoryKey = toSignal(this.route.paramMap.pipe(map((p) => p.get('category'))), {
+    initialValue: null,
+  });
 
   shownCategories = computed(() => {
     const key = this.categoryKey();
@@ -31,7 +33,10 @@ export class Videos {
     return key ? all.filter((c) => c.key === key) : all;
   });
   // A category address that doesn't exist (any more).
-  unknownCategory = computed(() => !!this.categoryKey() && this.media.categories().length > 0 && !this.shownCategories().length);
+  unknownCategory = computed(
+    () =>
+      !!this.categoryKey() && this.media.categories().length > 0 && !this.shownCategories().length,
+  );
   totalCount = computed(() => this.media.categories().reduce((sum, c) => sum + c.videos.length, 0));
 
   playing = signal<Playing | null>(null);

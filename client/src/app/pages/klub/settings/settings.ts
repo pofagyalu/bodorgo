@@ -25,7 +25,9 @@ function suggestUsername(fullName: string, taken: Set<string>): string {
   const family = words.length > 1 ? cap(words[0]) : '';
   let base = given.length >= 3 ? given : `${given}${family}`.padEnd(3, 'x');
   base = base.slice(0, 36);
-  const candidates = [base, family ? `${base}${family.charAt(0)}` : null].filter(Boolean) as string[];
+  const candidates = [base, family ? `${base}${family.charAt(0)}` : null].filter(
+    Boolean,
+  ) as string[];
   for (const c of candidates) if (!taken.has(usernameKey(c))) return c;
   for (let i = 2; ; i++) if (!taken.has(usernameKey(`${base}${i}`))) return `${base}${i}`;
 }
@@ -62,7 +64,9 @@ export class KlubSettings implements OnInit {
   private saved = signal<MembershipFee[]>([]);
   rows = signal<FeeRow[]>([]);
 
-  dirty = computed(() => JSON.stringify(this.sorted(this.rows())) !== JSON.stringify(this.sorted(this.saved())));
+  dirty = computed(
+    () => JSON.stringify(this.sorted(this.rows())) !== JSON.stringify(this.sorted(this.saved())),
+  );
   currentFee = computed(() => feeForYear(this.saved(), this.currentYear));
 
   ngOnInit() {
@@ -84,7 +88,9 @@ export class KlubSettings implements OnInit {
   }
 
   private sorted(rows: FeeRow[]) {
-    return [...rows].map((r) => ({ fromYear: Number(r.fromYear), amount: Number(r.amount) })).sort((a, b) => a.fromYear - b.fromYear);
+    return [...rows]
+      .map((r) => ({ fromYear: Number(r.fromYear), amount: Number(r.amount) }))
+      .sort((a, b) => a.fromYear - b.fromYear);
   }
 
   // The years a saved row covers, up to (not including) the next row's.
@@ -103,7 +109,9 @@ export class KlubSettings implements OnInit {
   }
 
   isFounding(row: FeeRow): boolean {
-    return row.fromYear === this.foundingYear() && this.saved().some((f) => f.fromYear === row.fromYear);
+    return (
+      row.fromYear === this.foundingYear() && this.saved().some((f) => f.fromYear === row.fromYear)
+    );
   }
 
   // "2019–2026" / "2027-től"
@@ -143,7 +151,12 @@ export class KlubSettings implements OnInit {
     this.userService.getUsernames().subscribe({
       next: (res) =>
         this.people.set(
-          res.data.users.map((u) => ({ id: u._id, name: u.name, original: u.username ?? '', username: u.username ?? '' })),
+          res.data.users.map((u) => ({
+            id: u._id,
+            name: u.name,
+            original: u.username ?? '',
+            username: u.username ?? '',
+          })),
         ),
       error: () => this.notifications.addError('A felhasználónevek betöltése nem sikerült.'),
     });
@@ -162,7 +175,11 @@ export class KlubSettings implements OnInit {
   // (ignoring case and accents), with the family name's initial
   // ("ZoltánN"), then a number. Only a suggestion - review, then Mentés.
   suggestUsernames() {
-    const taken = new Set(this.people().map((p) => usernameKey(p.username.trim())).filter(Boolean));
+    const taken = new Set(
+      this.people()
+        .map((p) => usernameKey(p.username.trim()))
+        .filter(Boolean),
+    );
     this.people.update((list) =>
       list.map((p) => {
         if (p.username.trim()) return p;
@@ -182,19 +199,23 @@ export class KlubSettings implements OnInit {
     if (this.savingUsernames()) return;
     const changed = this.people().filter((p) => p.username !== p.original);
     this.savingUsernames.set(true);
-    this.userService.updateUsernames(changed.map((p) => ({ id: p.id, username: p.username.trim() }))).subscribe({
-      next: (res) => {
-        this.savingUsernames.set(false);
-        this.usernameErrors.set({});
-        this.people.update((list) => list.map((p) => ({ ...p, username: p.username.trim(), original: p.username.trim() })));
-        this.notifications.addSuccess(`${res.data.updated} felhasználónév mentve.`);
-      },
-      error: (err) => {
-        this.savingUsernames.set(false);
-        this.usernameErrors.set(err?.error?.errors ?? {});
-        this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
-      },
-    });
+    this.userService
+      .updateUsernames(changed.map((p) => ({ id: p.id, username: p.username.trim() })))
+      .subscribe({
+        next: (res) => {
+          this.savingUsernames.set(false);
+          this.usernameErrors.set({});
+          this.people.update((list) =>
+            list.map((p) => ({ ...p, username: p.username.trim(), original: p.username.trim() })),
+          );
+          this.notifications.addSuccess(`${res.data.updated} felhasználónév mentve.`);
+        },
+        error: (err) => {
+          this.savingUsernames.set(false);
+          this.usernameErrors.set(err?.error?.errors ?? {});
+          this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+        },
+      });
   }
 
   save() {

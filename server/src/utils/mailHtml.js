@@ -12,7 +12,11 @@ export function cleanMailHtml(html) {
     allowedTags: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'span', 'ul', 'ol', 'li', 'a'],
     allowedAttributes: { span: ['style'], p: ['style'], a: ['href', 'target', 'rel'] },
     allowedStyles: {
-      '*': { color: COLOR, 'background-color': COLOR, 'text-align': [/^(left|right|center|justify)$/] },
+      '*': {
+        color: COLOR,
+        'background-color': COLOR,
+        'text-align': [/^(left|right|center|justify)$/],
+      },
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     transformTags: {

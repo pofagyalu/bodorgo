@@ -10,9 +10,7 @@ import { Observable } from 'rxjs';
   styleUrl: './forecast.component.css',
 })
 export class ForecastComponent {
-  forecast$: Observable<
-    { dateString: string; temp: number; weather: string; icon: string }[]
-  >;
+  forecast$: Observable<{ dateString: string; temp: number; weather: string; icon: string }[]>;
 
   constructor() {
     this.forecast$ = inject(ForecastService).getForecast();

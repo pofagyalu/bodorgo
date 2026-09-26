@@ -30,7 +30,9 @@ export async function sendPushToUsers(userIds, payload) {
   await Promise.all(
     subscriptions.map(async (s) => {
       try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, body, { TTL: 6 * 60 * 60 });
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, body, {
+          TTL: 6 * 60 * 60,
+        });
         sent++;
       } catch (err) {
         if (err.statusCode === 404 || err.statusCode === 410) {

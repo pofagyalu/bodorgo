@@ -119,7 +119,9 @@ const attendees = members.filter((m) => !alreadyRegisteredIds.has(m._id.toString
 const skipped = members.filter((m) => alreadyRegisteredIds.has(m._id.toString()));
 
 if (skipped.length) {
-  console.log(`Already registered for this tour, skipping: ${skipped.map((m) => m.name).join(', ')}`);
+  console.log(
+    `Already registered for this tour, skipping: ${skipped.map((m) => m.name).join(', ')}`,
+  );
 }
 
 if (attendees.length === 0) {

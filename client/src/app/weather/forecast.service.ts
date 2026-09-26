@@ -45,9 +45,7 @@ export class ForecastService {
           .set('units', 'metric')
           .set('appid', environment.openWeatherApi);
       }),
-      switchMap((params) =>
-        this.http.get<OpenWeatherResponse>(this.url, { params })
-      ),
+      switchMap((params) => this.http.get<OpenWeatherResponse>(this.url, { params })),
       map((response) => response?.list),
       mergeMap((value) => of(...value)),
       filter((value) => new Date(value.dt_txt).getHours() === 15),
@@ -61,7 +59,7 @@ export class ForecastService {
         };
       }),
       toArray(),
-      share()
+      share(),
     );
   }
 
@@ -74,7 +72,7 @@ export class ForecastService {
         },
         (err) => {
           observer.error(err);
-        }
+        },
       );
     }).pipe(
       retry(1),
@@ -86,7 +84,7 @@ export class ForecastService {
         // Already surfaced to the user above - complete quietly instead of
         // propagating an uncaught error through the template's async pipe.
         return EMPTY;
-      })
+      }),
     );
   }
 }

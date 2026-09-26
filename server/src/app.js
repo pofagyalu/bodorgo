@@ -117,11 +117,7 @@ export default function createApp(sessionMiddleware) {
   // user. Registered before the club documents router below, whose own
   // '/:filename' route would otherwise never match these deeper paths
   // anyway.
-  app.use(
-    '/documents/tours',
-    requireAuth,
-    express.static(TOUR_DOCUMENTS_DIR),
-  );
+  app.use('/documents/tours', requireAuth, express.static(TOUR_DOCUMENTS_DIR));
   app.use('/documents', documentRouter);
   app.use('/media', mediaRouter);
   app.use('/settings', settingsRouter);

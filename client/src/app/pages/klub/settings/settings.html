@@ -12,96 +12,116 @@
       <div>
         <h2>Tagdíj</h2>
         <p class="subtext">
-          Éves összeg, attól az évtől, amikor életbe lép. Egy emelés a korábbi, még ki nem fizetett éveket nem
-          érinti - azok a régi díjjal maradnak.
+          Éves összeg, attól az évtől, amikor életbe lép. Egy emelés a korábbi, még ki nem fizetett
+          éveket nem érinti - azok a régi díjjal maradnak.
         </p>
       </div>
       @if (currentFee(); as fee) {
-      <span class="current-fee">{{ currentYear }}: <strong>{{ fee }} Ft</strong></span>
+        <span class="current-fee"
+          >{{ currentYear }}: <strong>{{ fee }} Ft</strong></span
+        >
       }
     </div>
 
     @if (loading()) {
-    <p class="empty-note">Betöltés...</p>
+      <p class="empty-note">Betöltés...</p>
     } @else {
-    <table class="fee-table">
-      <thead>
-        <tr>
-          <th>Életbe lép</th>
-          <th>Összeg</th>
-          <th>Érvényes</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (row of rows(); track $index) {
-        <tr [class.locked]="isLocked(row)">
-          <td>
-            <span class="year-cell">
-              <input
-                type="number"
-                [min]="foundingYear()"
-                [ngModel]="row.fromYear"
-                (ngModelChange)="update(row, 'fromYear', $event)"
-                [disabled]="isLocked(row) || isFounding(row)"
-              />
-              <span class="suffix">-től</span>
-            </span>
-          </td>
-          <td>
-            <span class="amount-cell">
-              <input
-                type="number"
-                min="1"
-                step="100"
-                [ngModel]="row.amount"
-                (ngModelChange)="update(row, 'amount', $event)"
-                [disabled]="isLocked(row)"
-              />
-              <span class="suffix">Ft</span>
-            </span>
-          </td>
-          <td class="range">{{ rangeLabel(row) }}</td>
-          <td class="row-end">
-            @if (isLocked(row)) {
-            <mat-icon class="lock" title="Erre az időszakra már van befizetett tagdíj - nem módosítható">lock</mat-icon>
-            } @else if (!isFounding(row)) {
-            <button type="button" class="icon-btn" title="Sor törlése" (click)="removeRow(row)">
-              <mat-icon>delete</mat-icon>
-            </button>
+      <table class="fee-table">
+        <thead>
+          <tr>
+            <th>Életbe lép</th>
+            <th>Összeg</th>
+            <th>Érvényes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track $index) {
+            <tr [class.locked]="isLocked(row)">
+              <td>
+                <span class="year-cell">
+                  <input
+                    type="number"
+                    [min]="foundingYear()"
+                    [ngModel]="row.fromYear"
+                    (ngModelChange)="update(row, 'fromYear', $event)"
+                    [disabled]="isLocked(row) || isFounding(row)"
+                  />
+                  <span class="suffix">-től</span>
+                </span>
+              </td>
+              <td>
+                <span class="amount-cell">
+                  <input
+                    type="number"
+                    min="1"
+                    step="100"
+                    [ngModel]="row.amount"
+                    (ngModelChange)="update(row, 'amount', $event)"
+                    [disabled]="isLocked(row)"
+                  />
+                  <span class="suffix">Ft</span>
+                </span>
+              </td>
+              <td class="range">{{ rangeLabel(row) }}</td>
+              <td class="row-end">
+                @if (isLocked(row)) {
+                  <mat-icon
+                    class="lock"
+                    title="Erre az időszakra már van befizetett tagdíj - nem módosítható"
+                    >lock</mat-icon
+                  >
+                } @else if (!isFounding(row)) {
+                  <button
+                    type="button"
+                    class="icon-btn"
+                    title="Sor törlése"
+                    (click)="removeRow(row)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="actions">
+        <button type="button" class="outline-btn" (click)="addRow()" [disabled]="saving()">
+          <mat-icon>add</mat-icon> Új díj egy évtől
+        </button>
+        <span class="spacer"></span>
+        @if (dirty()) {
+          <button type="button" class="outline-btn" (click)="reset()" [disabled]="saving()">
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="save()"
+          [disabled]="!dirty() || saving()"
+        >
+          {{ saving() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+
+      @if (history().length) {
+        <div class="history">
+          <h3>Változások</h3>
+          <ul>
+            @for (h of history(); track $index) {
+              <li>
+                <span class="history-when"
+                  >{{ h.at | date: 'yyyy. MM. dd. HH:mm' }} · {{ h.byName }}</span
+                >
+                <span>{{ h.change }}</span>
+              </li>
             }
-          </td>
-        </tr>
-        }
-      </tbody>
-    </table>
-
-    <div class="actions">
-      <button type="button" class="outline-btn" (click)="addRow()" [disabled]="saving()">
-        <mat-icon>add</mat-icon> Új díj egy évtől
-      </button>
-      <span class="spacer"></span>
-      @if (dirty()) {
-      <button type="button" class="outline-btn" (click)="reset()" [disabled]="saving()">Mégse</button>
+          </ul>
+        </div>
       }
-      <button type="button" class="primary-btn" (click)="save()" [disabled]="!dirty() || saving()">
-        {{ saving() ? 'Mentés…' : 'Mentés' }}
-      </button>
-    </div>
-
-    @if (history().length) {
-    <div class="history">
-      <h3>Változások</h3>
-      <ul>
-        @for (h of history(); track $index) {
-        <li>
-          <span class="history-when">{{ h.at | date: 'yyyy. MM. dd. HH:mm' }} · {{ h.byName }}</span>
-          <span>{{ h.change }}</span>
-        </li>
-        }
-      </ul>
-    </div>
-    }
     }
   </section>
 
@@ -111,46 +131,63 @@
       <div>
         <h2>Felhasználónevek</h2>
         <p class="subtext">
-          A chatben ezen a néven jelennek meg, és így lehet megemlíteni őket (pl. <strong>&#64;Zoli</strong>). Utána
-          mindenki a Profilomban maga is átírhatja.
+          A chatben ezen a néven jelennek meg, és így lehet megemlíteni őket (pl.
+          <strong>&#64;Zoli</strong>). Utána mindenki a Profilomban maga is átírhatja.
         </p>
       </div>
       @if (missingCount()) {
-      <span class="missing">{{ missingCount() }} hiányzik</span>
+        <span class="missing">{{ missingCount() }} hiányzik</span>
       }
     </div>
 
     <ul class="username-list">
       @for (p of people(); track p.id) {
-      <li [class.changed]="p.username !== p.original" [class.has-error]="usernameErrors()[p.id]">
-        <span class="person-name">{{ p.name }}</span>
-        <span class="at-field">
-          <span class="at">&#64;</span>
-          <input
-            type="text"
-            maxlength="40"
-            [ngModel]="p.username"
-            (ngModelChange)="setUsername(p.id, $event)"
-            placeholder="nincs megadva"
-            [attr.aria-label]="p.name + ' felhasználóneve'"
-          />
-        </span>
-        @if (usernameErrors()[p.id]; as err) {
-        <span class="row-error">{{ err }}</span>
-        }
-      </li>
+        <li [class.changed]="p.username !== p.original" [class.has-error]="usernameErrors()[p.id]">
+          <span class="person-name">{{ p.name }}</span>
+          <span class="at-field">
+            <span class="at">&#64;</span>
+            <input
+              type="text"
+              maxlength="40"
+              [ngModel]="p.username"
+              (ngModelChange)="setUsername(p.id, $event)"
+              placeholder="nincs megadva"
+              [attr.aria-label]="p.name + ' felhasználóneve'"
+            />
+          </span>
+          @if (usernameErrors()[p.id]; as err) {
+            <span class="row-error">{{ err }}</span>
+          }
+        </li>
       }
     </ul>
 
     <div class="actions">
-      <button type="button" class="outline-btn" (click)="suggestUsernames()" [disabled]="!missingCount() || savingUsernames()">
+      <button
+        type="button"
+        class="outline-btn"
+        (click)="suggestUsernames()"
+        [disabled]="!missingCount() || savingUsernames()"
+      >
         <mat-icon>auto_fix_high</mat-icon> Javaslatok kitöltése
       </button>
       <span class="spacer"></span>
       @if (usernamesDirty()) {
-      <button type="button" class="outline-btn" (click)="resetUsernames()" [disabled]="savingUsernames()">Mégse</button>
+        <button
+          type="button"
+          class="outline-btn"
+          (click)="resetUsernames()"
+          [disabled]="savingUsernames()"
+        >
+          Mégse
+        </button>
       }
-      <button type="button" class="primary-btn" (click)="saveUsernames()" [disabled]="!usernamesDirty() || savingUsernames()">
+      <button
+        type="button"
+        class="primary-btn"
+        (click)="saveUsernames()"
+        [disabled]="!usernamesDirty() || savingUsernames()"
+      >
         {{ savingUsernames() ? 'Mentés…' : 'Mentés' }}
       </button>
     </div>

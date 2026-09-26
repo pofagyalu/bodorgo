@@ -4,19 +4,33 @@ import request from 'supertest';
 import Stripe from 'stripe';
 import { describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createAdmin, createGuest, createMember, createReservation, createTour } from '../helpers/factories.js';
+import {
+  createAdmin,
+  createGuest,
+  createMember,
+  createReservation,
+  createTour,
+} from '../helpers/factories.js';
 import Payment from '../../src/models/paymentModel.js';
 import Reservation from '../../src/models/reservationModel.js';
 import Transaction from '../../src/models/transactionModel.js';
 import User from '../../src/models/userModel.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
 import { createCheckoutSession, retrieveCheckoutSession } from '../../src/utils/stripe.js';
-import { createBarionPayment, getBarionPaymentState, createBarionWithdrawal } from '../../src/utils/barion.js';
+import {
+  createBarionPayment,
+  getBarionPaymentState,
+  createBarionWithdrawal,
+} from '../../src/utils/barion.js';
 
 // A tour with pricing and one unpaid member on it (+ an admin to receive
 // "everyone paid" emails).
 async function pricedTour() {
-  const tour = await createTour({ duration: 3, accommodationPricePerNight: 10000, advancePaymentPercentage: 30 });
+  const tour = await createTour({
+    duration: 3,
+    accommodationPricePerNight: 10000,
+    advancePaymentPercentage: 30,
+  });
   const member = await createMember({ lastLoginAt: new Date() });
   const reservation = await createReservation(tour, [member]);
   const admin = await createAdmin();
@@ -32,13 +46,22 @@ describe('paying a tour advance', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.gatewayUrl).toBe('https://stripe.test/checkout');
     const payment = await Payment.findById(res.body.data.paymentId);
-    expect(payment).toMatchObject({ status: 'Started', method: 'stripe', amount: 6000, providerPaymentId: 'cs_test' });
+    expect(payment).toMatchObject({
+      status: 'Started',
+      method: 'stripe',
+      amount: 6000,
+      providerPaymentId: 'cs_test',
+    });
     expect(createCheckoutSession).toHaveBeenCalledOnce();
   });
 
   it('adds the Barion fee when paying with Barion', async () => {
     const { tour, member, attendeeId } = await pricedTour();
-    const res = await start(member, { tourId: tour._id, attendeeIds: [attendeeId], method: 'barion' });
+    const res = await start(member, {
+      tourId: tour._id,
+      attendeeIds: [attendeeId],
+      method: 'barion',
+    });
     expect(res.status).toBe(200);
     const payment = await Payment.findById(res.body.data.paymentId);
     expect(payment.amount).toBeGreaterThan(6000);
@@ -48,9 +71,13 @@ describe('paying a tour advance', () => {
   it('refuses paying for someone outside my family, or with nothing owed', async () => {
     const { tour, attendeeId } = await pricedTour();
     const stranger = await createGuest();
-    expect((await start(stranger, { tourId: tour._id, attendeeIds: [attendeeId] })).status).toBe(400);
+    expect((await start(stranger, { tourId: tour._id, attendeeIds: [attendeeId] })).status).toBe(
+      400,
+    );
     expect((await start(stranger, { tourId: tour._id, attendeeIds: [] })).status).toBe(400);
-    expect((await start(stranger, { tourId: '000000000000000000000000', attendeeIds: ['x'] })).status).toBe(404);
+    expect(
+      (await start(stranger, { tourId: '000000000000000000000000', attendeeIds: ['x'] })).status,
+    ).toBe(404);
   });
 
   it('marks the payment failed when the gateway is down', async () => {
@@ -65,7 +92,11 @@ describe('paying a tour advance', () => {
 describe('completing a payment', () => {
   async function startedPayment(method = 'stripe') {
     const setup = await pricedTour();
-    const res = await start(setup.member, { tourId: setup.tour._id, attendeeIds: [setup.attendeeId], method });
+    const res = await start(setup.member, {
+      tourId: setup.tour._id,
+      attendeeIds: [setup.attendeeId],
+      method,
+    });
     return { ...setup, paymentId: res.body.data.paymentId };
   }
 
@@ -92,7 +123,10 @@ describe('completing a payment', () => {
 
   it('Stripe: an expired checkout is recorded as expired', async () => {
     const { member, paymentId } = await startedPayment();
-    vi.mocked(retrieveCheckoutSession).mockResolvedValueOnce({ payment_status: 'unpaid', status: 'expired' });
+    vi.mocked(retrieveCheckoutSession).mockResolvedValueOnce({
+      payment_status: 'unpaid',
+      status: 'expired',
+    });
     const res = await request(app).get(`/payments/${paymentId}/status`).set(asUser(member));
     expect(res.body.data.status).toBe('Expired');
   });
@@ -143,7 +177,9 @@ describe('completing a payment', () => {
   it('Barion: the status check also settles, expires, and survives a gateway error in the callback', async () => {
     const { member, paymentId } = await startedPayment('barion');
     vi.mocked(getBarionPaymentState).mockRejectedValueOnce(new Error('down'));
-    expect((await request(app).get('/payments/barion/callback?paymentId=barion-test')).status).toBe(200);
+    expect((await request(app).get('/payments/barion/callback?paymentId=barion-test')).status).toBe(
+      200,
+    );
     vi.mocked(getBarionPaymentState).mockResolvedValueOnce({ Status: 'Expired' });
     const res = await request(app).get(`/payments/${paymentId}/status`).set(asUser(member));
     expect(res.body.data.status).toBe('Expired');
@@ -152,32 +188,58 @@ describe('completing a payment', () => {
   it('only the payer may see the status; receipts for the payer or an admin', async () => {
     const { paymentId, admin } = await startedPayment();
     const other = await createMember();
-    expect((await request(app).get(`/payments/${paymentId}/status`).set(asUser(other))).status).toBe(403);
-    expect((await request(app).get(`/payments/${paymentId}/receipt`).set(asUser(other))).status).toBe(403);
-    expect((await request(app).get(`/payments/${paymentId}/receipt`).set(asUser(admin))).status).toBe(404); // no receipt yet
-    expect((await request(app).get('/payments/000000000000000000000000/status').set(asUser(other))).status).toBe(404);
-    expect((await request(app).get('/payments/000000000000000000000000/receipt').set(asUser(other))).status).toBe(404);
+    expect(
+      (await request(app).get(`/payments/${paymentId}/status`).set(asUser(other))).status,
+    ).toBe(403);
+    expect(
+      (await request(app).get(`/payments/${paymentId}/receipt`).set(asUser(other))).status,
+    ).toBe(403);
+    expect(
+      (await request(app).get(`/payments/${paymentId}/receipt`).set(asUser(admin))).status,
+    ).toBe(404); // no receipt yet
+    expect(
+      (await request(app).get('/payments/000000000000000000000000/status').set(asUser(other)))
+        .status,
+    ).toBe(404);
+    expect(
+      (await request(app).get('/payments/000000000000000000000000/receipt').set(asUser(other)))
+        .status,
+    ).toBe(404);
   });
 });
 
 describe('cash payments (admin)', () => {
   it('records a cash advance, and can undo it', async () => {
     const { tour, reservation, attendeeId, admin } = await pricedTour();
-    const res = await request(app).post('/payments/cash').set(asUser(admin)).send({ tourId: tour._id, attendeeIds: [attendeeId] });
+    const res = await request(app)
+      .post('/payments/cash')
+      .set(asUser(admin))
+      .send({ tourId: tour._id, attendeeIds: [attendeeId] });
     expect(res.status).toBe(201);
     expect((await Reservation.findById(reservation._id)).attendees[0].paid).toBe(true);
-    const undo = await request(app).delete(`/payments/${res.body.data.payment._id}`).set(asUser(admin));
+    const undo = await request(app)
+      .delete(`/payments/${res.body.data.payment._id}`)
+      .set(asUser(admin));
     expect(undo.status).toBe(204);
     expect((await Reservation.findById(reservation._id)).attendees[0].paid).toBe(false);
   });
 
   it('refuses bad input, and undoing a non-cash payment', async () => {
     const { tour, member, attendeeId, admin } = await pricedTour();
-    expect((await request(app).post('/payments/cash').set(asUser(admin)).send({})).status).toBe(400);
-    expect((await request(app).post('/payments/cash').set(asUser(member)).send({})).status).toBe(403);
+    expect((await request(app).post('/payments/cash').set(asUser(admin)).send({})).status).toBe(
+      400,
+    );
+    expect((await request(app).post('/payments/cash').set(asUser(member)).send({})).status).toBe(
+      403,
+    );
     const online = await start(member, { tourId: tour._id, attendeeIds: [attendeeId] });
-    expect((await request(app).delete(`/payments/${online.body.data.paymentId}`).set(asUser(admin))).status).toBe(400);
-    expect((await request(app).delete('/payments/000000000000000000000000').set(asUser(admin))).status).toBe(404);
+    expect(
+      (await request(app).delete(`/payments/${online.body.data.paymentId}`).set(asUser(admin)))
+        .status,
+    ).toBe(400);
+    expect(
+      (await request(app).delete('/payments/000000000000000000000000').set(asUser(admin))).status,
+    ).toBe(404);
   });
 });
 
@@ -200,7 +262,12 @@ describe('membership dues', () => {
     const res = await request(app)
       .post('/payments/membership/start')
       .set(asUser(member))
-      .send({ items: [{ userId: member._id, year: thisYear - 1 }, { userId: member._id, year: thisYear }] });
+      .send({
+        items: [
+          { userId: member._id, year: thisYear - 1 },
+          { userId: member._id, year: thisYear },
+        ],
+      });
     expect(res.status).toBe(200);
     const payment = await Payment.findById(res.body.data.paymentId);
     expect(payment.members.map((m) => m.membershipYear)).toEqual([thisYear]);
@@ -214,7 +281,8 @@ describe('membership dues', () => {
   it('refuses years already paid, outside membership, or other families', async () => {
     const member = await createMember({ memberSince: thisYear });
     const stranger = await createMember();
-    const send = (items) => request(app).post('/payments/membership/start').set(asUser(member)).send({ items });
+    const send = (items) =>
+      request(app).post('/payments/membership/start').set(asUser(member)).send({ items });
     expect((await send([])).status).toBe(400);
     expect((await send([{ userId: member._id, year: thisYear - 1 }])).status).toBe(400);
     expect((await send([{ userId: stranger._id, year: thisYear }])).status).toBe(400);
@@ -234,13 +302,22 @@ describe('membership dues', () => {
 describe('withdrawals (admin)', () => {
   it('reports which wallets are configured', async () => {
     const admin = await createAdmin();
-    expect((await request(app).get('/payments/withdraw/tourAdvance').set(asUser(admin))).body.data.configured).toBe(true);
-    expect((await request(app).get('/payments/withdraw/membershipFee').set(asUser(admin))).body.data.configured).toBe(false);
+    expect(
+      (await request(app).get('/payments/withdraw/tourAdvance').set(asUser(admin))).body.data
+        .configured,
+    ).toBe(true);
+    expect(
+      (await request(app).get('/payments/withdraw/membershipFee').set(asUser(admin))).body.data
+        .configured,
+    ).toBe(false);
   });
 
   it('withdraws with the Barion fee (0.1%, at least 70 Ft)', async () => {
     const admin = await createAdmin();
-    const res = await request(app).post('/payments/withdraw').set(asUser(admin)).send({ purpose: 'tourAdvance', amount: 10000 });
+    const res = await request(app)
+      .post('/payments/withdraw')
+      .set(asUser(admin))
+      .send({ purpose: 'tourAdvance', amount: 10000 });
     expect(res.body.data).toEqual({ fee: 70, net: 9930 });
     expect(createBarionWithdrawal).toHaveBeenCalledOnce();
   });
@@ -261,7 +338,9 @@ describe('when nobody has an email', () => {
     await User.updateOne({ _id: member._id }, { $unset: { email: 1 } });
     const res = await start(member, { tourId: tour._id, attendeeIds: [attendeeId] });
     vi.mocked(retrieveCheckoutSession).mockResolvedValueOnce({ payment_status: 'paid' });
-    const status = await request(app).get(`/payments/${res.body.data.paymentId}/status`).set(asUser(member));
+    const status = await request(app)
+      .get(`/payments/${res.body.data.paymentId}/status`)
+      .set(asUser(member));
     expect(status.body.data.status).toBe('Succeeded');
   });
 });

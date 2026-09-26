@@ -23,7 +23,9 @@ export async function getClubSettings() {
 // The fee for one year: the latest row that has started by then. Rows can
 // be in any order.
 export function feeForYear(fees, year) {
-  const row = [...fees].filter((f) => f.fromYear <= year).sort((a, b) => b.fromYear - a.fromYear)[0];
+  const row = [...fees]
+    .filter((f) => f.fromYear <= year)
+    .sort((a, b) => b.fromYear - a.fromYear)[0];
   return row ? row.amount : null;
 }
 

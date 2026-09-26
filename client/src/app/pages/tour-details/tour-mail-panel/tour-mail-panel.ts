@@ -79,7 +79,8 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
 
     this.quill = new Quill(this.editorEl.nativeElement, {
       theme: 'snow',
-      placeholder: 'Írd ide a levelet… (pl. hideg lesz, hozz meleg ruhát; a maradékot csak készpénzben lehet fizetni)',
+      placeholder:
+        'Írd ide a levelet… (pl. hideg lesz, hozz meleg ruhát; a maradékot csak készpénzben lehet fizetni)',
       modules: {
         toolbar: [
           ['bold', 'italic', 'underline', 'strike'],
@@ -181,7 +182,9 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
     this.sendingTest.set(true);
     try {
       await this.flush();
-      const res = await firstValueFrom(this.tourService.sendMailTest(this.tourId(), this.withPdf()));
+      const res = await firstValueFrom(
+        this.tourService.sendMailTest(this.tourId(), this.withPdf()),
+      );
       this.notifications.addSuccess(`Próbalevél elküldve: ${res.data.sentTo}`);
     } catch (err) {
       this.notifications.addError(errorMessage(err, 'A próbalevél küldése nem sikerült.'));

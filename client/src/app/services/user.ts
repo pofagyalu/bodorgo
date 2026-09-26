@@ -278,9 +278,9 @@ export class UserService {
   // Beállítások). Saving is all-or-nothing; a failed save's `errors` maps
   // user ids to what's wrong with that row.
   getUsernames() {
-    return this.http.get<{ data: { users: { _id: string; name: string; username?: string; role: string }[] } }>(
-      `${this.apiUrl}/usernames`,
-    );
+    return this.http.get<{
+      data: { users: { _id: string; name: string; username?: string; role: string }[] };
+    }>(`${this.apiUrl}/usernames`);
   }
 
   updateUsernames(items: { id: string; username: string }[]) {

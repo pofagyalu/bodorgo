@@ -1,12 +1,21 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createAdmin, createGuest, createMember, createReservation, createTour } from '../helpers/factories.js';
+import {
+  createAdmin,
+  createGuest,
+  createMember,
+  createReservation,
+  createTour,
+} from '../helpers/factories.js';
 import Reservation from '../../src/models/reservationModel.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
 
 const signUp = (tour, user, attendeeIds) =>
-  request(app).post(`/tours/${tour._id}/signup`).set(asUser(user)).send(attendeeIds ? { attendeeIds } : {});
+  request(app)
+    .post(`/tours/${tour._id}/signup`)
+    .set(asUser(user))
+    .send(attendeeIds ? { attendeeIds } : {});
 
 describe('signing up for a tour', () => {
   it('needs a login', async () => {
@@ -74,7 +83,9 @@ describe('signing up for a tour', () => {
   it('404s for an unknown tour or unknown attendee', async () => {
     const admin = await createAdmin();
     const tour = await createTour();
-    expect((await request(app).post('/tours/000000000000000000000000/signup').set(asUser(admin))).status).toBe(404);
+    expect(
+      (await request(app).post('/tours/000000000000000000000000/signup').set(asUser(admin))).status,
+    ).toBe(404);
     expect((await signUp(tour, admin, ['000000000000000000000000'])).status).toBe(404);
   });
 
@@ -99,10 +110,18 @@ describe('admin corrections on an attendee', () => {
 
   it('changes the nights, within 0..duration-1, admin only', async () => {
     const { base, admin, member, reservation } = await setup();
-    expect((await request(app).patch(`${base}/nights`).set(asUser(member)).send({ nights: 1 })).status).toBe(403);
-    expect((await request(app).patch(`${base}/nights`).set(asUser(admin)).send({ nights: 4 })).status).toBe(400);
-    expect((await request(app).patch(`${base}/nights`).set(asUser(admin)).send({ nights: -1 })).status).toBe(400);
-    expect((await request(app).patch(`${base}/nights`).set(asUser(admin)).send({ nights: 'x' })).status).toBe(400);
+    expect(
+      (await request(app).patch(`${base}/nights`).set(asUser(member)).send({ nights: 1 })).status,
+    ).toBe(403);
+    expect(
+      (await request(app).patch(`${base}/nights`).set(asUser(admin)).send({ nights: 4 })).status,
+    ).toBe(400);
+    expect(
+      (await request(app).patch(`${base}/nights`).set(asUser(admin)).send({ nights: -1 })).status,
+    ).toBe(400);
+    expect(
+      (await request(app).patch(`${base}/nights`).set(asUser(admin)).send({ nights: 'x' })).status,
+    ).toBe(400);
     const res = await request(app).patch(`${base}/nights`).set(asUser(admin)).send({ nights: 2 });
     expect(res.status).toBe(200);
     expect((await Reservation.findById(reservation._id)).attendees[0].nights).toBe(2);
@@ -110,8 +129,14 @@ describe('admin corrections on an attendee', () => {
 
   it('marks someone fee-exempt (and therefore paid)', async () => {
     const { base, admin, reservation } = await setup();
-    expect((await request(app).patch(`${base}/fee-exempt`).set(asUser(admin)).send({ feeExempt: 'yes' })).status).toBe(400);
-    const res = await request(app).patch(`${base}/fee-exempt`).set(asUser(admin)).send({ feeExempt: true });
+    expect(
+      (await request(app).patch(`${base}/fee-exempt`).set(asUser(admin)).send({ feeExempt: 'yes' }))
+        .status,
+    ).toBe(400);
+    const res = await request(app)
+      .patch(`${base}/fee-exempt`)
+      .set(asUser(admin))
+      .send({ feeExempt: true });
     expect(res.status).toBe(200);
     const saved = (await Reservation.findById(reservation._id)).attendees[0];
     expect(saved.feeExempt).toBe(true);

@@ -9,211 +9,243 @@
   </div>
 
   @if (loading()) {
-  <p class="empty-note">Betöltés...</p>
+    <p class="empty-note">Betöltés...</p>
   } @else {
-  @if (user(); as u) {
-  <div class="profile-banner">
-    <app-avatar class="profile-avatar" [name]="u.name" [userId]="u._id" [photoVersion]="u.photoUpdatedAt" />
-    <div>
-      <h2>{{ u.name }}</h2>
-      <p>
-        {{ u.role === 'admin' ? 'Admin' : u.role === 'member' ? 'Klubtag' : 'Vendég' }}
-        @if (u.memberSince) { · Klubtag {{ u.memberSince }} óta }
-      </p>
-    </div>
-  </div>
-  }
-
-  <div class="profile-layout">
-    <section class="panel">
-      <h2>Személyes adatok</h2>
-      <p class="subtext">
-        @if (isCreateMode) { A név itt kerül rögzítésre - amint ez a személy először bejelentkezik az Authentik
-        fiókjával, a neve onnantól már azzal szinkronizálódik. } @else { A név az Authentik fiókból származik, itt nem
-        módosítható. }
-      </p>
-
-      <div class="profile-fields">
-        @if (user(); as u) {
-        <div class="field field-photo">
-          <span class="field-label">Profilkép</span>
-          <app-photo-editor
-            [userId]="u._id"
-            [hasPhoto]="!!u.photoUpdatedAt"
-            [locked]="photoLocked()"
-            (changed)="onPhotoChanged($event)"
-          />
+    @if (user(); as u) {
+      <div class="profile-banner">
+        <app-avatar
+          class="profile-avatar"
+          [name]="u.name"
+          [userId]="u._id"
+          [photoVersion]="u.photoUpdatedAt"
+        />
+        <div>
+          <h2>{{ u.name }}</h2>
+          <p>
+            {{ u.role === 'admin' ? 'Admin' : u.role === 'member' ? 'Klubtag' : 'Vendég' }}
+            @if (u.memberSince) {
+              · Klubtag {{ u.memberSince }} óta
+            }
+          </p>
         </div>
-        }
+      </div>
+    }
 
-        <div class="field">
-          <label for="mName">Név</label>
+    <div class="profile-layout">
+      <section class="panel">
+        <h2>Személyes adatok</h2>
+        <p class="subtext">
           @if (isCreateMode) {
-          <input id="mName" type="text" [value]="name()" (input)="name.set($any($event.target).value)" />
+            A név itt kerül rögzítésre - amint ez a személy először bejelentkezik az Authentik
+            fiókjával, a neve onnantól már azzal szinkronizálódik.
           } @else {
-          <input id="mName" type="text" [value]="name()" disabled />
+            A név az Authentik fiókból származik, itt nem módosítható.
+          }
+        </p>
+
+        <div class="profile-fields">
+          @if (user(); as u) {
+            <div class="field field-photo">
+              <span class="field-label">Profilkép</span>
+              <app-photo-editor
+                [userId]="u._id"
+                [hasPhoto]="!!u.photoUpdatedAt"
+                [locked]="photoLocked()"
+                (changed)="onPhotoChanged($event)"
+              />
+            </div>
+          }
+
+          <div class="field">
+            <label for="mName">Név</label>
+            @if (isCreateMode) {
+              <input
+                id="mName"
+                type="text"
+                [value]="name()"
+                (input)="name.set($any($event.target).value)"
+              />
+            } @else {
+              <input id="mName" type="text" [value]="name()" disabled />
+            }
+          </div>
+
+          <div class="field">
+            <label for="mEmail">E-mail cím</label>
+            <input
+              id="mEmail"
+              type="email"
+              [value]="email()"
+              (input)="email.set($any($event.target).value)"
+            />
+          </div>
+
+          @if (!isCreateMode) {
+            <div class="field">
+              <label for="mUsername">Felhasználónév</label>
+              <input
+                id="mUsername"
+                type="text"
+                maxlength="40"
+                placeholder="pl. Zoli"
+                [value]="username()"
+                (input)="username.set($any($event.target).value)"
+              />
+              <small
+                >A chatben ezen a néven jelenik meg (&#64;említés). Később ő maga is
+                átírhatja.</small
+              >
+            </div>
+          }
+
+          <div class="field">
+            <label for="mBirthday">Születési dátum</label>
+            <input
+              id="mBirthday"
+              type="date"
+              [min]="minBirthday"
+              [max]="maxBirthday"
+              [value]="birthday()"
+              (change)="birthday.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field">
+            <label for="mGender">Nem</label>
+            <select
+              id="mGender"
+              [value]="gender()"
+              (change)="gender.set($any($event.target).value)"
+            >
+              <option value="">—</option>
+              <option value="férfi">Férfi</option>
+              <option value="nő">Nő</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="mFamilyId">Család ID</label>
+            <input
+              id="mFamilyId"
+              type="text"
+              placeholder="Család ID vagy annak vége (üresen eltávolítás)"
+              [value]="familyId()"
+              (input)="familyId.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field">
+            <label for="mRole">Szerepkör</label>
+            <select id="mRole" [value]="role()" (change)="role.set($any($event.target).value)">
+              <option value="admin">Admin</option>
+              <option value="member">Klubtag</option>
+              <option value="guest">Vendég</option>
+            </select>
+            <small>Kézi felülírás - a következő bejelentkezéskor Authentik felülírja.</small>
+          </div>
+
+          @if (role() !== 'guest') {
+            <div class="field">
+              <label for="mMemberSince">Tagság kezdete</label>
+              <input
+                id="mMemberSince"
+                type="number"
+                [min]="clubFoundingYear"
+                [max]="currentYear"
+                placeholder="pl. 2022"
+                [value]="memberSince()"
+                (input)="memberSince.set($any($event.target).value)"
+              />
+            </div>
           }
         </div>
 
-        <div class="field">
-          <label for="mEmail">E-mail cím</label>
-          <input
-            id="mEmail"
-            type="email"
-            [value]="email()"
-            (input)="email.set($any($event.target).value)"
-          />
+        <hr class="divider" />
+
+        <h2>Levelezési cím</h2>
+        <p class="subtext">Opcionális.</p>
+        <div class="profile-fields">
+          <div class="field">
+            <label for="mZip">Irányítószám</label>
+            <input
+              id="mZip"
+              type="text"
+              [value]="address().zipCode"
+              (input)="updateAddress('zipCode', $any($event.target).value)"
+            />
+          </div>
+          <div class="field">
+            <label for="mCity">Település</label>
+            <input
+              id="mCity"
+              type="text"
+              [value]="address().city"
+              (input)="updateAddress('city', $any($event.target).value)"
+            />
+          </div>
+          <div class="field">
+            <label for="mStreet">Utca, házszám</label>
+            <input
+              id="mStreet"
+              type="text"
+              [value]="address().street"
+              (input)="updateAddress('street', $any($event.target).value)"
+            />
+          </div>
+          <div class="field">
+            <label for="mCountry">Ország</label>
+            <select
+              id="mCountry"
+              [value]="address().country"
+              (change)="updateAddress('country', $any($event.target).value)"
+            >
+              <option value="Magyarország">Magyarország</option>
+              <option value="Románia">Románia</option>
+              <option value="Egyesült Királyság">Egyesült Királyság</option>
+            </select>
+          </div>
         </div>
 
-        @if (!isCreateMode) {
-        <div class="field">
-          <label for="mUsername">Felhasználónév</label>
-          <input
-            id="mUsername"
-            type="text"
-            maxlength="40"
-            placeholder="pl. Zoli"
-            [value]="username()"
-            (input)="username.set($any($event.target).value)"
-          />
-          <small>A chatben ezen a néven jelenik meg (&#64;említés). Később ő maga is átírhatja.</small>
-        </div>
-        }
-
-        <div class="field">
-          <label for="mBirthday">Születési dátum</label>
-          <input
-            id="mBirthday"
-            type="date"
-            [min]="minBirthday"
-            [max]="maxBirthday"
-            [value]="birthday()"
-            (change)="birthday.set($any($event.target).value)"
-          />
-        </div>
-
-        <div class="field">
-          <label for="mGender">Nem</label>
-          <select id="mGender" [value]="gender()" (change)="gender.set($any($event.target).value)">
-            <option value="">—</option>
-            <option value="férfi">Férfi</option>
-            <option value="nő">Nő</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="mFamilyId">Család ID</label>
-          <input
-            id="mFamilyId"
-            type="text"
-            placeholder="Család ID vagy annak vége (üresen eltávolítás)"
-            [value]="familyId()"
-            (input)="familyId.set($any($event.target).value)"
-          />
-        </div>
-
-        <div class="field">
-          <label for="mRole">Szerepkör</label>
-          <select id="mRole" [value]="role()" (change)="role.set($any($event.target).value)">
-            <option value="admin">Admin</option>
-            <option value="member">Klubtag</option>
-            <option value="guest">Vendég</option>
-          </select>
-          <small>Kézi felülírás - a következő bejelentkezéskor Authentik felülírja.</small>
-        </div>
-
-        @if (role() !== 'guest') {
-        <div class="field">
-          <label for="mMemberSince">Tagság kezdete</label>
-          <input
-            id="mMemberSince"
-            type="number"
-            [min]="clubFoundingYear"
-            [max]="currentYear"
-            placeholder="pl. 2022"
-            [value]="memberSince()"
-            (input)="memberSince.set($any($event.target).value)"
-          />
-        </div>
-        }
-      </div>
-
-      <hr class="divider" />
-
-      <h2>Levelezési cím</h2>
-      <p class="subtext">Opcionális.</p>
-      <div class="profile-fields">
-        <div class="field">
-          <label for="mZip">Irányítószám</label>
-          <input
-            id="mZip"
-            type="text"
-            [value]="address().zipCode"
-            (input)="updateAddress('zipCode', $any($event.target).value)"
-          />
-        </div>
-        <div class="field">
-          <label for="mCity">Település</label>
-          <input
-            id="mCity"
-            type="text"
-            [value]="address().city"
-            (input)="updateAddress('city', $any($event.target).value)"
-          />
-        </div>
-        <div class="field">
-          <label for="mStreet">Utca, házszám</label>
-          <input
-            id="mStreet"
-            type="text"
-            [value]="address().street"
-            (input)="updateAddress('street', $any($event.target).value)"
-          />
-        </div>
-        <div class="field">
-          <label for="mCountry">Ország</label>
-          <select
-            id="mCountry"
-            [value]="address().country"
-            (change)="updateAddress('country', $any($event.target).value)"
-          >
-            <option value="Magyarország">Magyarország</option>
-            <option value="Románia">Románia</option>
-            <option value="Egyesült Királyság">Egyesült Királyság</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="actions-row">
-        <button type="button" class="primary-btn" [disabled]="saving()" (click)="save()">
-          {{ isCreateMode ? (saving() ? 'Létrehozás...' : 'Létrehozás') : (saving() ? 'Mentés...' : 'Mentés') }}
-        </button>
-      </div>
-    </section>
-
-    @if (user(); as u) {
-    <div class="profile-side">
-      <section class="panel">
-        <h2>Áttekintés</h2>
-        <div class="info-row">
-          <span>Kor</span>
-          <strong>{{ u.age != null ? u.age + ' év' : 'Nincs megadva' }}</strong>
-        </div>
-        <div class="info-row">
-          <span>Táborok száma</span>
-          <strong>{{ u.toursAttended ?? 0 }}</strong>
-        </div>
-        <div class="info-row">
-          <span>Utolsó belépés</span>
-          <strong>{{ u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Még nem lépett be' }}</strong>
-        </div>
-        <div class="info-row">
-          <span>Fiók létrehozva</span>
-          <strong>{{ formatDateTime(u.createdAt) }}</strong>
+        <div class="actions-row">
+          <button type="button" class="primary-btn" [disabled]="saving()" (click)="save()">
+            {{
+              isCreateMode
+                ? saving()
+                  ? 'Létrehozás...'
+                  : 'Létrehozás'
+                : saving()
+                  ? 'Mentés...'
+                  : 'Mentés'
+            }}
+          </button>
         </div>
       </section>
+
+      @if (user(); as u) {
+        <div class="profile-side">
+          <section class="panel">
+            <h2>Áttekintés</h2>
+            <div class="info-row">
+              <span>Kor</span>
+              <strong>{{ u.age != null ? u.age + ' év' : 'Nincs megadva' }}</strong>
+            </div>
+            <div class="info-row">
+              <span>Táborok száma</span>
+              <strong>{{ u.toursAttended ?? 0 }}</strong>
+            </div>
+            <div class="info-row">
+              <span>Utolsó belépés</span>
+              <strong>{{
+                u.lastLoginAt ? formatDateTime(u.lastLoginAt) : 'Még nem lépett be'
+              }}</strong>
+            </div>
+            <div class="info-row">
+              <span>Fiók létrehozva</span>
+              <strong>{{ formatDateTime(u.createdAt) }}</strong>
+            </div>
+          </section>
+        </div>
+      }
     </div>
-    }
-  </div>
   }
 </div>

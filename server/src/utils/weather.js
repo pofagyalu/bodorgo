@@ -35,7 +35,10 @@ export function classifyDay({ code, sunshineS, daylightS, precipitationMm, snowf
   const sunShare = daylightS > 0 && sunshineS != null ? sunshineS / daylightS : null;
 
   if ((snowfallCm ?? 0) >= SNOW_CM) return 'snow';
-  if (precip >= RAIN_MM || (precip >= SHOWER_MM && sunShare != null && sunShare < PARTLY_SUNSHINE)) {
+  if (
+    precip >= RAIN_MM ||
+    (precip >= SHOWER_MM && sunShare != null && sunShare < PARTLY_SUNSHINE)
+  ) {
     return 'rain';
   }
 

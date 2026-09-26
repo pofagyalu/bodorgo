@@ -21,7 +21,12 @@ export default [
       // ones; a leading underscore marks anything unused on purpose.
       'no-unused-vars': [
         'error',
-        { args: 'after-used', argsIgnorePattern: '^_|^next$', caughtErrors: 'none', ignoreRestSiblings: true },
+        {
+          args: 'after-used',
+          argsIgnorePattern: '^_|^next$',
+          caughtErrors: 'none',
+          ignoreRestSiblings: true,
+        },
       ],
       // The app runs as its own process (pm2) - exiting on a fatal error
       // is intended (see server.js).
@@ -31,7 +36,14 @@ export default [
   {
     // Tests, their helpers, build and one-off scripts may use development
     // packages (vitest, supertest, esbuild...).
-    files: ['tests/**', 'scripts/**', 'build.js', 'sync.js', 'vitest.config.js', 'eslint.config.js'],
+    files: [
+      'tests/**',
+      'scripts/**',
+      'build.js',
+      'sync.js',
+      'vitest.config.js',
+      'eslint.config.js',
+    ],
     rules: { 'n/no-unpublished-import': 'off', 'n/no-extraneous-import': 'off' },
   },
   prettier,

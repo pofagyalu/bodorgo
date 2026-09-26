@@ -27,7 +27,9 @@ export class TourVideoPlayer implements OnDestroy {
   videos = input.required<TourVideo[]>();
 
   private selectedId = signal<string | null>(null);
-  video = computed(() => this.videos().find((v) => v.id === this.selectedId()) ?? this.videos()[0] ?? null);
+  video = computed(
+    () => this.videos().find((v) => v.id === this.selectedId()) ?? this.videos()[0] ?? null,
+  );
 
   // Drives the custom click-to-play overlay - false until the <video>'s
   // own 'play' event fires, and again for each newly picked version.
