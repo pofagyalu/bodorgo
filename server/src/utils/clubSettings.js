@@ -15,7 +15,7 @@ export async function getClubSettings() {
     (await ClubSettings.findOneAndUpdate(
       { key: 'club' },
       { $setOnInsert: { key: 'club', membershipFees: DEFAULT_MEMBERSHIP_FEES, history: [] } },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: 'after' },
     ))
   );
 }

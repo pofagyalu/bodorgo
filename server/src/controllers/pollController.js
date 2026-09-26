@@ -311,7 +311,7 @@ export const deletePoll = async (req, res) => {
     const post = await Post.findByIdAndUpdate(
       poll.post,
       { text: '', poll: null, deletedAt: new Date() },
-      { new: true },
+      { returnDocument: 'after' },
     ).populate('creator', 'name username');
     if (post) emitToTour(refId(poll.tour), 'post-updated', post);
   }

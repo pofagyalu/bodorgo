@@ -120,7 +120,7 @@ export const saveDraft = async (req, res) => {
       delta: delta ?? null,
       updatedByName: req.user.name,
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   );
   res.status(200).json({ status: 'success', data: { updatedAt: draft.updatedAt } });
 };
