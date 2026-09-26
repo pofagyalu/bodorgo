@@ -235,6 +235,17 @@ export interface Tour {
   extraDocuments?: ExtraDocument[];
 }
 
+// A withdrawn registration ("Lemondás") - see cancellationModel.js.
+export interface Cancellation {
+  _id: string;
+  name: string;
+  bookedByName?: string;
+  cancelledByName?: string;
+  reason: string;
+  wasPaid: boolean;
+  cancelledAt: string;
+}
+
 // A letter an admin sent to a tour's attendees (see mailingController.js)
 // - kept as the record of what went out.
 export interface SentMailing {
@@ -676,6 +687,23 @@ export class TourService {
     return this.http.patch<{ status: string; data: { attendee: Attendee } }>(
       `${this.apiUrl}/${tourId}/reservations/${reservationId}/attendees/${attendeeId}/fee-exempt`,
       { feeExempt },
+    );
+  }
+
+  // "Lemondás" - takes one person off the tour (see
+  // reservationController.js's withdrawAttendee for who may withdraw whom).
+  withdrawAttendee(tourId: string, reservationId: string, attendeeId: string, reason: string) {
+    return this.http.request<{ status: string; data: { wasPaid: boolean; roomsReopened: boolean } }>(
+      'DELETE',
+      `${this.apiUrl}/${tourId}/reservations/${reservationId}/attendees/${attendeeId}`,
+      { body: { reason } },
+    );
+  }
+
+  // Admin-only - the tour's "Lemondások" list, newest first.
+  getCancellations(tourId: string) {
+    return this.http.get<{ status: string; data: { cancellations: Cancellation[] } }>(
+      `${this.apiUrl}/${tourId}/cancellations`,
     );
   }
 

@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Input, Output, computed, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { TourService, PaymentTotals } from '../../../services/tour';
+import { TourService, PaymentTotals, Cancellation } from '../../../services/tour';
 import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
@@ -72,11 +73,11 @@ export interface FamilySubtotal {
 @Component({
   selector: 'app-attendee-list',
   standalone: true,
-  imports: [FormsModule, MatIconModule, Avatar],
+  imports: [FormsModule, MatIconModule, Avatar, DatePipe],
   templateUrl: './attendee-list.html',
   styleUrl: './attendee-list.scss',
 })
-export class AttendeeList {
+export class AttendeeList implements OnInit {
   private tourService = inject(TourService);
   private paymentService = inject(PaymentService);
   private notifications = inject(NotificationsService);
@@ -309,6 +310,75 @@ export class AttendeeList {
         this.notifications.addError(err?.error?.message ?? 'Hiba történt a rögzítés során.');
         this.togglingFeeExemptId.set(null);
       },
+    });
+  }
+
+  // --- Lemondás (withdrawing someone from the tour) ---
+
+  // Whoever could sign them up may withdraw them - same rule as the
+  // server's (see reservationController.js's withdrawAttendee): an admin
+  // anyone, anyone else themselves, and a member their own family too.
+  canWithdraw(row: AttendeeListRow): boolean {
+    const me = this.auth.user();
+    if (!me) return false;
+    if (me.role === 'admin') return true;
+    if (row.userId && row.userId === me.id) return true;
+    return me.role === 'member' && !!row.familyId && row.familyId === me.familyId;
+  }
+
+  // The action column shows when there's anything to do in it.
+  get showActions(): boolean {
+    return this.isAdmin() || this.attendees.some((a) => this.canWithdraw(a));
+  }
+
+  withdrawing = signal<AttendeeListRow | null>(null);
+  withdrawReason = '';
+  withdrawBusy = signal(false);
+
+  askWithdraw(row: AttendeeListRow) {
+    this.withdrawReason = '';
+    this.withdrawing.set(row);
+  }
+
+  cancelWithdraw() {
+    if (!this.withdrawBusy()) this.withdrawing.set(null);
+  }
+
+  confirmWithdraw() {
+    const row = this.withdrawing();
+    if (!row || this.withdrawBusy()) return;
+    this.withdrawBusy.set(true);
+    this.tourService.withdrawAttendee(this.tourId, row.reservationId, row.attendeeId, this.withdrawReason).subscribe({
+      next: (res) => {
+        this.withdrawBusy.set(false);
+        this.withdrawing.set(null);
+        this.notifications.addSuccess(
+          `${row.name} jelentkezése lemondva.` +
+            (res.data.roomsReopened ? ' A szobabeosztás újra szerkeszthető.' : ''),
+        );
+        this.loadCancellations();
+        this.nightsUpdated.emit();
+      },
+      error: (err) => {
+        this.withdrawBusy.set(false);
+        this.notifications.addError(err?.error?.message ?? 'A lemondás nem sikerült.');
+      },
+    });
+  }
+
+  // Admin-only: the tour's "Lemondások" list.
+  cancellations = signal<Cancellation[]>([]);
+  showCancellations = signal(false);
+
+  ngOnInit() {
+    this.loadCancellations();
+  }
+
+  private loadCancellations() {
+    if (!this.isAdmin()) return;
+    this.tourService.getCancellations(this.tourId).subscribe({
+      next: (res) => this.cancellations.set(res.data.cancellations),
+      error: () => this.cancellations.set([]),
     });
   }
 }
