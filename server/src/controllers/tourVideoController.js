@@ -8,7 +8,7 @@ import sendResendEmail from '../utils/resendEmail.js';
 import { partitionAttendeesByEmailEligibility } from './tourPdfController.js';
 import logger from '../logger.js';
 
-const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.mov', '.webm']);
+export const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.mov', '.webm']);
 
 // Tried in order against the video's own basename - .hun.srt is Jellyfin's
 // own convention for a Hungarian subtitle track, seen on the couple of
@@ -28,7 +28,7 @@ const SUBTITLE_SUFFIXES = ['.hun.srt', '.hu.srt', '.srt'];
 // which path.resolve on the Linux production server treats as a literal
 // character rather than a path separator, silently failing to find a file
 // that's actually right there. Forward slashes work identically on both.
-function resolveVideoPath(root, filename) {
+export function resolveVideoPath(root, filename) {
   const normalized = filename.replace(/\\/g, '/');
   const fullPath = path.resolve(root, normalized);
   if (fullPath !== root && !fullPath.startsWith(root + path.sep)) {
@@ -62,7 +62,7 @@ export const getTourVideo = async (req, res) => {
 // "05 - Parádsasvár (2014) S03E02.hun.srt" in the same folder. Returns
 // null (not an error) when none exists - most episodes don't have one, and
 // that's a normal, silent case, not a problem.
-function findSubtitlePath(root, videoFile) {
+export function findSubtitlePath(root, videoFile) {
   const dir = path.dirname(videoFile);
   const base = path.basename(videoFile, path.extname(videoFile));
   for (const suffix of SUBTITLE_SUFFIXES) {
@@ -77,7 +77,7 @@ function findSubtitlePath(root, videoFile) {
 // (comma in SRT, period in VTT). The regex only touches that exact
 // HH:MM:SS,mmm shape, so it can't accidentally mangle a comma anywhere in
 // the actual subtitle text.
-function srtToVtt(srtText) {
+export function srtToVtt(srtText) {
   const withoutBom = srtText.replace(/^﻿/, '');
   const body = withoutBom.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
   return `WEBVTT\n\n${body}`;

@@ -30,6 +30,12 @@ export class Header {
 
   private userService = inject(UserService);
 
+  // Média is members only - guests don't get the menu item at all.
+  isMember = computed(() => {
+    const role = this.auth.user()?.role;
+    return role === 'admin' || role === 'member';
+  });
+
   // The logged-in user's own photo in place of the colored initials, once
   // they have one. No hover preview here - it's their own face, and the
   // avatar is a link to their profile anyway.

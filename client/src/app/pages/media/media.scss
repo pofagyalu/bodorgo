@@ -1,0 +1,211 @@
+// Same layout and colors as the Klub shell (klub.scss) - a persistent dark
+// sidebar beside the page - plus an indented sub-menu for the video
+// categories.
+:host {
+  display: block;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.media-shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: calc(100dvh - 80px);
+  background: #f5f7f5;
+}
+
+.media-sidebar {
+  background: #142a3c;
+  color: #e7f0ee;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 46px;
+  // Pinned below the site header, like the Klub sidebar.
+  position: sticky;
+  top: 80px;
+  height: calc(100dvh - 80px);
+  overflow-y: auto;
+}
+
+.media-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  // The main menu's Média orange.
+  background: #fbd3b4;
+  color: #8a3f0d;
+  border-radius: 13px;
+
+  mat-icon {
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+  }
+}
+
+.brand-text strong {
+  font-size: 17px;
+  letter-spacing: -0.03em;
+}
+
+.brand-text small {
+  display: block;
+  color: #9eb5bf;
+  font-size: 11px;
+  margin-top: 2px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.media-nav {
+  display: grid;
+  gap: 7px;
+}
+
+.media-nav .nav-item {
+  padding: 13px 15px;
+  border-radius: 11px;
+  color: #a9bdc5;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+  }
+
+  &:hover:not(.active) {
+    background: #1c3548;
+  }
+
+  &.active {
+    background: #29485a;
+    color: #fff;
+    font-weight: 650;
+  }
+}
+
+.soon {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f7b37f;
+  background: #f0782722;
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+// The video categories, indented under Videók with a thin guide line.
+.sub-nav {
+  display: grid;
+  gap: 2px;
+  margin: -2px 0 6px 24px;
+  padding-left: 12px;
+  border-left: 1px solid #2c4659;
+}
+
+.sub-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: #a9bdc5;
+  font-size: 13px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+
+  &:hover:not(.active) {
+    background: #1c3548;
+  }
+
+  &.active {
+    background: #29485a;
+    color: #fff;
+    font-weight: 650;
+  }
+}
+
+.sub-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #7f96a1;
+}
+
+.side-bottom {
+  margin-top: auto;
+  padding: 18px 14px;
+  background: #233f50;
+  border-radius: 15px;
+  font-size: 13px;
+  color: #c1d5d7;
+  line-height: 1.5;
+}
+
+.side-bottom strong {
+  color: #fff;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.media-main {
+  min-width: 0;
+}
+
+.media-mobile-nav {
+  display: none;
+}
+
+// Narrow screens: no room for the sidebar - Videók/Fotók become tabs
+// above the page, and the page shows the categories as chips instead.
+@media (max-width: 900px) {
+  .media-shell {
+    display: block;
+  }
+
+  .media-sidebar {
+    display: none;
+  }
+
+  .media-mobile-nav {
+    display: flex;
+    overflow-x: auto;
+    background: #fff;
+    border-bottom: 1px solid #e4eae7;
+    gap: 5px;
+    padding: 8px 10px;
+  }
+
+  .media-mobile-nav a {
+    flex: none;
+    white-space: nowrap;
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: #4a5b63;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+
+    &.active {
+      background: #e8f3ee;
+      color: #196959;
+    }
+  }
+}

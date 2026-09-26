@@ -1,0 +1,92 @@
+<div class="content">
+  <div class="heading">
+    <div>
+      <div class="kicker">Média</div>
+      <h1>Videók</h1>
+      <p>Szilveszteri műsorok, különkiadások, farsangok és reklámok – csak a klub tagjainak.</p>
+    </div>
+  </div>
+
+  @if (media.loading() && !media.categories().length) {
+  <p class="empty-note">Betöltés...</p>
+  } @else if (media.error()) {
+  <p class="empty-note">Nem sikerült betölteni a videókat.</p>
+  } @else if (!media.categories().length) {
+  <p class="empty-note">Még nincs videó.</p>
+  } @else if (unknownCategory()) {
+  <p class="empty-note">Nincs ilyen videókategória.</p>
+  } @else {
+  <!-- Narrow screens only - on a wide one the Média sidebar does this. -->
+  <nav class="filter-chips" aria-label="Kategóriák">
+    <a class="chip" routerLink="/media/videok" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      Mind <span class="chip-count">{{ totalCount() }}</span>
+    </a>
+    @for (c of media.categories(); track c.key) {
+    <a class="chip" [routerLink]="['/media/videok', c.key]" routerLinkActive="active">
+      {{ c.title }} <span class="chip-count">{{ c.videos.length }}</span>
+    </a>
+    }
+  </nav>
+
+  @for (c of shownCategories(); track c.key) {
+  <section class="panel video-group">
+    <div class="group-head">
+      @if (c.hasCover) {
+      <img class="group-cover" [src]="categoryCoverUrl(c)" alt="" />
+      } @else {
+      <div class="group-cover group-cover--empty"><mat-icon>movie</mat-icon></div>
+      }
+      <div class="group-text">
+        <h2>{{ c.title }}</h2>
+        <p>{{ c.description }}</p>
+      </div>
+      <span class="group-count">{{ c.videos.length }} videó</span>
+    </div>
+
+    <div class="video-grid">
+      @for (v of c.videos; track v.id) {
+      <button type="button" class="video-card" (click)="play(c, v)" [title]="v.title + (v.year ? ' (' + v.year + ')' : '')">
+        <div class="video-thumb">
+          @if (v.hasCover) {
+          <img [src]="coverUrl(c, v)" alt="" loading="lazy" />
+          } @else {
+          <mat-icon class="thumb-placeholder">movie</mat-icon>
+          }
+          <span class="play-badge"><mat-icon>play_arrow</mat-icon></span>
+          @if (v.year) {
+          <span class="year-badge">{{ v.year }}</span>
+          }
+        </div>
+        <span class="video-title">{{ v.title }}</span>
+      </button>
+      }
+    </div>
+  </section>
+  }
+  }
+</div>
+
+@if (playing(); as p) {
+<div class="player-backdrop" (click)="close()">
+  <div class="player" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="p.video.title">
+    <div class="player-head">
+      <div>
+        <strong>{{ p.video.title }}</strong>
+        <span>{{ p.category.title }}{{ p.video.year ? ' · ' + p.video.year : '' }}</span>
+      </div>
+      <button type="button" class="player-close" (click)="close()" title="Bezárás">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <!-- Keyed by the video, so picking another one starts it fresh. -->
+    @for (key of [p.video.id]; track key) {
+    <video class="player-video" controls autoplay preload="metadata" crossorigin="use-credentials">
+      <source [src]="videoUrl(p)" type="video/mp4" />
+      @if (p.video.hasSubtitles) {
+      <track kind="subtitles" srclang="hu" label="Magyar" [src]="subtitlesUrl(p)" />
+      }
+    </video>
+    }
+  </div>
+</div>
+}

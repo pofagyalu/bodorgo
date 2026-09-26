@@ -25,6 +25,9 @@
   @if (auth.isLoggedIn()) {
   <nav class="menu">
     <a routerLink="/taborok" routerLinkActive="active" class="menu-item green">Táborok</a>
+    @if (isMember()) {
+    <a routerLink="/media" routerLinkActive="active" class="menu-item orange">Média</a>
+    }
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
     <a routerLink="/klub" routerLinkActive="active" class="menu-item dark-green">Klub</a>
     <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown">Szavazások</a>
@@ -95,6 +98,15 @@
       class="menu-item green"
       >Táborok</a
     >
+    @if (isMember()) {
+    <a
+      routerLink="/media"
+      routerLinkActive="active"
+      (click)="closeMobileMenu()"
+      class="menu-item orange"
+      >Média</a
+    >
+    }
     <a
       routerLink="/chat"
       routerLinkActive="active"
