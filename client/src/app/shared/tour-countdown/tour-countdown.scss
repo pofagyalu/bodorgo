@@ -1,0 +1,164 @@
+// A glowing amber LED clock on dark glass. The unlit segments stay
+// faintly visible ("ghosts"), like on a real seven-segment display.
+:host {
+  display: block;
+  --led: #ffa53d;
+  --led-hot: #ffd9a3;
+  --led-glow: #ff7a1a;
+  --led-ghost: #ffffff0d;
+}
+
+.countdown {
+  display: block;
+  width: 100%;
+  padding: 12px 12px 10px;
+  border: 1px solid #ffffff14;
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #ff8a2a14, transparent 60%),
+    linear-gradient(180deg, #0b1822, #07121a);
+  box-shadow:
+    inset 0 1px 0 #ffffff10,
+    inset 0 0 18px #000a,
+    0 8px 22px #0006;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+
+  &:hover {
+    border-color: #ffa53d55;
+    box-shadow:
+      inset 0 1px 0 #ffffff10,
+      inset 0 0 18px #000a,
+      0 8px 26px #0007,
+      0 0 18px #ff7a1a22;
+  }
+}
+
+.cd-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.cd-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--led);
+  text-shadow: 0 0 8px #ff7a1a88;
+}
+
+.cd-tour {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c9d7dc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cd-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  padding: 9px 6px 6px;
+  border-radius: 10px;
+  background: #03090d;
+  box-shadow: inset 0 2px 8px #000c;
+}
+
+.cd-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.cd-digits {
+  display: flex;
+  gap: 2px;
+  // A real LED clock's slight forward lean.
+  transform: skewX(-7deg);
+}
+
+.cd-digit {
+  display: block;
+  width: 16px;
+  height: 29px;
+  overflow: visible;
+}
+
+.seg-dark polygon {
+  fill: var(--led-ghost);
+}
+
+.seg-lit {
+  fill: var(--led);
+  filter: drop-shadow(0 0 1.5px var(--led-hot)) drop-shadow(0 0 5px var(--led-glow)) drop-shadow(0 0 11px #ff6a0066);
+}
+
+// ÉLŐ: room above the digits for the accents, and a once-a-second pulse.
+.countdown.live .cd-panel {
+  padding-top: 15px;
+  padding-bottom: 9px;
+}
+
+.cd-digits {
+  transition: opacity 0.25s;
+}
+
+.cd-digits.pulse-off {
+  opacity: 0.35;
+}
+
+// Nothing planned: nothing to click.
+.countdown:disabled {
+  cursor: default;
+
+  &:hover {
+    border-color: #ffffff14;
+  }
+}
+
+.cd-unit-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffa53d99;
+}
+
+.cd-colon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  height: 29px;
+  padding: 0 1px;
+
+  i {
+    display: block;
+    width: 4px;
+    height: 4px;
+    border-radius: 1px;
+    background: var(--led);
+    box-shadow:
+      0 0 3px var(--led-hot),
+      0 0 7px var(--led-glow);
+    transition: opacity 0.15s;
+  }
+
+  &.off i {
+    opacity: 0.12;
+    box-shadow: none;
+  }
+}
