@@ -19,20 +19,21 @@ runner:
 cache:
   enabled: true
   dir: /data/cache
-  # Jobs run in their own containers and reach the cache via the NAS's LAN
-  # address (ports published in docker-compose.yml).
+  # The runner and the jobs both use the NAS's own network (host mode, see
+  # container.network below), so the jobs reach this cache on the NAS's
+  # LAN address.
   host: 192.168.1.94
   port: 4000
   proxy_port: 4001
 
 container:
+  # The NAS's own network for every job, like the runner itself - name
+  # lookups from Docker's internal networks timed out on the Synology.
+  network: host
   # Every job container: at most 2 GB of memory, so a test run can never
   # squeeze Forgejo or the live site (no CPU limit: Synology's kernel
-  # doesn't support --cpus - "NanoCPUs can not be set") - and, like the
-  # runner itself, Forgejo's public name pointed at its LAN address so the
-  # job can check out the code.
-  # The LAN's own DNS servers too (AdGuard + Pi-hole/Unbound).
-  options: --memory=2g --add-host=forgejo.terfotozas.hu:192.168.1.81 --dns=192.168.1.82 --dns=192.168.1.12
-  # A fresh network per job.
-  network: ''
+  # doesn't support --cpus - "NanoCPUs can not be set") - and Forgejo's
+  # public name pointed at its LAN address so the job can check out the
+  # code.
+  options: --memory=2g --add-host=forgejo.terfotozas.hu:192.168.1.81
   privileged: false

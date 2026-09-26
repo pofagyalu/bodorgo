@@ -19,11 +19,11 @@ services:
     volumes:
       - ./data:/data
       - /var/run/docker.sock:/var/run/docker.sock
-    ports:
-      # The runner's own job cache (npm packages, the MongoDB binary) and
-      # its proxy - jobs reach them through the NAS's LAN address.
-      - '4000:4000'
-      - '4001:4001'
+    # The NAS's own network, not Docker's internal one: name lookups from
+    # Docker's internal networks timed out on the Synology (DNS forwarding /
+    # firewall), while the NAS itself resolves fine. The job containers use
+    # the host network too (data/config.yml).
+    network_mode: host
     mem_limit: 256m
     # Inside the LAN, Forgejo's public name has to point at its LAN address
     # (the reverse proxy on 192.168.1.81) - from the NAS the public IP isn't
@@ -31,12 +31,6 @@ services:
     # data/config.yml's container.options.
     extra_hosts:
       - 'forgejo.terfotozas.hu:192.168.1.81'
-    # The LAN's own DNS servers (AdGuard + Pi-hole/Unbound) - the NAS's
-    # default resolver inside containers timed out on lookups like
-    # data.forgejo.org (where the checkout/cache steps come from).
-    dns:
-      - 192.168.1.82
-      - 192.168.1.12
     environment:
       FORGEJO_INSTANCE: https://forgejo.terfotozas.hu
       # The registration code from Forgejo -> Site Administration ->
