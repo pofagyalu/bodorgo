@@ -6,7 +6,8 @@ request and every push to `main`, and blocks merging a PR while they fail.
 How it fits together: **Forgejo** only hands out the jobs; the **runner** (a
 small container on the NAS) picks them up and runs each one in a fresh,
 throwaway `node:22-bookworm` container. One job at a time, at most 2 GB of
-memory and 2 CPU cores each; a run takes about 1-2 minutes.
+memory each (no CPU limit - Synology's kernel doesn't support one); a run
+takes about 1-2 minutes.
 
 ## 1. Turn Actions on for the repository
 
