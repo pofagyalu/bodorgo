@@ -233,11 +233,17 @@ export interface Tour {
   // beszámoló, places-to-visit notes, etc.) - only populated on the
   // single-tour endpoint, same as schedule/reservations above.
   extraDocuments?: ExtraDocument[];
-  // The raw NAS-relative video path - only ever present in getTour's
-  // response for an admin viewer (see tourController.js), used solely to
-  // pre-select the current choice in tour-edit.ts's video picker. Never
-  // rely on this for playback - use TourService.videoUrl instead.
-  videoFile?: string;
+}
+
+// One version of a tour's recap video - matched to the tour by its file
+// name on the NAS (see server/src/utils/tourVideos.js). Most tours have
+// one with no label; a tour with two cuts has one per cut ("Directors
+// Cut", "Kilians Cut").
+export interface TourVideo {
+  id: string;
+  label: string;
+  hasCover: boolean;
+  hasSubtitles: boolean;
 }
 
 // filename is what's actually on disk under
@@ -327,11 +333,11 @@ export interface TourResponse {
   status: string;
   data: {
     tour: Tour;
-    // Derived server-side from the admin-only videoFile field (never sent
-    // to the client directly - see tourController.js's getTour) - whether
-    // to show the recap video player at all. The actual stream is a
-    // separate requireAuth-gated request (see TourService.videoUrl).
+    // The recap video's versions, found by the tour number (see
+    // tourController.js's getTour) - empty when there's none. The streams
+    // are separate requireAuth-gated requests (see TourService.videoUrl).
     hasVideo: boolean;
+    videos: TourVideo[];
     participantCount: number;
     attendeePayments: AttendeePayment[];
     paymentTotals: PaymentTotals | null;
@@ -370,16 +376,6 @@ export interface TourPayload {
   childAgeLimitYears?: number;
   advancePaymentPercentage?: number;
   clubSubsidyAmount?: number;
-  // Relative path under the NAS video library, picked from
-  // TourService.getAvailableVideos() rather than typed by hand (see
-  // tourVideoController.js's listAvailableVideos) - an empty string clears
-  // it, same convention as familyId elsewhere.
-  videoFile?: string;
-}
-
-export interface AvailableVideosResponse {
-  status: string;
-  data: { files: string[] };
 }
 
 export interface SignUpResponse {
@@ -707,23 +703,18 @@ export class TourService {
   }
 
   // Same plain-URL-with-cookie-auth pattern as the image URLs above - a
-  // <video src> straight to the requireAuth-gated stream (see
-  // tourVideoController.js's getTourVideo).
-  videoUrl(tourId: string): string {
-    return `${this.apiUrl}/${tourId}/video`;
+  // <video src>/<img src>/<track src> straight to the requireAuth-gated
+  // routes (see tourVideoController.js), one video version each.
+  videoUrl(tourId: string, videoId: string): string {
+    return `${this.apiUrl}/${tourId}/videos/${videoId}/video`;
   }
 
-  // A <track src> - 404s silently (no subtitle track rendered) when the
-  // video has no matching .srt file, which is the normal case for most
-  // episodes (see tourVideoController.js's getTourSubtitles).
-  subtitlesUrl(tourId: string): string {
-    return `${this.apiUrl}/${tourId}/subtitles.vtt`;
+  videoCoverUrl(tourId: string, videoId: string): string {
+    return `${this.apiUrl}/${tourId}/videos/${videoId}/cover`;
   }
 
-  // Admin-only - the real files found under the NAS video library, for the
-  // tour-edit page's video picker.
-  getAvailableVideos(): Observable<AvailableVideosResponse> {
-    return this.http.get<AvailableVideosResponse>(`${this.apiUrl}/videos/available`);
+  subtitlesUrl(tourId: string, videoId: string): string {
+    return `${this.apiUrl}/${tourId}/videos/${videoId}/subtitles.vtt`;
   }
 
   // Admin-only server-side (restrictTo('admin') on the route) - marks/

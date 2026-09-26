@@ -297,39 +297,12 @@
     </div>
   </section>
 
-  <!-- Post-tour recap video (see tourVideoController.js) - only present
-       once an admin has picked one from the tour-edit page. A custom
-       click-to-play overlay stands in for the cover image until playback
-       actually starts (see videoStarted), rather than the browser's own
-       static poster. -->
-  @if (hasVideo()) {
+  <!-- Post-tour recap video(s) - found on the NAS by the tour number (see
+       server/src/utils/tourVideos.js); see tour-video-player. -->
+  @if (videos().length) {
   <section class="video-section">
-    <h2 class="section-heading">Tábori videó</h2>
-    <div class="video-wrap">
-      <video
-        #tourVideo
-        class="tour-video"
-        controls
-        preload="metadata"
-        crossorigin="use-credentials"
-        (play)="videoStarted.set(true)"
-      >
-        <source [src]="videoUrl(t._id)" type="video/mp4" />
-        <track
-          kind="subtitles"
-          srclang="hu"
-          label="Magyar"
-          [src]="subtitlesUrl(t._id)"
-          default
-        />
-      </video>
-      @if (!videoStarted()) {
-      <button type="button" class="video-overlay" (click)="tourVideo.play()">
-        <mat-icon class="video-overlay-icon">play_circle</mat-icon>
-        <span class="video-overlay-text">Nyomd meg azt a gombot, te Béla!</span>
-      </button>
-      }
-    </div>
+    <h2 class="section-heading">Tábori {{ videos().length > 1 ? 'videók' : 'videó' }}</h2>
+    <app-tour-video-player [tourId]="t._id" [videos]="videos()" />
   </section>
   }
 

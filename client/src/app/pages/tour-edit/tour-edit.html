@@ -165,18 +165,11 @@
       <p class="field-note">A kiválasztott kép a tábor mentésekor kerül feltöltésre.</p>
     </div>
 
-    <label class="form-field-full"
-      >Tábori videó
-      <select [(ngModel)]="form.videoFile" name="videoFile">
-        <option value="">— Nincs videó —</option>
-        @for (file of availableVideos(); track file) {
-        <option [value]="file">{{ file }}</option>
-        }
-      </select>
-    </label>
     <p class="field-note">
-      A NAS-on lévő videótár ("A bódorgó klán") fájljai közül választhatsz - a bejelentkezett
-      felhasználók itt tekinthetik meg a tábor videóját.
+      <strong>Tábori videó:</strong> automatikusan megjelenik, amint a NAS-on az
+      <em>a-bodorgo-klan</em> mappába kerül egy fájl, aminek a neve a tábor sorszámával kezdődik
+      (pl. „10 - Sarud (2017) S06E01.mp4”). Több változatnál az évszám és az epizódkód közötti
+      szöveg a változat neve (pl. „Directors Cut”).
     </p>
 
     @if (error()) {

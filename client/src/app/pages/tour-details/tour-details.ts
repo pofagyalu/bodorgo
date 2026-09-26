@@ -15,6 +15,7 @@ import {
   PaymentTotals,
   DistanceInfo,
   ExtraDocument,
+  TourVideo,
   attendeeUserId,
   isInMyPaymentGroup,
 } from '../../services/tour';
@@ -26,6 +27,7 @@ import { formatDrivingDuration } from '../../shared/format';
 import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
+import { TourVideoPlayer } from './tour-video-player/tour-video-player';
 import { AttendeeList, AttendeeListRow as AttendeeListPayment } from './attendee-list/attendee-list';
 import { NotificationsService } from '../../notifications/notifications.service';
 
@@ -51,7 +53,7 @@ interface PickerOption {
 @Component({
   selector: 'app-tour-details',
   standalone: true,
-  imports: [MatIconModule, RouterLink, FormsModule, TourEvent, EventForm, ReviewStars, AttendeeList],
+  imports: [MatIconModule, RouterLink, FormsModule, TourEvent, EventForm, ReviewStars, AttendeeList, TourVideoPlayer],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
@@ -95,15 +97,9 @@ export class TourDetails implements OnDestroy {
   // sign-ups) - passed down to their avatars.
   userPhotos = signal<Record<string, string>>({});
   usernames = signal<Record<string, string>>({});
-  // Whether an admin has assigned a post-tour recap video (see
-  // tourController.js's getTour) - the actual file path never reaches the
-  // client, just this boolean plus the requireAuth-gated stream URL below.
-  hasVideo = signal(false);
-  // Drives the custom click-to-play overlay (see tour-details.html) -
-  // starts false on every fresh tour load and flips permanently true the
-  // first time the <video>'s own 'play' event fires, whether that's from
-  // clicking the overlay or the native controls once it's visible.
-  videoStarted = signal(false);
+  // The recap video's versions, found on the NAS by the tour number (see
+  // tourController.js's getTour) - usually one; see tour-video-player.
+  videos = signal<TourVideo[]>([]);
   loadError = signal<string | null>(null);
   signingUp = signal(false);
   signUpError = signal<string | null>(null);
@@ -413,7 +409,7 @@ export class TourDetails implements OnDestroy {
         this.attendeePayments.set(res.data.attendeePayments);
         this.paymentTotals.set(res.data.paymentTotals);
         this.distanceInfo.set(res.data.distanceInfo);
-        this.hasVideo.set(res.data.hasVideo);
+        this.videos.set(res.data.videos ?? []);
         this.userPhotos.set(res.data.userPhotos ?? {});
         this.usernames.set(res.data.usernames ?? {});
       },
@@ -439,14 +435,6 @@ export class TourDetails implements OnDestroy {
 
   attendeesExcelUrl(tourId: string): string {
     return this.tourService.attendeesExcelUrl(tourId);
-  }
-
-  videoUrl(tourId: string): string {
-    return this.tourService.videoUrl(tourId);
-  }
-
-  subtitlesUrl(tourId: string): string {
-    return this.tourService.subtitlesUrl(tourId);
   }
 
   // Same deep-link URLs as tourPdfController.js's Helyszín row - each

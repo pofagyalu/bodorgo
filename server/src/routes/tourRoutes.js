@@ -2,7 +2,7 @@ import express from 'express';
 import * as tourController from '../controllers/tourController.js';
 import { signUpForTour, updateAttendeeNights, updateAttendeeFeeExempt } from '../controllers/reservationController.js';
 import * as tourImageController from '../controllers/tourImageController.js';
-import { getTourVideo, getTourSubtitles, listAvailableVideos } from '../controllers/tourVideoController.js';
+import { getTourVideo, getTourVideoCover, getTourVideoSubtitles } from '../controllers/tourVideoController.js';
 import * as reviewController from '../controllers/reviewController.js';
 import { downloadTourPdf, emailTourPdf, emailTourPdfToAttendees } from '../controllers/tourPdfController.js';
 import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
@@ -30,10 +30,6 @@ router
 
 router.route('/tour-stats').get(requireAuth, tourController.getTourStats);
 router.route('/montly-plan/:year').get(requireAuth, tourController.getMonthlyPlan);
-// Admin-only picker data for the tour-edit page - a plain top-level path
-// (not nested under /:id), same "no collision risk" reasoning as
-// /tour-stats above.
-router.route('/videos/available').get(requireAuth, restrictTo('admin'), listAvailableVideos);
 
 router
   .route('/')
@@ -120,10 +116,13 @@ router
   .get(requireAuth, tourImageController.getTourImage)
   .patch(requireAuth, restrictTo('admin'), tourImageController.setImageRestricted);
 
-// Post-tour recap video - same "logged in, that's it, no role
-// restriction" bar as the gallery routes above (see getTour's hasVideo).
-router.route('/:tourId/video').get(requireAuth, getTourVideo);
-router.route('/:tourId/subtitles.vtt').get(requireAuth, getTourSubtitles);
+// Post-tour recap video(s), matched by tour number (see
+// utils/tourVideos.js) - same "logged in, that's it, no role restriction"
+// bar as the gallery routes above. :videoId is one of the ids getTour
+// lists in `videos`.
+router.route('/:tourId/videos/:videoId/video').get(requireAuth, getTourVideo);
+router.route('/:tourId/videos/:videoId/cover').get(requireAuth, getTourVideoCover);
+router.route('/:tourId/videos/:videoId/subtitles.vtt').get(requireAuth, getTourVideoSubtitles);
 
 // Reviews - requireAuth only, not restrictTo('admin')/anything role-based;
 // the actual "who's allowed" check is attendance-based, enforced inside

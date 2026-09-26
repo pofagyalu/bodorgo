@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import AppError from '../utils/appError.js';
 import config from '../config.js';
-import { VIDEO_EXTENSIONS, findSubtitlePath, resolveVideoPath, srtToVtt } from './tourVideoController.js';
+import { VIDEO_EXTENSIONS, findSubtitlePath, resolveVideoPath, srtToVtt } from '../utils/videoFiles.js';
 
 // The club's own videos that don't belong to any one tour - Média → Videók.
 // Nothing is stored in the database: each category is a Jellyfin-organized

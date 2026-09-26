@@ -4,7 +4,7 @@ import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import Payment from '../models/paymentModel.js';
 import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservationController.js';
-import { notifyAttendeesOfNewVideo } from './tourVideoController.js';
+import { tourVideoList } from '../utils/tourVideos.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
@@ -190,7 +190,6 @@ export const getTour = async (req, res, next) => {
     : { slug: req.params.id };
 
   const tour = await Tour.findOne(query)
-    .select('+videoFile')
     .populate({
       path: 'reservations',
       populate: [
@@ -279,24 +278,19 @@ export const getTour = async (req, res, next) => {
     : null;
   const distanceInfo = await resolveDistanceInfo(tour, viewer);
 
-  // videoFile was only selected above to compute this boolean and (for an
-  // admin, who needs it to pre-fill the tour-edit page's video picker) to
-  // report back directly - the raw NAS-relative path must never reach a
-  // public, unauthenticated response otherwise (same reasoning as
-  // sourceFolder/images - see tourModel.js). Actual playback always goes
-  // through the separate requireAuth-gated /tours/:id/video route (see
-  // tourVideoController.js), regardless of role.
+  // The recap video(s), found by the tour number (see utils/tourVideos.js)
+  // - only ids and version names; playback goes through the
+  // requireAuth-gated /tours/:id/videos/... routes.
   const tourJson = tour.toObject();
-  const hasVideo = !!tourJson.videoFile;
-  if (req.session?.user?.role !== 'admin') {
-    delete tourJson.videoFile;
-  }
+  const videos = tourVideoList(tour.order);
+  const hasVideo = videos.length > 0;
 
   res.status(200).json({
     status: 'success',
     data: {
       tour: tourJson,
       hasVideo,
+      videos,
       participantCount,
       attendeePayments: attendeePaymentsWithMethod,
       paymentTotals,
@@ -341,11 +335,7 @@ export const updateTour = async (req, res) => {
     ? { _id: req.params.id }
     : { slug: req.params.id };
 
-  // +videoFile: select:false by default (see tourModel.js) - needed here
-  // to read the value BEFORE it's overwritten below, so videoJustLinked
-  // can tell "newly assigned" apart from "already had one, admin just
-  // re-saved the form".
-  const tour = await Tour.findOne(query).select('+videoFile');
+  const tour = await Tour.findOne(query);
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
   }
@@ -356,8 +346,6 @@ export const updateTour = async (req, res) => {
       throw new AppError(`A ${req.body.order}. sorszám már foglalt ("${existing.title}").`, 400);
     }
   }
-
-  const hadVideoBefore = !!tour.videoFile;
 
   for (const [key, value] of Object.entries(req.body)) {
     tour[key] = value;
@@ -370,25 +358,11 @@ export const updateTour = async (req, res) => {
   // markAllAttendeesPaidForTour's own comment on why that's worth an
   // automatic side effect.
   const advanceBecameZero = tour.isModified('advancePaymentPercentage') && tour.advancePaymentPercentage === 0;
-  // Only a genuine "went from unset to set" counts - swapping one already-
-  // linked video for another (e.g. correcting to the right cut) is a fix,
-  // not a "your video is ready" moment, so it doesn't re-notify.
-  const videoJustLinked = tour.isModified('videoFile') && !!tour.videoFile && !hadVideoBefore;
 
   await tour.save();
 
   if (advanceBecameZero) {
     await markAllAttendeesPaidForTour(tour._id);
-  }
-
-  if (videoJustLinked) {
-    // Never lets an email hiccup fail the admin's save - the tour is
-    // already saved by this point regardless.
-    try {
-      await notifyAttendeesOfNewVideo(tour);
-    } catch (err) {
-      logger.error(`Tour ${tour._id}: video-ready notification batch failed: ${err.message}`);
-    }
   }
 
   res.status(200).json({ status: 'success', data: { tour } });
