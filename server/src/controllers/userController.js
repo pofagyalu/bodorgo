@@ -3,6 +3,7 @@ import User from '../models/userModel.js';
 import Reservation from '../models/reservationModel.js';
 import Payment from '../models/paymentModel.js';
 import AppError from '../utils/appError.js';
+import { CLUB_FOUNDING_YEAR } from '../utils/clubSettings.js';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -291,11 +292,9 @@ export const getUser = async (req, res) => {
 // by hand, same identity model as the family scripts (createFamily.js
 // etc.): omitting familyId starts a brand new family for this one person,
 // giving one joins them into that existing family directly.
-// The club has tracked membership dues since this year (see
-// userModel.js's memberSince) - also enforced here so a mistyped year
-// can't silently produce a nonsensical membership table column.
-const CLUB_FOUNDING_YEAR = 2019;
-
+// memberSince can't be before the club's founding year (see
+// utils/clubSettings.js) - enforced here so a mistyped year can't
+// silently produce a nonsensical membership table column.
 function parseMemberSince(value) {
   if (value === undefined) return undefined;
   if (value === null || value === '') return null;

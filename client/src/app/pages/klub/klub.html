@@ -21,6 +21,11 @@
       <a routerLink="profilom" routerLinkActive="active" class="nav-item">
         <mat-icon>person</mat-icon><span>Profilom</span>
       </a>
+      @if (isAdmin()) {
+      <a routerLink="beallitasok" routerLinkActive="active" class="nav-item">
+        <mat-icon>settings</mat-icon><span>Beállítások</span>
+      </a>
+      }
     </nav>
     <div class="side-bottom">
       <strong>Átlátható klubélet</strong>
@@ -36,6 +41,9 @@
       <a routerLink="felhasznalok" routerLinkActive="active">Felhasználók</a>
       <a routerLink="dokumentumok" routerLinkActive="active">Dokumentumok</a>      }
       <a routerLink="profilom" routerLinkActive="active">Profil</a>
+      @if (isAdmin()) {
+      <a routerLink="beallitasok" routerLinkActive="active">Beállítások</a>
+      }
     </nav>
 
     <router-outlet />

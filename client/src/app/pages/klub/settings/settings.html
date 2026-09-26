@@ -1,0 +1,107 @@
+<div class="content">
+  <div class="heading">
+    <div>
+      <div class="kicker">Klub</div>
+      <h1>Beállítások</h1>
+      <p>A klub egészére vonatkozó beállítások - csak adminoknak.</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Tagdíj</h2>
+        <p class="subtext">
+          Éves összeg, attól az évtől, amikor életbe lép. Egy emelés a korábbi, még ki nem fizetett éveket nem
+          érinti - azok a régi díjjal maradnak.
+        </p>
+      </div>
+      @if (currentFee(); as fee) {
+      <span class="current-fee">{{ currentYear }}: <strong>{{ fee }} Ft</strong></span>
+      }
+    </div>
+
+    @if (loading()) {
+    <p class="empty-note">Betöltés...</p>
+    } @else {
+    <table class="fee-table">
+      <thead>
+        <tr>
+          <th>Életbe lép</th>
+          <th>Összeg</th>
+          <th>Érvényes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track $index) {
+        <tr [class.locked]="isLocked(row)">
+          <td>
+            <span class="year-cell">
+              <input
+                type="number"
+                [min]="foundingYear()"
+                [ngModel]="row.fromYear"
+                (ngModelChange)="update(row, 'fromYear', $event)"
+                [disabled]="isLocked(row) || isFounding(row)"
+              />
+              <span class="suffix">-től</span>
+            </span>
+          </td>
+          <td>
+            <span class="amount-cell">
+              <input
+                type="number"
+                min="1"
+                step="100"
+                [ngModel]="row.amount"
+                (ngModelChange)="update(row, 'amount', $event)"
+                [disabled]="isLocked(row)"
+              />
+              <span class="suffix">Ft</span>
+            </span>
+          </td>
+          <td class="range">{{ rangeLabel(row) }}</td>
+          <td class="row-end">
+            @if (isLocked(row)) {
+            <mat-icon class="lock" title="Erre az időszakra már van befizetett tagdíj - nem módosítható">lock</mat-icon>
+            } @else if (!isFounding(row)) {
+            <button type="button" class="icon-btn" title="Sor törlése" (click)="removeRow(row)">
+              <mat-icon>delete</mat-icon>
+            </button>
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+
+    <div class="actions">
+      <button type="button" class="outline-btn" (click)="addRow()" [disabled]="saving()">
+        <mat-icon>add</mat-icon> Új díj egy évtől
+      </button>
+      <span class="spacer"></span>
+      @if (dirty()) {
+      <button type="button" class="outline-btn" (click)="reset()" [disabled]="saving()">Mégse</button>
+      }
+      <button type="button" class="primary-btn" (click)="save()" [disabled]="!dirty() || saving()">
+        {{ saving() ? 'Mentés…' : 'Mentés' }}
+      </button>
+    </div>
+
+    @if (history().length) {
+    <div class="history">
+      <h3>Változások</h3>
+      <ul>
+        @for (h of history(); track $index) {
+        <li>
+          <span class="history-when">{{ h.at | date: 'yyyy. MM. dd. HH:mm' }} · {{ h.byName }}</span>
+          <span>{{ h.change }}</span>
+        </li>
+        }
+      </ul>
+    </div>
+    }
+    }
+  </section>
+</div>

@@ -24,4 +24,7 @@ export class Klub {
     const role = this.auth.user()?.role;
     return role === 'admin' || role === 'member';
   });
+
+  // Beállítások is admin-only.
+  isAdmin = computed(() => this.auth.user()?.role === 'admin');
 }
