@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember, createReservation, createTour } from '../helpers/factories.js';
 import Tour from '../../src/models/tourModel.js';
+import { tourHasEnded } from '../../src/controllers/reviewController.js';
 
 describe('finance ledger', () => {
   const tx = { date: '2026-01-10', name: ' Szállás előleg ', type: 'expense', category: 'Szállásköltség', amount: 50000 };
@@ -101,20 +102,36 @@ describe('polls', () => {
 
 describe('tour reviews', () => {
   it('only attendees rate (1-10); a second rating replaces the first', async () => {
-    const tour = await createTour();
+    const tour = await createTour({ startDate: new Date('2024-05-01'), duration: 3 });
     const attendee = await createMember();
     const outsider = await createMember();
     await createReservation(tour, [attendee]);
     const rate = (user, rating) => request(app).put(`/tours/${tour._id}/reviews`).set(asUser(user)).send({ rating });
 
-    expect((await request(app).get(`/tours/${tour._id}/reviews/me`).set(asUser(outsider))).body.data).toEqual({ isAttendee: false, rating: null });
+    expect((await request(app).get(`/tours/${tour._id}/reviews/me`).set(asUser(outsider))).body.data).toEqual({ isAttendee: false, hasEnded: false, rating: null });
     expect((await rate(outsider, 8)).status).toBe(403);
     expect((await rate(attendee, 11)).status).toBe(400);
     expect((await rate(attendee, 8)).status).toBe(200);
     const second = await rate(attendee, 6);
     expect(second.body.data).toMatchObject({ rating: 6, ratingsQuantity: 1 });
     const mine = await request(app).get(`/tours/${tour._id}/reviews/me`).set(asUser(attendee));
-    expect(mine.body.data).toEqual({ isAttendee: true, rating: 6 });
+    expect(mine.body.data).toEqual({ isAttendee: true, hasEnded: true, rating: 6 });
     expect((await Tour.findById(tour._id)).ratingsAverage).toBe(6);
+  });
+
+  it('an unfinished tour cannot be rated yet, not even by an attendee', async () => {
+    const tour = await createTour(); // starts in 30 days
+    const attendee = await createMember();
+    await createReservation(tour, [attendee]);
+    const mine = await request(app).get(`/tours/${tour._id}/reviews/me`).set(asUser(attendee));
+    expect(mine.body.data).toEqual({ isAttendee: true, hasEnded: false, rating: null });
+    const res = await request(app).put(`/tours/${tour._id}/reviews`).set(asUser(attendee)).send({ rating: 8 });
+    expect(res.status).toBe(403);
+  });
+
+  it('a tour ends at midnight after its last day', () => {
+    const tour = { startDate: new Date(2024, 4, 1), duration: 3 }; // 1-3 May
+    expect(tourHasEnded(tour, new Date(2024, 4, 3, 23, 59))).toBe(false);
+    expect(tourHasEnded(tour, new Date(2024, 4, 4, 0, 0))).toBe(true);
   });
 });

@@ -413,6 +413,7 @@ export interface MyReviewResponse {
   status: string;
   data: {
     isAttendee: boolean;
+    hasEnded: boolean;
     rating: number | null;
   };
 }

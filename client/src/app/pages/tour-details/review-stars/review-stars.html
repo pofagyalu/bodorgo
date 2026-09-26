@@ -3,14 +3,14 @@
   <mat-icon>star</mat-icon>
   {{ averageRating }}/10
   <span class="empty-note">
-    @if (loaded() && isAttendee()) {
+    @if (loaded() && canReview()) {
       ({{ savedRating() !== null ? 'a te értékelésed ' + savedRating() : 'még nem értékeltél' }})
     } @else {
       ({{ reviewCount }} értékelés)
     }
   </span>
-  @if (loaded() && isAttendee()) {
-  <button type="button" class="review-edit-btn" (click)="startEditing()">
+  @if (loaded() && canReview()) {
+  <button type="button" class="review-edit-btn" (click)="startEditing($event)">
     {{ savedRating() !== null ? 'Módosítom' : 'Értékelek' }}
   </button>
   }
