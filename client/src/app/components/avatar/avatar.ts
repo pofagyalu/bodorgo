@@ -100,17 +100,23 @@ export class Avatar {
     this.closePreview();
   }
 
-  // A tap anywhere else, or any scrolling, closes an open preview.
+  // A tap anywhere else, or any scrolling (see onAnyScroll), closes an open
+  // preview.
   @HostListener('document:click')
-  @HostListener('window:scroll')
   @HostListener('window:resize')
   closePreview() {
     clearTimeout(this.openTimer);
+    document.removeEventListener('scroll', this.onAnyScroll, true);
     if (!this.previewPos()) return;
     this.previewShown.set(false);
     clearTimeout(this.removeTimer);
     this.removeTimer = setTimeout(() => this.previewPos.set(null), FADE_MS);
   }
+
+  // Scroll events don't bubble - a capturing listener on the document
+  // catches every scrolling element's; only attached while a preview is
+  // open.
+  private onAnyScroll = () => this.closePreview();
 
   private canPreview(): boolean {
     return this.preview() && !!this.photoUrl();
@@ -129,6 +135,7 @@ export class Avatar {
     const centered = rect.left + rect.width / 2 - PREVIEW_SIZE / 2;
     const left = Math.min(Math.max(centered, 8), window.innerWidth - PREVIEW_SIZE - 8);
     this.previewPos.set({ top, left, above });
+    document.addEventListener('scroll', this.onAnyScroll, { capture: true, passive: true });
     requestAnimationFrame(() => requestAnimationFrame(() => this.previewShown.set(true)));
   }
 }

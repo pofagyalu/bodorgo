@@ -1,4 +1,14 @@
-import { Component, OnDestroy, computed, effect, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  afterEveryRender,
+  computed,
+  effect,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs';
 import { PollService } from '../../services/poll';
@@ -48,6 +58,72 @@ export class Header implements OnDestroy {
     if (this.auth.isLoggedIn()) this.pollService.refreshPending();
     else this.pollService.pendingCount.set(0);
   });
+
+  // The soap bubble behind the menu: it sits on the selected item, floats
+  // over to whichever one the mouse is on (stretching to its width) and
+  // back when the mouse leaves the menu. Placed after every render too, so
+  // it follows a page change (routerLinkActive) and a menu item changing
+  // width (the Szavazások badge, the font loading in).
+  private menu = viewChild<ElementRef<HTMLElement>>('menu');
+  private bubble = viewChild<ElementRef<HTMLElement>>('bubble');
+  private hovered: HTMLElement | null = null;
+  private bubbleTarget: HTMLElement | null = null;
+  private bubbleBox = '';
+  private bubbleSync = afterEveryRender(() => this.placeBubble());
+  private fontsLoaded = document.fonts?.ready.then(() => this.placeBubble());
+
+  hoverItem(item: EventTarget | null) {
+    this.hovered = item as HTMLElement | null;
+    this.placeBubble();
+  }
+
+  @HostListener('window:resize')
+  placeBubble() {
+    const bubble = this.bubble()?.nativeElement;
+    const menu = this.menu()?.nativeElement;
+    if (!bubble || !menu) return;
+
+    const target = this.hovered ?? menu.querySelector<HTMLElement>('.menu-item.active');
+    if (!target) {
+      // Nothing selected (e.g. the home page) and no hover: the bubble pops.
+      bubble.classList.remove('shown');
+      this.bubbleTarget = null;
+      return;
+    }
+    const box = [target.offsetLeft, target.offsetTop, target.offsetWidth, target.offsetHeight];
+    if (target === this.bubbleTarget && box.join() === this.bubbleBox) return;
+
+    // Appearing from nowhere: it forms in place instead of flying in from
+    // wherever it last was.
+    const appearing = !this.bubbleTarget || !bubble.classList.contains('shown');
+    const moved = !appearing && target !== this.bubbleTarget;
+    bubble.classList.toggle('instant', appearing);
+    bubble.style.transform = `translate(${box[0]}px, ${box[1]}px)`;
+    bubble.style.width = `${box[2]}px`;
+    bubble.style.height = `${box[3]}px`;
+    if (appearing) {
+      void bubble.offsetWidth; // apply the jump before the transitions come back
+      bubble.classList.remove('instant');
+    }
+    bubble.classList.add('shown');
+    this.bubbleTarget = target;
+    this.bubbleBox = box.join();
+
+    // A soap bubble's wobble on the way: drawn out sideways as it sets off,
+    // then squeezed the other way, settling back to round.
+    if (moved && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      bubble.firstElementChild?.animate(
+        [
+          { transform: 'scale(1, 1)' },
+          { transform: 'scale(1.1, 0.84)', offset: 0.28 },
+          { transform: 'scale(0.95, 1.1)', offset: 0.55 },
+          { transform: 'scale(1.02, 0.97)', offset: 0.78 },
+          { transform: 'scale(1, 1)' },
+        ],
+        { duration: 750, easing: 'ease-out' },
+      );
+    }
+  }
 
   ngOnDestroy() {
     clearInterval(this.pollTimer);

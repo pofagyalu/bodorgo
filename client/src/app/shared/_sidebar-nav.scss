@@ -1,0 +1,41 @@
+// The dark sidebars' menu items (Klub, Média, Chat) - one look for all,
+// Média's: a subtle slate blue for the selected item and an even slighter
+// one on hover, plus the countdown clock's warm glow on
+// hover (see shared/tour-countdown/tour-countdown.scss).
+
+// All three sidebars are this wide (on a wide screen).
+$sidebar-width: 290px;
+
+$nav-hover-bg: #1c3548;
+$nav-active-bg: #29485a;
+$nav-glow-border: #ffa53d55;
+$nav-glow: 0 0 14px #ff7a1a2e;
+
+// Colours only - hover and selected.
+@mixin nav-item-colors {
+  border: 1px solid transparent; // reserved, so the glow's border doesn't shift anything
+  transition:
+    background-color 0.15s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.15s ease;
+
+  &:hover:not(.active) {
+    background: $nav-hover-bg;
+  }
+
+  &.active {
+    background: $nav-active-bg;
+    color: #fff;
+  }
+}
+
+// Plus the warm glow on hover.
+@mixin nav-item-glow {
+  @include nav-item-colors;
+
+  &:hover {
+    border-color: $nav-glow-border;
+    box-shadow: $nav-glow;
+  }
+}

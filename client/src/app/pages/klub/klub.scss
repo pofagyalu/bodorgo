@@ -1,3 +1,5 @@
+@use '../../shared/sidebar-nav' as nav;
+
 // Same colors/layout as the club-finances-demo.html prototype's <aside> -
 // a persistent dark sidebar for switching between klub/* subpages, kept
 // separate from this app's own top header (that one stays as-is above it).
@@ -14,7 +16,7 @@
 
 .klub-shell {
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: nav.$sidebar-width minmax(0, 1fr);
   min-height: calc(100dvh - 80px);
   background: #f5f7f5;
 }
@@ -26,10 +28,11 @@
   display: flex;
   flex-direction: column;
   gap: 46px;
-  // Pinned below the site header (.header-container, itself sticky at
-  // top:0, 80px tall) instead of scrolling away with .klub-main's content.
+  // Pinned to the top of the page area (app.component's .page-body, right
+  // below the 80px site header) instead of scrolling away with
+  // .klub-main's content.
   position: sticky;
-  top: 80px;
+  top: 0;
   height: calc(100dvh - 80px);
   overflow-y: auto;
 }
@@ -83,7 +86,7 @@
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  transition: background 0.15s ease;
+  @include nav.nav-item-glow;
 
   mat-icon {
     width: 18px;
@@ -91,13 +94,7 @@
     font-size: 18px;
   }
 
-  &:hover:not(.active) {
-    background: #1c3548;
-  }
-
   &.active {
-    background: #29485a;
-    color: #fff;
     font-weight: 650;
   }
 }

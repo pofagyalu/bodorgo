@@ -1,0 +1,25 @@
+/* The header on top, the page filling the rest of the screen below it and
+   scrolling on its own - the window itself never scrolls, so the
+   scrollbar starts under the main menu. 100vh first as a fallback for
+   browsers without dvh support. */
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+app-header {
+  flex: none;
+}
+
+/* Room for the scrollbar is always kept, even on pages short enough not to
+   need one - otherwise switching between a long and a short page changes
+   the page width by the scrollbar's, and everything centred jumps
+   sideways. */
+.page-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}

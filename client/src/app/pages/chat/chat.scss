@@ -1,3 +1,5 @@
+@use '../../shared/sidebar-nav' as nav;
+
 // Same look and breakpoints as the Klub area (klub.scss): a dark sidebar
 // with the tours - full names on a wide screen, round cover thumbnails
 // below 1050px, hidden in favor of a scrolling row of names on a phone.
@@ -23,7 +25,7 @@
 .chat-shell {
   display: grid;
   // A bit wider than Klub's 248px - tour names are longer than menu labels.
-  grid-template-columns: 290px minmax(0, 1fr);
+  grid-template-columns: nav.$sidebar-width minmax(0, 1fr);
   height: 100%;
   background: #f5f7f5;
 }
@@ -87,26 +89,16 @@
   gap: 12px;
   width: 100%;
   padding: 9px 10px;
-  border: 0;
   border-radius: 12px;
   background: none;
   color: #c7d6db;
   text-align: left;
   font: inherit;
   cursor: pointer;
+  @include nav.nav-item-glow;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: #fff;
-  }
-
-  &.active {
-    background: #b9e6d6;
-    color: #142a3c;
-
-    .tour-text small {
-      color: #3d6570;
-    }
+  &.active .tour-text small {
+    color: #b9cfe6;
   }
 }
 
