@@ -5,6 +5,7 @@ import { UserService, MyProfile, UserAddress, AttendedTour, FamilyMember } from 
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
+import { PushService } from '../../../services/push';
 import { Avatar } from '../../../components/avatar/avatar';
 import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 
@@ -68,6 +69,44 @@ export class KlubProfile implements OnInit {
     this.load();
     this.loadAttendance();
     this.loadFamily();
+    this.push.refresh().catch(() => {});
+  }
+
+  // Push notifications on this device (see PushService).
+  push = inject(PushService);
+  pushBusy = signal(false);
+
+  async togglePush() {
+    if (this.pushBusy()) return;
+    this.pushBusy.set(true);
+    try {
+      if (this.push.state() === 'on') {
+        await this.push.disable();
+        this.notifications.addSuccess('Értesítések kikapcsolva ezen az eszközön.');
+      } else {
+        await this.push.enable();
+        this.notifications.addSuccess('Értesítések bekapcsolva ezen az eszközön.');
+      }
+    } catch (err: any) {
+      this.notifications.addError(err?.error?.message ?? err?.message ?? 'Nem sikerült beállítani az értesítéseket.');
+      await this.push.refresh().catch(() => {});
+    } finally {
+      this.pushBusy.set(false);
+    }
+  }
+
+  sendTestPush() {
+    this.pushBusy.set(true);
+    this.push.sendTest().subscribe({
+      next: () => {
+        this.pushBusy.set(false);
+        this.notifications.addSuccess('Próbaértesítés elküldve - pár másodpercen belül meg kell jelennie.');
+      },
+      error: (err) => {
+        this.pushBusy.set(false);
+        this.notifications.addError(err?.error?.message ?? 'A próbaértesítés nem sikerült.');
+      },
+    });
   }
 
   private loadAttendance() {

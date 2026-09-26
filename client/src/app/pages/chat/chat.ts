@@ -1,4 +1,5 @@
-import { Component, ElementRef, OnDestroy, OnInit, inject, signal, computed, viewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, inject, signal, computed, effect, viewChild } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { TourSocketService } from '../../services/tour-socket';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +7,8 @@ import { Feed } from '../../components/feed/feed';
 import { RoomBoard } from './room-board/room-board';
 import { TourService, Tour } from '../../services/tour';
 import { TourCountdown } from '../../shared/tour-countdown/tour-countdown';
+import { PushService } from '../../services/push';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 // Exempted from the close-after-14-days rule below so the tour we used to
 // build/test the chat feature stays reachable even though it's long past -
@@ -63,6 +66,7 @@ function isChatOpen(t: Tour): boolean {
 export class Chat implements OnInit, OnDestroy {
   private tourService = inject(TourService);
   private tourSocket = inject(TourSocketService);
+  private route = inject(ActivatedRoute);
 
   selectedTourId = signal<string | null>(null);
   visibleTours = signal<Tour[]>([]);
@@ -88,7 +92,10 @@ export class Chat implements OnInit, OnDestroy {
           .filter(isChatOpen)
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
         this.visibleTours.set(list);
-        this.selectedTourId.set(list[0]?._id ?? null);
+        // /chat?tabor=<id> - e.g. from a push notification - opens that
+        // tour's chat; otherwise the newest one.
+        const wanted = this.route.snapshot.queryParamMap.get('tabor');
+        this.selectedTourId.set(list.find((t) => t._id === wanted)?._id ?? list[0]?._id ?? null);
         this.loaded.set(true);
       },
       error: (err) => {
@@ -141,6 +148,36 @@ export class Chat implements OnInit, OnDestroy {
   selectTour(id: string) {
     this.selectedTourId.set(id);
     this.activePane.set('chat');
+  }
+
+  // --- The selected chat's push notifications on/off (the bell) ---
+  private push = inject(PushService);
+  private notifications = inject(NotificationsService);
+  chatMuted = signal(false);
+
+  private loadMuted = effect(() => {
+    const id = this.selectedTourId();
+    this.chatMuted.set(false);
+    if (!id) return;
+    this.push.getChatMuted(id).subscribe({
+      next: (res) => {
+        if (this.selectedTourId() === id) this.chatMuted.set(res.data.muted);
+      },
+      error: () => {},
+    });
+  });
+
+  toggleChatMuted(tourId: string) {
+    const next = !this.chatMuted();
+    this.chatMuted.set(next);
+    this.push.setChatMuted(tourId, next).subscribe({
+      next: () =>
+        this.notifications.addSuccess(next ? 'Ennek a chatnek az értesítései némítva.' : 'Értesítések ebből a chatből bekapcsolva.'),
+      error: () => {
+        this.chatMuted.set(!next);
+        this.notifications.addError('Nem sikerült menteni.');
+      },
+    });
   }
 
   coverUrl(t: Tour): string | null {

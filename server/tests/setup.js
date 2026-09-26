@@ -67,6 +67,13 @@ vi.mock('../src/utils/weather.js', async (importOriginal) => ({
   fetchHistorical: vi.fn(async () => null),
 }));
 
+// Web push - fake keys, and the push services themselves faked below.
+process.env.VAPID_PUBLIC_KEY = 'test-public-key';
+process.env.VAPID_PRIVATE_KEY = 'test-private-key';
+vi.mock('web-push', () => ({
+  default: { setVapidDetails: vi.fn(), sendNotification: vi.fn(async () => ({ statusCode: 201 })) },
+}));
+
 // Email sending.
 vi.mock('../src/utils/resendEmail.js', () => ({ default: vi.fn(async () => ({ id: 'test-email' })) }));
 vi.mock('../src/utils/email.js', () => ({ default: vi.fn(async () => {}) }));

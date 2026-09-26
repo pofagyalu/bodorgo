@@ -68,6 +68,16 @@
 
     <div class="chat-panes" #panes [style.--rooms-width.px]="roomsWidth()" [class.resizing]="resizing()">
       <section class="pane pane-chat" [class.inactive]="activePane() !== 'chat'" aria-label="Chat">
+        <!-- This tour's chat notifications on/off (see PushService). -->
+        <button
+          type="button"
+          class="mute-btn"
+          [class.muted]="chatMuted()"
+          [title]="chatMuted() ? 'Ennek a chatnek az értesítései némítva - kattints a bekapcsoláshoz' : 'Értesítések ebből a chatből - kattints a némításhoz'"
+          (click)="toggleChatMuted(t._id)"
+        >
+          <mat-icon>{{ chatMuted() ? 'notifications_off' : 'notifications' }}</mat-icon>
+        </button>
         @for (id of feedKey(); track id) {
         <app-feed [tourId]="id" />
         }

@@ -126,6 +126,14 @@ const config = {
   // The 12-hourly "your tour's video is ready" e-mails (see server.js) -
   // switched on in the live server's .env only.
   tourVideoEmails: process.env.TOUR_VIDEO_EMAILS === 'on',
+  // Web push notifications (see utils/push.js) - off when the keys aren't
+  // set. The same key pair on every server: a device subscribed through
+  // one can only be reached with that pair.
+  push: {
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY,
+    subject: process.env.VAPID_SUBJECT || 'https://bodorgo.hu',
+  },
 };
 
 // Shared by Express's cors() middleware and Socket.IO's own cors option, so
