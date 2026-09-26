@@ -123,6 +123,9 @@ const config = {
   videosRoot:
     process.env.VIDEOS_ROOT || (process.env.MEDIA_ROOT ? path.join(process.env.MEDIA_ROOT, 'a-bodorgo-klan') : undefined),
   mediaVideosRoot: process.env.MEDIA_VIDEOS_ROOT || process.env.MEDIA_ROOT,
+  // The 12-hourly "your tour's video is ready" e-mails (see server.js) -
+  // switched on in the live server's .env only.
+  tourVideoEmails: process.env.TOUR_VIDEO_EMAILS === 'on',
 };
 
 // Shared by Express's cors() middleware and Socket.IO's own cors option, so

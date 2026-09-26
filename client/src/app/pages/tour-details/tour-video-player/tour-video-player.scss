@@ -1,0 +1,134 @@
+// The tour page's recap video player and its version cards.
+:host {
+  display: block;
+}
+
+// A fixed 16:9 frame - the same size whichever version is loading in it,
+// so switching never moves the page. Capped at roughly half the page's
+// width/height (650px, 35vh) rather than dwarfing everything else;
+// position:relative so .video-overlay below can cover it exactly.
+.video-wrap {
+  position: relative;
+  width: min(100%, 650px, calc(35vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.tour-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  transition: opacity 0.22s ease;
+}
+
+// Switching versions: the picture fades out, the other file loads into
+// the same player, and it fades back in on its first frame.
+.video-wrap.switching .tour-video {
+  opacity: 0;
+}
+
+// More than one cut: a small card per version above the player - a tiny
+// cover and the name, just as wide as the text needs. The playing one is
+// outlined in the title band's green.
+.video-versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.version-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px 5px 5px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #f1f4f2;
+  color: #2f414b;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+
+  &:hover:not(.active) {
+    background: #e6efe9;
+  }
+
+  &.active {
+    border-color: rgb(27, 126, 60);
+    background: #fff;
+    box-shadow: 0 3px 12px rgba(27, 126, 60, 0.18);
+    color: #1c2d38;
+  }
+}
+
+.version-thumb {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  aspect-ratio: 16 / 9;
+  flex: none;
+  border-radius: 999px;
+  overflow: hidden;
+  // Stands in when the version has no cover of its own.
+  background: linear-gradient(135deg, #1f3a34, #0f1f25);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #ffffff88;
+  }
+}
+
+.version-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// Stands in for a static poster image until playback actually starts - a
+// dark scrim plus a big, bold, partly see-through play icon, closer to a
+// "tap to watch" prompt than a plain photo.
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: rgba(10, 20, 15, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+
+.video-overlay-icon {
+  font-size: 5rem;
+  width: 5rem;
+  height: 5rem;
+  opacity: 0.55;
+}
+
+.video-overlay-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}

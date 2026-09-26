@@ -382,16 +382,12 @@ const tourSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    // Path to the post-tour recap video, relative to config.videosRoot -
-    // admin-picked from the actual files on disk (see
-    // tourVideoController.js's listAvailableVideos), not typed by hand,
-    // since one trip can have more than one cut (e.g. two alternate edits
-    // of the same episode) with no naming convention that could resolve
-    // that on its own. select:false for the same reason as sourceFolder
-    // above - the raw NAS-relative path never appears on the public tour
-    // endpoints, only derived into a plain `hasVideo` boolean (see
-    // tourController.js's getTour) and the requireAuth-gated video route.
-    videoFile: { type: String, select: false },
+    // The recap videos themselves aren't stored here - they're matched to
+    // the tour by the tour number their file names start with (see
+    // utils/tourVideos.js). This only remembers when the attendees were
+    // e-mailed about the first one (see tourVideoController.js's
+    // checkForNewTourVideos), so they're told once.
+    videoNotifiedAt: { type: Date, default: null },
   },
   {
     toJSON: { virtuals: true },
