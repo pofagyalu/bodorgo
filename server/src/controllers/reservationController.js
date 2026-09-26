@@ -6,6 +6,8 @@ import { computeAge } from './userController.js';
 import { partitionAttendeesByEmailEligibility } from './tourPdfController.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import logger from '../logger.js';
+import Cancellation from '../models/cancellationModel.js';
+import { emitToTour } from '../chat/tourEvents.js';
 
 // The club didn't exist before this date, so it can't have contributed
 // money toward a tour's accommodation before it either - see
@@ -512,4 +514,121 @@ export const updateAttendeeFeeExempt = async (req, res) => {
   await reservation.save();
 
   res.status(200).json({ status: 'success', data: { attendee } });
+};
+
+// The short "Lemondás" confirmation - to the withdrawn person and to
+// whoever signed them up (see withdrawAttendee).
+function withdrawalEmailBody(recipientName, { attendeeName, tourTitle, recipientIsAttendee, cancelledByName }) {
+  const noReplyNote = 'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
+  const what = recipientIsAttendee
+    ? `a(z) "${tourTitle}" táborra szóló jelentkezésedet visszavontuk`
+    : `${attendeeName} jelentkezését a(z) "${tourTitle}" táborra visszavontuk`;
+  const by = cancelledByName ? ` (${cancelledByName} intézte)` : '';
+  return {
+    subject: `Lemondás - ${tourTitle}`,
+    text: `Szia ${recipientName}!\n\nTájékoztatunk, hogy ${what}${by}.\n\nÜdvözlettel,\nBódorgó\n\n${noReplyNote}`,
+    html: `<p>Szia ${recipientName}!</p><p>Tájékoztatunk, hogy ${what}${by}.</p><p>Üdvözlettel,<br>Bódorgó</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
+  };
+}
+
+// DELETE /tours/:tourId/reservations/:reservationId/attendees/:attendeeId
+// - "Lemondás": takes one person off a tour, any time. Whoever could sign
+// them up may withdraw them (admin: anyone; member: themselves and their
+// family; guest: only themselves - see assertCanRegister). Their room and
+// optional-program sign-ups are freed; a finalized Szobabeosztás becomes
+// editable again, since it now has a gap. An advance they already paid is
+// simply left as it is - no automatic refund, settled in-house - and the
+// withdrawal is logged for the admins' "Lemondások" list.
+export const withdrawAttendee = async (req, res) => {
+  const { tourId, reservationId, attendeeId } = req.params;
+  const reservation = await Reservation.findById(reservationId);
+  if (!reservation || String(reservation.tour) !== String(tourId)) {
+    throw new AppError('Nincs ilyen foglalás.', 404);
+  }
+  const attendee = reservation.attendees.id(attendeeId);
+  if (!attendee) {
+    throw new AppError('Nincs ilyen résztvevő ebben a foglalásban.', 404);
+  }
+
+  try {
+    await assertCanRegister(req.user, [String(attendee.user)]);
+  } catch (err) {
+    throw new AppError('Csak saját magadat és a hozzátartozóidat jelentheted le.', 403);
+  }
+
+  const tour = await Tour.findById(tourId);
+  if (!tour) throw new AppError('No tour found with that ID!', 404);
+
+  const reason = String(req.body?.reason ?? '').trim().slice(0, 300);
+  const { user: userId, name, paid } = attendee;
+
+  // Off the reservation - and the reservation itself goes when it was the
+  // last person on it.
+  if (reservation.attendees.length === 1) {
+    await reservation.deleteOne();
+  } else {
+    attendee.deleteOne();
+    await reservation.save();
+  }
+
+  // Off any optional program they had signed up for, and a finalized room
+  // allocation opens up again for the admin to fill the gap.
+  let tourChanged = false;
+  for (const event of tour.schedule ?? []) {
+    const before = event.participants?.length ?? 0;
+    event.participants = (event.participants ?? []).filter((p) => String(p.user) !== String(userId));
+    if (event.participants.length !== before) tourChanged = true;
+  }
+  const roomsReopened = !!tour.accommodation?.finalized;
+  if (roomsReopened) {
+    tour.accommodation.finalized = false;
+    tourChanged = true;
+  }
+  if (tourChanged) {
+    await Tour.updateOne(
+      { _id: tour._id },
+      { schedule: tour.schedule, 'accommodation.finalized': tour.accommodation?.finalized ?? false },
+    );
+  }
+  emitToTour(tour._id, 'rooms-changed', { tourId: String(tour._id) });
+
+  const bookedBy = await User.findById(reservation.bookedBy).select('name email lastLoginAt wantsEmailNotifications');
+  const cancellation = await Cancellation.create({
+    tour: tour._id,
+    user: userId,
+    name,
+    bookedByName: bookedBy?.name,
+    cancelledBy: req.user._id,
+    cancelledByName: req.user.name,
+    reason,
+    wasPaid: !!paid,
+  });
+
+  // Same "only people who can get e-mail" rules as the sign-up confirmation.
+  try {
+    const attendeeUser = await User.findById(userId).select('name email lastLoginAt wantsEmailNotifications');
+    const candidates = new Map();
+    if (attendeeUser) candidates.set(String(attendeeUser._id), attendeeUser);
+    if (bookedBy) candidates.set(String(bookedBy._id), bookedBy);
+    const { eligible } = partitionAttendeesByEmailEligibility([...candidates.values()]);
+    for (const recipient of eligible) {
+      const { subject, text, html } = withdrawalEmailBody(recipient.name, {
+        attendeeName: name,
+        tourTitle: tour.title,
+        recipientIsAttendee: String(recipient._id) === String(userId),
+        cancelledByName: String(req.user._id) === String(recipient._id) ? null : req.user.name,
+      });
+      await sendResendEmail({ to: recipient.email, subject, text, html });
+    }
+  } catch (err) {
+    logger.error(`Tour ${tour._id}: withdrawal email for ${name} failed: ${err.message}`);
+  }
+
+  res.status(200).json({ status: 'success', data: { cancellation, wasPaid: !!paid, roomsReopened } });
+};
+
+// GET /tours/:tourId/cancellations - admin-only "Lemondások" list, newest first.
+export const getCancellations = async (req, res) => {
+  const cancellations = await Cancellation.find({ tour: req.params.tourId }).sort('-cancelledAt');
+  res.status(200).json({ status: 'success', data: { cancellations } });
 };

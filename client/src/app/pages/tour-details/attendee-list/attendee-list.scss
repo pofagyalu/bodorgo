@@ -294,3 +294,157 @@
     }
   }
 }
+
+// Lemondás - a muted red, so it doesn't compete with the everyday
+// actions but still reads as "takes someone off".
+.icon-btn--withdraw {
+  background: #c2574b;
+
+  &:hover {
+    background: #a3402a;
+  }
+}
+
+// Admin-only "Lemondások" list under the table.
+.cancellations {
+  margin-top: 12px;
+}
+
+.cancellations-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 2px;
+  border: 0;
+  background: none;
+  color: #4a5b63;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancellations-count {
+  font-size: 0.75rem;
+  background: #fbe7e3;
+  color: #a3402a;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.cancellations-list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+    padding: 7px 10px;
+    border-bottom: 1px solid #eef1ef;
+  }
+}
+
+.paid-flag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1b6548;
+  background: #e5f5ec;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+.cancel-meta {
+  font-size: 0.82rem;
+  color: #56666e;
+}
+
+// Lemondás confirmation dialog.
+.withdraw-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 22, 30, 0.5);
+}
+
+.withdraw-modal {
+  width: min(440px, 100%);
+  padding: 20px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+
+  h3 {
+    margin: 0 0 8px;
+  }
+
+  p {
+    margin: 0 0 12px;
+  }
+}
+
+.withdraw-note {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff6ee;
+  font-size: 0.9rem;
+  color: #6b4a2b;
+
+  mat-icon {
+    flex: none;
+    color: #d0661a;
+  }
+}
+
+.withdraw-reason {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+
+  input {
+    padding: 9px 11px;
+    border: 1px solid #d4dfda;
+    border-radius: 9px;
+    font: inherit;
+    font-weight: 400;
+  }
+}
+
+.withdraw-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.withdraw-btn {
+  padding: 9px 16px;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &--safe {
+    border: 1px solid #d4dfda;
+    background: #fff;
+    color: #254257;
+  }
+
+  &--danger {
+    border: 1px solid #c2574b;
+    background: #c2574b;
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}

@@ -12,7 +12,7 @@
       <th class="optional-col" title="Opciós programok - mindig helyben fizetendő, csak tájékoztató jellegű">Opciók</th>
       }
       <th class="paid-col"></th>
-      @if (isAdmin()) {
+      @if (showActions) {
       <th></th>
       }
     </tr>
@@ -66,8 +66,9 @@
         </span>
       </td>
 
-      @if (isAdmin()) {
+      @if (showActions) {
       <td class="row-actions">
+        @if (isAdmin()) {
         @if (editingAttendeeId() === a.attendeeId) {
         <button
           type="button"
@@ -109,6 +110,12 @@
         </button>
         }
         }
+        }
+        @if (canWithdraw(a) && editingAttendeeId() !== a.attendeeId) {
+        <button type="button" class="icon-btn icon-btn--withdraw" title="Lemondás" (click)="askWithdraw(a)">
+          <mat-icon>person_remove</mat-icon>
+        </button>
+        }
       </td>
       }
     </tr>
@@ -140,7 +147,7 @@
           >{{ familySubtotal(group).paidCount }}/{{ familySubtotal(group).memberCount }} fizetve</span
         >
       </td>
-      @if (isAdmin()) {
+      @if (showActions) {
       <td></td>
       }
     </tr>
@@ -158,10 +165,64 @@
       <td class="optional-col">{{ formatForint(totalOptionalProgramsCost) }} Ft</td>
       }
       <td class="paid-col"></td>
-      @if (isAdmin()) {
+      @if (showActions) {
       <td></td>
       }
     </tr>
   </tfoot>
   }
 </table>
+
+<!-- Admin-only: who has withdrawn from this tour, newest first. -->
+@if (isAdmin() && cancellations().length) {
+<div class="cancellations">
+  <button type="button" class="cancellations-toggle" (click)="showCancellations.set(!showCancellations())">
+    <mat-icon>{{ showCancellations() ? 'expand_less' : 'expand_more' }}</mat-icon>
+    Lemondások <span class="cancellations-count">{{ cancellations().length }}</span>
+  </button>
+  @if (showCancellations()) {
+  <ul class="cancellations-list">
+    @for (c of cancellations(); track c._id) {
+    <li>
+      <strong>{{ c.name }}</strong>
+      @if (c.wasPaid) {
+      <span class="paid-flag" title="Az előleget már kifizette">fizetett</span>
+      }
+      <span class="cancel-meta">
+        {{ c.cancelledAt | date: 'yyyy. MM. dd. HH:mm' }} · {{ c.cancelledByName }}
+        @if (c.reason) { · „{{ c.reason }}” }
+      </span>
+    </li>
+    }
+  </ul>
+  }
+</div>
+}
+
+<!-- Lemondás confirmation. -->
+@if (withdrawing(); as w) {
+<div class="withdraw-backdrop" (click)="cancelWithdraw()">
+  <div class="withdraw-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <h3>Lemondás</h3>
+    <p>Biztosan lemondod <strong>{{ w.name }}</strong> jelentkezését erre a táborra?</p>
+    @if (w.paid) {
+    <p class="withdraw-note">
+      <mat-icon>info</mat-icon>
+      <span>{{ w.name }} már kifizette az előleget. Automatikus visszatérítés nincs - ezt házon belül rendezzük.</span>
+    </p>
+    }
+    <label class="withdraw-reason">
+      <span>Indoklás (nem kötelező)</span>
+      <input type="text" [(ngModel)]="withdrawReason" maxlength="300" placeholder="pl. beteg lett, rossz személyt jelöltem" />
+    </label>
+    <div class="withdraw-actions">
+      <button type="button" class="withdraw-btn withdraw-btn--safe" (click)="cancelWithdraw()" [disabled]="withdrawBusy()">
+        Mégse
+      </button>
+      <button type="button" class="withdraw-btn withdraw-btn--danger" (click)="confirmWithdraw()" [disabled]="withdrawBusy()">
+        {{ withdrawBusy() ? 'Lemondás…' : 'Lemondás' }}
+      </button>
+    </div>
+  </div>
+</div>
+}

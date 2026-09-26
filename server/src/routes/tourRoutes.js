@@ -1,6 +1,12 @@
 import express from 'express';
 import * as tourController from '../controllers/tourController.js';
-import { signUpForTour, updateAttendeeNights, updateAttendeeFeeExempt } from '../controllers/reservationController.js';
+import {
+  signUpForTour,
+  updateAttendeeNights,
+  updateAttendeeFeeExempt,
+  withdrawAttendee,
+  getCancellations,
+} from '../controllers/reservationController.js';
 import * as tourImageController from '../controllers/tourImageController.js';
 import { getTourVideo, getTourVideoCover, getTourVideoSubtitles } from '../controllers/tourVideoController.js';
 import * as reviewController from '../controllers/reviewController.js';
@@ -88,6 +94,10 @@ router
 router
   .route('/:tourId/reservations/:reservationId/attendees/:attendeeId/fee-exempt')
   .patch(requireAuth, restrictTo('admin'), updateAttendeeFeeExempt);
+// "Lemondás" - taking one person off the tour (see withdrawAttendee for
+// who may withdraw whom), and the admins' list of them.
+router.route('/:tourId/reservations/:reservationId/attendees/:attendeeId').delete(requireAuth, withdrawAttendee);
+router.route('/:tourId/cancellations').get(requireAuth, restrictTo('admin'), getCancellations);
 
 router
   .route('/:tourId/schedule/:eventId/participants')
