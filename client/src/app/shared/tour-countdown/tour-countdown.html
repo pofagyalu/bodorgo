@@ -1,0 +1,43 @@
+<button
+  type="button"
+  class="countdown"
+  [class.live]="mode() === 'live'"
+  [class.idle]="mode() === 'idle'"
+  [disabled]="!tour()"
+  (click)="select()"
+  [attr.aria-label]="ariaLabel()"
+>
+  <span class="cd-head">
+    <span class="cd-label">{{ headLabel() }}</span>
+    <span class="cd-tour">{{ headTitle() }}</span>
+  </span>
+
+  <span class="cd-panel" aria-hidden="true">
+    @for (g of groups(); track $index; let last = $last) {
+    <span class="cd-unit">
+      <span class="cd-digits" [class.pulse-off]="mode() === 'live' && $index === 1 && !tick()">
+        @for (ch of g.glyphs; track $index) {
+        <svg class="cd-digit" viewBox="0 0 24 44">
+          <g class="seg-dark">
+            @for (s of ch.dark; track s) {
+            <polygon [attr.points]="shapes[s]" />
+            }
+          </g>
+          <g class="seg-lit">
+            @for (s of ch.lit; track s) {
+            <polygon [attr.points]="shapes[s]" />
+            }
+          </g>
+        </svg>
+        }
+      </span>
+      @if (g.label) {
+      <span class="cd-unit-label">{{ g.label }}</span>
+      }
+    </span>
+    @if (!last) {
+    <span class="cd-colon" [class.off]="!tick()"><i></i><i></i></span>
+    }
+    }
+  </span>
+</button>

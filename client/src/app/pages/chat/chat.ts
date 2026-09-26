@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Feed } from '../../components/feed/feed';
 import { RoomBoard } from './room-board/room-board';
 import { TourService, Tour } from '../../services/tour';
+import { TourCountdown } from '../../shared/tour-countdown/tour-countdown';
 
 // Exempted from the close-after-14-days rule below so the tour we used to
 // build/test the chat feature stays reachable even though it's long past -
@@ -55,7 +56,7 @@ function isChatOpen(t: Tour): boolean {
 // side on a very wide screen, otherwise as two tabs.
 @Component({
   selector: 'app-chat',
-  imports: [Feed, MatIconModule, RoomBoard, CdkScrollable],
+  imports: [Feed, MatIconModule, RoomBoard, CdkScrollable, TourCountdown],
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
 })

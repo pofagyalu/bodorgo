@@ -5,6 +5,9 @@
       <div class="brand-text"><strong>Chat</strong><small>Táboronként</small></div>
     </div>
 
+    @if (loaded()) {
+    <app-tour-countdown class="chat-countdown" [tours]="visibleTours()" (pick)="selectTour($event)" />    }
+
     <nav class="chat-nav" aria-label="Táborok">
       @for (t of visibleTours(); track t._id) {
       <button
