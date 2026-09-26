@@ -1,0 +1,36 @@
+# Forgejo runner configuration (read by the daemon, see docker-compose.yml).
+# The connection to Forgejo itself is created once by the registration in
+# docker-compose.yml (data/.runner) - Forgejo 14 uses a registration code.
+
+log:
+  level: info
+
+runner:
+  file: .runner
+  # One job at a time - the NAS also runs Forgejo and the live site.
+  capacity: 1
+  # A test run takes 1-2 minutes; anything this long is stuck.
+  timeout: 20m
+  # "docker" = what the workflows ask for (runs-on: docker), run in a fresh
+  # node:22-bookworm container.
+  labels:
+    - docker:docker://node:22-bookworm
+
+cache:
+  enabled: true
+  dir: /data/cache
+  # Jobs run in their own containers and reach the cache via the NAS's LAN
+  # address (ports published in docker-compose.yml).
+  host: 192.168.1.94
+  port: 4000
+  proxy_port: 4001
+
+container:
+  # Every job container: at most 2 GB of memory and 2 CPU cores, so a test
+  # run can never squeeze Forgejo or the live site - and, like the runner
+  # itself, Forgejo's public name pointed at its LAN address so the job can
+  # check out the code.
+  options: --memory=2g --cpus=2 --add-host=forgejo.terfotozas.hu:192.168.1.81
+  # A fresh network per job.
+  network: ''
+  privileged: false

@@ -17,6 +17,7 @@ import systemRouter from './routes/systemRoutes.js';
 import authOidcRouter from './routes/authOidcRoutes.js';
 import documentRouter from './routes/documentRoutes.js';
 import requireAuth from './auth/requireAuth.js';
+import { TOUR_DOCUMENTS_DIR } from './utils/dataDirs.js';
 import paymentRouter from './routes/paymentRoutes.js';
 import financeRouter from './routes/financeRoutes.js';
 import membershipRouter from './routes/membershipRoutes.js';
@@ -111,7 +112,7 @@ export default function createApp(sessionMiddleware) {
   app.use(
     '/documents/tours',
     requireAuth,
-    express.static(path.join(rootDir, 'public', 'documents', 'tours')),
+    express.static(TOUR_DOCUMENTS_DIR),
   );
   app.use('/documents', documentRouter);
 

@@ -22,3 +22,5 @@ scripts/input/*
 !scripts/input/example-tour.json
 !scripts/input/example-events.json
 !scripts/input/example-attendance.json
+# Test coverage report (npm run test:coverage) - generated, never committed.
+coverage/

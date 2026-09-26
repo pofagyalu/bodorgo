@@ -140,8 +140,8 @@ export async function syncOneTour(tour) {
   return { message, subfolderNotices };
 }
 
-// Guarded so scripts/testSyncTourImages.js can import diffTourImages
-// above without also running this whole CLI body (which would otherwise
+// Guarded so another module can import diffTourImages above without
+// also running this whole CLI body (which would otherwise
 // parse process.argv, likely find nothing under a test runner, and
 // process.exit(1) immediately).
 // pathToFileURL (not a raw string comparison) so this is correct on

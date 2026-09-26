@@ -4,12 +4,13 @@ import crypto from 'crypto';
 import multer from 'multer';
 import ClubDocument, { DOCUMENT_CATEGORIES } from '../models/clubDocumentModel.js';
 import AppError from '../utils/appError.js';
+import { CLUB_DOCUMENTS_DIR } from '../utils/dataDirs.js';
 
 // Same directory documentController.js's getDocument already serves from
 // (outside public/, requireAuth-gated) - so an uploaded club document is
 // reachable the exact same way the two original hand-placed PDFs already
 // were, with no change needed to that route at all.
-const DOCUMENTS_DIR = path.join(path.resolve(), 'documents');
+const DOCUMENTS_DIR = CLUB_DOCUMENTS_DIR;
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

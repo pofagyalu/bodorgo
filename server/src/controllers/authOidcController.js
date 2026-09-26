@@ -9,8 +9,8 @@ import logger from '../logger.js';
 // the user's group membership (bodorgo-admin/bodorgo-member/bodorgo-guest)
 // and returns "admin" | "member" | "guest" | null directly. This app no
 // longer maps group names to a role itself (that used to happen here via a
-// plain `groups` claim - see server/scripts/testRoleFromGroups.js for that
-// superseded design, kept only as a historical/verification artifact).
+// plain `groups` claim - a superseded design). Tested in
+// tests/api/auth.test.js.
 //
 // A missing or unrecognized value is treated as "not enrolled" and denies
 // login entirely (see callback()) rather than falling back to guest or

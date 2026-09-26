@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import slugify from 'slugify';
+import { RECEIPTS_DIR as RECEIPTS_DIR_CONFIG } from './dataDirs.js';
 
 // Same code-adjacent asset paths tourPdfController.js already established
 // (server/assets, git-tracked, auto-deployed - see sync.js) - duplicated
@@ -13,7 +14,8 @@ const LOGO_PATH = path.join(rootDir, 'assets', 'img', 'logo.png');
 const FONT_REGULAR = path.join(rootDir, 'assets', 'fonts', 'Mulish-Regular.ttf');
 const FONT_BOLD = path.join(rootDir, 'assets', 'fonts', 'Mulish-Bold.ttf');
 
-const RECEIPTS_DIR = path.join(rootDir, 'documents', 'payments');
+// See utils/dataDirs.js (overridable only by the automated tests).
+const RECEIPTS_DIR = RECEIPTS_DIR_CONFIG;
 
 const DARK_GREEN = '#1b6548';
 

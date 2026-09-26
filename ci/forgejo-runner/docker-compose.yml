@@ -1,0 +1,51 @@
+# The Forgejo Actions runner, as a Container Manager (or Dockge) project on
+# the NAS. See README.md in this folder for the setup.
+#
+# The runner itself is tiny; for each job it starts a separate, throwaway
+# container (node:22-bookworm) through the NAS's own Docker - hence the
+# docker.sock mount. One job at a time, each capped at 2 GB of memory (see
+# data/config.yml).
+services:
+  forgejo-runner:
+    # 13 = newest 13.x (13.2.0 when this was set up) - bug-fix updates only.
+    # Newer major versions:
+    # https://code.forgejo.org/forgejo/runner/releases
+    image: data.forgejo.org/forgejo/runner:13
+    container_name: forgejo-runner
+    restart: unless-stopped
+    # root inside the container, only so it may use the Docker socket.
+    user: '0:0'
+    working_dir: /data
+    volumes:
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      # The runner's own job cache (npm packages, the MongoDB binary) and
+      # its proxy - jobs reach them through the NAS's LAN address.
+      - '4000:4000'
+      - '4001:4001'
+    mem_limit: 256m
+    # Inside the LAN, Forgejo's public name has to point at its LAN address
+    # (the reverse proxy on 192.168.1.81) - from the NAS the public IP isn't
+    # reachable ("hairpin"). The job containers get the same entry via
+    # data/config.yml's container.options.
+    extra_hosts:
+      - 'forgejo.terfotozas.hu:192.168.1.81'
+    environment:
+      FORGEJO_INSTANCE: https://forgejo.terfotozas.hu
+      # The registration code from Forgejo -> Site Administration ->
+      # Actions -> Runners -> Create new runner (Forgejo 14: a single code).
+      # Only used on the very first start; can be removed once the runner
+      # shows up in Forgejo. Never commit the real code.
+      RUNNER_TOKEN: PASTE-THE-CODE-HERE
+    # First start: registers itself (creates data/.runner). Every start
+    # after that: just runs. ("register" prints a deprecation notice with
+    # runner v13 - fine; Forgejo 14 still uses this registration method.)
+    command: >
+      sh -c "if [ ! -f /data/.runner ]; then
+      echo 'Registering with' $$FORGEJO_INSTANCE;
+      forgejo-runner register --no-interactive --instance $$FORGEJO_INSTANCE --token $$RUNNER_TOKEN
+      --name synology --labels docker:docker://node:22-bookworm
+      || { echo 'REGISTRATION FAILED - check RUNNER_TOKEN and FORGEJO_INSTANCE'; sleep 120; exit 1; };
+      fi;
+      exec forgejo-runner daemon --config /data/config.yml"
