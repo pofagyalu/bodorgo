@@ -236,6 +236,14 @@
   color: var(--logo-yellow);
 }
 
+// Avatar + Kijelentkezés side by side. A flex row centres them - left as
+// plain inline boxes they sat on the text baseline, and a photo (no
+// baseline of its own) put its bottom edge there, lifting the circle.
+.login-container {
+  display: flex;
+  align-items: center;
+}
+
 .login-btn {
   font-family: 'Marhey', sans-serif;
   padding: 8px 18px;

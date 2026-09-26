@@ -1,12 +1,11 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../auth/auth.service';
 import { ClubDocumentService, ClubDocument, DOCUMENT_CATEGORIES } from '../../../services/club-document';
 
 @Component({
   selector: 'app-klub-documents',
-  imports: [DatePipe, MatIconModule],
+  imports: [MatIconModule],
   templateUrl: './documents.html',
   styleUrl: './documents.scss',
 })

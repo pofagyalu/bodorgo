@@ -2,7 +2,7 @@
   <div class="heading">
     <div>
       <div class="kicker">Klub</div>
-      <h1>Dokumentumok.</h1>
+      <h1>Dokumentumok</h1>
       <p>Alapdokumentumok és éves hivatalos iratok egy helyen.</p>
     </div>
     @if (isAdmin()) {
@@ -41,7 +41,6 @@
         @if (doc.year) {
         <span class="document-year">{{ doc.year }}. év</span>
         }
-        <span class="document-date">{{ doc.createdAt | date: 'yyyy. MM. dd.' }}</span>
         <div class="document-actions">
           <a [href]="fileUrl(doc.filename)" target="_blank" rel="noopener" class="document-link">Megnyitás</a>
           <a [href]="fileUrl(doc.filename, true)" class="document-link">Letöltés</a>
