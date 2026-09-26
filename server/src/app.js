@@ -71,6 +71,14 @@ export default function createApp(sessionMiddleware) {
     }),
   );
 
+  // Private club site - nothing the server returns (API answers, PDFs,
+  // uploaded documents) belongs in search results. The page-level twin is
+  // client/src/index.html's robots meta tag.
+  app.use((req, res, next) => {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+    next();
+  });
+
   app.use(morgan('combined', { stream: logger.stream }));
 
   const limiter = rateLimit({

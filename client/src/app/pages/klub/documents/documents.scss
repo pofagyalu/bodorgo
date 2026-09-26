@@ -48,7 +48,7 @@ button {
 
 .heading p {
   margin: 0;
-  color: #7c8b94;
+  color: #56666e;
   font-size: 14px;
 }
 
@@ -113,7 +113,7 @@ button {
 
 .panel-title span {
   font-size: 12px;
-  color: #84939b;
+  color: #56666e;
   background: #edf4f1;
   border-radius: 8px;
   padding: 4px 9px;
@@ -121,7 +121,7 @@ button {
 }
 
 .empty-note {
-  color: #83939a;
+  color: #56666e;
   font-size: 14px;
 }
 
@@ -129,8 +129,8 @@ button {
 
 .document-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
 }
 
 .document-card {
@@ -139,8 +139,8 @@ button {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 6px;
-  padding: 22px 16px 18px;
+  gap: 4px;
+  padding: 14px 12px 12px;
   background: #f7faf8;
   border: 1px solid #e7edea;
   border-radius: 14px;
@@ -152,12 +152,12 @@ button {
 }
 
 .document-icon {
-  font-size: 2.2rem;
-  width: 2.2rem;
-  height: 2.2rem;
+  font-size: 1.8rem;
+  width: 1.8rem;
+  height: 1.8rem;
   line-height: 1;
-  margin-bottom: 4px;
-  color: #5a7a83;
+  margin-bottom: 2px;
+  color: #4a5b63;
 }
 
 .document-icon--pdf {
@@ -181,15 +181,10 @@ button {
   border-radius: 6px;
 }
 
-.document-date {
-  color: #8a9a9d;
-  font-size: 11px;
-}
-
 .document-actions {
   display: flex;
   gap: 14px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .document-link {
@@ -271,7 +266,7 @@ button {
   border-radius: 9px;
   width: 33px;
   height: 33px;
-  color: #566c73;
+  color: #2f414b;
 }
 
 .modal-body {
@@ -288,7 +283,7 @@ button {
 .field label {
   font-size: 12px;
   font-weight: 700;
-  color: #50636e;
+  color: #2f414b;
 }
 
 .field input,
@@ -318,7 +313,7 @@ button {
 
 .demo-tip {
   font-size: 11px;
-  color: #84939a;
+  color: #56666e;
   line-height: 1.5;
   margin: 0;
 }

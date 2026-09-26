@@ -24,6 +24,8 @@ describe('reading tours', () => {
   it('404s for an unknown tour', async () => {
     const res = await request(app).get('/tours/nincs-ilyen').set(asUser(await createMember()));
     expect(res.status).toBe(404);
+    // Every answer tells search engines to stay away.
+    expect(res.headers['x-robots-tag']).toBe('noindex, nofollow');
   });
 
   it('fills in the weather: forecast for upcoming days, final history for past days', async () => {

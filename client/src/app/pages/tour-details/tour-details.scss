@@ -58,6 +58,15 @@
   margin: 0;
   font-size: 2.2rem;
   font-weight: 700;
+  // Anchor for the admin's edit button, pinned inside the band.
+  position: relative;
+}
+
+// Room for the edit button on the right - on both sides, so the title
+// stays centred on the band rather than shifted left.
+.hero-title--admin .hero-title-span {
+  padding-left: 4rem;
+  padding-right: 4rem;
 }
 
 // Same diagonal semi-transparent green gradient as the tour cards' title
@@ -174,7 +183,7 @@
 
 // Tap-to-navigate app icons right after the place name - real app icons
 // (provided directly), so no color/style overrides beyond sizing. Sized to
-// match .icon-btn--edit-tour's own 2rem circle right after them, with
+// match the 2rem .icon-btn size, with
 // extra margin on top of .info-line's own gap, specifically so icons this
 // close together are still easy to tell apart and hit individually on a
 // phone.
@@ -438,19 +447,29 @@
 }
 
 // Same filled dark-rectangle icon-button look as .icon-btn--add above and
-// tour-event.scss's edit trigger - sits right after the place name in
-// .info-line, tooltip-only (no visible label, per the admin's request).
+// tour-event.scss's edit trigger - on the right of the title band (it edits
+// the whole tour, not just one info line), tooltip-only (no visible label,
+// per the admin's request).
 .icon-btn--edit-tour {
-  // Pushed to the far right of .info-line, same margin-left:auto pattern
-  // as the event edit icon in tour-event.scss.
-  margin-left: auto;
+  // Right side of .hero-title's band, vertically centred on it - stays
+  // centred however many lines the title wraps to. 1.5rem in from the
+  // edge: clear of the band's slanted right edge, and in line with the
+  // event edit buttons below (.day-block's 1.5rem padding).
+  position: absolute;
+  top: 50%;
+  right: 1.5rem;
+  transform: translateY(-50%);
   background: #445a67;
   border-radius: 8px;
   color: #fff;
   text-decoration: none; // it's an <a>, not a <button>, so this isn't free
+  // Faded so it doesn't compete with the title; solid on hover.
+  opacity: 0.7;
+  transition: opacity 0.15s;
 
   &:hover {
     background: #37474f;
+    opacity: 1;
   }
 }
 

@@ -44,12 +44,12 @@ button {
 
 .heading p {
   margin: 0;
-  color: #7c8b94;
+  color: #56666e;
   font-size: 14px;
 }
 
 .empty-note {
-  color: #83939a;
+  color: #56666e;
   font-size: 14px;
 }
 
@@ -74,7 +74,7 @@ button {
 
 .subtext {
   margin: 0 0 20px;
-  color: #82939a;
+  color: #56666e;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -207,7 +207,7 @@ button {
 .field-label {
   font-size: 12px;
   font-weight: 700;
-  color: #50636e;
+  color: #2f414b;
 }
 
 // Profilkép row (upload/replace/remove, see components/photo-editor) -
@@ -228,13 +228,18 @@ button {
   font-size: 13px;
 }
 
+// Read-only info (name, email, age...), not a dead control - readable
+// text, only the tinted background says "not editable here". Safari/iOS
+// fade disabled inputs on their own too (text-fill-color, opacity).
 .field input:disabled {
-  background: #f7faf8;
-  color: #6c8087;
+  background: #f1f5f3;
+  color: #2f414b;
+  -webkit-text-fill-color: #2f414b;
+  opacity: 1;
 }
 
 .field small {
-  color: #8a9a9d;
+  color: #56666e;
   font-size: 11px;
 }
 
@@ -256,7 +261,7 @@ button {
 
 .toggle-row small {
   font-size: 11px;
-  color: #84949c;
+  color: #56666e;
   display: block;
   margin-top: 4px;
   line-height: 1.35;
@@ -346,7 +351,7 @@ button {
 }
 
 .attendance-date {
-  color: #82939a;
+  color: #56666e;
   font-size: 12px;
 }
 
@@ -421,7 +426,7 @@ button {
 }
 
 .family-row small {
-  color: #82939a;
+  color: #56666e;
   font-size: 11px;
 }
 

@@ -72,6 +72,23 @@ describe('Programfüzet (tour PDF)', () => {
     expect((await request(app).get(`/tours/${tour._id}/pdf`)).status).toBe(401);
   });
 
+  it('adds a Szobabeosztás page only once the room allocation is finalized', async () => {
+    const { tour, guest } = await richTour();
+    const pageCount = async () => {
+      const res = await request(app).get(`/tours/${tour._id}/pdf`).set(asUser(guest)).buffer(true).parse((r, cb) => {
+        const chunks = [];
+        r.on('data', (c) => chunks.push(c));
+        r.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
+      return (res.body.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length;
+    };
+    const houses = [{ name: 'Ház', rooms: [{ name: 'Szoba', beds: 4 }] }];
+    await Tour.updateOne({ _id: tour._id }, { accommodation: { houses, finalized: false } });
+    const before = await pageCount();
+    await Tour.updateOne({ _id: tour._id }, { 'accommodation.finalized': true });
+    expect(await pageCount()).toBe(before + 1);
+  });
+
   it('also works by slug, and 404s for an unknown tour', async () => {
     const { tour, guest } = await richTour();
     expect((await request(app).get(`/tours/${tour.slug}/pdf`).set(asUser(guest))).status).toBe(200);

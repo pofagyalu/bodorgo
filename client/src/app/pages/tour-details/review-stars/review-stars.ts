@@ -1,12 +1,12 @@
-import { Component, EventEmitter, Input, Output, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output, OnInit, inject, signal, computed } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
 
 // Owns the whole "★ 7.5/10 (...)" line near the top of the tour details
-// page - not just the star input. For a non-attendee (or before
-// getMyReview() resolves) it's the plain public average + review count,
-// same as always. For an actual attendee it swaps the parenthetical for
+// page - not just the star input. For a non-attendee, a tour that hasn't
+// ended yet (or before getMyReview() resolves) it's the plain public average + review count,
+// same as always. For an actual attendee of an ended tour it swaps the parenthetical for
 // their own status ("még nem értékeltél" / "a te értékelésed N") plus an
 // Értékelek/Módosítom button that swaps the whole line for the 10-star
 // input - clicking a star submits immediately and swaps back to the
@@ -21,6 +21,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 export class ReviewStars implements OnInit {
   private tourService = inject(TourService);
   private notifications = inject(NotificationsService);
+  private host = inject(ElementRef<HTMLElement>);
 
   @Input({ required: true }) tourId!: string;
   @Input({ required: true }) averageRating!: number;
@@ -31,6 +32,8 @@ export class ReviewStars implements OnInit {
 
   loaded = signal(false);
   isAttendee = signal(false);
+  // Attendee of a tour that has already ended - only then can they rate it.
+  canReview = signal(false);
   savedRating = signal<number | null>(null);
   hoverRating = signal<number | null>(null);
   submitting = signal(false);
@@ -54,6 +57,7 @@ export class ReviewStars implements OnInit {
     this.tourService.getMyReview(this.tourId).subscribe({
       next: (res) => {
         this.isAttendee.set(res.data.isAttendee);
+        this.canReview.set(res.data.isAttendee && res.data.hasEnded);
         this.savedRating.set(res.data.rating);
         this.loaded.set(true);
       },
@@ -61,8 +65,28 @@ export class ReviewStars implements OnInit {
     });
   }
 
-  startEditing() {
+  // stopPropagation: the button is swapped out of the DOM by this very
+  // click, so the document listener below would otherwise see a click
+  // "outside" and close the stars again straight away.
+  startEditing(event: MouseEvent) {
+    event.stopPropagation();
     this.editing.set(true);
+  }
+
+  // Changed their mind - a click anywhere outside the stars (or Escape)
+  // puts the summary line back, nothing saved.
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (this.editing() && !this.host.nativeElement.contains(event.target as Node)) {
+      this.cancelEditing();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  cancelEditing() {
+    if (!this.editing() || this.submitting()) return;
+    this.hoverRating.set(null);
+    this.editing.set(false);
   }
 
   onHover(value: number) {

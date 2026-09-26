@@ -21,8 +21,17 @@
     </div>
 
     <div class="hero-info">
-      <h1 class="hero-title">
+      <h1 class="hero-title" [class.hero-title--admin]="auth.user()?.role === 'admin'">
         <span class="hero-title-span">{{ t.title }}</span>
+        @if (auth.user()?.role === 'admin') {
+        <a
+          [routerLink]="['/taborok', t.slug, 'szerkesztes']"
+          class="icon-btn icon-btn--edit-tour"
+          title="Tábor szerkesztése"
+        >
+          <mat-icon>edit</mat-icon>
+        </a>
+        }
       </h1>
 
       <app-review-stars
@@ -62,14 +71,6 @@
           (click)="$event.stopPropagation()"
         >
           <img src="assets/images/navigate/google-maps.png" alt="Google Maps" />
-        </a>
-        } @if (auth.user()?.role === 'admin') {
-        <a
-          [routerLink]="['/taborok', t.slug, 'szerkesztes']"
-          class="icon-btn icon-btn--edit-tour"
-          title="Tábor szerkesztése"
-        >
-          <mat-icon>edit</mat-icon>
         </a>
         }
       </div>

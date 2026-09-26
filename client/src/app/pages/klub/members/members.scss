@@ -49,7 +49,7 @@ button {
 
 .heading p {
   margin: 0;
-  color: #7c8b94;
+  color: #56666e;
   font-size: 14px;
 }
 
@@ -89,7 +89,7 @@ button {
   background: transparent;
   border: 0;
   border-bottom: 3px solid transparent;
-  color: #748891;
+  color: #56666e;
   padding: 12px 17px;
   font-size: 13px;
   font-weight: 750;
@@ -256,7 +256,7 @@ button {
 .member-panel-head p {
   margin: 0;
   font-size: 12px;
-  color: #819199;
+  color: #56666e;
 }
 
 .member-search {
@@ -326,7 +326,7 @@ table {
 th {
   padding: 13px 21px;
   background: #f7faf8;
-  color: #7f9097;
+  color: #56666e;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -394,7 +394,7 @@ td {
   padding: 17px 21px;
   border-top: 1px solid #f0f2f0;
   font-size: 13px;
-  color: #40535d;
+  color: #2f414b;
 }
 
 .membership-table tbody tr.mine {
@@ -458,9 +458,13 @@ td {
   flex: none;
 }
 
+.person strong {
+  color: #1c2d38;
+}
+
 .person small {
   display: block;
-  color: #82939a;
+  color: #56666e;
   margin-top: 3px;
   font-size: 11px;
   // A long email address has no spaces to wrap at - break it anywhere
@@ -488,7 +492,7 @@ td {
 }
 
 .status.na {
-  color: #789098;
+  color: #56666e;
   background: #f0f4f3;
 }
 
@@ -541,7 +545,7 @@ td {
 .history-fraction {
   font-size: 12px;
   font-weight: 650;
-  color: #6c8087;
+  color: #4a5b63;
   white-space: nowrap;
 }
 
@@ -647,7 +651,7 @@ td {
 .empty-row {
   text-align: center;
   padding: 35px;
-  color: #87969d;
+  color: #56666e;
 }
 
 // --- Detail panel ---
@@ -682,13 +686,13 @@ td {
 }
 
 .history-row span {
-  color: #778b94;
+  color: #56666e;
   text-align: right;
 }
 
 .member-note {
   margin-top: 17px;
-  color: #83939a;
+  color: #56666e;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -739,7 +743,7 @@ td {
 
 .subtext {
   margin: 0 0 16px;
-  color: #82939a;
+  color: #56666e;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -852,7 +856,7 @@ td {
 .pay-confirm-fee-row {
   font-size: 12px;
   font-weight: 600;
-  color: #46585a;
+  color: #2f414b;
 }
 
 .pay-confirm-grand-row {

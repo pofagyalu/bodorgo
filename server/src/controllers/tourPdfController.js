@@ -37,6 +37,7 @@ const GOOGLE_MAPS_ICON_PATH = path.join(rootDir, 'assets', 'img', 'google-maps.p
 // Hungarian text renders correctly.
 const FONT_REGULAR = path.join(rootDir, 'assets', 'fonts', 'Mulish-Regular.ttf');
 const FONT_BOLD = path.join(rootDir, 'assets', 'fonts', 'Mulish-Bold.ttf');
+const FONT_ITALIC = path.join(rootDir, 'assets', 'fonts', 'Mulish-Italic.ttf');
 
 // The classic Material Icons glyph font, same one client/index.html loads
 // for <mat-icon> ligatures (e.g. "location_on") - but pdfkit's text layout
@@ -70,6 +71,9 @@ const COLORS = {
   blue: '#096396',
   yellow: '#f6b528',
 };
+
+// Marks the viewer's own name and room in the Szobabeosztás.
+const HIGHLIGHT = COLORS.orange;
 
 function formatHu(date, options) {
   return new Intl.DateTimeFormat('hu-HU', options).format(date);
@@ -117,6 +121,239 @@ function infoLine(doc, x, width, color, iconName, text) {
     .text(text, x + 18, startY, { width: width - 18 });
 }
 
+// Lays out the houses and their rooms: rooms as pale boxes in `columns`
+// masonry columns (each goes under the shortest column), people inside a
+// room in two columns of their own. Everything is sized by `scale`.
+// With draw = false nothing is drawn and no page is added - it just
+// returns the total height, so the caller can pick a scale that fits.
+function layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, pageBottom, { columns, scale }, draw) {
+  const s = (n) => n * scale;
+  const GAP = s(10);
+  const PAD = s(7);
+  const NAME_GAP = s(8); // between the two name columns
+  const INDENT = s(6);
+  // Each house is a box of its own, its rooms inside it.
+  const HOUSE_PAD = s(8);
+  const HOUSE_GAP = s(12);
+  const roomsX = PAGE_MARGIN + HOUSE_PAD;
+  const roomsWidth = contentWidth - HOUSE_PAD * 2;
+  const boxWidth = (roomsWidth - GAP * (columns - 1)) / columns;
+  const inner = boxWidth - PAD * 2;
+  const COUNT_WIDTH = s(40); // the "3/4 fő" at the right of the room name
+  const nameColWidth = (inner - INDENT - NAME_GAP) / 2;
+  const topY = doc.page.margins.top;
+  let y = startY;
+
+  const heightOf = (font, size, text, width) => doc.font(font).fontSize(size).heightOfString(text, { width });
+
+  // The viewer's own name stands out: bold, in the highlight color.
+  const nameFont = (n) => (n.me ? 'Heading' : 'Body');
+
+  // Names down the left column first, then the right - still alphabetical
+  // when read top to bottom. A single name keeps the whole width.
+  const nameRows = (names) => {
+    if (names.length < 2) return names.map((n) => [n]);
+    const half = Math.ceil(names.length / 2);
+    return names.slice(0, half).map((n, i) => [n, names[half + i]].filter(Boolean));
+  };
+  const roomHeight = (room) => {
+    const names = namesByRoom.get(String(room._id)) ?? [];
+    let h = PAD * 2 + heightOf('Heading', s(10.5), room.name, inner - COUNT_WIDTH);
+    if (room.description) h += heightOf('Italic', s(8.5), room.description, inner);
+    h += s(3);
+    if (!names.length) return h + heightOf('Body', s(9.5), '(üres)', inner);
+    for (const row of nameRows(names)) {
+      const w = row.length === 1 && names.length === 1 ? inner - INDENT : nameColWidth;
+      h += Math.max(...row.map((n) => heightOf(nameFont(n), s(9.5), n.name, w)));
+    }
+    return h;
+  };
+  const drawRoom = (room, x, top, height) => {
+    const names = namesByRoom.get(String(room._id)) ?? [];
+    // White on the house's green, so the rooms read as inside it. The
+    // viewer's own room gets a thicker outline in the highlight color.
+    const mine = names.some((n) => n.me);
+    doc
+      .lineWidth(mine ? 1.8 : 1)
+      .roundedRect(x, top, boxWidth, height, s(6))
+      .fillAndStroke('#ffffff', mine ? HIGHLIGHT : '#d3e0d7');
+    doc.lineWidth(1);
+    doc
+      .font('Body')
+      .fontSize(s(8.5))
+      .fillColor('#666')
+      .text(`${names.length}/${room.beds} fő`, x + PAD, top + PAD + s(1), { width: inner, align: 'right' });
+    doc.font('Heading').fontSize(s(10.5)).fillColor('#333').text(room.name, x + PAD, top + PAD, { width: inner - COUNT_WIDTH });
+    let ly = top + PAD + heightOf('Heading', s(10.5), room.name, inner - COUNT_WIDTH);
+    if (room.description) {
+      doc.font('Italic').fontSize(s(8.5)).fillColor('#666').text(room.description, x + PAD, ly, { width: inner });
+      ly += heightOf('Italic', s(8.5), room.description, inner);
+    }
+    ly += s(3);
+    if (!names.length) {
+      doc.font('Body').fontSize(s(9.5)).fillColor('#999').text('(üres)', x + PAD + INDENT, ly, { width: inner - INDENT });
+      return;
+    }
+    for (const row of nameRows(names)) {
+      const w = row.length === 1 && names.length === 1 ? inner - INDENT : nameColWidth;
+      row.forEach((n, j) => {
+        doc
+          .font(nameFont(n))
+          .fontSize(s(9.5))
+          .fillColor(n.me ? HIGHLIGHT : '#000')
+          .text(n.name, x + PAD + INDENT + j * (nameColWidth + NAME_GAP), ly, { width: w });
+      });
+      ly += Math.max(...row.map((n) => heightOf(nameFont(n), s(9.5), n.name, w)));
+    }
+  };
+
+  const newPage = () => {
+    doc.addPage();
+    y = topY;
+  };
+
+  for (const house of tour.accommodation.houses) {
+    let headH = heightOf('Heading', s(12.5), house.name, roomsWidth);
+    if (house.description) headH += heightOf('Body', s(9.5), house.description, roomsWidth);
+    headH += s(5);
+
+    // Masonry: each room under whichever column is shortest so far -
+    // placed up front, so the house's own box (drawn first, underneath)
+    // knows its height.
+    const cols = Array(columns).fill(0);
+    const placed = house.rooms.map((room) => {
+      const h = roomHeight(room);
+      const c = cols.indexOf(Math.min(...cols));
+      const spot = { room, c, top: cols[c], h };
+      cols[c] += h + GAP;
+      return spot;
+    });
+    const roomsH = placed.length ? Math.max(...cols) - GAP : 0;
+    const houseH = HOUSE_PAD * 2 + headH + roomsH;
+
+    // A house that doesn't fit the rest of the page starts on a new one,
+    // unless it's too big even for a whole page - then it goes without
+    // its box and its rooms just flow on.
+    if (draw && y + houseH > pageBottom && houseH <= pageBottom - topY) newPage();
+    const boxed = y + houseH <= pageBottom;
+    if (draw) {
+      if (boxed) {
+        doc.roundedRect(PAGE_MARGIN, y, contentWidth, houseH, s(8)).fillAndStroke('#eaf2ed', '#c9d9ce');
+      }
+      // Measured before setting the description's font - heightOf switches fonts.
+      const descY = y + HOUSE_PAD + heightOf('Heading', s(12.5), house.name, roomsWidth);
+      doc
+        .font('Heading')
+        .fontSize(s(12.5))
+        .fillColor('#333')
+        .text(house.name, roomsX, y + HOUSE_PAD, { width: roomsWidth });
+      if (house.description) {
+        doc.font('Body').fontSize(s(9.5)).fillColor('#666').text(house.description, roomsX, descY, { width: roomsWidth });
+      }
+    }
+    const roomsTop = y + HOUSE_PAD + headH;
+
+    if (!draw || boxed) {
+      if (draw) {
+        for (const { room, c, top, h } of placed) drawRoom(room, roomsX + c * (boxWidth + GAP), roomsTop + top, h);
+      }
+      y += houseH + HOUSE_GAP;
+      continue;
+    }
+    // Oversized house: rooms flow on, onto new pages as needed.
+    const flow = Array(columns).fill(roomsTop);
+    for (const { room, h } of placed) {
+      let c = flow.indexOf(Math.min(...flow));
+      if (flow[c] + h > pageBottom) {
+        newPage();
+        flow.fill(y);
+        c = 0;
+      }
+      drawRoom(room, roomsX + c * (boxWidth + GAP), flow[c], h);
+      flow[c] += h + GAP;
+    }
+    y = Math.max(...flow) + HOUSE_GAP;
+  }
+  if (draw) doc.y = y;
+  return y - startY;
+}
+
+// The finalized Szobabeosztás on a page of its own: per house, its rooms
+// with who sleeps where (see layoutRoomAllocation), shrunk to fit one page.
+async function renderRoomAllocationPage(doc, tour, contentWidth, viewer) {
+  const reservations = await Reservation.find({ tour: tour._id }).select('attendees.name attendees.room attendees.user');
+  const viewerId = viewer?._id ? String(viewer._id) : null;
+  // Per room id: { name, me } - `me` marks the person this copy is for.
+  const namesByRoom = new Map();
+  for (const a of reservations.flatMap((r) => r.attendees)) {
+    const key = a.room ? String(a.room) : null;
+    if (!namesByRoom.has(key)) namesByRoom.set(key, []);
+    namesByRoom.get(key).push({ name: a.name, me: !!viewerId && String(a.user) === viewerId });
+  }
+  const collator = new Intl.Collator('hu');
+  for (const names of namesByRoom.values()) names.sort((a, b) => collator.compare(a.name, b.name));
+
+  doc.addPage();
+  doc.font('Heading').fontSize(16).fillColor(COLORS.darkGreen).text('Tervezett szobabeosztás', PAGE_MARGIN, doc.y, {
+    width: contentWidth,
+  });
+  doc.moveDown(0.3);
+  doc
+    .font('Italic')
+    .fontSize(10)
+    .fillColor('#666')
+    .text(
+      'Amennyire a buli után a józanságod engedi, próbálj meg a saját szobádban, a saját párod mellé ' +
+        'feküdni. Ha reggel mégis máshol ébredsz, az nem a szobabeosztás hibája.',
+      PAGE_MARGIN,
+      doc.y,
+      { width: contentWidth },
+    );
+  doc.y += 12;
+
+  const pageBottom = doc.page.height - PAGE_MARGIN - 40; // clear of the footer
+  const startY = doc.y;
+  const layout = (option, draw) => layoutRoomAllocation(doc, tour, namesByRoom, contentWidth, startY, pageBottom, option, draw);
+  // Measured first (nothing drawn): the roomiest layout that fits the
+  // whole Szobabeosztás on this one page - two rooms side by side, then
+  // three, then shrinking. Only a really big accommodation still runs
+  // onto a next page at the smallest size.
+  const options = [
+    { columns: 2, scale: 1 },
+    { columns: 3, scale: 1 },
+    { columns: 3, scale: 0.92 },
+    { columns: 3, scale: 0.85 },
+    { columns: 3, scale: 0.8 },
+  ];
+  const chosen = options.find((o) => startY + layout(o, false) + 20 <= pageBottom) ?? options.at(-1);
+  layout(chosen, true);
+  doc.x = PAGE_MARGIN;
+
+  // Anyone registered but left out of every room (or in a since-deleted one).
+  const validRooms = new Set(tour.accommodation.houses.flatMap((h) => h.rooms.map((r) => String(r._id))));
+  const unplaced = [...namesByRoom.entries()]
+    .filter(([roomId]) => !roomId || !validRooms.has(roomId))
+    .flatMap(([, names]) => names.map((n) => n.name))
+    .sort(collator.compare);
+  if (unplaced.length) {
+    if (doc.y > pageBottom - 40) doc.addPage();
+    doc
+      .font('Heading')
+      .fontSize(11)
+      .fillColor(COLORS.orange)
+      .text('Még nincs szobája: ', PAGE_MARGIN, doc.y, { width: contentWidth, continued: true })
+      .font('Body')
+      .fillColor('#000')
+      .text(unplaced.join(', '));
+  }
+}
+
+// Footer "Ez a dokumentum … tulajdona." - the username, falling back to
+// the full name for someone who hasn't set one.
+function ownerLabel(user) {
+  return user.username || user.name;
+}
+
 async function findTourByIdParam(idParam) {
   const query = mongoose.isValidObjectId(idParam) ? { _id: idParam } : { slug: idParam };
   const tour = await Tour.findOne(query);
@@ -130,11 +367,19 @@ async function findTourByIdParam(idParam) {
 // ends it - shared by the direct-download route and the email-attachment
 // route below, which differ only in what happens to the resulting bytes
 // (piped straight to the HTTP response vs. collected into a Buffer).
-// ownerName is passed in rather than read off req directly so this
+// The viewer (whose copy this is - named in the footer, highlighted in the
+// Szobabeosztás) is passed in rather than read off req directly so this
 // function has no dependency on the request/response objects at all.
-async function renderTourPdfDocument(doc, tour, ownerName, distanceInfo) {
+async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
+  const ownerName = ownerLabel(viewer);
   doc.registerFont('Body', FONT_REGULAR);
   doc.registerFont('Heading', FONT_BOLD);
+  doc.registerFont('Italic', FONT_ITALIC);
+
+  // Room at the bottom of the first page for the navigation footnote
+  // (drawn with the footer at the end) - content breaks to page 2 above it.
+  const hasNavLinks = tour.location?.coordinates?.length === 2;
+  if (hasNavLinks) doc.page.margins.bottom = PAGE_MARGIN + 45;
   doc.registerFont('Icons', FONT_ICONS);
   doc.font('Body');
 
@@ -243,7 +488,10 @@ async function renderTourPdfDocument(doc, tour, ownerName, distanceInfo) {
       if (fs.existsSync(GOOGLE_MAPS_ICON_PATH)) {
         doc.image(GOOGLE_MAPS_ICON_PATH, navX, iconY, { width: iconSize, height: iconSize });
         doc.link(navX, iconY, iconSize, iconSize, googleUrl);
+        navX += iconSize + 2;
       }
+      // Points to the footnote at the bottom of this page.
+      doc.font('Body').fontSize(11).fillColor('#666').text('*', navX, startY - 2, { lineBreak: false });
     }
 
     doc.x = infoColX;
@@ -308,11 +556,49 @@ async function renderTourPdfDocument(doc, tour, ownerName, distanceInfo) {
       .slice()
       .sort((a, b) => a.time.localeCompare(b.time));
 
-    if (doc.y > 700) doc.addPage();
-    let brokeAcrossPage = false;
-    const dayBlockStartY = doc.y;
-
     const headingText = `${day}. nap – ${label}`;
+    const extraOf = (e) => (e.isOptional && e.extraCost != null ? ` (+${e.extraCost} Ft)` : '');
+    const lines = events.length
+      ? events.map((e) => ({ text: `${e.time} – ${e.description}${extraOf(e)}`, color: '#000' }))
+      : [{ text: 'Erre a napra még nincs program megadva.', color: '#999' }];
+
+    // Measured up front, so the day's pale background box can be drawn
+    // BEFORE its text - pdfkit has no z-order, anything drawn later
+    // covers what's already there.
+    const headingHeight = Math.max(
+      doc.font('Heading').fontSize(13).heightOfString(headingText, { width: contentWidth }),
+      16,
+    );
+    const HEADING_GAP = 4;
+    doc.font('Body').fontSize(10);
+    const linesHeight = lines.reduce((sum, l) => sum + doc.heightOfString(l.text, { width: contentWidth - 15 }), 0);
+    const blockHeight = headingHeight + HEADING_GAP + linesHeight;
+
+    const boxPadding = 8;
+    // doc.y sits right at the last line's own bottom edge (no descender
+    // room), so the bottom needs its own padding too.
+    const bottomPadding = 6;
+    // Clear of the footer (and page 1's footnote, via its larger margin).
+    const pageBottom = Math.min(doc.page.height - PAGE_MARGIN - 40, doc.page.maxY() - 10);
+    // A day that doesn't fit the rest of this page starts on the next one
+    // rather than splitting - unless it wouldn't fit a whole page either.
+    const fitsOnePage = blockHeight + boxPadding + bottomPadding <= pageBottom - doc.page.margins.top;
+    if (doc.y + blockHeight + bottomPadding > pageBottom && (fitsOnePage || doc.y > 700)) {
+      doc.addPage();
+    }
+    const boxed = doc.y + blockHeight + bottomPadding <= pageBottom;
+    if (boxed) {
+      doc
+        .roundedRect(
+          PAGE_MARGIN - boxPadding,
+          doc.y - boxPadding,
+          contentWidth + boxPadding * 2,
+          blockHeight + boxPadding + bottomPadding,
+          6,
+        )
+        .fillAndStroke('#f4f8f5', '#dde6e0');
+    }
+
     const headingY = doc.y;
     doc.font('Heading').fontSize(13).fillColor('#333');
     const headingWidth = doc.widthOfString(headingText);
@@ -338,57 +624,17 @@ async function renderTourPdfDocument(doc, tour, ownerName, distanceInfo) {
         });
       doc.x = PAGE_MARGIN;
     }
-    doc.y = Math.max(doc.y, headingY + 16);
-    doc.moveDown(0.3);
+    doc.y = headingY + headingHeight + HEADING_GAP;
 
-    if (events.length === 0) {
+    for (const line of lines) {
+      // Only an oversized (unboxed) day ever runs onto a new page.
+      if (!boxed && doc.y > 720) doc.addPage();
       doc
         .font('Body')
         .fontSize(10)
-        .fillColor('#999')
-        .text('Erre a napra még nincs program megadva.', PAGE_MARGIN + 15, doc.y, {
-          width: contentWidth - 15,
-        });
+        .fillColor(line.color)
+        .text(line.text, PAGE_MARGIN + 15, doc.y, { width: contentWidth - 15 });
       doc.x = PAGE_MARGIN;
-    } else {
-      for (const event of events) {
-        if (doc.y > 720) {
-          doc.addPage();
-          brokeAcrossPage = true;
-        }
-        const extra = event.isOptional && event.extraCost != null ? ` (+${event.extraCost} Ft)` : '';
-        doc
-          .font('Body')
-          .fontSize(10)
-          .fillColor('#000')
-          .text(`${event.time} – ${event.description}${extra}`, PAGE_MARGIN + 15, doc.y, {
-            width: contentWidth - 15,
-          });
-        doc.x = PAGE_MARGIN;
-      }
-    }
-
-    // A rounded-rectangle outline around the whole day, drawn last (after
-    // its text) so the stroke-only box never covers anything - skipped if
-    // the day's events ran onto a second page, since a box can't sensibly
-    // span two separate pages.
-    if (!brokeAcrossPage) {
-      const boxPadding = 8;
-      // doc.y sits right at the last line's own bottom edge (no descender
-      // room), so the box needs padding added on both top AND bottom to
-      // clear the content, not just once - a single boxPadding only
-      // pushed the top edge up, leaving the last event flush against the
-      // bottom border.
-      const bottomPadding = 6;
-      doc
-        .roundedRect(
-          PAGE_MARGIN - boxPadding,
-          dayBlockStartY - boxPadding,
-          contentWidth + boxPadding * 2,
-          doc.y - dayBlockStartY + boxPadding + bottomPadding,
-          6,
-        )
-        .stroke('#ddd');
     }
     // A fixed gap rather than moveDown (which scales with whatever font
     // size was last set, an easy way to under-shoot) - has to clear the
@@ -430,6 +676,12 @@ async function renderTourPdfDocument(doc, tour, ownerName, distanceInfo) {
     doc.moveDown(1);
   }
 
+  // Szobabeosztás - its own page, only once the admin has finalized it
+  // (Véglegesítés); before that it's still changing and not worth printing.
+  if (tour.accommodation?.finalized && tour.accommodation.houses?.length) {
+    await renderRoomAllocationPage(doc, tour, contentWidth, viewer);
+  }
+
   // Footer on every page: download date bottom-left, ownership
   // attribution bottom-right - added last (after all real content, once
   // the final page count is known) via bufferPages, not interleaved with
@@ -447,12 +699,31 @@ async function renderTourPdfDocument(doc, tour, ownerName, distanceInfo) {
     // of its exact height, without needing to guess at font metrics.
     const realBottomMargin = doc.page.margins.bottom;
     doc.page.margins.bottom = 0;
+
+    // Thin rule above the footer, margin to margin.
+    doc
+      .moveTo(PAGE_MARGIN, footerY - 7)
+      .lineTo(PAGE_MARGIN + contentWidth, footerY - 7)
+      .lineWidth(0.5)
+      .stroke('#ccc');
+
+    // First page only: the footnote for the "*" after the navigation icons.
+    if (i === range.start && hasNavLinks) {
+      const note =
+        '* Ha már beültél az autóba, és fogalmad sincs, merre tovább: bökj rá valamelyik navigációs ikonra, ' +
+        'dőlj hátra, és kapcsolj önvezető üzemmódba (ha az autód nem tud ilyet, legalább a navigációt kövesd). ' +
+        'Mi a célban várunk!';
+      doc.font('Italic').fontSize(8).fillColor('#666');
+      const noteHeight = doc.heightOfString(note, { width: contentWidth });
+      doc.text(note, PAGE_MARGIN, footerY - 14 - noteHeight, { width: contentWidth });
+    }
+
     doc.y = footerY;
     doc
       .font('Body')
       .fontSize(8)
       .fillColor('#999')
-      .text(`Letöltve: ${formatHu(new Date(), LONG_DATE)}`, PAGE_MARGIN, footerY, {
+      .text(`Letöltve: ${formatHu(new Date(), LONG_DATE)} · ${i - range.start + 1}/${range.count}. oldal`, PAGE_MARGIN, footerY, {
         width: contentWidth / 2,
         lineBreak: false,
       });
@@ -461,7 +732,7 @@ async function renderTourPdfDocument(doc, tour, ownerName, distanceInfo) {
       .font('Body')
       .fontSize(8)
       .fillColor('#999')
-      .text(`Ez a dokumentum a ${ownerName} tulajdona.`, PAGE_MARGIN + contentWidth / 2, footerY, {
+      .text(`Ez a dokumentum ${ownerName} tulajdona.`, PAGE_MARGIN + contentWidth / 2, footerY, {
         width: contentWidth / 2,
         align: 'right',
         lineBreak: false,
@@ -507,7 +778,7 @@ export const downloadTourPdf = async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   doc.pipe(res);
 
-  await renderTourPdfDocument(doc, tour, req.user.name, distanceInfo);
+  await renderTourPdfDocument(doc, tour, req.user, distanceInfo);
 };
 
 // Builds the same PDF as downloadTourPdf, but collects it into a Buffer
@@ -515,14 +786,14 @@ export const downloadTourPdf = async (req, res) => {
 // mechanism already defers the actual byte-writing until doc.end() calls
 // flush internally, so attaching these 'data'/'end' listeners beforehand
 // is enough to capture every page regardless.
-function renderTourPdfToBuffer(tour, ownerName, distanceInfo) {
+function renderTourPdfToBuffer(tour, viewer, distanceInfo) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
-    renderTourPdfDocument(doc, tour, ownerName, distanceInfo).catch(reject);
+    renderTourPdfDocument(doc, tour, viewer, distanceInfo).catch(reject);
   });
 }
 
@@ -551,7 +822,7 @@ export const emailTourPdf = async (req, res) => {
   }
 
   const distanceInfo = await resolveDistanceInfo(tour, req.user);
-  const pdfBuffer = await renderTourPdfToBuffer(tour, req.user.name, distanceInfo);
+  const pdfBuffer = await renderTourPdfToBuffer(tour, req.user, distanceInfo);
   const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
   const { subject, text, html } = programfuzetEmailBody(req.user.name, tour.title);
 
@@ -597,7 +868,7 @@ export const emailTourPdfToAttendees = async (req, res) => {
 
   const reservations = await Reservation.find({ tour: tour._id }).populate({
     path: 'attendees.user',
-    select: 'name email lastLoginAt wantsEmailNotifications location address',
+    select: 'name username email lastLoginAt wantsEmailNotifications location address',
   });
 
   const recipientsById = new Map();
@@ -615,7 +886,7 @@ export const emailTourPdfToAttendees = async (req, res) => {
   const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
   for (const user of eligible) {
     const distanceInfo = await resolveDistanceInfo(tour, user);
-    const pdfBuffer = await renderTourPdfToBuffer(tour, user.name, distanceInfo);
+    const pdfBuffer = await renderTourPdfToBuffer(tour, user, distanceInfo);
     const { subject, text, html } = programfuzetEmailBody(user.name, tour.title);
     await sendResendEmail({ to: user.email, subject, text, html, attachments: [{ filename, content: pdfBuffer }] });
   }
