@@ -18,7 +18,7 @@
             "browser": "src/main.ts",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
-            "assets": ["src/favicon.ico", "src/robots.txt", "src/assets"],
+            "assets": ["src/favicon.ico", "src/robots.txt", "src/manifest.webmanifest", "src/sw.js", "src/assets"],
             "styles": [
               "node_modules/material-icons/iconfont/material-icons.css",
               "node_modules/leaflet/dist/leaflet.css",

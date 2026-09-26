@@ -214,6 +214,37 @@
             <span></span>
           </label>
         </div>
+
+        <!-- Push notifications - per device (browser), see PushService. -->
+        <div class="toggle-row">
+          <div>
+            <strong>Értesítések ezen az eszközön</strong>
+            <small>
+              @switch (push.state()) {
+              @case ('on') { Bekapcsolva - a táborok chatjéből egyszer szól, amíg meg nem nézed. }
+              @case ('denied') { A böngészőben le vannak tiltva - a webhely beállításainál engedélyezheted. }
+              @case ('unsupported') { Ez a böngésző nem tud értesítést küldeni. }
+              @case ('needs-install') { iPhone-on: Megosztás → „Főképernyőhöz adás”, majd onnan megnyitva kapcsold be. }
+              @default { A táborok chatjéből egyszer szól, amíg meg nem nézed - egy chat a 🔔 gombbal némítható. }
+              }
+            </small>
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              [checked]="push.state() === 'on'"
+              [disabled]="pushBusy() || !['on', 'off'].includes(push.state())"
+              (change)="togglePush()"
+              aria-label="Értesítések ezen az eszközön"
+            />
+            <span></span>
+          </label>
+        </div>
+        @if (push.state() === 'on') {
+        <button type="button" class="link-btn" (click)="sendTestPush()" [disabled]="pushBusy()">
+          Próbaértesítés küldése
+        </button>
+        }
       </section>
 
       <section class="panel">

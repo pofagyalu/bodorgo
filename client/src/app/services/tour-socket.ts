@@ -22,6 +22,18 @@ export class TourSocketService {
       this.socket.on('connect', () => {
         if (this.joinedTourId) this.socket!.emit('join-tour-chat', { tourId: this.joinedTourId });
       });
+      // Tell the server when the chat's tab goes to the background (or
+      // comes back): someone looking at the chat gets no push notification
+      // about it, and coming back counts as having read it (see
+      // server/src/chat/chatNotifications.js).
+      document.addEventListener('visibilitychange', () => {
+        if (this.joinedTourId && this.socket?.connected) {
+          this.socket.emit('chat-visible', {
+            tourId: this.joinedTourId,
+            visible: document.visibilityState === 'visible',
+          });
+        }
+      });
     }
     return this.socket;
   }

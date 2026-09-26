@@ -1,6 +1,7 @@
 import Post from '../models/postModel.js';
 import logger from '../logger.js';
 import { setIo, tourRoom } from './tourEvents.js';
+import { markChatRead, notifyChatPostInBackground } from './chatNotifications.js';
 
 // One Socket.IO connection per open browser tab, shared by the tour chat
 // and its Szobabeosztás panel (see the client's TourSocketService): joining
@@ -11,6 +12,13 @@ export default function registerChatHandlers(io) {
 
   io.on('connection', (socket) => {
     const sessionUser = socket.request.session?.user;
+    // Who this socket is, and which chat it's showing right now - so chat
+    // push notifications skip whoever is already looking at it (see
+    // chatNotifications.js).
+    socket.data.userId = sessionUser?.id ?? null;
+    socket.data.visibleTour = null;
+    const markRead = (tourId) =>
+      sessionUser && markChatRead(sessionUser.id, tourId).catch((err) => logger.error(`chat: mark read failed: ${err}`));
 
     socket.on('join-tour-chat', async ({ tourId }) => {
       if (!sessionUser) {
@@ -19,6 +27,8 @@ export default function registerChatHandlers(io) {
       if (!tourId) return;
 
       socket.join(tourRoom(tourId));
+      socket.data.visibleTour = String(tourId);
+      markRead(tourId);
 
       try {
         const posts = await Post.find({ tourId })
@@ -35,6 +45,15 @@ export default function registerChatHandlers(io) {
     // posts/room changes on the same connection.
     socket.on('leave-tour-chat', ({ tourId }) => {
       if (tourId) socket.leave(tourRoom(tourId));
+      if (socket.data.visibleTour === String(tourId)) socket.data.visibleTour = null;
+    });
+
+    // The chat's tab went to the background (or came back) - only a
+    // visible chat counts as "already looking at it".
+    socket.on('chat-visible', ({ tourId, visible }) => {
+      if (!tourId || !socket.rooms.has(tourRoom(tourId))) return;
+      socket.data.visibleTour = visible ? String(tourId) : null;
+      if (visible) markRead(tourId);
     });
 
     socket.on('create-post', async ({ tourId, text }) => {
@@ -51,6 +70,8 @@ export default function registerChatHandlers(io) {
         });
         const populated = await post.populate('creator', 'name username');
         io.to(tourRoom(tourId)).emit('new-post', populated);
+        markRead(tourId);
+        notifyChatPostInBackground(io, populated);
       } catch (err) {
         logger.error(`chat: failed to save post for tour ${tourId}: ${err}`);
         socket.emit('chat-error', 'Could not send message.');

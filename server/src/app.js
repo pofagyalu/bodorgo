@@ -17,6 +17,7 @@ import systemRouter from './routes/systemRoutes.js';
 import authOidcRouter from './routes/authOidcRoutes.js';
 import mediaRouter from './routes/mediaRoutes.js';
 import settingsRouter from './routes/settingsRoutes.js';
+import pushRouter from './routes/pushRoutes.js';
 import documentRouter from './routes/documentRoutes.js';
 import requireAuth from './auth/requireAuth.js';
 import { TOUR_DOCUMENTS_DIR } from './utils/dataDirs.js';
@@ -127,6 +128,7 @@ export default function createApp(sessionMiddleware) {
   app.use('/documents', documentRouter);
   app.use('/media', mediaRouter);
   app.use('/settings', settingsRouter);
+  app.use('/push', pushRouter);
 
   app.use((req, res, next) => {
     req.requestTime = new Date().toISOString();

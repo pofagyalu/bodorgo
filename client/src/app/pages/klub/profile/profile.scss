@@ -463,3 +463,20 @@ button {
     padding: 20px;
   }
 }
+
+// "Próbaértesítés küldése" under the push switch.
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1a796c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}

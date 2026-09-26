@@ -250,12 +250,46 @@
 }
 
 .pane-chat {
+  position: relative;
   display: flex;
   flex-direction: column;
 
   app-feed {
     flex: 1;
     min-height: 0;
+  }
+}
+
+// The bell in the chat's top-right corner - this chat's notifications.
+.mute-btn {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #dfe8e4;
+  border-radius: 50%;
+  background: #ffffffe6;
+  color: #1a796c;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #0000000f;
+  transition: background 0.15s;
+
+  mat-icon {
+    font-size: 19px;
+    width: 19px;
+    height: 19px;
+  }
+
+  &:hover {
+    background: #eef6f2;
+  }
+
+  &.muted {
+    color: #90a4ae;
   }
 }
 
