@@ -13,8 +13,13 @@ import logger from '../logger.js';
 
 const WEATHER_REFETCH_HOURS = 6;
 
-function toDateStr(date) {
-  return date.toISOString().slice(0, 10); // YYYY-MM-DD
+// YYYY-MM-DD of the date's own calendar day (server local time). Not
+// toISOString(): the tour days are local midnights, which in Hungary are
+// still the PREVIOUS day in UTC - that asked Open-Meteo for the day before
+// every tour day.
+export function toDateStr(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function upsertDailyWeather(tour, day, data) {

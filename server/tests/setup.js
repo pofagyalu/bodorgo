@@ -8,6 +8,10 @@ import { afterAll, afterEach, beforeAll, inject, vi } from 'vitest';
 
 // --- Settings the app reads at import time (config.js) ---
 process.env.NODE_ENV = 'test';
+// Same time zone as the production server - date handling differs between
+// UTC (the CI container's default) and Hungarian time, and the weather's
+// one-day shift only showed up in the latter.
+process.env.TZ = 'Europe/Budapest';
 process.env.COOKIE_SECRET ??= 'test-cookie-secret';
 process.env.CLIENT_BASE_URL ??= 'http://localhost:4200';
 process.env.CLIENT_ORIGIN ??= 'http://localhost:4200';
