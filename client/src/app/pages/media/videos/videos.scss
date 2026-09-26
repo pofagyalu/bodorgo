@@ -49,7 +49,7 @@ button {
 
 // --- Category chips ---
 
-// Hidden on a wide screen - the Média sidebar lists the categories there.
+// Phones only - elsewhere the Média sidebar lists the categories.
 .filter-chips {
   display: none;
   flex-wrap: wrap;
@@ -57,7 +57,7 @@ button {
   margin-bottom: 20px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 580px) and (hover: none) {
   .filter-chips {
     display: flex;
   }
