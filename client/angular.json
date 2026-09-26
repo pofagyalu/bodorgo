@@ -23,6 +23,7 @@
               "node_modules/material-icons/iconfont/material-icons.css",
               "node_modules/leaflet/dist/leaflet.css",
               "node_modules/photoswipe/dist/photoswipe.css",
+              "node_modules/quill/dist/quill.snow.css",
               "src/styles.scss"
             ],
             "scripts": [],

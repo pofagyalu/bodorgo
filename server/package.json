@@ -41,6 +41,7 @@
     "pdfkit": "^0.20.2",
     "qrcode": "^1.5.4",
     "resend": "^6.28.1",
+    "sanitize-html": "^2.17.7",
     "sharp": "^0.35.4",
     "slugify": "^1.6.6",
     "socket.io": "^4.8.1",

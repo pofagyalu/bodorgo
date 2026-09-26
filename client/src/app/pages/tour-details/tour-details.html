@@ -260,12 +260,11 @@
       <button
         type="button"
         class="extra-doc-card extra-doc-card--admin"
-        title="Programfüzet küldése e-mailben minden erre jogosult résztvevőnek"
-        [disabled]="emailingAttendees()"
-        (click)="askEmailAttendees()"
+        title="Levél írása a tábor minden résztvevőjének - a Programfüzet is csatolható"
+        (click)="showMailPanel.set(true)"
       >
         <mat-icon>forward_to_inbox</mat-icon>
-        <span>{{ emailingAttendees() ? 'Küldés...' : 'Küldés mindenkinek' }}</span>
+        <span>Levél a résztvevőknek</span>
       </button>
       } @if ((t.extraDocuments ?? []).length > 0) {
       <span class="extra-docs-divider"></span>
@@ -416,36 +415,9 @@
   </div>
   }
 
-  <!-- Admin's "email everyone" confirmation - a real send to potentially
-       several real people, so it gets the same explicit confirm as
-       deleting a document, not a one-click fire. -->
-  @if (confirmingEmailAttendees()) {
-  <div class="attendee-modal-backdrop" (click)="cancelEmailAttendees()">
-    <div class="confirm-modal" (click)="$event.stopPropagation()">
-      <p>
-        Biztosan elküldöd a Programfüzetet e-mailben minden erre jogosult résztvevőnek? (Csak azoknak megy ki, akiknek
-        van e-mail címük, már beléptek legalább egyszer, és nem kapcsolták ki az e-mail értesítéseket.)
-      </p>
-      <div class="user-form-actions">
-        <button
-          type="button"
-          class="confirm-btn confirm-btn--safe"
-          [disabled]="emailingAttendees()"
-          (click)="cancelEmailAttendees()"
-        >
-          Mégse
-        </button>
-        <button
-          type="button"
-          class="confirm-btn confirm-btn--danger"
-          [disabled]="emailingAttendees()"
-          (click)="confirmEmailAttendees(t._id)"
-        >
-          Küldés
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Admin's letter to every attendee (see tour-mail-panel). -->
+  @if (showMailPanel()) {
+  <app-tour-mail-panel [tourId]="t._id" (closed)="showMailPanel.set(false)" />
   }
 
   <!-- Attendee picker popup - only for a member/admin with more than one

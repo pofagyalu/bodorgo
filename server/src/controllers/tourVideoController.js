@@ -82,7 +82,7 @@ function videoReadyEmailBody(recipientName, tourTitle, videoPageUrl) {
 // E-mails a tour's attendees that its video is ready. Same attendee query
 // + eligibility rules (email on file, logged in at least once, hasn't
 // turned off wantsEmailNotifications) as tourPdfController.js's
-// emailTourPdfToAttendees.
+// mass send (mailingController.js).
 export async function notifyAttendeesOfNewVideo(tour) {
   const reservations = await Reservation.find({ tour: tour._id }).populate({
     path: 'attendees.user',
