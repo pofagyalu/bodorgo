@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import compression from 'compression';
-import path from 'path';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -29,8 +28,6 @@ import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
 import logger from './logger.js';
-
-const rootDir = path.resolve();
 
 // sessionMiddleware is built once in server.js and shared with Socket.IO -
 // see session.js for why.

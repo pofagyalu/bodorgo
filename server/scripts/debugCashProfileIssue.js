@@ -3,7 +3,6 @@ import mongoose from 'mongoose';
 import User from '../src/models/userModel.js';
 import Reservation from '../src/models/reservationModel.js';
 import Payment from '../src/models/paymentModel.js';
-import Tour from '../src/models/tourModel.js';
 
 await mongoose.connect(process.env.DB_URI);
 

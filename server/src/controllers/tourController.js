@@ -9,7 +9,6 @@ import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
 import { resolveDistanceInfo } from '../utils/distance.js';
-import logger from '../logger.js';
 
 const WEATHER_REFETCH_HOURS = 6;
 

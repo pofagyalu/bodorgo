@@ -23,7 +23,7 @@ export function cleanMailHtml(html) {
   // e-mail clients from wrapping lines - back to plain spaces.
   // (sanitize-html may hand them back as the character itself, not the
   // entity - both are replaced.)
-  return cleaned.replace(/&nbsp;| /g, ' ').trim();
+  return cleaned.replace(/&nbsp;|\u00a0/g, ' ').trim();
 }
 
 // Nothing but empty paragraphs/whitespace left?

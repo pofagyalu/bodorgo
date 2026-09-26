@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -34,13 +34,13 @@ interface MeResponse {
   providedIn: 'root',
 })
 export class AuthService {
+  private http = inject(HttpClient);
+
   private loggedIn = signal(false);
   private currentUser = signal<CurrentUser | null>(null);
 
   isLoggedIn = this.loggedIn.asReadonly();
   user = this.currentUser.asReadonly();
-
-  constructor(private http: HttpClient) {}
 
   // Lets a component (e.g. the profile page's notification toggle) reflect
   // a just-saved change immediately, without a full /auth/me round trip.

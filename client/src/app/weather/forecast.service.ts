@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
@@ -33,10 +33,8 @@ interface OpenWeatherResponse {
 export class ForecastService {
   private url = 'https://api.openweathermap.org/data/2.5/forecast';
 
-  constructor(
-    private http: HttpClient,
-    private notificationService: NotificationsService
-  ) {}
+  private http = inject(HttpClient);
+  private notificationService = inject(NotificationsService);
 
   getForecast() {
     return this.getCurrentLocation().pipe(
@@ -83,7 +81,7 @@ export class ForecastService {
       tap(() => {
         this.notificationService.addSuccess('Sikerült a helymeghatározás!');
       }),
-      catchError((err: GeolocationPositionError) => {
+      catchError(() => {
         this.notificationService.addError('Nem sikerült a helymeghatározás!');
         // Already surfaced to the user above - complete quietly instead of
         // propagating an uncaught error through the template's async pipe.

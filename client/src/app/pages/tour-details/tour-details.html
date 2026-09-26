@@ -165,7 +165,7 @@
         [saving]="addingEvent()"
         [error]="addEventError()"
         (save)="saveNewEvent(day.day)"
-        (cancel)="cancelAddEvent()"
+        (cancelled)="cancelAddEvent()"
       />
       } @if (day.events.length) {
       <ul class="event-list">

@@ -26,9 +26,9 @@ const AVATAR_COLOR_VARS = [
   styleUrl: './header.scss',
 })
 export class Header implements OnDestroy {
-  isMobileMenuOpen = false;
+  auth = inject(AuthService);
 
-  constructor(public auth: AuthService) {}
+  isMobileMenuOpen = false;
 
   private userService = inject(UserService);
 

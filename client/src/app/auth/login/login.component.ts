@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -11,11 +11,9 @@ import { NotificationsService } from '../../notifications/notifications.service'
   styleUrl: './login.component.css',
 })
 export class LoginComponent implements OnInit {
-  constructor(
-    private authService: AuthService,
-    private route: ActivatedRoute,
-    private notifications: NotificationsService,
-  ) {}
+  private authService = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  private notifications = inject(NotificationsService);
 
   ngOnInit() {
     // authOidcController.js's callback() redirects here with this query

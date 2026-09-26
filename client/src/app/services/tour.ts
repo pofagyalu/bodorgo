@@ -591,7 +591,7 @@ export class TourService {
   }
 
   /** Optional: Get tours with query params (sorting/filtering/pagination) */
-  getToursWithParams(params: Record<string, any>): Observable<ToursResponse> {
+  getToursWithParams(params: Record<string, string | number | boolean>): Observable<ToursResponse> {
     return this.http.get<ToursResponse>(this.apiUrl, { params });
   }
 

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ForecastService } from '../forecast.service';
 import { Observable } from 'rxjs';
@@ -14,7 +14,7 @@ export class ForecastComponent {
     { dateString: string; temp: number; weather: string; icon: string }[]
   >;
 
-  constructor(forecastService: ForecastService) {
-    this.forecast$ = forecastService.getForecast();
+  constructor() {
+    this.forecast$ = inject(ForecastService).getForecast();
   }
 }

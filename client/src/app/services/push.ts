@@ -31,7 +31,7 @@ export class PushService {
   }
 
   private get standalone(): boolean {
-    return window.matchMedia?.('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+    return window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
   }
 
   private registration(): Promise<ServiceWorkerRegistration> {

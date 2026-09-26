@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable } from 'rxjs';
 import { NotificationsService, Command } from '../notifications.service';
@@ -10,9 +10,11 @@ import { NotificationsService, Command } from '../notifications.service';
   styleUrl: './notification-list.component.css',
 })
 export class NotificationListComponent {
+  private notificationsService = inject(NotificationsService);
+
   messages: Observable<Command[]>;
 
-  constructor(private notificationsService: NotificationsService) {
+  constructor() {
     this.messages = this.notificationsService.messagesOutput;
   }
 

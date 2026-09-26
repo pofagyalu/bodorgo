@@ -4,7 +4,7 @@
   [saving]="editSaving()"
   [error]="editError()"
   (save)="saveEdit()"
-  (cancel)="cancelEdit()"
+  (cancelled)="cancelEdit()"
 />
 } @else {
 <div class="event-main" [class.event-main--admin]="auth.user()?.role === 'admin'">

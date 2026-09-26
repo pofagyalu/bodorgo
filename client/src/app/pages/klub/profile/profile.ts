@@ -6,6 +6,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
 import { PushService } from '../../../services/push';
+import { errorMessage } from '../../../shared/errors';
 import { Avatar } from '../../../components/avatar/avatar';
 import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 
@@ -118,8 +119,8 @@ export class KlubProfile implements OnInit {
         await this.push.enable();
         this.notifications.addSuccess('Értesítések bekapcsolva ezen az eszközön.');
       }
-    } catch (err: any) {
-      this.notifications.addError(err?.error?.message ?? err?.message ?? 'Nem sikerült beállítani az értesítéseket.');
+    } catch (err) {
+      this.notifications.addError(errorMessage(err, 'Nem sikerült beállítani az értesítéseket.'));
       await this.push.refresh().catch(() => {});
     } finally {
       this.pushBusy.set(false);

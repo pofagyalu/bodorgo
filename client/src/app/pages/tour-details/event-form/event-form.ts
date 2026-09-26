@@ -36,7 +36,7 @@ export class EventForm {
   @Input() saving = false;
   @Input() error: string | null = null;
   @Output() save = new EventEmitter<void>();
-  @Output() cancel = new EventEmitter<void>();
+  @Output() cancelled = new EventEmitter<void>();
 
   readonly timeOptions = EVENT_FORM_TIME_OPTIONS;
 }

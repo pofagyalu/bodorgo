@@ -174,7 +174,6 @@ export class Members implements OnInit {
   // payMembership below). Mirrors tour.ts's isInMyPaymentGroup spirit for
   // dues instead of a tour advance.
   myFamilyClubMembers = computed(() => {
-    const mine = this.me();
     const myFamilyId = this.auth.user()?.familyId;
     return this.clubMembers().filter(
       (u) => u._id === this.myId() || (!!myFamilyId && u.familyId === myFamilyId),
