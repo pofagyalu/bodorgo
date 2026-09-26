@@ -221,7 +221,7 @@ export const getMe = async (req, res) => {
 // booked it for them.
 export const getMyAttendance = async (req, res) => {
   const reservations = await Reservation.find({ 'attendees.user': req.user._id })
-    .populate('tour', 'title slug order startDate coverUpdatedAt')
+    .populate('tour', 'title slug order startDate duration coverUpdatedAt')
     .sort('-createdAt');
 
   const tours = await Promise.all(

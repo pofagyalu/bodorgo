@@ -72,6 +72,7 @@ export interface AttendedTour {
   slug: string;
   order: number;
   startDate: string;
+  duration?: number;
   coverUpdatedAt?: string;
 }
 
