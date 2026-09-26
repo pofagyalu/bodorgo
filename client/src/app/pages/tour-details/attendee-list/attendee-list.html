@@ -11,7 +11,9 @@
       @if (hasOptionalPrograms) {
       <th class="optional-col" title="Opciós programok - mindig helyben fizetendő, csak tájékoztató jellegű">Opciók</th>
       }
+      @if (hasPricing()) {
       <th class="paid-col"></th>
+      }
       @if (showActions) {
       <th></th>
       }
@@ -56,6 +58,8 @@
       </td>
       }
 
+      <!-- Paid / not paid only means something once prices are set. -->
+      @if (hasPricing()) {
       <td class="paid-col">
         <span class="paid-cell">
           @if (a.paid) {
@@ -65,6 +69,7 @@
           }
         </span>
       </td>
+      }
 
       @if (showActions) {
       <td class="row-actions">
@@ -142,11 +147,13 @@
         <span class="family-value">{{ formatForint(familySubtotal(group).optionalProgramsCost) }} Ft</span>
       </td>
       }
+      @if (hasPricing()) {
       <td class="paid-col family-value-cell">
         <span class="family-value family-paid-count"
           >{{ familySubtotal(group).paidCount }}/{{ familySubtotal(group).memberCount }} fizetve</span
         >
       </td>
+      }
       @if (showActions) {
       <td></td>
       }

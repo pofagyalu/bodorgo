@@ -96,7 +96,12 @@ export class AttendeeList implements OnInit {
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   readonly formatForint = formatForint;
-  hasPricing = computed(() => this.totals !== null);
+  // Prices are set for this tour - only then are there amounts, or any
+  // "paid / not paid" to show. A method, not a computed: `totals` is a
+  // plain @Input, which a computed would never notice changing.
+  hasPricing(): boolean {
+    return this.totals !== null;
+  }
 
   // Only shown at all once at least one attendee actually owes something
   // for an optional event - a tour with no such events (the common case)
