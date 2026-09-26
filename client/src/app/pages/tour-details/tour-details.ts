@@ -28,6 +28,7 @@ import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
 import { TourVideoPlayer } from './tour-video-player/tour-video-player';
+import { TourMailPanel } from './tour-mail-panel/tour-mail-panel';
 import { AttendeeList, AttendeeListRow as AttendeeListPayment } from './attendee-list/attendee-list';
 import { NotificationsService } from '../../notifications/notifications.service';
 
@@ -53,7 +54,7 @@ interface PickerOption {
 @Component({
   selector: 'app-tour-details',
   standalone: true,
-  imports: [MatIconModule, RouterLink, FormsModule, TourEvent, EventForm, ReviewStars, AttendeeList, TourVideoPlayer],
+  imports: [MatIconModule, RouterLink, FormsModule, TourEvent, EventForm, ReviewStars, AttendeeList, TourVideoPlayer, TourMailPanel],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
@@ -486,41 +487,8 @@ export class TourDetails implements OnDestroy {
     });
   }
 
-  // Admin-only: emails the Programfüzet to every eligible attendee - a
-  // real send to potentially several real people, so it's gated behind an
-  // explicit confirm modal (same reasoning as the document-delete one
-  // above), not a one-click fire.
-  confirmingEmailAttendees = signal(false);
-  emailingAttendees = signal(false);
-
-  askEmailAttendees() {
-    this.confirmingEmailAttendees.set(true);
-  }
-
-  cancelEmailAttendees() {
-    this.confirmingEmailAttendees.set(false);
-  }
-
-  confirmEmailAttendees(tourId: string) {
-    this.emailingAttendees.set(true);
-    this.tourService.emailPdfToAttendees(tourId).subscribe({
-      next: (res) => {
-        this.emailingAttendees.set(false);
-        this.confirmingEmailAttendees.set(false);
-        const { sentCount, skipped } = res.data;
-        this.notifications.addSuccess(`Programfüzet elküldve ${sentCount} résztvevőnek.`);
-        if (skipped.length > 0) {
-          this.notifications.addError(
-            `${skipped.length} résztvevő kimaradt: ${skipped.map((s) => `${s.name} (${s.reason})`).join(', ')}`,
-          );
-        }
-      },
-      error: (err) => {
-        this.emailingAttendees.set(false);
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a küldés során.');
-      },
-    });
-  }
+  // Admin-only: the "Levél a résztvevőknek" dialog (see tour-mail-panel).
+  showMailPanel = signal(false);
 
   startAddDocument() {
     this.newDocumentTitle = '';

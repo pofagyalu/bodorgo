@@ -107,16 +107,6 @@ describe('Programfüzet (tour PDF)', () => {
     await User.updateOne({ _id: kid._id }, { $unset: { email: 1 } });
     expect((await request(app).post(`/tours/${tour._id}/pdf/email`).set(asUser(kid))).status).toBe(400);
   });
-
-  it('admin emails it to every eligible attendee and lists who was skipped', async () => {
-    const { tour, admin, parent } = await richTour();
-    const res = await request(app).post(`/tours/${tour._id}/pdf/email-attendees`).set(asUser(admin));
-    expect(res.status).toBe(200);
-    const recipients = vi.mocked(sendResendEmail).mock.calls.map(([e]) => e.to);
-    expect(recipients).toContain(parent.email);
-    expect(JSON.stringify(res.body)).toContain('még sosem jelentkezett be'); // the kid never logged in
-    expect((await request(app).post(`/tours/${tour._id}/pdf/email-attendees`).set(asUser(parent))).status).toBe(403);
-  });
 });
 
 describe('attendee Excel export (admin)', () => {

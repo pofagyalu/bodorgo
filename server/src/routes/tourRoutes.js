@@ -4,7 +4,8 @@ import { signUpForTour, updateAttendeeNights, updateAttendeeFeeExempt } from '..
 import * as tourImageController from '../controllers/tourImageController.js';
 import { getTourVideo, getTourVideoCover, getTourVideoSubtitles } from '../controllers/tourVideoController.js';
 import * as reviewController from '../controllers/reviewController.js';
-import { downloadTourPdf, emailTourPdf, emailTourPdfToAttendees } from '../controllers/tourPdfController.js';
+import { downloadTourPdf, emailTourPdf } from '../controllers/tourPdfController.js';
+import { getMailings, saveDraft, sendTest, sendToAttendees } from '../controllers/mailingController.js';
 import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
 import {
   loadTourForUpload,
@@ -47,7 +48,11 @@ router
 // be a real logged-in user to attribute it to.
 router.route('/:id/pdf').get(requireAuth, downloadTourPdf);
 router.route('/:id/pdf/email').post(requireAuth, emailTourPdf);
-router.route('/:id/pdf/email-attendees').post(requireAuth, restrictTo('admin'), emailTourPdfToAttendees);
+// Letters to the tour's attendees (admin) - see mailingController.js.
+router.route('/:id/mailings').get(requireAuth, restrictTo('admin'), getMailings);
+router.route('/:id/mailings/draft').put(requireAuth, restrictTo('admin'), saveDraft);
+router.route('/:id/mailings/test').post(requireAuth, restrictTo('admin'), sendTest);
+router.route('/:id/mailings/send').post(requireAuth, restrictTo('admin'), sendToAttendees);
 router.route('/:id/attendees/export.xlsx').get(requireAuth, restrictTo('admin'), downloadAttendeesExcel);
 
 // Cover image - stored in the database (see tourCoverModel.js), viewable

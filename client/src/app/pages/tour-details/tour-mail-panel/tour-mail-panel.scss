@@ -1,0 +1,447 @@
+// "Levél a résztvevőknek" - a dialog over the tour page.
+:host {
+  display: contents;
+}
+
+.mail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 22, 30, 0.55);
+  // A wheel/touch scroll that reaches the end of the dialog stops there
+  // instead of moving the page behind it.
+  overscroll-behavior: contain;
+}
+
+.mail-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: calc(100dvh - 40px);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  color: #23354a;
+}
+
+.mail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid #e7edea;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 1.25rem;
+    color: #193346;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #56666e;
+  }
+}
+
+.icon-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f4f2;
+  color: #2f414b;
+  cursor: pointer;
+
+  &:hover {
+    background: #e3eae6;
+  }
+}
+
+.mail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.field {
+  display: grid;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2f414b;
+
+  input {
+    padding: 9px 12px;
+    border: 1px solid #d4dfda;
+    border-radius: 9px;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: #1c2d38;
+  }
+}
+
+// Quill's own snow theme, softened to match the page.
+.editor-wrap {
+  border-radius: 10px;
+
+  &.is-loading {
+    opacity: 0.5;
+  }
+
+  ::ng-deep .ql-toolbar.ql-snow {
+    border: 1px solid #d4dfda;
+    border-radius: 10px 10px 0 0;
+    background: #f7faf8;
+  }
+
+  ::ng-deep .ql-container.ql-snow {
+    border: 1px solid #d4dfda;
+    border-top: 0;
+    border-radius: 0 0 10px 10px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+  }
+
+  ::ng-deep .ql-editor {
+    min-height: 220px;
+    max-height: 42vh;
+    line-height: 1.55;
+  }
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: -4px;
+}
+
+.save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #56666e;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #2e8b57;
+  }
+
+  &.error,
+  &.error mat-icon {
+    color: #b00020;
+  }
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1a796c;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.inline {
+    font-size: inherit;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+// What the attendees will see - the same frame the e-mail gets.
+.preview {
+  border: 1px dashed #cfdcd6;
+  border-radius: 10px;
+  background: #fbfcfb;
+  overflow: hidden;
+}
+
+.preview-meta {
+  padding: 8px 14px;
+  border-bottom: 1px dashed #cfdcd6;
+  font-size: 0.85rem;
+  color: #4a5b63;
+}
+
+.letter {
+  padding: 4px 14px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #222;
+  overflow-wrap: anywhere;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f4f7f5;
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: #1a796c;
+  }
+
+  strong {
+    display: block;
+    font-size: 0.92rem;
+  }
+
+  small {
+    color: #56666e;
+    font-size: 0.78rem;
+  }
+}
+
+.recipients {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #2f414b;
+
+  mat-icon {
+    color: #4a5b63;
+  }
+}
+
+.skipped {
+  margin: -4px 0 0;
+  padding: 8px 14px 8px 32px;
+  border-radius: 10px;
+  background: #fff6ee;
+  font-size: 0.85rem;
+  color: #4a5b63;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.primary {
+    border: 1px solid #1a796c;
+    background: #1a796c;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(26, 121, 108, 0.25);
+
+    &:hover:not(:disabled) {
+      background: #16675d;
+    }
+  }
+
+  &.ghost {
+    border: 1px solid #d4dfda;
+    background: #fff;
+    color: #254257;
+
+    &:hover:not(:disabled) {
+      background: #f1f5f3;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #f3c79f;
+  border-radius: 10px;
+  background: #fff6ee;
+
+  > mat-icon {
+    color: #d0661a;
+  }
+
+  > div:nth-child(2) {
+    flex: 1;
+    min-width: 200px;
+    display: grid;
+    gap: 2px;
+
+    span {
+      font-size: 0.82rem;
+      color: #56666e;
+    }
+  }
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+// Letters already sent - read-only.
+.sent {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid #e7edea;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    color: #203747;
+  }
+
+  .count {
+    font-size: 0.75rem;
+    background: #edf4f1;
+    color: #4a5b63;
+    border-radius: 999px;
+    padding: 1px 8px;
+  }
+
+  .empty {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #56666e;
+  }
+}
+
+.sent-item {
+  border: 1px solid #e7edea;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+
+  &.open {
+    border-color: #cfdcd6;
+  }
+}
+
+.sent-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  background: #fbfcfb;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #f1f5f3;
+  }
+}
+
+.chev {
+  color: #4a5b63;
+}
+
+.sent-subject {
+  flex: 1;
+  min-width: 140px;
+  font-weight: 700;
+  color: #1c2d38;
+}
+
+.chip mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: #e02424;
+}
+
+.sent-meta {
+  font-size: 0.8rem;
+  color: #56666e;
+}
+
+.sent-content {
+  border-top: 1px solid #e7edea;
+  padding: 4px 0 8px;
+}
+
+.sent-by {
+  margin: 4px 14px 0;
+  font-size: 0.8rem;
+  color: #56666e;
+}
+
+@media (max-width: 580px) {
+  .mail-backdrop {
+    padding: 0;
+  }
+
+  .mail-panel {
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+}

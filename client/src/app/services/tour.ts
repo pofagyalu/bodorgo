@@ -235,6 +235,29 @@ export interface Tour {
   extraDocuments?: ExtraDocument[];
 }
 
+// A letter an admin sent to a tour's attendees (see mailingController.js)
+// - kept as the record of what went out.
+export interface SentMailing {
+  _id: string;
+  subject: string;
+  html: string;
+  withPdf: boolean;
+  sentAt: string;
+  sentByName: string;
+  recipientCount: number;
+  skipped: { name: string; reason: string }[];
+}
+
+export interface MailingsResponse {
+  status: string;
+  data: {
+    draft: { subject: string; html: string; delta: unknown; updatedAt: string } | null;
+    sent: SentMailing[];
+    recipients: { eligible: string[]; skipped: { name: string; reason: string }[] };
+    defaults: { subject: string; withPdf: boolean };
+  };
+}
+
 // One version of a tour's recap video - matched to the tour by its file
 // name on the NAS (see server/src/utils/tourVideos.js). Most tours have
 // one with no label; a tour with two cuts has one per cut ("Directors
@@ -518,17 +541,33 @@ export class TourService {
     );
   }
 
-  // Admin-only: emails the Programfüzet to every eligible attendee of this
-  // tour (has an email, has logged in at least once, hasn't opted out) -
-  // see tourPdfController.js's partitionAttendeesByEmailEligibility.
-  emailPdfToAttendees(tourId: string): Observable<{
-    status: string;
-    data: { sentCount: number; sentTo: string[]; skipped: { name: string; reason: string }[] };
-  }> {
-    return this.http.post<{
-      status: string;
-      data: { sentCount: number; sentTo: string[]; skipped: { name: string; reason: string }[] };
-    }>(`${this.apiUrl}/${tourId}/pdf/email-attendees`, {});
+  // Admin-only: letters to the tour's attendees (see mailingController.js)
+  // - the draft, the sent ones, and who'd receive the next.
+  getMailings(tourId: string): Observable<MailingsResponse> {
+    return this.http.get<MailingsResponse>(`${this.apiUrl}/${tourId}/mailings`);
+  }
+
+  saveMailDraft(tourId: string, draft: { subject: string; html: string; delta: unknown }) {
+    return this.http.put<{ status: string; data: { updatedAt: string } }>(
+      `${this.apiUrl}/${tourId}/mailings/draft`,
+      draft,
+    );
+  }
+
+  // The saved draft to the admin themselves only.
+  sendMailTest(tourId: string, withPdf: boolean) {
+    return this.http.post<{ status: string; data: { sentTo: string } }>(`${this.apiUrl}/${tourId}/mailings/test`, {
+      withPdf,
+    });
+  }
+
+  // The saved draft to every attendee who can get an e-mail - it then
+  // becomes a sent letter, kept and no longer editable.
+  sendMailing(tourId: string, withPdf: boolean) {
+    return this.http.post<{ status: string; data: { mailing: SentMailing } }>(
+      `${this.apiUrl}/${tourId}/mailings/send`,
+      { withPdf },
+    );
   }
 
   getTours(): Observable<ToursResponse> {

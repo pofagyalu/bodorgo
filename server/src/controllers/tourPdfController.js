@@ -786,7 +786,7 @@ export const downloadTourPdf = async (req, res) => {
 // mechanism already defers the actual byte-writing until doc.end() calls
 // flush internally, so attaching these 'data'/'end' listeners beforehand
 // is enough to capture every page regardless.
-function renderTourPdfToBuffer(tour, viewer, distanceInfo) {
+export function renderTourPdfToBuffer(tour, viewer, distanceInfo) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
     const chunks = [];
@@ -856,47 +856,3 @@ export function partitionAttendeesByEmailEligibility(users) {
   return { eligible, skipped };
 }
 
-// Admin-only: emails the Programfüzet to every eligible attendee of this
-// tour (see partitionAttendeesByEmailEligibility above). The same person
-// can show up as an attendee on more than one reservation for this tour
-// (rare, but possible - see e.g. a re-booking); deduped so they only get
-// one copy. Each copy is still generated (and footer-stamped) per-
-// recipient, same as the self-send above, rather than one generic PDF for
-// everyone.
-export const emailTourPdfToAttendees = async (req, res) => {
-  const tour = await findTourByIdParam(req.params.id);
-
-  const reservations = await Reservation.find({ tour: tour._id }).populate({
-    path: 'attendees.user',
-    select: 'name username email lastLoginAt wantsEmailNotifications location address',
-  });
-
-  const recipientsById = new Map();
-  for (const reservation of reservations) {
-    for (const attendee of reservation.attendees) {
-      const user = attendee.user;
-      if (user && !recipientsById.has(String(user._id))) {
-        recipientsById.set(String(user._id), user);
-      }
-    }
-  }
-
-  const { eligible, skipped } = partitionAttendeesByEmailEligibility([...recipientsById.values()]);
-
-  const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
-  for (const user of eligible) {
-    const distanceInfo = await resolveDistanceInfo(tour, user);
-    const pdfBuffer = await renderTourPdfToBuffer(tour, user, distanceInfo);
-    const { subject, text, html } = programfuzetEmailBody(user.name, tour.title);
-    await sendResendEmail({ to: user.email, subject, text, html, attachments: [{ filename, content: pdfBuffer }] });
-  }
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      sentCount: eligible.length,
-      sentTo: eligible.map((u) => u.email),
-      skipped,
-    },
-  });
-};
