@@ -49,7 +49,9 @@ if (!tour) {
 if (data.order !== undefined && data.order !== tour.order) {
   const collision = await Tour.findOne({ order: data.order }).select('title');
   if (collision) {
-    console.error(`Order ${data.order} is already taken by "${collision.title}" - pick a different one.`);
+    console.error(
+      `Order ${data.order} is already taken by "${collision.title}" - pick a different one.`,
+    );
     await mongoose.disconnect();
     process.exit(1);
   }
@@ -65,9 +67,13 @@ for (const [key, value] of Object.entries(data)) {
 }
 await tour.save();
 
-console.log(`Updated "${before.title}" -> "${tour.title}" (order ${tour.order}, slug "${tour.slug}").`);
+console.log(
+  `Updated "${before.title}" -> "${tour.title}" (order ${tour.order}, slug "${tour.slug}").`,
+);
 if (tour.distanceFromBudapestKm !== before.distanceFromBudapestKm) {
-  console.log(`Distance from Budapest: ${before.distanceFromBudapestKm ?? '—'} km -> ${tour.distanceFromBudapestKm ?? '—'} km`);
+  console.log(
+    `Distance from Budapest: ${before.distanceFromBudapestKm ?? '—'} km -> ${tour.distanceFromBudapestKm ?? '—'} km`,
+  );
 }
 
 await mongoose.disconnect();

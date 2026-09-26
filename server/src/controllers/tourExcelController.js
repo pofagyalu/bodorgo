@@ -5,7 +5,11 @@ import AppError from '../utils/appError.js';
 import { computeAttendeePayments } from './reservationController.js';
 
 function formatHu(date) {
-  return new Intl.DateTimeFormat('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' }).format(date);
+  return new Intl.DateTimeFormat('hu-HU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
 }
 
 // Same grouping rule as the client's own attendee-list.ts groupedFamilies
@@ -81,7 +85,9 @@ const BASE_COLUMNS = ['Név', 'Család', 'Éjszakák', 'Teljes ár', 'Előleg', 
 // to know exactly what was ordered per person per day, not just a lump
 // sum.
 export const downloadAttendeesExcel = async (req, res) => {
-  const query = mongoose.isValidObjectId(req.params.id) ? { _id: req.params.id } : { slug: req.params.id };
+  const query = mongoose.isValidObjectId(req.params.id)
+    ? { _id: req.params.id }
+    : { slug: req.params.id };
   const tour = await Tour.findOne(query).populate({
     path: 'reservations',
     populate: [{ path: 'attendees.user', select: 'role birthday familyId' }],
@@ -109,7 +115,8 @@ export const downloadAttendeesExcel = async (req, res) => {
   sheet.getCell(1, 1).font = { bold: true, size: 14 };
 
   sheet.mergeCells(2, 1, 2, totalColumns);
-  sheet.getCell(2, 1).value = `${formatHu(tour.startDate)} · ${tour.duration} nap / ${tour.duration - 1} éjszaka`;
+  sheet.getCell(2, 1).value =
+    `${formatHu(tour.startDate)} · ${tour.duration} nap / ${tour.duration - 1} éjszaka`;
   sheet.getCell(2, 1).font = { color: { argb: 'FF666666' } };
 
   sheet.mergeCells(3, 1, 3, totalColumns);
@@ -193,7 +200,10 @@ export const downloadAttendeesExcel = async (req, res) => {
       totals.advance,
       totals.rest,
       ...optionalEvents.map((event) => {
-        const sum = attendeePayments.reduce((s, m) => s + (eventCostForAttendee(event, m.userId) ?? 0), 0);
+        const sum = attendeePayments.reduce(
+          (s, m) => s + (eventCostForAttendee(event, m.userId) ?? 0),
+          0,
+        );
         return sum > 0 ? sum : null;
       }),
     ]);
@@ -210,7 +220,10 @@ export const downloadAttendeesExcel = async (req, res) => {
   }
 
   const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}-resztvevok.xlsx`;
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  );
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   await workbook.xlsx.write(res);
   res.end();

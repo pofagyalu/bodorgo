@@ -1,7 +1,7 @@
 <div class="event-edit-form">
   <select class="event-edit-time" [(ngModel)]="model.time" title="Kezdés időpontja">
     @for (time of timeOptions; track time) {
-    <option [value]="time">{{ time }}</option>
+      <option [value]="time">{{ time }}</option>
     }
   </select>
   <input type="text" class="event-edit-desc" [(ngModel)]="model.description" placeholder="Leírás" />
@@ -17,24 +17,35 @@
     <span class="toggle-thumb"></span>
   </button>
   @if (model.isOptional) {
-  <input
-    type="number"
-    class="event-edit-cost"
-    [(ngModel)]="model.extraCost"
-    placeholder="Ft"
-    min="0"
-    title="Ár (Ft)"
-  />
+    <input
+      type="number"
+      class="event-edit-cost"
+      [(ngModel)]="model.extraCost"
+      placeholder="Ft"
+      min="0"
+      title="Ár (Ft)"
+    />
   }
   <div class="event-edit-actions">
-    <button type="button" class="icon-btn icon-btn--save" title="Mentés" [disabled]="saving" (click)="save.emit()">
+    <button
+      type="button"
+      class="icon-btn icon-btn--save"
+      title="Mentés"
+      [disabled]="saving"
+      (click)="save.emit()"
+    >
       <mat-icon>check</mat-icon>
     </button>
-    <button type="button" class="icon-btn icon-btn--cancel" title="Mégse" (click)="cancel.emit()">
+    <button
+      type="button"
+      class="icon-btn icon-btn--cancel"
+      title="Mégse"
+      (click)="cancelled.emit()"
+    >
       <mat-icon>close</mat-icon>
     </button>
   </div>
   @if (error) {
-  <p class="error-note">{{ error }}</p>
+    <p class="error-note">{{ error }}</p>
   }
 </div>

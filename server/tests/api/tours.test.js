@@ -36,11 +36,24 @@ describe('tours: members-only access', () => {
 describe('tours: public ticker', () => {
   it('works logged out and shows only the ticker fields of the next tour', async () => {
     await createTour({ title: 'Régi', startDate: new Date(Date.now() - 400 * 24 * 3600 * 1000) });
-    await createTour({ title: 'Következő', startDate: new Date(Date.now() + 10 * 24 * 3600 * 1000) });
+    await createTour({
+      title: 'Következő',
+      startDate: new Date(Date.now() + 10 * 24 * 3600 * 1000),
+    });
     const res = await request(app).get('/tours/ticker');
     expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({ label: 'Következő', title: 'Következő', place: 'Teszt hely' });
-    expect(Object.keys(res.body.data).sort()).toEqual(['label', 'order', 'place', 'startDate', 'title']);
+    expect(res.body.data).toMatchObject({
+      label: 'Következő',
+      title: 'Következő',
+      place: 'Teszt hely',
+    });
+    expect(Object.keys(res.body.data).sort()).toEqual([
+      'label',
+      'order',
+      'place',
+      'startDate',
+      'title',
+    ]);
   });
 
   it('falls back to the latest tour once every tour has ended', async () => {

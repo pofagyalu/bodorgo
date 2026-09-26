@@ -23,7 +23,7 @@ export class NotificationsService {
         } else {
           return [...acc, value];
         }
-      }, [])
+      }, []),
     );
   }
 

@@ -73,10 +73,7 @@ const reservationSchema = new Schema(
     bookedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: [
-        true,
-        'Minden foglalásnak kell legyen egy foglaló felhasználója!',
-      ],
+      required: [true, 'Minden foglalásnak kell legyen egy foglaló felhasználója!'],
     },
     attendees: [attendeeSchema],
     totalPrice: {

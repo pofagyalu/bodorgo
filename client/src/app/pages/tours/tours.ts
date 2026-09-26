@@ -21,7 +21,7 @@ export class Tours implements OnInit {
 
   searchInput = signal(''); // instant changes
   searchTerm = signal(''); // debounced version
-  private debounceTimer: any = null;
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   year = signal('');
   sort = signal('');
 
@@ -59,7 +59,7 @@ export class Tours implements OnInit {
   onSearch(value: string) {
     this.searchInput.set(value);
 
-    clearTimeout(this.debounceTimer);
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
 
     this.debounceTimer = setTimeout(() => {
       this.searchTerm.set(value);
@@ -99,8 +99,10 @@ export class Tours implements OnInit {
         const field = sort.replace('-', ''); // e.g. title
         const direction = sort.startsWith('-') ? -1 : 1;
 
-        let A = (a as any)[field];
-        let B = (b as any)[field];
+        // Sortable fields are strings, numbers or dates-as-strings.
+        const fieldOf = (t: Tour) => (t as unknown as Record<string, string | number>)[field];
+        let A = fieldOf(a);
+        let B = fieldOf(b);
 
         // convert dates
         if (field === 'startDate') {

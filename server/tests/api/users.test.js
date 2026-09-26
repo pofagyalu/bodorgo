@@ -2,7 +2,13 @@ import request from 'supertest';
 import mongoose from 'mongoose';
 import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createAdmin, createGuest, createMember, createReservation, createTour } from '../helpers/factories.js';
+import {
+  createAdmin,
+  createGuest,
+  createMember,
+  createReservation,
+  createTour,
+} from '../helpers/factories.js';
 import User from '../../src/models/userModel.js';
 import Reservation from '../../src/models/reservationModel.js';
 import { computeAge, resolveFamilyId } from '../../src/controllers/userController.js';
@@ -45,7 +51,10 @@ describe('user lists', () => {
   });
 
   it('the members list has age, tour count, email and photo version', async () => {
-    const member = await createMember({ birthday: new Date('1990-01-01'), photoUpdatedAt: new Date() });
+    const member = await createMember({
+      birthday: new Date('1990-01-01'),
+      photoUpdatedAt: new Date(),
+    });
     await createReservation(await createTour(), [member]);
     const res = await request(app).get('/membership/users').set(asUser(member));
     expect(res.status).toBe(200);
@@ -62,7 +71,12 @@ describe('my own profile', () => {
     await createReservation(await createTour(), [member]);
     const res = await request(app).get('/users/me').set(asUser(member));
     expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({ _id: String(member._id), username: 'teszt.elek', toursAttended: 1, photoUpdatedAt: null });
+    expect(res.body.data).toMatchObject({
+      _id: String(member._id),
+      username: 'teszt.elek',
+      toursAttended: 1,
+      photoUpdatedAt: null,
+    });
   });
 
   it('updates only the allowed fields', async () => {
@@ -76,7 +90,10 @@ describe('my own profile', () => {
     expect(saved.username).toBe('uj.nev');
     expect(saved.wantsEmailNotifications).toBe(false);
     expect(saved.role).toBe('member'); // not changeable here
-    expect((await request(app).patch('/users/updateMe').set(asUser(member)).send({ password: 'x' })).status).toBe(400);
+    expect(
+      (await request(app).patch('/users/updateMe').set(asUser(member)).send({ password: 'x' }))
+        .status,
+    ).toBe(400);
   });
 
   it('lists my tours and my family', async () => {
@@ -91,7 +108,9 @@ describe('my own profile', () => {
     expect(family.body.data.members.map((m) => m.name)).toEqual(['Gyerek']);
     const loner = await createMember({ familyId: undefined });
     await User.updateOne({ _id: loner._id }, { $unset: { familyId: 1 } });
-    expect((await request(app).get('/users/me/family').set(asUser(loner))).body.data.members).toEqual([]);
+    expect(
+      (await request(app).get('/users/me/family').set(asUser(loner))).body.data.members,
+    ).toEqual([]);
   });
 });
 
@@ -110,11 +129,19 @@ describe('admin user management', () => {
     const read = await request(app).get(`/users/${id}`).set(asUser(admin));
     expect(read.body.data.user).toMatchObject({ name: 'Új Ember', toursAttended: 0 });
 
-    const edited = await request(app).patch(`/users/${id}`).set(asUser(admin)).send({ role: 'member', gender: 'nő' });
+    const edited = await request(app)
+      .patch(`/users/${id}`)
+      .set(asUser(admin))
+      .send({ role: 'member', gender: 'nő' });
     expect(edited.status).toBe(200);
     expect(edited.body.data.user).toMatchObject({ role: 'member', gender: 'nő' });
-    expect((await request(app).patch(`/users/${id}`).set(asUser(admin)).send({ role: 'king' })).status).toBe(400);
-    expect((await request(app).post('/users').set(asUser(admin)).send({ name: 'X', role: 'king' })).status).toBe(400);
+    expect(
+      (await request(app).patch(`/users/${id}`).set(asUser(admin)).send({ role: 'king' })).status,
+    ).toBe(400);
+    expect(
+      (await request(app).post('/users').set(asUser(admin)).send({ name: 'X', role: 'king' }))
+        .status,
+    ).toBe(400);
   });
 
   it('404s for unknown users and is admin-only', async () => {
@@ -122,7 +149,9 @@ describe('admin user management', () => {
     const member = await createMember();
     const unknown = '000000000000000000000000';
     expect((await request(app).get(`/users/${unknown}`).set(asUser(admin))).status).toBe(404);
-    expect((await request(app).patch(`/users/${unknown}`).set(asUser(admin)).send({})).status).toBe(404);
+    expect((await request(app).patch(`/users/${unknown}`).set(asUser(admin)).send({})).status).toBe(
+      404,
+    );
     expect((await request(app).get(`/users/${member._id}`).set(asUser(member))).status).toBe(403);
   });
 
@@ -138,8 +167,13 @@ describe('admin user management', () => {
     saved = await User.findById(member._id);
     expect(saved.retired).toBe(false);
     expect(saved.retiredAt).toBeUndefined();
-    expect((await request(app).delete('/users/000000000000000000000000').set(asUser(admin))).status).toBe(404);
-    expect((await request(app).patch('/users/000000000000000000000000/restore').set(asUser(admin))).status).toBe(404);
+    expect(
+      (await request(app).delete('/users/000000000000000000000000').set(asUser(admin))).status,
+    ).toBe(404);
+    expect(
+      (await request(app).patch('/users/000000000000000000000000/restore').set(asUser(admin)))
+        .status,
+    ).toBe(404);
   });
 
   it('joins users into one family', async () => {
@@ -147,7 +181,14 @@ describe('admin user management', () => {
     const a = await createMember();
     const b = await createMember();
     await User.updateMany({ _id: { $in: [a._id, b._id] } }, { $unset: { familyId: 1 } });
-    expect((await request(app).post('/users/join-family').set(asUser(admin)).send({ userIds: [a._id] })).status).toBe(400);
+    expect(
+      (
+        await request(app)
+          .post('/users/join-family')
+          .set(asUser(admin))
+          .send({ userIds: [a._id] })
+      ).status,
+    ).toBe(400);
     const res = await request(app)
       .post('/users/join-family')
       .set(asUser(admin))

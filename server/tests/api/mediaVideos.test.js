@@ -19,7 +19,10 @@ beforeAll(() => {
   put('farsang/Season 01/Farsang (2024) S01E01.mp4', 'video-2024');
   put('farsang/Season 01/Farsang (2024) S01E01-thumb.jpg', 'thumb-2024');
   put('farsang/Season 01/Farsang (2025) S01E02.mp4', 'video-2025');
-  put('farsang/Season 01/Farsang (2025) S01E02.hun.srt', '1\n00:00:01,000 --> 00:00:02,500\nHelló\n');
+  put(
+    'farsang/Season 01/Farsang (2025) S01E02.hun.srt',
+    '1\n00:00:01,000 --> 00:00:02,500\nHelló\n',
+  );
   put('reklam/Season 01/A magyar igazság (2024) S01E01 .mp4');
   put('reklam/Season 01/A magyar igazság (2024) S01E01 -thumb.jpg');
   put('farsang/notes.txt'); // not a video - ignored
@@ -27,7 +30,9 @@ beforeAll(() => {
 
 describe('Média videos', () => {
   it('lists the categories with their videos, newest first, for members only', async () => {
-    const res = await request(app).get('/media/videos').set(asUser(await createMember()));
+    const res = await request(app)
+      .get('/media/videos')
+      .set(asUser(await createMember()));
     expect(res.status).toBe(200);
     const [farsang, reklam] = res.body.data.categories;
     expect(res.body.data.categories.map((c) => c.key)).toEqual(['farsang', 'reklam']); // empty ones left out
@@ -37,11 +42,27 @@ describe('Média videos', () => {
       [2024, true, false],
     ]);
     // The stray space before "-thumb" still finds the cover.
-    expect(reklam.videos[0]).toMatchObject({ title: 'A magyar igazság', year: 2024, hasCover: true });
+    expect(reklam.videos[0]).toMatchObject({
+      title: 'A magyar igazság',
+      year: 2024,
+      hasCover: true,
+    });
 
-    expect((await request(app).get('/media/videos').set(asUser(await createGuest()))).status).toBe(403);
+    expect(
+      (
+        await request(app)
+          .get('/media/videos')
+          .set(asUser(await createGuest()))
+      ).status,
+    ).toBe(403);
     expect((await request(app).get('/media/videos')).status).toBe(401);
-    expect((await request(app).get('/media/videos').set(asUser(await createAdmin()))).status).toBe(200);
+    expect(
+      (
+        await request(app)
+          .get('/media/videos')
+          .set(asUser(await createAdmin()))
+      ).status,
+    ).toBe(200);
   });
 
   it('streams a video, its cover and subtitles, and the category cover', async () => {
@@ -61,36 +82,64 @@ describe('Média videos', () => {
       });
     expect(video.status).toBe(200);
     expect(video.body.toString()).toBe('video-2024');
-    const ranged = await request(app).get(`${base}/${v2024.id}/video`).set(asUser(member)).set('Range', 'bytes=0-4');
+    const ranged = await request(app)
+      .get(`${base}/${v2024.id}/video`)
+      .set(asUser(member))
+      .set('Range', 'bytes=0-4');
     expect(ranged.status).toBe(206);
 
     const cover = await request(app).get(`${base}/${v2024.id}/cover`).set(asUser(member));
     expect(cover.status).toBe(200);
     expect(cover.headers['content-type']).toBe('image/jpeg');
-    expect((await request(app).get(`${base}/${v2025.id}/cover`).set(asUser(member))).status).toBe(404);
+    expect((await request(app).get(`${base}/${v2025.id}/cover`).set(asUser(member))).status).toBe(
+      404,
+    );
 
     const subs = await request(app).get(`${base}/${v2025.id}/subtitles.vtt`).set(asUser(member));
     expect(subs.text).toBe('WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.500\nHelló\n');
 
     expect((await request(app).get(`${base}/cover`).set(asUser(member))).status).toBe(200);
-    expect((await request(app).get('/media/videos/reklam/cover').set(asUser(member))).status).toBe(404);
+    expect((await request(app).get('/media/videos/reklam/cover').set(asUser(member))).status).toBe(
+      404,
+    );
   });
 
   it('refuses anything outside the category folder, or not a video', async () => {
     const member = await createMember();
     const id = (rel) => Buffer.from(rel).toString('base64url');
     const get = (url) => request(app).get(url).set(asUser(member));
-    expect((await get(`/media/videos/farsang/${id('../reklam/Season 01/A magyar igazság (2024) S01E01 .mp4')}/video`)).status).toBe(400);
+    expect(
+      (
+        await get(
+          `/media/videos/farsang/${id('../reklam/Season 01/A magyar igazság (2024) S01E01 .mp4')}/video`,
+        )
+      ).status,
+    ).toBe(400);
     expect((await get(`/media/videos/farsang/${id('notes.txt')}/video`)).status).toBe(404);
-    expect((await get(`/media/videos/farsang/${id('Season 01/nincs (2020) S01E09.mp4')}/video`)).status).toBe(404);
+    expect(
+      (await get(`/media/videos/farsang/${id('Season 01/nincs (2020) S01E09.mp4')}/video`)).status,
+    ).toBe(404);
     expect((await get(`/media/videos/nincs/${id('x.mp4')}/video`)).status).toBe(404);
   });
 });
 
 describe('parseVideoName', () => {
   it('reads Jellyfin-style names', () => {
-    expect(parseVideoName('Season 01/Farsang (2025) S01E02.mp4')).toEqual({ title: 'Farsang', year: 2025, season: 1, episode: 2 });
-    expect(parseVideoName('A dal (2026) S01E3 Bodorgunk.mp4')).toMatchObject({ title: 'A dal – Bodorgunk', episode: 3 });
-    expect(parseVideoName('Valami más.mp4')).toEqual({ title: 'Valami más', year: null, season: null, episode: null });
+    expect(parseVideoName('Season 01/Farsang (2025) S01E02.mp4')).toEqual({
+      title: 'Farsang',
+      year: 2025,
+      season: 1,
+      episode: 2,
+    });
+    expect(parseVideoName('A dal (2026) S01E3 Bodorgunk.mp4')).toMatchObject({
+      title: 'A dal – Bodorgunk',
+      episode: 3,
+    });
+    expect(parseVideoName('Valami más.mp4')).toEqual({
+      title: 'Valami más',
+      year: null,
+      season: null,
+      episode: null,
+    });
   });
 });

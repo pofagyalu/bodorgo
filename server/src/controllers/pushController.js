@@ -11,14 +11,21 @@ import { isChatMuted, setChatMuted } from '../chat/chatNotifications.js';
 // GET /push/public-key - what the browser needs to subscribe (the
 // server's public VAPID key); null when push isn't set up on this server.
 export const getPublicKey = async (req, res) => {
-  res.status(200).json({ status: 'success', data: { publicKey: pushEnabled() ? config.push.publicKey : null } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { publicKey: pushEnabled() ? config.push.publicKey : null } });
 };
 
 // POST /push/subscriptions - this device, from the browser's
 // PushSubscription (endpoint + keys). Re-subscribing just refreshes it.
 export const subscribe = async (req, res) => {
   const { endpoint, keys } = req.body ?? {};
-  if (typeof endpoint !== 'string' || !/^https:\/\//.test(endpoint) || !keys?.p256dh || !keys?.auth) {
+  if (
+    typeof endpoint !== 'string' ||
+    !/^https:\/\//.test(endpoint) ||
+    !keys?.p256dh ||
+    !keys?.auth
+  ) {
     throw new AppError('Hibás értesítési feliratkozás.', 400);
   }
   await PushSubscription.updateOne(
@@ -48,7 +55,8 @@ export const sendTest = async (req, res) => {
     tag: 'test',
     url: '/klub/profilom',
   });
-  if (!sent) throw new AppError('Nincs olyan eszközöd, ahol be vannak kapcsolva az értesítések.', 400);
+  if (!sent)
+    throw new AppError('Nincs olyan eszközöd, ahol be vannak kapcsolva az értesítések.', 400);
   res.status(200).json({ status: 'success', data: { sent } });
 };
 
@@ -59,7 +67,10 @@ const tourIdParam = (req) => {
 
 // GET/PUT /push/chat-mutes/:tourId - one tour's chat notifications off/on.
 export const getChatMute = async (req, res) => {
-  res.status(200).json({ status: 'success', data: { muted: await isChatMuted(req.user._id, tourIdParam(req)) } });
+  res.status(200).json({
+    status: 'success',
+    data: { muted: await isChatMuted(req.user._id, tourIdParam(req)) },
+  });
 };
 
 export const putChatMute = async (req, res) => {

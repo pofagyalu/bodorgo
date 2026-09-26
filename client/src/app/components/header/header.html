@@ -12,79 +12,75 @@
 
     <div class="logo-container">
       <a routerLink="/">
-        <img
-          src="assets/images/transparent_color_logo.svg"
-          alt="Logo"
-          class="logo"
-        />
+        <img src="assets/images/transparent_color_logo.svg" alt="Logo" class="logo" />
       </a>
     </div>
   </div>
 
   <!-- Middle: Menu (desktop only, hidden on mobile in favor of the hamburger) -->
   @if (auth.isLoggedIn()) {
-  <nav class="menu">
-    <a routerLink="/taborok" routerLinkActive="active" class="menu-item green">Táborok</a>
-    @if (isMember()) {
-    <a routerLink="/media" routerLinkActive="active" class="menu-item orange">Média</a>
-    }
-    <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
-    <a routerLink="/klub" routerLinkActive="active" class="menu-item dark-green">Klub</a>
-    <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown"
-      >Szavazások @if (pendingPolls()) {<span class="menu-badge" [title]="pendingPolls() + ' szavazás vár rád'">{{ pendingPolls() }}</span>}</a
-    >
-    <!-- Hidden for now, still routable - not ready for public linking yet -->
-    <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item yellow">Versenyek</a> -->
-  </nav>
-
+    <nav class="menu">
+      <a routerLink="/taborok" routerLinkActive="active" class="menu-item green">Táborok</a>
+      @if (isMember()) {
+        <a routerLink="/media" routerLinkActive="active" class="menu-item orange">Média</a>
+      }
+      <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
+      <a routerLink="/klub" routerLinkActive="active" class="menu-item dark-green">Klub</a>
+      <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown"
+        >Szavazások
+        @if (pendingPolls()) {
+          <span class="menu-badge" [title]="pendingPolls() + ' szavazás vár rád'">{{
+            pendingPolls()
+          }}</span>
+        }
+      </a>
+      <!-- Hidden for now, still routable - not ready for public linking yet -->
+      <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item yellow">Versenyek</a> -->
+    </nav>
   }
 
   <!-- Right side: Login or Logout (desktop only) -->
   <div class="login-container">
     @if (!auth.isLoggedIn()) {
-    <button class="login-btn" (click)="login()">Gyere bé!</button>
+      <button class="login-btn" (click)="login()">Gyere bé!</button>
     } @else {
-    <a
-      routerLink="/klub/profilom"
-      routerLinkActive="active"
-      class="user-avatar"
-      [style.background]="avatarColor(auth.user()?.name)"
-      [title]="auth.user()?.name"
-    >
-      @if (photoUrl(); as url) {
-    <img class="user-avatar-photo" [src]="url" alt="" />
-    } @else {
-    <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
-    }
-    </a>
-    <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
+      <a
+        routerLink="/klub/profilom"
+        routerLinkActive="active"
+        class="user-avatar"
+        [style.background]="avatarColor(auth.user()?.name)"
+        [title]="auth.user()?.name"
+      >
+        @if (photoUrl(); as url) {
+          <img class="user-avatar-photo" [src]="url" alt="" />
+        } @else {
+          <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
+        }
+      </a>
+      <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
     }
   </div>
 
   <!-- Mobile only: just the avatar, no logout - that lives in the hamburger menu -->
   @if (auth.isLoggedIn()) {
-  <a
-    routerLink="/klub/profilom"
-    routerLinkActive="active"
-    class="user-avatar mobile-user-avatar"
-    [style.background]="avatarColor(auth.user()?.name)"
-    [title]="auth.user()?.name"
-  >
-    @if (photoUrl(); as url) {
-    <img class="user-avatar-photo" [src]="url" alt="" />
-    } @else {
-    <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
-    }
-  </a>
+    <a
+      routerLink="/klub/profilom"
+      routerLinkActive="active"
+      class="user-avatar mobile-user-avatar"
+      [style.background]="avatarColor(auth.user()?.name)"
+      [title]="auth.user()?.name"
+    >
+      @if (photoUrl(); as url) {
+        <img class="user-avatar-photo" [src]="url" alt="" />
+      } @else {
+        <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
+      }
+    </a>
   }
 </header>
 
 <!-- Tapping outside the slide-in panel closes it, like any other app -->
-<div
-  class="mobile-backdrop"
-  [class.open]="isMobileMenuOpen"
-  (click)="closeMobileMenu()"
-></div>
+<div class="mobile-backdrop" [class.open]="isMobileMenuOpen" (click)="closeMobileMenu()"></div>
 
 <!-- Mobile Slide-in Menu -->
 <div class="mobile-menu" [class.open]="isMobileMenuOpen">
@@ -92,57 +88,60 @@
   <button class="close-btn" aria-label="Menü bezárása" (click)="closeMobileMenu()">✖</button>
 
   @if (auth.isLoggedIn()) {
-  <nav class="mobile-nav">
-    <a
-      routerLink="/taborok"
-      routerLinkActive="active"
-      (click)="closeMobileMenu()"
-      class="menu-item green"
-      >Táborok</a
-    >
-    @if (isMember()) {
-    <a
-      routerLink="/media"
-      routerLinkActive="active"
-      (click)="closeMobileMenu()"
-      class="menu-item orange"
-      >Média</a
-    >
-    }
-    <a
-      routerLink="/chat"
-      routerLinkActive="active"
-      (click)="closeMobileMenu()"
-      class="menu-item blue"
-      >Chat</a
-    >
-    <a
-      routerLink="/klub"
-      routerLinkActive="active"
-      (click)="closeMobileMenu()"
-      class="menu-item dark-green"
-      >Klub</a
-    >
-    <a
-      routerLink="/szavazasok"
-      routerLinkActive="active"
-      (click)="closeMobileMenu()"
-      class="menu-item brown"
-      >Szavazások @if (pendingPolls()) {<span class="menu-badge">{{ pendingPolls() }}</span>}</a
-    >
-    <!-- Hidden for now, still routable - not ready for public linking yet -->
-    <!-- <a
+    <nav class="mobile-nav">
+      <a
+        routerLink="/taborok"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+        class="menu-item green"
+        >Táborok</a
+      >
+      @if (isMember()) {
+        <a
+          routerLink="/media"
+          routerLinkActive="active"
+          (click)="closeMobileMenu()"
+          class="menu-item orange"
+          >Média</a
+        >
+      }
+      <a
+        routerLink="/chat"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+        class="menu-item blue"
+        >Chat</a
+      >
+      <a
+        routerLink="/klub"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+        class="menu-item dark-green"
+        >Klub</a
+      >
+      <a
+        routerLink="/szavazasok"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+        class="menu-item brown"
+        >Szavazások
+        @if (pendingPolls()) {
+          <span class="menu-badge">{{ pendingPolls() }}</span>
+        }
+      </a>
+      <!-- Hidden for now, still routable - not ready for public linking yet -->
+      <!-- <a
       routerLink="/versenyek"
       routerLinkActive="active"
       (click)="closeMobileMenu()"
       class="menu-item yellow"
       >Versenyek</a
     > -->
-    <button class="menu-item logout-item" (click)="logout(); closeMobileMenu()">
-      Kijelentkezés
-    </button>
-  </nav>
+      <button class="menu-item logout-item" (click)="logout(); closeMobileMenu()">
+        Kijelentkezés
+      </button>
+    </nav>
   } @else {
-  <button class="login-btn" (click)="login(); closeMobileMenu()">Gyere bé!</button>
+    <button class="login-btn" (click)="login(); closeMobileMenu()">Gyere bé!</button>
   }
 </div>

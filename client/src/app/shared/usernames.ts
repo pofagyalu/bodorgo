@@ -4,8 +4,5 @@
 // How two usernames are compared - no upper/lower case, no accents:
 // "Béla", "bela" and "BÉLA" are the same name ("@bela" mentions Béla).
 export function usernameKey(username: string): string {
-  return username
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
+  return username.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }

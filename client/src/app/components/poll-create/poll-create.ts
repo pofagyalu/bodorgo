@@ -63,7 +63,9 @@ export class PollCreate {
 
   submit(event: Event) {
     event.preventDefault();
-    const options = this.options().map((o) => o.trim()).filter(Boolean);
+    const options = this.options()
+      .map((o) => o.trim())
+      .filter(Boolean);
     if (!this.question().trim()) return this.error.set('Írd be a kérdést.');
     if (options.length < 2) return this.error.set('Legalább 2 válasz kell.');
     const closes = new Date(this.closesAt());

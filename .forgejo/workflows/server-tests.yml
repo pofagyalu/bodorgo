@@ -1,10 +1,16 @@
-# Runs the server's automated tests (server/tests) on Forgejo Actions.
+# Checks every pull request (and what lands on main) on Forgejo Actions:
+#
+#   lint - formatting (Prettier) and lint rules (ESLint) for the server
+#          and the client; must pass before the tests even start.
+#   test - the server's automated tests (server/tests), with the coverage
+#          minimum from server/vitest.config.js.
 #
 # Only when a pull request is opened/updated and when something lands on
 # main - not on every push to a work branch - to keep the load on the NAS
-# small (see ci/forgejo-runner/README.md). The job fails if a test fails or
-# if line coverage drops below the threshold in server/vitest.config.js,
-# and the branch protection rule on main then blocks the merge.
+# small (see ci/forgejo-runner/README.md). Branch protection on main
+# requires both jobs, so a PR with a lint error or a failing test can't be
+# merged. (The workflow keeps its old name, server-tests, because the
+# required checks are named after it.)
 name: server-tests
 
 on:
@@ -13,8 +19,47 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  lint:
     # The label the runner was registered with (ci/forgejo-runner/README.md).
+    runs-on: docker
+    container:
+      image: node:22-bookworm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache npm packages
+        uses: actions/cache@v4
+        with:
+          path: /root/.npm
+          key: lint-${{ hashFiles('server/package-lock.json', 'client/package-lock.json') }}
+          restore-keys: lint-
+
+      - name: Install (server)
+        working-directory: server
+        run: npm ci --no-audit --no-fund
+
+      - name: Install (client)
+        working-directory: client
+        run: npm ci --no-audit --no-fund
+
+      - name: Formatting (server)
+        working-directory: server
+        run: npm run format:check
+
+      - name: Formatting (client)
+        working-directory: client
+        run: npm run format:check
+
+      - name: Lint (server)
+        working-directory: server
+        run: npm run lint
+
+      - name: Lint (client)
+        working-directory: client
+        run: npm run lint
+
+  test:
+    needs: lint
     runs-on: docker
     container:
       image: node:22-bookworm

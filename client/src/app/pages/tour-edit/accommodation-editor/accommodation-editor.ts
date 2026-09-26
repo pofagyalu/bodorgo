@@ -63,7 +63,7 @@ export class AccommodationEditor {
 
   private occupantsIn(roomIds: (string | undefined)[]): number {
     const counts = this.occupantsByRoom();
-    return roomIds.reduce((sum, id) => sum + (id ? counts[id] ?? 0 : 0), 0);
+    return roomIds.reduce((sum, id) => sum + (id ? (counts[id] ?? 0) : 0), 0);
   }
 
   totals = computed(() => {
@@ -85,7 +85,9 @@ export class AccommodationEditor {
     this.houses().some(
       (h) =>
         !h.name.trim() ||
-        h.rooms.some((r) => !r.name.trim() || !Number.isInteger(r.beds) || r.beds < 1 || r.beds > 20),
+        h.rooms.some(
+          (r) => !r.name.trim() || !Number.isInteger(r.beds) || r.beds < 1 || r.beds > 20,
+        ),
     ),
   );
 
@@ -108,7 +110,9 @@ export class AccommodationEditor {
       : '';
     if (
       house.rooms.length &&
-      !confirm(`Biztosan törlöd a(z) "${house.name || 'névtelen'}" házat a szobáival együtt?${warning}`)
+      !confirm(
+        `Biztosan törlöd a(z) "${house.name || 'névtelen'}" házat a szobáival együtt?${warning}`,
+      )
     ) {
       return;
     }

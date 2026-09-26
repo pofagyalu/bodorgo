@@ -1,22 +1,52 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createAdmin, createGuest, createMember, createReservation, createTour } from '../helpers/factories.js';
+import {
+  createAdmin,
+  createGuest,
+  createMember,
+  createReservation,
+  createTour,
+} from '../helpers/factories.js';
 import Tour from '../../src/models/tourModel.js';
 import { tourHasEnded } from '../../src/controllers/reviewController.js';
 
 describe('finance ledger', () => {
-  const tx = { date: '2026-01-10', name: ' Szállás előleg ', type: 'expense', category: 'Szállásköltség', amount: 50000 };
+  const tx = {
+    date: '2026-01-10',
+    name: ' Szállás előleg ',
+    type: 'expense',
+    category: 'Szállásköltség',
+    amount: 50000,
+  };
 
   it('admin records income/expense; members can read, guests cannot', async () => {
     const admin = await createAdmin();
-    const res = await request(app).post('/finance/transactions').set(asUser(admin)).send({ ...tx, currency: 'EUR' });
+    const res = await request(app)
+      .post('/finance/transactions')
+      .set(asUser(admin))
+      .send({ ...tx, currency: 'EUR' });
     expect(res.status).toBe(201);
     expect(res.body.data.transaction).toMatchObject({ name: 'Szállás előleg', currency: 'EUR' });
-    const list = await request(app).get('/finance/transactions').set(asUser(await createMember()));
+    const list = await request(app)
+      .get('/finance/transactions')
+      .set(asUser(await createMember()));
     expect(list.body.data.transactions).toHaveLength(1);
-    expect((await request(app).get('/finance/transactions').set(asUser(await createGuest()))).status).toBe(403);
-    expect((await request(app).post('/finance/transactions').set(asUser(await createMember())).send(tx)).status).toBe(403);
+    expect(
+      (
+        await request(app)
+          .get('/finance/transactions')
+          .set(asUser(await createGuest()))
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .post('/finance/transactions')
+          .set(asUser(await createMember()))
+          .send(tx)
+      ).status,
+    ).toBe(403);
   });
 
   it('validates the entry', async () => {
@@ -59,14 +89,27 @@ describe('polls', () => {
     const before = await request(app).get(`/polls/${id}`).set(asUser(voter));
     expect(before.body.data.poll.results).toBeNull();
     const optionId = res.body.data.poll.options[0]._id;
-    const voted = await request(app).post(`/polls/${id}/vote`).set(asUser(voter)).send({ optionId });
+    const voted = await request(app)
+      .post(`/polls/${id}/vote`)
+      .set(asUser(voter))
+      .send({ optionId });
     expect(voted.body.data.poll).toMatchObject({ hasVoted: true, totalVotes: 1 });
     expect(voted.body.data.poll.results[0]).toMatchObject({ count: 1, percentage: 100 });
     // Changing my mind: still one vote, now on the other answer.
     const otherId = res.body.data.poll.options[1]._id;
-    const changed = await request(app).post(`/polls/${id}/vote`).set(asUser(voter)).send({ optionId: otherId });
+    const changed = await request(app)
+      .post(`/polls/${id}/vote`)
+      .set(asUser(voter))
+      .send({ optionId: otherId });
     expect(changed.body.data.poll).toMatchObject({ totalVotes: 1, myOptionId: otherId });
-    expect((await request(app).post(`/polls/${id}/vote`).set(asUser(await createMember())).send({ optionId: 'nope' })).status).toBe(400);
+    expect(
+      (
+        await request(app)
+          .post(`/polls/${id}/vote`)
+          .set(asUser(await createMember()))
+          .send({ optionId: 'nope' })
+      ).status,
+    ).toBe(400);
 
     const closed = await poll({ closesAt: new Date(Date.now() - 1000).toISOString() });
     const late = await request(app)
@@ -85,7 +128,8 @@ describe('polls', () => {
     const edit = (body) => request(app).patch(`/polls/${id}`).set(asUser(admin)).send(body);
     expect((await edit({ question: 'Új kérdés?', options: ['A', 'B', 'C'] })).status).toBe(200);
     expect((await edit({ options: ['csak egy'] })).status).toBe(400);
-    const optionId = (await request(app).get(`/polls/${id}`).set(asUser(admin))).body.data.poll.options[0]._id;
+    const optionId = (await request(app).get(`/polls/${id}`).set(asUser(admin))).body.data.poll
+      .options[0]._id;
     await request(app).post(`/polls/${id}/vote`).set(asUser(admin)).send({ optionId });
     expect((await edit({ question: 'Még újabb?' })).status).toBe(400);
     expect((await edit({ closesAt: new Date(Date.now() + 2e8).toISOString() })).status).toBe(200);
@@ -97,9 +141,13 @@ describe('polls', () => {
     expect((await request(app).delete(`/polls/${id}`).set(asUser(admin))).status).toBe(204);
     const unknown = '000000000000000000000000';
     expect((await request(app).get(`/polls/${unknown}`).set(asUser(admin))).status).toBe(404);
-    expect((await request(app).patch(`/polls/${unknown}`).set(asUser(admin)).send({})).status).toBe(404);
+    expect((await request(app).patch(`/polls/${unknown}`).set(asUser(admin)).send({})).status).toBe(
+      404,
+    );
     expect((await request(app).delete(`/polls/${unknown}`).set(asUser(admin))).status).toBe(404);
-    expect((await request(app).post(`/polls/${unknown}/vote`).set(asUser(admin)).send({})).status).toBe(404);
+    expect(
+      (await request(app).post(`/polls/${unknown}/vote`).set(asUser(admin)).send({})).status,
+    ).toBe(404);
   });
 });
 
@@ -109,9 +157,12 @@ describe('tour reviews', () => {
     const attendee = await createMember();
     const outsider = await createMember();
     await createReservation(tour, [attendee]);
-    const rate = (user, rating) => request(app).put(`/tours/${tour._id}/reviews`).set(asUser(user)).send({ rating });
+    const rate = (user, rating) =>
+      request(app).put(`/tours/${tour._id}/reviews`).set(asUser(user)).send({ rating });
 
-    expect((await request(app).get(`/tours/${tour._id}/reviews/me`).set(asUser(outsider))).body.data).toEqual({ isAttendee: false, hasEnded: false, rating: null });
+    expect(
+      (await request(app).get(`/tours/${tour._id}/reviews/me`).set(asUser(outsider))).body.data,
+    ).toEqual({ isAttendee: false, hasEnded: false, rating: null });
     expect((await rate(outsider, 8)).status).toBe(403);
     expect((await rate(attendee, 11)).status).toBe(400);
     expect((await rate(attendee, 8)).status).toBe(200);
@@ -128,7 +179,10 @@ describe('tour reviews', () => {
     await createReservation(tour, [attendee]);
     const mine = await request(app).get(`/tours/${tour._id}/reviews/me`).set(asUser(attendee));
     expect(mine.body.data).toEqual({ isAttendee: true, hasEnded: false, rating: null });
-    const res = await request(app).put(`/tours/${tour._id}/reviews`).set(asUser(attendee)).send({ rating: 8 });
+    const res = await request(app)
+      .put(`/tours/${tour._id}/reviews`)
+      .set(asUser(attendee))
+      .send({ rating: 8 });
     expect(res.status).toBe(403);
   });
 

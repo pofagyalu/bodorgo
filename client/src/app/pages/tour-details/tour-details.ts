@@ -29,7 +29,10 @@ import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
 import { TourVideoPlayer } from './tour-video-player/tour-video-player';
 import { TourMailPanel } from './tour-mail-panel/tour-mail-panel';
-import { AttendeeList, AttendeeListRow as AttendeeListPayment } from './attendee-list/attendee-list';
+import {
+  AttendeeList,
+  AttendeeListRow as AttendeeListPayment,
+} from './attendee-list/attendee-list';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 interface DayGroup {
@@ -54,7 +57,17 @@ interface PickerOption {
 @Component({
   selector: 'app-tour-details',
   standalone: true,
-  imports: [MatIconModule, RouterLink, FormsModule, TourEvent, EventForm, ReviewStars, AttendeeList, TourVideoPlayer, TourMailPanel],
+  imports: [
+    MatIconModule,
+    RouterLink,
+    FormsModule,
+    TourEvent,
+    EventForm,
+    ReviewStars,
+    AttendeeList,
+    TourVideoPlayer,
+    TourMailPanel,
+  ],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
@@ -115,7 +128,12 @@ export class TourDetails implements OnDestroy {
   addingEventForDay = signal<number | null>(null);
   addingEvent = signal(false);
   addEventError = signal<string | null>(null);
-  addEventForm: EventFormModel = { time: '08:00', description: '', isOptional: false, extraCost: null };
+  addEventForm: EventFormModel = {
+    time: '08:00',
+    description: '',
+    isOptional: false,
+    extraCost: null,
+  };
 
   // Sign-up picker: who a 'member' or 'admin' can additionally choose to
   // register besides themselves - loaded once the role is known (see the
@@ -273,14 +291,21 @@ export class TourDetails implements OnDestroy {
   // list, so the two can never disagree about who's included.
   hasUnpaidAdvanceInMyGroup = computed(() => {
     const me = this.auth.user();
-    return this.attendeePayments().some((p) => p.advance != null && !p.paid && isInMyPaymentGroup(p, me));
+    return this.attendeePayments().some(
+      (p) => p.advance != null && !p.paid && isInMyPaymentGroup(p, me),
+    );
   });
 
   // Someone an admin marked "retired" (member-edit.ts) - attended in the
   // past, kept for history everywhere, just never offered again as a
   // candidate for a new reservation or schedule-event opt-in (below).
   retiredUserIds = computed<Set<string>>(
-    () => new Set(this.allUsers().filter((u) => u.retired).map((u) => u._id)),
+    () =>
+      new Set(
+        this.allUsers()
+          .filter((u) => u.retired)
+          .map((u) => u._id),
+      ),
   );
 
   // Who the logged-in user can still pick to register for this tour -
@@ -557,7 +582,10 @@ export class TourDetails implements OnDestroy {
       next: () => {
         const t = this.tour();
         if (t) {
-          this.tour.set({ ...t, extraDocuments: (t.extraDocuments ?? []).filter((d) => d._id !== doc._id) });
+          this.tour.set({
+            ...t,
+            extraDocuments: (t.extraDocuments ?? []).filter((d) => d._id !== doc._id),
+          });
         }
         this.deletingDocument.set(false);
         this.documentPendingDelete.set(null);
@@ -748,7 +776,9 @@ export class TourDetails implements OnDestroy {
         );
         onDone();
         this.notifications.addSuccess(
-          restricted ? 'Fénykép korlátozva a résztvevőkre' : 'Fénykép újra mindenki számára látható',
+          restricted
+            ? 'Fénykép korlátozva a résztvevőkre'
+            : 'Fénykép újra mindenki számára látható',
         );
       },
       error: (err) => {
@@ -860,9 +890,7 @@ export class TourDetails implements OnDestroy {
         this.showAttendeePicker.set(false);
       },
       error: (err) => {
-        this.signUpError.set(
-          err?.error?.message ?? 'Hiba történt a jelentkezés során.',
-        );
+        this.signUpError.set(err?.error?.message ?? 'Hiba történt a jelentkezés során.');
         this.signingUp.set(false);
       },
     });

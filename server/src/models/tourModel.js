@@ -407,10 +407,7 @@ tourSchema.pre('save', function () {
 // specifically so this (and the dailyWeather hook below) actually fire on
 // an edit, not just on creation.
 tourSchema.pre('save', async function () {
-  if (
-    this.isModified('location.coordinates') &&
-    this.location?.coordinates?.length === 2
-  ) {
+  if (this.isModified('location.coordinates') && this.location?.coordinates?.length === 2) {
     try {
       const route = await computeDrivingRoute(BUDAPEST_CENTER, {
         lat: this.location.coordinates[1],

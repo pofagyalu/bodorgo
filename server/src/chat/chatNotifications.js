@@ -21,11 +21,19 @@ const SNIPPET_LENGTH = 90;
 
 // The user had the chat open - notifications may buzz again next time.
 export async function markChatRead(userId, tourId) {
-  await ChatReadState.updateOne({ user: userId, tour: tourId }, { readAt: new Date() }, { upsert: true });
+  await ChatReadState.updateOne(
+    { user: userId, tour: tourId },
+    { readAt: new Date() },
+    { upsert: true },
+  );
 }
 
 export async function setChatMuted(userId, tourId, muted) {
-  await ChatReadState.updateOne({ user: userId, tour: tourId }, { muted: !!muted }, { upsert: true });
+  await ChatReadState.updateOne(
+    { user: userId, tour: tourId },
+    { muted: !!muted },
+    { upsert: true },
+  );
 }
 
 export async function isChatMuted(userId, tourId) {
@@ -36,7 +44,9 @@ export async function isChatMuted(userId, tourId) {
 // 'chat-visible' event in chatSocket.js).
 async function watchingUserIds(io, tourId) {
   const sockets = await io.in(tourRoom(tourId)).fetchSockets();
-  return new Set(sockets.filter((s) => s.data.visibleTour === String(tourId)).map((s) => s.data.userId));
+  return new Set(
+    sockets.filter((s) => s.data.visibleTour === String(tourId)).map((s) => s.data.userId),
+  );
 }
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -44,7 +54,9 @@ const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // (see utils/usernames.js).
 function mentions(text, username) {
   if (!username) return false;
-  return new RegExp(`@${escapeRegExp(usernameKey(username))}(?![\\p{L}\\p{N}_])`, 'u').test(usernameKey(text));
+  return new RegExp(`@${escapeRegExp(usernameKey(username))}(?![\\p{L}\\p{N}_])`, 'u').test(
+    usernameKey(text),
+  );
 }
 
 export async function notifyChatPost(io, post) {
@@ -53,9 +65,9 @@ export async function notifyChatPost(io, post) {
   const authorName = post.creator.username || post.creator.name || 'Valaki';
 
   const reservations = await Reservation.find({ tour: tourId }).select('attendees.user');
-  const attendeeIds = [...new Set(reservations.flatMap((r) => r.attendees.map((a) => String(a.user))))].filter(
-    (id) => id !== authorId,
-  );
+  const attendeeIds = [
+    ...new Set(reservations.flatMap((r) => r.attendees.map((a) => String(a.user)))),
+  ].filter((id) => id !== authorId);
   if (!attendeeIds.length) return;
 
   const watching = await watchingUserIds(io, tourId);
@@ -70,8 +82,11 @@ export async function notifyChatPost(io, post) {
   const stateByUser = new Map(states.map((s) => [String(s.user), s]));
   const usernameById = new Map(users.map((u) => [String(u._id), u.username]));
 
-  const title = tour ? `${tour.order ? `${tour.order}. ` : ''}${tour.title} – chat` : 'Bódorgó chat';
-  const text = post.text.length > SNIPPET_LENGTH ? `${post.text.slice(0, SNIPPET_LENGTH - 1)}…` : post.text;
+  const title = tour
+    ? `${tour.order ? `${tour.order}. ` : ''}${tour.title} – chat`
+    : 'Bódorgó chat';
+  const text =
+    post.text.length > SNIPPET_LENGTH ? `${post.text.slice(0, SNIPPET_LENGTH - 1)}…` : post.text;
 
   for (const userId of candidates) {
     const state = stateByUser.get(userId);
@@ -100,7 +115,11 @@ export async function notifyChatPost(io, post) {
       renotify: loud,
     });
     if (sent && loud) {
-      await ChatReadState.updateOne({ user: userId, tour: tourId }, { notifiedAt: new Date() }, { upsert: true });
+      await ChatReadState.updateOne(
+        { user: userId, tour: tourId },
+        { notifiedAt: new Date() },
+        { upsert: true },
+      );
     }
   }
 }
@@ -108,7 +127,9 @@ export async function notifyChatPost(io, post) {
 // Fire-and-forget from the socket handler - a notification problem never
 // affects the chat itself.
 export function notifyChatPostInBackground(io, post) {
-  notifyChatPost(io, post).catch((err) => logger.error(`chat push for post ${post._id} failed: ${err.message}`));
+  notifyChatPost(io, post).catch((err) =>
+    logger.error(`chat push for post ${post._id} failed: ${err.message}`),
+  );
 }
 
 // A tour's attendees who can get a notification about it - everyone signed
@@ -117,7 +138,9 @@ export function notifyChatPostInBackground(io, post) {
 export async function tourAttendeeIds(tourId, except = []) {
   const reservations = await Reservation.find({ tour: tourId }).select('attendees.user');
   const skip = new Set(except.map(String));
-  return [...new Set(reservations.flatMap((r) => r.attendees.map((a) => String(a.user))))].filter((id) => !skip.has(id));
+  return [...new Set(reservations.flatMap((r) => r.attendees.map((a) => String(a.user))))].filter(
+    (id) => !skip.has(id),
+  );
 }
 
 export function pushInBackground(userIds, payload) {

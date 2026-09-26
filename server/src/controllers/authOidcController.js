@@ -28,9 +28,7 @@ export function roleFromClaim(bodorgoRole) {
 // callers can append a path directly (e.g. `${base}login`).
 function getClientBaseUrl(req) {
   const isLocalRequest = ['localhost', '127.0.0.1'].includes(req.hostname);
-  return isLocalRequest
-    ? 'http://localhost:4200/'
-    : config.oridzs.clientBaseUrl || '/';
+  return isLocalRequest ? 'http://localhost:4200/' : config.oridzs.clientBaseUrl || '/';
 }
 
 let oidcConfigPromise;
@@ -40,11 +38,7 @@ function getOidcConfig() {
     const { server, clientId, clientSecret, providerSlug } = config.oridzs;
 
     oidcConfigPromise = openidClient
-      .discovery(
-        new URL(`${server}/application/o/${providerSlug}/`),
-        clientId,
-        clientSecret,
-      )
+      .discovery(new URL(`${server}/application/o/${providerSlug}/`), clientId, clientSecret)
       .catch((err) => {
         oidcConfigPromise = undefined;
         throw err;
@@ -63,8 +57,7 @@ export const login = async (req, res) => {
    * session so they can be recovered when the user is redirected back.
    */
   const code_verifier = openidClient.randomPKCECodeVerifier();
-  const codeChallenge =
-    await openidClient.calculatePKCECodeChallenge(code_verifier);
+  const codeChallenge = await openidClient.calculatePKCECodeChallenge(code_verifier);
   const state = openidClient.randomState();
   const nonce = openidClient.randomNonce();
 
@@ -101,22 +94,16 @@ export const callback = async (req, res, next) => {
   try {
     const oidcConfig = await getOidcConfig();
 
-    const currentUrl = new URL(
-      `${req.protocol}://${req.get('host')}${req.originalUrl}`,
-    );
+    const currentUrl = new URL(`${req.protocol}://${req.get('host')}${req.originalUrl}`);
 
     const { code_verifier, state, nonce } = req.session.oidc || {};
 
-    const tokens = await openidClient.authorizationCodeGrant(
-      oidcConfig,
-      currentUrl,
-      {
-        pkceCodeVerifier: code_verifier,
-        expectedState: state,
-        expectedNonce: nonce,
-        idTokenExpected: true,
-      },
-    );
+    const tokens = await openidClient.authorizationCodeGrant(oidcConfig, currentUrl, {
+      pkceCodeVerifier: code_verifier,
+      expectedState: state,
+      expectedNonce: nonce,
+      idTokenExpected: true,
+    });
 
     const claims = tokens.claims();
     logger.info(`ID Token Claims for sub=${claims.sub}`);
@@ -148,7 +135,9 @@ export const callback = async (req, res, next) => {
     // session immediately - simplest option, revisit if that's ever a
     // problem in practice.
     if (role === null) {
-      logger.error(`Denying login for sub=${claims.sub}: no valid bodorgo_role (got ${JSON.stringify(bodorgoRole)})`);
+      logger.error(
+        `Denying login for sub=${claims.sub}: no valid bodorgo_role (got ${JSON.stringify(bodorgoRole)})`,
+      );
       return res.redirect(`${getClientBaseUrl(req)}login?error=no-role`);
     }
 
@@ -212,9 +201,7 @@ export const callback = async (req, res, next) => {
     logger.error(`❌ CALLBACK ERROR: ${err}`);
     if (err.response) {
       logger.error(`🔴 RAW TOKEN ERROR STATUS: ${err.response.status}`);
-      logger.error(
-        `🔴 RAW TOKEN ERROR BODY: ${err.response.body?.toString()}`,
-      );
+      logger.error(`🔴 RAW TOKEN ERROR BODY: ${err.response.body?.toString()}`);
     }
     return res.status(500).send('Login failed');
   }
@@ -256,19 +243,14 @@ export const logout = async (req, res) => {
 
     const idToken = req.session?.user?.id_token;
 
-    const logoutUrl = new URL(
-      `${server}/application/o/${providerSlug}/end-session/`,
-    );
+    const logoutUrl = new URL(`${server}/application/o/${providerSlug}/end-session/`);
 
     if (idToken) {
       logoutUrl.searchParams.set('id_token_hint', idToken);
     }
 
     if (postLogoutRedirectUri) {
-      logoutUrl.searchParams.set(
-        'post_logout_redirect_uri',
-        postLogoutRedirectUri,
-      );
+      logoutUrl.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri);
     }
 
     req.session.destroy(() => res.redirect(logoutUrl.href));

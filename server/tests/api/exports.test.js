@@ -1,7 +1,13 @@
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createAdmin, createGuest, createMember, createReservation, createTour } from '../helpers/factories.js';
+import {
+  createAdmin,
+  createGuest,
+  createMember,
+  createReservation,
+  createTour,
+} from '../helpers/factories.js';
 import TourCover from '../../src/models/tourCoverModel.js';
 import Tour from '../../src/models/tourModel.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
@@ -46,7 +52,14 @@ async function richTour() {
         schedule: {
           $each: [
             { day: 1, time: '15:00', description: 'Érkezés' },
-            { day: 2, time: '17:00', description: 'Borkóstoló', isOptional: true, extraCost: 4000, participants: [{ user: parent._id, name: parent.name }] },
+            {
+              day: 2,
+              time: '17:00',
+              description: 'Borkóstoló',
+              isOptional: true,
+              extraCost: 4000,
+              participants: [{ user: parent._id, name: parent.name }],
+            },
           ],
         },
         extraDocuments: { title: 'Térkép', filename: 'terkep.pdf', mimeType: 'application/pdf' },
@@ -59,12 +72,19 @@ async function richTour() {
 describe('Programfüzet (tour PDF)', () => {
   it('downloads a real PDF for any logged-in user', async () => {
     const { tour, guest } = await richTour();
-    await Tour.updateOne({ _id: tour._id }, { distanceFromBudapestKm: 120, drivingDurationFromBudapestMinutes: 95 });
-    const res = await request(app).get(`/tours/${tour._id}/pdf`).set(asUser(guest)).buffer(true).parse((r, cb) => {
-      const chunks = [];
-      r.on('data', (c) => chunks.push(c));
-      r.on('end', () => cb(null, Buffer.concat(chunks)));
-    });
+    await Tour.updateOne(
+      { _id: tour._id },
+      { distanceFromBudapestKm: 120, drivingDurationFromBudapestMinutes: 95 },
+    );
+    const res = await request(app)
+      .get(`/tours/${tour._id}/pdf`)
+      .set(asUser(guest))
+      .buffer(true)
+      .parse((r, cb) => {
+        const chunks = [];
+        r.on('data', (c) => chunks.push(c));
+        r.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/pdf');
     expect(res.headers['content-disposition']).toContain(`${tour.order}-`);
@@ -75,11 +95,15 @@ describe('Programfüzet (tour PDF)', () => {
   it('adds a Szobabeosztás page only once the room allocation is finalized', async () => {
     const { tour, guest } = await richTour();
     const pageCount = async () => {
-      const res = await request(app).get(`/tours/${tour._id}/pdf`).set(asUser(guest)).buffer(true).parse((r, cb) => {
-        const chunks = [];
-        r.on('data', (c) => chunks.push(c));
-        r.on('end', () => cb(null, Buffer.concat(chunks)));
-      });
+      const res = await request(app)
+        .get(`/tours/${tour._id}/pdf`)
+        .set(asUser(guest))
+        .buffer(true)
+        .parse((r, cb) => {
+          const chunks = [];
+          r.on('data', (c) => chunks.push(c));
+          r.on('end', () => cb(null, Buffer.concat(chunks)));
+        });
       return (res.body.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length;
     };
     const houses = [{ name: 'Ház', rooms: [{ name: 'Szoba', beds: 4 }] }];
@@ -105,7 +129,9 @@ describe('Programfüzet (tour PDF)', () => {
 
     const { default: User } = await import('../../src/models/userModel.js');
     await User.updateOne({ _id: kid._id }, { $unset: { email: 1 } });
-    expect((await request(app).post(`/tours/${tour._id}/pdf/email`).set(asUser(kid))).status).toBe(400);
+    expect((await request(app).post(`/tours/${tour._id}/pdf/email`).set(asUser(kid))).status).toBe(
+      400,
+    );
   });
 });
 
@@ -135,7 +161,16 @@ describe('attendee Excel export (admin)', () => {
 
   it('is admin-only and 404s for an unknown tour', async () => {
     const { tour, parent, admin } = await richTour();
-    expect((await request(app).get(`/tours/${tour._id}/attendees/export.xlsx`).set(asUser(parent))).status).toBe(403);
-    expect((await request(app).get('/tours/000000000000000000000000/attendees/export.xlsx').set(asUser(admin))).status).toBe(404);
+    expect(
+      (await request(app).get(`/tours/${tour._id}/attendees/export.xlsx`).set(asUser(parent)))
+        .status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .get('/tours/000000000000000000000000/attendees/export.xlsx')
+          .set(asUser(admin))
+      ).status,
+    ).toBe(404);
   });
 });

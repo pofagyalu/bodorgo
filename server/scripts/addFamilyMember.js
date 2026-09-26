@@ -23,9 +23,7 @@ import User from '../src/models/userModel.js';
 const [, , anchor, name, futureEmail] = process.argv;
 
 if (!anchor || !name) {
-  console.error(
-    'Usage: node scripts/addFamilyMember.js <anchor> <name> [futureEmail]',
-  );
+  console.error('Usage: node scripts/addFamilyMember.js <anchor> <name> [futureEmail]');
   process.exit(1);
 }
 
@@ -42,9 +40,7 @@ if (!anchorUser) {
 }
 
 if (!anchorUser.familyId) {
-  console.error(
-    `${anchorUser.name} doesn't belong to a family yet - run createFamily.js first.`,
-  );
+  console.error(`${anchorUser.name} doesn't belong to a family yet - run createFamily.js first.`);
   await mongoose.disconnect();
   process.exit(1);
 }

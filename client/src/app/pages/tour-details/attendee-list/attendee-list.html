@@ -4,232 +4,305 @@
       <th>Név</th>
       <th>Éjszakák</th>
       @if (hasPricing()) {
-      <th>Teljes ár</th>
-      <th>Előleg</th>
-      <th>Fizetendő</th>
+        <th>Teljes ár</th>
+        <th>Előleg</th>
+        <th>Fizetendő</th>
       }
       @if (hasOptionalPrograms) {
-      <th class="optional-col" title="Opciós programok - mindig helyben fizetendő, csak tájékoztató jellegű">Opciók</th>
+        <th
+          class="optional-col"
+          title="Opciós programok - mindig helyben fizetendő, csak tájékoztató jellegű"
+        >
+          Opciók
+        </th>
       }
       @if (hasPricing()) {
-      <th class="paid-col"></th>
+        <th class="paid-col"></th>
       }
       @if (showActions) {
-      <th></th>
+        <th></th>
       }
     </tr>
   </thead>
   <tbody>
-    @for (group of groupedFamilies; track group.key) { @for (a of group.members; track a.attendeeId) {
-    <tr [class.attendee-row--stripe]="a.familyStripe === 1">
-      <td>
-        <span class="attendee-name">
-          <app-avatar
-            class="attendee-avatar"
-            [name]="a.name"
-            [userId]="a.userId"
-            [photoVersion]="a.userId ? userPhotos[a.userId] : null"
-          />
-          {{ a.name }}
-        </span>
-        @if (a.feeExempt) {
-        <span class="exempt-badge" title="Nem kell fizetnie a szállásért">Ingyenes</span>
-        }
-      </td>
+    @for (group of groupedFamilies; track group.key) {
+      @for (a of group.members; track a.attendeeId) {
+        <tr [class.attendee-row--stripe]="a.familyStripe === 1">
+          <td>
+            <span class="attendee-name">
+              <app-avatar
+                class="attendee-avatar"
+                [name]="a.name"
+                [userId]="a.userId"
+                [photoVersion]="a.userId ? userPhotos[a.userId] : null"
+              />
+              {{ a.name }}
+            </span>
+            @if (a.feeExempt) {
+              <span class="exempt-badge" title="Nem kell fizetnie a szállásért">Ingyenes</span>
+            }
+          </td>
 
-      @if (editingAttendeeId() === a.attendeeId) {
-      <td class="nights-edit-cell">
-        <input type="number" min="0" [(ngModel)]="editNights" />
-      </td>
-      } @else {
-      <td>{{ a.nights }}</td>
-      }
-
-      @if (hasPricing()) {
-      <td>{{ formatForint(a.totalPrice) }} Ft</td>
-      <td>{{ formatForint(a.advance) }} Ft</td>
-      <td>{{ formatForint(a.rest) }} Ft</td>
-      }
-      @if (hasOptionalPrograms) {
-      <td class="optional-col">
-        @if (a.optionalProgramsCost > 0) {
-        {{ formatForint(a.optionalProgramsCost) }} Ft
-        }
-      </td>
-      }
-
-      <!-- Paid / not paid only means something once prices are set. -->
-      @if (hasPricing()) {
-      <td class="paid-col">
-        <span class="paid-cell">
-          @if (a.paid) {
-          <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
+          @if (editingAttendeeId() === a.attendeeId) {
+            <td class="nights-edit-cell">
+              <input type="number" min="0" [(ngModel)]="editNights" />
+            </td>
           } @else {
-          <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">radio_button_unchecked</mat-icon>
+            <td>{{ a.nights }}</td>
           }
-        </span>
-      </td>
-      }
 
-      @if (showActions) {
-      <td class="row-actions">
-        @if (isAdmin()) {
-        @if (editingAttendeeId() === a.attendeeId) {
-        <button
-          type="button"
-          class="icon-btn icon-btn--save"
-          title="Mentés"
-          [disabled]="savingNights()"
-          (click)="saveNights(a)"
+          @if (hasPricing()) {
+            <td>{{ formatForint(a.totalPrice) }} Ft</td>
+            <td>{{ formatForint(a.advance) }} Ft</td>
+            <td>{{ formatForint(a.rest) }} Ft</td>
+          }
+          @if (hasOptionalPrograms) {
+            <td class="optional-col">
+              @if (a.optionalProgramsCost > 0) {
+                {{ formatForint(a.optionalProgramsCost) }} Ft
+              }
+            </td>
+          }
+
+          <!-- Paid / not paid only means something once prices are set. -->
+          @if (hasPricing()) {
+            <td class="paid-col">
+              <span class="paid-cell">
+                @if (a.paid) {
+                  <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
+                } @else {
+                  <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve"
+                    >radio_button_unchecked</mat-icon
+                  >
+                }
+              </span>
+            </td>
+          }
+
+          @if (showActions) {
+            <td class="row-actions">
+              @if (isAdmin()) {
+                @if (editingAttendeeId() === a.attendeeId) {
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--save"
+                    title="Mentés"
+                    [disabled]="savingNights()"
+                    (click)="saveNights(a)"
+                  >
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--cancel"
+                    title="Mégse"
+                    (click)="cancelEditNights()"
+                  >
+                    <mat-icon>close</mat-icon>
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--edit"
+                    title="Éjszakák szerkesztése"
+                    (click)="startEditNights(a)"
+                  >
+                    <mat-icon>hotel</mat-icon>
+                  </button>
+                  @if ((!a.paid && a.advance != null) || a.paymentMethod === 'cash') {
+                    <button
+                      type="button"
+                      class="icon-btn icon-btn--cash"
+                      [class.icon-btn--cash-active]="a.paymentMethod === 'cash'"
+                      [title]="
+                        a.paymentMethod === 'cash'
+                          ? 'Készpénzes fizetés visszavonása'
+                          : 'Készpénzes fizetés'
+                      "
+                      [disabled]="markingCashPaidId() === a.attendeeId"
+                      (click)="toggleCashPaid(a)"
+                    >
+                      <mat-icon>attach_money</mat-icon>
+                    </button>
+                  }
+                  @if (!a.paid || a.feeExempt) {
+                    <button
+                      type="button"
+                      class="icon-btn icon-btn--exempt"
+                      [class.icon-btn--exempt-active]="a.feeExempt"
+                      [title]="
+                        a.feeExempt ? 'Díjmentesség visszavonása' : 'Megjelölés díjmentesként'
+                      "
+                      [disabled]="togglingFeeExemptId() === a.attendeeId"
+                      (click)="toggleFeeExempt(a)"
+                    >
+                      <mat-icon>loyalty</mat-icon>
+                    </button>
+                  }
+                }
+              }
+              @if (canWithdraw(a) && editingAttendeeId() !== a.attendeeId) {
+                <button
+                  type="button"
+                  class="icon-btn icon-btn--withdraw"
+                  title="Lemondás"
+                  (click)="askWithdraw(a)"
+                >
+                  <mat-icon>person_remove</mat-icon>
+                </button>
+              }
+            </td>
+          }
+        </tr>
+      }
+      @if (group.members.length > 1 && canSeeFamilySubtotal(group)) {
+        <tr
+          class="family-subtotal-row"
+          [class.attendee-row--stripe]="group.familyStripe === 1"
+          [class.family-subtotal-row--expanded]="isFamilySubtotalExpanded(group.key)"
+          (click)="toggleFamilySubtotal(group.key)"
         >
-          <mat-icon>check</mat-icon>
-        </button>
-        <button type="button" class="icon-btn icon-btn--cancel" title="Mégse" (click)="cancelEditNights()">
-          <mat-icon>close</mat-icon>
-        </button>
-        } @else {
-        <button type="button" class="icon-btn icon-btn--edit" title="Éjszakák szerkesztése" (click)="startEditNights(a)">
-          <mat-icon>hotel</mat-icon>
-        </button>
-        @if ((!a.paid && a.advance != null) || a.paymentMethod === 'cash') {
-        <button
-          type="button"
-          class="icon-btn icon-btn--cash"
-          [class.icon-btn--cash-active]="a.paymentMethod === 'cash'"
-          [title]="a.paymentMethod === 'cash' ? 'Készpénzes fizetés visszavonása' : 'Készpénzes fizetés'"
-          [disabled]="markingCashPaidId() === a.attendeeId"
-          (click)="toggleCashPaid(a)"
-        >
-          <mat-icon>attach_money</mat-icon>
-        </button>
-        } @if (!a.paid || a.feeExempt) {
-        <button
-          type="button"
-          class="icon-btn icon-btn--exempt"
-          [class.icon-btn--exempt-active]="a.feeExempt"
-          [title]="a.feeExempt ? 'Díjmentesség visszavonása' : 'Megjelölés díjmentesként'"
-          [disabled]="togglingFeeExemptId() === a.attendeeId"
-          (click)="toggleFeeExempt(a)"
-        >
-          <mat-icon>loyalty</mat-icon>
-        </button>
-        }
-        }
-        }
-        @if (canWithdraw(a) && editingAttendeeId() !== a.attendeeId) {
-        <button type="button" class="icon-btn icon-btn--withdraw" title="Lemondás" (click)="askWithdraw(a)">
-          <mat-icon>person_remove</mat-icon>
-        </button>
-        }
-      </td>
+          <td colspan="2">
+            <button type="button" class="family-subtotal-toggle">
+              <mat-icon>{{
+                isFamilySubtotalExpanded(group.key) ? 'chevron_left' : 'chevron_right'
+              }}</mat-icon>
+              {{ familyLabel(group) }}
+            </button>
+          </td>
+          @if (hasPricing()) {
+            <td class="family-value-cell">
+              <span class="family-value"
+                >{{ formatForint(familySubtotal(group).totalPrice) }} Ft</span
+              >
+            </td>
+            <td class="family-value-cell">
+              <span class="family-value">{{ formatForint(familySubtotal(group).advance) }} Ft</span>
+            </td>
+            <td class="family-value-cell">
+              <span class="family-value">{{ formatForint(familySubtotal(group).rest) }} Ft</span>
+            </td>
+          }
+          @if (hasOptionalPrograms) {
+            <td class="optional-col family-value-cell">
+              <span class="family-value"
+                >{{ formatForint(familySubtotal(group).optionalProgramsCost) }} Ft</span
+              >
+            </td>
+          }
+          @if (hasPricing()) {
+            <td class="paid-col family-value-cell">
+              <span class="family-value family-paid-count"
+                >{{ familySubtotal(group).paidCount }}/{{
+                  familySubtotal(group).memberCount
+                }}
+                fizetve</span
+              >
+            </td>
+          }
+          @if (showActions) {
+            <td></td>
+          }
+        </tr>
       }
-    </tr>
-    } @if (group.members.length > 1 && canSeeFamilySubtotal(group)) {
-    <tr
-      class="family-subtotal-row"
-      [class.attendee-row--stripe]="group.familyStripe === 1"
-      [class.family-subtotal-row--expanded]="isFamilySubtotalExpanded(group.key)"
-      (click)="toggleFamilySubtotal(group.key)"
-    >
-      <td colspan="2">
-        <button type="button" class="family-subtotal-toggle">
-          <mat-icon>{{ isFamilySubtotalExpanded(group.key) ? 'chevron_left' : 'chevron_right' }}</mat-icon>
-          {{ familyLabel(group) }}
-        </button>
-      </td>
-      @if (hasPricing()) {
-      <td class="family-value-cell"><span class="family-value">{{ formatForint(familySubtotal(group).totalPrice) }} Ft</span></td>
-      <td class="family-value-cell"><span class="family-value">{{ formatForint(familySubtotal(group).advance) }} Ft</span></td>
-      <td class="family-value-cell"><span class="family-value">{{ formatForint(familySubtotal(group).rest) }} Ft</span></td>
-      }
-      @if (hasOptionalPrograms) {
-      <td class="optional-col family-value-cell">
-        <span class="family-value">{{ formatForint(familySubtotal(group).optionalProgramsCost) }} Ft</span>
-      </td>
-      }
-      @if (hasPricing()) {
-      <td class="paid-col family-value-cell">
-        <span class="family-value family-paid-count"
-          >{{ familySubtotal(group).paidCount }}/{{ familySubtotal(group).memberCount }} fizetve</span
-        >
-      </td>
-      }
-      @if (showActions) {
-      <td></td>
-      }
-    </tr>
-    } }
+    }
   </tbody>
   @if (hasPricing() && totals) {
-  <tfoot>
-    <tr class="totals-row">
-      <td>Összesen</td>
-      <td></td>
-      <td>{{ formatForint(totals.totalPrice) }} Ft</td>
-      <td>{{ formatForint(totals.advance) }} Ft</td>
-      <td>{{ formatForint(totals.rest) }} Ft</td>
-      @if (hasOptionalPrograms) {
-      <td class="optional-col">{{ formatForint(totalOptionalProgramsCost) }} Ft</td>
-      }
-      <td class="paid-col"></td>
-      @if (showActions) {
-      <td></td>
-      }
-    </tr>
-  </tfoot>
+    <tfoot>
+      <tr class="totals-row">
+        <td>Összesen</td>
+        <td></td>
+        <td>{{ formatForint(totals.totalPrice) }} Ft</td>
+        <td>{{ formatForint(totals.advance) }} Ft</td>
+        <td>{{ formatForint(totals.rest) }} Ft</td>
+        @if (hasOptionalPrograms) {
+          <td class="optional-col">{{ formatForint(totalOptionalProgramsCost) }} Ft</td>
+        }
+        <td class="paid-col"></td>
+        @if (showActions) {
+          <td></td>
+        }
+      </tr>
+    </tfoot>
   }
 </table>
 
 <!-- Admin-only: who has withdrawn from this tour, newest first. -->
 @if (isAdmin() && cancellations().length) {
-<div class="cancellations">
-  <button type="button" class="cancellations-toggle" (click)="showCancellations.set(!showCancellations())">
-    <mat-icon>{{ showCancellations() ? 'expand_less' : 'expand_more' }}</mat-icon>
-    Lemondások <span class="cancellations-count">{{ cancellations().length }}</span>
-  </button>
-  @if (showCancellations()) {
-  <ul class="cancellations-list">
-    @for (c of cancellations(); track c._id) {
-    <li>
-      <strong>{{ c.name }}</strong>
-      @if (c.wasPaid) {
-      <span class="paid-flag" title="Az előleget már kifizette">fizetett</span>
-      }
-      <span class="cancel-meta">
-        {{ c.cancelledAt | date: 'yyyy. MM. dd. HH:mm' }} · {{ c.cancelledByName }}
-        @if (c.reason) { · „{{ c.reason }}” }
-      </span>
-    </li>
+  <div class="cancellations">
+    <button
+      type="button"
+      class="cancellations-toggle"
+      (click)="showCancellations.set(!showCancellations())"
+    >
+      <mat-icon>{{ showCancellations() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      Lemondások <span class="cancellations-count">{{ cancellations().length }}</span>
+    </button>
+    @if (showCancellations()) {
+      <ul class="cancellations-list">
+        @for (c of cancellations(); track c._id) {
+          <li>
+            <strong>{{ c.name }}</strong>
+            @if (c.wasPaid) {
+              <span class="paid-flag" title="Az előleget már kifizette">fizetett</span>
+            }
+            <span class="cancel-meta">
+              {{ c.cancelledAt | date: 'yyyy. MM. dd. HH:mm' }} · {{ c.cancelledByName }}
+              @if (c.reason) {
+                · „{{ c.reason }}”
+              }
+            </span>
+          </li>
+        }
+      </ul>
     }
-  </ul>
-  }
-</div>
+  </div>
 }
 
 <!-- Lemondás confirmation. -->
 @if (withdrawing(); as w) {
-<div class="withdraw-backdrop" (click)="cancelWithdraw()">
-  <div class="withdraw-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
-    <h3>Lemondás</h3>
-    <p>Biztosan lemondod <strong>{{ w.name }}</strong> jelentkezését erre a táborra?</p>
-    @if (w.paid) {
-    <p class="withdraw-note">
-      <mat-icon>info</mat-icon>
-      <span>{{ w.name }} már kifizette az előleget. Automatikus visszatérítés nincs - ezt házon belül rendezzük.</span>
-    </p>
-    }
-    <label class="withdraw-reason">
-      <span>Indoklás (nem kötelező)</span>
-      <input type="text" [(ngModel)]="withdrawReason" maxlength="300" placeholder="pl. beteg lett, rossz személyt jelöltem" />
-    </label>
-    <div class="withdraw-actions">
-      <button type="button" class="withdraw-btn withdraw-btn--safe" (click)="cancelWithdraw()" [disabled]="withdrawBusy()">
-        Mégse
-      </button>
-      <button type="button" class="withdraw-btn withdraw-btn--danger" (click)="confirmWithdraw()" [disabled]="withdrawBusy()">
-        {{ withdrawBusy() ? 'Lemondás…' : 'Lemondás' }}
-      </button>
+  <div class="withdraw-backdrop" (click)="cancelWithdraw()">
+    <div class="withdraw-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <h3>Lemondás</h3>
+      <p>
+        Biztosan lemondod <strong>{{ w.name }}</strong> jelentkezését erre a táborra?
+      </p>
+      @if (w.paid) {
+        <p class="withdraw-note">
+          <mat-icon>info</mat-icon>
+          <span
+            >{{ w.name }} már kifizette az előleget. Automatikus visszatérítés nincs - ezt házon
+            belül rendezzük.</span
+          >
+        </p>
+      }
+      <label class="withdraw-reason">
+        <span>Indoklás (nem kötelező)</span>
+        <input
+          type="text"
+          [(ngModel)]="withdrawReason"
+          maxlength="300"
+          placeholder="pl. beteg lett, rossz személyt jelöltem"
+        />
+      </label>
+      <div class="withdraw-actions">
+        <button
+          type="button"
+          class="withdraw-btn withdraw-btn--safe"
+          (click)="cancelWithdraw()"
+          [disabled]="withdrawBusy()"
+        >
+          Mégse
+        </button>
+        <button
+          type="button"
+          class="withdraw-btn withdraw-btn--danger"
+          (click)="confirmWithdraw()"
+          [disabled]="withdrawBusy()"
+        >
+          {{ withdrawBusy() ? 'Lemondás…' : 'Lemondás' }}
+        </button>
+      </div>
     </div>
   </div>
-</div>
 }

@@ -9,7 +9,10 @@ const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const upload = (url, user, buffer = JPEG, type = 'image/jpeg') =>
-  request(app).put(url).set(asUser(user)).attach('file', buffer, { filename: 'photo.jpg', contentType: type });
+  request(app)
+    .put(url)
+    .set(asUser(user))
+    .attach('file', buffer, { filename: 'photo.jpg', contentType: type });
 
 describe('profile photos', () => {
   it('uploads my own photo and serves it to logged-in users only', async () => {
@@ -17,7 +20,9 @@ describe('profile photos', () => {
     const res = await upload('/users/me/photo', me);
     expect(res.status).toBe(200);
     expect(res.body.data.photoSetBy).toBe('self');
-    const photo = await request(app).get(`/users/${me._id}/photo`).set(asUser(await createMember()));
+    const photo = await request(app)
+      .get(`/users/${me._id}/photo`)
+      .set(asUser(await createMember()));
     expect(photo.status).toBe(200);
     expect(photo.headers['content-type']).toContain('image/jpeg');
     expect(photo.headers['cache-control']).toContain('immutable');
@@ -39,14 +44,16 @@ describe('profile photos', () => {
     expect((await request(app).get(`/users/${me._id}/photo`).set(asUser(me))).status).toBe(404);
   });
 
-  it('an admin can set someone\'s photo until that person sets their own', async () => {
+  it("an admin can set someone's photo until that person sets their own", async () => {
     const admin = await createAdmin();
     const member = await createMember();
     const byAdmin = await upload(`/users/${member._id}/photo`, admin);
     expect(byAdmin.body.data.photoSetBy).toBe('admin');
     await upload('/users/me/photo', member);
     expect((await upload(`/users/${member._id}/photo`, admin)).status).toBe(403);
-    expect((await request(app).delete(`/users/${member._id}/photo`).set(asUser(admin))).status).toBe(403);
+    expect(
+      (await request(app).delete(`/users/${member._id}/photo`).set(asUser(admin))).status,
+    ).toBe(403);
   });
 
   it('an admin editing their own photo counts as setting it themselves', async () => {
@@ -57,9 +64,11 @@ describe('profile photos', () => {
     expect(del.status).toBe(200);
   });
 
-  it('only admins may change someone else\'s photo; 404 for unknown users', async () => {
+  it("only admins may change someone else's photo; 404 for unknown users", async () => {
     const member = await createMember();
     expect((await upload(`/users/${member._id}/photo`, await createMember())).status).toBe(403);
-    expect((await upload('/users/000000000000000000000000/photo', await createAdmin())).status).toBe(404);
+    expect(
+      (await upload('/users/000000000000000000000000/photo', await createAdmin())).status,
+    ).toBe(404);
   });
 });

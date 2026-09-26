@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 
 import { RouterOutlet, ChildrenOutletContexts } from '@angular/router';
 import { Header } from './components/header/header';
@@ -14,11 +14,9 @@ import { NotificationListComponent } from './notifications/notification-list/not
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent {
-  constructor(
-    private contexts: ChildrenOutletContexts,
-    private authService: AuthService,
-  ) {}
+export class AppComponent implements OnInit {
+  private contexts = inject(ChildrenOutletContexts);
+  private authService = inject(AuthService);
 
   ngOnInit() {
     this.authService.checkAuth().subscribe();
@@ -31,7 +29,6 @@ export class AppComponent {
   // all. This way every route, including any added later, gets the
   // crossfade automatically with no per-route config needed.
   getRouteAnimationData() {
-    return this.contexts.getContext('primary')?.route?.snapshot?.routeConfig
-      ?.path;
+    return this.contexts.getContext('primary')?.route?.snapshot?.routeConfig?.path;
   }
 }

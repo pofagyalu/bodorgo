@@ -44,7 +44,9 @@ import { createMember, createTour } from '../helpers/factories.js';
 
 it('lists tours for a member', async () => {
   await createTour({ title: 'Mátra' });
-  const res = await request(app).get('/tours').set(asUser(await createMember()));
+  const res = await request(app)
+    .get('/tours')
+    .set(asUser(await createMember()));
   expect(res.status).toBe(200);
 });
 ```

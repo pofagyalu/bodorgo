@@ -38,7 +38,9 @@ const buffered = (req) =>
 describe('tour videos, matched by tour number', () => {
   it('lists every version on the tour page, sorted by name', async () => {
     const tour = await createTour({ order: 10 });
-    const res = await request(app).get(`/tours/${tour._id}`).set(asUser(await createMember()));
+    const res = await request(app)
+      .get(`/tours/${tour._id}`)
+      .set(asUser(await createMember()));
     expect(res.body.data.hasVideo).toBe(true);
     expect(res.body.data.videos.map((v) => [v.label, v.hasCover])).toEqual([
       ['Rendezői változat', true],
@@ -46,11 +48,17 @@ describe('tour videos, matched by tour number', () => {
     ]);
 
     const single = await createTour({ order: 11 });
-    const res11 = await request(app).get(`/tours/${single._id}`).set(asUser(await createMember()));
-    expect(res11.body.data.videos).toEqual([expect.objectContaining({ label: '', hasSubtitles: true })]);
+    const res11 = await request(app)
+      .get(`/tours/${single._id}`)
+      .set(asUser(await createMember()));
+    expect(res11.body.data.videos).toEqual([
+      expect.objectContaining({ label: '', hasSubtitles: true }),
+    ]);
 
     const none = await createTour({ order: 12 });
-    const res12 = await request(app).get(`/tours/${none._id}`).set(asUser(await createMember()));
+    const res12 = await request(app)
+      .get(`/tours/${none._id}`)
+      .set(asUser(await createMember()));
     expect(res12.body.data).toMatchObject({ hasVideo: false, videos: [] });
   });
 
@@ -58,21 +66,33 @@ describe('tour videos, matched by tour number', () => {
     const member = await createMember();
     const tour10 = await createTour({ order: 10 });
     const tour11 = await createTour({ order: 11 });
-    const [director, kilian] = (await request(app).get(`/tours/${tour10._id}`).set(asUser(member))).body.data.videos;
-    const [orseg] = (await request(app).get(`/tours/${tour11._id}`).set(asUser(member))).body.data.videos;
+    const [director, kilian] = (await request(app).get(`/tours/${tour10._id}`).set(asUser(member)))
+      .body.data.videos;
+    const [orseg] = (await request(app).get(`/tours/${tour11._id}`).set(asUser(member))).body.data
+      .videos;
     const base = `/tours/${tour10._id}/videos`;
 
-    const video = await buffered(request(app).get(`${base}/${kilian.id}/video`).set(asUser(member)));
+    const video = await buffered(
+      request(app).get(`${base}/${kilian.id}/video`).set(asUser(member)),
+    );
     expect(video.status).toBe(200);
     expect(video.body.toString()).toBe('kilian');
-    expect((await request(app).get(`${base}/${director.id}/cover`).set(asUser(member))).status).toBe(200);
-    expect((await request(app).get(`${base}/${kilian.id}/cover`).set(asUser(member))).status).toBe(404);
+    expect(
+      (await request(app).get(`${base}/${director.id}/cover`).set(asUser(member))).status,
+    ).toBe(200);
+    expect((await request(app).get(`${base}/${kilian.id}/cover`).set(asUser(member))).status).toBe(
+      404,
+    );
 
-    const subs = await request(app).get(`/tours/${tour11._id}/videos/${orseg.id}/subtitles.vtt`).set(asUser(member));
+    const subs = await request(app)
+      .get(`/tours/${tour11._id}/videos/${orseg.id}/subtitles.vtt`)
+      .set(asUser(member));
     expect(subs.text).toContain('00:00:01.000 --> 00:00:02.000');
 
     // Tour 11's video through tour 10's address, a made-up id, no login.
-    expect((await request(app).get(`${base}/${orseg.id}/video`).set(asUser(member))).status).toBe(404);
+    expect((await request(app).get(`${base}/${orseg.id}/video`).set(asUser(member))).status).toBe(
+      404,
+    );
     const fake = Buffer.from('../../secret.mp4').toString('base64url');
     expect((await request(app).get(`${base}/${fake}/video`).set(asUser(member))).status).toBe(404);
     expect((await request(app).get(`${base}/${kilian.id}/video`)).status).toBe(401);
@@ -105,9 +125,17 @@ describe('the 12-hourly "video is ready" e-mail', () => {
 
 describe('parseTourVideoName', () => {
   it('reads the tour number and version name', () => {
-    expect(parseTourVideoName('10 - Sarud (2017) - Directors Cut - S06E01.mp4')).toEqual({ order: 10, label: 'Directors Cut' });
-    expect(parseTourVideoName('03 - Jeli arborétum-Sárvár (2013) S02E01.mp4')).toEqual({ order: 3, label: '' });
-    expect(parseTourVideoName('01 - Szalajkavölgy - Az eltűnt víz nyomában (2012) - S01E01.mp4')).toEqual({
+    expect(parseTourVideoName('10 - Sarud (2017) - Directors Cut - S06E01.mp4')).toEqual({
+      order: 10,
+      label: 'Directors Cut',
+    });
+    expect(parseTourVideoName('03 - Jeli arborétum-Sárvár (2013) S02E01.mp4')).toEqual({
+      order: 3,
+      label: '',
+    });
+    expect(
+      parseTourVideoName('01 - Szalajkavölgy - Az eltűnt víz nyomában (2012) - S01E01.mp4'),
+    ).toEqual({
       order: 1,
       label: '',
     });

@@ -1,178 +1,205 @@
 <div class="board-head">
   <h3><mat-icon>bed</mat-icon>Szobabeosztás</h3>
   @if (isAdmin()) {
-  <a class="setup-link" [routerLink]="['/taborok', tour().slug, 'szerkesztes']" title="A tábor szerkesztő oldalán, a Szállás résznél">
-    <mat-icon>tune</mat-icon>Szállás beállítása
-  </a>
+    <a
+      class="setup-link"
+      [routerLink]="['/taborok', tour().slug, 'szerkesztes']"
+      title="A tábor szerkesztő oldalán, a Szállás résznél"
+    >
+      <mat-icon>tune</mat-icon>Szállás beállítása
+    </a>
   }
 </div>
 
 @if (!loaded()) {
-<p class="board-sub">Betöltés...</p>
+  <p class="board-sub">Betöltés...</p>
 } @else if (houses().length) {
-<!-- Final or not - everyone sees it; only an admin can switch it -->
-<div class="status" [class.status--final]="finalized()">
-  <mat-icon>{{ finalized() ? 'verified' : 'pending' }}</mat-icon>
-  <span>{{ finalized() ? 'Beosztás véglegesítve' : 'A beosztás még nem végleges' }}</span>
-  @if (isAdmin()) {
-  <button type="button" class="status-btn" [disabled]="busy()" (click)="toggleFinalized()">
-    {{ finalized() ? 'Feloldás' : 'Véglegesítés' }}
-  </button>
-  }
-</div>
-
-@if (myPlaces().length) {
-<div class="mine">
-  @for (m of myPlaces(); track m.person.attendeeId) {
-  <div>
-    <strong>{{ m.person.userId === myId() ? 'Te' : label(m.person) }}:</strong>
-    {{ m.where ?? 'még nincs szobája' }}
+  <!-- Final or not - everyone sees it; only an admin can switch it -->
+  <div class="status" [class.status--final]="finalized()">
+    <mat-icon>{{ finalized() ? 'verified' : 'pending' }}</mat-icon>
+    <span>{{ finalized() ? 'Beosztás véglegesítve' : 'A beosztás még nem végleges' }}</span>
+    @if (isAdmin()) {
+      <button type="button" class="status-btn" [disabled]="busy()" (click)="toggleFinalized()">
+        {{ finalized() ? 'Feloldás' : 'Véglegesítés' }}
+      </button>
+    }
   </div>
-  }
-</div>
-}
 
-<p class="board-sub">
-  {{ houses().length }} ház · {{ totalBeds() }} férőhely · {{ people().length }} résztvevő
-  @if (canEdit()) { · <span class="hint">húzd a résztvevőket a szobákba, vagy koppints rájuk</span> }
-</p>
-
-<div cdkDropListGroup>
-  @for (h of houses(); track h._id) {
-  <div class="house">
-    <div class="house-head">
-      <mat-icon>home</mat-icon>
-      <div>
-        <strong>{{ h.name }}</strong>
-        @if (h.description) {
-        <small>{{ h.description }}</small>
-        }
-      </div>
+  @if (myPlaces().length) {
+    <div class="mine">
+      @for (m of myPlaces(); track m.person.attendeeId) {
+        <div>
+          <strong>{{ m.person.userId === myId() ? 'Te' : label(m.person) }}:</strong>
+          {{ m.where ?? 'még nincs szobája' }}
+        </div>
+      }
     </div>
+  }
 
-    <!-- Room cards packed brick-style (masonry, see .rooms) -->
-    <div class="rooms">
-    @for (r of h.rooms; track r._id) {
-    <!-- The chips and free places sit directly in the room card (the drop
+  <p class="board-sub">
+    {{ houses().length }} ház · {{ totalBeds() }} férőhely · {{ people().length }} résztvevő
+    @if (canEdit()) {
+      · <span class="hint">húzd a résztvevőket a szobákba, vagy koppints rájuk</span>
+    }
+  </p>
+
+  <div cdkDropListGroup>
+    @for (h of houses(); track h._id) {
+      <div class="house">
+        <div class="house-head">
+          <mat-icon>home</mat-icon>
+          <div>
+            <strong>{{ h.name }}</strong>
+            @if (h.description) {
+              <small>{{ h.description }}</small>
+            }
+          </div>
+        </div>
+
+        <!-- Room cards packed brick-style (masonry, see .rooms) -->
+        <div class="rooms">
+          @for (r of h.rooms; track r._id) {
+            <!-- The chips and free places sit directly in the room card (the drop
          target) - so while someone is dragged over it, CDK's placeholder
          (the ghost chip) lands among the chips, i.e. in the next free
          place, and one dashed place hides: it "snaps" into a place. -->
-    <div
-      class="room"
-      [class.room--full]="isFull(r)"
-      cdkDropList
-      cdkDropListOrientation="mixed"
-      [cdkDropListData]="r._id ?? null"
-      [cdkDropListEnterPredicate]="roomAccepts"
-      [cdkDropListSortingDisabled]="true"
-      (cdkDropListEntered)="onRoomEntered(r._id)"
-      (cdkDropListExited)="onRoomExited(r._id)"
-      (cdkDropListDropped)="onDrop($event)"
-    >
-      <div class="room-head">
-        <div>
-          <strong>{{ r.name }}</strong>
-          @if (r.description) {
-          <small>{{ r.description }}</small>
+            <div
+              class="room"
+              [class.room--full]="isFull(r)"
+              cdkDropList
+              cdkDropListOrientation="mixed"
+              [cdkDropListData]="r._id ?? null"
+              [cdkDropListEnterPredicate]="roomAccepts"
+              [cdkDropListSortingDisabled]="true"
+              (cdkDropListEntered)="onRoomEntered(r._id)"
+              (cdkDropListExited)="onRoomExited(r._id)"
+              (cdkDropListDropped)="onDrop($event)"
+            >
+              <div class="room-head">
+                <div>
+                  <strong>{{ r.name }}</strong>
+                  @if (r.description) {
+                    <small>{{ r.description }}</small>
+                  }
+                </div>
+                <span class="room-count">{{ occupants(r._id).length }}/{{ r.beds }}</span>
+              </div>
+              @for (p of occupants(r._id); track p.attendeeId) {
+                <span
+                  class="person"
+                  [class.person--me]="p.userId === myId()"
+                  cdkDrag
+                  [cdkDragData]="p"
+                  [cdkDragDisabled]="!canEdit()"
+                  (cdkDragStarted)="onDragStarted(p)"
+                  (cdkDragEnded)="onDragEnded()"
+                  [cdkDragStartDelay]="{ touch: 250, mouse: 0 }"
+                  (click)="onPersonTap(p)"
+                  [title]="p.name"
+                >
+                  <app-avatar
+                    class="person-avatar"
+                    [name]="p.name"
+                    [userId]="p.userId"
+                    [photoVersion]="p.photoUpdatedAt"
+                    [preview]="!canEdit()"
+                  />
+                  <span class="person-name">{{ label(p) }}</span>
+                </span>
+              }
+              @for (f of freePlaces(r); track f) {
+                <span class="place" title="Szabad hely"><mat-icon>bed</mat-icon></span>
+              }
+            </div>
+          } @empty {
+            <p class="empty-note">Ebben a házban még nincs szoba.</p>
           }
         </div>
-        <span class="room-count">{{ occupants(r._id).length }}/{{ r.beds }}</span>
       </div>
-      @for (p of occupants(r._id); track p.attendeeId) {
-      <span
-        class="person"
-        [class.person--me]="p.userId === myId()"
-        cdkDrag
-        [cdkDragData]="p"
-        [cdkDragDisabled]="!canEdit()"
-        (cdkDragStarted)="onDragStarted(p)"
-        (cdkDragEnded)="onDragEnded()"
-        [cdkDragStartDelay]="{ touch: 250, mouse: 0 }"
-        (click)="onPersonTap(p)"
-        [title]="p.name"
-      >
-        <app-avatar class="person-avatar" [name]="p.name" [userId]="p.userId" [photoVersion]="p.photoUpdatedAt" [preview]="!canEdit()" />
-        <span class="person-name">{{ label(p) }}</span>
-      </span>
-      }
-      @for (f of freePlaces(r); track f) {
-      <span class="place" title="Szabad hely"><mat-icon>bed</mat-icon></span>
-      }
-    </div>
-    } @empty {
-    <p class="empty-note">Ebben a házban még nincs szoba.</p>
     }
-    </div>
-  </div>
-  }
 
-  <!-- Everyone registered who has no room yet - a tray fixed to the bottom
+    <!-- Everyone registered who has no room yet - a tray fixed to the bottom
        of the panel (see .unassigned), so they're always at hand while the
        rooms scroll above them. -->
-  <div class="unassigned">
-    <h4>Még nincs szobája ({{ unassigned().length }})</h4>
-    <div
-      class="places unassigned-list"
-      cdkDropList
-      [cdkDropListData]="null"
-      [cdkDropListSortingDisabled]="true"
-      (cdkDropListDropped)="onDrop($event)"
-    >
-      @for (p of unassigned(); track p.attendeeId) {
-      <span
-        class="person"
-        [class.person--me]="p.userId === myId()"
-        cdkDrag
-        [cdkDragData]="p"
-        [cdkDragDisabled]="!canEdit()"
-        (cdkDragStarted)="onDragStarted(p)"
-        (cdkDragEnded)="onDragEnded()"
-        [cdkDragStartDelay]="{ touch: 250, mouse: 0 }"
-        (click)="onPersonTap(p)"
-        [title]="p.name"
+    <div class="unassigned">
+      <h4>Még nincs szobája ({{ unassigned().length }})</h4>
+      <div
+        class="places unassigned-list"
+        cdkDropList
+        [cdkDropListData]="null"
+        [cdkDropListSortingDisabled]="true"
+        (cdkDropListDropped)="onDrop($event)"
       >
-        <app-avatar class="person-avatar" [name]="p.name" [userId]="p.userId" [photoVersion]="p.photoUpdatedAt" [preview]="!canEdit()" />
-        <span class="person-name">{{ label(p) }}</span>
-      </span>
-      } @empty {
-      <p class="empty-note">
-        {{ people().length ? 'Mindenkinek van már szobája.' : 'Még senki nem jelentkezett erre a táborra.' }}
-      </p>
-      }
+        @for (p of unassigned(); track p.attendeeId) {
+          <span
+            class="person"
+            [class.person--me]="p.userId === myId()"
+            cdkDrag
+            [cdkDragData]="p"
+            [cdkDragDisabled]="!canEdit()"
+            (cdkDragStarted)="onDragStarted(p)"
+            (cdkDragEnded)="onDragEnded()"
+            [cdkDragStartDelay]="{ touch: 250, mouse: 0 }"
+            (click)="onPersonTap(p)"
+            [title]="p.name"
+          >
+            <app-avatar
+              class="person-avatar"
+              [name]="p.name"
+              [userId]="p.userId"
+              [photoVersion]="p.photoUpdatedAt"
+              [preview]="!canEdit()"
+            />
+            <span class="person-name">{{ label(p) }}</span>
+          </span>
+        } @empty {
+          <p class="empty-note">
+            {{
+              people().length
+                ? 'Mindenkinek van már szobája.'
+                : 'Még senki nem jelentkezett erre a táborra.'
+            }}
+          </p>
+        }
+      </div>
     </div>
   </div>
-</div>
 } @else {
-<div class="board-empty">
-  <mat-icon>holiday_village</mat-icon>
-  <p>Ehhez a táborhoz még nincs megadva szállás.</p>
-  @if (isAdmin()) {
-  <p class="hint">A házakat és szobákat a tábor szerkesztő oldalán, a <strong>Szállás</strong> résznél adhatod meg.</p>
-  }
-</div>
+  <div class="board-empty">
+    <mat-icon>holiday_village</mat-icon>
+    <p>Ehhez a táborhoz még nincs megadva szállás.</p>
+    @if (isAdmin()) {
+      <p class="hint">
+        A házakat és szobákat a tábor szerkesztő oldalán, a <strong>Szállás</strong> résznél adhatod
+        meg.
+      </p>
+    }
+  </div>
 }
 
 <!-- Admin tapped someone: pick their room -->
 @if (picking(); as p) {
-<div class="pick-backdrop" (click)="picking.set(null)"></div>
-<div class="pick-sheet" role="dialog" aria-modal="true" aria-label="Szoba választása">
-  <h4>Hová kerüljön: {{ label(p) }}?</h4>
-  <div class="pick-list">
-    @for (h of houses(); track h._id) {
-    @for (r of h.rooms; track r._id) {
-    <button
-      type="button"
-      [class.current]="p.roomId === r._id"
-      [disabled]="isFull(r) && p.roomId !== r._id"
-      (click)="pick(r._id ?? null)"
-    >
-      <span>{{ h.name }} / {{ r.name }}</span>
-      <span class="room-count">{{ occupants(r._id).length }}/{{ r.beds }}</span>
-    </button>
-    }
-    }
-    <button type="button" class="pick-none" [class.current]="!p.roomId" (click)="pick(null)">Nincs szoba</button>
+  <div class="pick-backdrop" (click)="picking.set(null)"></div>
+  <div class="pick-sheet" role="dialog" aria-modal="true" aria-label="Szoba választása">
+    <h4>Hová kerüljön: {{ label(p) }}?</h4>
+    <div class="pick-list">
+      @for (h of houses(); track h._id) {
+        @for (r of h.rooms; track r._id) {
+          <button
+            type="button"
+            [class.current]="p.roomId === r._id"
+            [disabled]="isFull(r) && p.roomId !== r._id"
+            (click)="pick(r._id ?? null)"
+          >
+            <span>{{ h.name }} / {{ r.name }}</span>
+            <span class="room-count">{{ occupants(r._id).length }}/{{ r.beds }}</span>
+          </button>
+        }
+      }
+      <button type="button" class="pick-none" [class.current]="!p.roomId" (click)="pick(null)">
+        Nincs szoba
+      </button>
+    </div>
+    <button type="button" class="pick-cancel" (click)="picking.set(null)">Mégse</button>
   </div>
-  <button type="button" class="pick-cancel" (click)="picking.set(null)">Mégse</button>
-</div>
 }

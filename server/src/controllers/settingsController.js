@@ -30,7 +30,9 @@ export const getMembershipFees = async (req, res) => {
     data: {
       fees: [...settings.membershipFees].sort((a, b) => a.fromYear - b.fromYear),
       foundingYear: CLUB_FOUNDING_YEAR,
-      ...(isAdmin ? { paidYears: await paidYears(), history: [...settings.history].reverse() } : {}),
+      ...(isAdmin
+        ? { paidYears: await paidYears(), history: [...settings.history].reverse() }
+        : {}),
     },
   });
 };
@@ -59,7 +61,10 @@ export const updateMembershipFees = async (req, res) => {
     throw new AppError('Egy évhez csak egy sor tartozhat.', 400);
   }
   if (!fees.some((f) => f.fromYear === CLUB_FOUNDING_YEAR)) {
-    throw new AppError(`Kell egy sor ${CLUB_FOUNDING_YEAR}-től, hogy minden évnek legyen díja.`, 400);
+    throw new AppError(
+      `Kell egy sor ${CLUB_FOUNDING_YEAR}-től, hogy minden évnek legyen díja.`,
+      400,
+    );
   }
 
   const settings = await getClubSettings();
@@ -77,7 +82,11 @@ export const updateMembershipFees = async (req, res) => {
   settings.membershipFees = fees.sort((a, b) => a.fromYear - b.fromYear);
   const after = formatFees(settings.membershipFees);
   if (before !== after) {
-    settings.history.push({ at: new Date(), byName: req.user.name, change: `Tagdíj: ${before} → ${after}` });
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Tagdíj: ${before} → ${after}`,
+    });
   }
   await settings.save();
 

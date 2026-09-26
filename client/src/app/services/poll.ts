@@ -98,7 +98,9 @@ export class PollService {
   }
 
   createPoll(payload: PollPayload): Observable<PollResponse> {
-    return this.http.post<PollResponse>(this.apiUrl, payload).pipe(tap(() => this.refreshPending()));
+    return this.http
+      .post<PollResponse>(this.apiUrl, payload)
+      .pipe(tap(() => this.refreshPending()));
   }
 
   // From a tour's chat - by anyone signed up for the tour.
@@ -113,7 +115,9 @@ export class PollService {
   }
 
   closePoll(id: string): Observable<PollResponse> {
-    return this.http.post<PollResponse>(`${this.apiUrl}/${id}/close`, {}).pipe(tap(() => this.refreshPending()));
+    return this.http
+      .post<PollResponse>(`${this.apiUrl}/${id}/close`, {})
+      .pipe(tap(() => this.refreshPending()));
   }
 
   deletePoll(id: string): Observable<void> {

@@ -68,7 +68,9 @@ for (const tour of tours) {
         method: 'cash',
         tour: tour._id,
         createdBy: p.userId,
-        attendees: [{ reservationId: p.reservationId, attendeeId: p.attendeeId, name: p.name, amount }],
+        attendees: [
+          { reservationId: p.reservationId, attendeeId: p.attendeeId, name: p.name, amount },
+        ],
         amount,
         status: 'Succeeded',
       });
@@ -77,7 +79,9 @@ for (const tour of tours) {
   }
 }
 
-console.log(`\n${apply ? 'Created' : 'Would create'} ${created} backfilled cash Payment record(s), ${unknownAmount} with an unknown (0) amount.`);
+console.log(
+  `\n${apply ? 'Created' : 'Would create'} ${created} backfilled cash Payment record(s), ${unknownAmount} with an unknown (0) amount.`,
+);
 if (!apply) {
   console.log('This was a dry run - re-run with --apply to actually write these.');
 }

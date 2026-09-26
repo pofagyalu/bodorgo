@@ -15,10 +15,7 @@ const DB = config.db.uri;
 mongoose.connect(DB).then(() => console.log('Adatbázis kapcsolat sikeres!'));
 
 const tours = JSON.parse(
-  fs.readFileSync(
-    path.join(rootDir, '/dev-data/data/tours-simple.json'),
-    'utf-8',
-  ),
+  fs.readFileSync(path.join(rootDir, '/dev-data/data/tours-simple.json'), 'utf-8'),
 );
 
 const importData = async () => {

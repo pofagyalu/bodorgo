@@ -357,9 +357,10 @@ export const createUser = async (req, res) => {
 // "Bela" (see utils/usernames.js and chat/chatNotifications.js).
 async function isUsernameTaken(username, exceptUserId) {
   const key = usernameKey(username);
-  const others = await User.find({ _id: { $ne: exceptUserId }, username: { $exists: true, $ne: null } }).select(
-    'username',
-  );
+  const others = await User.find({
+    _id: { $ne: exceptUserId },
+    username: { $exists: true, $ne: null },
+  }).select('username');
   return others.some((o) => usernameKey(o.username) === key);
 }
 
@@ -378,7 +379,8 @@ async function isUsernameTaken(username, exceptUserId) {
 // authOidcController.js's callback). Use for a quick fix, not as the
 // long-term way to manage roles.
 export const updateUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, address, memberSince, role, username } = req.body;
+  const { name, email, familyId, birthday, gender, address, memberSince, role, username } =
+    req.body;
 
   const user = await User.findById(req.params.id);
   if (!user) {
@@ -398,7 +400,8 @@ export const updateUser = async (req, res) => {
 
   if (name !== undefined) user.name = name;
   if (email !== undefined) user.email = email ? email.toLowerCase() : undefined;
-  if (familyId !== undefined) user.familyId = familyId ? await resolveFamilyId(familyId) : undefined;
+  if (familyId !== undefined)
+    user.familyId = familyId ? await resolveFamilyId(familyId) : undefined;
   if (birthday !== undefined) user.birthday = birthday || undefined;
   if (gender !== undefined) user.gender = gender || undefined;
   if (address !== undefined) user.address = address;
@@ -514,8 +517,13 @@ export const updateUsernames = async (req, res) => {
   if (!items || items.length === 0 || items.length > 500) {
     throw new AppError('Nincs mentendő felhasználónév.', 400);
   }
-  const rows = items.map((i) => ({ id: String(i?.id ?? ''), username: String(i?.username ?? '').trim() }));
-  const users = await User.find({ _id: { $in: rows.map((r) => r.id).filter((id) => mongoose.isValidObjectId(id)) } });
+  const rows = items.map((i) => ({
+    id: String(i?.id ?? ''),
+    username: String(i?.username ?? '').trim(),
+  }));
+  const users = await User.find({
+    _id: { $in: rows.map((r) => r.id).filter((id) => mongoose.isValidObjectId(id)) },
+  });
   const userById = new Map(users.map((u) => [String(u._id), u]));
 
   const errors = {};
@@ -525,13 +533,17 @@ export const updateUsernames = async (req, res) => {
     else if (r.username && !USERNAME_RULE.test(r.username)) errors[r.id] = USERNAME_RULE_MESSAGE;
     else if (r.username) {
       const key = usernameKey(r.username);
-      if (seen.has(key)) errors[r.id] = errors[seen.get(key)] = 'Ugyanez a név kétszer szerepel a listában.';
+      if (seen.has(key))
+        errors[r.id] = errors[seen.get(key)] = 'Ugyanez a név kétszer szerepel a listában.';
       else seen.set(key, r.id);
     }
   }
   // Clashes with users outside this list (inside it, the list itself decides).
   const listIds = rows.map((r) => r.id).filter((id) => mongoose.isValidObjectId(id));
-  const others = await User.find({ _id: { $nin: listIds }, username: { $exists: true, $ne: null } }).select('username');
+  const others = await User.find({
+    _id: { $nin: listIds },
+    username: { $exists: true, $ne: null },
+  }).select('username');
   const takenByOthers = new Set(others.map((o) => usernameKey(o.username)));
   for (const r of rows) {
     if (!errors[r.id] && r.username && takenByOthers.has(usernameKey(r.username))) {
@@ -539,7 +551,9 @@ export const updateUsernames = async (req, res) => {
     }
   }
   if (Object.keys(errors).length) {
-    return res.status(400).json({ status: 'fail', message: 'Néhány felhasználónév nem menthető.', errors });
+    return res
+      .status(400)
+      .json({ status: 'fail', message: 'Néhány felhasználónév nem menthető.', errors });
   }
 
   // Cleared first, then set - so two people can swap names in one save.

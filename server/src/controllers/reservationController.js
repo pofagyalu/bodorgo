@@ -57,7 +57,8 @@ function registrationConfirmationEmailBody(
   recipientName,
   { registrantIsRecipient, registrantIsAttendee, registrantName, tourTitle, otherNames },
 ) {
-  const noReplyNote = 'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
+  const noReplyNote =
+    'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
   const signature = 'Üdvözlettel,\nA Bódorgó csapat 🏕️';
   const signatureHtml = 'Üdvözlettel,<br>A Bódorgó csapat 🏕️';
   const nextSteps = 'Hamarosan véglegesedik a szállás ára, és jöhet az előlegbefizetés.';
@@ -202,10 +203,16 @@ export const signUpForTour = async (req, res) => {
   // only other people (e.g. an admin signing up a member who called in) -
   // they're the one who'd want to know it went through.
   try {
-    const emails = buildRegistrationEmails({ registrant: req.user, tourTitle: tour.title, attendeeUsers });
+    const emails = buildRegistrationEmails({
+      registrant: req.user,
+      tourTitle: tour.title,
+      attendeeUsers,
+    });
     for (const email of emails) await sendResendEmail(email);
   } catch (err) {
-    logger.error(`Reservation ${reservation._id}: registration confirmation email failed: ${err.message}`);
+    logger.error(
+      `Reservation ${reservation._id}: registration confirmation email failed: ${err.message}`,
+    );
   }
 
   res.status(201).json({ status: 'success', data: { reservation } });
@@ -275,19 +282,21 @@ export function computeAttendeePayments(tour, reservations) {
 
   if (!pricingConfigured) {
     return {
-      attendeePayments: rows.map(({ reservationId, attendeeId, name, nights, familyId, userId, paid, feeExempt }) => ({
-        reservationId,
-        attendeeId,
-        name,
-        nights,
-        familyId,
-        userId,
-        paid,
-        feeExempt,
-        totalPrice: null,
-        advance: null,
-        rest: null,
-      })),
+      attendeePayments: rows.map(
+        ({ reservationId, attendeeId, name, nights, familyId, userId, paid, feeExempt }) => ({
+          reservationId,
+          attendeeId,
+          name,
+          nights,
+          familyId,
+          userId,
+          paid,
+          feeExempt,
+          totalPrice: null,
+          advance: null,
+          rest: null,
+        }),
+      ),
       totals: null,
     };
   }
@@ -319,7 +328,8 @@ export function computeAttendeePayments(tour, reservations) {
   function nightlyRateFor(row) {
     if (!perPerson) return pricePerPersonNight;
     const age = computeAge(row.birthday, tour.startDate);
-    const isChild = age != null && tour.childAgeLimitYears != null && age <= tour.childAgeLimitYears;
+    const isChild =
+      age != null && tour.childAgeLimitYears != null && age <= tour.childAgeLimitYears;
     return isChild && childPricePerNight != null ? childPricePerNight : nightlyRate;
   }
 
@@ -423,7 +433,9 @@ export function computeAttendeePayments(tour, reservations) {
   // discount (perPerson: true average is lower). Null with nobody
   // registered yet - nothing real to average.
   const averagePricePerPersonPerNight =
-    totalPersonNights > 0 ? Math.ceil((perPerson ? summedTotalPrice : totalHouseFee) / totalPersonNights) : null;
+    totalPersonNights > 0
+      ? Math.ceil((perPerson ? summedTotalPrice : totalHouseFee) / totalPersonNights)
+      : null;
 
   return {
     attendeePayments,
@@ -518,8 +530,12 @@ export const updateAttendeeFeeExempt = async (req, res) => {
 
 // The short "Lemondás" confirmation - to the withdrawn person and to
 // whoever signed them up (see withdrawAttendee).
-function withdrawalEmailBody(recipientName, { attendeeName, tourTitle, recipientIsAttendee, cancelledByName }) {
-  const noReplyNote = 'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
+function withdrawalEmailBody(
+  recipientName,
+  { attendeeName, tourTitle, recipientIsAttendee, cancelledByName },
+) {
+  const noReplyNote =
+    'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
   const what = recipientIsAttendee
     ? `a(z) "${tourTitle}" táborra szóló jelentkezésedet visszavontuk`
     : `${attendeeName} jelentkezését a(z) "${tourTitle}" táborra visszavontuk`;
@@ -559,7 +575,9 @@ export const withdrawAttendee = async (req, res) => {
   const tour = await Tour.findById(tourId);
   if (!tour) throw new AppError('No tour found with that ID!', 404);
 
-  const reason = String(req.body?.reason ?? '').trim().slice(0, 300);
+  const reason = String(req.body?.reason ?? '')
+    .trim()
+    .slice(0, 300);
   const { user: userId, name, paid } = attendee;
 
   // Off the reservation - and the reservation itself goes when it was the
@@ -576,7 +594,9 @@ export const withdrawAttendee = async (req, res) => {
   let tourChanged = false;
   for (const event of tour.schedule ?? []) {
     const before = event.participants?.length ?? 0;
-    event.participants = (event.participants ?? []).filter((p) => String(p.user) !== String(userId));
+    event.participants = (event.participants ?? []).filter(
+      (p) => String(p.user) !== String(userId),
+    );
     if (event.participants.length !== before) tourChanged = true;
   }
   const roomsReopened = !!tour.accommodation?.finalized;
@@ -587,12 +607,17 @@ export const withdrawAttendee = async (req, res) => {
   if (tourChanged) {
     await Tour.updateOne(
       { _id: tour._id },
-      { schedule: tour.schedule, 'accommodation.finalized': tour.accommodation?.finalized ?? false },
+      {
+        schedule: tour.schedule,
+        'accommodation.finalized': tour.accommodation?.finalized ?? false,
+      },
     );
   }
   emitToTour(tour._id, 'rooms-changed', { tourId: String(tour._id) });
 
-  const bookedBy = await User.findById(reservation.bookedBy).select('name email lastLoginAt wantsEmailNotifications');
+  const bookedBy = await User.findById(reservation.bookedBy).select(
+    'name email lastLoginAt wantsEmailNotifications',
+  );
   const cancellation = await Cancellation.create({
     tour: tour._id,
     user: userId,
@@ -606,7 +631,9 @@ export const withdrawAttendee = async (req, res) => {
 
   // Same "only people who can get e-mail" rules as the sign-up confirmation.
   try {
-    const attendeeUser = await User.findById(userId).select('name email lastLoginAt wantsEmailNotifications');
+    const attendeeUser = await User.findById(userId).select(
+      'name email lastLoginAt wantsEmailNotifications',
+    );
     const candidates = new Map();
     if (attendeeUser) candidates.set(String(attendeeUser._id), attendeeUser);
     if (bookedBy) candidates.set(String(bookedBy._id), bookedBy);
@@ -624,7 +651,9 @@ export const withdrawAttendee = async (req, res) => {
     logger.error(`Tour ${tour._id}: withdrawal email for ${name} failed: ${err.message}`);
   }
 
-  res.status(200).json({ status: 'success', data: { cancellation, wasPaid: !!paid, roomsReopened } });
+  res
+    .status(200)
+    .json({ status: 'success', data: { cancellation, wasPaid: !!paid, roomsReopened } });
 };
 
 // GET /tours/:tourId/cancellations - admin-only "Lemondások" list, newest first.

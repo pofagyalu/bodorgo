@@ -1,0 +1,14 @@
+# Build output, dependencies, generated files - never formatted.
+node_modules/
+dist/
+coverage/
+.angular/
+**/package-lock.json
+# Data and assets, not code.
+**/public/
+**/assets/
+**/documents/
+**/logs/
+*.min.js
+brand/
+ci/forgejo-runner/data/

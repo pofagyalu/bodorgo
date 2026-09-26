@@ -62,7 +62,9 @@ export class Overview implements OnInit {
   eligibleThisYear = computed(() =>
     this.clubMembers().filter((m) => this.isEligible(m, this.currentYear)),
   );
-  paidThisYear = computed(() => this.eligibleThisYear().filter((m) => this.isPaid(m, this.currentYear)));
+  paidThisYear = computed(() =>
+    this.eligibleThisYear().filter((m) => this.isPaid(m, this.currentYear)),
+  );
 
   // "How much money does the club actually have right now" - all-time
   // income minus all-time expenses, not just this year's - a single

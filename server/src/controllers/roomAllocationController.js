@@ -77,10 +77,14 @@ export const assignRoom = async (req, res) => {
     if (!room) {
       throw new AppError('Nincs ilyen szoba ennél a tábornál.', 400);
     }
-    const reservations = await Reservation.find({ tour: tour._id }).select('attendees._id attendees.room');
+    const reservations = await Reservation.find({ tour: tour._id }).select(
+      'attendees._id attendees.room',
+    );
     const occupants = reservations
       .flatMap((r) => r.attendees)
-      .filter((a) => String(a.room) === String(roomId) && String(a._id) !== String(attendeeId)).length;
+      .filter(
+        (a) => String(a.room) === String(roomId) && String(a._id) !== String(attendeeId),
+      ).length;
     if (occupants >= room.beds) {
       throw new AppError(`A(z) "${room.name}" már tele van.`, 409);
     }
@@ -89,7 +93,10 @@ export const assignRoom = async (req, res) => {
   const update = roomId
     ? { $set: { 'attendees.$.room': roomId } }
     : { $unset: { 'attendees.$.room': 1 } };
-  const result = await Reservation.updateOne({ tour: tour._id, 'attendees._id': attendeeId }, update);
+  const result = await Reservation.updateOne(
+    { tour: tour._id, 'attendees._id': attendeeId },
+    update,
+  );
   if (!result.matchedCount) {
     throw new AppError('Ez a személy nincs regisztrálva erre a táborra.', 404);
   }

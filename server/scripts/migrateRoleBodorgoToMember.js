@@ -18,10 +18,7 @@ import User from '../src/models/userModel.js';
 
 await mongoose.connect(config.db.testUri);
 
-const result = await User.updateMany(
-  { role: 'bodorgo' },
-  { $set: { role: 'member' } },
-);
+const result = await User.updateMany({ role: 'bodorgo' }, { $set: { role: 'member' } });
 
 console.log(`Updated ${result.modifiedCount} user(s) from role "bodorgo" to "member".`);
 

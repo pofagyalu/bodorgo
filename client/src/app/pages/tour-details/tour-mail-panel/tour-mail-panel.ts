@@ -18,6 +18,7 @@ import Quill from 'quill';
 import { firstValueFrom } from 'rxjs';
 import { MailingsResponse, SentMailing, TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { errorMessage } from '../../../shared/errors';
 
 const SAVE_DELAY_MS = 1500;
 
@@ -78,7 +79,8 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
 
     this.quill = new Quill(this.editorEl.nativeElement, {
       theme: 'snow',
-      placeholder: 'Írd ide a levelet… (pl. hideg lesz, hozz meleg ruhát; a maradékot csak készpénzben lehet fizetni)',
+      placeholder:
+        'Írd ide a levelet… (pl. hideg lesz, hozz meleg ruhát; a maradékot csak készpénzben lehet fizetni)',
       modules: {
         toolbar: [
           ['bold', 'italic', 'underline', 'strike'],
@@ -180,10 +182,12 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
     this.sendingTest.set(true);
     try {
       await this.flush();
-      const res = await firstValueFrom(this.tourService.sendMailTest(this.tourId(), this.withPdf()));
+      const res = await firstValueFrom(
+        this.tourService.sendMailTest(this.tourId(), this.withPdf()),
+      );
       this.notifications.addSuccess(`Próbalevél elküldve: ${res.data.sentTo}`);
-    } catch (err: any) {
-      this.notifications.addError(err?.error?.message ?? 'A próbalevél küldése nem sikerült.');
+    } catch (err) {
+      this.notifications.addError(errorMessage(err, 'A próbalevél küldése nem sikerült.'));
     } finally {
       this.sendingTest.set(false);
     }
@@ -214,8 +218,8 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
       this.showPreview.set(false);
       this.confirming.set(false);
       this.openSentId.set(m._id);
-    } catch (err: any) {
-      this.notifications.addError(err?.error?.message ?? 'A levél küldése nem sikerült.');
+    } catch (err) {
+      this.notifications.addError(errorMessage(err, 'A levél küldése nem sikerült.'));
     } finally {
       this.sending.set(false);
     }

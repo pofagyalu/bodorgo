@@ -150,7 +150,8 @@ export class Post {
   // Moving the finger (scrolling) is not a long press.
   onPointerMove(e: PointerEvent) {
     if (!this.pressStart) return;
-    if (Math.hypot(e.clientX - this.pressStart.x, e.clientY - this.pressStart.y) > 10) this.cancelPress();
+    if (Math.hypot(e.clientX - this.pressStart.x, e.clientY - this.pressStart.y) > 10)
+      this.cancelPress();
   }
 
   cancelPress() {
@@ -254,11 +255,15 @@ export class Post {
   });
 
   timeLabel = computed(() =>
-    new Intl.DateTimeFormat('hu-HU', { hour: '2-digit', minute: '2-digit' }).format(this.timestamp()),
+    new Intl.DateTimeFormat('hu-HU', { hour: '2-digit', minute: '2-digit' }).format(
+      this.timestamp(),
+    ),
   );
 
   // The full date and time, as the short one's tooltip.
   fullTimestamp = computed(() =>
-    new Intl.DateTimeFormat('hu-HU', { dateStyle: 'long', timeStyle: 'short' }).format(this.timestamp()),
+    new Intl.DateTimeFormat('hu-HU', { dateStyle: 'long', timeStyle: 'short' }).format(
+      this.timestamp(),
+    ),
   );
 }

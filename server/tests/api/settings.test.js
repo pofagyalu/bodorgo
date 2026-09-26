@@ -17,9 +17,17 @@ describe('Klub → Beállítások: membership fee by year', () => {
     expect(res.body.data.fees).toEqual([{ fromYear: 2019, amount: 1000 }]);
     expect(res.body.data.history).toBeUndefined();
 
-    const admin = await request(app).get(url).set(asUser(await createAdmin()));
+    const admin = await request(app)
+      .get(url)
+      .set(asUser(await createAdmin()));
     expect(admin.body.data).toMatchObject({ paidYears: [], history: [] });
-    expect((await request(app).get(url).set(asUser(await createGuest()))).status).toBe(403);
+    expect(
+      (
+        await request(app)
+          .get(url)
+          .set(asUser(await createGuest()))
+      ).status,
+    ).toBe(403);
   });
 
   it('an admin raises it from a year on; older years keep their fee, the change is logged', async () => {
@@ -44,7 +52,12 @@ describe('Klub → Beállítások: membership fee by year', () => {
     const pay = await request(app)
       .post('/payments/membership/start')
       .set(asUser(member))
-      .send({ items: [{ userId: member._id, year: thisYear - 1 }, { userId: member._id, year: thisYear }] });
+      .send({
+        items: [
+          { userId: member._id, year: thisYear - 1 },
+          { userId: member._id, year: thisYear },
+        ],
+      });
     const payment = await Payment.findById(pay.body.data.paymentId);
     expect(payment.members.map((m) => [m.membershipYear, m.amount])).toEqual([
       [thisYear - 1, 1000],
@@ -68,7 +81,12 @@ describe('Klub → Beállítások: membership fee by year', () => {
     const raiseFrom2023 = await request(app)
       .put(url)
       .set(asUser(admin))
-      .send({ fees: [{ fromYear: 2019, amount: 1000 }, { fromYear: 2023, amount: 2000 }] });
+      .send({
+        fees: [
+          { fromYear: 2019, amount: 1000 },
+          { fromYear: 2023, amount: 2000 },
+        ],
+      });
     expect(raiseFrom2023.status).toBe(400);
     expect(raiseFrom2023.body.message).toContain('2024');
 
@@ -76,7 +94,12 @@ describe('Klub → Beállítások: membership fee by year', () => {
     const raiseFrom2025 = await request(app)
       .put(url)
       .set(asUser(admin))
-      .send({ fees: [{ fromYear: 2019, amount: 1000 }, { fromYear: 2025, amount: 2000 }] });
+      .send({
+        fees: [
+          { fromYear: 2019, amount: 1000 },
+          { fromYear: 2025, amount: 2000 },
+        ],
+      });
     expect(raiseFrom2025.status).toBe(200);
   });
 
@@ -89,7 +112,12 @@ describe('Klub → Beállítások: membership fee by year', () => {
     expect((await put([{ fromYear: 2018, amount: 1000 }])).status).toBe(400);
     expect((await put([{ fromYear: 2021, amount: 1000 }])).status).toBe(400); // 2019-2020 uncovered
     expect(
-      (await put([{ fromYear: 2019, amount: 1000 }, { fromYear: 2019, amount: 2000 }])).status,
+      (
+        await put([
+          { fromYear: 2019, amount: 1000 },
+          { fromYear: 2019, amount: 2000 },
+        ])
+      ).status,
     ).toBe(400);
     expect((await put([{ fromYear: 2019, amount: 1000 }], await createMember())).status).toBe(403);
   });

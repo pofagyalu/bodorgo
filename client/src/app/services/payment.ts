@@ -6,7 +6,8 @@ import { environment } from '../../environments/environment';
 // Mirrors paymentModel.js's own status enum - derived server-side from
 // whichever gateway's own status (Stripe's Checkout Session, or Barion's
 // GetPaymentState).
-export type PaymentStatus = 'Prepared' | 'Started' | 'Succeeded' | 'Failed' | 'Canceled' | 'Expired';
+export type PaymentStatus =
+  'Prepared' | 'Started' | 'Succeeded' | 'Failed' | 'Canceled' | 'Expired';
 
 export interface StartPaymentResponse {
   status: string;
@@ -64,7 +65,9 @@ export class PaymentService {
   // one year each for several family members. The server re-validates
   // every pair itself (self + same family, real club members only, really
   // still unpaid) rather than trusting amounts from here.
-  startMembershipPayment(items: { userId: string; year: number }[]): Observable<StartPaymentResponse> {
+  startMembershipPayment(
+    items: { userId: string; year: number }[],
+  ): Observable<StartPaymentResponse> {
     return this.http.post<StartPaymentResponse>(`${this.apiUrl}/membership/start`, {
       items,
       method: 'barion',

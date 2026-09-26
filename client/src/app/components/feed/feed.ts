@@ -60,7 +60,9 @@ export class Feed implements OnInit, OnDestroy {
       .map((p) => ({ username: p.username!, name: p.name })),
   );
   // Compared without case or accents ("@bela" is Béla) - see usernameKey.
-  knownUsernames = computed(() => new Set(this.people().flatMap((p) => (p.username ? [usernameKey(p.username)] : []))));
+  knownUsernames = computed(
+    () => new Set(this.people().flatMap((p) => (p.username ? [usernameKey(p.username)] : []))),
+  );
   myUsername = computed(() => {
     const mine = this.people().find((p) => p.userId === this.currentUserId())?.username;
     return mine ? usernameKey(mine) : null;
@@ -119,7 +121,13 @@ export class Feed implements OnInit, OnDestroy {
       next: (res) => {
         // One entry per person, even if they're on two reservations.
         const byUser = new Map(res.data.people.map((p) => [p.userId ?? p.attendeeId, p]));
-        this.people.set([...byUser.values()].map((p) => ({ userId: p.userId, name: p.name, username: p.username })));
+        this.people.set(
+          [...byUser.values()].map((p) => ({
+            userId: p.userId,
+            name: p.name,
+            username: p.username,
+          })),
+        );
       },
       error: () => {}, // no suggestions/highlighting - the chat itself still works
     });

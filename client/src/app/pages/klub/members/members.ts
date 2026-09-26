@@ -174,7 +174,6 @@ export class Members implements OnInit {
   // payMembership below). Mirrors tour.ts's isInMyPaymentGroup spirit for
   // dues instead of a tour advance.
   myFamilyClubMembers = computed(() => {
-    const mine = this.me();
     const myFamilyId = this.auth.user()?.familyId;
     return this.clubMembers().filter(
       (u) => u._id === this.myId() || (!!myFamilyId && u.familyId === myFamilyId),
@@ -235,7 +234,9 @@ export class Members implements OnInit {
   // What Barion will actually charge, once its own ~1.6% fee is added on
   // top (see BARION_FEE_RATE above) - rounded the same way the server
   // rounds it, so this matches exactly rather than drifting a forint off.
-  selectedPayGrandTotal = computed(() => Math.round(this.selectedPayTotal() * (1 + BARION_FEE_RATE)));
+  selectedPayGrandTotal = computed(() =>
+    Math.round(this.selectedPayTotal() * (1 + BARION_FEE_RATE)),
+  );
 
   // Just the fee portion, derived from the two totals above rather than
   // computed separately, so it always reconciles exactly with them
@@ -294,7 +295,10 @@ export class Members implements OnInit {
         }
       },
       error: () => {
-        this.paymentNotice.set({ kind: 'error', text: 'A fizetés állapotát nem sikerült lekérdezni.' });
+        this.paymentNotice.set({
+          kind: 'error',
+          text: 'A fizetés állapotát nem sikerült lekérdezni.',
+        });
       },
     });
   }
@@ -465,13 +469,17 @@ export class Members implements OnInit {
 
   private setRetired(u: MemberUser, retired: boolean) {
     this.archivingId.set(u._id);
-    const request = retired ? this.userService.archiveUser(u._id) : this.userService.restoreUser(u._id);
+    const request = retired
+      ? this.userService.archiveUser(u._id)
+      : this.userService.restoreUser(u._id);
     request.subscribe({
       next: () => {
         this.users.update((list) => list.map((x) => (x._id === u._id ? { ...x, retired } : x)));
         this.archivingId.set(null);
         this.userPendingDelete.set(null);
-        this.notifications.addSuccess(retired ? `${u.name} felfüggesztve` : `${u.name} visszaállítva`);
+        this.notifications.addSuccess(
+          retired ? `${u.name} felfüggesztve` : `${u.name} visszaállítva`,
+        );
       },
       error: (err) => {
         this.notifications.addError(

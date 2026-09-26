@@ -47,7 +47,14 @@ process.env.BARION_TOUR_WITHDRAW_IBAN ??= 'HU00 0000 0000 0000';
 vi.mock('../src/logger.js', () => {
   const noop = () => {};
   return {
-    default: { info: noop, warn: noop, error: noop, debug: noop, http: noop, stream: { write: noop } },
+    default: {
+      info: noop,
+      warn: noop,
+      error: noop,
+      debug: noop,
+      http: noop,
+      stream: { write: noop },
+    },
   };
 });
 
@@ -75,13 +82,18 @@ vi.mock('web-push', () => ({
 }));
 
 // Email sending.
-vi.mock('../src/utils/resendEmail.js', () => ({ default: vi.fn(async () => ({ id: 'test-email' })) }));
+vi.mock('../src/utils/resendEmail.js', () => ({
+  default: vi.fn(async () => ({ id: 'test-email' })),
+}));
 vi.mock('../src/utils/email.js', () => ({ default: vi.fn(async () => {}) }));
 
 // Payment gateways - individual tests override these with vi.mocked(...).
 vi.mock('../src/utils/stripe.js', async (importOriginal) => ({
   ...(await importOriginal()),
-  createCheckoutSession: vi.fn(async () => ({ id: 'cs_test', url: 'https://stripe.test/checkout' })),
+  createCheckoutSession: vi.fn(async () => ({
+    id: 'cs_test',
+    url: 'https://stripe.test/checkout',
+  })),
   retrieveCheckoutSession: vi.fn(async () => ({ id: 'cs_test', payment_status: 'unpaid' })),
 }));
 vi.mock('../src/utils/barion.js', async (importOriginal) => ({

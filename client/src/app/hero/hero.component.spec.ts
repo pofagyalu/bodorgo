@@ -16,9 +16,8 @@ describe('HeroComponent', () => {
       // testing HttpClient so that request is captured rather than
       // actually attempted against a real (unreachable, in a test run) server.
       providers: [provideHttpClient(), provideHttpClientTesting()],
-    })
-    .compileComponents();
-    
+    }).compileComponents();
+
     fixture = TestBed.createComponent(HeroComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

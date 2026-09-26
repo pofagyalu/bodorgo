@@ -20,9 +20,8 @@ describe('LoginComponent', () => {
           useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
         },
       ],
-    })
-    .compileComponents();
-    
+    }).compileComponents();
+
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

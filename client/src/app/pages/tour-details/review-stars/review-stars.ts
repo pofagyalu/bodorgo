@@ -1,4 +1,15 @@
-import { Component, ElementRef, EventEmitter, HostListener, Input, Output, OnInit, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  HostListener,
+  Input,
+  Output,
+  OnInit,
+  inject,
+  signal,
+  computed,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
@@ -107,10 +118,15 @@ export class ReviewStars implements OnInit {
         this.submitting.set(false);
         this.editing.set(false);
         this.notifications.addSuccess('Értékelés mentve');
-        this.reviewSubmitted.emit({ average: res.data.ratingsAverage, quantity: res.data.ratingsQuantity });
+        this.reviewSubmitted.emit({
+          average: res.data.ratingsAverage,
+          quantity: res.data.ratingsQuantity,
+        });
       },
       error: (err) => {
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt az értékelés mentése közben.');
+        this.notifications.addError(
+          err?.error?.message ?? 'Hiba történt az értékelés mentése közben.',
+        );
         this.submitting.set(false);
       },
     });

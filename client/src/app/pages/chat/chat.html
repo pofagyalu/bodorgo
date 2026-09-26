@@ -6,28 +6,33 @@
     </div>
 
     @if (loaded()) {
-    <app-tour-countdown class="chat-countdown" [tours]="visibleTours()" (pick)="selectTour($event)" />    }
+      <app-tour-countdown
+        class="chat-countdown"
+        [tours]="visibleTours()"
+        (pick)="selectTour($event)"
+      />
+    }
 
     <nav class="chat-nav" aria-label="Táborok">
       @for (t of visibleTours(); track t._id) {
-      <button
-        type="button"
-        class="nav-item"
-        [class.active]="t._id === selectedTourId()"
-        [title]="t.order + '. ' + t.title"
-        (click)="selectTour(t._id)"
-      >
-        <span class="tour-thumb">
-          @if (coverUrl(t); as url) {
-          <img [src]="url" alt="" />
-          }
-          <span class="tour-order">{{ t.order }}</span>
-        </span>
-        <span class="tour-text">
-          <strong>{{ t.title }}</strong>
-          <small>{{ formatDate(t) }}</small>
-        </span>
-      </button>
+        <button
+          type="button"
+          class="nav-item"
+          [class.active]="t._id === selectedTourId()"
+          [title]="t.order + '. ' + t.title"
+          (click)="selectTour(t._id)"
+        >
+          <span class="tour-thumb">
+            @if (coverUrl(t); as url) {
+              <img [src]="url" alt="" />
+            }
+            <span class="tour-order">{{ t.order }}</span>
+          </span>
+          <span class="tour-text">
+            <strong>{{ t.title }}</strong>
+            <small>{{ formatDate(t) }}</small>
+          </span>
+        </button>
       }
     </nav>
   </aside>
@@ -36,77 +41,94 @@
     <!-- Phone only: the tour list as a scrolling row, like Klub's mobile nav -->
     <nav class="chat-mobile-nav" aria-label="Táborok mobilon">
       @for (t of visibleTours(); track t._id) {
-      <button type="button" [class.active]="t._id === selectedTourId()" (click)="selectTour(t._id)">
-        {{ t.order }}. {{ t.title }}
-      </button>
+        <button
+          type="button"
+          [class.active]="t._id === selectedTourId()"
+          (click)="selectTour(t._id)"
+        >
+          {{ t.order }}. {{ t.title }}
+        </button>
       }
     </nav>
 
     @if (selectedTour(); as t) {
-    <header class="chat-header">
-      <div class="pane-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          [class.active]="activePane() === 'chat'"
-          [attr.aria-selected]="activePane() === 'chat'"
-          (click)="activePane.set('chat')"
-        >
-          <mat-icon>chat</mat-icon>Chat
-        </button>
-        <button
-          type="button"
-          role="tab"
-          [class.active]="activePane() === 'rooms'"
-          [attr.aria-selected]="activePane() === 'rooms'"
-          (click)="activePane.set('rooms')"
-        >
-          <mat-icon>bed</mat-icon>Szobabeosztás
-        </button>
-      </div>
-    </header>
+      <header class="chat-header">
+        <div class="pane-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            [class.active]="activePane() === 'chat'"
+            [attr.aria-selected]="activePane() === 'chat'"
+            (click)="activePane.set('chat')"
+          >
+            <mat-icon>chat</mat-icon>Chat
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.active]="activePane() === 'rooms'"
+            [attr.aria-selected]="activePane() === 'rooms'"
+            (click)="activePane.set('rooms')"
+          >
+            <mat-icon>bed</mat-icon>Szobabeosztás
+          </button>
+        </div>
+      </header>
 
-    <div class="chat-panes" #panes [style.--rooms-width.px]="roomsWidth()" [class.resizing]="resizing()">
-      <section class="pane pane-chat" [class.inactive]="activePane() !== 'chat'" aria-label="Chat">
-        <!-- This tour's chat notifications on/off (see PushService). -->
-        <button
-          type="button"
-          class="mute-btn"
-          [class.muted]="chatMuted()"
-          [title]="chatMuted() ? 'Ennek a chatnek az értesítései némítva - kattints a bekapcsoláshoz' : 'Értesítések ebből a chatből - kattints a némításhoz'"
-          (click)="toggleChatMuted(t._id)"
-        >
-          <mat-icon>{{ chatMuted() ? 'notifications_off' : 'notifications' }}</mat-icon>
-        </button>
-        @for (id of feedKey(); track id) {
-        <app-feed [tourId]="id" />
-        }
-      </section>
-
-      <!-- Side-by-side only: drag to resize the Szobabeosztás panel, double-click to reset -->
       <div
-        class="pane-resizer"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Szobabeosztás szélessége"
-        title="Húzd a szélesség állításához (dupla kattintás: alaphelyzet)"
-        (pointerdown)="startResize($event)"
-        (dblclick)="resetRoomsWidth()"
-      ></div>
-
-      <section
-        class="pane pane-rooms"
-        cdkScrollable
-        [class.inactive]="activePane() !== 'rooms'"
-        aria-label="Szobabeosztás"
+        class="chat-panes"
+        #panes
+        [style.--rooms-width.px]="roomsWidth()"
+        [class.resizing]="resizing()"
       >
-        <app-room-board [tour]="t" />
-      </section>
-    </div>
+        <section
+          class="pane pane-chat"
+          [class.inactive]="activePane() !== 'chat'"
+          aria-label="Chat"
+        >
+          <!-- This tour's chat notifications on/off (see PushService). -->
+          <button
+            type="button"
+            class="mute-btn"
+            [class.muted]="chatMuted()"
+            [title]="
+              chatMuted()
+                ? 'Ennek a chatnek az értesítései némítva - kattints a bekapcsoláshoz'
+                : 'Értesítések ebből a chatből - kattints a némításhoz'
+            "
+            (click)="toggleChatMuted(t._id)"
+          >
+            <mat-icon>{{ chatMuted() ? 'notifications_off' : 'notifications' }}</mat-icon>
+          </button>
+          @for (id of feedKey(); track id) {
+            <app-feed [tourId]="id" />
+          }
+        </section>
+
+        <!-- Side-by-side only: drag to resize the Szobabeosztás panel, double-click to reset -->
+        <div
+          class="pane-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Szobabeosztás szélessége"
+          title="Húzd a szélesség állításához (dupla kattintás: alaphelyzet)"
+          (pointerdown)="startResize($event)"
+          (dblclick)="resetRoomsWidth()"
+        ></div>
+
+        <section
+          class="pane pane-rooms"
+          cdkScrollable
+          [class.inactive]="activePane() !== 'rooms'"
+          aria-label="Szobabeosztás"
+        >
+          <app-room-board [tour]="t" />
+        </section>
+      </div>
     } @else if (loaded()) {
-    <p class="chat-empty">Nincs elérhető tábor a csevegéshez.</p>
+      <p class="chat-empty">Nincs elérhető tábor a csevegéshez.</p>
     } @else {
-    <p class="chat-empty">Betöltés...</p>
+      <p class="chat-empty">Betöltés...</p>
     }
   </main>
 </div>

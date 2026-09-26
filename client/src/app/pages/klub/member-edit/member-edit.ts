@@ -131,7 +131,10 @@ export class MemberEdit implements OnInit {
     }).format(new Date(dateStr));
   }
 
-  private handleSaveResult(res: { data: { user: AdminUser; addressResolved?: boolean | null } }, successMessage: string) {
+  private handleSaveResult(
+    res: { data: { user: AdminUser; addressResolved?: boolean | null } },
+    successMessage: string,
+  ) {
     this.saving.set(false);
     if (res.data.addressResolved === false) {
       this.notifications.addError(

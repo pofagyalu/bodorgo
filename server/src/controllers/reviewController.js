@@ -30,7 +30,9 @@ export function tourHasEnded(tour, now = new Date()) {
 export const getMyReview = async (req, res) => {
   const attendee = await isAttendee(req.user._id, req.params.tourId);
   if (!attendee) {
-    return res.status(200).json({ status: 'success', data: { isAttendee: false, hasEnded: false, rating: null } });
+    return res
+      .status(200)
+      .json({ status: 'success', data: { isAttendee: false, hasEnded: false, rating: null } });
   }
 
   const tour = await Tour.findById(req.params.tourId).select('+reviews');

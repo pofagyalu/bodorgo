@@ -124,13 +124,15 @@ export const routes: Routes = [
         path: 'felhasznalok/uj',
         title: 'Új felhasználó',
         canActivate: [adminGuard],
-        loadComponent: () => import('./pages/klub/member-edit/member-edit').then((m) => m.MemberEdit),
+        loadComponent: () =>
+          import('./pages/klub/member-edit/member-edit').then((m) => m.MemberEdit),
       },
       {
         path: 'felhasznalok/:id',
         title: 'Tag szerkesztése',
         canActivate: [adminGuard],
-        loadComponent: () => import('./pages/klub/member-edit/member-edit').then((m) => m.MemberEdit),
+        loadComponent: () =>
+          import('./pages/klub/member-edit/member-edit').then((m) => m.MemberEdit),
       },
       {
         path: 'dokumentumok',
@@ -153,7 +155,6 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    loadComponent: () =>
-      import('./not-found/not-found.component').then((m) => m.NotFoundComponent),
+    loadComponent: () => import('./not-found/not-found.component').then((m) => m.NotFoundComponent),
   },
 ];

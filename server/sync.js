@@ -77,4 +77,6 @@ for (const pkg of PDFKIT_DEPENDENCY_CLOSURE) {
     force: true,
   });
 }
-console.log(`✓ Synced pdfkit + its ${PDFKIT_DEPENDENCY_CLOSURE.length - 1} dependencies → S:/bodorgo/node_modules`);
+console.log(
+  `✓ Synced pdfkit + its ${PDFKIT_DEPENDENCY_CLOSURE.length - 1} dependencies → S:/bodorgo/node_modules`,
+);

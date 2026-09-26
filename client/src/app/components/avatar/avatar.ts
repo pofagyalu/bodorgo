@@ -1,4 +1,12 @@
-import { Component, ElementRef, HostListener, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { UserService } from '../../services/user';
 
 const PREVIEW_SIZE = 160;

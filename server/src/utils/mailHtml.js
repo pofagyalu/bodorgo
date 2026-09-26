@@ -12,7 +12,11 @@ export function cleanMailHtml(html) {
     allowedTags: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'span', 'ul', 'ol', 'li', 'a'],
     allowedAttributes: { span: ['style'], p: ['style'], a: ['href', 'target', 'rel'] },
     allowedStyles: {
-      '*': { color: COLOR, 'background-color': COLOR, 'text-align': [/^(left|right|center|justify)$/] },
+      '*': {
+        color: COLOR,
+        'background-color': COLOR,
+        'text-align': [/^(left|right|center|justify)$/],
+      },
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     transformTags: {
@@ -23,7 +27,7 @@ export function cleanMailHtml(html) {
   // e-mail clients from wrapping lines - back to plain spaces.
   // (sanitize-html may hand them back as the character itself, not the
   // entity - both are replaced.)
-  return cleaned.replace(/&nbsp;| /g, ' ').trim();
+  return cleaned.replace(/&nbsp;|\u00a0/g, ' ').trim();
 }
 
 // Nothing but empty paragraphs/whitespace left?

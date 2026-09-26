@@ -114,7 +114,11 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
   if (!isMembership) {
     doc.font('Body').text(`Tábor: `, { continued: true }).font('Heading').text(tourTitle);
     if (tourStartDate) {
-      doc.font('Body').text(`Tábor időpontja: `, { continued: true }).font('Heading').text(formatHuDate(new Date(tourStartDate)));
+      doc
+        .font('Body')
+        .text(`Tábor időpontja: `, { continued: true })
+        .font('Heading')
+        .text(formatHuDate(new Date(tourStartDate)));
     }
   }
   doc.moveDown(1);
@@ -123,7 +127,10 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
   const colNameX = 50;
   const colAmountX = 50 + contentWidth - 120;
   doc.font('Heading').fontSize(11).fillColor(DARK_GREEN);
-  doc.text(isMembership ? 'Tag' : 'Résztvevő', colNameX, doc.y, { width: colAmountX - colNameX, continued: false });
+  doc.text(isMembership ? 'Tag' : 'Résztvevő', colNameX, doc.y, {
+    width: colAmountX - colNameX,
+    continued: false,
+  });
   doc.text('Összeg', colAmountX, doc.y - doc.currentLineHeight(), { width: 120, align: 'right' });
   doc.moveDown(0.3);
   doc

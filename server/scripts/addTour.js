@@ -56,7 +56,9 @@ if (!filePath) {
 const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
 if (data.order === undefined) {
-  console.error('tour.json must include an explicit "order" - see the usage comment at the top of this script.');
+  console.error(
+    'tour.json must include an explicit "order" - see the usage comment at the top of this script.',
+  );
   process.exit(1);
 }
 
@@ -64,7 +66,9 @@ await mongoose.connect(config.db.testUri);
 
 const existing = await Tour.findOne({ order: data.order }).select('title');
 if (existing) {
-  console.error(`Order ${data.order} is already taken by "${existing.title}" - pick a different one.`);
+  console.error(
+    `Order ${data.order} is already taken by "${existing.title}" - pick a different one.`,
+  );
   await mongoose.disconnect();
   process.exit(1);
 }

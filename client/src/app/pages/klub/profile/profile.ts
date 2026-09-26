@@ -1,11 +1,18 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { UserService, MyProfile, UserAddress, AttendedTour, FamilyMember } from '../../../services/user';
+import {
+  UserService,
+  MyProfile,
+  UserAddress,
+  AttendedTour,
+  FamilyMember,
+} from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
 import { PushService } from '../../../services/push';
+import { errorMessage } from '../../../shared/errors';
 import { Avatar } from '../../../components/avatar/avatar';
 import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 
@@ -44,7 +51,11 @@ export class KlubProfile implements OnInit {
   // past ones become small chips grouped by year, newest first.
   private isOver = (row: AttendanceRow) => {
     const start = new Date(row.tour.startDate);
-    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + (row.tour.duration ?? 1));
+    const end = new Date(
+      start.getFullYear(),
+      start.getMonth(),
+      start.getDate() + (row.tour.duration ?? 1),
+    );
     return end.getTime() <= Date.now();
   };
   upcomingTours = computed(() =>
@@ -118,8 +129,8 @@ export class KlubProfile implements OnInit {
         await this.push.enable();
         this.notifications.addSuccess('Értesítések bekapcsolva ezen az eszközön.');
       }
-    } catch (err: any) {
-      this.notifications.addError(err?.error?.message ?? err?.message ?? 'Nem sikerült beállítani az értesítéseket.');
+    } catch (err) {
+      this.notifications.addError(errorMessage(err, 'Nem sikerült beállítani az értesítéseket.'));
       await this.push.refresh().catch(() => {});
     } finally {
       this.pushBusy.set(false);
@@ -131,7 +142,9 @@ export class KlubProfile implements OnInit {
     this.push.sendTest().subscribe({
       next: () => {
         this.pushBusy.set(false);
-        this.notifications.addSuccess('Próbaértesítés elküldve - pár másodpercen belül meg kell jelennie.');
+        this.notifications.addSuccess(
+          'Próbaértesítés elküldve - pár másodpercen belül meg kell jelennie.',
+        );
       },
       error: (err) => {
         this.pushBusy.set(false);

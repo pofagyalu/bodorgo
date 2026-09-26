@@ -18,7 +18,10 @@ export default function registerChatHandlers(io) {
     socket.data.userId = sessionUser?.id ?? null;
     socket.data.visibleTour = null;
     const markRead = (tourId) =>
-      sessionUser && markChatRead(sessionUser.id, tourId).catch((err) => logger.error(`chat: mark read failed: ${err}`));
+      sessionUser &&
+      markChatRead(sessionUser.id, tourId).catch((err) =>
+        logger.error(`chat: mark read failed: ${err}`),
+      );
 
     socket.on('join-tour-chat', async ({ tourId }) => {
       if (!sessionUser) {

@@ -230,7 +230,6 @@ export class TourEdit implements OnDestroy {
     this.coverPreviewUrl.set(URL.createObjectURL(cover));
   }
 
-
   save() {
     this.error.set(null);
     this.saving.set(true);
@@ -264,27 +263,34 @@ export class TourEdit implements OnDestroy {
       // entered earlier survives toggling the currency back and forth
       // instead of having to be retyped, same reasoning as childPricePerNight
       // surviving a pricingMode toggle below.
-      eurHufExchangeRate: f.accommodationCurrency === 'EUR' ? f.eurHufExchangeRate ?? undefined : undefined,
+      eurHufExchangeRate:
+        f.accommodationCurrency === 'EUR' ? (f.eurHufExchangeRate ?? undefined) : undefined,
       // Only meaningful (and only shown/editable) in perPerson mode -
       // simply omitted while in perHouse mode rather than cleared, so a
       // value entered earlier survives toggling the mode back and forth
       // instead of having to be retyped.
-      childPricePerNight: f.pricingMode === 'perPerson' ? f.childPricePerNight ?? undefined : undefined,
-      childAgeLimitYears: f.pricingMode === 'perPerson' ? f.childAgeLimitYears ?? undefined : undefined,
+      childPricePerNight:
+        f.pricingMode === 'perPerson' ? (f.childPricePerNight ?? undefined) : undefined,
+      childAgeLimitYears:
+        f.pricingMode === 'perPerson' ? (f.childAgeLimitYears ?? undefined) : undefined,
       advancePaymentPercentage: f.advancePaymentPercentage ?? undefined,
       // Never sent for a pre-2019 tour, even if the disabled field
       // somehow still holds a stale nonzero value - the server ignores it
       // anyway (see reservationController.js's CLUB_FOUNDING_DATE), but
       // there's no reason to persist a misleading number either.
-      clubSubsidyAmount: this.subsidyAllowed ? f.clubSubsidyAmount ?? undefined : 0,
+      clubSubsidyAmount: this.subsidyAllowed ? (f.clubSubsidyAmount ?? undefined) : 0,
     };
 
     const wasEditMode = this.isEditMode;
-    const request = wasEditMode ? this.tourService.updateTour(this.tourId!, payload) : this.tourService.createTour(payload);
+    const request = wasEditMode
+      ? this.tourService.updateTour(this.tourId!, payload)
+      : this.tourService.createTour(payload);
 
     request.subscribe({
       next: (res) => {
-        this.notifications.addSuccess(wasEditMode ? 'Tábor mentése sikeres' : 'Tábor létrehozása sikeres');
+        this.notifications.addSuccess(
+          wasEditMode ? 'Tábor mentése sikeres' : 'Tábor létrehozása sikeres',
+        );
         // An edited tour goes to its own page; a brand new one always
         // returns to the list, whether or not a cover was picked (a
         // coverless creation used to stay on this form, which read as "did

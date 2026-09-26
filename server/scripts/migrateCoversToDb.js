@@ -37,7 +37,10 @@ await mongoose.connect(process.env.DB_URI);
 // which file belongs to which tour.
 const tours = mongoose.connection.db.collection('tours');
 const list = await tours
-  .find({ imageCover: { $exists: true, $ne: '' } }, { projection: { order: 1, title: 1, imageCover: 1 } })
+  .find(
+    { imageCover: { $exists: true, $ne: '' } },
+    { projection: { order: 1, title: 1, imageCover: 1 } },
+  )
   .sort({ order: 1 })
   .toArray();
 
@@ -59,7 +62,9 @@ for (const tour of list) {
   await TourCover.findOneAndUpdate({ tour: tour._id }, { data, contentType }, { upsert: true });
   await tours.updateOne({ _id: tour._id }, { $set: { coverUpdatedAt: fs.statSync(file).mtime } });
   imported += 1;
-  console.log(`✓ ${tour.order}. ${tour.title}: ${tour.imageCover} (${Math.round(data.length / 1024)} KB)`);
+  console.log(
+    `✓ ${tour.order}. ${tour.title}: ${tour.imageCover} (${Math.round(data.length / 1024)} KB)`,
+  );
 }
 
 console.log(`\n${imported}/${list.length} covers imported.`);

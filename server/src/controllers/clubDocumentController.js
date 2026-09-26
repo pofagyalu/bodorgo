@@ -25,7 +25,8 @@ const storage = multer.diskStorage({
   // for the allowed types.
   filename: (req, file, cb) => {
     const unique = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-    const ext = file.mimetype === 'image/jpeg' ? 'jpg' : file.mimetype === 'image/png' ? 'png' : 'pdf';
+    const ext =
+      file.mimetype === 'image/jpeg' ? 'jpg' : file.mimetype === 'image/png' ? 'png' : 'pdf';
     cb(null, `klub-dok-${unique}.${ext}`);
   },
 });

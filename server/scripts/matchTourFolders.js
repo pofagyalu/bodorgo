@@ -57,7 +57,9 @@ export function findFolderForOrder(order) {
     });
 
   if (matches.length > 1) {
-    throw new Error(`Multiple folders match order ${order}: ${matches.join(', ')} - resolve by hand.`);
+    throw new Error(
+      `Multiple folders match order ${order}: ${matches.join(', ')} - resolve by hand.`,
+    );
   }
   return matches[0] ?? null;
 }
@@ -102,12 +104,16 @@ async function main() {
     const candidates = await Tour.find({ order }).select('title +sourceFolder');
 
     if (candidates.length === 0) {
-      console.log(`-  "${folder}" -> order ${order}: no tour with this order yet (not an error - upload it later and re-run).`);
+      console.log(
+        `-  "${folder}" -> order ${order}: no tour with this order yet (not an error - upload it later and re-run).`,
+      );
       noTour++;
       continue;
     }
     if (candidates.length > 1) {
-      console.log(`!  "${folder}" -> order ${order}: ${candidates.length} tours share this order - resolve by hand.`);
+      console.log(
+        `!  "${folder}" -> order ${order}: ${candidates.length} tours share this order - resolve by hand.`,
+      );
       conflicts++;
       continue;
     }

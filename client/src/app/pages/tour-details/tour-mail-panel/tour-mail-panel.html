@@ -1,11 +1,22 @@
 <div class="mail-backdrop" (click)="close()">
-  <div class="mail-panel" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Levél a résztvevőknek">
+  <div
+    class="mail-panel"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Levél a résztvevőknek"
+  >
     <header class="mail-head">
       <div>
         <h2>Levél a résztvevőknek</h2>
-        <p>Mindenkinek elmegy, aki e-mailt kaphat - a megszólítás („Szia …!”) és az aláírás automatikus.</p>
+        <p>
+          Mindenkinek elmegy, aki e-mailt kaphat - a megszólítás („Szia …!”) és az aláírás
+          automatikus.
+        </p>
       </div>
-      <button type="button" class="icon-close" (click)="close()" title="Bezárás"><mat-icon>close</mat-icon></button>
+      <button type="button" class="icon-close" (click)="close()" title="Bezárás">
+        <mat-icon>close</mat-icon>
+      </button>
     </header>
 
     <div class="mail-body">
@@ -27,13 +38,23 @@
       <div class="status-row">
         <span class="save-state" [class.error]="saveState() === 'error'">
           @switch (saveState()) {
-          @case ('pending') { Szerkesztés… }
-          @case ('saving') { Mentés… }
-          @case ('error') { <mat-icon>error_outline</mat-icon> Nem sikerült menteni - újrapróbálom a következő változásnál }
-          @default {
-          @if (savedAt(); as at) { <mat-icon>cloud_done</mat-icon> Piszkozat mentve {{ at | date: 'MMM d. HH:mm' }} }
-          @else { Gépelés közben automatikusan mentődik. }
-          }
+            @case ('pending') {
+              Szerkesztés…
+            }
+            @case ('saving') {
+              Mentés…
+            }
+            @case ('error') {
+              <mat-icon>error_outline</mat-icon> Nem sikerült menteni - újrapróbálom a következő
+              változásnál
+            }
+            @default {
+              @if (savedAt(); as at) {
+                <mat-icon>cloud_done</mat-icon> Piszkozat mentve {{ at | date: 'MMM d. HH:mm' }}
+              } @else {
+                Gépelés közben automatikusan mentődik.
+              }
+            }
           }
         </span>
         <button type="button" class="link-btn" (click)="togglePreview()" [disabled]="loading()">
@@ -43,22 +64,27 @@
       </div>
 
       @if (showPreview()) {
-      <div class="preview">
-        <div class="preview-meta"><strong>Tárgy:</strong> {{ subject() }}</div>
-        <div class="letter">
-          <p>Szia {{ recipients().eligible[0] || 'Név' }}!</p>
-          <div [innerHTML]="previewHtml()"></div>
-          @if (withPdf()) {
-          <p>Csatolva küldjük a tábor programfüzetét.</p>
-          }
-          <p>Üdvözlettel,<br />Bódorgó</p>
+        <div class="preview">
+          <div class="preview-meta"><strong>Tárgy:</strong> {{ subject() }}</div>
+          <div class="letter">
+            <p>Szia {{ recipients().eligible[0] || 'Név' }}!</p>
+            <div [innerHTML]="previewHtml()"></div>
+            @if (withPdf()) {
+              <p>Csatolva küldjük a tábor programfüzetét.</p>
+            }
+            <p>Üdvözlettel,<br />Bódorgó</p>
+          </div>
         </div>
-      </div>
       }
 
       <div class="options">
         <label class="check">
-          <input type="checkbox" [checked]="withPdf()" (change)="withPdf.set($any($event.target).checked)" [disabled]="busy()" />
+          <input
+            type="checkbox"
+            [checked]="withPdf()"
+            (change)="withPdf.set($any($event.target).checked)"
+            [disabled]="busy()"
+          />
           <span>
             <strong>Programfüzet csatolása</strong>
             <small>mindenki a saját példányát kapja (saját távolság, kiemelt szoba)</small>
@@ -70,80 +96,110 @@
           <span>
             <strong>{{ recipients().eligible.length }}</strong> résztvevő kapja meg
             @if (recipients().skipped.length) {
-            ·
-            <button type="button" class="link-btn inline" (click)="showSkipped.set(!showSkipped())">
-              {{ recipients().skipped.length }} kimarad
-            </button>
+              ·
+              <button
+                type="button"
+                class="link-btn inline"
+                (click)="showSkipped.set(!showSkipped())"
+              >
+                {{ recipients().skipped.length }} kimarad
+              </button>
             }
           </span>
         </div>
       </div>
       @if (showSkipped()) {
-      <ul class="skipped">
-        @for (s of recipients().skipped; track s.name) {
-        <li>{{ s.name }} – <em>{{ s.reason }}</em></li>
-        }
-      </ul>
+        <ul class="skipped">
+          @for (s of recipients().skipped; track s.name) {
+            <li>
+              {{ s.name }} – <em>{{ s.reason }}</em>
+            </li>
+          }
+        </ul>
       }
 
       @if (confirming()) {
-      <div class="confirm">
-        <mat-icon>forward_to_inbox</mat-icon>
-        <div>
-          <strong>Biztosan elküldöd {{ recipients().eligible.length }} résztvevőnek?</strong>
-          <span>Elküldés után a levél már nem szerkeszthető, csak megtekinthető.</span>
+        <div class="confirm">
+          <mat-icon>forward_to_inbox</mat-icon>
+          <div>
+            <strong>Biztosan elküldöd {{ recipients().eligible.length }} résztvevőnek?</strong>
+            <span>Elküldés után a levél már nem szerkeszthető, csak megtekinthető.</span>
+          </div>
+          <div class="confirm-actions">
+            <button
+              type="button"
+              class="btn ghost"
+              (click)="confirming.set(false)"
+              [disabled]="sending()"
+            >
+              Mégse
+            </button>
+            <button type="button" class="btn primary" (click)="send()" [disabled]="sending()">
+              {{ sending() ? 'Küldés…' : 'Igen, küldés' }}
+            </button>
+          </div>
         </div>
-        <div class="confirm-actions">
-          <button type="button" class="btn ghost" (click)="confirming.set(false)" [disabled]="sending()">Mégse</button>
-          <button type="button" class="btn primary" (click)="send()" [disabled]="sending()">
-            {{ sending() ? 'Küldés…' : 'Igen, küldés' }}
+      } @else {
+        <div class="actions">
+          <button
+            type="button"
+            class="btn ghost"
+            (click)="sendTest()"
+            [disabled]="busy() || loading() || isEmpty()"
+          >
+            <mat-icon>outgoing_mail</mat-icon>
+            {{ sendingTest() ? 'Küldés…' : 'Próbaküldés magamnak' }}
+          </button>
+          <button
+            type="button"
+            class="btn primary"
+            (click)="askSend()"
+            [disabled]="busy() || loading() || isEmpty() || !recipients().eligible.length"
+          >
+            <mat-icon>send</mat-icon> Küldés mindenkinek
           </button>
         </div>
-      </div>
-      } @else {
-      <div class="actions">
-        <button type="button" class="btn ghost" (click)="sendTest()" [disabled]="busy() || loading() || isEmpty()">
-          <mat-icon>outgoing_mail</mat-icon>
-          {{ sendingTest() ? 'Küldés…' : 'Próbaküldés magamnak' }}
-        </button>
-        <button
-          type="button"
-          class="btn primary"
-          (click)="askSend()"
-          [disabled]="busy() || loading() || isEmpty() || !recipients().eligible.length"
-        >
-          <mat-icon>send</mat-icon> Küldés mindenkinek
-        </button>
-      </div>
       }
 
       <section class="sent">
-        <h3>Elküldött levelek @if (sent().length) { <span class="count">{{ sent().length }}</span> }</h3>
+        <h3>
+          Elküldött levelek
+          @if (sent().length) {
+            <span class="count">{{ sent().length }}</span>
+          }
+        </h3>
         @if (!sent().length) {
-        <p class="empty">Ehhez a táborhoz még nem ment ki levél.</p>
+          <p class="empty">Ehhez a táborhoz még nem ment ki levél.</p>
         }
         @for (m of sent(); track m._id) {
-        <div class="sent-item" [class.open]="openSentId() === m._id">
-          <button type="button" class="sent-row" (click)="toggleSent(m)">
-            <mat-icon class="chev">{{ openSentId() === m._id ? 'expand_less' : 'expand_more' }}</mat-icon>
-            <span class="sent-subject">{{ m.subject }}</span>
-            @if (m.withPdf) {
-            <span class="chip" title="Programfüzettel"><mat-icon>picture_as_pdf</mat-icon></span>
-            }
-            <span class="sent-meta">{{ m.sentAt | date: 'yyyy. MM. dd. HH:mm' }} · {{ m.recipientCount }} címzett</span>
-          </button>
-          @if (openSentId() === m._id) {
-          <div class="sent-content">
-            <div class="letter" [innerHTML]="sentHtml(m)"></div>
-            <p class="sent-by">
-              Küldte: {{ m.sentByName }}
-              @if (m.skipped.length) {
-              · Kimaradt: {{ m.skipped.length }} ({{ m.skipped[0].name }}{{ m.skipped.length > 1 ? ', …' : '' }})
+          <div class="sent-item" [class.open]="openSentId() === m._id">
+            <button type="button" class="sent-row" (click)="toggleSent(m)">
+              <mat-icon class="chev">{{
+                openSentId() === m._id ? 'expand_less' : 'expand_more'
+              }}</mat-icon>
+              <span class="sent-subject">{{ m.subject }}</span>
+              @if (m.withPdf) {
+                <span class="chip" title="Programfüzettel"
+                  ><mat-icon>picture_as_pdf</mat-icon></span
+                >
               }
-            </p>
+              <span class="sent-meta"
+                >{{ m.sentAt | date: 'yyyy. MM. dd. HH:mm' }} · {{ m.recipientCount }} címzett</span
+              >
+            </button>
+            @if (openSentId() === m._id) {
+              <div class="sent-content">
+                <div class="letter" [innerHTML]="sentHtml(m)"></div>
+                <p class="sent-by">
+                  Küldte: {{ m.sentByName }}
+                  @if (m.skipped.length) {
+                    · Kimaradt: {{ m.skipped.length }} ({{ m.skipped[0].name
+                    }}{{ m.skipped.length > 1 ? ', …' : '' }})
+                  }
+                </p>
+              </div>
+            }
           </div>
-          }
-        </div>
         }
       </section>
     </div>

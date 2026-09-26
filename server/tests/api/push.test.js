@@ -16,11 +16,16 @@ const subscribeDevice = (user) =>
 
 // What each device was sent, in order: [endpoint, payload].
 const sentPushes = () =>
-  vi.mocked(webpush.sendNotification).mock.calls.map(([sub, body]) => [sub.endpoint, JSON.parse(body)]);
+  vi
+    .mocked(webpush.sendNotification)
+    .mock.calls.map(([sub, body]) => [sub.endpoint, JSON.parse(body)]);
 
 // A stand-in for Socket.IO: who has the chat open right now.
 const fakeIo = (watching = []) => ({
-  in: () => ({ fetchSockets: async () => watching.map(([userId, tourId]) => ({ data: { userId, visibleTour: tourId } })) }),
+  in: () => ({
+    fetchSockets: async () =>
+      watching.map(([userId, tourId]) => ({ data: { userId, visibleTour: tourId } })),
+  }),
 });
 
 async function post(tour, author, text) {
@@ -31,7 +36,9 @@ async function post(tour, author, text) {
 describe('push subscriptions', () => {
   it('a device turns on, gets a test notification, turns off', async () => {
     const user = await createMember();
-    expect((await request(app).get('/push/public-key').set(asUser(user))).body.data.publicKey).toBe('test-public-key');
+    expect((await request(app).get('/push/public-key').set(asUser(user))).body.data.publicKey).toBe(
+      'test-public-key',
+    );
     expect((await request(app).post('/push/test').set(asUser(user))).status).toBe(400); // no device yet
 
     expect((await subscribeDevice(user)).status).toBe(201);
@@ -39,10 +46,16 @@ describe('push subscriptions', () => {
     expect(sentPushes()[0][1]).toMatchObject({ title: 'Bódorgó', tag: 'test' });
 
     const [sub] = await PushSubscription.find({ user: user._id });
-    await request(app).delete('/push/subscriptions').set(asUser(user)).send({ endpoint: sub.endpoint });
+    await request(app)
+      .delete('/push/subscriptions')
+      .set(asUser(user))
+      .send({ endpoint: sub.endpoint });
     expect(await PushSubscription.countDocuments()).toBe(0);
 
-    const bad = await request(app).post('/push/subscriptions').set(asUser(user)).send({ endpoint: 'http://x' });
+    const bad = await request(app)
+      .post('/push/subscriptions')
+      .set(asUser(user))
+      .send({ endpoint: 'http://x' });
     expect(bad.status).toBe(400);
     expect((await request(app).get('/push/public-key')).status).toBe(401);
   });
@@ -50,7 +63,9 @@ describe('push subscriptions', () => {
   it('a device the push service no longer knows is forgotten', async () => {
     const user = await createMember();
     await subscribeDevice(user);
-    vi.mocked(webpush.sendNotification).mockRejectedValueOnce(Object.assign(new Error('gone'), { statusCode: 410 }));
+    vi.mocked(webpush.sendNotification).mockRejectedValueOnce(
+      Object.assign(new Error('gone'), { statusCode: 410 }),
+    );
     await request(app).post('/push/test').set(asUser(user));
     expect(await PushSubscription.countDocuments()).toBe(0);
   });
@@ -85,7 +100,11 @@ describe('chat notifications: one buzz, then quiet until read', () => {
       url: `/chat?tabor=${tour._id}`,
     });
     // Same notification, updated without a sound.
-    expect(second).toMatchObject({ body: '2 új üzenet · anna: Hozzatok kenyeret is', silent: true, renotify: false });
+    expect(second).toMatchObject({
+      body: '2 új üzenet · anna: Hozzatok kenyeret is',
+      silent: true,
+      renotify: false,
+    });
 
     // A mention gets through even while quiet.
     await notifyChatPost(fakeIo(), await post(tour, anna, 'Szia @Bela, hozod a bográcsot?'));
@@ -99,13 +118,20 @@ describe('chat notifications: one buzz, then quiet until read', () => {
 
   it('nothing for the author, a muted chat, someone watching it, or a non-attendee', async () => {
     const tour = await createTour();
-    const [author, muted, watching] = await Promise.all([createMember(), createMember(), createMember()]);
+    const [author, muted, watching] = await Promise.all([
+      createMember(),
+      createMember(),
+      createMember(),
+    ]);
     const outsider = await createMember();
     await createReservation(tour, [author, muted, watching]);
     for (const u of [author, muted, watching, outsider]) await subscribeDevice(u);
     await setChatMuted(muted._id, tour._id, true);
 
-    await notifyChatPost(fakeIo([[String(watching._id), String(tour._id)]]), await post(tour, author, 'Hahó'));
+    await notifyChatPost(
+      fakeIo([[String(watching._id), String(tour._id)]]),
+      await post(tour, author, 'Hahó'),
+    );
     expect(sentPushes()).toHaveLength(0);
   });
 

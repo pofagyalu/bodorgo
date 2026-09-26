@@ -19,11 +19,7 @@ export interface Mentionable {
 }
 
 const MAX_SUGGESTIONS = 6;
-const plain = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
+const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 @Component({
   selector: 'app-compose',
@@ -53,7 +49,13 @@ export class Compose {
     if (!q) return [];
     const needle = plain(q.query);
     return this.mentionables()
-      .filter((m) => plain(m.username).startsWith(needle) || plain(m.name).split(/\s+/).some((w) => w.startsWith(needle)))
+      .filter(
+        (m) =>
+          plain(m.username).startsWith(needle) ||
+          plain(m.name)
+            .split(/\s+/)
+            .some((w) => w.startsWith(needle)),
+      )
       .slice(0, MAX_SUGGESTIONS);
   });
 
