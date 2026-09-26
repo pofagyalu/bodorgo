@@ -79,8 +79,17 @@ author) may get a notification. To keep phones from ringing at every message
    device gets nothing. The chat page tells the server when its tab goes to
    the background (`chat-visible` socket event).
 3. **Mentions always get through.** `@username` in a message buzzes that
-   person even during the quiet period.
-4. **Muting.** The 🔔 in the chat's corner mutes one tour's chat for oneself.
+   person even during the quiet period - and even in a muted chat. Typing
+   `@` in the chat suggests the tour's attendees; mentions are highlighted
+   in the messages (a mention of you in yellow).
+4. **Muting.** The 🔔 in the chat's corner mutes one tour's chat for oneself
+   (except for messages that name you).
+
+Usernames are what mentions refer to: 3-40 letters (accented too), numbers,
+`.`, `_` or `-`, no spaces - and unique ignoring case and accents, so
+`@bela` means Béla (see `server/src/utils/usernames.js`). Admins can fill them in for everyone at
+once on Klub → Beállítások (with suggestions from the names); everyone can
+change their own in Profilom.
 
 "Read" and "buzzed" are remembered per user per tour in `ChatReadState`
 (`readAt`, `notifiedAt`, `muted`).

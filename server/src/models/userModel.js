@@ -4,6 +4,7 @@ import validator from 'validator';
 import crypto from 'crypto';
 import { geocodeAddress } from '../utils/distance.js';
 import logger from '../logger.js';
+import { USERNAME_RULE, USERNAME_RULE_MESSAGE } from '../utils/usernames.js';
 
 const { Schema } = mongoose;
 
@@ -44,22 +45,18 @@ const userSchema = new Schema(
       default: false,
       select: false,
     },
-    // Self-service only (see userController.js's updateMe) - a personal
-    // handle distinct from `name` above, which comes from Authentik and
-    // nobody edits directly in this app. Meant to eventually be shown in
-    // place of the real name in places like the tour chat (see
-    // feed/post components) - not wired up there yet. Admin does not
-    // manage this field; it's the one piece of their own profile a user
-    // fully controls themselves.
+    // A personal handle distinct from `name` above (which comes from
+    // Authentik and nobody edits directly in this app) - shown in the tour
+    // chat, and what "@username" mentions there refer to. The user sets
+    // their own (see userController.js's updateMe); an admin may too, e.g.
+    // filling everyone in at first (updateUser / updateUsernames). Unique
+    // regardless of upper/lower case and accents (see utils/usernames.js).
     username: {
       type: String,
       trim: true,
       sparse: true,
       unique: true,
-      match: [
-        /^[A-Za-z0-9._-]{3,40}$/,
-        'A felhasználónév 3-40 karakter lehet: betű, szám, pont, aláhúzás vagy kötőjel.',
-      ],
+      match: [USERNAME_RULE, USERNAME_RULE_MESSAGE],
     },
     // Neither is shown directly (birthday especially never renders in the
     // admin table - see userController.js's computeAge) - birthday only

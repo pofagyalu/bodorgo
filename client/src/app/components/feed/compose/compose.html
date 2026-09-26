@@ -1,11 +1,31 @@
 <form class="compose-container" (ngSubmit)="submit()">
+  <!-- "@" suggestions: the tour's attendees with a username. -->
+  @if (suggestions().length) {
+  <ul class="mention-list" role="listbox" aria-label="Megemlíthető résztvevők">
+    @for (m of suggestions(); track m.username; let i = $index) {
+    <li
+      role="option"
+      [class.active]="i === highlighted()"
+      [attr.aria-selected]="i === highlighted()"
+      (mousedown)="$event.preventDefault(); pick(m)"
+      (mouseenter)="highlighted.set(i)"
+    >
+      <strong>&#64;{{ m.username }}</strong>
+      <span>{{ m.name }}</span>
+    </li>
+    }
+  </ul>
+  }
+
   <textarea
     #messageInput
-    placeholder="Írj egy üzenetet..."
+    placeholder="Írj egy üzenetet... (&#64; = megemlítés)"
     rows="1"
     [ngModel]="text()"
-    (ngModelChange)="text.set($event)"
-    (keydown.enter)="onEnter($event)"
+    (ngModelChange)="onTextChange($event)"
+    (keydown)="onKeydown($event)"
+    (click)="updateMentionQuery()"
+    (blur)="updateMentionQuery()"
     name="message"
   ></textarea>
 

@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { usernameKey } from '../../../shared/usernames';
 
 // Fixed, brand-matched colors instead of per-user hashing: orange for your
 // own name, blue for everyone else's (see post.scss for the bubble
@@ -19,6 +20,34 @@ const OTHER_NAME_COLOR = '#1e88e5';
 
 // How long a finger has to stay on a message (phone) to open its menu.
 const LONG_PRESS_MS = 500;
+
+export interface TextPart {
+  text: string;
+  mention?: boolean;
+  me?: boolean;
+}
+
+// Splits a message into plain text and "@username" mentions of people who
+// really are in this tour. `known` and `me` are usernameKey()s. A dot or
+// dash straight after the name ("@Zoli.") isn't part of it.
+export function splitMentions(text: string, known: Set<string>, me: string | null): TextPart[] {
+  const parts: TextPart[] = [];
+  const re = /(^|[^\p{L}\p{N}._-])@([\p{L}\p{N}._-]{3,40})/gu;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    let name = m[2];
+    while (name && !known.has(usernameKey(name)) && /[._-]$/.test(name)) name = name.slice(0, -1);
+    if (!name || !known.has(usernameKey(name))) continue;
+    const start = m.index + m[1].length;
+    if (start > last) parts.push({ text: text.slice(last, start) });
+    parts.push({ text: `@${name}`, mention: true, me: !!me && usernameKey(name) === me });
+    last = start + 1 + name.length;
+    re.lastIndex = last;
+  }
+  if (last < text.length) parts.push({ text: text.slice(last) });
+  return parts;
+}
 
 @Component({
   selector: 'app-post',
@@ -59,6 +88,21 @@ export class Post {
   @Input() set imageUrlInput(v: string | undefined) {
     this.imageUrl.set(v);
   }
+
+  // "@username" mentions: every username in this tour (lower-cased), and
+  // mine - a mention of a real attendee is highlighted, one of me more so.
+  private knownUsernames = signal<Set<string>>(new Set());
+  private myUsername = signal<string | null>(null);
+
+  @Input() set knownUsernamesInput(v: Set<string> | null) {
+    this.knownUsernames.set(v ?? new Set());
+  }
+
+  @Input() set myUsernameInput(v: string | null) {
+    this.myUsername.set(v);
+  }
+
+  textParts = computed(() => splitMentions(this.text(), this.knownUsernames(), this.myUsername()));
 
   // Edited afterwards by its author -> "(szerkesztve)" next to the time.
   @Input() edited = false;

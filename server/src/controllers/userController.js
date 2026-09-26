@@ -4,6 +4,7 @@ import Reservation from '../models/reservationModel.js';
 import Payment from '../models/paymentModel.js';
 import AppError from '../utils/appError.js';
 import { CLUB_FOUNDING_YEAR } from '../utils/clubSettings.js';
+import { USERNAME_RULE, USERNAME_RULE_MESSAGE, usernameKey } from '../utils/usernames.js';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -149,6 +150,9 @@ export const updateMe = async (req, res, next) => {
   const filteredBody = filterObj(req.body, 'username', 'wantsEmailNotifications', 'address');
   if (typeof filteredBody.username === 'string') {
     filteredBody.username = filteredBody.username.trim() || undefined;
+    if (filteredBody.username && (await isUsernameTaken(filteredBody.username, req.user._id))) {
+      throw new AppError(`A(z) "${filteredBody.username}" felhasználónév már foglalt.`, 400);
+    }
   }
 
   // Loaded and .save()d rather than findByIdAndUpdate - specifically so
@@ -348,6 +352,17 @@ export const createUser = async (req, res) => {
   });
 };
 
+// Usernames must be unique ignoring upper/lower case and accents - "@bela"
+// in the chat must mean exactly one person, whether they're "Béla" or
+// "Bela" (see utils/usernames.js and chat/chatNotifications.js).
+async function isUsernameTaken(username, exceptUserId) {
+  const key = usernameKey(username);
+  const others = await User.find({ _id: { $ne: exceptUserId }, username: { $exists: true, $ne: null } }).select(
+    'username',
+  );
+  return others.some((o) => usernameKey(o.username) === key);
+}
+
 // Admin-only - edits name/email/familyId/address by hand. familyId as an
 // empty string explicitly removes the user from their family (rather than
 // the field being silently ignored), for undoing a mistaken assignment.
@@ -363,11 +378,22 @@ export const createUser = async (req, res) => {
 // authOidcController.js's callback). Use for a quick fix, not as the
 // long-term way to manage roles.
 export const updateUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, address, memberSince, role } = req.body;
+  const { name, email, familyId, birthday, gender, address, memberSince, role, username } = req.body;
 
   const user = await User.findById(req.params.id);
   if (!user) {
     throw new AppError('No user found with that ID!', 404);
+  }
+
+  // An admin may set anyone's username (e.g. filling them in for the
+  // first time) - the user can still change their own afterwards.
+  if (username !== undefined) {
+    const value = String(username ?? '').trim();
+    if (value && !USERNAME_RULE.test(value)) throw new AppError(USERNAME_RULE_MESSAGE, 400);
+    if (value && (await isUsernameTaken(value, user._id))) {
+      throw new AppError(`A(z) "${value}" felhasználónév már foglalt.`, 400);
+    }
+    user.username = value || undefined;
   }
 
   if (name !== undefined) user.name = name;
@@ -466,4 +492,61 @@ export const restoreUser = async (req, res) => {
   }
 
   res.status(200).json({ status: 'success', data: { user: { _id: user._id, retired: false } } });
+};
+
+// GET /users/usernames - admin-only: everyone (not suspended) with their
+// username, for Klub → Beállítások' "Felhasználónevek" list.
+export const getUsernames = async (req, res) => {
+  const users = await User.find({ retired: { $ne: true } })
+    .select('name username role')
+    .sort('name')
+    .collation({ locale: 'hu' });
+  res.status(200).json({ status: 'success', data: { users } });
+};
+
+// PUT /users/usernames - admin-only: sets many usernames at once
+// ({ items: [{ id, username }] }, '' clears one). All-or-nothing: every row
+// is checked first (the rule, no clash within the list or with anyone
+// else, ignoring upper/lower case and accents) and nothing is saved if any row fails -
+// the answer then lists each problem by user id.
+export const updateUsernames = async (req, res) => {
+  const items = Array.isArray(req.body?.items) ? req.body.items : null;
+  if (!items || items.length === 0 || items.length > 500) {
+    throw new AppError('Nincs mentendő felhasználónév.', 400);
+  }
+  const rows = items.map((i) => ({ id: String(i?.id ?? ''), username: String(i?.username ?? '').trim() }));
+  const users = await User.find({ _id: { $in: rows.map((r) => r.id).filter((id) => mongoose.isValidObjectId(id)) } });
+  const userById = new Map(users.map((u) => [String(u._id), u]));
+
+  const errors = {};
+  const seen = new Map(); // usernameKey -> id in this list
+  for (const r of rows) {
+    if (!userById.has(r.id)) errors[r.id] = 'Nincs ilyen felhasználó.';
+    else if (r.username && !USERNAME_RULE.test(r.username)) errors[r.id] = USERNAME_RULE_MESSAGE;
+    else if (r.username) {
+      const key = usernameKey(r.username);
+      if (seen.has(key)) errors[r.id] = errors[seen.get(key)] = 'Ugyanez a név kétszer szerepel a listában.';
+      else seen.set(key, r.id);
+    }
+  }
+  // Clashes with users outside this list (inside it, the list itself decides).
+  const listIds = rows.map((r) => r.id).filter((id) => mongoose.isValidObjectId(id));
+  const others = await User.find({ _id: { $nin: listIds }, username: { $exists: true, $ne: null } }).select('username');
+  const takenByOthers = new Set(others.map((o) => usernameKey(o.username)));
+  for (const r of rows) {
+    if (!errors[r.id] && r.username && takenByOthers.has(usernameKey(r.username))) {
+      errors[r.id] = `A(z) "${r.username}" felhasználónév már foglalt.`;
+    }
+  }
+  if (Object.keys(errors).length) {
+    return res.status(400).json({ status: 'fail', message: 'Néhány felhasználónév nem menthető.', errors });
+  }
+
+  // Cleared first, then set - so two people can swap names in one save.
+  const changed = rows.filter((r) => (userById.get(r.id).username ?? '') !== r.username);
+  await User.updateMany({ _id: { $in: changed.map((r) => r.id) } }, { $unset: { username: 1 } });
+  for (const r of changed) {
+    if (r.username) await User.updateOne({ _id: r.id }, { username: r.username });
+  }
+  res.status(200).json({ status: 'success', data: { updated: changed.length } });
 };
