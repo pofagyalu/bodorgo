@@ -39,6 +39,10 @@ describe('reading tours', () => {
     expect(savedSoon.dailyWeather).toHaveLength(2);
     expect(savedSoon.dailyWeather[0]).toMatchObject({ condition: 'clear', isFinal: false });
     expect(savedPast.dailyWeather.every((w) => w.isFinal)).toBe(true);
+    // Day 1 is the tour's own start date - not the day before (the old
+    // UTC conversion shifted every day back by one in Hungarian time).
+    const askedDates = vi.mocked(fetchHistorical).mock.calls.map(([, , date]) => date).sort();
+    expect(askedDates).toEqual(['2023-05-01', '2023-05-02']);
     // Past days are final: never fetched again.
     vi.mocked(fetchHistorical).mockClear();
     await request(app).get(`/tours/${past._id}`).set(asUser(member));

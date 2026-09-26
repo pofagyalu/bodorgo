@@ -22,11 +22,23 @@ import Tour from '../src/models/tourModel.js';
 const [, , identifier] = process.argv;
 
 if (!identifier) {
-  console.error('Usage: node scripts/resetWeather.js <tourId|order|slug>');
+  console.error('Usage: node scripts/resetWeather.js <tourId|order|slug|--all>');
   process.exit(1);
 }
 
 await mongoose.connect(config.db.testUri);
+
+// --all: every tour at once - e.g. after a change to how the weather is
+// fetched or classified (see utils/weather.js), since past days are
+// frozen and would otherwise never be fetched again.
+if (identifier === '--all') {
+  const result = await Tour.updateMany({ 'dailyWeather.0': { $exists: true } }, { $set: { dailyWeather: [] } });
+  console.log(
+    `Cleared the weather of ${result.modifiedCount} tour(s). Each is fetched fresh the next time its page is opened.`,
+  );
+  await mongoose.disconnect();
+  process.exit(0);
+}
 
 let tour;
 if (mongoose.isValidObjectId(identifier)) {
