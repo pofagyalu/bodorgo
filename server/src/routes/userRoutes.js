@@ -26,6 +26,11 @@ router
   .put(requireAuth, restrictTo('admin'), photoUploadMiddleware, setUserPhoto)
   .delete(requireAuth, restrictTo('admin'), deleteUserPhoto);
 router.post('/join-family', requireAuth, restrictTo('admin'), userController.joinFamily);
+// Admins filling in everyone's usernames at once (Klub → Beállítások).
+router
+  .route('/usernames')
+  .get(requireAuth, restrictTo('admin'), userController.getUsernames)
+  .put(requireAuth, restrictTo('admin'), userController.updateUsernames);
 
 router
   .route('/')

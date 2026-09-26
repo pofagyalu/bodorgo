@@ -6,6 +6,7 @@ import ChatReadState from '../models/chatReadStateModel.js';
 import { sendPushToUsers } from '../utils/push.js';
 import logger from '../logger.js';
 import { tourRoom } from './tourEvents.js';
+import { usernameKey } from '../utils/usernames.js';
 
 // Push notifications for a tour's chat - to the tour's attendees, without
 // the phone ringing at every message:
@@ -14,7 +15,7 @@ import { tourRoom } from './tourEvents.js';
 //   is opened again;
 // - nothing for someone who has the chat open (and visible) right now;
 // - a mention (@username) always buzzes;
-// - a chat can be muted (see setChatMuted).
+// - a chat can be muted (see setChatMuted) - a mention still gets through.
 
 const SNIPPET_LENGTH = 90;
 
@@ -39,9 +40,11 @@ async function watchingUserIds(io, tourId) {
 }
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// "@bela" mentions Béla too - both sides compared without case or accents
+// (see utils/usernames.js).
 function mentions(text, username) {
   if (!username) return false;
-  return new RegExp(`@${escapeRegExp(username)}(?![\\p{L}\\p{N}_])`, 'iu').test(text);
+  return new RegExp(`@${escapeRegExp(usernameKey(username))}(?![\\p{L}\\p{N}_])`, 'u').test(usernameKey(text));
 }
 
 export async function notifyChatPost(io, post) {
@@ -72,7 +75,9 @@ export async function notifyChatPost(io, post) {
 
   for (const userId of candidates) {
     const state = stateByUser.get(userId);
-    if (state?.muted) continue;
+    const mentioned = mentions(post.text, usernameById.get(userId));
+    // A muted chat stays quiet - except for a message that names them.
+    if (state?.muted && !mentioned) continue;
     const readAt = state?.readAt ?? new Date(0);
 
     const unread = await Post.countDocuments({
@@ -81,7 +86,6 @@ export async function notifyChatPost(io, post) {
       creator: { $ne: userId },
       deletedAt: null,
     });
-    const mentioned = mentions(post.text, usernameById.get(userId));
     // A buzz only if nothing has buzzed since they last read the chat -
     // otherwise the same notification just updates, silently.
     const alreadyBuzzed = !!state?.notifiedAt && state.notifiedAt > readAt;

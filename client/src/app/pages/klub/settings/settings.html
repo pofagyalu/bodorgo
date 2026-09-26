@@ -104,4 +104,55 @@
     }
     }
   </section>
+
+  <!-- Everyone's username at once - what "@username" means in the chat. -->
+  <section class="panel usernames">
+    <div class="panel-title">
+      <div>
+        <h2>Felhasználónevek</h2>
+        <p class="subtext">
+          A chatben ezen a néven jelennek meg, és így lehet megemlíteni őket (pl. <strong>&#64;Zoli</strong>). Utána
+          mindenki a Profilomban maga is átírhatja.
+        </p>
+      </div>
+      @if (missingCount()) {
+      <span class="missing">{{ missingCount() }} hiányzik</span>
+      }
+    </div>
+
+    <ul class="username-list">
+      @for (p of people(); track p.id) {
+      <li [class.changed]="p.username !== p.original" [class.has-error]="usernameErrors()[p.id]">
+        <span class="person-name">{{ p.name }}</span>
+        <span class="at-field">
+          <span class="at">&#64;</span>
+          <input
+            type="text"
+            maxlength="40"
+            [ngModel]="p.username"
+            (ngModelChange)="setUsername(p.id, $event)"
+            placeholder="nincs megadva"
+            [attr.aria-label]="p.name + ' felhasználóneve'"
+          />
+        </span>
+        @if (usernameErrors()[p.id]; as err) {
+        <span class="row-error">{{ err }}</span>
+        }
+      </li>
+      }
+    </ul>
+
+    <div class="actions">
+      <button type="button" class="outline-btn" (click)="suggestUsernames()" [disabled]="!missingCount() || savingUsernames()">
+        <mat-icon>auto_fix_high</mat-icon> Javaslatok kitöltése
+      </button>
+      <span class="spacer"></span>
+      @if (usernamesDirty()) {
+      <button type="button" class="outline-btn" (click)="resetUsernames()" [disabled]="savingUsernames()">Mégse</button>
+      }
+      <button type="button" class="primary-btn" (click)="saveUsernames()" [disabled]="!usernamesDirty() || savingUsernames()">
+        {{ savingUsernames() ? 'Mentés…' : 'Mentés' }}
+      </button>
+    </div>
+  </section>
 </div>

@@ -12,8 +12,10 @@ import {
 } from '@angular/core';
 import { AuthService } from '../../auth/auth.service';
 import { TourSocketService } from '../../services/tour-socket';
-import { Compose } from './compose/compose';
+import { Compose, Mentionable } from './compose/compose';
+import { TourService } from '../../services/tour';
 import { Post } from './post/post';
+import { usernameKey } from '../../shared/usernames';
 
 interface IPost {
   _id: string;
@@ -42,6 +44,22 @@ export class Feed implements OnInit, OnDestroy {
 
   posts = signal<IPost[]>([]);
   private tourSocket = inject(TourSocketService);
+  private tourService = inject(TourService);
+
+  // The tour's attendees with their usernames (from the Szobabeosztás
+  // board's list) - for "@" suggestions and for highlighting mentions.
+  private people = signal<{ userId: string | null; name: string; username: string | null }[]>([]);
+  mentionables = computed<Mentionable[]>(() =>
+    this.people()
+      .filter((p) => p.username && p.userId !== this.currentUserId())
+      .map((p) => ({ username: p.username!, name: p.name })),
+  );
+  // Compared without case or accents ("@bela" is Béla) - see usernameKey.
+  knownUsernames = computed(() => new Set(this.people().flatMap((p) => (p.username ? [usernameKey(p.username)] : []))));
+  myUsername = computed(() => {
+    const mine = this.people().find((p) => p.userId === this.currentUserId())?.username;
+    return mine ? usernameKey(mine) : null;
+  });
   private unsubscribers: (() => void)[] = [];
 
   private feedContainer = viewChild<ElementRef<HTMLDivElement>>('feedContainer');
@@ -91,6 +109,15 @@ export class Feed implements OnInit, OnDestroy {
       this.tourSocket.on<string>('chat-error', (message) => console.error('Chat error:', message)),
     ];
     this.tourSocket.joinTour(this.tourId());
+
+    this.tourService.getRoomBoard(this.tourId()).subscribe({
+      next: (res) => {
+        // One entry per person, even if they're on two reservations.
+        const byUser = new Map(res.data.people.map((p) => [p.userId ?? p.attendeeId, p]));
+        this.people.set([...byUser.values()].map((p) => ({ userId: p.userId, name: p.name, username: p.username })));
+      },
+      error: () => {}, // no suggestions/highlighting - the chat itself still works
+    });
   }
 
   onCompose(data: { text: string }) {

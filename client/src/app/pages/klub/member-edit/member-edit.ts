@@ -59,6 +59,7 @@ export class MemberEdit implements OnInit {
   // on every login, so nothing in this app lets it be typed over.
   name = signal('');
   email = signal('');
+  username = signal('');
   familyId = signal('');
   birthday = signal('');
   gender = signal('');
@@ -75,6 +76,7 @@ export class MemberEdit implements OnInit {
         this.user.set(u);
         this.name.set(u.name);
         this.email.set(u.email ?? '');
+        this.username.set(u.username ?? '');
         this.familyId.set(u.familyId ?? '');
         this.birthday.set(u.birthday ? u.birthday.slice(0, 10) : '');
         this.gender.set(u.gender ?? '');
@@ -184,6 +186,7 @@ export class MemberEdit implements OnInit {
     this.userService
       .updateUser(this.userId!, {
         email: this.email().trim(),
+        username: this.username().trim(),
         familyId: this.familyId().trim(),
         birthday: this.birthday(),
         gender: this.gender(),

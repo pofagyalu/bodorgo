@@ -49,6 +49,27 @@
   overflow-wrap: anywhere;
 }
 
+// "@username" of someone in this tour - and a stronger marker when it's me.
+.mention {
+  font-weight: 700;
+  color: #1565c0;
+}
+
+.mention--me {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: #fff1a8;
+  color: #6b4a00;
+}
+
+// On my own (green) bubble the blue wouldn't read - white instead.
+:host.own .mention:not(.mention--me) {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
 .post-image {
   margin-top: 8px;
   border-radius: 10px;

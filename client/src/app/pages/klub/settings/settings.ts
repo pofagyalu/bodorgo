@@ -4,6 +4,31 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MembershipFee, SettingsService, feeForYear } from '../../../services/settings';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { UserService } from '../../../services/user';
+import { usernameKey } from '../../../shared/usernames';
+
+interface UsernameRow {
+  id: string;
+  name: string;
+  original: string;
+  username: string;
+}
+
+// A username from a real name - see KlubSettings.suggestUsernames. Keeps
+// accents ("Zoltán"); drops anything the server wouldn't accept (see
+// shared/usernames.ts). `taken` holds usernameKey()s.
+function suggestUsername(fullName: string, taken: Set<string>): string {
+  const clean = (s: string) => s.replace(/[^\p{L}\p{N}._-]/gu, '');
+  const words = fullName.trim().split(/\s+/).map(clean).filter(Boolean);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const given = cap(words.at(-1) ?? 'Tag');
+  const family = words.length > 1 ? cap(words[0]) : '';
+  let base = given.length >= 3 ? given : `${given}${family}`.padEnd(3, 'x');
+  base = base.slice(0, 36);
+  const candidates = [base, family ? `${base}${family.charAt(0)}` : null].filter(Boolean) as string[];
+  for (const c of candidates) if (!taken.has(usernameKey(c))) return c;
+  for (let i = 2; ; i++) if (!taken.has(usernameKey(`${base}${i}`))) return `${base}${i}`;
+}
 
 interface FeeRow {
   fromYear: number;
@@ -41,6 +66,7 @@ export class KlubSettings implements OnInit {
   currentFee = computed(() => feeForYear(this.saved(), this.currentYear));
 
   ngOnInit() {
+    this.loadUsernames();
     this.settingsService.getMembershipFees().subscribe({
       next: (res) => {
         this.foundingYear.set(res.data.foundingYear);
@@ -102,6 +128,73 @@ export class KlubSettings implements OnInit {
 
   reset() {
     this.rows.set(this.saved().map((f) => ({ ...f })));
+  }
+
+  // --- Felhasználónevek: filling in everyone's username at once ---
+
+  private userService = inject(UserService);
+  people = signal<UsernameRow[]>([]);
+  usernameErrors = signal<Record<string, string>>({});
+  savingUsernames = signal(false);
+  usernamesDirty = computed(() => this.people().some((p) => p.username !== p.original));
+  missingCount = computed(() => this.people().filter((p) => !p.username.trim()).length);
+
+  private loadUsernames() {
+    this.userService.getUsernames().subscribe({
+      next: (res) =>
+        this.people.set(
+          res.data.users.map((u) => ({ id: u._id, name: u.name, original: u.username ?? '', username: u.username ?? '' })),
+        ),
+      error: () => this.notifications.addError('A felhasználónevek betöltése nem sikerült.'),
+    });
+  }
+
+  setUsername(id: string, value: string) {
+    this.people.update((list) => list.map((p) => (p.id === id ? { ...p, username: value } : p)));
+    this.usernameErrors.update((e) => {
+      const { [id]: _removed, ...rest } = e;
+      return rest;
+    });
+  }
+
+  // Fills the empty ones: the given name (the last word - Hungarian names
+  // put the family name first) - "Nagy Zoltán" → "Zoltán"; if that's taken
+  // (ignoring case and accents), with the family name's initial
+  // ("ZoltánN"), then a number. Only a suggestion - review, then Mentés.
+  suggestUsernames() {
+    const taken = new Set(this.people().map((p) => usernameKey(p.username.trim())).filter(Boolean));
+    this.people.update((list) =>
+      list.map((p) => {
+        if (p.username.trim()) return p;
+        const suggestion = suggestUsername(p.name, taken);
+        taken.add(usernameKey(suggestion));
+        return { ...p, username: suggestion };
+      }),
+    );
+  }
+
+  resetUsernames() {
+    this.people.update((list) => list.map((p) => ({ ...p, username: p.original })));
+    this.usernameErrors.set({});
+  }
+
+  saveUsernames() {
+    if (this.savingUsernames()) return;
+    const changed = this.people().filter((p) => p.username !== p.original);
+    this.savingUsernames.set(true);
+    this.userService.updateUsernames(changed.map((p) => ({ id: p.id, username: p.username.trim() }))).subscribe({
+      next: (res) => {
+        this.savingUsernames.set(false);
+        this.usernameErrors.set({});
+        this.people.update((list) => list.map((p) => ({ ...p, username: p.username.trim(), original: p.username.trim() })));
+        this.notifications.addSuccess(`${res.data.updated} felhasználónév mentve.`);
+      },
+      error: (err) => {
+        this.savingUsernames.set(false);
+        this.usernameErrors.set(err?.error?.errors ?? {});
+        this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+      },
+    });
   }
 
   save() {

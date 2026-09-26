@@ -108,4 +108,31 @@ describe('chat notifications: one buzz, then quiet until read', () => {
     await notifyChatPost(fakeIo([[String(watching._id), String(tour._id)]]), await post(tour, author, 'Hahó'));
     expect(sentPushes()).toHaveLength(0);
   });
+
+  it('a muted chat still lets a message that names you through', async () => {
+    const tour = await createTour();
+    const author = await createMember();
+    const muted = await createMember({ username: 'Zoli' });
+    await createReservation(tour, [author, muted]);
+    await subscribeDevice(muted);
+    await setChatMuted(muted._id, tour._id, true);
+
+    await notifyChatPost(fakeIo(), await post(tour, author, 'Valami általános'));
+    expect(sentPushes()).toHaveLength(0);
+    await notifyChatPost(fakeIo(), await post(tour, author, 'Szia @zoli, jössz?'));
+    expect(sentPushes()).toHaveLength(1);
+    expect(sentPushes()[0][1]).toMatchObject({ silent: false });
+  });
+
+  it('"@bela" mentions Béla - no accents needed', async () => {
+    const tour = await createTour();
+    const author = await createMember();
+    const bela = await createMember({ username: 'Béla' });
+    await createReservation(tour, [author, bela]);
+    await subscribeDevice(bela);
+    await setChatMuted(bela._id, tour._id, true);
+
+    await notifyChatPost(fakeIo(), await post(tour, author, 'Hozod a bográcsot, @bela?'));
+    expect(sentPushes()).toHaveLength(1);
+  });
 });
