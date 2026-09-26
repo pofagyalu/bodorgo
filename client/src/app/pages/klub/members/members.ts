@@ -9,6 +9,7 @@ import { PaymentService } from '../../../services/payment';
 import { UserService } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { Avatar } from '../../../components/avatar/avatar';
+import { SettingsService, MembershipFee, feeForYear } from '../../../services/settings';
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
   const formatted = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount);
@@ -83,6 +84,7 @@ export class Members implements OnInit {
   private notifications = inject(NotificationsService);
   private route = inject(ActivatedRoute);
   private auth = inject(AuthService);
+  private settingsService = inject(SettingsService);
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   myId = computed(() => this.auth.user()?.id ?? null);
@@ -193,19 +195,25 @@ export class Members implements OnInit {
     return !this.payBreakdown().some((row) => row.userId === mine._id);
   });
 
+  // The yearly fee table, set on Klub → Beállítások - loaded in ngOnInit;
+  // 1000 Ft from 2019 until then, the club's long-standing fee.
+  private membershipFees = signal<MembershipFee[]>([{ fromYear: 2019, amount: 1000 }]);
+
   // Every outstanding person+year pair across the family - one row per
-  // unpaid year per member (not just each person's earliest), 1000 Ft each
-  // (see MEMBERSHIP_DUES_AMOUNT server-side), oldest year first per person.
+  // unpaid year per member (not just each person's earliest), each at that
+  // year's own fee (see membershipFees), oldest year first per person.
   // The confirmation step lets the payer pick exactly which of these to
   // actually include this time (see selectedPayIds below) - e.g. catching
   // up two unpaid years for themselves and one for a family member, all in
   // one payment.
   payBreakdown = computed(() => {
-    const rows: { id: string; userId: string; name: string; year: number }[] = [];
+    const rows: { id: string; userId: string; name: string; year: number; amount: number }[] = [];
+    const fees = this.membershipFees();
     for (const m of this.myFamilyClubMembers()) {
       for (const year of this.historyYears()) {
-        if (this.yearState(m._id, year) === 'unpaid') {
-          rows.push({ id: `${m._id}:${year}`, userId: m._id, name: m.name, year });
+        const amount = feeForYear(fees, year);
+        if (amount && this.yearState(m._id, year) === 'unpaid') {
+          rows.push({ id: `${m._id}:${year}`, userId: m._id, name: m.name, year, amount });
         }
       }
     }
@@ -218,8 +226,10 @@ export class Members implements OnInit {
   // adjustable rather than fixed.
   selectedPayIds = signal<Set<string>>(new Set());
 
-  selectedPayTotal = computed(
-    () => this.payBreakdown().filter((row) => this.selectedPayIds().has(row.id)).length * 1000,
+  selectedPayTotal = computed(() =>
+    this.payBreakdown()
+      .filter((row) => this.selectedPayIds().has(row.id))
+      .reduce((sum, row) => sum + row.amount, 0),
   );
 
   // What Barion will actually charge, once its own ~1.6% fee is added on
@@ -233,6 +243,10 @@ export class Members implements OnInit {
   selectedPayFee = computed(() => this.selectedPayGrandTotal() - this.selectedPayTotal());
 
   ngOnInit() {
+    this.settingsService.getMembershipFees().subscribe({
+      next: (res) => this.membershipFees.set(res.data.fees),
+      error: () => {}, // keeps the default - the server charges the real fee anyway
+    });
     this.membershipService.getMembers().subscribe({
       next: (res) => {
         this.users.set(res.data.users);

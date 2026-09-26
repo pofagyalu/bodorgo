@@ -13,6 +13,7 @@ import sendResendEmail from '../utils/resendEmail.js';
 import AppError from '../utils/appError.js';
 import config from '../config.js';
 import logger from '../logger.js';
+import { CLUB_FOUNDING_YEAR, feeForYear, getClubSettings } from '../utils/clubSettings.js';
 
 async function loadAttendeePayments(tourId) {
   const tour = await Tour.findById(tourId);
@@ -74,13 +75,13 @@ export async function resolvePayableAttendeesForAdmin(tourId, attendeeIds) {
   return { tour, payable };
 }
 
-// Club membership dues: 1000 Ft/year, tracked as real Transaction entries
-// (see transactionModel.js's user/membershipYear fields) rather than
+// Club membership dues: a yearly fee set by an admin on the Klub →
+// Beállítások page (by the year it takes effect - see
+// utils/clubSettings.js), tracked as real Transaction entries (see
+// transactionModel.js's user/membershipYear fields) rather than
 // Reservation attendees - "paid" means a Tagdíj income transaction
 // already exists for that person+year (same rule members.ts/overview.ts
 // use client-side).
-const CLUB_FOUNDING_YEAR = 2019;
-const MEMBERSHIP_DUES_AMOUNT = 1000;
 
 // Same "self + same family" rule as resolvePayableAttendees, but for
 // membership dues rather than a tour advance - the payer picks exactly
@@ -112,6 +113,7 @@ async function resolvePayableMembers(items, user) {
     paidYearsByUser.get(key).add(t.membershipYear);
   }
 
+  const { membershipFees } = await getClubSettings();
   const currentYear = new Date().getFullYear();
   const seen = new Set();
   const payable = [];
@@ -130,7 +132,9 @@ async function resolvePayableMembers(items, user) {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    payable.push({ _id: member._id, name: member.name, year: y, amount: MEMBERSHIP_DUES_AMOUNT });
+    const amount = feeForYear(membershipFees, y);
+    if (!amount) continue; // no fee set for that year - nothing to pay
+    payable.push({ _id: member._id, name: member.name, year: y, amount });
   }
 
   if (payable.length === 0) {

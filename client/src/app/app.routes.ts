@@ -139,6 +139,12 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/klub/documents/documents').then((m) => m.Documents),
       },
       {
+        path: 'beallitasok',
+        title: 'Klub beállítások',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/klub/settings/settings').then((m) => m.KlubSettings),
+      },
+      {
         path: 'profilom',
         title: 'Klub profilom',
         loadComponent: () => import('./pages/klub/profile/profile').then((m) => m.KlubProfile),
