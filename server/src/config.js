@@ -1,3 +1,5 @@
+import path from 'path';
+
 const config = {
   nodeEnv: process.env.NODE_ENV,
   port: process.env.PORT,
@@ -107,13 +109,20 @@ const config = {
   // Windows-mapped-drive form instead (Z:\..., S:\...) in the local .env.
   photosRoot: process.env.PHOTOS_ROOT,
   thumbnailsRoot: process.env.THUMBNAILS_ROOT,
-  // The Jellyfin-organized "A bódorgó klán" video library, already on the
-  // NAS - streamed straight from there (see tourVideoController.js), never
-  // copied into this app's own storage. Same dual-form path split as
+  // MEDIA_ROOT: the one Jellyfin-organized folder on the NAS holding every
+  // club video, one subfolder per series - streamed straight from there,
+  // never copied into this app's own storage. Same dual-form path split as
   // photosRoot/thumbnailsRoot above: the live pm2 process needs the
   // NAS-native absolute path, a dev machine running this by hand instead
   // needs the Windows-mapped-drive form (Y:\...) in its own local .env.
-  videosRoot: process.env.VIDEOS_ROOT,
+  //
+  // The tour recap videos are its a-bodorgo-klan subfolder (see
+  // tourVideoController.js); the Média page's categories are the others
+  // (see mediaVideoController.js). The tests point each at its own
+  // temporary folder instead (VIDEOS_ROOT / MEDIA_VIDEOS_ROOT).
+  videosRoot:
+    process.env.VIDEOS_ROOT || (process.env.MEDIA_ROOT ? path.join(process.env.MEDIA_ROOT, 'a-bodorgo-klan') : undefined),
+  mediaVideosRoot: process.env.MEDIA_VIDEOS_ROOT || process.env.MEDIA_ROOT,
 };
 
 // Shared by Express's cors() middleware and Socket.IO's own cors option, so

@@ -15,6 +15,7 @@ import tourRouter from './routes/tourRoutes.js';
 import userRouter from './routes/userRoutes.js';
 import systemRouter from './routes/systemRoutes.js';
 import authOidcRouter from './routes/authOidcRoutes.js';
+import mediaRouter from './routes/mediaRoutes.js';
 import documentRouter from './routes/documentRoutes.js';
 import requireAuth from './auth/requireAuth.js';
 import { TOUR_DOCUMENTS_DIR } from './utils/dataDirs.js';
@@ -123,6 +124,7 @@ export default function createApp(sessionMiddleware) {
     express.static(TOUR_DOCUMENTS_DIR),
   );
   app.use('/documents', documentRouter);
+  app.use('/media', mediaRouter);
 
   app.use((req, res, next) => {
     req.requestTime = new Date().toISOString();

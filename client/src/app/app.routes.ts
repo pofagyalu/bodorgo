@@ -67,6 +67,31 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
+    // The club's videos (and later event photos) that don't belong to one
+    // tour - members only, the whole section.
+    path: 'media',
+    canActivate: [memberGuard],
+    loadComponent: () => import('./pages/media/media').then((m) => m.Media),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'videok' },
+      {
+        path: 'videok',
+        title: 'Média – Videók',
+        loadComponent: () => import('./pages/media/videos/videos').then((m) => m.Videos),
+      },
+      {
+        path: 'videok/:category',
+        title: 'Média – Videók',
+        loadComponent: () => import('./pages/media/videos/videos').then((m) => m.Videos),
+      },
+      {
+        path: 'fotok',
+        title: 'Média – Fotók',
+        loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
+      },
+    ],
+  },
+  {
     // No guard at the parent level any more - Profilom (below) is for every
     // logged-in user, guest included. The member/admin-only subpages each
     // carry their own memberGuard instead (see below).
