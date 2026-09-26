@@ -391,11 +391,12 @@ button {
   }
 }
 
+// Card payments are blue everywhere (cash is gold, below).
 .receipt-btn {
-  color: #1a796c;
+  color: #1565c0;
 
   &:hover {
-    background: #e5f5ec;
+    background: #e3eefb;
   }
 }
 
@@ -478,5 +479,118 @@ button {
   &:disabled {
     opacity: 0.5;
     cursor: default;
+  }
+}
+
+// --- Táboraim: upcoming as full rows, past ones as chips by year ---
+
+.attendance-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.attendance-summary {
+  font-size: 12px;
+  font-weight: 700;
+  color: #267c68;
+  background: #e7f5ed;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.attendance-subhead {
+  margin: 16px 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #56666e;
+}
+
+.past-years {
+  display: grid;
+  gap: 8px;
+}
+
+.past-year {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.year-label {
+  flex: none;
+  width: 38px;
+  padding-top: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #4a5b63;
+}
+
+.past-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.past-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f5f3;
+  font-size: 12px;
+
+  a {
+    color: #2f414b;
+    text-decoration: none;
+  }
+
+  strong {
+    color: #1a796c;
+    margin-right: 2px;
+  }
+
+  &:hover {
+    background: #e6efea;
+  }
+
+  &.unpaid {
+    background: #fff4ea;
+  }
+}
+
+.unpaid-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e08e0b;
+}
+
+// Same card icon as the full rows - at 18px it still reads as a card
+// (smaller, the glyph turns into a blob). Written as .past-chip
+// .chip-receipt so it outranks `.past-chip a` above (the tour name's dark
+// colour), which would otherwise win and paint the card black.
+.past-chip .chip-receipt {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -3px -6px -3px 0;
+  border-radius: 50%;
+  color: #1565c0;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: #e3eefb;
   }
 }

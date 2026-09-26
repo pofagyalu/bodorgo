@@ -154,7 +154,12 @@
     </section>
 
     <section class="panel">
-      <h2>Táboraim</h2>
+      <div class="attendance-head">
+        <h2>Táboraim</h2>
+        @if (attendanceSummary()) {
+        <span class="attendance-summary">{{ attendanceSummary() }}</span>
+        }
+      </div>
       <p class="subtext">A táborok, amelyekre eddig jelentkeztél.</p>
 
       @if (attendanceError()) {
@@ -162,8 +167,11 @@
       } @else if (attendance().length === 0) {
       <p class="empty-note">Még nem jelentkeztél egyetlen táborra sem.</p>
       } @else {
+      <!-- Not over yet: the full row - paid or not, receipt. -->
+      @if (upcomingTours().length) {
+      <h3 class="attendance-subhead">Következő</h3>
       <ul class="attendance-list">
-        @for (row of attendance(); track row.tour._id) {
+        @for (row of upcomingTours(); track row.tour._id) {
         <li class="attendance-row">
           <a [routerLink]="['/taborok', row.tour.slug]" class="attendance-link">
             {{ row.tour.order }}. {{ row.tour.title }}
@@ -190,6 +198,35 @@
         </li>
         }
       </ul>
+      }
+
+      <!-- Past tours: small chips by year - hover shows the date. -->
+      @if (pastByYear().length) {
+      <h3 class="attendance-subhead">Korábbiak</h3>
+      <div class="past-years">
+        @for (group of pastByYear(); track group.year) {
+        <div class="past-year">
+          <span class="year-label">{{ group.year }}</span>
+          <div class="past-chips">
+            @for (row of group.rows; track row.tour._id) {
+            <span class="past-chip" [class.unpaid]="!row.paid" [title]="formatDate(row.tour.startDate) + (row.paid ? '' : ' · nincs kifizetve')">
+              <a [routerLink]="['/taborok', row.tour.slug]">
+                <strong>{{ row.tour.order }}</strong> {{ row.tour.title }}
+              </a>
+              @if (!row.paid) {
+              <span class="unpaid-dot" aria-label="Nincs kifizetve"></span>
+              } @else if (row.paymentMethod !== 'cash' && row.paymentId) {
+              <a [href]="receiptUrl(row.paymentId)" target="_blank" class="chip-receipt" title="Fizetési igazolás (bankkártyás fizetés)">
+                <mat-icon>credit_card</mat-icon>
+              </a>
+              }
+            </span>
+            }
+          </div>
+        </div>
+        }
+      </div>
+      }
       }
     </section>
     </div>

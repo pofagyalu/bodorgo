@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { UserService, MyProfile, UserAddress, AttendedTour, FamilyMember } from '../../../services/user';
@@ -38,6 +38,37 @@ export class KlubProfile implements OnInit {
   // Moved here from the old top-level Profil page (now removed) - every
   // logged-in user's own tours and family roster, not just club members'.
   attendance = signal<AttendanceRow[]>([]);
+
+  // Táboraim, split by what matters: tours not over yet keep their full
+  // row (paid or not, receipt - the part you may still need to act on);
+  // past ones become small chips grouped by year, newest first.
+  private isOver = (row: AttendanceRow) => {
+    const start = new Date(row.tour.startDate);
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + (row.tour.duration ?? 1));
+    return end.getTime() <= Date.now();
+  };
+  upcomingTours = computed(() =>
+    this.attendance()
+      .filter((r) => !this.isOver(r))
+      .sort((a, b) => a.tour.startDate.localeCompare(b.tour.startDate)),
+  );
+  pastByYear = computed(() => {
+    const byYear = new Map<number, AttendanceRow[]>();
+    for (const r of this.attendance().filter((row) => this.isOver(row))) {
+      const year = new Date(r.tour.startDate).getFullYear();
+      byYear.set(year, [...(byYear.get(year) ?? []), r]);
+    }
+    return [...byYear.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([year, rows]) => ({ year, rows: rows.sort((a, b) => b.tour.order - a.tour.order) }));
+  });
+  // "24 tábor · 2012 óta"
+  attendanceSummary = computed(() => {
+    const rows = this.attendance();
+    if (!rows.length) return '';
+    const first = Math.min(...rows.map((r) => new Date(r.tour.startDate).getFullYear()));
+    return `${rows.length} tábor · ${first} óta`;
+  });
   attendanceError = signal<string | null>(null);
 
   family = signal<FamilyMember[]>([]);
