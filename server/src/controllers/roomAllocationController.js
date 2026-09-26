@@ -99,13 +99,16 @@ export const assignRoom = async (req, res) => {
 };
 
 // PUT /tours/:id/rooms/finalized - admin-only. { finalized: true | false }.
+// A direct update of just this one flag - loadTour only loads the
+// accommodation, and a .save() of that partial document ran the tour's
+// save hooks (e.g. rebuilding the slug from the unloaded title) and failed.
 export const setFinalized = async (req, res) => {
   const tour = await loadTour(req.params.id);
-  tour.accommodation.finalized = !!req.body?.finalized;
-  await tour.save({ validateModifiedOnly: true });
+  const finalized = !!req.body?.finalized;
+  await Tour.updateOne({ _id: tour._id }, { $set: { 'accommodation.finalized': finalized } });
 
   emitToTour(tour._id, 'rooms-changed', { tourId: String(tour._id) });
-  res.status(200).json({ status: 'success', data: { finalized: tour.accommodation.finalized } });
+  res.status(200).json({ status: 'success', data: { finalized } });
 };
 
 // After the accommodation itself is edited: anyone whose room no longer

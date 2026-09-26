@@ -4,12 +4,13 @@ import crypto from 'crypto';
 import multer from 'multer';
 import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
+import { TOUR_DOCUMENTS_DIR } from '../utils/dataDirs.js';
 
 // Same "not committed, not synced, per-environment" storage as tour cover
 // images (server/public/img/tours) - see server/.gitignore's bare
 // `public` entry. One subfolder per tour (by _id, stable even if the
 // slug changes later) so files never collide across tours.
-const DOCS_ROOT = path.join(path.resolve(), 'public', 'documents', 'tours');
+const DOCS_ROOT = TOUR_DOCUMENTS_DIR;
 
 const ALLOWED_MIME_TYPES = {
   'application/pdf': '.pdf',

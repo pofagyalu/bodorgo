@@ -17,9 +17,13 @@ Local user records (`src/models/userModel.js`) have a `role` field: `admin | mem
 - **A missing or unrecognized role denies the login outright** (`roleFromClaim()` returns `null` → redirect to `/login?error=no-role`, no session created, no local user record created or touched) — a deliberate choice so a broken invite or a group membership removed later locks someone out instead of silently downgrading them to guest. A role change (including a downgrade) only takes effect on that user's *next* login, not by killing an already-active session immediately.
 - `admin` = full access. `member` = an official, dues-paying club member. `guest` = can log in and use the app fully, just isn't a paying member (this is *not* the same as "not enrolled" — a real `bodorgo-guest` group member still gets a valid role and logs in fine).
 - The one exception: a login-less dependent (e.g. a child with no email/account of their own, created by hand via `scripts/addFamilyMember.js` or `scripts/importAttendance.js`) never goes through a login at all, so their `role` (schema default `guest`) stays whatever it was set to until they get a real Authentik account — at which point the callback's email-match "claim" logic attaches their `sub` and the group sync above takes over normally.
-- `scripts/testRoleFromClaim.js` verifies the claim-validation logic without needing a live Authentik login.
+- `tests/api/auth.test.js` verifies the claim validation and the whole login callback (new user, claiming an existing record by email, refusing a login without a role) with a faked Authentik - see [tests/README.md](tests/README.md).
 
-This replaced an earlier design (raw `groups` claim mapped to a role in this app's own code, group named `bodorgo` rather than `bodorgo-member`, and "keep the existing role" instead of "deny login" when the claim was missing) — `scripts/testRoleFromGroups.js` documents that superseded mapping for reference only; it's not used by the app anymore.
+This replaced an earlier design (raw `groups` claim mapped to a role in this app's own code, group named `bodorgo` rather than `bodorgo-member`, and "keep the existing role" instead of "deny login" when the claim was missing) - no longer used by the app.
+
+## Tests
+
+`npm test` runs the automated tests (Vitest, a throwaway in-memory MongoDB - never the real database); `npm run test:coverage` adds the coverage report. See [tests/README.md](tests/README.md).
 
 ## Local development
 

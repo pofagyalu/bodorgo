@@ -10,7 +10,10 @@
   "scripts": {
     "build": "node build.js && node sync.js",
     "start": "nodemon src/server.js",
-    "start:prod": "SET NODE_ENV=production&&nodemon src/server.js"
+    "start:prod": "SET NODE_ENV=production&&nodemon src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "author": "Zoltán Nagy",
   "license": "ISC",
@@ -49,6 +52,7 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.2",
     "esbuild": "^0.27.0",
     "esbuild-node-externals": "^1.20.1",
     "eslint": "^8.57.1",
@@ -59,7 +63,11 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-react": "^7.37.5",
+    "mongodb-memory-server": "^11.3.0",
     "nodemon": "^3.1.14",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "socket.io-client": "^4.8.4",
+    "supertest": "^7.3.0",
+    "vitest": "^5.0.2"
   }
 }

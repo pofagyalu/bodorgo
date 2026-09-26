@@ -1,11 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import AppError from '../utils/appError.js';
+import { CLUB_DOCUMENTS_DIR } from '../utils/dataDirs.js';
 
 // Deliberately outside public/ (see app.js's express.static) - these files
 // are only ever reachable through this requireAuth-gated route, not as a
 // plain unauthenticated static asset like tour images are.
-const DOCUMENTS_DIR = path.join(path.resolve(), 'documents');
+const DOCUMENTS_DIR = CLUB_DOCUMENTS_DIR;
 
 // Any logged-in user (guest/bodorgo/admin alike) can fetch a document -
 // see documentRoutes.js, this is the "bare minimum" protection asked for,

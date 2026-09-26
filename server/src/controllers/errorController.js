@@ -64,9 +64,12 @@ export default (err, req, res, next) => {
     `${err.statusCode} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`,
   );
 
-  if (config.nodeEnv === 'development') {
+  // Anything but production (development, test, or NODE_ENV unset) gets the
+  // detailed response - previously only an exact 'development' did, and any
+  // other value left every failing request hanging with no response at all.
+  if (config.nodeEnv !== 'production') {
     sendErrorDev(err, res);
-  } else if (config.nodeEnv === 'production') {
+  } else {
     let error = { ...err };
     if (err.name === 'CastError') error = handleCastErrorDB(error);
     if (err.code === 11000) error = handleDuplicateFieldsDB(error);
