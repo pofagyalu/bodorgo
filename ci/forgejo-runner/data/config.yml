@@ -26,11 +26,12 @@ cache:
   proxy_port: 4001
 
 container:
-  # Every job container: at most 2 GB of memory and 2 CPU cores, so a test
-  # run can never squeeze Forgejo or the live site - and, like the runner
-  # itself, Forgejo's public name pointed at its LAN address so the job can
-  # check out the code.
-  options: --memory=2g --cpus=2 --add-host=forgejo.terfotozas.hu:192.168.1.81
+  # Every job container: at most 2 GB of memory, so a test run can never
+  # squeeze Forgejo or the live site (no CPU limit: Synology's kernel
+  # doesn't support --cpus - "NanoCPUs can not be set") - and, like the
+  # runner itself, Forgejo's public name pointed at its LAN address so the
+  # job can check out the code.
+  options: --memory=2g --add-host=forgejo.terfotozas.hu:192.168.1.81
   # A fresh network per job.
   network: ''
   privileged: false
