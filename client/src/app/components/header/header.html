@@ -30,7 +30,9 @@
     }
     <a routerLink="/chat" routerLinkActive="active" class="menu-item blue">Chat</a>
     <a routerLink="/klub" routerLinkActive="active" class="menu-item dark-green">Klub</a>
-    <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown">Szavazások</a>
+    <a routerLink="/szavazasok" routerLinkActive="active" class="menu-item brown"
+      >Szavazások @if (pendingPolls()) {<span class="menu-badge" [title]="pendingPolls() + ' szavazás vár rád'">{{ pendingPolls() }}</span>}</a
+    >
     <!-- Hidden for now, still routable - not ready for public linking yet -->
     <!-- <a routerLink="/versenyek" routerLinkActive="active" class="menu-item yellow">Versenyek</a> -->
   </nav>
@@ -126,7 +128,7 @@
       routerLinkActive="active"
       (click)="closeMobileMenu()"
       class="menu-item brown"
-      >Szavazások</a
+      >Szavazások @if (pendingPolls()) {<span class="menu-badge">{{ pendingPolls() }}</span>}</a
     >
     <!-- Hidden for now, still routable - not ready for public linking yet -->
     <!-- <a

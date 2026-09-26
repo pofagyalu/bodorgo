@@ -41,6 +41,8 @@ export class Compose {
   private messageInput = viewChild<ElementRef<HTMLTextAreaElement>>('messageInput');
 
   @Output() send = new EventEmitter<{ text: string }>();
+  // The 📊 button - the chat opens the "Új szavazás" form.
+  @Output() pollRequested = new EventEmitter<void>();
 
   // The "@..." being typed right before the cursor, if any.
   private mentionQuery = signal<{ start: number; query: string } | null>(null);

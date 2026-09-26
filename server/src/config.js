@@ -126,6 +126,10 @@ const config = {
   // The 12-hourly "your tour's video is ready" e-mails (see server.js) -
   // switched on in the live server's .env only.
   tourVideoEmails: process.env.TOUR_VIDEO_EMAILS === 'on',
+  // Other timed jobs that must run on one server only, e.g. the polls'
+  // "closes in 2 hours" reminders (see server.js) - on in the live
+  // server's .env.
+  backgroundJobs: process.env.BACKGROUND_JOBS === 'on',
   // Web push notifications (see utils/push.js) - off when the keys aren't
   // set. The same key pair on every server: a device subscribed through
   // one can only be reached with that pair.

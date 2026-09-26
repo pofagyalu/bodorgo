@@ -12,6 +12,7 @@ import { getTourVideo, getTourVideoCover, getTourVideoSubtitles } from '../contr
 import * as reviewController from '../controllers/reviewController.js';
 import { downloadTourPdf, emailTourPdf } from '../controllers/tourPdfController.js';
 import { getMailings, saveDraft, sendTest, sendToAttendees } from '../controllers/mailingController.js';
+import { createTourPoll } from '../controllers/pollController.js';
 import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
 import {
   loadTourForUpload,
@@ -98,6 +99,8 @@ router
 // who may withdraw whom), and the admins' list of them.
 router.route('/:tourId/reservations/:reservationId/attendees/:attendeeId').delete(requireAuth, withdrawAttendee);
 router.route('/:tourId/cancellations').get(requireAuth, restrictTo('admin'), getCancellations);
+// A poll started from the tour's chat - by any attendee (see pollController.js).
+router.route('/:tourId/polls').post(requireAuth, createTourPoll);
 
 router
   .route('/:tourId/schedule/:eventId/participants')

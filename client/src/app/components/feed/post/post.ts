@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { usernameKey } from '../../../shared/usernames';
+import { PollCard } from '../../poll-card/poll-card';
 
 // Fixed, brand-matched colors instead of per-user hashing: orange for your
 // own name, blue for everyone else's (see post.scss for the bubble
@@ -52,7 +53,7 @@ export function splitMentions(text: string, known: Set<string>, me: string | nul
 @Component({
   selector: 'app-post',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, PollCard],
   templateUrl: './post.html',
   styleUrls: ['./post.scss'],
   host: {
@@ -104,6 +105,10 @@ export class Post {
 
   textParts = computed(() => splitMentions(this.text(), this.knownUsernames(), this.myUsername()));
 
+  // A poll started in the chat - shown as its live card; managed from the
+  // card itself, so no edit/delete here.
+  @Input() pollId: string | null = null;
+
   // Edited afterwards by its author -> "(szerkesztve)" next to the time.
   @Input() edited = false;
   // Deleted by its author -> a "Hozzászólás törölve" placeholder.
@@ -131,7 +136,7 @@ export class Post {
   private pressStart: { x: number; y: number } | null = null;
 
   onPointerDown(e: PointerEvent) {
-    if (e.pointerType !== 'touch' || this.editing()) return;
+    if (e.pointerType !== 'touch' || this.editing() || this.pollId) return;
     this.pressStart = { x: e.clientX, y: e.clientY };
     clearTimeout(this.pressTimer);
     this.pressTimer = setTimeout(() => {

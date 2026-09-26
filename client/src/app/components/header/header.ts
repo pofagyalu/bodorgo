@@ -1,5 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, OnDestroy, computed, effect, inject } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter } from 'rxjs';
+import { PollService } from '../../services/poll';
 import { AuthService } from '../../auth/auth.service';
 import { UserService } from '../../services/user';
 
@@ -23,12 +25,34 @@ const AVATAR_COLOR_VARS = [
   templateUrl: './header.html',
   styleUrl: './header.scss',
 })
-export class Header {
+export class Header implements OnDestroy {
   isMobileMenuOpen = false;
 
   constructor(public auth: AuthService) {}
 
   private userService = inject(UserService);
+
+  // Szavazások badge: open polls on my tours still waiting for my vote.
+  // Refreshed on every page change and every 2 minutes (and by PollService
+  // itself after a vote or a new poll).
+  private pollService = inject(PollService);
+  pendingPolls = this.pollService.pendingCount;
+  private refreshPolls = () => {
+    if (this.auth.isLoggedIn()) this.pollService.refreshPending();
+  };
+  private pollTimer = setInterval(this.refreshPolls, 2 * 60 * 1000);
+  private navSub = inject(Router)
+    .events.pipe(filter((e) => e instanceof NavigationEnd))
+    .subscribe(this.refreshPolls);
+  private loginWatch = effect(() => {
+    if (this.auth.isLoggedIn()) this.pollService.refreshPending();
+    else this.pollService.pendingCount.set(0);
+  });
+
+  ngOnDestroy() {
+    clearInterval(this.pollTimer);
+    this.navSub.unsubscribe();
+  }
 
   // Média is members only - guests don't get the menu item at all.
   isMember = computed(() => {

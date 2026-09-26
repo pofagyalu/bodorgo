@@ -1,0 +1,66 @@
+<div class="backdrop" (click)="cancel()">
+  <form class="dialog" (click)="$event.stopPropagation()" (submit)="submit($event)" novalidate role="dialog" aria-modal="true" aria-label="Új szavazás">
+    <header>
+      <h2><mat-icon>poll</mat-icon> Új szavazás</h2>
+      <button type="button" class="icon-close" (click)="cancel()" title="Bezárás"><mat-icon>close</mat-icon></button>
+    </header>
+
+    <label class="field">
+      <span>Kérdés</span>
+      <input type="text" name="question" maxlength="200" placeholder="pl. Pénteken megnézzük a múzeumot?" [ngModel]="question()" (ngModelChange)="question.set($event)" autofocus />
+    </label>
+
+    <div class="field">
+      <span>Válaszok</span>
+      @for (o of options(); track $index; let i = $index) {
+      <div class="option-row">
+        <input type="text" [name]="'o' + i" maxlength="100" [ngModel]="o" (ngModelChange)="setOption(i, $event)" [placeholder]="'Válasz ' + (i + 1)" />
+        @if (options().length > 2) {
+        <button type="button" class="icon-btn" (click)="removeOption(i)" title="Válasz törlése"><mat-icon>close</mat-icon></button>
+        }
+      </div>
+      }
+      <button type="button" class="link-btn" (click)="addOption()">+ Új válasz</button>
+    </div>
+
+    <label class="field">
+      <span>Lezárul</span>
+      <input type="datetime-local" name="closesAt" [ngModel]="closesAt()" (ngModelChange)="closesAt.set($event)" />
+    </label>
+
+    <div class="field">
+      <span>Láthatóság</span>
+      <div class="segmented">
+        <button type="button" [class.active]="visibility() === 'open'" (click)="visibility.set('open')">
+          <mat-icon>visibility</mat-icon> Nyílt
+        </button>
+        <button type="button" [class.active]="visibility() === 'secret'" (click)="visibility.set('secret')">
+          <mat-icon>lock</mat-icon> Titkos
+        </button>
+      </div>
+      <small>
+        {{ visibility() === 'open' ? 'Mindenki látja, ki mire szavazott – pl. „ki jön?”' : 'Csak az eredmény látszik, nevek nélkül – pl. „hol együnk?”' }}
+      </small>
+    </div>
+
+    <label class="check">
+      <input type="checkbox" name="useMinimum" [ngModel]="useMinimum()" (ngModelChange)="useMinimum.set($event)" />
+      <span>
+        Legalább
+        <input type="number" name="minimumCount" min="1" max="500" class="small-number" [ngModel]="minimumCount()" (ngModelChange)="minimumCount.set(+$event); useMinimum.set(true)" />
+        fő kell erre: <strong>„{{ options()[0] || 'első válasz' }}”</strong>
+      </span>
+    </label>
+
+    @if (error()) {
+    <p class="error">{{ error() }}</p>
+    }
+
+    <footer>
+      <button type="button" class="btn ghost" (click)="cancel()" [disabled]="saving()">Mégse</button>
+      <button type="submit" class="btn primary" [disabled]="saving()">
+        {{ saving() ? 'Indítás…' : 'Szavazás indítása' }}
+      </button>
+    </footer>
+  </form>
+</div>

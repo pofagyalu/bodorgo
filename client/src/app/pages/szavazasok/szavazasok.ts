@@ -1,20 +1,24 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { PollService, Poll, PollPayload } from '../../services/poll';
+import { PollService, Poll, PollPayload, PollVisibility } from '../../services/poll';
 import { TourService, Tour } from '../../services/tour';
 import { AuthService } from '../../auth/auth.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { PollCard } from '../../components/poll-card/poll-card';
 
 interface PollFormModel {
   tour: string;
   question: string;
   options: string[];
   closesAtLocal: string;
+  visibility: PollVisibility;
+  // On the first answer; empty = none.
+  minimumCount: number | null;
 }
 
 function emptyForm(): PollFormModel {
-  return { tour: '', question: '', options: ['', ''], closesAtLocal: '' };
+  return { tour: '', question: '', options: ['', ''], closesAtLocal: '', visibility: 'secret', minimumCount: null };
 }
 
 // datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not
@@ -25,15 +29,14 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// Admin creates a poll tied to a tour, with a question, as many options as
-// needed, and a closing time. Anyone logged in can vote once while it's
-// still open; before voting (and before it closes) the results stay
-// hidden - see pollController.js's buildPollView for the exact visibility
-// rule, including the "closed polls open up to everyone" extension beyond
-// what was originally asked for.
+// Every poll, open ones first: the ones started in a tour's chat (with a
+// link back to it) and the ones an admin creates here. Each is the same
+// card as in the chat (components/poll-card) - voting, results, Nyílt /
+// Titkos, minimum, close/delete for whoever started it. Admins can also
+// create and edit polls here.
 @Component({
   selector: 'app-szavazasok',
-  imports: [FormsModule, MatIconModule],
+  imports: [FormsModule, MatIconModule, PollCard],
   templateUrl: './szavazasok.html',
   styleUrl: './szavazasok.scss',
 })
@@ -47,11 +50,10 @@ export class Szavazasok implements OnInit {
   polls = signal<Poll[]>([]);
   tours = signal<Tour[]>([]);
 
-  // Which option is currently picked per poll, before the vote is actually
-  // submitted - keyed by poll id, since several polls can be mid-choice at
-  // once on this one list page.
-  selectedOption = signal<Record<string, string>>({});
-  voting = signal<string | null>(null);
+  sections = computed(() => [
+    { title: 'Nyitott', polls: this.polls().filter((p) => !p.isClosed) },
+    { title: 'Lezárt', polls: this.polls().filter((p) => p.isClosed) },
+  ]);
 
   showForm = signal(false);
   editingId = signal<string | null>(null);
@@ -59,10 +61,9 @@ export class Szavazasok implements OnInit {
   saving = signal(false);
   formError = signal<string | null>(null);
 
-  deletingId = signal<string | null>(null);
-
   ngOnInit() {
     this.loadPolls();
+    this.pollService.refreshPending();
   }
 
   private loadPolls() {
@@ -93,28 +94,8 @@ export class Szavazasok implements OnInit {
     return this.auth.user()?.role === 'admin';
   }
 
-  selectOption(pollId: string, optionId: string) {
-    this.selectedOption.update((m) => ({ ...m, [pollId]: optionId }));
-  }
-
-  vote(poll: Poll) {
-    const optionId = this.selectedOption()[poll._id];
-    if (!optionId) {
-      this.notifications.addError('Válassz egy választ a szavazáshoz.');
-      return;
-    }
-
-    this.voting.set(poll._id);
-    this.pollService.vote(poll._id, optionId).subscribe({
-      next: (res) => {
-        this.polls.update((list) => list.map((p) => (p._id === poll._id ? res.data.poll : p)));
-        this.voting.set(null);
-      },
-      error: (err) => {
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a szavazás során.');
-        this.voting.set(null);
-      },
-    });
+  onRemoved(id: string) {
+    this.polls.update((list) => list.filter((p) => p._id !== id));
   }
 
   openCreate() {
@@ -132,6 +113,8 @@ export class Szavazasok implements OnInit {
       question: poll.question,
       options: poll.options.map((o) => o.text),
       closesAtLocal: toDatetimeLocal(poll.closesAt),
+      visibility: poll.visibility,
+      minimumCount: poll.minimum?.count ?? null,
     };
     this.formError.set(null);
     this.loadTours();
@@ -185,6 +168,8 @@ export class Szavazasok implements OnInit {
       question: this.form.question.trim(),
       options: cleanedOptions,
       closesAt: new Date(this.form.closesAtLocal).toISOString(),
+      visibility: this.form.visibility,
+      minimumCount: this.form.minimumCount ? Number(this.form.minimumCount) : null,
     };
 
     this.saving.set(true);
@@ -209,32 +194,5 @@ export class Szavazasok implements OnInit {
         this.saving.set(false);
       },
     });
-  }
-
-  remove(poll: Poll) {
-    if (this.deletingId()) return;
-    if (!confirm(`Biztosan törlöd ezt a szavazást: "${poll.question}"?`)) return;
-
-    this.deletingId.set(poll._id);
-    this.pollService.deletePoll(poll._id).subscribe({
-      next: () => {
-        this.polls.update((list) => list.filter((p) => p._id !== poll._id));
-        this.deletingId.set(null);
-      },
-      error: (err) => {
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a törlés során.');
-        this.deletingId.set(null);
-      },
-    });
-  }
-
-  formatClosesAt(iso: string): string {
-    return new Intl.DateTimeFormat('hu-HU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(iso));
   }
 }

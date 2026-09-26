@@ -8,6 +8,7 @@ import createSessionMiddleware from './session.js';
 import registerChatHandlers from './chat/chatSocket.js';
 import logger from './logger.js';
 import { checkForNewTourVideos } from './controllers/tourVideoController.js';
+import { checkPollReminders } from './chat/pollReminders.js';
 
 // This handler must run before anything else
 process.on('uncaughtException', (err) => {
@@ -52,6 +53,16 @@ mongoose
         checkForNewTourVideos().catch((err) => logger.error(`Tour video check failed: ${err.message}`));
       setTimeout(checkVideos, 5 * 60 * 1000);
       setInterval(checkVideos, 12 * 60 * 60 * 1000);
+    }
+
+    // Every 10 minutes: remind people about polls closing within 2 hours
+    // they haven't voted in (see chat/pollReminders.js). Live server only
+    // (BACKGROUND_JOBS=on) - the reminders must go out once.
+    if (config.backgroundJobs) {
+      setInterval(
+        () => checkPollReminders().catch((err) => logger.error(`Poll reminders failed: ${err.message}`)),
+        10 * 60 * 1000,
+      );
     }
 
     process.on('SIGINT', (err) => {

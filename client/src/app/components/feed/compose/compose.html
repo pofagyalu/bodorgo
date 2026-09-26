@@ -17,6 +17,11 @@
   </ul>
   }
 
+  <!-- Start a poll in this chat (see poll-create). -->
+  <button type="button" class="poll-btn" title="Szavazás indítása" aria-label="Szavazás indítása" (click)="pollRequested.emit()">
+    <mat-icon>poll</mat-icon>
+  </button>
+
   <textarea
     #messageInput
     placeholder="Írj egy üzenetet... (&#64; = megemlítés)"

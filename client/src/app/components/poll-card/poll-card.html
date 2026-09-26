@@ -1,0 +1,88 @@
+@if (poll(); as p) {
+<div class="poll" [class.closed]="p.isClosed">
+  <div class="poll-head">
+    <span class="kind"><mat-icon>poll</mat-icon> Szavazás</span>
+    <span class="visibility" [title]="p.visibility === 'open' ? 'Mindenki látja, ki mire szavazott' : 'Csak az eredmény látszik, a nevek nem'">
+      <mat-icon>{{ p.visibility === 'open' ? 'visibility' : 'lock' }}</mat-icon>
+      {{ p.visibility === 'open' ? 'Nyílt' : 'Titkos' }}
+    </span>
+    <span class="deadline">
+      @if (p.isClosed) { Lezárva } @else { Lezárul: {{ deadline(p.closesAt) }} }
+    </span>
+  </div>
+
+  @if (showTour()) {
+  <div class="tour-line">{{ p.tour.order }}. {{ p.tour.title }}</div>
+  }
+  <h3 class="question">{{ p.question }}</h3>
+
+  <div class="options">
+    @for (o of p.options; track o._id) {
+    @let r = resultFor(o._id);
+    <button
+      type="button"
+      class="option"
+      [class.mine]="p.myOptionId === o._id"
+      [disabled]="p.isClosed || busy()"
+      (click)="vote(o._id)"
+      [attr.aria-pressed]="p.myOptionId === o._id"
+    >
+      @if (r) {
+      <span class="bar" [style.width.%]="r.percentage"></span>
+      }
+      <span class="option-main">
+        <mat-icon class="check">{{ p.myOptionId === o._id ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+        <span class="option-text">{{ o.text }}</span>
+        @if (r) {
+        <span class="option-count">{{ r.count }}</span>
+        }
+      </span>
+      @if (r?.voters?.length) {
+      <span class="voters">{{ voterNames(r!) }}</span>
+      }
+    </button>
+    }
+  </div>
+
+  @if (p.minimum) {
+  <div class="minimum" [class.reached]="p.minimum.reached">
+    <div class="minimum-track"><div class="minimum-fill" [style.width.%]="minimumPercent()"></div></div>
+    <span>
+      @if (p.minimum.reached) { <mat-icon>celebration</mat-icon> }
+      {{ minimumText() }}
+    </span>
+  </div>
+  }
+
+  <div class="poll-foot">
+    <span class="foot-info">
+      @if (p.results) { {{ p.totalVotes }} szavazat }
+      @else { Az eredmény a szavazás után látszik. }
+      @if (p.createdBy) { · {{ p.createdBy.name }} indította }
+    </span>
+    <span class="foot-actions">
+      @if (showTour() && p.post) {
+      <a class="foot-link" routerLink="/chat" [queryParams]="{ tabor: p.tour._id }">Ugrás a chatbe</a>
+      }
+      @if (live()) {
+      <a class="foot-link" routerLink="/szavazasok">Szavazások</a>
+      }
+      @if (p.canManage) {
+      @if (confirmDelete()) {
+      <span class="confirm">Törlöd?
+        <button type="button" class="foot-btn danger" (click)="remove()" [disabled]="busy()">Igen</button>
+        <button type="button" class="foot-btn" (click)="confirmDelete.set(false)">Mégse</button>
+      </span>
+      } @else {
+      @if (!p.isClosed) {
+      <button type="button" class="foot-btn" (click)="close()" [disabled]="busy()">Lezárás</button>
+      }
+      <button type="button" class="foot-btn danger" (click)="confirmDelete.set(true)" [disabled]="busy()">Törlés</button>
+      }
+      }
+    </span>
+  </div>
+</div>
+} @else {
+<div class="poll loading">Szavazás betöltése…</div>
+}
