@@ -124,6 +124,16 @@
 
   @if (auth.isLoggedIn()) {
     <nav class="mobile-nav">
+      <!-- Phone only: the home page as the first item, so the menu always
+           shows where you are (on desktop the logo is the way home). -->
+      <a
+        routerLink="/"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        (click)="closeMobileMenu()"
+        class="menu-item home-item"
+        >Kezdőlap</a
+      >
       <a
         routerLink="/taborok"
         routerLinkActive="active"

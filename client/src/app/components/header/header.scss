@@ -282,14 +282,36 @@
   }
 }
 
-/* Mobile slide-in menu: a plain highlight box on the selected item - the
-   rectangle alone marks it, so its text keeps its own color instead of
-   switching to black. */
+/* Mobile slide-in menu: the selected item is a solid white pill, just as
+   wide as its text - its text keeps its own logo color, which reads well
+   on white (a see-through white over the green panel washed the light
+   green Táborok out completely). */
 .mobile-nav .menu-item.active {
+  align-self: flex-start;
   border: 2px solid white;
-  box-shadow: 0 1px 5px 1px #ddd;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.3);
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+/* Kezdőlap (phone menu only): neutral - white on the green panel, dark
+   grey once it's the selected (white) pill. */
+.mobile-nav .home-item {
+  color: #fff;
+}
+
+.mobile-nav .menu-item.active.home-item {
+  color: #333;
+}
+
+/* The two light logo colors are still faint on white - a darker shade of
+   the same color for the selected pill only. */
+.mobile-nav .menu-item.active.green {
+  color: #4b8a38;
+}
+
+.mobile-nav .menu-item.active.yellow {
+  color: #b7800c;
 }
 
 /* One fixed, deliberate color per menu item - drawn from the same 7-color
@@ -436,4 +458,40 @@
   font-weight: 800;
   line-height: 1;
   vertical-align: 2px;
+}
+
+// Phone: three columns - the hamburger on the left, the logo exactly in
+// the middle, the avatar on the right. The two side columns are equal
+// (1fr each), so the logo stays centred even without an avatar (logged
+// out). .left-group steps aside (display: contents) so its hamburger and
+// logo become columns of their own. Last in the file, so it wins over the
+// base .header-container / .mobile-user-avatar rules above.
+@media (max-width: 768px) {
+  .header-container {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .left-group {
+    display: contents;
+  }
+
+  .hamburger {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .logo-container {
+    grid-column: 2;
+    justify-self: center;
+    margin: 0;
+  }
+
+  .mobile-user-avatar {
+    grid-column: 3;
+    justify-self: end;
+    margin: 0;
+  }
 }
