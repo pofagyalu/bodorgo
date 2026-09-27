@@ -374,9 +374,14 @@
        applies to everyone regardless of role, there's just no other
        reason to keep the whole bar around once they're personally signed
        up (the checkmark below still needs to show). -->
-    @if (!auth.isLoggedIn() || alreadySignedUp() || !isFull()) {
+    <!-- Once the tour has started, sign-up is closed (signUpOpen) - the bar
+       says so instead; only an admin still gets the button, to register
+       people afterwards. -->
+    @if (!auth.isLoggedIn() || alreadySignedUp() || !isFull() || !signUpOpen()) {
       <div class="signup-bar">
-        @if (!auth.isLoggedIn()) {
+        @if (!signUpOpen() && !alreadySignedUp()) {
+          <p class="signup-closed">A jelentkezés erre a táborra lezárult.</p>
+        } @else if (!auth.isLoggedIn()) {
           <p>A jelentkezéshez be kell jelentkezned.</p>
           <button class="btn btn--green" (click)="login()">Bejelentkezés</button>
         } @else {
@@ -388,7 +393,7 @@
               >
             }
           }
-          @if (!isFull()) {
+          @if (!isFull() && signUpOpen()) {
             @if (pickerOptions().length === 1) {
               <button class="btn btn--green" [disabled]="signingUp()" (click)="signUpSingle()">
                 {{ signingUp() ? 'Jelentkezés folyamatban...' : 'Jelentkezés' }}
@@ -403,10 +408,6 @@
         }
       </div>
     }
-
-    <!-- Extra infók document delete confirmation - a real in-app modal
-       (same visual language as the attendee picker below), not the
-       browser's own confirm(). -->
 
     <!-- Admin's letter to every attendee (see tour-mail-panel). -->
     @if (showMailPanel()) {

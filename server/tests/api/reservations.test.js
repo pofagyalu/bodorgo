@@ -80,6 +80,29 @@ describe('signing up for a tour', () => {
     expect(res.body.message).toContain('megtelt');
   });
 
+  it('is closed to members and guests once the tour has started', async () => {
+    const hourAgo = new Date(Date.now() - 3600 * 1000);
+    const started = await createTour({ startDate: hourAgo });
+    const longPast = await createTour({ startDate: new Date('2019-07-10') });
+    for (const tour of [started, longPast]) {
+      const member = await createMember();
+      const res = await signUp(tour, member);
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('már nem lehet jelentkezni');
+      expect((await signUp(tour, await createGuest())).status).toBe(400);
+    }
+    expect(await Reservation.countDocuments()).toBe(0);
+  });
+
+  it('an admin can still register anyone for a started or past tour (backfilling)', async () => {
+    const admin = await createAdmin();
+    const member = await createMember();
+    const past = await createTour({ startDate: new Date('2019-07-10') });
+    const res = await signUp(past, admin, [member._id]);
+    expect(res.status).toBe(201);
+    expect(res.body.data.reservation.attendees[0].user).toBe(String(member._id));
+  });
+
   it('404s for an unknown tour or unknown attendee', async () => {
     const admin = await createAdmin();
     const tour = await createTour();

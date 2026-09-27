@@ -726,6 +726,12 @@
   border-radius: 12px;
 }
 
+// Sign-up closed (the tour has started) - said plainly, in grey.
+.signup-closed {
+  color: #6b7780;
+  font-weight: 600;
+}
+
 .already-signed {
   color: #2e7d32;
   font-weight: 600;
