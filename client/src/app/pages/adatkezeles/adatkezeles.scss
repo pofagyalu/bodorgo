@@ -1,0 +1,159 @@
+// Same grey backdrop and floating white panel as the home page
+// (homepage.scss) - wide on a desktop, so the notice isn't one long column.
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 80px);
+  background: #ececec;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+.privacy {
+  flex: 1;
+  width: 100%;
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 3rem;
+  background: #fff;
+  box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
+  color: #333;
+  line-height: 1.65;
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 2.5rem 0 0.5rem;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 1.75rem 0 0.4rem;
+    color: var(--logo-dark-green);
+  }
+
+  p {
+    margin: 0 0 0.75rem;
+  }
+
+  ul {
+    margin: 0 0 0.75rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+
+  li {
+    margin-bottom: 0.4rem;
+  }
+
+  a {
+    color: var(--logo-blue);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+// The fun part - a warm, slightly larger card, set apart from the
+// serious text below it.
+.fun {
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  background: #fff6ec;
+  border: 1px solid #f7d7b5;
+  font-size: 1.05rem;
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.updated {
+  margin-top: 2rem !important;
+  font-size: 0.85rem;
+  color: #7a858b;
+}
+
+@media (max-width: 580px) {
+  .privacy {
+    padding: 1.75rem 1.1rem 2.5rem;
+  }
+}
+
+// Ki fér még hozzá: one card per outside service - what it gets, what it
+// doesn't, and a badge saying whether it can tell whose data it is.
+.recipients {
+  display: grid;
+  // Side by side on a wide screen (2-3 per row), one per row on a phone.
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 12px;
+  margin: 0.75rem 0 1rem;
+}
+
+.recipient {
+  padding: 14px 16px;
+  border: 1px solid #e4eae7;
+  border-radius: 12px;
+  background: #fafcfb;
+
+  header {
+    margin-bottom: 4px;
+  }
+
+  // Azonosítani tudja a személyt? with an Igen/Nem pill right after it - inline,
+  // so the pill always follows the question's last word on its line.
+  .identify {
+    font-size: 0.9rem;
+    color: #5b6770;
+  }
+
+  p {
+    margin: 0 0 0.35rem;
+    font-size: 0.95rem;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  em {
+    font-style: normal;
+    font-weight: 650;
+  }
+
+  .what {
+    color: #5b6770;
+  }
+}
+
+.who {
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: 1px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &--yes {
+    background: #fff1e3;
+    color: #a4520f;
+  }
+
+  &--no {
+    background: #e5f5ec;
+    color: #1a796c;
+  }
+}

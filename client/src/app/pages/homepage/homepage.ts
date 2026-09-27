@@ -4,11 +4,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { TourService, TourStatsResponse } from '../../services/tour';
 import { ToursMap } from '../../components/tours-map/tours-map';
 import { shuffledLogoColors } from '../../shared/logo-colors';
+import { SiteFooter } from '../../shared/site-footer/site-footer';
 
 @Component({
   selector: 'app-homepage',
   standalone: true,
-  imports: [MatIconModule, RouterLink, ToursMap],
+  imports: [MatIconModule, RouterLink, ToursMap, SiteFooter],
   templateUrl: './homepage.html',
   styleUrl: './homepage.scss',
 })
