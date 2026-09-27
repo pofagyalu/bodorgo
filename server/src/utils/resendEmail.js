@@ -1,5 +1,11 @@
 import { Resend } from 'resend';
 import config from '../config.js';
+import logger from '../logger.js';
+import { redirectEmail } from './emailRedirect.js';
+
+if (config.resend.redirectTo) {
+  logger.warn(`EMAIL_REDIRECT_TO is set: every e-mail goes to ${config.resend.redirectTo} only`);
+}
 
 // Separate from utils/email.js's Mailtrap/nodemailer transport - that one
 // writes into Mailtrap's sandbox inbox (never reaches a real mailbox),
@@ -16,7 +22,8 @@ function getClient() {
 /**
  * @param {{to: string | string[], subject: string, html: string, text?: string, attachments?: {filename: string, content: Buffer}[]}} options
  */
-const sendResendEmail = async ({ to, subject, html, text, attachments }) => {
+const sendResendEmail = async (options) => {
+  const { to, subject, html, text, attachments } = redirectEmail(options, config.resend.redirectTo);
   const { data, error } = await getClient().emails.send({
     from: config.resend.from,
     to,
