@@ -16,7 +16,14 @@
         <div class="stat-card">
           <mat-icon [style.color]="totalToursIconColor">holiday_village</mat-icon>
           <span class="stat-value">{{ s.totalTours }}</span>
-          <span class="stat-label">tábor eddig</span>
+          <!-- Tours still ahead aren't counted yet - just flagged as coming,
+               as the label's second line. -->
+          <span class="stat-label"
+            >tábor eddig
+            @if (s.upcomingTours) {
+              <br /><span class="soon-pill">+{{ s.upcomingTours }} hamarosan</span>
+            }
+          </span>
         </div>
 
         <div class="stat-card">
@@ -29,7 +36,7 @@
           <a class="stat-card stat-card--link" [routerLink]="['/taborok', m.slug]">
             <mat-icon [style.color]="mostAttendedIconColor">groups</mat-icon>
             <span class="stat-value">{{ m.participantCount }} fő</span>
-            <span class="stat-label">legnépesebb tábor: {{ m.order }}. {{ m.title }}</span>
+            <span class="stat-label">legnépesebb tábor:<br />{{ m.order }}. {{ m.title }}</span>
           </a>
         }
 
@@ -37,7 +44,9 @@
           <a class="stat-card stat-card--link" [routerLink]="['/taborok', b.slug]">
             <mat-icon [style.color]="bestRatedIconColor">grade</mat-icon>
             <span class="stat-value">{{ b.ratingsAverage }}</span>
-            <span class="stat-label">legjobbra értékelt tábor: {{ b.order }}. {{ b.title }}</span>
+            <span class="stat-label"
+              >legjobbra értékelt tábor:<br />{{ b.order }}. {{ b.title }}</span
+            >
           </a>
         }
 

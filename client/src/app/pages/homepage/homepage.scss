@@ -59,12 +59,18 @@
   gap: 1.2rem;
 }
 
+// Each card spans three rows of the grid and shares them with the other
+// cards in its row (subgrid): picture (icon/pie), value (number/legend),
+// label. So the labels start at the same height across a row, however
+// many lines one wraps to.
 .stat-card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  justify-items: center;
   align-items: center;
+  row-gap: 0.4rem;
   text-align: center;
-  gap: 0.4rem;
   padding: 1.5rem 1rem;
   background: #f7f7f7;
   border-radius: 12px;
@@ -86,15 +92,25 @@
   color: #333;
 }
 
+// "+2 hamarosan" - the second line of the tour count's label: the tours
+// still ahead.
+.soon-pill {
+  display: inline-block;
+  margin-top: 4px;
+  white-space: nowrap;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #fff1e3;
+  color: #a4520f;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .stat-label {
   font-size: 0.9rem;
   color: #777;
-  // Grid items stretch to the tallest card in their row by default, and
-  // the gender card's icon+legend block isn't the same height as a plain
-  // icon+value block - anchoring every label to the bottom of its (now
-  // equal-height) card keeps them lined up horizontally across the row
-  // instead of each just following its own card's shorter content.
-  margin-top: auto;
+  // Its first line lines up across the row (see .stat-card).
+  align-self: start;
 }
 
 .stat-card--link {

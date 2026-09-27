@@ -4,6 +4,7 @@ import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import Payment from '../models/paymentModel.js';
 import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservationController.js';
+import { tourHasEnded } from './reviewController.js';
 import { tourVideoList } from '../utils/tourVideos.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
@@ -544,7 +545,13 @@ export const getTourStats = async (req, res) => {
   // the moment a real tour got rated below 4.5. countDocuments() goes
   // through the same pre(/^find/) secretTour-exclusion middleware as
   // getAlltours's own totalDocuments count.
-  const totalTours = await Tour.countDocuments();
+  //
+  // Only tours that have already ended count ("N tábor eddig") - same
+  // "ended" as the reviews (tourHasEnded); the ones still ahead are
+  // counted separately, for the card's "+N hamarosan".
+  const tourDates = await Tour.find().select('startDate duration');
+  const totalTours = tourDates.filter((t) => tourHasEnded(t)).length;
+  const upcomingTours = tourDates.length - totalTours;
 
   const participantStats = await Reservation.aggregate([
     { $unwind: '$attendees' }, // each attendee becomes its own doc
@@ -610,6 +617,7 @@ export const getTourStats = async (req, res) => {
     status: 'success',
     data: {
       totalTours,
+      upcomingTours,
       totalParticipants,
       genderRatio,
       mostAttendedTour: mostAttendedTourDoc
