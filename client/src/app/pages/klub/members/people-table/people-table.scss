@@ -1,0 +1,351 @@
+// The Felhasználók tables (see people-table.ts) - moved here from
+// members.scss, the same look as before.
+:host {
+  display: block;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.table-scroll {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+// With extra columns (Klubtagok): wide enough for them all, scrolling
+// sideways on a phone rather than squeezing.
+table.wide {
+  min-width: 820px;
+}
+
+// Név is exactly as wide as its longest name or email - width: 1% in an
+// auto-layout table means "as narrow as the content allows", and .person
+// never wraps. The other columns share the rest (an extra column can ask
+// for its own share - see ExtraColumn.width).
+.name-col {
+  width: 1%;
+}
+
+th {
+  padding: 13px 21px;
+  background: #f7faf8;
+  color: #56666e;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+td {
+  padding: 17px 21px;
+  border-top: 1px solid #f0f2f0;
+  font-size: 13px;
+  color: #2f414b;
+}
+
+// Táborok/Kor - only ever a 1-2 digit number, so just wide enough for the
+// header label + sort arrow, with tighter side padding.
+.num-col {
+  padding-left: 12px;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
+th.tours-col {
+  width: 104px;
+}
+
+th.age-col {
+  width: 68px;
+}
+
+// Státusz - one badge column, sized for the longest label ("— Nincs fiókja").
+.status-col {
+  width: 150px;
+  padding-left: 12px;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
+// Műveletek sits flush against the right edge - the header right-aligned,
+// the buttons pushed right inside their cell (a flex div inside the <td>:
+// a display:flex <td> would drop out of the table's column layout).
+th.actions-col {
+  width: 12%;
+  text-align: right;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+// Header of a sortable column - looks like the plain th text, just clickable.
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+
+  &:hover {
+    color: #23354a;
+  }
+}
+
+.sort-arrow {
+  font-size: 9px;
+  opacity: 0.3;
+
+  &.active {
+    opacity: 1;
+  }
+}
+
+tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+tbody tr.mine {
+  background: #f6fbf8;
+}
+
+// e.g. Klubtagok for an admin: the row opens its detail (payment history).
+tbody tr.row-clickable {
+  cursor: pointer;
+
+  &:hover {
+    background: #eef6f2;
+  }
+
+  &.mine:hover {
+    background: #e3f3ea;
+  }
+}
+
+// The detail row takes no room of its own - its content (the page's
+// template) animates open/closed itself.
+tr.detail-row td {
+  padding: 0;
+  border-top: 0;
+}
+
+// Avatar on the left, name above email beside it - never wrapping. On a
+// phone the email moves under both (see the bottom of this file).
+.person {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: center;
+  column-gap: 12px;
+  white-space: nowrap;
+
+  > :first-child {
+    grid-row: 1 / span 2;
+  }
+
+  strong {
+    align-self: end;
+    color: #1c2d38;
+  }
+
+  small {
+    grid-column: 2;
+    align-self: start;
+    display: block;
+    color: #56666e;
+    margin-top: 3px;
+    font-size: 11px;
+  }
+}
+
+.person-avatar {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #d9ede7;
+  color: #306b61;
+  font-weight: 750;
+  font-size: 12px;
+  flex: none;
+}
+
+// An admin, told apart without any text: a gold ring around the avatar
+// and a small gold star badge on its top corner ("Admin" on hover). The
+// star lives on this wrapper, since the avatar itself clips its contents.
+.person-pic {
+  position: relative;
+  display: inline-grid;
+
+  &.admin .person-avatar {
+    box-shadow:
+      0 0 0 2px #fff,
+      0 0 0 4px var(--logo-yellow, #f6b528);
+  }
+}
+
+.person-pic .admin-star {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--logo-yellow, #f6b528);
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  box-sizing: content-box;
+  pointer-events: none;
+}
+
+.status {
+  display: inline-block;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.paid {
+    color: #267b66;
+    background: #e5f5ec;
+  }
+
+  &.unpaid {
+    color: #aa6841;
+    background: #fff0e4;
+  }
+
+  &.na {
+    color: #56666e;
+    background: #f0f4f3;
+  }
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  text-decoration: none;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.icon-btn--edit {
+  background: #445a67;
+  color: #fff;
+
+  &:hover {
+    background: #37474f;
+  }
+}
+
+.icon-btn--archive {
+  background: #f3e3dc;
+  color: #a4513a;
+
+  &:hover {
+    background: #ecd0c4;
+  }
+}
+
+.icon-btn--restore {
+  background: #e5f5ec;
+  color: #267b66;
+
+  &:hover {
+    background: #d2ecdf;
+  }
+}
+
+.empty-row {
+  text-align: center;
+  padding: 35px;
+  color: #56666e;
+}
+
+@media (max-width: 580px) {
+  // Narrow screen: avatar + name on the first line, the email below
+  // starting at the cell's left edge.
+  .person {
+    column-gap: 8px;
+    row-gap: 4px;
+
+    > :first-child {
+      grid-row: 1;
+    }
+
+    strong {
+      align-self: center;
+    }
+
+    small {
+      grid-column: 1 / span 2;
+      margin-top: 0;
+    }
+  }
+
+  th,
+  td {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  th.tours-col {
+    width: 88px;
+  }
+
+  th.age-col {
+    width: 56px;
+  }
+
+  .status-col {
+    width: 136px;
+  }
+
+  // A table without extra columns fits the screen: badges and buttons may
+  // wrap rather than overflow.
+  table:not(.wide) {
+    .status {
+      white-space: normal;
+    }
+
+    .row-actions {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+  }
+}

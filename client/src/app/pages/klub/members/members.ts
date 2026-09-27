@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, TemplateRef, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,7 +9,7 @@ import { PaymentService } from '../../../services/payment';
 import { UserService } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
-import { Avatar } from '../../../components/avatar/avatar';
+import { ExtraColumn, PeopleTable } from './people-table/people-table';
 import { SettingsService, MembershipFee, feeForYear } from '../../../services/settings';
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
@@ -29,51 +29,9 @@ const CLUB_FOUNDING_YEAR = 2019;
 // way (see paymentController.js's chargeableAmount).
 const BARION_FEE_RATE = 0.016;
 
-type SortKey = 'name' | 'toursAttended' | 'age' | 'status';
-
-// The one activity status shown per user on both tables - derived, never
-// stored, from the only two real facts: whether an admin archived them
-// (retired, always wins - a later login doesn't undo it) and whether
-// they've ever logged in. Someone with no email has no account of their
-// own at all (can't be invited through Authentik), so "never logged in"
-// isn't something they could ever change.
-export type UserStatus = 'active' | 'inactive' | 'noAccount' | 'retired';
-
-export function userStatus(u: MemberUser): UserStatus {
-  if (u.retired) return 'retired';
-  if (u.lastLoginAt) return 'active';
-  return u.email ? 'inactive' : 'noAccount';
-}
-
-// Also the ascending sort order of the Státusz column.
-const STATUS_ORDER: UserStatus[] = ['active', 'inactive', 'noAccount', 'retired'];
-type SortState = { key: SortKey; dir: 'asc' | 'desc' };
-
-// Shared by both tables' sortable Név/Táborok/Kor columns. Ties on the
-// numbers fall back to the name, and a missing age (no birthday recorded)
-// always sorts to the bottom, whichever direction.
-function sortUsers(users: MemberUser[], { key, dir }: SortState): MemberUser[] {
-  const sign = dir === 'asc' ? 1 : -1;
-  const byName = (a: MemberUser, b: MemberUser) => a.name.localeCompare(b.name, 'hu');
-  return [...users].sort((a, b) => {
-    if (key === 'name') return sign * byName(a, b);
-    if (key === 'status') {
-      const diff = STATUS_ORDER.indexOf(userStatus(a)) - STATUS_ORDER.indexOf(userStatus(b));
-      return sign * diff || byName(a, b);
-    }
-    if (key === 'age') {
-      if (a.age == null || b.age == null) {
-        return a.age == null && b.age == null ? byName(a, b) : a.age == null ? 1 : -1;
-      }
-      return sign * (a.age - b.age) || byName(a, b);
-    }
-    return sign * (a.toursAttended - b.toursAttended) || byName(a, b);
-  });
-}
-
 @Component({
   selector: 'app-members',
-  imports: [DatePipe, RouterLink, MatIconModule, Avatar],
+  imports: [DatePipe, RouterLink, MatIconModule, PeopleTable],
   templateUrl: './members.html',
   styleUrl: './members.scss',
 })
@@ -101,9 +59,10 @@ export class Members implements OnInit {
   // Map lookup.
   private paidTransactions = signal<Map<string, Transaction>>(new Map());
 
-  activeTab = signal<'club' | 'casual'>('club');
-  clubSearch = signal('');
-  casualSearch = signal('');
+  activeTab = signal<'club' | 'casual' | 'everyone'>('club');
+  // "Személy keresése" - one search for all three tables, by name or
+  // email, kept when switching tabs.
+  search = signal('');
 
   // Which club member's per-year payment history is expanded inline in the
   // "Tagok és éves befizetések" table right now (admin-only - see
@@ -138,29 +97,26 @@ export class Members implements OnInit {
   );
   casualUsers = computed(() => this.users().filter((u) => u.role === 'guest'));
 
-  // Sortable Név/Táborok/Kor columns of each table - clicking a header
-  // sorts by it, clicking the same one again flips the direction (see
-  // sortBy below).
-  sorts = {
-    club: signal<SortState>({ key: 'name', dir: 'asc' }),
-    casual: signal<SortState>({ key: 'name', dir: 'asc' }),
-  };
-
-  filteredClubMembers = computed(() => {
-    const q = this.clubSearch().trim().toLocaleLowerCase('hu');
-    return sortUsers(
-      this.clubMembers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q)),
-      this.sorts.club(),
-    );
+  private matches = computed(() => {
+    const q = this.search().trim().toLocaleLowerCase('hu');
+    return (u: MemberUser) =>
+      !q ||
+      u.name.toLocaleLowerCase('hu').includes(q) ||
+      (u.email ?? '').toLocaleLowerCase('hu').includes(q);
   });
+  filteredClubMembers = computed(() => this.clubMembers().filter(this.matches()));
+  filteredCasualUsers = computed(() => this.casualUsers().filter(this.matches()));
+  // Mindenki: every user, the suspended ones too.
+  filteredEveryone = computed(() => this.users().filter(this.matches()));
 
-  filteredCasualUsers = computed(() => {
-    const q = this.casualSearch().trim().toLocaleLowerCase('hu');
-    return sortUsers(
-      this.casualUsers().filter((u) => u.name.toLocaleLowerCase('hu').includes(q)),
-      this.sorts.casual(),
-    );
-  });
+  // Klubtagok's own columns for its people-table - this year's dues and
+  // the Előzmény dot-row (templates in members.html).
+  private yearCell = viewChild.required<TemplateRef<{ $implicit: MemberUser }>>('yearCell');
+  private historyCell = viewChild.required<TemplateRef<{ $implicit: MemberUser }>>('historyCell');
+  clubExtraColumns = computed<ExtraColumn[]>(() => [
+    { header: String(this.currentMembershipYear()), width: '15%', cell: this.yearCell() },
+    { header: 'Előzmény', width: '35%', cell: this.historyCell() },
+  ]);
 
   me = computed(() => this.clubMembers().find((u) => u._id === this.myId()) ?? null);
 
@@ -360,25 +316,8 @@ export class Members implements OnInit {
     });
   }
 
-  selectTab(tab: 'club' | 'casual') {
+  selectTab(tab: 'club' | 'casual' | 'everyone') {
     this.activeTab.set(tab);
-  }
-
-  // Same column again flips the direction; a new column starts A→Z for
-  // the name and Aktív-first for Státusz, but most-first for Táborok/Kor -
-  // the more useful end of a number column.
-  sortBy(table: 'club' | 'casual', key: SortKey) {
-    this.sorts[table].update((s) =>
-      s.key === key
-        ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: key === 'name' || key === 'status' ? 'asc' : 'desc' },
-    );
-  }
-
-  ariaSort(table: 'club' | 'casual', key: SortKey): 'ascending' | 'descending' | 'none' {
-    const s = this.sorts[table]();
-    if (s.key !== key) return 'none';
-    return s.dir === 'asc' ? 'ascending' : 'descending';
   }
 
   // Admin-only, one at a time - toggles a member's row open to show their
@@ -422,23 +361,6 @@ export class Members implements OnInit {
 
   money(amount: number, currency: TransactionCurrency = 'HUF') {
     return formatMoney(amount, currency);
-  }
-
-  status(u: MemberUser): UserStatus {
-    return userStatus(u);
-  }
-
-  statusLabel(u: MemberUser): string {
-    switch (userStatus(u)) {
-      case 'active':
-        return '✓ Aktív';
-      case 'inactive':
-        return '○ Inaktív';
-      case 'noAccount':
-        return '— Nincs fiókja';
-      case 'retired':
-        return 'Felfüggesztett';
-    }
   }
 
   // Admin-only "delete" - never actually removes anyone (see
