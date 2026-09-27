@@ -8,6 +8,7 @@ import { FinanceService, Transaction, TransactionCurrency } from '../../../servi
 import { PaymentService } from '../../../services/payment';
 import { UserService } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { Avatar } from '../../../components/avatar/avatar';
 import { SettingsService, MembershipFee, feeForYear } from '../../../services/settings';
 
@@ -82,6 +83,7 @@ export class Members implements OnInit {
   private paymentService = inject(PaymentService);
   private userService = inject(UserService);
   private notifications = inject(NotificationsService);
+  private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private auth = inject(AuthService);
   private settingsService = inject(SettingsService);
@@ -441,25 +443,18 @@ export class Members implements OnInit {
 
   // Admin-only "delete" - never actually removes anyone (see
   // userController.js's archiveUser), so restore is always one click away.
-  // Confirmed in an in-app modal (same one as the dues payment's below)
-  // rather than the browser's own confirm(), same reasoning as
-  // tour-details.ts's document delete.
+  // Confirmed in the app's shared dialog (shared/confirm-dialog).
   archivingId = signal<string | null>(null);
-  userPendingDelete = signal<MemberUser | null>(null);
 
-  archive(u: MemberUser) {
+  async archive(u: MemberUser) {
     if (this.archivingId()) return;
-    this.userPendingDelete.set(u);
-  }
-
-  cancelArchive() {
-    if (this.archivingId()) return;
-    this.userPendingDelete.set(null);
-  }
-
-  confirmArchive() {
-    const u = this.userPendingDelete();
-    if (u) this.setRetired(u, true);
+    const ok = await this.confirm.ask({
+      title: 'Felhasználó felfüggesztése',
+      message: `Biztosan felfüggeszted: ${u.name}?`,
+      detail: 'A korábbi adatai (táborok, tagdíjak) megmaradnak, és később visszaállítható.',
+      confirmText: 'Felfüggesztés',
+    });
+    if (ok) this.setRetired(u, true);
   }
 
   restore(u: MemberUser) {
@@ -476,7 +471,6 @@ export class Members implements OnInit {
       next: () => {
         this.users.update((list) => list.map((x) => (x._id === u._id ? { ...x, retired } : x)));
         this.archivingId.set(null);
-        this.userPendingDelete.set(null);
         this.notifications.addSuccess(
           retired ? `${u.name} felfüggesztve` : `${u.name} visszaállítva`,
         );

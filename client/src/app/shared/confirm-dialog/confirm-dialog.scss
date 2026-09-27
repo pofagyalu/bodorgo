@@ -1,0 +1,77 @@
+// The same look as tour-details.scss's .confirm-modal.
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.confirm-modal {
+  width: min(380px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  color: #333;
+
+  h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+    // A message may have its own line breaks (\n).
+    white-space: pre-line;
+    line-height: 1.5;
+  }
+
+  // The optional smaller note under the question.
+  .detail {
+    margin-top: -0.4rem;
+    font-size: 0.88rem;
+    color: #6b7780;
+  }
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.confirm-btn {
+  padding: 0.5rem 1.3rem;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.confirm-btn--safe {
+  background: #2e7d32;
+
+  &:hover {
+    background: #1b5e20;
+  }
+}
+
+.confirm-btn--danger {
+  background: #b00020;
+
+  &:hover {
+    background: #7f0016;
+  }
+}

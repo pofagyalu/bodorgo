@@ -1,7 +1,13 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../auth/auth.service';
-import { ClubDocumentService, ClubDocument, DOCUMENT_CATEGORIES } from '../../../services/club-document';
+import {
+  ClubDocumentService,
+  ClubDocument,
+  DOCUMENT_CATEGORIES,
+} from '../../../services/club-document';
+import { NotificationsService } from '../../../notifications/notifications.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 
 @Component({
   selector: 'app-klub-documents',
@@ -12,6 +18,8 @@ import { ClubDocumentService, ClubDocument, DOCUMENT_CATEGORIES } from '../../..
 export class Documents implements OnInit {
   private documentService = inject(ClubDocumentService);
   private auth = inject(AuthService);
+  private notifications = inject(NotificationsService);
+  private confirm = inject(ConfirmService);
 
   readonly categories = DOCUMENT_CATEGORIES;
   readonly currentYear = new Date().getFullYear();
@@ -125,9 +133,12 @@ export class Documents implements OnInit {
     });
   }
 
-  remove(doc: ClubDocument) {
+  async remove(doc: ClubDocument) {
     if (this.deletingId()) return;
-    if (!confirm(`Biztosan törlöd ezt a dokumentumot: "${doc.name}"?`)) return;
+    if (
+      !(await this.confirm.ask({ message: `Biztosan törlöd ezt a dokumentumot: "${doc.name}"?` }))
+    )
+      return;
 
     this.deletingId.set(doc._id);
     this.documentService.delete(doc._id).subscribe({
@@ -136,7 +147,7 @@ export class Documents implements OnInit {
         this.deletingId.set(null);
       },
       error: (err) => {
-        alert(err?.error?.message ?? 'Nem sikerült törölni a dokumentumot.');
+        this.notifications.addError(err?.error?.message ?? 'Nem sikerült törölni a dokumentumot.');
         this.deletingId.set(null);
       },
     });

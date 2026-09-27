@@ -407,31 +407,6 @@
     <!-- Extra infók document delete confirmation - a real in-app modal
        (same visual language as the attendee picker below), not the
        browser's own confirm(). -->
-    @if (documentPendingDelete(); as pending) {
-      <div class="attendee-modal-backdrop" (click)="cancelDeleteDocument()">
-        <div class="confirm-modal" (click)="$event.stopPropagation()">
-          <p>Biztos, hogy törölni akarod a "{{ pending.title }}" dokumentumot?</p>
-          <div class="user-form-actions">
-            <button
-              type="button"
-              class="confirm-btn confirm-btn--safe"
-              [disabled]="deletingDocument()"
-              (click)="cancelDeleteDocument()"
-            >
-              Mégse
-            </button>
-            <button
-              type="button"
-              class="confirm-btn confirm-btn--danger"
-              [disabled]="deletingDocument()"
-              (click)="confirmDeleteDocument(t._id)"
-            >
-              Törlés
-            </button>
-          </div>
-        </div>
-      </div>
-    }
 
     <!-- Admin's letter to every attendee (see tour-mail-panel). -->
     @if (showMailPanel()) {

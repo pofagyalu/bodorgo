@@ -35,6 +35,7 @@ import {
   AttendeeListRow as AttendeeListPayment,
 } from './attendee-list/attendee-list';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 
 interface DayGroup {
   day: number;
@@ -79,6 +80,7 @@ export class TourDetails implements OnDestroy {
   private userService = inject(UserService);
   private sanitizer = inject(DomSanitizer);
   private notifications = inject(NotificationsService);
+  private confirm = inject(ConfirmService);
   auth = inject(AuthService);
   environment = environment;
   readonly formatDrivingDuration = formatDrivingDuration;
@@ -590,26 +592,18 @@ export class TourDetails implements OnDestroy {
     });
   }
 
-  // A real in-app modal (reusing the attendee-picker's backdrop/box visual
-  // language) rather than the browser's own confirm() - not just for
-  // looks, the native dialog also can't be styled/translated consistently
-  // with the rest of the page.
-  documentPendingDelete = signal<ExtraDocument | null>(null);
+  // Confirmed in the app's shared dialog (shared/confirm-dialog).
   deletingDocument = signal(false);
 
-  askDeleteDocument(doc: ExtraDocument, event: Event) {
+  async askDeleteDocument(doc: ExtraDocument, event: Event) {
     event.preventDefault();
     event.stopPropagation();
-    this.documentPendingDelete.set(doc);
-  }
-
-  cancelDeleteDocument() {
-    this.documentPendingDelete.set(null);
-  }
-
-  confirmDeleteDocument(tourId: string) {
-    const doc = this.documentPendingDelete();
-    if (!doc) return;
+    const tourId = this.tour()?._id;
+    if (!tourId || this.deletingDocument()) return;
+    const ok = await this.confirm.ask({
+      message: `Biztos, hogy törölni akarod a "${doc.title}" dokumentumot?`,
+    });
+    if (!ok) return;
 
     this.deletingDocument.set(true);
     this.tourService.deleteDocument(tourId, doc._id).subscribe({
@@ -622,7 +616,6 @@ export class TourDetails implements OnDestroy {
           });
         }
         this.deletingDocument.set(false);
-        this.documentPendingDelete.set(null);
         this.notifications.addSuccess('Dokumentum törölve');
       },
       error: (err) => {
