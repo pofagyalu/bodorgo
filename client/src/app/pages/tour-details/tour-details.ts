@@ -375,6 +375,15 @@ export class TourDetails implements OnDestroy {
     return this.participantCount() >= t.maxCapacity;
   });
 
+  // Sign-up closes when the tour starts - except for an admin, who can
+  // still register people afterwards (backfilling past tours). The server
+  // enforces the same (reservationController.js's signUpForTour).
+  signUpOpen = computed(() => {
+    const t = this.tour();
+    if (!t) return false;
+    return this.auth.user()?.role === 'admin' || new Date() < new Date(t.startDate);
+  });
+
   // Embedding an iframe instead of opening a new tab/window keeps the user
   // on this page entirely - no popup-blocker risk either, unlike
   // window.open(). Angular sanitizes iframe src by default, hence bypass.

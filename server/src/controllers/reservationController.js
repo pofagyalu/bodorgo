@@ -144,10 +144,19 @@ export function buildRegistrationEmails({ registrant, tourTitle, attendeeUsers }
 // when they're registering only other people (e.g. an admin signing up a
 // member who called in), so it's always clear who to contact about a
 // reservation.
+// Sign-up closes when the tour starts - for everyone but an admin, who can
+// still register people afterwards (backfilling past tours' attendance).
+export function tourHasStarted(tour, now = new Date()) {
+  return now >= new Date(tour.startDate);
+}
+
 export const signUpForTour = async (req, res) => {
   const tour = await Tour.findById(req.params.tourId);
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
+  }
+  if (req.user.role !== 'admin' && tourHasStarted(tour)) {
+    throw new AppError('Erre a táborra már nem lehet jelentkezni - elkezdődött.', 400);
   }
 
   const attendeeIds = [
