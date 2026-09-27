@@ -28,7 +28,8 @@
       >
         <source [src]="src()" type="video/mp4" />
         @if (subtitlesSrc(); as subs) {
-          <track kind="subtitles" srclang="hu" label="Magyar" [src]="subs" />
+          <!-- default: shown right away, not only when picked in the player's menu. -->
+          <track kind="subtitles" srclang="hu" label="Magyar" [src]="subs" default />
         }
       </video>
     }
