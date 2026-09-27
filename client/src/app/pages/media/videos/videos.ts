@@ -1,9 +1,11 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaService, MediaVideo, MediaVideoCategory } from '../../../services/media';
+import { VideoCard } from '../../../shared/video-card/video-card';
+import { VideoPlayer } from '../../../shared/video-player/video-player';
 
 interface Playing {
   category: MediaVideoCategory;
@@ -15,7 +17,7 @@ interface Playing {
 // loaded once by the Média shell (see MediaService).
 @Component({
   selector: 'app-media-videos',
-  imports: [MatIconModule, RouterLink, RouterLinkActive],
+  imports: [MatIconModule, RouterLink, RouterLinkActive, VideoCard, VideoPlayer],
   templateUrl: './videos.html',
   styleUrl: './videos.scss',
 })
@@ -61,7 +63,6 @@ export class Videos {
     this.playing.set({ category, video });
   }
 
-  @HostListener('document:keydown.escape')
   close() {
     this.playing.set(null);
   }

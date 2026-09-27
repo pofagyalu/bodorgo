@@ -275,12 +275,32 @@
     </section>
 
     <!-- Post-tour recap video(s) - found on the NAS by the tour number (see
-       server/src/utils/tourVideos.js); see tour-video-player. -->
+       server/src/utils/tourVideos.js). The same cards and player as Média →
+       Videók; several cuts (e.g. the director's) side by side. -->
     @if (videos().length) {
       <section class="video-section">
         <h2 class="section-heading">Tábori {{ videos().length > 1 ? 'videók' : 'videó' }}</h2>
-        <app-tour-video-player [tourId]="t._id" [videos]="videos()" />
+        <div class="video-grid">
+          @for (v of videos(); track v.id) {
+            <app-video-card
+              [title]="v.label || 'Tábori videó'"
+              [coverUrl]="v.hasCover ? tourVideoCoverUrl(t, v) : null"
+              prompt="Nyomd azt a gombot, te Béla!"
+              (playClicked)="playingVideo.set(v)"
+            />
+          }
+        </div>
       </section>
+
+      @if (playingVideo(); as v) {
+        <app-video-player
+          [title]="v.label || 'Tábori videó'"
+          [subtitle]="t.order + '. ' + t.title"
+          [src]="tourVideoUrl(t, v)"
+          [subtitlesSrc]="v.hasSubtitles ? tourVideoSubtitlesUrl(t, v) : null"
+          (closed)="playingVideo.set(null)"
+        />
+      }
     }
 
     <!-- Row 3: participants -->

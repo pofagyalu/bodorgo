@@ -1,0 +1,22 @@
+<button
+  type="button"
+  class="video-card"
+  (click)="playClicked.emit()"
+  [title]="tooltip() || title()"
+>
+  <div class="video-thumb">
+    @if (coverUrl(); as url) {
+      <img [src]="url" alt="" loading="lazy" />
+    } @else {
+      <mat-icon class="thumb-placeholder">movie</mat-icon>
+    }
+    <span class="play-badge"><mat-icon>play_arrow</mat-icon></span>
+    @if (prompt()) {
+      <span class="play-prompt">{{ prompt() }}</span>
+    }
+    @if (badge()) {
+      <span class="corner-badge">{{ badge() }}</span>
+    }
+  </div>
+  <span class="video-title">{{ title() }}</span>
+</button>

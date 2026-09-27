@@ -27,7 +27,8 @@ import { formatDrivingDuration } from '../../shared/format';
 import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
-import { TourVideoPlayer } from './tour-video-player/tour-video-player';
+import { VideoCard } from '../../shared/video-card/video-card';
+import { VideoPlayer } from '../../shared/video-player/video-player';
 import { TourMailPanel } from './tour-mail-panel/tour-mail-panel';
 import {
   AttendeeList,
@@ -65,7 +66,8 @@ interface PickerOption {
     EventForm,
     ReviewStars,
     AttendeeList,
-    TourVideoPlayer,
+    VideoCard,
+    VideoPlayer,
     TourMailPanel,
   ],
   templateUrl: './tour-details.html',
@@ -112,8 +114,10 @@ export class TourDetails implements OnDestroy {
   userPhotos = signal<Record<string, string>>({});
   usernames = signal<Record<string, string>>({});
   // The recap video's versions, found on the NAS by the tour number (see
-  // tourController.js's getTour) - usually one; see tour-video-player.
+  // tourController.js's getTour) - usually one. playingVideo is the one
+  // open in the player dialog.
   videos = signal<TourVideo[]>([]);
+  playingVideo = signal<TourVideo | null>(null);
   loadError = signal<string | null>(null);
   signingUp = signal(false);
   signUpError = signal<string | null>(null);
@@ -491,6 +495,18 @@ export class TourDetails implements OnDestroy {
 
   documentUrl(tourId: string, filename: string): string {
     return this.tourService.documentUrl(tourId, filename);
+  }
+
+  tourVideoUrl(t: Tour, v: TourVideo): string {
+    return this.tourService.videoUrl(t._id, v.id);
+  }
+
+  tourVideoCoverUrl(t: Tour, v: TourVideo): string {
+    return this.tourService.videoCoverUrl(t._id, v.id);
+  }
+
+  tourVideoSubtitlesUrl(t: Tour, v: TourVideo): string {
+    return this.tourService.subtitlesUrl(t._id, v.id);
   }
 
   // v1 test of the "send Programfüzet by email" card - sends to the

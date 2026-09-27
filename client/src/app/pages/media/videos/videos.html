@@ -50,25 +50,13 @@
 
         <div class="video-grid">
           @for (v of c.videos; track v.id) {
-            <button
-              type="button"
-              class="video-card"
-              (click)="play(c, v)"
-              [title]="v.title + (v.year ? ' (' + v.year + ')' : '')"
-            >
-              <div class="video-thumb">
-                @if (v.hasCover) {
-                  <img [src]="coverUrl(c, v)" alt="" loading="lazy" />
-                } @else {
-                  <mat-icon class="thumb-placeholder">movie</mat-icon>
-                }
-                <span class="play-badge"><mat-icon>play_arrow</mat-icon></span>
-                @if (v.year) {
-                  <span class="year-badge">{{ v.year }}</span>
-                }
-              </div>
-              <span class="video-title">{{ v.title }}</span>
-            </button>
+            <app-video-card
+              [title]="v.title"
+              [coverUrl]="v.hasCover ? coverUrl(c, v) : null"
+              [badge]="v.year"
+              [tooltip]="v.title + (v.year ? ' (' + v.year + ')' : '')"
+              (playClicked)="play(c, v)"
+            />
           }
         </div>
       </section>
@@ -77,38 +65,11 @@
 </div>
 
 @if (playing(); as p) {
-  <div class="player-backdrop" (click)="close()">
-    <div
-      class="player"
-      (click)="$event.stopPropagation()"
-      role="dialog"
-      aria-modal="true"
-      [attr.aria-label]="p.video.title"
-    >
-      <div class="player-head">
-        <div>
-          <strong>{{ p.video.title }}</strong>
-          <span>{{ p.category.title }}{{ p.video.year ? ' · ' + p.video.year : '' }}</span>
-        </div>
-        <button type="button" class="player-close" (click)="close()" title="Bezárás">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-      <!-- Keyed by the video, so picking another one starts it fresh. -->
-      @for (key of [p.video.id]; track key) {
-        <video
-          class="player-video"
-          controls
-          autoplay
-          preload="metadata"
-          crossorigin="use-credentials"
-        >
-          <source [src]="videoUrl(p)" type="video/mp4" />
-          @if (p.video.hasSubtitles) {
-            <track kind="subtitles" srclang="hu" label="Magyar" [src]="subtitlesUrl(p)" />
-          }
-        </video>
-      }
-    </div>
-  </div>
+  <app-video-player
+    [title]="p.video.title"
+    [subtitle]="p.category.title + (p.video.year ? ' · ' + p.video.year : '')"
+    [src]="videoUrl(p)"
+    [subtitlesSrc]="p.video.hasSubtitles ? subtitlesUrl(p) : null"
+    (closed)="close()"
+  />
 }

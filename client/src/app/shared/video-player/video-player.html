@@ -1,0 +1,36 @@
+<div class="player-backdrop" (click)="close()">
+  <div
+    class="player"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title()"
+  >
+    <div class="player-head">
+      <div>
+        <strong>{{ title() }}</strong>
+        @if (subtitle()) {
+          <span>{{ subtitle() }}</span>
+        }
+      </div>
+      <button type="button" class="player-close" (click)="close()" title="Bezárás">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <!-- Keyed by the source, so another video starts fresh. -->
+    @for (key of [src()]; track key) {
+      <video
+        class="player-video"
+        controls
+        autoplay
+        preload="metadata"
+        crossorigin="use-credentials"
+      >
+        <source [src]="src()" type="video/mp4" />
+        @if (subtitlesSrc(); as subs) {
+          <track kind="subtitles" srclang="hu" label="Magyar" [src]="subs" />
+        }
+      </video>
+    }
+  </div>
+</div>
