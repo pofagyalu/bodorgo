@@ -8,7 +8,10 @@ import config from './config.js';
 // `socket.request.session.user`, the same shape requireAuth.js reads.
 const SESSION_MAX_AGE_SECONDS = 90 * 24 * 60 * 60; // 90 days
 
-export default function createSessionMiddleware(mongoClient) {
+// dbName: the database the app itself is connected to (from the connection
+// string in .env) - the sessions live next to the rest of its data, so
+// switching databases (bodorgo / bodorgo-dev) takes only the .env change.
+export default function createSessionMiddleware(mongoClient, dbName) {
   return session({
     secret: config.cookie.secret,
     resave: false,
@@ -27,7 +30,7 @@ export default function createSessionMiddleware(mongoClient) {
     },
     store: MongoStore.create({
       client: mongoClient,
-      dbName: 'bodorgo-test',
+      dbName,
       collectionName: 'sessions',
       ttl: SESSION_MAX_AGE_SECONDS,
       touchAfter: 24 * 3600,
