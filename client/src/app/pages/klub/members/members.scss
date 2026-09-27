@@ -283,21 +283,16 @@ table {
   min-width: 820px;
 }
 
-// Explicit shares for every column (table-layout:fixed makes these exact,
-// not just a starting point auto-layout might override) - previously only
-// the year/Teendő columns had a fixed width, so the two flexible ones (Tag,
-// Előzmény) split whatever was left in whatever proportion their content
-// happened to want, landing on a ~1/3 Tag vs ~2/3 Előzmény split that had
-// nothing to do with either column's actual needs. Előzmény still gets the
-// single largest share on purpose - its dot-row only grows as more years
-// accumulate, the other columns never will.
-.membership-table--compact {
-  table-layout: fixed;
-}
-
+// The name column (1) is exactly as wide as its longest name or email -
+// width: 1% in an auto-layout table means "as narrow as the content
+// allows", and .person never wraps. The other columns share the rest;
+// Előzmény gets the single largest share on purpose - its dot-row only
+// grows as more years accumulate, the other columns never will.
 .membership-table--compact th:nth-child(1),
-.membership-table--compact td:nth-child(1) {
-  width: 20%;
+.membership-table--compact td:nth-child(1),
+.casual-table th:nth-child(1),
+.casual-table td:nth-child(1) {
+  width: 1%;
 }
 
 .membership-table--compact th:nth-child(5),
@@ -313,14 +308,6 @@ table {
 .membership-table--compact th:nth-child(7),
 .membership-table--compact td:nth-child(7) {
   width: 12%;
-}
-
-.casual-table {
-  // Every column gets an equal share of the width (no explicit widths
-  // anywhere in this table), and it shrinks with the screen instead of
-  // scrolling sideways - names and headers just wrap. See the mobile
-  // block at the bottom for the phone-width split.
-  table-layout: fixed;
 }
 
 th {
@@ -431,18 +418,30 @@ td {
   text-align: right;
 }
 
+// Avatar on the left, name above email beside it - never wrapping, so the
+// column is as wide as the longest of them (see width: 1% above). On a
+// phone the email moves under both (see the bottom of this file).
 .person {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
   align-items: center;
-  gap: 12px;
-}
+  column-gap: 12px;
+  white-space: nowrap;
 
-// Lets a long name wrap onto a second line within the narrower fixed
-// column width above, instead of overflowing past it (the old nowrap
-// only ever worked because this column had no fixed width to overflow).
-// .person-avatar (the other span here) already has flex:none, unaffected.
-.person > span:last-child {
-  min-width: 0;
+  // The avatar - or, in the member table, its wrapper (.person-pic).
+  > :first-child {
+    grid-row: 1 / span 2;
+  }
+
+  strong {
+    align-self: end;
+  }
+
+  small {
+    grid-column: 2;
+    align-self: start;
+  }
 }
 
 .person-avatar {
@@ -458,6 +457,39 @@ td {
   flex: none;
 }
 
+// An admin, told apart without any text: a gold ring around the avatar
+// and a small gold star badge on its top corner (not the bottom one - on a
+// phone the email line runs right under the avatar) ("Admin" on hover). The star
+// lives on this wrapper, since the avatar itself clips its contents.
+.person-pic {
+  position: relative;
+  display: inline-grid;
+
+  &.admin .person-avatar {
+    box-shadow:
+      0 0 0 2px #fff,
+      0 0 0 4px var(--logo-yellow, #f6b528);
+  }
+}
+
+.person-pic .admin-star {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--logo-yellow, #f6b528);
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  box-sizing: content-box;
+  pointer-events: none;
+}
+
 .person strong {
   color: #1c2d38;
 }
@@ -467,9 +499,6 @@ td {
   color: #56666e;
   margin-top: 3px;
   font-size: 11px;
-  // A long email address has no spaces to wrap at - break it anywhere
-  // rather than overflowing the (narrow, fixed-width) name column.
-  overflow-wrap: anywhere;
 }
 
 .status {
@@ -891,8 +920,25 @@ td {
     width: 100%;
   }
 
+  // Narrow screen: avatar + name on the first line, the email below
+  // starting at the cell's left edge - the column needs only the wider of
+  // the two lines, not avatar + email side by side.
   .person {
-    gap: 8px;
+    column-gap: 8px;
+    row-gap: 4px;
+
+    > :first-child {
+      grid-row: 1;
+    }
+
+    strong {
+      align-self: center;
+    }
+
+    small {
+      grid-column: 1 / span 2;
+      margin-top: 0;
+    }
   }
 
   th,
@@ -901,18 +947,12 @@ td {
     padding-right: 10px;
   }
 
-  // The member table still scrolls sideways on a phone, but narrowed so
-  // that at least Név + Táborok + Kor (~315px) fit in view without
-  // scrolling: a fixed-width name column the name just wraps inside.
+  // The member table still scrolls sideways on a phone, kept narrow so
+  // Név + Táborok + Kor fit in view as far as possible.
   .membership-table th.num-col,
   .membership-table td.num-col {
     padding-left: 8px;
     padding-right: 8px;
-  }
-
-  .membership-table--compact th:nth-child(1),
-  .membership-table--compact td:nth-child(1) {
-    width: 170px;
   }
 
   .membership-table th.num-col:nth-of-type(2) {
@@ -930,18 +970,12 @@ td {
     padding-right: 8px;
   }
 
-  // The other-users table fits the screen outright: the name (avatar +
-  // up to two lines) gets about a third, the rest split the remainder
-  // equally, with tight padding, and headers/badges/buttons allowed to
-  // wrap rather than overflow.
+  // The other-users table: tight padding, and headers/badges/buttons
+  // allowed to wrap - it scrolls sideways only if the names need it.
   .casual-table th,
   .casual-table td {
     padding-left: 6px;
     padding-right: 6px;
-  }
-
-  .casual-table th:nth-child(1) {
-    width: 34%;
   }
 
   .casual-table .status {

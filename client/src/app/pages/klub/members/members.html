@@ -189,19 +189,24 @@
                   >
                     <td>
                       <div class="person">
-                        <app-avatar
-                          class="person-avatar"
-                          [name]="m.name"
-                          [userId]="m._id"
-                          [photoVersion]="m.photoUpdatedAt"
-                        />
-                        <span>
-                          <strong>{{ m.name }}</strong>
-                          <small
-                            >{{ m.role === 'admin' ? 'Admin · ' : ''
-                            }}{{ m.email || 'Meghívott' }}</small
-                          >
+                        <!-- An admin: gold ring and a star on the avatar, no text needed. -->
+                        <span
+                          class="person-pic"
+                          [class.admin]="m.role === 'admin'"
+                          [attr.title]="m.role === 'admin' ? 'Admin' : null"
+                        >
+                          <app-avatar
+                            class="person-avatar"
+                            [name]="m.name"
+                            [userId]="m._id"
+                            [photoVersion]="m.photoUpdatedAt"
+                          />
+                          @if (m.role === 'admin') {
+                            <mat-icon class="admin-star" aria-label="Admin">star</mat-icon>
+                          }
                         </span>
+                        <strong>{{ m.name }}</strong>
+                        <small>{{ m.email || 'Meghívott' }}</small>
                       </div>
                     </td>
                     <td class="num-col">{{ m.toursAttended }}</td>
@@ -413,10 +418,8 @@
                           [userId]="u._id"
                           [photoVersion]="u.photoUpdatedAt"
                         />
-                        <span>
-                          <strong>{{ u.name }}</strong>
-                          <small>{{ u.email || 'Meghívott' }}</small>
-                        </span>
+                        <strong>{{ u.name }}</strong>
+                        <small>{{ u.email || 'Meghívott' }}</small>
                       </div>
                     </td>
                     <td class="num-col">{{ u.toursAttended }}</td>

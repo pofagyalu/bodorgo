@@ -157,6 +157,14 @@ export const routes: Routes = [
         title: 'Klub profilom',
         loadComponent: () => import('./pages/klub/profile/profile').then((m) => m.KlubProfile),
       },
+      {
+        // The privacy notice again (see 'adatkezeles' above), opened from
+        // Profilom - here it stays inside the Klub shell, and under
+        // profilom/ so the sidebar keeps Profilom highlighted.
+        path: 'profilom/adatkezeles',
+        title: 'Bódorgó adatkezelés',
+        loadComponent: () => import('./pages/adatkezeles/adatkezeles').then((m) => m.Adatkezeles),
+      },
     ],
   },
   {
