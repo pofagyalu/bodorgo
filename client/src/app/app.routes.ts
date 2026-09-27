@@ -62,6 +62,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/versenyek/versenyek').then((m) => m.Versenyek),
   },
   {
+    // The privacy notice - public, linked from the footer.
+    path: 'adatkezeles',
+    title: 'Bódorgó adatkezelés',
+    loadComponent: () => import('./pages/adatkezeles/adatkezeles').then((m) => m.Adatkezeles),
+  },
+  {
     path: 'login',
     title: 'Bódorgó, gyere bé',
     loadComponent: () => import('./auth/login/login.component').then((m) => m.LoginComponent),

@@ -600,3 +600,20 @@ button {
     background: #e3eefb;
   }
 }
+
+// The link to the privacy notice, quietly at the bottom of the page.
+.privacy-note {
+  margin: 28px 0 0;
+  font-size: 13px;
+  color: #7a858b;
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--logo-dark-green);
+    }
+  }
+}

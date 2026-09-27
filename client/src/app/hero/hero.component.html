@@ -2,8 +2,12 @@
   id="hero"
   class="bg-cover bg-hero-pattern-mobile lg:bg-hero-pattern-desktop bg-no-repeat flex flex-col overflow-hidden"
 >
+  <!-- The tours running across the top, right under the menu - the bottom
+       is the footer's (the club's legal details). -->
+  <app-tour-ticker></app-tour-ticker>
+
   <!-- Hero container - flex-1 so it fills whatever's left of #hero's fixed
-       height (see hero.component.css) above the ticker, and centers its
+       height (see hero.component.css) between the ticker and the footer, and centers its
        content vertically within that instead of relying on fixed margins
        that assumed a free-scrolling page. -->
   <div
@@ -35,5 +39,5 @@
     </div>
   </div>
 
-  <app-tour-ticker></app-tour-ticker>
+  <app-site-footer></app-site-footer>
 </section>

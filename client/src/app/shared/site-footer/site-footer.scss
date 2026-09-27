@@ -1,0 +1,40 @@
+// One small line (wrapping on a narrow screen), the parts separated by
+// dots - present, but not competing with the page above it.
+:host {
+  display: block;
+}
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 0;
+  padding: 10px 16px;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #5b6770;
+  text-align: center;
+
+  span:not(:last-child)::after {
+    content: '·';
+    margin: 0 8px;
+    color: #9aa5ab;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--logo-dark-green);
+    }
+  }
+}
