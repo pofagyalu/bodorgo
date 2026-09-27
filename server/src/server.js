@@ -27,7 +27,7 @@ mongoose
     const mongoClient = mongoose.connection.getClient();
 
     // Built once and shared between Express and Socket.IO - see session.js.
-    const sessionMiddleware = createSessionMiddleware(mongoClient);
+    const sessionMiddleware = createSessionMiddleware(mongoClient, mongoose.connection.name);
 
     const app = createApp(sessionMiddleware);
     const server = http.createServer(app);
