@@ -3,7 +3,7 @@
     <div>
       <div class="kicker">Közösség</div>
       <h1>Felhasználók</h1>
-      <p>A klubtagok és a többi alkalmazáshasználó külön nézetben.</p>
+      <p>A klubtagok, a többiek, és mindenki egy listában.</p>
     </div>
   </div>
 
@@ -24,8 +24,18 @@
       [class.active]="activeTab() === 'casual'"
       (click)="selectTab('casual')"
     >
-      Egyéb felhasználók
+      A többiek
       <span class="tab-count">{{ casualUsers().length }}</span>
+    </button>
+    <button
+      role="tab"
+      type="button"
+      [attr.aria-selected]="activeTab() === 'everyone'"
+      [class.active]="activeTab() === 'everyone'"
+      (click)="selectTab('everyone')"
+    >
+      Mindenki
+      <span class="tab-count">{{ users().length }}</span>
     </button>
     @if (isAdmin()) {
       <a
@@ -37,7 +47,85 @@
         <mat-icon>add</mat-icon>
       </a>
     }
+    <!-- One search for all three tables - it stays when switching tabs. -->
+    <input
+      class="member-search"
+      type="search"
+      aria-label="Személy keresése"
+      placeholder="Személy keresése…"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
   </div>
+
+  <!-- Klubtagok's own columns and detail row, handed to its people-table:
+       this year's dues, the Előzmény dot-row, and (admin, on a row click)
+       the year-by-year payment history. -->
+  <ng-template #yearCell let-m>
+    <span
+      class="status"
+      [class.paid]="yearState(m._id, currentMembershipYear()) === 'paid'"
+      [class.unpaid]="yearState(m._id, currentMembershipYear()) === 'unpaid'"
+      [class.na]="yearState(m._id, currentMembershipYear()) === 'na'"
+    >
+      {{
+        yearState(m._id, currentMembershipYear()) === 'paid'
+          ? '✓ Fizetve'
+          : yearState(m._id, currentMembershipYear()) === 'unpaid'
+            ? '○ Nincs befizetve'
+            : '— Nem volt tag'
+      }}
+    </span>
+  </ng-template>
+
+  <ng-template #historyCell let-m>
+    <div class="history-summary">
+      <div class="history-dots">
+        @for (y of historyYears(); track y) {
+          <span
+            class="history-dot"
+            [class.paid]="yearState(m._id, y) === 'paid'"
+            [class.unpaid]="yearState(m._id, y) === 'unpaid'"
+            [class.na]="yearState(m._id, y) === 'na'"
+            [attr.title]="y"
+          ></span>
+        }
+      </div>
+      <span class="history-fraction">{{ historyFraction(m._id) }} év fizetve</span>
+    </div>
+  </ng-template>
+
+  <ng-template #historyDetail let-m>
+    <div class="history-expanded" [class.open]="isExpanded(m._id)">
+      <div class="history-expanded-inner">
+        @for (y of membershipYears(); track y) {
+          <div class="history-row">
+            <div class="history-row-label">
+              <span
+                class="history-dot history-dot--lg"
+                [class.paid]="yearState(m._id, y) === 'paid'"
+                [class.unpaid]="yearState(m._id, y) === 'unpaid'"
+                [class.na]="yearState(m._id, y) === 'na'"
+              ></span>
+              <strong>{{ y }}. évi tagdíj</strong>
+            </div>
+            @if (yearState(m._id, y) === 'paid') {
+              @if (paymentFor(m._id, y); as payment) {
+                <span
+                  >{{ money(payment.amount, payment.currency) }} ·
+                  {{ payment.date | date: 'yyyy. MM. dd.' }}</span
+                >
+              }
+            } @else if (yearState(m._id, y) === 'unpaid') {
+              <span>Nincs befizetve</span>
+            } @else {
+              <span>Még nem volt tag</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </ng-template>
 
   @if (activeTab() === 'club') {
     <div role="tabpanel">
@@ -131,216 +219,32 @@
         <div class="member-panel-head">
           <div>
             <h2>Tagok és éves befizetések</h2>
-            <p>A státuszok minden klubtag számára láthatók.</p>
+            <p>Az éves befizetések állapota minden klubtag számára látható.</p>
           </div>
-          <input
-            class="member-search"
-            type="search"
-            aria-label="Tag keresése"
-            placeholder="Tag keresése…"
-            [value]="clubSearch()"
-            (input)="clubSearch.set($any($event.target).value)"
-          />
         </div>
-        <div class="table-scroll">
-          <table class="membership-table membership-table--compact">
-            <thead>
-              <tr>
-                @for (
-                  col of [
-                    { key: 'name', label: 'Név' },
-                    { key: 'toursAttended', label: 'Táborok' },
-                    { key: 'age', label: 'Kor' },
-                    { key: 'status', label: 'Státusz' },
-                  ];
-                  track col.key
-                ) {
-                  <th
-                    [attr.aria-sort]="ariaSort('club', $any(col.key))"
-                    [class.num-col]="col.key === 'toursAttended' || col.key === 'age'"
-                    [class.status-col]="col.key === 'status'"
-                  >
-                    <button type="button" class="sort-btn" (click)="sortBy('club', $any(col.key))">
-                      {{ col.label }}
-                      <span class="sort-arrow" [class.active]="sorts.club().key === col.key">
-                        {{
-                          sorts.club().key === col.key && sorts.club().dir === 'desc' ? '▼' : '▲'
-                        }}
-                      </span>
-                    </button>
-                  </th>
-                }
-                <th>{{ currentMembershipYear() }}</th>
-                <th>Előzmény</th>
-                <th>Műveletek</th>
-              </tr>
-            </thead>
-            <tbody>
-              @if (!filteredClubMembers().length) {
-                <tr>
-                  <td colspan="7" class="empty-row">Nincs ilyen nevű tag.</td>
-                </tr>
-              } @else {
-                @for (m of filteredClubMembers(); track m._id) {
-                  <tr
-                    [class.mine]="m._id === myId()"
-                    [class.row-clickable]="isAdmin()"
-                    (click)="toggleDetail(m._id)"
-                  >
-                    <td>
-                      <div class="person">
-                        <!-- An admin: gold ring and a star on the avatar, no text needed. -->
-                        <span
-                          class="person-pic"
-                          [class.admin]="m.role === 'admin'"
-                          [attr.title]="m.role === 'admin' ? 'Admin' : null"
-                        >
-                          <app-avatar
-                            class="person-avatar"
-                            [name]="m.name"
-                            [userId]="m._id"
-                            [photoVersion]="m.photoUpdatedAt"
-                          />
-                          @if (m.role === 'admin') {
-                            <mat-icon class="admin-star" aria-label="Admin">star</mat-icon>
-                          }
-                        </span>
-                        <strong>{{ m.name }}</strong>
-                        <small>{{ m.email || 'Meghívott' }}</small>
-                      </div>
-                    </td>
-                    <td class="num-col">{{ m.toursAttended }}</td>
-                    <td class="num-col">{{ m.age ?? '-' }}</td>
-                    <td class="status-col">
-                      <span
-                        class="status"
-                        [class.paid]="status(m) === 'active'"
-                        [class.unpaid]="status(m) === 'retired'"
-                        [class.na]="status(m) === 'inactive' || status(m) === 'noAccount'"
-                      >
-                        {{ statusLabel(m) }}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        class="status"
-                        [class.paid]="yearState(m._id, currentMembershipYear()) === 'paid'"
-                        [class.unpaid]="yearState(m._id, currentMembershipYear()) === 'unpaid'"
-                        [class.na]="yearState(m._id, currentMembershipYear()) === 'na'"
-                      >
-                        {{
-                          yearState(m._id, currentMembershipYear()) === 'paid'
-                            ? '✓
-                  Fizetve'
-                            : yearState(m._id, currentMembershipYear()) === 'unpaid'
-                              ? '○ Nincs befizetve'
-                              : '— Nem volt tag'
-                        }}
-                      </span>
-                    </td>
-                    <td>
-                      <div class="history-summary">
-                        <div class="history-dots">
-                          @for (y of historyYears(); track y) {
-                            <span
-                              class="history-dot"
-                              [class.paid]="yearState(m._id, y) === 'paid'"
-                              [class.unpaid]="yearState(m._id, y) === 'unpaid'"
-                              [class.na]="yearState(m._id, y) === 'na'"
-                              [attr.title]="y"
-                            ></span>
-                          }
-                        </div>
-                        <span class="history-fraction"
-                          >{{ historyFraction(m._id) }} év fizetve</span
-                        >
-                      </div>
-                    </td>
-                    <td class="actions-cell">
-                      <div class="row-actions">
-                        @if (isAdmin()) {
-                          <a
-                            [routerLink]="['/klub/felhasznalok', m._id]"
-                            class="icon-btn icon-btn--edit"
-                            title="Szerkesztés"
-                            aria-label="Tag szerkesztése"
-                            (click)="$event.stopPropagation()"
-                          >
-                            <mat-icon>edit</mat-icon>
-                          </a>
-                          @if (status(m) === 'retired') {
-                            <button
-                              type="button"
-                              class="icon-btn icon-btn--restore"
-                              title="Visszaállítás"
-                              aria-label="Felhasználó visszaállítása"
-                              [disabled]="archivingId() === m._id"
-                              (click)="$event.stopPropagation(); restore(m)"
-                            >
-                              <mat-icon>restore_from_trash</mat-icon>
-                            </button>
-                          } @else {
-                            <button
-                              type="button"
-                              class="icon-btn icon-btn--archive"
-                              title="Felfüggesztés"
-                              aria-label="Felhasználó felfüggesztése"
-                              [disabled]="archivingId() === m._id"
-                              (click)="$event.stopPropagation(); archive(m)"
-                            >
-                              <mat-icon>delete</mat-icon>
-                            </button>
-                          }
-                        }
-                      </div>
-                    </td>
-                  </tr>
-                  <tr class="history-expanded-row">
-                    <td colspan="7">
-                      <div class="history-expanded" [class.open]="isExpanded(m._id)">
-                        <div class="history-expanded-inner">
-                          @for (y of membershipYears(); track y) {
-                            <div class="history-row">
-                              <div class="history-row-label">
-                                <span
-                                  class="history-dot history-dot--lg"
-                                  [class.paid]="yearState(m._id, y) === 'paid'"
-                                  [class.unpaid]="yearState(m._id, y) === 'unpaid'"
-                                  [class.na]="yearState(m._id, y) === 'na'"
-                                ></span>
-                                <strong>{{ y }}. évi tagdíj</strong>
-                              </div>
-                              @if (yearState(m._id, y) === 'paid') {
-                                @if (paymentFor(m._id, y); as payment) {
-                                  <span
-                                    >{{ money(payment.amount, payment.currency) }} ·
-                                    {{ payment.date | date: 'yyyy. MM. dd.' }}</span
-                                  >
-                                }
-                              } @else if (yearState(m._id, y) === 'unpaid') {
-                                <span>Nincs befizetve</span>
-                              } @else {
-                                <span>Még nem volt tag</span>
-                              }
-                            </div>
-                          }
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                }
-              }
-            </tbody>
-          </table>
-        </div>
+        <app-people-table
+          [people]="filteredClubMembers()"
+          [showStatus]="isAdmin()"
+          [showActions]="isAdmin()"
+          [extraColumns]="clubExtraColumns()"
+          [detailRow]="historyDetail"
+          [rowClickable]="isAdmin()"
+          [highlightId]="myId()"
+          [busyId]="archivingId()"
+          [wide]="true"
+          emptyText="Nincs ilyen nevű tag."
+          (rowClick)="toggleDetail($event._id)"
+          (archive)="archive($event)"
+          (restore)="restore($event)"
+        />
       </section>
 
       <p class="member-note">
-        A tagok egymás státuszát látják; a befizetés részleteit csak a saját tag és az admin
-        láthatja.
+        A tagok egymás befizetési állapotát látják; a befizetés részleteit csak a saját tag és az
+        admin láthatja.
       </p>
     </div>
-  } @else {
+  } @else if (activeTab() === 'casual') {
     <div role="tabpanel">
       <div class="casual-intro">
         Ők használhatják az alkalmazást, de nem klubtagok. Náluk nincs éves tagdíj vagy „nem
@@ -349,138 +253,32 @@
       <section class="panel member-panel">
         <div class="member-panel-head">
           <div>
-            <h2>Egyéb felhasználók</h2>
-            <p>Csak a név és az alkalmazáshoz való hozzáférés látható itt.</p>
+            <h2>A többiek</h2>
           </div>
-          <input
-            class="member-search"
-            type="search"
-            aria-label="Egyéb felhasználó keresése"
-            placeholder="Felhasználó keresése…"
-            [value]="casualSearch()"
-            (input)="casualSearch.set($any($event.target).value)"
-          />
         </div>
-        <div class="table-scroll">
-          <table class="casual-table">
-            <thead>
-              <tr>
-                @for (
-                  col of [
-                    { key: 'name', label: 'Név' },
-                    { key: 'toursAttended', label: 'Táborok' },
-                    { key: 'age', label: 'Kor' },
-                    { key: 'status', label: 'Státusz' },
-                  ];
-                  track col.key
-                ) {
-                  <th
-                    [attr.aria-sort]="ariaSort('casual', $any(col.key))"
-                    [class.num-col]="col.key === 'toursAttended' || col.key === 'age'"
-                    [class.status-col]="col.key === 'status'"
-                  >
-                    <button
-                      type="button"
-                      class="sort-btn"
-                      (click)="sortBy('casual', $any(col.key))"
-                    >
-                      {{ col.label }}
-                      <span class="sort-arrow" [class.active]="sorts.casual().key === col.key">
-                        {{
-                          sorts.casual().key === col.key && sorts.casual().dir === 'desc'
-                            ? '▼'
-                            : '▲'
-                        }}
-                      </span>
-                    </button>
-                  </th>
-                }
-                @if (isAdmin()) {
-                  <th>Műveletek</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @if (!filteredCasualUsers().length) {
-                <tr>
-                  <td [attr.colspan]="isAdmin() ? 5 : 4" class="empty-row">
-                    Nincs ilyen nevű felhasználó.
-                  </td>
-                </tr>
-              } @else {
-                @for (u of filteredCasualUsers(); track u._id) {
-                  <tr>
-                    <td>
-                      <div class="person">
-                        <app-avatar
-                          class="person-avatar"
-                          [name]="u.name"
-                          [userId]="u._id"
-                          [photoVersion]="u.photoUpdatedAt"
-                        />
-                        <strong>{{ u.name }}</strong>
-                        <small>{{ u.email || 'Meghívott' }}</small>
-                      </div>
-                    </td>
-                    <td class="num-col">{{ u.toursAttended }}</td>
-                    <td class="num-col">{{ u.age ?? '-' }}</td>
-                    <td class="status-col">
-                      <span
-                        class="status"
-                        [class.paid]="status(u) === 'active'"
-                        [class.unpaid]="status(u) === 'retired'"
-                        [class.na]="status(u) === 'inactive' || status(u) === 'noAccount'"
-                      >
-                        {{ statusLabel(u) }}
-                      </span>
-                    </td>
-                    @if (isAdmin()) {
-                      <td class="actions-cell">
-                        <div class="row-actions">
-                          <a
-                            [routerLink]="['/klub/felhasznalok', u._id]"
-                            class="icon-btn icon-btn--edit"
-                            title="Szerkesztés"
-                            aria-label="Felhasználó szerkesztése"
-                          >
-                            <mat-icon>edit</mat-icon>
-                          </a>
-                          @if (status(u) === 'retired') {
-                            <button
-                              type="button"
-                              class="icon-btn icon-btn--restore"
-                              title="Visszaállítás"
-                              aria-label="Felhasználó visszaállítása"
-                              [disabled]="archivingId() === u._id"
-                              (click)="restore(u)"
-                            >
-                              <mat-icon>restore_from_trash</mat-icon>
-                            </button>
-                          } @else {
-                            <button
-                              type="button"
-                              class="icon-btn icon-btn--archive"
-                              title="Felfüggesztés"
-                              aria-label="Felhasználó felfüggesztése"
-                              [disabled]="archivingId() === u._id"
-                              (click)="archive(u)"
-                            >
-                              <mat-icon>delete</mat-icon>
-                            </button>
-                          }
-                        </div>
-                      </td>
-                    }
-                  </tr>
-                }
-              }
-            </tbody>
-          </table>
-        </div>
+        <app-people-table
+          [people]="filteredCasualUsers()"
+          [showStatus]="isAdmin()"
+          [showActions]="isAdmin()"
+          [busyId]="archivingId()"
+          (archive)="archive($event)"
+          (restore)="restore($event)"
+        />
       </section>
       <p class="member-note">
         A személyes elérhetőségek és a fiók beállításai továbbra is a saját profilban maradnak.
       </p>
+    </div>
+  } @else {
+    <div role="tabpanel">
+      <section class="panel member-panel">
+        <div class="member-panel-head">
+          <div>
+            <h2>Mindenki</h2>
+          </div>
+        </div>
+        <app-people-table [people]="filteredEveryone()" [highlightId]="myId()" />
+      </section>
     </div>
   }
 </div>

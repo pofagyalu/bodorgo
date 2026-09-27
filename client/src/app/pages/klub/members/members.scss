@@ -85,6 +85,15 @@ button {
   }
 }
 
+// "Személy keresése" at the bar's right end (after the add button, if any).
+.people-tabs .member-search {
+  margin: 6px 0 6px auto;
+}
+
+.people-tabs .icon-btn--add ~ .member-search {
+  margin-left: 8px;
+}
+
 .people-tabs button {
   background: transparent;
   border: 0;
@@ -269,238 +278,6 @@ button {
   font-size: 13px;
 }
 
-.table-scroll {
-  overflow: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.membership-table {
-  min-width: 820px;
-}
-
-// The name column (1) is exactly as wide as its longest name or email -
-// width: 1% in an auto-layout table means "as narrow as the content
-// allows", and .person never wraps. The other columns share the rest;
-// Előzmény gets the single largest share on purpose - its dot-row only
-// grows as more years accumulate, the other columns never will.
-.membership-table--compact th:nth-child(1),
-.membership-table--compact td:nth-child(1),
-.casual-table th:nth-child(1),
-.casual-table td:nth-child(1) {
-  width: 1%;
-}
-
-.membership-table--compact th:nth-child(5),
-.membership-table--compact td:nth-child(5) {
-  width: 15%;
-}
-
-.membership-table--compact th:nth-child(6),
-.membership-table--compact td:nth-child(6) {
-  width: 35%;
-}
-
-.membership-table--compact th:nth-child(7),
-.membership-table--compact td:nth-child(7) {
-  width: 12%;
-}
-
-th {
-  padding: 13px 21px;
-  background: #f7faf8;
-  color: #56666e;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-// Táborok/Kor in the member table - only ever a 1-2 digit number, so just
-// wide enough for the header label + sort arrow, with tighter side padding
-// than the other columns. Fixed px so it holds in its table-layout:fixed
-// (the remaining % columns there share whatever is left).
-.membership-table th.num-col,
-.membership-table td.num-col {
-  padding-left: 12px;
-  padding-right: 12px;
-  white-space: nowrap;
-}
-
-.membership-table th.num-col:nth-of-type(2) {
-  width: 104px;
-}
-
-.membership-table th.num-col:nth-of-type(3) {
-  width: 68px;
-}
-
-// Státusz in the member table - one fixed-width badge column, sized for
-// the longest label ("— Nincs fiókja").
-.membership-table th.status-col,
-.membership-table td.status-col {
-  width: 150px;
-  padding-left: 12px;
-  padding-right: 12px;
-  white-space: nowrap;
-}
-
-// Header of a sortable column - looks like the plain th text, just clickable.
-.sort-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  cursor: pointer;
-
-  &:hover {
-    color: #23354a;
-  }
-}
-
-.sort-arrow {
-  font-size: 9px;
-  opacity: 0.3;
-
-  &.active {
-    opacity: 1;
-  }
-}
-
-td {
-  padding: 17px 21px;
-  border-top: 1px solid #f0f2f0;
-  font-size: 13px;
-  color: #2f414b;
-}
-
-.membership-table tbody tr.mine {
-  background: #f6fbf8;
-}
-
-.membership-table tbody tr {
-  transition: background-color 0.18s ease;
-}
-
-// Admin-only - clicking anywhere on the row now toggles its payment
-// history open/closed directly (see members.ts's toggleDetail), replacing
-// the old separate "Részletek →" text button.
-.membership-table tbody tr.row-clickable {
-  cursor: pointer;
-}
-
-.membership-table tbody tr.row-clickable:hover {
-  background: #eef6f2;
-}
-
-.membership-table tbody tr.row-clickable.mine:hover {
-  background: #e3f3ea;
-}
-
-// Műveletek sits flush against the right edge of both tables - the
-// header text right-aligned, and the buttons pushed right inside their
-// cell. The <td> itself stays a normal table cell (the flex container is
-// a div inside it, .row-actions below) - a display:flex <td> drops out of
-// the table's column layout, which is what knocked the buttons out of
-// line with the header.
-.membership-table th:last-child,
-.casual-table th:last-child {
-  text-align: right;
-}
-
-// Avatar on the left, name above email beside it - never wrapping, so the
-// column is as wide as the longest of them (see width: 1% above). On a
-// phone the email moves under both (see the bottom of this file).
-.person {
-  display: grid;
-  grid-template-columns: auto auto;
-  justify-content: start;
-  align-items: center;
-  column-gap: 12px;
-  white-space: nowrap;
-
-  // The avatar - or, in the member table, its wrapper (.person-pic).
-  > :first-child {
-    grid-row: 1 / span 2;
-  }
-
-  strong {
-    align-self: end;
-  }
-
-  small {
-    grid-column: 2;
-    align-self: start;
-  }
-}
-
-.person-avatar {
-  width: 35px;
-  height: 35px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: #d9ede7;
-  color: #306b61;
-  font-weight: 750;
-  font-size: 12px;
-  flex: none;
-}
-
-// An admin, told apart without any text: a gold ring around the avatar
-// and a small gold star badge on its top corner (not the bottom one - on a
-// phone the email line runs right under the avatar) ("Admin" on hover). The star
-// lives on this wrapper, since the avatar itself clips its contents.
-.person-pic {
-  position: relative;
-  display: inline-grid;
-
-  &.admin .person-avatar {
-    box-shadow:
-      0 0 0 2px #fff,
-      0 0 0 4px var(--logo-yellow, #f6b528);
-  }
-}
-
-.person-pic .admin-star {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 17px;
-  height: 17px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--logo-yellow, #f6b528);
-  border: 2px solid #fff;
-  color: #fff;
-  font-size: 12px;
-  line-height: 1;
-  box-sizing: content-box;
-  pointer-events: none;
-}
-
-.person strong {
-  color: #1c2d38;
-}
-
-.person small {
-  display: block;
-  color: #56666e;
-  margin-top: 3px;
-  font-size: 11px;
-}
-
 .status {
   display: inline-block;
   padding: 7px 10px;
@@ -580,11 +357,6 @@ td {
 
 // --- Inline per-member history (replaces the old fixed detail panel) ---
 
-.history-expanded-row td {
-  padding: 0;
-  border-top: 0;
-}
-
 // Always rendered (not @if-toggled) so this can actually animate - an
 // element can't transition between "doesn't exist" and "exists". A single
 // grid row track sized 0fr -> 1fr animates smoothly to the row's own exact
@@ -617,13 +389,6 @@ td {
   font-size: 12.5px;
 }
 
-.row-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -643,44 +408,9 @@ td {
   }
 }
 
-.icon-btn--edit {
-  // Same colors as the old Profil page's own .icon-btn/.icon-btn--edit
-  // (profile.scss) - identical edit action everywhere in the app.
-  background: #445a67;
-  color: #fff;
-
-  &:hover {
-    background: #37474f;
-  }
-}
-
-.icon-btn--archive {
-  background: #f3e3dc;
-  color: #a4513a;
-
-  &:hover {
-    background: #ecd0c4;
-  }
-}
-
-.icon-btn--restore {
-  background: #e5f5ec;
-  color: #267b66;
-
-  &:hover {
-    background: #d2ecdf;
-  }
-}
-
 .icon-btn:disabled {
   opacity: 0.5;
   cursor: default;
-}
-
-.empty-row {
-  text-align: center;
-  padding: 35px;
-  color: #56666e;
 }
 
 // --- Detail panel ---
@@ -907,74 +637,15 @@ td {
     flex-direction: column;
   }
 
-  .member-search {
-    width: 100%;
-  }
-
-  // Narrow screen: avatar + name on the first line, the email below
-  // starting at the cell's left edge - the column needs only the wider of
-  // the two lines, not avatar + email side by side.
-  .person {
-    column-gap: 8px;
-    row-gap: 4px;
-
-    > :first-child {
-      grid-row: 1;
-    }
-
-    strong {
-      align-self: center;
-    }
-
-    small {
-      grid-column: 1 / span 2;
-      margin-top: 0;
-    }
-  }
-
-  th,
-  td {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-
-  // The member table still scrolls sideways on a phone, kept narrow so
-  // Név + Táborok + Kor fit in view as far as possible.
-  .membership-table th.num-col,
-  .membership-table td.num-col {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-
-  .membership-table th.num-col:nth-of-type(2) {
-    width: 88px;
-  }
-
-  .membership-table th.num-col:nth-of-type(3) {
-    width: 56px;
-  }
-
-  .membership-table th.status-col,
-  .membership-table td.status-col {
-    width: 136px;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-
-  // The other-users table: tight padding, and headers/badges/buttons
-  // allowed to wrap - it scrolls sideways only if the names need it.
-  .casual-table th,
-  .casual-table td {
-    padding-left: 6px;
-    padding-right: 6px;
-  }
-
-  .casual-table .status {
-    white-space: normal;
-  }
-
-  .casual-table .row-actions {
+  // The tabs scroll sideways; the search gets its own full-width line.
+  .people-tabs {
     flex-wrap: wrap;
-    gap: 6px;
+  }
+
+  .people-tabs .member-search,
+  .people-tabs .icon-btn--add ~ .member-search {
+    order: 10;
+    width: 100%;
+    margin: 6px 0 10px;
   }
 }

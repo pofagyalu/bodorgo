@@ -1,0 +1,131 @@
+<div class="table-scroll">
+  <table [class.wide]="wide()">
+    <thead>
+      <tr>
+        @for (col of sortColumns(); track col.key) {
+          <th
+            [attr.aria-sort]="ariaSort(col.key)"
+            [class.name-col]="col.key === 'name'"
+            [class.num-col]="col.key === 'toursAttended' || col.key === 'age'"
+            [class.tours-col]="col.key === 'toursAttended'"
+            [class.age-col]="col.key === 'age'"
+            [class.status-col]="col.key === 'status'"
+          >
+            <button type="button" class="sort-btn" (click)="sortBy(col.key)">
+              {{ col.label }}
+              <span class="sort-arrow" [class.active]="isSortedBy(col.key)">{{
+                arrow(col.key)
+              }}</span>
+            </button>
+          </th>
+        }
+        @for (x of extraColumns(); track x.header) {
+          <th [style.width]="x.width">{{ x.header }}</th>
+        }
+        @if (showActions()) {
+          <th class="actions-col">Műveletek</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (p of sorted(); track p._id) {
+        <tr
+          [class.mine]="p._id === highlightId()"
+          [class.row-clickable]="rowClickable()"
+          (click)="onRowClick(p)"
+        >
+          <td class="name-col">
+            <div class="person">
+              <!-- An admin: gold ring and a star on the avatar, no text needed. -->
+              <span
+                class="person-pic"
+                [class.admin]="p.role === 'admin'"
+                [attr.title]="p.role === 'admin' ? 'Admin' : null"
+              >
+                <app-avatar
+                  class="person-avatar"
+                  [name]="p.name"
+                  [userId]="p._id"
+                  [photoVersion]="p.photoUpdatedAt"
+                />
+                @if (p.role === 'admin') {
+                  <mat-icon class="admin-star" aria-label="Admin">star</mat-icon>
+                }
+              </span>
+              <strong>{{ p.name }}</strong>
+              <small>{{ p.email || 'Meghívott' }}</small>
+            </div>
+          </td>
+          <td class="num-col">{{ p.toursAttended }}</td>
+          <td class="num-col">{{ p.age ?? '-' }}</td>
+          @if (showStatus()) {
+            <td class="status-col">
+              <span
+                class="status"
+                [class.paid]="status(p) === 'active'"
+                [class.unpaid]="status(p) === 'retired'"
+                [class.na]="status(p) === 'inactive' || status(p) === 'noAccount'"
+              >
+                {{ statusLabel(p) }}
+              </span>
+            </td>
+          }
+          @for (x of extraColumns(); track x.header) {
+            <td>
+              <ng-container *ngTemplateOutlet="x.cell; context: { $implicit: p }" />
+            </td>
+          }
+          @if (showActions()) {
+            <td class="actions-cell">
+              <div class="row-actions">
+                <a
+                  [routerLink]="['/klub/felhasznalok', p._id]"
+                  class="icon-btn icon-btn--edit"
+                  title="Szerkesztés"
+                  aria-label="Felhasználó szerkesztése"
+                  (click)="$event.stopPropagation()"
+                >
+                  <mat-icon>edit</mat-icon>
+                </a>
+                @if (status(p) === 'retired') {
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--restore"
+                    title="Visszaállítás"
+                    aria-label="Felhasználó visszaállítása"
+                    [disabled]="busyId() === p._id"
+                    (click)="$event.stopPropagation(); restore.emit(p)"
+                  >
+                    <mat-icon>restore_from_trash</mat-icon>
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--archive"
+                    title="Felfüggesztés"
+                    aria-label="Felhasználó felfüggesztése"
+                    [disabled]="busyId() === p._id"
+                    (click)="$event.stopPropagation(); archive.emit(p)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </div>
+            </td>
+          }
+        </tr>
+        @if (detailRow(); as detail) {
+          <tr class="detail-row">
+            <td [attr.colspan]="columnCount()">
+              <ng-container *ngTemplateOutlet="detail; context: { $implicit: p }" />
+            </td>
+          </tr>
+        }
+      } @empty {
+        <tr>
+          <td [attr.colspan]="columnCount()" class="empty-row">{{ emptyText() }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
