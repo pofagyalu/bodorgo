@@ -7,7 +7,6 @@ import createApp from './app.js';
 import createSessionMiddleware from './session.js';
 import registerChatHandlers from './chat/chatSocket.js';
 import logger from './logger.js';
-import { checkForNewTourVideos } from './controllers/tourVideoController.js';
 import { checkPollReminders } from './chat/pollReminders.js';
 
 // This handler must run before anything else
@@ -44,18 +43,9 @@ mongoose
       logger.info(`App is listening on ${PORT} (Node ${process.version})`);
     });
 
-    // Every 12 hours (and a few minutes after each start): e-mail the
-    // attendees of tours whose recap video has just appeared on the NAS.
-    // Only where TOUR_VIDEO_EMAILS=on (the live server's .env) - a local
-    // dev server shares the same database and must not send them too.
-    if (config.tourVideoEmails) {
-      const checkVideos = () =>
-        checkForNewTourVideos().catch((err) =>
-          logger.error(`Tour video check failed: ${err.message}`),
-        );
-      setTimeout(checkVideos, 5 * 60 * 1000);
-      setInterval(checkVideos, 12 * 60 * 60 * 1000);
-    }
+    // New tour recap videos are announced by an admin's "Új média
+    // felfedezése" (see photos/discovery.js), not on a schedule - the NAS
+    // is only read when someone has actually added something.
 
     // Every 10 minutes: remind people about polls closing within 2 hours
     // they haven't voted in (see chat/pollReminders.js). Live server only

@@ -115,6 +115,9 @@ const config = {
   // Windows-mapped-drive form instead (Z:\..., S:\...) in the local .env.
   photosRoot: process.env.PHOTOS_ROOT,
   thumbnailsRoot: process.env.THUMBNAILS_ROOT,
+  // Média → Fotók: the NAS's bódorgó_egyéb, each subfolder a category (see
+  // photos/mediaPhotoSync.js). Same NAS-path / mapped-drive split.
+  mediaPhotosRoot: process.env.MEDIA_PHOTOS_ROOT,
   // MEDIA_ROOT: the one Jellyfin-organized folder on the NAS holding every
   // club video, one subfolder per series - streamed straight from there,
   // never copied into this app's own storage. Same dual-form path split as

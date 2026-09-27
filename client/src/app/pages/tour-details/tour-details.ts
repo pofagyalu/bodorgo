@@ -733,6 +733,25 @@ export class TourDetails implements OnDestroy {
         },
       });
 
+      // A phone photo (the tour folder's "mobil" subfolder): a small phone
+      // icon in the top bar while it's the one open - not a button, just
+      // telling it apart from the camera's photos at a glance.
+      ui.registerElement({
+        name: 'mobile-indicator',
+        order: 6,
+        isButton: false,
+        html: `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M16 1H8a3 3 0 0 0-3 3v16a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V4a3 3 0 0 0-3-3zm-4 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5-5H7V4h10z"/></svg>`,
+        onInit: (el, pswp) => {
+          el.classList.add('pswp__mobile-indicator');
+          el.title = 'Mobillal készült';
+          const refresh = () => {
+            el.hidden = this.tourImages()[pswp.currIndex]?.source !== 'mobile';
+          };
+          pswp.on('change', refresh);
+          refresh();
+        },
+      });
+
       // Bottom filmstrip - click any thumbnail to jump straight to it, or
       // use PhotoSwipe's own built-in arrows/swipe to advance one by one.
       // Lives in PhotoSwipe's own root overlay (outside Angular's view
@@ -750,7 +769,23 @@ export class TourDetails implements OnDestroy {
             thumb.loading = 'lazy';
             thumb.className = 'pswp__thumbnails-strip-item';
             thumb.addEventListener('click', () => pswp.goTo(i));
-            el.appendChild(thumb);
+            // A phone photo gets a small phone badge in its corner - the
+            // <img> itself can't hold one, hence the wrapper.
+            if (img.source === 'mobile') {
+              const cell = document.createElement('span');
+              cell.className = 'pswp__thumbnails-strip-cell';
+              cell.title = 'Mobillal készült';
+              cell.append(
+                thumb,
+                Object.assign(document.createElement('span'), {
+                  className: 'pswp__thumbnails-strip-mobile',
+                  innerHTML: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 1H8a3 3 0 0 0-3 3v16a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V4a3 3 0 0 0-3-3zm-4 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5-5H7V4h10z"/></svg>`,
+                }),
+              );
+              el.appendChild(cell);
+            } else {
+              el.appendChild(thumb);
+            }
             return thumb;
           });
 

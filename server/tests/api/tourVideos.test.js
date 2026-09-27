@@ -99,7 +99,7 @@ describe('tour videos, matched by tour number', () => {
   });
 });
 
-describe('the 12-hourly "video is ready" e-mail', () => {
+describe('the "video is ready" e-mail (sent by Új média felfedezése)', () => {
   it('first run only marks existing videos; later a new one is e-mailed once', async () => {
     const tour10 = await createTour({ order: 10 });
     const attendee = await createMember({ lastLoginAt: new Date() });

@@ -30,23 +30,103 @@
         }
       </div>
 
-      <a routerLink="fotok" routerLinkActive="active" class="nav-item" title="Fotók (hamarosan)">
+      <a
+        routerLink="fotok"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item"
+        title="Fotók"
+      >
         <mat-icon>photo_library</mat-icon><span>Fotók</span>
-        <span class="soon">hamarosan</span>
       </a>
+      <!-- The photo categories: one per subfolder of bódorgó_egyéb. -->
+      <div class="sub-nav">
+        @for (c of media.photoCategories(); track c.key) {
+          <a
+            [routerLink]="['fotok', c.key]"
+            routerLinkActive="active"
+            class="sub-item"
+            [title]="c.title"
+          >
+            <mat-icon [style.color]="'#8fd3b8'">photo_camera</mat-icon>
+            <span class="sub-title">{{ c.title }}</span>
+            <span class="sub-count">{{ c.photos.length }}</span>
+          </a>
+        }
+      </div>
     </nav>
 
     <div class="side-bottom">
       <strong>Közös emlékek</strong>
       Szilveszterek, farsangok és minden, ami nem fért bele egy táborba.
     </div>
+
+    <!-- Admins: look through the NAS for new tour folders, photos (tours and
+         Média) and tour recap videos - only when pressed. -->
+    @if (isAdmin()) {
+      <button
+        type="button"
+        class="discover-btn"
+        (click)="media.discover()"
+        [disabled]="media.discovery()?.running"
+        title="Új tábormappák, fotók és tábori videók keresése a NAS-on"
+      >
+        <mat-icon [class.spin]="media.discovery()?.running">{{
+          media.discovery()?.running ? 'autorenew' : 'travel_explore'
+        }}</mat-icon>
+        <span>{{
+          media.discovery()?.running ? 'Felfedezés folyamatban…' : 'Új média felfedezése'
+        }}</span>
+      </button>
+    }
   </aside>
 
   <main class="media-main">
     <nav class="media-mobile-nav" aria-label="Média főmenü mobilon">
       <a routerLink="videok" routerLinkActive="active">Videók</a>
       <a routerLink="fotok" routerLinkActive="active">Fotók</a>
+      @if (isAdmin()) {
+        <button
+          type="button"
+          class="mobile-discover"
+          (click)="media.discover()"
+          [disabled]="media.discovery()?.running"
+          title="Új média felfedezése"
+        >
+          <mat-icon [class.spin]="media.discovery()?.running">travel_explore</mat-icon>
+        </button>
+      }
     </nav>
+
+    <!-- What the last Új média felfedezése found - on top of any Média page. -->
+    @if (media.discovery(); as d) {
+      @if (!d.running && (d.report || d.error)) {
+        <section class="discovery-report">
+          <div class="report-head">
+            <strong>Új média felfedezése – eredmény</strong>
+            <button
+              type="button"
+              class="report-close"
+              (click)="media.closeDiscoveryReport()"
+              title="Bezárás"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          @if (d.error) {
+            <p class="report-error">Hiba: {{ d.error }}</p>
+          } @else if (media.discoveryReport().length) {
+            <ul>
+              @for (line of media.discoveryReport(); track $index) {
+                <li>{{ line }}</li>
+              }
+            </ul>
+          } @else {
+            <p class="report-none">Nincs új média – minden naprakész.</p>
+          }
+        </section>
+      }
+    }
 
     <router-outlet />
   </main>

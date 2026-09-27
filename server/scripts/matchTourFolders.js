@@ -20,49 +20,11 @@ import mongoose from 'mongoose';
 import config from '../src/config.js';
 import Tour from '../src/models/tourModel.js';
 
-const ROMAN_VALUES = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
-
-export function romanToInt(roman) {
-  const s = roman.toUpperCase();
-  let total = 0;
-  for (let i = 0; i < s.length; i++) {
-    const value = ROMAN_VALUES[s[i]];
-    if (value === undefined) return null;
-    const next = ROMAN_VALUES[s[i + 1]];
-    total += next !== undefined && value < next ? -value : value;
-  }
-  return total;
-}
-
-// Matches the trailing "_<roman numeral>" at the end of a folder name,
-// whatever descriptive text precedes it - some real folders don't even
-// contain the word "bodorgo" (e.g. "..._sarkany_panzio_xxviii").
-export const TRAILING_NUMERAL_RE = /_([ivxlcdm]+)$/i;
-
-// Single-tour equivalent of this script's own bulk loop below (which
-// converts every folder's numeral and matches it against every tour) -
-// used by refreshTourPhotos.js so it doesn't have to re-scan the whole
-// PHOTOS_ROOT for a script that only cares about one tour. Returns null if
-// no folder matches; throws if more than one folder resolves to the same
-// order (a real conflict to resolve by hand, same as the bulk script's own
-// "conflicts" case below).
-export function findFolderForOrder(order) {
-  const entries = fs.readdirSync(config.photosRoot, { withFileTypes: true });
-  const matches = entries
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .filter((folder) => {
-      const m = folder.match(TRAILING_NUMERAL_RE);
-      return m && romanToInt(m[1]) === order;
-    });
-
-  if (matches.length > 1) {
-    throw new Error(
-      `Multiple folders match order ${order}: ${matches.join(', ')} - resolve by hand.`,
-    );
-  }
-  return matches[0] ?? null;
-}
+// The folder-matching helpers live in the server now (src/photos/
+// tourFolders.js - "Új média felfedezése" uses them too); re-exported for
+// the other scripts.
+import { romanToInt, TRAILING_NUMERAL_RE } from '../src/photos/tourFolders.js';
+export { romanToInt, TRAILING_NUMERAL_RE, findFolderForOrder } from '../src/photos/tourFolders.js';
 
 // Guarded so refreshTourPhotos.js (and anything else) can import
 // romanToInt/TRAILING_NUMERAL_RE/findFolderForOrder above without also

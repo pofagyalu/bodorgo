@@ -6,6 +6,7 @@ import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
 import config from '../config.js';
 import logger from '../logger.js';
+import { thumbRelPath } from '../photos/imageFiles.js';
 
 // A restricted photo (see tourModel.js's images.restricted) is visible to
 // an admin, or to anyone who actually attended *this* tour - same
@@ -83,10 +84,11 @@ export const getTourImages = async (req, res) => {
 export const getTourImageThumb = async (req, res) => {
   const tour = await loadTourImage(req.params.tourId, req.params.filename, req.user);
 
+  // A phone photo's ("mobil/…") thumbnail is in the same subfolder.
   const thumbPath = resolveImagePath(
     config.thumbnailsRoot,
     tour,
-    `${path.parse(req.params.filename).name}.webp`,
+    thumbRelPath(req.params.filename),
   );
 
   if (fs.existsSync(thumbPath)) {
@@ -120,7 +122,7 @@ export const downloadTourImage = async (req, res) => {
   if (!fs.existsSync(fullPath)) {
     throw new AppError('A fénykép nem található a lemezen.', 404);
   }
-  res.download(fullPath, req.params.filename);
+  res.download(fullPath, path.basename(req.params.filename));
 };
 
 // PATCH /tours/:tourId/images/:filename - admin-only. Marks/unmarks one

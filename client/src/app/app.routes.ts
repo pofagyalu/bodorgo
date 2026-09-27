@@ -95,6 +95,11 @@ export const routes: Routes = [
         title: 'Média – Fotók',
         loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
       },
+      {
+        path: 'fotok/:category',
+        title: 'Média – Fotók',
+        loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
+      },
     ],
   },
   {
