@@ -24,6 +24,9 @@ const config = {
   resend: {
     apiKey: process.env.RESEND_API_KEY,
     from: process.env.RESEND_EMAIL_FROM,
+    // Local .env only: every e-mail goes to this address instead (see
+    // utils/emailRedirect.js). Never set on the live server.
+    redirectTo: process.env.EMAIL_REDIRECT_TO,
   },
   redisUrl: process.env.REDIS_URL,
   sendgrid: {
