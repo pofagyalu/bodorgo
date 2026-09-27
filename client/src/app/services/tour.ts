@@ -189,6 +189,8 @@ export interface Tour {
   price?: number;
   summary: string;
   description: string;
+  // Who to call on arrival (name, phone) - optional free text.
+  contact?: string;
   // When the cover image last changed - absent until one is uploaded (see
   // tourCoverController.js). Also its cache-busting version (see
   // TourService.coverUrl).
@@ -396,6 +398,7 @@ export interface TourPayload {
   price?: number;
   summary?: string;
   description?: string;
+  contact?: string;
   pricingMode?: 'perHouse' | 'perPerson';
   accommodationPricePerNight?: number;
   accommodationCurrency?: 'HUF' | 'EUR';

@@ -100,6 +100,23 @@
           >
         </div>
 
+        <!-- Who to call if you get there before the organizers (optional). -->
+        @if (t.contact) {
+          <div class="info-line">
+            <mat-icon [style.color]="contactIconColor">call</mat-icon>
+            <span
+              ><strong>Kapcsolat:</strong>
+              @for (p of contactParts(t.contact); track $index) {
+                @if (p.tel) {
+                  <a class="contact-tel" [href]="'tel:' + p.tel">{{ p.text }}</a>
+                } @else {
+                  {{ p.text }}
+                }
+              }
+            </span>
+          </div>
+        }
+
         <p class="long-description">{{ t.description }}</p>
       </div>
     </div>

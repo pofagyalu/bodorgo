@@ -98,6 +98,7 @@ export class TourDetails implements OnDestroy {
   addressIconColor = this.infoLineIconColors[1];
   distanceIconColor = this.infoLineIconColors[2];
   dateIconColor = this.infoLineIconColors[3];
+  contactIconColor = this.infoLineIconColors[4];
 
   private tourId!: string;
   tour = signal<Tour | null>(null);
@@ -470,6 +471,20 @@ export class TourDetails implements OnDestroy {
   // Same deep-link URLs as tourPdfController.js's Helyszín row - each
   // app handles the handoff itself (installed app on mobile, its own web
   // app on desktop), nothing platform-specific to detect here.
+  // The Kapcsolat line's text split around phone numbers, so each number
+  // becomes a tap-to-call link (e.g. "Kiss Béla, +36 30 123 4567").
+  contactParts(contact: string): { text: string; tel?: string }[] {
+    const phone = /(\+?\d[\d\s/()-]{5,}\d)/;
+    return contact
+      .split(phone)
+      .filter(Boolean)
+      .map((text) =>
+        phone.test(text) && text.match(phone)![0] === text
+          ? { text, tel: text.replace(/[^\d+]/g, '') }
+          : { text },
+      );
+  }
+
   wazeUrl(t: Tour): string {
     const [lng, lat] = t.location.coordinates;
     return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;

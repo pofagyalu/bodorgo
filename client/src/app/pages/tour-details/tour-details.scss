@@ -997,3 +997,11 @@
   height: 100%;
   border: none;
 }
+
+// Kapcsolat: a phone number in it calls on tap.
+.contact-tel {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}

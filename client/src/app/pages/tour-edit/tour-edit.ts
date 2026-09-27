@@ -18,6 +18,7 @@ interface TourEditForm {
   startDateLocal: string;
   duration: number | null;
   maxCapacity: number | null;
+  contact: string;
   summary: string;
   description: string;
   // The current (already uploaded) cover's URL, for the preview - '' if
@@ -58,6 +59,7 @@ function emptyForm(): TourEditForm {
     startDateLocal: '',
     duration: null,
     maxCapacity: null,
+    contact: '',
     summary: '',
     description: '',
     existingCoverUrl: '',
@@ -151,6 +153,7 @@ export class TourEdit implements OnDestroy {
           startDateLocal: toDatetimeLocal(t.startDate),
           duration: t.duration,
           maxCapacity: t.maxCapacity,
+          contact: t.contact ?? '',
           summary: t.summary,
           description: t.description,
           existingCoverUrl: this.tourService.coverUrl(t) ?? '',
@@ -249,6 +252,7 @@ export class TourEdit implements OnDestroy {
       startDate: f.startDateLocal ? new Date(f.startDateLocal).toISOString() : undefined,
       duration: f.duration ?? undefined,
       maxCapacity: f.maxCapacity ?? undefined,
+      contact: f.contact.trim(),
       // price is never sent from this form at all - it's entirely
       // server-derived once accommodationPricePerNight is set (see
       // tourModel.js's pre('save') hook), and simply stays unset (shown
