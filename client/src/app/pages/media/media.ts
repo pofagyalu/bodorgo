@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaService } from '../../services/media';
+import { AuthService } from '../../auth/auth.service';
 
 // Outer shell for media/* - the club's videos (and later event photos)
 // that don't belong to one tour. Same sidebar layout as the Klub shell,
@@ -14,6 +15,9 @@ import { MediaService } from '../../services/media';
 })
 export class Media implements OnInit {
   media = inject(MediaService);
+  private auth = inject(AuthService);
+  // "Új média felfedezése" - the button at the bottom of the sidebar.
+  isAdmin = computed(() => this.auth.user()?.role === 'admin');
 
   // Each video category's icon in the sub-menu - all that's left of it
   // once the sidebar collapses to an icon rail.
@@ -42,5 +46,7 @@ export class Media implements OnInit {
 
   ngOnInit() {
     this.media.loadVideos();
+    this.media.loadPhotos();
+    if (this.isAdmin()) this.media.resumeDiscovery();
   }
 }

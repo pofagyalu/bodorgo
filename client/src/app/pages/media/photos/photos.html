@@ -1,0 +1,56 @@
+<div class="content">
+  <div class="heading">
+    <div>
+      <div class="kicker">Média</div>
+      <h1>Fotók</h1>
+      <p>Közös programok fotói, amelyek nem egy táborhoz tartoznak – csak a klub tagjainak.</p>
+    </div>
+  </div>
+
+  @if (media.photosLoading() && !media.photoCategories().length) {
+    <p class="empty-note">Betöltés...</p>
+  } @else if (media.photosError()) {
+    <p class="empty-note">Nem sikerült betölteni a fotókat.</p>
+  } @else if (!media.photoCategories().length) {
+    <p class="empty-note">Még nincs fotó.</p>
+  } @else if (unknownCategory()) {
+    <p class="empty-note">Nincs ilyen fotókategória.</p>
+  } @else {
+    <!-- Narrow screens only - on a wide one the Média sidebar does this. -->
+    <nav class="filter-chips" aria-label="Kategóriák">
+      <a
+        class="chip"
+        routerLink="/media/fotok"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Mind <span class="chip-count">{{ totalCount() }}</span>
+      </a>
+      @for (c of media.photoCategories(); track c.key) {
+        <a class="chip" [routerLink]="['/media/fotok', c.key]" routerLinkActive="active">
+          {{ c.title }} <span class="chip-count">{{ c.photos.length }}</span>
+        </a>
+      }
+    </nav>
+
+    @for (c of shownCategories(); track c.key) {
+      <section class="panel photo-group">
+        <div class="group-head">
+          <div class="group-cover"><mat-icon>photo_camera</mat-icon></div>
+          <div class="group-text">
+            <h2>{{ c.title }}</h2>
+          </div>
+          <span class="group-count">{{ c.photos.length }} fotó</span>
+        </div>
+
+        <div class="photo-grid">
+          @for (p of c.photos; track p.filename; let i = $index) {
+            <button type="button" class="photo-tile" (click)="open(c, i)" [title]="p.filename">
+              <img [src]="thumbUrl(c, p.filename)" alt="" loading="lazy" />
+            </button>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>

@@ -34,6 +34,9 @@ process.env.RECEIPTS_DIR = path.join(TEST_FILES, 'receipts');
 process.env.TOUR_DOCUMENTS_DIR = path.join(TEST_FILES, 'tour-documents');
 process.env.MEDIA_VIDEOS_ROOT = path.join(TEST_FILES, 'media-videos');
 process.env.VIDEOS_ROOT = path.join(TEST_FILES, 'tour-videos');
+process.env.PHOTOS_ROOT = path.join(TEST_FILES, 'tour-photos');
+process.env.THUMBNAILS_ROOT = path.join(TEST_FILES, 'thumbnails');
+process.env.MEDIA_PHOTOS_ROOT = path.join(TEST_FILES, 'media-photos');
 // The tour wallet is "configured" for the withdrawal tests; the membership
 // one deliberately isn't.
 process.env.BARION_TOUR_PAYEE_EMAIL ??= 'tour@test.local';

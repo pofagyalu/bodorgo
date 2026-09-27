@@ -25,122 +25,24 @@
 //   node scripts/syncTourImages.js <tourId|order|slug>
 
 import 'dotenv/config';
-import fs from 'fs';
-import path from 'path';
 import { pathToFileURL } from 'url';
 import mongoose from 'mongoose';
 import sharp from 'sharp';
 import config from '../src/config.js';
 import Tour from '../src/models/tourModel.js';
+import { diffTourImages, syncTourPhotos } from '../src/photos/tourPhotoSync.js';
 
-const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic']);
-const THUMB_WIDTH = 400;
+// The sync itself lives in the server (src/photos/tourPhotoSync.js) - the
+// admins' "Új média felfedezése" button runs the same code for every tour.
+export { diffTourImages };
 
-// Pure (no DB/filesystem) so it's directly unit-testable - given the
-// current file listing and the tour's recorded images, decides what's new
-// (needs a thumbnail generated) and what's stale (file's gone, needs
-// pruning). filesOnDisk/recordedImages are never mutated.
-export function diffTourImages(filesOnDisk, recordedImages) {
-  const onDisk = new Set(filesOnDisk);
-  const existing = new Set(recordedImages.map((i) => i.filename));
-  const newFilenames = filesOnDisk.filter((f) => !existing.has(f));
-  const removedImages = recordedImages.filter((i) => !onDisk.has(i.filename));
-  return { newFilenames, removedImages };
-}
-
-// The actual sync for one already-loaded tour (mongoose already connected,
-// tour.sourceFolder already set) - factored out of main() below so
-// refreshTourPhotos.js can call it directly after matching a folder,
-// without shelling out to a second process or re-connecting to the DB.
-// Returns a short summary object instead of just printing, so a caller
-// combining this with matchTourFolders' own logic can build one combined
-// report rather than interleaved console output from two scripts.
 export async function syncOneTour(tour) {
-  const folderPath = path.join(config.photosRoot, tour.sourceFolder);
-  if (!fs.existsSync(folderPath)) {
-    throw new Error(`Folder not found: ${folderPath}`);
-  }
-
-  const entries = fs.readdirSync(folderPath, { withFileTypes: true });
-  const subfolderNotices = [];
-  for (const sub of entries.filter((e) => e.isDirectory())) {
-    const count = fs.readdirSync(path.join(folderPath, sub.name)).length;
-    if (count > 0) {
-      subfolderNotices.push(
-        `Note: subfolder "${sub.name}" (${count} file(s)) was not read - subfolders aren't walked yet, see the plan.`,
-      );
-    }
-  }
-
-  const files = entries
-    .filter((e) => e.isFile() && IMAGE_EXTENSIONS.has(path.extname(e.name).toLowerCase()))
-    .map((e) => e.name)
-    .sort((a, b) => a.localeCompare(b));
-
-  const { newFilenames, removedImages } = diffTourImages(files, tour.images);
-
-  if (newFilenames.length === 0 && removedImages.length === 0) {
-    return {
-      message: `"${tour.title}": no changes (${tour.images.length} already recorded, all still present).`,
-      subfolderNotices,
-    };
-  }
-
-  const thumbDir = path.join(config.thumbnailsRoot, tour.sourceFolder);
-  fs.mkdirSync(thumbDir, { recursive: true });
-
-  let thumbsGenerated = 0;
-  let thumbFailures = 0;
-  const added = [];
-  for (const filename of newFilenames) {
-    const src = path.join(folderPath, filename);
-    const dest = path.join(thumbDir, `${path.parse(filename).name}.webp`);
-    try {
-      // .rotate() with no args auto-orients based on the source's own EXIF
-      // tag - without it, a portrait phone/camera photo can come out
-      // sideways once EXIF is stripped by re-encoding to webp, and the
-      // width/height PhotoSwipe needs would be the pre-rotation (wrong) ones.
-      const { width, height } = await sharp(src).rotate().metadata();
-      const { size } = fs.statSync(src);
-      await sharp(src).rotate().resize({ width: THUMB_WIDTH }).webp({ quality: 75 }).toFile(dest);
-      added.push({ filename, width, height, size });
-      thumbsGenerated++;
-    } catch (err) {
-      console.error(`Failed to process "${filename}": ${err.message}`);
-      thumbFailures++;
-    }
-  }
-
-  // Prune entries whose backing file is gone - best-effort thumbnail
-  // cleanup (a missing thumbnail is harmless to ignore; the DB entry being
-  // gone is what actually stops it from being served).
-  for (const image of removedImages) {
-    const thumbPath = path.join(thumbDir, `${path.parse(image.filename).name}.webp`);
-    try {
-      fs.rmSync(thumbPath, { force: true });
-    } catch (err) {
-      console.error(`Could not remove thumbnail for "${image.filename}": ${err.message}`);
-    }
-  }
-  if (removedImages.length > 0) {
-    const removedFilenames = new Set(removedImages.map((i) => i.filename));
-    tour.images = tour.images.filter((i) => !removedFilenames.has(i.filename));
-  }
-
-  tour.images.push(...added);
-  await tour.save();
-
-  const message =
-    `"${tour.title}": added ${added.length} new photo(s), removed ${removedImages.length} stale entr${
-      removedImages.length === 1 ? 'y' : 'ies'
-    } (${tour.images.length} total), generated ${thumbsGenerated} thumbnail(s)${
-      thumbFailures ? `, ${thumbFailures} failure(s)` : ''
-    }.` +
-    (removedImages.length > 0
-      ? `\nRemoved (file no longer in folder): ${removedImages.map((i) => i.filename).join(', ')}`
-      : '');
-
-  return { message, subfolderNotices };
+  const r = await syncTourPhotos(tour, sharp);
+  const failures = r.failures ? `, ${r.failures} failure(s)` : '';
+  return {
+    message: `"${r.title}": added ${r.added} new photo(s), removed ${r.removed} (${r.total} total)${failures}.`,
+    subfolderNotices: r.skipped.map((d) => `Note: subfolder ${d} was not read (only "mobil" is).`),
+  };
 }
 
 // Guarded so another module can import diffTourImages above without

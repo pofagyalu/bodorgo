@@ -427,6 +427,10 @@ export interface TourImage {
   height: number;
   size: number;
   restricted: boolean;
+  // 'mobile' = a phone photo (the tour folder's "mobil" subfolder) - shown
+  // with a small phone icon; absent for the camera's photos.
+  source?: 'mobile';
+  takenAt?: string | null;
 }
 
 export interface TourImagesResponse {
@@ -457,7 +461,9 @@ export interface SubmitReviewResponse {
 export interface TourStatsResponse {
   status: string;
   data: {
+    // Only the tours that have already ended; upcomingTours = still ahead.
     totalTours: number;
+    upcomingTours?: number;
     totalParticipants: number;
     // The gender split pooled across every tour attendee on record (not
     // every registered user - see tourController.js's getTourStats). null

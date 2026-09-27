@@ -12,9 +12,13 @@
       <form class="tour-form" (ngSubmit)="save()">
         <div class="form-row">
           <label
-            >Sorszám<input type="number" [(ngModel)]="form.order" name="order" required
+            ><span>Sorszám<span class="required-star" aria-hidden="true">*</span></span
+            ><input type="number" [(ngModel)]="form.order" name="order" required
           /></label>
-          <label>Cím<input type="text" [(ngModel)]="form.title" name="title" required /></label>
+          <label
+            ><span>Cím<span class="required-star" aria-hidden="true">*</span></span
+            ><input type="text" [(ngModel)]="form.title" name="title" required
+          /></label>
         </div>
 
         <div class="form-row">
@@ -44,7 +48,7 @@
 
         <div class="form-row">
           <label
-            >Kezdés
+            ><span>Kezdés<span class="required-star" aria-hidden="true">*</span></span>
             <input
               type="datetime-local"
               [(ngModel)]="form.startDateLocal"
@@ -52,21 +56,18 @@
               required
           /></label>
           <label
-            >Időtartam (nap)<input
-              type="number"
-              [(ngModel)]="form.duration"
-              name="duration"
-              required
+            ><span>Időtartam (nap)<span class="required-star" aria-hidden="true">*</span></span
+            ><input type="number" [(ngModel)]="form.duration" name="duration" required
           /></label>
         </div>
 
         <div class="form-row">
           <label
-            >Maximum létszám
+            ><span>Maximum létszám<span class="required-star" aria-hidden="true">*</span></span>
             <input type="number" [(ngModel)]="form.maxCapacity" name="maxCapacity" required
           /></label>
           <label
-            >Kapcsolat (nem kötelező)
+            >Kapcsolat
             <input
               type="text"
               [(ngModel)]="form.contact"
@@ -108,11 +109,7 @@
             </select>
           </label>
           <label class="field-narrow"
-            >{{
-              form.pricingMode === 'perPerson'
-                ? 'Felnőtt ár / fő / éjszaka'
-                : 'Szállás ára / éjszaka'
-            }}
+            >{{ form.pricingMode === 'perPerson' ? 'Felnőtt ár / fő / éj' : 'Szállás ára / éj' }}
             <input
               type="number"
               [(ngModel)]="form.accommodationPricePerNight"
@@ -129,7 +126,7 @@
           /></label>
           @if (form.pricingMode === 'perPerson') {
             <label class="field-narrow"
-              >Gyermekár / fő / éjszaka
+              >Gyermekár / fő / éj
               <input
                 type="number"
                 [(ngModel)]="form.childPricePerNight"
@@ -201,7 +198,7 @@
         </label>
 
         <label class="form-field-full"
-          >Leírás
+          ><span>Leírás<span class="required-star" aria-hidden="true">*</span></span>
           <textarea [(ngModel)]="form.description" name="description" rows="5" required></textarea>
         </label>
 

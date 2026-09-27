@@ -1,5 +1,7 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
+import { execSync } from 'child_process';
 
 const dest = 'S:/bodorgo';
 
@@ -47,9 +49,8 @@ console.log('✓ Synced assets → S:/bodorgo/assets');
 // works identically on the NAS's Linux. This exact package list is
 // pdfkit's full transitive closure per package-lock.json - regenerate it
 // with the one-liner in this file's git history if pdfkit's own
-// dependencies ever change. sharp is also external but deliberately NOT
-// shipped this way (yet) - it has a compiled-per-platform native addon
-// this dev machine can't produce a Linux build of; see build.js's comment.
+// dependencies ever change. sharp is shipped separately, below - it has a
+// compiled native part, so it needs its Linux build, not this machine's.
 const PDFKIT_DEPENDENCY_CLOSURE = [
   'pdfkit',
   '@noble/ciphers',
@@ -80,3 +81,42 @@ for (const pkg of PDFKIT_DEPENDENCY_CLOSURE) {
 console.log(
   `✓ Synced pdfkit + its ${PDFKIT_DEPENDENCY_CLOSURE.length - 1} dependencies → S:/bodorgo/node_modules`,
 );
+
+// sharp (thumbnails for "Új média felfedezése", see src/photos/) is
+// external too, but it has a compiled native part: the NAS needs sharp's
+// Linux x64 build, not this Windows machine's. npm fetches exactly that
+// into a temporary folder (--os/--cpu/--libc), and only the packages sharp
+// needs on Linux are copied next to pdfkit - not its optional WebAssembly
+// fallback, whose tslib would overwrite pdfkit's. Done again only when the
+// sharp version changes (the marker file below).
+const sharpVersion = JSON.parse(
+  fs.readFileSync(path.resolve('node_modules/sharp/package.json'), 'utf8'),
+).version;
+const sharpMarker = path.join(dest, 'node_modules', 'sharp', '.linux-x64-build');
+const shippedVersion = fs.existsSync(sharpMarker) ? fs.readFileSync(sharpMarker, 'utf8') : null;
+if (shippedVersion !== sharpVersion) {
+  const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'bodorgo-sharp-linux-'));
+  execSync(
+    `npm install sharp@${sharpVersion} --os=linux --cpu=x64 --libc=glibc --no-save --no-package-lock --no-audit --no-fund --omit=dev`,
+    { cwd: staging, stdio: 'ignore' },
+  );
+  const SHARP_LINUX_PACKAGES = [
+    'sharp',
+    '@img/sharp-linux-x64',
+    '@img/sharp-libvips-linux-x64',
+    '@img/colour',
+    'detect-libc',
+    'semver',
+  ];
+  for (const pkg of SHARP_LINUX_PACKAGES) {
+    fs.cpSync(path.join(staging, 'node_modules', pkg), path.join(dest, 'node_modules', pkg), {
+      recursive: true,
+      force: true,
+    });
+  }
+  fs.writeFileSync(sharpMarker, sharpVersion);
+  fs.rmSync(staging, { recursive: true, force: true });
+  console.log(`✓ Shipped sharp ${sharpVersion} (Linux x64) → S:/bodorgo/node_modules`);
+} else {
+  console.log(`✓ sharp ${sharpVersion} (Linux x64) already on S:/bodorgo`);
+}

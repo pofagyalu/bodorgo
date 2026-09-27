@@ -77,6 +77,15 @@ body {
   transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
 }
 
+/* A required form field: a red star after its label (e.g. the tour edit
+   page). aria-hidden on the star - the input's own "required" tells
+   screen readers. */
+.required-star {
+  margin-left: 2px;
+  color: #c62828;
+  font-weight: 700;
+}
+
 /* Tailwind's Preflight resets h1 to font-size: inherit (and margin: 0),
    which doesn't count as an explicit size to browsers - they warn about
    <h1> inside sectioning content (<section>, <article>, etc.) relying on
@@ -131,6 +140,46 @@ h1 {
 .pswp__thumbnails-strip-item--active {
   opacity: 1;
   border-color: #fff;
+}
+
+/* A phone photo (the tour folder's "mobil" subfolder, see tour-details.ts):
+   a small phone badge on its filmstrip thumbnail, and a phone icon in the
+   top bar while it's the one open. */
+.pswp__thumbnails-strip-cell {
+  position: relative;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.pswp__thumbnails-strip-mobile {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  pointer-events: none;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.pswp__mobile-indicator {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  color: #fff;
+  opacity: 0.85;
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 /* Admin-only restrict-to-attendees toggle (see tour-details.ts's

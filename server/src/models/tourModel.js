@@ -381,6 +381,12 @@ const tourSchema = new Schema(
           // it exists - see tourImageController.js's canViewRestrictedImage).
           // Most photos never get touched, so this defaults to visible.
           restricted: { type: Boolean, default: false },
+          // 'mobile' for a phone photo (the folder's "mobil" subfolder -
+          // shown with a small phone icon); absent for the camera's.
+          source: { type: String, enum: ['mobile'] },
+          // When it was taken (EXIF) - the album is kept in this order;
+          // null if the file doesn't say.
+          takenAt: Date,
         },
       ],
       select: false,

@@ -1,77 +1,72 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
+import type PhotoSwipeLightbox from 'photoswipe/lightbox';
+import { MediaPhotoCategory, MediaService } from '../../../services/media';
 
-// Média → Fotók: event photos that don't belong to a tour - not built yet.
+// Média → Fotók: every category (/media/fotok), or just one
+// (/media/fotok/<folder>) as picked in the Média sidebar. A category is a
+// subfolder of the NAS's bódorgó_egyéb (found by the sidebar's "Új média
+// felfedezése"); its photos open in the same lightbox as the tour albums.
 @Component({
   selector: 'app-media-photos',
-  imports: [MatIconModule],
-  template: `
-    <div class="content">
-      <div class="kicker">Média</div>
-      <h1>Fotók</h1>
-      <div class="soon-card">
-        <mat-icon>photo_library</mat-icon>
-        <strong>Hamarosan</strong>
-        <p>Ide kerülnek majd a közös programok fotói, amelyek nem egy táborhoz tartoznak.</p>
-      </div>
-    </div>
-  `,
-  styles: `
-    :host {
-      display: block;
-      font-family:
-        Inter,
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        'Segoe UI',
-        sans-serif;
-      color: #23354a;
-    }
-    .content {
-      max-width: 1390px;
-      margin: auto;
-      padding: 38px clamp(22px, 4vw, 58px) 70px;
-    }
-    .kicker {
-      color: #4c9184;
-      font-size: 11px;
-      letter-spacing: 0.13em;
-      text-transform: uppercase;
-      font-weight: 800;
-    }
-    h1 {
-      font-size: clamp(29px, 3vw, 38px);
-      line-height: 1.1;
-      letter-spacing: -0.045em;
-      margin: 6px 0 22px;
-      color: #193346;
-    }
-    .soon-card {
-      display: grid;
-      justify-items: center;
-      gap: 6px;
-      text-align: center;
-      padding: 48px 24px;
-      background: #fff;
-      border: 1px dashed #cfdcd6;
-      border-radius: 17px;
-      color: #4a5b63;
-    }
-    .soon-card mat-icon {
-      font-size: 40px;
-      width: 40px;
-      height: 40px;
-      color: #f07827;
-    }
-    .soon-card strong {
-      font-size: 17px;
-      color: #203747;
-    }
-    .soon-card p {
-      margin: 0;
-      font-size: 14px;
-    }
-  `,
+  imports: [MatIconModule, RouterLink, RouterLinkActive],
+  templateUrl: './photos.html',
+  styleUrl: './photos.scss',
 })
-export class Photos {}
+export class Photos implements OnInit, OnDestroy {
+  media = inject(MediaService);
+  private route = inject(ActivatedRoute);
+
+  private categoryKey = toSignal(this.route.paramMap.pipe(map((p) => p.get('category'))), {
+    initialValue: null,
+  });
+  shownCategories = computed(() => {
+    const key = this.categoryKey();
+    const all = this.media.photoCategories();
+    return key ? all.filter((c) => c.key === key) : all;
+  });
+  unknownCategory = computed(
+    () =>
+      !!this.categoryKey() &&
+      this.media.photoCategories().length > 0 &&
+      !this.shownCategories().length,
+  );
+  totalCount = computed(() =>
+    this.media.photoCategories().reduce((sum, c) => sum + c.photos.length, 0),
+  );
+
+  thumbUrl(c: MediaPhotoCategory, filename: string): string {
+    return this.media.photoThumbUrl(c.key, filename);
+  }
+
+  // The lightbox (PhotoSwipe) - loaded only when a photo is opened.
+  private lightbox: PhotoSwipeLightbox | null = null;
+
+  async open(c: MediaPhotoCategory, index: number) {
+    if (!this.lightbox) {
+      const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
+      this.lightbox = new PhotoSwipeLightbox({ pswpModule: () => import('photoswipe') });
+      this.lightbox.init();
+    }
+    this.lightbox.loadAndOpen(
+      index,
+      c.photos.map((p) => ({
+        src: this.media.photoUrl(c.key, p.filename),
+        width: p.width,
+        height: p.height,
+        alt: p.filename,
+      })),
+    );
+  }
+
+  ngOnInit() {
+    this.media.loadPhotos();
+  }
+
+  ngOnDestroy() {
+    this.lightbox?.destroy();
+  }
+}
