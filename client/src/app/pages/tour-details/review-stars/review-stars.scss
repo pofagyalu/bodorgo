@@ -2,19 +2,23 @@
 // (now removed there - this component owns the whole line) - duplicated
 // per Angular's view encapsulation, same reasoning documented repeatedly
 // elsewhere in this app (e.g. tour-event.scss's icon-btn rules).
+// Lined up with the tour page's info lines below it (tour-details.scss's
+// .info-line): the same 2rem icon, gap and text size, so the star sits in
+// the same column as the place/address/date icons.
 .rating-summary {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.7rem;
   margin: 0;
+  font-size: 1.05rem;
   color: #444;
   flex-wrap: wrap;
 
   mat-icon {
     color: var(--logo-orange, #f07827);
-    font-size: 1.2rem;
-    width: 1.2rem;
-    height: 1.2rem;
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
   }
 }
 

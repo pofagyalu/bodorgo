@@ -65,6 +65,14 @@
             >Maximum létszám
             <input type="number" [(ngModel)]="form.maxCapacity" name="maxCapacity" required
           /></label>
+          <label
+            >Kapcsolat (nem kötelező)
+            <input
+              type="text"
+              [(ngModel)]="form.contact"
+              name="contact"
+              placeholder="pl. Kiss Béla, +36 30 123 4567"
+          /></label>
         </div>
 
         <!-- The accommodation payment breakdown shown per-attendee on the

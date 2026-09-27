@@ -232,6 +232,13 @@ const tourSchema = new Schema(
       type: String,
       trim: true,
     },
+    // Optional free text, e.g. "Kiss Béla, +36 30 123 4567" - who to call
+    // if you get there before the organizers. Shown under the date on the
+    // tour page when set.
+    contact: {
+      type: String,
+      trim: true,
+    },
     description: {
       type: String,
       required: [true, 'A tábornak kell legyen leírása'],
