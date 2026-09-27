@@ -92,8 +92,11 @@ export class TourDetails implements OnDestroy {
 
   // Picked once per page view (not reactive - these don't need to change
   // while looking at the same tour), one per icon off a shuffled copy of
-  // the logo colors so none of the four can repeat.
-  private readonly infoLineIconColors = shuffledLogoColors();
+  // the logo colors so none of them can repeat. Orange is left out: it's
+  // the review star's fixed color right above them (review-stars.scss).
+  private readonly infoLineIconColors = shuffledLogoColors().filter(
+    (c) => c !== 'var(--logo-orange)',
+  );
   placeIconColor = this.infoLineIconColors[0];
   addressIconColor = this.infoLineIconColors[1];
   distanceIconColor = this.infoLineIconColors[2];
