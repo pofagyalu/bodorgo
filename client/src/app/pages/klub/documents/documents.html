@@ -6,124 +6,140 @@
       <p>Alapdokumentumok és éves hivatalos iratok egy helyen.</p>
     </div>
     @if (isAdmin()) {
-    <button type="button" class="primary-btn" (click)="openUpload()">＋ Új dokumentum</button>
+      <button type="button" class="primary-btn" (click)="openUpload()">＋ Új dokumentum</button>
     }
   </div>
 
   @if (loading()) {
-  <p class="empty-note">Betöltés...</p>
+    <p class="empty-note">Betöltés...</p>
   } @else if (!groupedDocuments().length) {
-  <p class="empty-note">Még nincs feltöltött dokumentum.</p>
-  } @else { @for (group of groupedDocuments(); track group.category) {
-  <section class="panel document-group">
-    <div class="panel-title">
-      <h2>{{ group.category }}</h2>
-      <span>{{ group.documents.length }} dokumentum</span>
-    </div>
-    <div class="document-grid">
-      @for (doc of group.documents; track doc._id) {
-      <div class="document-card">
-        @if (isAdmin()) {
-        <button
-          type="button"
-          class="document-remove"
-          [disabled]="deletingId() === doc._id"
-          (click)="remove(doc)"
-          aria-label="Dokumentum törlése"
-        >
-          ✕
-        </button>
-        }
-        <mat-icon class="document-icon" [class.document-icon--pdf]="icon(doc) === 'picture_as_pdf'">{{
-          icon(doc)
-        }}</mat-icon>
-        <span class="document-name">{{ doc.name }}</span>
-        @if (doc.year) {
-        <span class="document-year">{{ doc.year }}. év</span>
-        }
-        <div class="document-actions">
-          <a [href]="fileUrl(doc.filename)" target="_blank" rel="noopener" class="document-link">Megnyitás</a>
-          <a [href]="fileUrl(doc.filename, true)" class="document-link">Letöltés</a>
+    <p class="empty-note">Még nincs feltöltött dokumentum.</p>
+  } @else {
+    @for (group of groupedDocuments(); track group.category) {
+      <section class="panel document-group">
+        <div class="panel-title">
+          <h2>{{ group.category }}</h2>
+          <span>{{ group.documents.length }} dokumentum</span>
         </div>
-      </div>
-      }
-    </div>
-  </section>
-  } }
+        <div class="document-grid">
+          @for (doc of group.documents; track doc._id) {
+            <div class="document-card">
+              @if (isAdmin()) {
+                <button
+                  type="button"
+                  class="document-remove"
+                  [disabled]="deletingId() === doc._id"
+                  (click)="remove(doc)"
+                  aria-label="Dokumentum törlése"
+                >
+                  ✕
+                </button>
+              }
+              <mat-icon
+                class="document-icon"
+                [class.document-icon--pdf]="icon(doc) === 'picture_as_pdf'"
+                >{{ icon(doc) }}</mat-icon
+              >
+              <span class="document-name">{{ doc.name }}</span>
+              @if (doc.year) {
+                <span class="document-year">{{ doc.year }}. év</span>
+              }
+              <div class="document-actions">
+                <a
+                  [href]="fileUrl(doc.filename)"
+                  target="_blank"
+                  rel="noopener"
+                  class="document-link"
+                  >Megnyitás</a
+                >
+                <a [href]="fileUrl(doc.filename, true)" class="document-link">Letöltés</a>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
 </div>
 
 @if (showUpload()) {
-<div class="modal-backdrop" (click)="closeUpload()"></div>
-<div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="uploadDialogTitle">
-  <form (submit)="onSubmit($event)" novalidate>
-    <div class="modal-head">
-      <div>
-        <div class="kicker">Adminisztráció</div>
-        <h2 id="uploadDialogTitle">Új dokumentum</h2>
-      </div>
-      <button class="icon-btn" type="button" aria-label="Bezárás" (click)="closeUpload()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label for="docName">Megnevezés</label>
-        <input
-          id="docName"
-          type="text"
-          maxlength="150"
-          required
-          placeholder="Pl. 2025. évi adóbevallás"
-          [value]="formName()"
-          (input)="formName.set($any($event.target).value)"
-        />
-      </div>
-
-      <div class="form-row">
-        <div class="field">
-          <label for="docCategory">Kategória</label>
-          <select id="docCategory" [value]="formCategory()" (change)="formCategory.set($any($event.target).value)">
-            @for (c of categories; track c) {
-            <option [value]="c">{{ c }}</option>
-            }
-          </select>
+  <div class="modal-backdrop" (click)="closeUpload()"></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="uploadDialogTitle">
+    <form (submit)="onSubmit($event)" novalidate>
+      <div class="modal-head">
+        <div>
+          <div class="kicker">Adminisztráció</div>
+          <h2 id="uploadDialogTitle">Új dokumentum</h2>
         </div>
-        <div class="field">
-          <label for="docYear">Év (opcionális)</label>
-          <input
-            id="docYear"
-            type="number"
-            [min]="2000"
-            [max]="currentYear"
-            placeholder="Pl. 2025"
-            [value]="formYear()"
-            (input)="formYear.set($any($event.target).value)"
-          />
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="docFile">PDF, JPG vagy PNG fájl</label>
-        <input
-          id="docFile"
-          type="file"
-          accept="application/pdf,image/jpeg,image/png"
-          required
-          (change)="onFileSelected($event)"
-        />
-      </div>
-
-      @if (uploadError()) {
-      <p class="form-error">{{ uploadError() }}</p>
-      }
-
-      <p class="demo-tip">Csak PDF, JPG vagy PNG fájl tölthető fel, legfeljebb 15 MB méretben.</p>
-
-      <div class="modal-actions">
-        <button class="outline-btn" type="button" (click)="closeUpload()">Mégse</button>
-        <button class="primary-btn" type="submit" [disabled]="uploading()">
-          {{ uploading() ? 'Feltöltés...' : 'Feltöltés' }}
+        <button class="icon-btn" type="button" aria-label="Bezárás" (click)="closeUpload()">
+          ✕
         </button>
       </div>
-    </div>
-  </form>
-</div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="docName">Megnevezés</label>
+          <input
+            id="docName"
+            type="text"
+            maxlength="150"
+            required
+            placeholder="Pl. 2025. évi adóbevallás"
+            [value]="formName()"
+            (input)="formName.set($any($event.target).value)"
+          />
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="docCategory">Kategória</label>
+            <select
+              id="docCategory"
+              [value]="formCategory()"
+              (change)="formCategory.set($any($event.target).value)"
+            >
+              @for (c of categories; track c) {
+                <option [value]="c">{{ c }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="docYear">Év (opcionális)</label>
+            <input
+              id="docYear"
+              type="number"
+              [min]="2000"
+              [max]="currentYear"
+              placeholder="Pl. 2025"
+              [value]="formYear()"
+              (input)="formYear.set($any($event.target).value)"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="docFile">PDF, JPG vagy PNG fájl</label>
+          <input
+            id="docFile"
+            type="file"
+            accept="application/pdf,image/jpeg,image/png"
+            required
+            (change)="onFileSelected($event)"
+          />
+        </div>
+
+        @if (uploadError()) {
+          <p class="form-error">{{ uploadError() }}</p>
+        }
+
+        <p class="demo-tip">Csak PDF, JPG vagy PNG fájl tölthető fel, legfeljebb 15 MB méretben.</p>
+
+        <div class="modal-actions">
+          <button class="outline-btn" type="button" (click)="closeUpload()">Mégse</button>
+          <button class="primary-btn" type="submit" [disabled]="uploading()">
+            {{ uploading() ? 'Feltöltés...' : 'Feltöltés' }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
 }

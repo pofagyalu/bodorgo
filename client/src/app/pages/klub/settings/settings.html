@@ -140,8 +140,31 @@
       }
     </div>
 
+    <div class="username-toolbar">
+      <label class="search-field">
+        <mat-icon>search</mat-icon>
+        <input
+          type="search"
+          placeholder="Keresés névre vagy felhasználónévre"
+          [ngModel]="usernameSearch()"
+          (ngModelChange)="usernameSearch.set($event)"
+          aria-label="Keresés"
+        />
+      </label>
+      <button
+        type="button"
+        class="filter-chip"
+        [class.active]="onlyMissing()"
+        (click)="onlyMissing.set(!onlyMissing())"
+      >
+        Csak a hiányzók
+      </button>
+      <span class="shown-count">{{ shownPeople().length }} / {{ people().length }}</span>
+    </div>
+
+    <!-- A grid of small tiles, as many columns as fit - not one long list. -->
     <ul class="username-list">
-      @for (p of people(); track p.id) {
+      @for (p of shownPeople(); track p.id) {
         <li [class.changed]="p.username !== p.original" [class.has-error]="usernameErrors()[p.id]">
           <span class="person-name">{{ p.name }}</span>
           <span class="at-field">
@@ -159,10 +182,13 @@
             <span class="row-error">{{ err }}</span>
           }
         </li>
+      } @empty {
+        <li class="no-match">Nincs ilyen nevű felhasználó.</li>
       }
     </ul>
 
-    <div class="actions">
+    <!-- Sticky: Mentés stays in reach while scrolling through the grid. -->
+    <div class="actions actions--sticky">
       <button
         type="button"
         class="outline-btn"

@@ -1,0 +1,33 @@
+@if (confirm.pending(); as p) {
+  <div class="confirm-backdrop" (click)="cancel()">
+    <div
+      class="confirm-modal"
+      role="alertdialog"
+      aria-modal="true"
+      [attr.aria-label]="p.message"
+      (click)="$event.stopPropagation()"
+    >
+      @if (p.title) {
+        <h2>{{ p.title }}</h2>
+      }
+      <p>{{ p.message }}</p>
+      @if (p.detail) {
+        <p class="detail">{{ p.detail }}</p>
+      }
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-btn--safe" (click)="cancel()">
+          {{ p.cancelText ?? 'Mégse' }}
+        </button>
+        <button
+          type="button"
+          class="confirm-btn"
+          [class.confirm-btn--danger]="p.danger !== false"
+          [class.confirm-btn--safe]="p.danger === false"
+          (click)="confirm.answer(true)"
+        >
+          {{ p.confirmText ?? 'Törlés' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

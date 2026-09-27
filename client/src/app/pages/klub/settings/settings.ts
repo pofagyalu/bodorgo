@@ -147,6 +147,19 @@ export class KlubSettings implements OnInit {
   usernamesDirty = computed(() => this.people().some((p) => p.username !== p.original));
   missingCount = computed(() => this.people().filter((p) => !p.username.trim()).length);
 
+  // The search box and the "Csak a hiányzók" filter above the grid - the
+  // search matches the name or the username, ignoring case and accents.
+  usernameSearch = signal('');
+  onlyMissing = signal(false);
+  shownPeople = computed(() => {
+    const q = usernameKey(this.usernameSearch().trim());
+    return this.people().filter(
+      (p) =>
+        (!this.onlyMissing() || !p.original.trim()) &&
+        (!q || usernameKey(p.name).includes(q) || usernameKey(p.username).includes(q)),
+    );
+  });
+
   private loadUsernames() {
     this.userService.getUsernames().subscribe({
       next: (res) =>

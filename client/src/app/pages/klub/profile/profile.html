@@ -32,333 +32,327 @@
       </div>
     </div>
 
-    <div class="profile-layout">
-      <div class="profile-main">
-        <section class="panel">
-          <h2>Személyes adatok</h2>
+    <!-- Masonry: each card goes into the column that ends highest (shared/masonry). -->
+    <div class="profile-masonry" appMasonry>
+      <section class="panel">
+        <h2>Személyes adatok</h2>
+        <p class="subtext">
+          Egyes adatokat csak az admin módosíthat - ha valami nem stimmel bennük, keresd meg.
+        </p>
+
+        <div class="profile-fields">
+          <div class="field field-photo">
+            <span class="field-label">Profilkép</span>
+            <app-photo-editor [hasPhoto]="!!p.photoUpdatedAt" (changed)="onPhotoChanged($event)" />
+          </div>
+
+          <div class="field">
+            <label for="pName">Név</label>
+            <input id="pName" type="text" [value]="p.name" disabled />
+          </div>
+
+          <div class="field">
+            <label for="pUsername">Felhasználónév</label>
+            <input
+              id="pUsername"
+              type="text"
+              maxlength="40"
+              placeholder="pl. nagy.zoltan"
+              [value]="usernameDraft()"
+              (input)="usernameDraft.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field">
+            <label for="pEmail">E-mail cím</label>
+            <input id="pEmail" type="email" [value]="p.email ?? ''" disabled />
+          </div>
+
+          <div class="field">
+            <label for="pAge">Kor</label>
+            <input
+              id="pAge"
+              type="text"
+              [value]="p.age != null ? p.age + ' év' : 'Nincs megadva'"
+              disabled
+            />
+          </div>
+
+          <div class="field">
+            <label for="pMemberSince">Tag kezdete</label>
+            <input
+              id="pMemberSince"
+              type="text"
+              [value]="p.memberSince ? p.memberSince + '. év' : 'Nincs megadva'"
+              disabled
+            />
+          </div>
+
+          <div class="field">
+            <label for="pLastLogin">Utolsó belépés</label>
+            <input
+              id="pLastLogin"
+              type="text"
+              [value]="p.lastLoginAt ? formatDateTime(p.lastLoginAt) : 'Még nem lépett be'"
+              disabled
+            />
+          </div>
+
+          <div class="field">
+            <label for="pTours">Táborok száma</label>
+            <input id="pTours" type="text" [value]="p.toursAttended + ' tábor'" disabled />
+          </div>
+        </div>
+
+        <div class="subsection">
+          <h3>Lakcím</h3>
           <p class="subtext">
-            Egyes adatokat csak az admin módosíthat - ha valami nem stimmel bennük, keresd meg.
+            Ha megadod, ebből számoljuk a táborok távolságát/időtartamát Budapest helyett.
           </p>
 
           <div class="profile-fields">
-            <div class="field field-photo">
-              <span class="field-label">Profilkép</span>
-              <app-photo-editor
-                [hasPhoto]="!!p.photoUpdatedAt"
-                (changed)="onPhotoChanged($event)"
-              />
-            </div>
-
             <div class="field">
-              <label for="pName">Név</label>
-              <input id="pName" type="text" [value]="p.name" disabled />
-            </div>
-
-            <div class="field">
-              <label for="pUsername">Felhasználónév</label>
+              <label for="aZip">Irányítószám</label>
               <input
-                id="pUsername"
+                id="aZip"
                 type="text"
-                maxlength="40"
-                placeholder="pl. nagy.zoltan"
-                [value]="usernameDraft()"
-                (input)="usernameDraft.set($any($event.target).value)"
+                [value]="address().zipCode"
+                (input)="updateAddress('zipCode', $any($event.target).value)"
               />
             </div>
-
             <div class="field">
-              <label for="pEmail">E-mail cím</label>
-              <input id="pEmail" type="email" [value]="p.email ?? ''" disabled />
-            </div>
-
-            <div class="field">
-              <label for="pAge">Kor</label>
+              <label for="aCity">Település</label>
               <input
-                id="pAge"
+                id="aCity"
                 type="text"
-                [value]="p.age != null ? p.age + ' év' : 'Nincs megadva'"
-                disabled
+                [value]="address().city"
+                (input)="updateAddress('city', $any($event.target).value)"
               />
             </div>
-
             <div class="field">
-              <label for="pMemberSince">Tag kezdete</label>
+              <label for="aStreet">Utca, házszám</label>
               <input
-                id="pMemberSince"
+                id="aStreet"
                 type="text"
-                [value]="p.memberSince ? p.memberSince + '. év' : 'Nincs megadva'"
-                disabled
+                [value]="address().street"
+                (input)="updateAddress('street', $any($event.target).value)"
               />
             </div>
-
             <div class="field">
-              <label for="pLastLogin">Utolsó belépés</label>
-              <input
-                id="pLastLogin"
-                type="text"
-                [value]="p.lastLoginAt ? formatDateTime(p.lastLoginAt) : 'Még nem lépett be'"
-                disabled
-              />
-            </div>
-
-            <div class="field">
-              <label for="pTours">Táborok száma</label>
-              <input id="pTours" type="text" [value]="p.toursAttended + ' tábor'" disabled />
+              <label for="aCountry">Ország</label>
+              <select
+                id="aCountry"
+                [value]="address().country"
+                (change)="updateAddress('country', $any($event.target).value)"
+              >
+                <option value="Magyarország">Magyarország</option>
+                <option value="Románia">Románia</option>
+                <option value="Egyesült Királyság">Egyesült Királyság</option>
+              </select>
             </div>
           </div>
 
-          <div class="subsection">
-            <h3>Lakcím</h3>
-            <p class="subtext">
-              Ha megadod, ebből számoljuk a táborok távolságát/időtartamát Budapest helyett.
+          @if (addressResolved() === true) {
+            <p class="address-note address-note--ok">✔ A cím sikeresen beazonosítva.</p>
+          } @else if (addressResolved() === false) {
+            <p class="address-note address-note--warn">
+              ⚠ Nem sikerült pontosan beazonosítani ezt a címet - próbáld a hivatalos (pl. angol
+              vagy román) városnevet is, ha külföldi cím.
             </p>
-
-            <div class="profile-fields">
-              <div class="field">
-                <label for="aZip">Irányítószám</label>
-                <input
-                  id="aZip"
-                  type="text"
-                  [value]="address().zipCode"
-                  (input)="updateAddress('zipCode', $any($event.target).value)"
-                />
-              </div>
-              <div class="field">
-                <label for="aCity">Település</label>
-                <input
-                  id="aCity"
-                  type="text"
-                  [value]="address().city"
-                  (input)="updateAddress('city', $any($event.target).value)"
-                />
-              </div>
-              <div class="field">
-                <label for="aStreet">Utca, házszám</label>
-                <input
-                  id="aStreet"
-                  type="text"
-                  [value]="address().street"
-                  (input)="updateAddress('street', $any($event.target).value)"
-                />
-              </div>
-              <div class="field">
-                <label for="aCountry">Ország</label>
-                <select
-                  id="aCountry"
-                  [value]="address().country"
-                  (change)="updateAddress('country', $any($event.target).value)"
-                >
-                  <option value="Magyarország">Magyarország</option>
-                  <option value="Románia">Románia</option>
-                  <option value="Egyesült Királyság">Egyesült Királyság</option>
-                </select>
-              </div>
-            </div>
-
-            @if (addressResolved() === true) {
-              <p class="address-note address-note--ok">✔ A cím sikeresen beazonosítva.</p>
-            } @else if (addressResolved() === false) {
-              <p class="address-note address-note--warn">
-                ⚠ Nem sikerült pontosan beazonosítani ezt a címet - próbáld a hivatalos (pl. angol
-                vagy román) városnevet is, ha külföldi cím.
-              </p>
-            }
-          </div>
-
-          <div class="actions-row">
-            <button type="button" class="primary-btn" [disabled]="saving()" (click)="saveProfile()">
-              {{ saving() ? 'Mentés...' : 'Mentés' }}
-            </button>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="attendance-head">
-            <h2>Táboraim</h2>
-            @if (attendanceSummary()) {
-              <span class="attendance-summary">{{ attendanceSummary() }}</span>
-            }
-          </div>
-          <p class="subtext">A táborok, amelyekre eddig jelentkeztél.</p>
-
-          @if (attendanceError()) {
-            <p class="error-note">{{ attendanceError() }}</p>
-          } @else if (attendance().length === 0) {
-            <p class="empty-note">Még nem jelentkeztél egyetlen táborra sem.</p>
-          } @else {
-            <!-- Not over yet: the full row - paid or not, receipt. -->
-            @if (upcomingTours().length) {
-              <h3 class="attendance-subhead">Következő</h3>
-              <ul class="attendance-list">
-                @for (row of upcomingTours(); track row.tour._id) {
-                  <li class="attendance-row">
-                    <a [routerLink]="['/taborok', row.tour.slug]" class="attendance-link">
-                      {{ row.tour.order }}. {{ row.tour.title }}
-                    </a>
-                    <span class="attendance-date">{{ formatDate(row.tour.startDate) }}</span>
-                    @if (!row.paid) {
-                      <span class="status unpaid">Nincs kifizetve</span>
-                    } @else {
-                      <span class="status paid">Fizetve</span>
-                      @if (row.paymentMethod === 'cash') {
-                        <span class="cash-badge" title="Az előleg készpénzben lett kifizetve">
-                          <mat-icon>attach_money</mat-icon>
-                        </span>
-                      } @else if (row.paymentId) {
-                        <a
-                          [href]="receiptUrl(row.paymentId)"
-                          target="_blank"
-                          class="receipt-btn"
-                          title="Fizetési igazolás letöltése (bankkártyás fizetés)"
-                        >
-                          <mat-icon>credit_card</mat-icon>
-                        </a>
-                      }
-                    }
-                  </li>
-                }
-              </ul>
-            }
-
-            <!-- Past tours: small chips by year - hover shows the date. -->
-            @if (pastByYear().length) {
-              <h3 class="attendance-subhead">Korábbiak</h3>
-              <div class="past-years">
-                @for (group of pastByYear(); track group.year) {
-                  <div class="past-year">
-                    <span class="year-label">{{ group.year }}</span>
-                    <div class="past-chips">
-                      @for (row of group.rows; track row.tour._id) {
-                        <span
-                          class="past-chip"
-                          [class.unpaid]="!row.paid"
-                          [title]="
-                            formatDate(row.tour.startDate) + (row.paid ? '' : ' · nincs kifizetve')
-                          "
-                        >
-                          <a [routerLink]="['/taborok', row.tour.slug]">
-                            <strong>{{ row.tour.order }}</strong> {{ row.tour.title }}
-                          </a>
-                          @if (!row.paid) {
-                            <span class="unpaid-dot" aria-label="Nincs kifizetve"></span>
-                          } @else if (row.paymentMethod !== 'cash' && row.paymentId) {
-                            <a
-                              [href]="receiptUrl(row.paymentId)"
-                              target="_blank"
-                              class="chip-receipt"
-                              title="Fizetési igazolás (bankkártyás fizetés)"
-                            >
-                              <mat-icon>credit_card</mat-icon>
-                            </a>
-                          }
-                        </span>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            }
           }
-        </section>
-      </div>
+        </div>
 
-      <div class="profile-side">
-        <section class="panel">
-          <h2>Értesítések</h2>
-          <p class="subtext">Te döntöd el, miről kérsz üzenetet.</p>
-          <div class="toggle-row">
-            <div>
-              <strong>E-mail értesítések</strong>
-              <small>Az összes klubos e-mail ki- vagy bekapcsolása</small>
-            </div>
-            <label class="switch">
-              <input
-                type="checkbox"
-                [checked]="p.wantsEmailNotifications"
-                [disabled]="savingNotifications()"
-                (change)="toggleEmailNotifications()"
-                aria-label="E-mail értesítések"
-              />
-              <span></span>
-            </label>
-          </div>
+        <div class="actions-row">
+          <button type="button" class="primary-btn" [disabled]="saving()" (click)="saveProfile()">
+            {{ saving() ? 'Mentés...' : 'Mentés' }}
+          </button>
+        </div>
+      </section>
 
-          <!-- Push notifications - per device (browser), see PushService. -->
-          <div class="toggle-row">
-            <div>
-              <strong>Értesítések ezen az eszközön</strong>
-              <small>
-                @switch (push.state()) {
-                  @case ('on') {
-                    Bekapcsolva - a táborok chatjéből egyszer szól, amíg meg nem nézed.
-                  }
-                  @case ('denied') {
-                    A böngészőben le vannak tiltva - a webhely beállításainál engedélyezheted.
-                  }
-                  @case ('unsupported') {
-                    Ez a böngésző nem tud értesítést küldeni.
-                  }
-                  @case ('needs-install') {
-                    iPhone-on: Megosztás → „Főképernyőhöz adás”, majd onnan megnyitva kapcsold be.
-                  }
-                  @default {
-                    A táborok chatjéből egyszer szól, amíg meg nem nézed - egy chat a 🔔 gombbal
-                    némítható.
-                  }
-                }
-              </small>
-            </div>
-            <label class="switch">
-              <input
-                type="checkbox"
-                [checked]="push.state() === 'on'"
-                [disabled]="pushBusy() || !['on', 'off'].includes(push.state())"
-                (change)="togglePush()"
-                aria-label="Értesítések ezen az eszközön"
-              />
-              <span></span>
-            </label>
-          </div>
-          @if (push.state() === 'on') {
-            <button type="button" class="link-btn" (click)="sendTestPush()" [disabled]="pushBusy()">
-              Próbaértesítés küldése
-            </button>
+      <section class="panel">
+        <div class="attendance-head">
+          <h2>Táboraim</h2>
+          @if (attendanceSummary()) {
+            <span class="attendance-summary">{{ attendanceSummary() }}</span>
           }
-        </section>
+        </div>
+        <p class="subtext">A táborok, amelyekre eddig jelentkeztél.</p>
 
-        <section class="panel">
-          <h2>Hozzátartozók</h2>
-          <p class="subtext">
-            Ezeket a személyeket az admin egy csoportba rendelte, hogy könnyebb legyen szállást
-            foglalni vagy akár előleget befizetni.
-          </p>
-
-          @if (familyError()) {
-            <p class="error-note">{{ familyError() }}</p>
-          } @else if (family().length === 0) {
-            <p class="empty-note">Még nincs hozzád rendelve hozzátartozó.</p>
-          } @else {
-            <ul class="family-list">
-              @for (m of family(); track m._id) {
-                <li class="family-row">
-                  <app-avatar
-                    class="person-avatar"
-                    [name]="m.name"
-                    [userId]="m._id"
-                    [photoVersion]="m.photoUpdatedAt"
-                  />
-                  <span>
-                    <strong>{{ m.name }}</strong>
-                    @if (m.email) {
-                      <small>{{ m.email }}</small>
+        @if (attendanceError()) {
+          <p class="error-note">{{ attendanceError() }}</p>
+        } @else if (attendance().length === 0) {
+          <p class="empty-note">Még nem jelentkeztél egyetlen táborra sem.</p>
+        } @else {
+          <!-- Not over yet: the full row - paid or not, receipt. -->
+          @if (upcomingTours().length) {
+            <h3 class="attendance-subhead">Következő</h3>
+            <ul class="attendance-list">
+              @for (row of upcomingTours(); track row.tour._id) {
+                <li class="attendance-row">
+                  <a [routerLink]="['/taborok', row.tour.slug]" class="attendance-link">
+                    {{ row.tour.order }}. {{ row.tour.title }}
+                  </a>
+                  <span class="attendance-date">{{ formatDate(row.tour.startDate) }}</span>
+                  @if (!row.paid) {
+                    <span class="status unpaid">Nincs kifizetve</span>
+                  } @else {
+                    <span class="status paid">Fizetve</span>
+                    @if (row.paymentMethod === 'cash') {
+                      <span class="cash-badge" title="Az előleg készpénzben lett kifizetve">
+                        <mat-icon>attach_money</mat-icon>
+                      </span>
+                    } @else if (row.paymentId) {
+                      <a
+                        [href]="receiptUrl(row.paymentId)"
+                        target="_blank"
+                        class="receipt-btn"
+                        title="Fizetési igazolás letöltése (bankkártyás fizetés)"
+                      >
+                        <mat-icon>credit_card</mat-icon>
+                      </a>
                     }
-                  </span>
+                  }
                 </li>
               }
             </ul>
           }
-        </section>
-      </div>
+
+          <!-- Past tours: small chips by year - hover shows the date. -->
+          @if (pastByYear().length) {
+            <h3 class="attendance-subhead">Korábbiak</h3>
+            <div class="past-years">
+              @for (group of pastByYear(); track group.year) {
+                <div class="past-year">
+                  <span class="year-label">{{ group.year }}</span>
+                  <div class="past-chips">
+                    @for (row of group.rows; track row.tour._id) {
+                      <span
+                        class="past-chip"
+                        [class.unpaid]="!row.paid"
+                        [title]="
+                          formatDate(row.tour.startDate) + (row.paid ? '' : ' · nincs kifizetve')
+                        "
+                      >
+                        <a [routerLink]="['/taborok', row.tour.slug]">
+                          <strong>{{ row.tour.order }}</strong> {{ row.tour.title }}
+                        </a>
+                        @if (!row.paid) {
+                          <span class="unpaid-dot" aria-label="Nincs kifizetve"></span>
+                        } @else if (row.paymentMethod !== 'cash' && row.paymentId) {
+                          <a
+                            [href]="receiptUrl(row.paymentId)"
+                            target="_blank"
+                            class="chip-receipt"
+                            title="Fizetési igazolás (bankkártyás fizetés)"
+                          >
+                            <mat-icon>credit_card</mat-icon>
+                          </a>
+                        }
+                      </span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+      </section>
+
+      <section class="panel">
+        <h2>Értesítések</h2>
+        <p class="subtext">Te döntöd el, miről kérsz üzenetet.</p>
+        <div class="toggle-row">
+          <div>
+            <strong>E-mail értesítések</strong>
+            <small>Az összes klubos e-mail ki- vagy bekapcsolása</small>
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              [checked]="p.wantsEmailNotifications"
+              [disabled]="savingNotifications()"
+              (change)="toggleEmailNotifications()"
+              aria-label="E-mail értesítések"
+            />
+            <span></span>
+          </label>
+        </div>
+
+        <!-- Push notifications - per device (browser), see PushService. -->
+        <div class="toggle-row">
+          <div>
+            <strong>Értesítések ezen az eszközön</strong>
+            <small>
+              @switch (push.state()) {
+                @case ('on') {
+                  Bekapcsolva - a táborok chatjéből egyszer szól, amíg meg nem nézed.
+                }
+                @case ('denied') {
+                  A böngészőben le vannak tiltva - a webhely beállításainál engedélyezheted.
+                }
+                @case ('unsupported') {
+                  Ez a böngésző nem tud értesítést küldeni.
+                }
+                @case ('needs-install') {
+                  iPhone-on: Megosztás → „Főképernyőhöz adás”, majd onnan megnyitva kapcsold be.
+                }
+                @default {
+                  A táborok chatjéből egyszer szól, amíg meg nem nézed - egy chat a 🔔 gombbal
+                  némítható.
+                }
+              }
+            </small>
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              [checked]="push.state() === 'on'"
+              [disabled]="pushBusy() || !['on', 'off'].includes(push.state())"
+              (change)="togglePush()"
+              aria-label="Értesítések ezen az eszközön"
+            />
+            <span></span>
+          </label>
+        </div>
+        @if (push.state() === 'on') {
+          <button type="button" class="link-btn" (click)="sendTestPush()" [disabled]="pushBusy()">
+            Próbaértesítés küldése
+          </button>
+        }
+      </section>
+
+      <section class="panel">
+        <h2>Hozzátartozók</h2>
+        <p class="subtext">
+          Ezeket a személyeket az admin egy csoportba rendelte, hogy könnyebb legyen szállást
+          foglalni vagy akár előleget befizetni.
+        </p>
+
+        @if (familyError()) {
+          <p class="error-note">{{ familyError() }}</p>
+        } @else if (family().length === 0) {
+          <p class="empty-note">Még nincs hozzád rendelve hozzátartozó.</p>
+        } @else {
+          <ul class="family-list">
+            @for (m of family(); track m._id) {
+              <li class="family-row">
+                <app-avatar
+                  class="person-avatar"
+                  [name]="m.name"
+                  [userId]="m._id"
+                  [photoVersion]="m.photoUpdatedAt"
+                />
+                <span>
+                  <strong>{{ m.name }}</strong>
+                  @if (m.email) {
+                    <small>{{ m.email }}</small>
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
     </div>
   }
 

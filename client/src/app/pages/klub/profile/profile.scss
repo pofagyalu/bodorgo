@@ -145,21 +145,19 @@ button {
 
 // --- Layout ---
 
-.profile-layout {
+// Masonry (shared/masonry): columns at least 420px wide - one on a phone,
+// two on a normal screen, three on a very wide one - and each card goes
+// into whichever column currently ends highest. 1px rows, no row gap: the
+// directive sizes each card's row span, with the column gap below it.
+.profile-masonry {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
-  gap: 18px;
-  align-items: start;
-}
+  grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+  grid-auto-rows: 1px;
+  column-gap: 18px;
 
-.profile-main {
-  display: grid;
-  gap: 18px;
-}
-
-.profile-side {
-  display: grid;
-  gap: 18px;
+  > .panel {
+    align-self: start;
+  }
 }
 
 .address-note {
@@ -452,10 +450,6 @@ button {
 }
 
 @media (max-width: 800px) {
-  .profile-layout {
-    grid-template-columns: 1fr;
-  }
-
   .profile-fields {
     grid-template-columns: 1fr;
   }

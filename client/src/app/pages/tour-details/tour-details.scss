@@ -761,61 +761,6 @@
   gap: 0.8rem;
 }
 
-// A small confirm/cancel dialog (document deletion) - same backdrop as
-// .attendee-modal above, but compact since it only ever holds a short
-// question and two buttons, not a scrollable picker list.
-.confirm-modal {
-  width: min(360px, 100%);
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.3);
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  text-align: center;
-
-  p {
-    margin: 0;
-  }
-}
-
-// Real text-label buttons (not .icon-btn, which is a fixed 2rem circle
-// meant for a bare glyph - "Mégse"/"Törlés" don't fit in that). Mégse is
-// the safe/neutral choice (green), Törlés is the destructive one (red).
-.confirm-btn {
-  padding: 0.5rem 1.3rem;
-  border: none;
-  border-radius: 8px;
-  font: inherit;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
-  transition: background-color 0.15s;
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: default;
-  }
-}
-
-.confirm-btn--safe {
-  background: #2e7d32;
-
-  &:hover:not(:disabled) {
-    background: #1b5e20;
-  }
-}
-
-.confirm-btn--danger {
-  background: #b00020;
-
-  &:hover:not(:disabled) {
-    background: #7f0016;
-  }
-}
-
 .attendee-modal-close {
   position: absolute;
   top: 10px;

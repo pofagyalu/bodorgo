@@ -2,6 +2,7 @@ import { Component, computed, inject, input, output, signal, effect } from '@ang
 import { MatIconModule } from '@angular/material/icon';
 import { TourService, AccommodationHouse } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 
 function copyHouses(houses: AccommodationHouse[] | undefined): AccommodationHouse[] {
   return (houses ?? []).map((h) => ({ ...h, rooms: h.rooms.map((r) => ({ ...r })) }));
@@ -22,6 +23,7 @@ function copyHouses(houses: AccommodationHouse[] | undefined): AccommodationHous
 export class AccommodationEditor {
   private tourService = inject(TourService);
   private notifications = inject(NotificationsService);
+  private confirm = inject(ConfirmService);
 
   tourId = input.required<string>();
   initialHouses = input<AccommodationHouse[] | undefined>([]);
@@ -102,7 +104,7 @@ export class AccommodationEditor {
     this.change((hs) => hs.push({ name: '', description: '', rooms: [] }));
   }
 
-  removeHouse(hi: number) {
+  async removeHouse(hi: number) {
     const house = this.houses()[hi];
     const people = this.occupantsIn(house.rooms.map((r) => r._id));
     const warning = people
@@ -110,9 +112,9 @@ export class AccommodationEditor {
       : '';
     if (
       house.rooms.length &&
-      !confirm(
-        `Biztosan törlöd a(z) "${house.name || 'névtelen'}" házat a szobáival együtt?${warning}`,
-      )
+      !(await this.confirm.ask({
+        message: `Biztosan törlöd a(z) "${house.name || 'névtelen'}" házat a szobáival együtt?${warning}`,
+      }))
     ) {
       return;
     }
@@ -127,14 +129,14 @@ export class AccommodationEditor {
     this.change((hs) => hs[hi].rooms.push({ name: '', description: '', beds: 2 }));
   }
 
-  removeRoom(hi: number, ri: number) {
+  async removeRoom(hi: number, ri: number) {
     const room = this.houses()[hi].rooms[ri];
     const people = this.occupantsIn([room._id]);
     if (
       people &&
-      !confirm(
-        `A(z) "${room.name}" szobában ${people} ember van beosztva - mentés után visszakerülnek a "még nincs szobája" listába. Törlöd?`,
-      )
+      !(await this.confirm.ask({
+        message: `A(z) "${room.name}" szobában ${people} ember van beosztva - mentés után visszakerülnek a "még nincs szobája" listába. Törlöd?`,
+      }))
     ) {
       return;
     }
