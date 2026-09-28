@@ -33,7 +33,8 @@ function stateUrl(paymentId) {
 // payeeEmail is which wallet actually receives this transaction's money -
 // the shop (config.barion.posKey) stays the same either way, but
 // paymentController.js passes a different wallet email depending on
-// purpose (config.barion.membership.payeeEmail vs .tour.payeeEmail), so
+// purpose (Beállítások' Barion wallets - utils/clubSettings.js's
+// barionWallet), so
 // dues and advances land in two separate Barion accounts.
 export async function createBarionPayment({
   referenceId,
@@ -113,7 +114,7 @@ export async function getBarionPaymentState(paymentId) {
 // x-api-key header, not the shop's POSKey in the request body. Used only
 // by the admin-triggered withdrawal feature (paymentController.js's
 // withdrawFunds) to pull real money out of one of the two wallets
-// (config.barion.membership/.tour) into its own fixed, preconfigured bank
+// (Beállítások' Barion wallets) into its own preconfigured bank
 // account - never for accepting payments. HUF-only and domestic
 // (Country: 'HU') since that's this club's only real use case; revisit if
 // that ever changes.

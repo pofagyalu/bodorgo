@@ -1,10 +1,12 @@
 import express from 'express';
 import {
+  getBarionSettings,
   getChatImageSettings,
   getMembershipFees,
   getMembershipReminder,
   testMembershipReminder,
   updateMembershipFees,
+  updateBarionWallet,
   updateChatImageSettings,
   updateMembershipReminder,
 } from '../controllers/settingsController.js';
@@ -32,5 +34,9 @@ router
   .route('/chat-images')
   .get(requireAuth, restrictTo('admin'), getChatImageSettings)
   .put(requireAuth, restrictTo('admin'), updateChatImageSettings);
+
+// Barion wallets: payees, API keys, bank accounts - admins only.
+router.get('/barion', requireAuth, restrictTo('admin'), getBarionSettings);
+router.put('/barion/:wallet', requireAuth, restrictTo('admin'), updateBarionWallet);
 
 export default router;

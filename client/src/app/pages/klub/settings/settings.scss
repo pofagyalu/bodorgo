@@ -53,8 +53,21 @@ button {
   font-size: 14px;
 }
 
+// Masonry: the cards flow down in as many columns as fit (at least
+// 480px wide each), a card never split between two - so the right side
+// isn't left empty on a wide screen.
+.cards {
+  columns: 2 480px;
+  column-gap: 18px;
+
+  > * {
+    display: block;
+    break-inside: avoid;
+    margin: 0 0 18px;
+  }
+}
+
 .panel {
-  max-width: 760px;
   background: #fff;
   border: 1px solid #e7edea;
   border-radius: 17px;
@@ -270,10 +283,6 @@ button {
 
 // --- Chat fotók ---
 
-.chat-images {
-  margin-top: 18px;
-}
-
 .chat-usage {
   display: grid;
   gap: 6px;
@@ -327,10 +336,25 @@ button {
   }
 }
 
-// --- Értesítések: every e-mail and push, and the Tagdíj emlékeztető ---
+// --- Értesítések: every e-mail and push (info), under the settings ---
 
+// A column's last card loses its bottom margin (the column ends there),
+// so the full gap is set here.
 .notifications {
   margin-top: 18px;
+}
+
+// E-mails | pushes, side by side - each list as tall as it is.
+.notif-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0 24px;
+  align-items: start;
+
+  // Both lists start level (no extra gap above the first heading).
+  > div > .notif-group:first-child {
+    margin-top: 0;
+  }
 }
 
 .notif-group {
@@ -401,10 +425,14 @@ button {
   font-style: italic;
 }
 
+// The Tagdíj emlékeztető card's settings (its own card now).
 .reminder {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #dfece6;
+  p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #2f414b;
+    line-height: 1.5;
+  }
 
   select,
   .reminder-day {

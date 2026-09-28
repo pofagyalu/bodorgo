@@ -23,7 +23,12 @@ import { notifyAdminsIfAllMembersPaid } from '../utils/membershipReminders.js';
 import AppError from '../utils/appError.js';
 import config from '../config.js';
 import logger from '../logger.js';
-import { CLUB_FOUNDING_YEAR, feeForYear, getClubSettings } from '../utils/clubSettings.js';
+import {
+  CLUB_FOUNDING_YEAR,
+  barionWallet,
+  feeForYear,
+  getClubSettings,
+} from '../utils/clubSettings.js';
 
 async function loadAttendeePayments(tourId) {
   const tour = await Tour.findById(tourId);
@@ -243,7 +248,7 @@ export const startMembershipPayment = async (req, res) => {
       payerEmail: req.user.email,
       successUrl: returnUrl,
       description: `Tagdíj - ${payable.map((p) => `${p.name} (${p.year})`).join(', ')}`,
-      payeeEmail: config.barion.membership.payeeEmail,
+      payeeEmail: (await barionWallet('membership')).payeeEmail,
     });
   } catch (err) {
     payment.status = 'Failed';
@@ -313,7 +318,7 @@ export const startPayment = async (req, res) => {
       payerEmail: req.user.email,
       successUrl: returnUrl,
       description: `${tour.title} - előleg (${payable.map((p) => p.name).join(', ')})`,
-      payeeEmail: config.barion.tour.payeeEmail,
+      payeeEmail: (await barionWallet('tour')).payeeEmail,
     });
   } catch (err) {
     payment.status = 'Failed';
@@ -848,8 +853,11 @@ export const downloadReceipt = async (req, res) => {
 const WITHDRAWAL_FEE_RATE = 0.001;
 const WITHDRAWAL_MIN_FEE = 70;
 
-function withdrawalWalletConfigFor(purpose) {
-  return purpose === 'membershipFee' ? config.barion.membership : config.barion.tour;
+// A wallet's bank account is a club setting (Beállítások), its API key a
+// secret in .env.
+async function withdrawalWalletConfigFor(purpose) {
+  const key = purpose === 'membershipFee' ? 'membership' : 'tour';
+  return { ...(await barionWallet(key)), walletKey: config.barion.walletKeys[key] };
 }
 
 function isWithdrawalConfigured(wallet) {
@@ -857,30 +865,24 @@ function isWithdrawalConfigured(wallet) {
 }
 
 // GET /payments/withdraw/:purpose - requireAuth, restrictTo('admin'). Lets
-// the Klub finance page show each wallet's withdraw button as inactive
-// until its own BARION_..._WALLET_KEY/WITHDRAW_NAME/WITHDRAW_IBAN are all
-// actually set (see config.js's own comment) - both wallets started out
-// unconfigured, since the withdrawal feature only makes sense once real,
-// live (non-sandbox) Barion wallets exist to hold real money.
+// Beállítások show each wallet's withdraw button as inactive until its
+// bank account is set there and its API key in .env.
 export const getWithdrawalStatus = async (req, res) => {
   const purpose = req.params.purpose === 'membershipFee' ? 'membershipFee' : 'tourAdvance';
-  const configured = isWithdrawalConfigured(withdrawalWalletConfigFor(purpose));
+  const configured = isWithdrawalConfigured(await withdrawalWalletConfigFor(purpose));
   res.status(200).json({ status: 'success', data: { configured } });
 };
 
 // POST /payments/withdraw - requireAuth, restrictTo('admin'). Pulls real
-// money out of one of the two Barion wallets (see config.js's
-// barion.membership/.tour) into that wallet's own fixed, preconfigured
-// bank account via Barion's /v3/Withdraw/BankTransfer - authenticated with
-// that specific wallet's own API key, never the shop's posKey (see
-// utils/barion.js's createBarionWithdrawal). The destination account is
-// deliberately not taken from the request at all (see the wallet config's
-// own comment) - an admin can only pick which wallet and how much, never
-// where the money actually goes, so a compromised admin session can't be
-// used to redirect a withdrawal to an arbitrary account.
+// money out of one of the two Barion wallets into that wallet's bank
+// account via Barion's /v3/Withdraw/BankTransfer - authenticated with that
+// wallet's own API key, never the shop's posKey (see utils/barion.js's
+// createBarionWithdrawal). The destination is never taken from this
+// request - only from Beállítások, where changing it is recorded and
+// e-mailed to every admin (settingsController.js's updateBarionWallet).
 export const withdrawFunds = async (req, res) => {
   const purpose = req.body.purpose === 'membershipFee' ? 'membershipFee' : 'tourAdvance';
-  const wallet = withdrawalWalletConfigFor(purpose);
+  const wallet = await withdrawalWalletConfigFor(purpose);
   if (!isWithdrawalConfigured(wallet)) {
     throw new AppError('Ehhez a számlához még nincs beállítva a kiutalás.', 400);
   }

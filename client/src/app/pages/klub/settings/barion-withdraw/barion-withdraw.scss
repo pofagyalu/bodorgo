@@ -1,0 +1,261 @@
+// The same Klub card look as the rest of Beállítások (settings.scss).
+:host {
+  display: block;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e7edea;
+  border-radius: 17px;
+  box-shadow: 0 5px 19px #213b4110;
+  padding: 24px;
+}
+
+.panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+
+  h2 {
+    font-size: 17px;
+    letter-spacing: -0.025em;
+    margin: 0 0 5px;
+    color: #203747;
+  }
+}
+
+// The fee note, as a small pill on the title's right.
+.panel-title > span {
+  font-size: 12px;
+  color: #56666e;
+  background: #edf4f1;
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.primary-btn {
+  background: #1a796c;
+  color: white;
+  border: 1px solid #1a796c;
+  padding: 10px 18px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 750;
+  min-height: 42px;
+
+  &:hover:not(:disabled) {
+    background: #16675d;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+.withdraw-panel {
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.withdraw-notice {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 9px;
+  background: #e2f4eb;
+  color: #1b6548;
+  font-size: 13px;
+}
+
+.withdraw-notice.error {
+  background: #fdecea;
+  color: #a3402a;
+}
+
+.withdraw-row {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  background: #f7faf8;
+  border-radius: 12px;
+}
+
+.withdraw-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.withdraw-row-head strong {
+  font-size: 14px;
+  color: #203747;
+}
+
+.withdraw-inactive-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a3402a;
+  background: #fdecea;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.withdraw-row-body {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.withdraw-row-body input {
+  width: 160px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #dce5e1;
+  border-radius: 9px;
+  background: white;
+  color: #283e49;
+  font-size: 14px;
+}
+
+.withdraw-row-body input:disabled {
+  background: #f0f2f1;
+  color: #9aa6a2;
+}
+
+.withdraw-preview {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2f414b;
+}
+
+// --- The wallet's account, on top ---
+
+.account {
+  padding: 14px 16px;
+  margin-bottom: 4px;
+  border: 1px solid #e7edea;
+  border-radius: 12px;
+}
+
+.account-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  strong {
+    font-size: 14px;
+    color: #203747;
+  }
+}
+
+.account-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  font-size: 13px;
+
+  dt {
+    color: #56666e;
+  }
+
+  dd {
+    margin: 0;
+    color: #203747;
+    overflow-wrap: anywhere;
+  }
+}
+
+.iban {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.unset {
+  color: #a3402a;
+}
+
+.account-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+
+  label {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #2f414b;
+  }
+
+  input {
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid #dce5e1;
+    border-radius: 9px;
+    color: #283e49;
+    font-size: 14px;
+  }
+}
+
+.account-warning {
+  margin: 0;
+  font-size: 12px;
+  color: #8a5a1e;
+}
+
+.account-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.outline-btn {
+  background: white;
+  color: #254257;
+  border: 1px solid #dce6e3;
+  padding: 10px 15px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 650;
+  min-height: 42px;
+}
+
+.icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #dce6e3;
+  border-radius: 50%;
+  background: #fff;
+  color: #187e70;
+
+  &:hover {
+    background: #e7f5ed;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}

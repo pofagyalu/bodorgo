@@ -54,6 +54,16 @@ export interface ChatImageSettings {
   usage: { bytes: number; count: number }; // the photos still on disk
 }
 
+// One Barion wallet (Beállítások): where its payments land, and the bank
+// account withdrawals go to. (Its API key is a secret in the server's .env.)
+export interface BarionWallet {
+  payeeEmail: string;
+  withdrawName: string;
+  withdrawIban: string;
+}
+
+export type BarionWalletKey = 'membership' | 'tour';
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private http = inject(HttpClient);
@@ -103,6 +113,16 @@ export class SettingsService {
       `${this.apiUrl}/chat-images`,
       settings,
     );
+  }
+
+  // --- Barion wallets (admin-only) ---
+
+  getBarionSettings() {
+    return this.http.get<{ data: Record<BarionWalletKey, BarionWallet> }>(`${this.apiUrl}/barion`);
+  }
+
+  updateBarionWallet(key: BarionWalletKey, wallet: BarionWallet) {
+    return this.http.put<{ data: BarionWallet }>(`${this.apiUrl}/barion/${key}`, wallet);
   }
 
   // The reminder as a member would get it, to the admin themselves.

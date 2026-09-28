@@ -7,199 +7,333 @@
     </div>
   </div>
 
-  <section class="panel">
-    <div class="panel-title">
-      <div>
-        <h2>Tagdíj</h2>
-        <p class="subtext">
-          Éves összeg, attól az évtől, amikor életbe lép. Egy emelés a korábbi, még ki nem fizetett
-          éveket nem érinti - azok a régi díjjal maradnak.
-        </p>
-      </div>
-      @if (currentFee(); as fee) {
-        <span class="current-fee"
-          >{{ currentYear }}: <strong>{{ fee }} Ft</strong></span
-        >
-      }
-    </div>
-
-    @if (loading()) {
-      <p class="empty-note">Betöltés...</p>
-    } @else {
-      <table class="fee-table">
-        <thead>
-          <tr>
-            <th>Életbe lép</th>
-            <th>Összeg</th>
-            <th>Érvényes</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of rows(); track $index) {
-            <tr [class.locked]="isLocked(row)">
-              <td>
-                <span class="year-cell">
-                  <input
-                    type="number"
-                    [min]="foundingYear()"
-                    [ngModel]="row.fromYear"
-                    (ngModelChange)="update(row, 'fromYear', $event)"
-                    [disabled]="isLocked(row) || isFounding(row)"
-                  />
-                  <span class="suffix">-től</span>
-                </span>
-              </td>
-              <td>
-                <span class="amount-cell">
-                  <input
-                    type="number"
-                    min="1"
-                    step="100"
-                    [ngModel]="row.amount"
-                    (ngModelChange)="update(row, 'amount', $event)"
-                    [disabled]="isLocked(row)"
-                  />
-                  <span class="suffix">Ft</span>
-                </span>
-              </td>
-              <td class="range">{{ rangeLabel(row) }}</td>
-              <td class="row-end">
-                @if (isLocked(row)) {
-                  <mat-icon
-                    class="lock"
-                    title="Erre az időszakra már van befizetett tagdíj - nem módosítható"
-                    >lock</mat-icon
-                  >
-                } @else if (!isFounding(row)) {
-                  <button
-                    type="button"
-                    class="icon-btn"
-                    title="Sor törlése"
-                    (click)="removeRow(row)"
-                  >
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-
-      <div class="actions">
-        <button type="button" class="outline-btn" (click)="addRow()" [disabled]="saving()">
-          <mat-icon>add</mat-icon> Új díj egy évtől
-        </button>
-        <span class="spacer"></span>
-        @if (dirty()) {
-          <button type="button" class="outline-btn" (click)="reset()" [disabled]="saving()">
-            Mégse
-          </button>
+  <!-- The settings, in columns (masonry): as many as fit, each card whole;
+       the Értesítések info below them, full width. -->
+  <div class="cards">
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2>Tagdíj</h2>
+          <p class="subtext">
+            Éves összeg, attól az évtől, amikor életbe lép. Egy emelés a korábbi, még ki nem
+            fizetett éveket nem érinti - azok a régi díjjal maradnak.
+          </p>
+        </div>
+        @if (currentFee(); as fee) {
+          <span class="current-fee"
+            >{{ currentYear }}: <strong>{{ fee }} Ft</strong></span
+          >
         }
-        <button
-          type="button"
-          class="primary-btn"
-          (click)="save()"
-          [disabled]="!dirty() || saving()"
-        >
-          {{ saving() ? 'Mentés…' : 'Mentés' }}
-        </button>
       </div>
 
-      @if (history().length) {
-        <div class="history">
-          <h3>Változások</h3>
-          <ul>
-            @for (h of history(); track $index) {
-              <li>
-                <span class="history-when"
-                  >{{ h.at | date: 'yyyy. MM. dd. HH:mm' }} · {{ h.byName }}</span
-                >
-                <span>{{ h.change }}</span>
-              </li>
+      @if (loading()) {
+        <p class="empty-note">Betöltés...</p>
+      } @else {
+        <table class="fee-table">
+          <thead>
+            <tr>
+              <th>Életbe lép</th>
+              <th>Összeg</th>
+              <th>Érvényes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track $index) {
+              <tr [class.locked]="isLocked(row)">
+                <td>
+                  <span class="year-cell">
+                    <input
+                      type="number"
+                      [min]="foundingYear()"
+                      [ngModel]="row.fromYear"
+                      (ngModelChange)="update(row, 'fromYear', $event)"
+                      [disabled]="isLocked(row) || isFounding(row)"
+                    />
+                    <span class="suffix">-től</span>
+                  </span>
+                </td>
+                <td>
+                  <span class="amount-cell">
+                    <input
+                      type="number"
+                      min="1"
+                      step="100"
+                      [ngModel]="row.amount"
+                      (ngModelChange)="update(row, 'amount', $event)"
+                      [disabled]="isLocked(row)"
+                    />
+                    <span class="suffix">Ft</span>
+                  </span>
+                </td>
+                <td class="range">{{ rangeLabel(row) }}</td>
+                <td class="row-end">
+                  @if (isLocked(row)) {
+                    <mat-icon
+                      class="lock"
+                      title="Erre az időszakra már van befizetett tagdíj - nem módosítható"
+                      >lock</mat-icon
+                    >
+                  } @else if (!isFounding(row)) {
+                    <button
+                      type="button"
+                      class="icon-btn"
+                      title="Sor törlése"
+                      (click)="removeRow(row)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
+                </td>
+              </tr>
             }
-          </ul>
-        </div>
-      }
-    }
-  </section>
+          </tbody>
+        </table>
 
-  <!-- Chat photos: how much room they may take and how many a person may
-       send a day. Over the limit the oldest go - their messages stay. -->
-  <section class="panel chat-images">
-    <div class="panel-title">
-      <div>
-        <h2>Kotyogó fotók</h2>
-        <p class="subtext">
-          A táborok Kotyogójában küldött fotók. Ha betelik a keret, a legrégebbiek törlődnek – az
-          üzenet megmarad, „A fotó már nem érhető el” jelzéssel.
-        </p>
-      </div>
-    </div>
-
-    @if (chatImages(); as c) {
-      <div class="chat-usage">
-        <div class="chat-usage-bar" [class.chat-usage-bar--full]="chatUsagePercent() >= 80">
-          <span [style.width.%]="chatUsagePercent()"></span>
-        </div>
-        <small>
-          {{ chatUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} fotó ({{
-            chatUsagePercent()
-          }}%)
-        </small>
-      </div>
-
-      <div class="chat-fields">
-        <label>
-          Tárhely keret (MB)
-          <input
-            type="number"
-            min="50"
-            step="50"
-            [ngModel]="chatQuotaMB()"
-            (ngModelChange)="chatQuotaMB.set(+$event)"
-          />
-        </label>
-        <label>
-          Fotó naponta, személyenként
-          <input
-            type="number"
-            min="1"
-            [ngModel]="chatDailyLimit()"
-            (ngModelChange)="chatDailyLimit.set(+$event)"
-          />
-        </label>
-      </div>
-
-      <div class="actions">
-        <span class="spacer"></span>
-        @if (chatImagesDirty()) {
+        <div class="actions">
+          <button type="button" class="outline-btn" (click)="addRow()" [disabled]="saving()">
+            <mat-icon>add</mat-icon> Új díj egy évtől
+          </button>
+          <span class="spacer"></span>
+          @if (dirty()) {
+            <button type="button" class="outline-btn" (click)="reset()" [disabled]="saving()">
+              Mégse
+            </button>
+          }
           <button
             type="button"
-            class="outline-btn"
-            (click)="applyChatImages(c)"
-            [disabled]="savingChatImages()"
+            class="primary-btn"
+            (click)="save()"
+            [disabled]="!dirty() || saving()"
           >
-            Mégse
+            {{ saving() ? 'Mentés…' : 'Mentés' }}
           </button>
-        }
-        <button
-          type="button"
-          class="primary-btn"
-          (click)="saveChatImages()"
-          [disabled]="!chatImagesDirty() || savingChatImages()"
-        >
-          {{ savingChatImages() ? 'Mentés…' : 'Mentés' }}
-        </button>
-      </div>
-    } @else {
-      <p class="empty-note">Betöltés...</p>
-    }
-  </section>
+        </div>
 
-  <!-- Every e-mail and push the app sends - what triggers it and who gets
-       it; the Tagdíj emlékeztető is also set here. -->
+        @if (history().length) {
+          <div class="history">
+            <h3>Változások</h3>
+            <ul>
+              @for (h of history(); track $index) {
+                <li>
+                  <span class="history-when"
+                    >{{ h.at | date: 'yyyy. MM. dd. HH:mm' }} · {{ h.byName }}</span
+                  >
+                  <span>{{ h.change }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      }
+    </section>
+
+    <!-- The two Barion wallets: settings + withdrawing, one card each. -->
+    <app-barion-withdraw wallet="membership" />
+    <app-barion-withdraw wallet="tour" />
+
+    <!-- Tagdíj emlékeztető: e-mails to members who haven't paid this year's
+       dues - its settings (the Értesítések list below describes it too). -->
+    <section class="panel reminder-card">
+      <div class="panel-title">
+        <div>
+          <h2>Tagdíj emlékeztető</h2>
+          <p class="subtext">
+            E-mail azoknak a tagoknak, akik még nem fizették be az idei tagdíjat – az első napon,
+            aztán havonta vagy negyedévente.
+          </p>
+        </div>
+      </div>
+      <div class="reminder">
+        @if (reminderLoading()) {
+          <p class="empty-note">Betöltés...</p>
+        } @else {
+          <label class="reminder-switch">
+            <input
+              type="checkbox"
+              [ngModel]="reminderEnabled()"
+              (ngModelChange)="reminderEnabled.set($event)"
+            />
+            Bekapcsolva
+          </label>
+
+          <div class="reminder-row">
+            <span class="reminder-label">Első emlékeztető:</span>
+            <select
+              [ngModel]="reminderMonth()"
+              (ngModelChange)="reminderMonth.set(+$event)"
+              aria-label="Hónap"
+            >
+              @for (m of months; track m; let i = $index) {
+                <option [ngValue]="i + 1">{{ m }}</option>
+              }
+            </select>
+            <input
+              type="number"
+              min="1"
+              max="28"
+              class="reminder-day"
+              [ngModel]="reminderDay()"
+              (ngModelChange)="reminderDay.set(+$event)"
+              aria-label="Nap"
+            />
+            <span>.</span>
+          </div>
+
+          <div class="reminder-row">
+            <span class="reminder-label">Utána:</span>
+            <label class="reminder-choice">
+              <input
+                type="radio"
+                name="reminderFrequency"
+                value="quarterly"
+                [ngModel]="reminderFrequency()"
+                (ngModelChange)="reminderFrequency.set($event)"
+              />
+              negyedévente
+            </label>
+            <label class="reminder-choice">
+              <input
+                type="radio"
+                name="reminderFrequency"
+                value="monthly"
+                [ngModel]="reminderFrequency()"
+                (ngModelChange)="reminderFrequency.set($event)"
+              />
+              havonta
+            </label>
+          </div>
+
+          <p class="reminder-dates">
+            <span class="reminder-label">Idei körök:</span> {{ previewDates().join(', ') }}
+            <small>(reggel 9 után, amíg ki nem fizeti)</small>
+          </p>
+
+          @if (reminder()?.nextRound; as next) {
+            <p class="reminder-next">
+              Következő kör: <strong>{{ roundLabel(next) }}</strong>
+            </p>
+          }
+
+          <details class="reminder-who">
+            <summary>Most {{ reminderRecipients().length }} tag kapna emlékeztetőt</summary>
+            @if (reminderRecipients().length) {
+              <p>{{ reminderRecipients().join(', ') }}</p>
+            } @else {
+              <p>Senki – mindenki befizette az idei tagdíjat.</p>
+            }
+          </details>
+
+          <div class="actions">
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="sendTestReminder()"
+              [disabled]="sendingTest()"
+            >
+              <mat-icon>forward_to_inbox</mat-icon>
+              {{ sendingTest() ? 'Küldés…' : 'Próba e-mail magamnak' }}
+            </button>
+            <span class="spacer"></span>
+            @if (reminderDirty()) {
+              <button
+                type="button"
+                class="outline-btn"
+                (click)="resetReminder()"
+                [disabled]="savingReminder()"
+              >
+                Mégse
+              </button>
+            }
+            <button
+              type="button"
+              class="primary-btn"
+              (click)="saveReminder()"
+              [disabled]="!reminderDirty() || savingReminder()"
+            >
+              {{ savingReminder() ? 'Mentés…' : 'Mentés' }}
+            </button>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Chat photos: how much room they may take and how many a person may
+       send a day. Over the limit the oldest go - their messages stay. -->
+    <section class="panel chat-images">
+      <div class="panel-title">
+        <div>
+          <h2>Kotyogó fotók</h2>
+          <p class="subtext">
+            A táborok Kotyogójában küldött fotók. Ha betelik a keret, a legrégebbiek törlődnek – az
+            üzenet megmarad, „A fotó már nem érhető el” jelzéssel.
+          </p>
+        </div>
+      </div>
+
+      @if (chatImages(); as c) {
+        <div class="chat-usage">
+          <div class="chat-usage-bar" [class.chat-usage-bar--full]="chatUsagePercent() >= 80">
+            <span [style.width.%]="chatUsagePercent()"></span>
+          </div>
+          <small>
+            {{ chatUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} fotó ({{
+              chatUsagePercent()
+            }}%)
+          </small>
+        </div>
+
+        <div class="chat-fields">
+          <label>
+            Tárhely keret (MB)
+            <input
+              type="number"
+              min="50"
+              step="50"
+              [ngModel]="chatQuotaMB()"
+              (ngModelChange)="chatQuotaMB.set(+$event)"
+            />
+          </label>
+          <label>
+            Fotó naponta, személyenként
+            <input
+              type="number"
+              min="1"
+              [ngModel]="chatDailyLimit()"
+              (ngModelChange)="chatDailyLimit.set(+$event)"
+            />
+          </label>
+        </div>
+
+        <div class="actions">
+          <span class="spacer"></span>
+          @if (chatImagesDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="applyChatImages(c)"
+              [disabled]="savingChatImages()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="saveChatImages()"
+            [disabled]="!chatImagesDirty() || savingChatImages()"
+          >
+            {{ savingChatImages() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      } @else {
+        <p class="empty-note">Betöltés...</p>
+      }
+    </section>
+  </div>
+
+  <!-- Info only: every e-mail and push the app sends - what triggers it and
+     who gets it. (The settings are all in the cards above.) -->
   <section class="panel notifications">
     <div class="panel-title">
       <div>
@@ -210,154 +344,45 @@
       </div>
     </div>
 
-    <h3 class="notif-group">E-mailek</h3>
-    <ul class="notif-list">
-      @for (e of emails; track e.name) {
-        <li class="notif" [class.notif--settings]="e.settings">
-          <div class="notif-head">
-            <strong>{{ e.name }}</strong>
-            @if (e.settings) {
-              <span class="notif-badge">beállítható</span>
-            }
-          </div>
-          <p><span class="notif-label">Mikor:</span> {{ e.when }}</p>
-          <p><span class="notif-label">Kinek:</span> {{ e.who }}</p>
-          @if (e.note) {
-            <p class="notif-note">{{ e.note }}</p>
-          }
-
-          @if (e.settings === 'membershipReminder') {
-            <div class="reminder">
-              @if (reminderLoading()) {
-                <p class="empty-note">Betöltés...</p>
-              } @else {
-                <label class="reminder-switch">
-                  <input
-                    type="checkbox"
-                    [ngModel]="reminderEnabled()"
-                    (ngModelChange)="reminderEnabled.set($event)"
-                  />
-                  Bekapcsolva
-                </label>
-
-                <div class="reminder-row">
-                  <span class="reminder-label">Első emlékeztető:</span>
-                  <select
-                    [ngModel]="reminderMonth()"
-                    (ngModelChange)="reminderMonth.set(+$event)"
-                    aria-label="Hónap"
-                  >
-                    @for (m of months; track m; let i = $index) {
-                      <option [ngValue]="i + 1">{{ m }}</option>
-                    }
-                  </select>
-                  <input
-                    type="number"
-                    min="1"
-                    max="28"
-                    class="reminder-day"
-                    [ngModel]="reminderDay()"
-                    (ngModelChange)="reminderDay.set(+$event)"
-                    aria-label="Nap"
-                  />
-                  <span>.</span>
-                </div>
-
-                <div class="reminder-row">
-                  <span class="reminder-label">Utána:</span>
-                  <label class="reminder-choice">
-                    <input
-                      type="radio"
-                      name="reminderFrequency"
-                      value="quarterly"
-                      [ngModel]="reminderFrequency()"
-                      (ngModelChange)="reminderFrequency.set($event)"
-                    />
-                    negyedévente
-                  </label>
-                  <label class="reminder-choice">
-                    <input
-                      type="radio"
-                      name="reminderFrequency"
-                      value="monthly"
-                      [ngModel]="reminderFrequency()"
-                      (ngModelChange)="reminderFrequency.set($event)"
-                    />
-                    havonta
-                  </label>
-                </div>
-
-                <p class="reminder-dates">
-                  <span class="reminder-label">Idei körök:</span> {{ previewDates().join(', ') }}
-                  <small>(reggel 9 után, amíg ki nem fizeti)</small>
-                </p>
-
-                @if (reminder()?.nextRound; as next) {
-                  <p class="reminder-next">
-                    Következő kör: <strong>{{ roundLabel(next) }}</strong>
-                  </p>
+    <!-- E-mails on the left, pushes on the right (one column on a phone). -->
+    <div class="notif-columns">
+      <div>
+        <h3 class="notif-group">E-mailek</h3>
+        <ul class="notif-list">
+          @for (e of emails; track e.name) {
+            <li class="notif" [class.notif--settings]="e.settings">
+              <div class="notif-head">
+                <strong>{{ e.name }}</strong>
+                @if (e.settings) {
+                  <span class="notif-badge">beállítható</span>
                 }
-
-                <details class="reminder-who">
-                  <summary>Most {{ reminderRecipients().length }} tag kapna emlékeztetőt</summary>
-                  @if (reminderRecipients().length) {
-                    <p>{{ reminderRecipients().join(', ') }}</p>
-                  } @else {
-                    <p>Senki – mindenki befizette az idei tagdíjat.</p>
-                  }
-                </details>
-
-                <div class="actions">
-                  <button
-                    type="button"
-                    class="outline-btn"
-                    (click)="sendTestReminder()"
-                    [disabled]="sendingTest()"
-                  >
-                    <mat-icon>forward_to_inbox</mat-icon>
-                    {{ sendingTest() ? 'Küldés…' : 'Próba e-mail magamnak' }}
-                  </button>
-                  <span class="spacer"></span>
-                  @if (reminderDirty()) {
-                    <button
-                      type="button"
-                      class="outline-btn"
-                      (click)="resetReminder()"
-                      [disabled]="savingReminder()"
-                    >
-                      Mégse
-                    </button>
-                  }
-                  <button
-                    type="button"
-                    class="primary-btn"
-                    (click)="saveReminder()"
-                    [disabled]="!reminderDirty() || savingReminder()"
-                  >
-                    {{ savingReminder() ? 'Mentés…' : 'Mentés' }}
-                  </button>
-                </div>
+              </div>
+              <p><span class="notif-label">Mikor:</span> {{ e.when }}</p>
+              <p><span class="notif-label">Kinek:</span> {{ e.who }}</p>
+              @if (e.note) {
+                <p class="notif-note">{{ e.note }}</p>
               }
-            </div>
+            </li>
           }
-        </li>
-      }
-    </ul>
-
-    <h3 class="notif-group">Telefonos értesítések (push)</h3>
-    <p class="notif-note">
-      Csak akinek a böngészőjében / telefonján be vannak kapcsolva az értesítések (Profilom).
-    </p>
-    <ul class="notif-list">
-      @for (p of pushes; track p.name) {
-        <li class="notif">
-          <div class="notif-head">
-            <strong>{{ p.name }}</strong>
-          </div>
-          <p><span class="notif-label">Mikor:</span> {{ p.when }}</p>
-          <p><span class="notif-label">Kinek:</span> {{ p.who }}</p>
-        </li>
-      }
-    </ul>
+        </ul>
+      </div>
+      <div>
+        <h3 class="notif-group">Telefonos értesítések (push)</h3>
+        <p class="notif-note">
+          Csak akinek a böngészőjében / telefonján be vannak kapcsolva az értesítések (Profilom).
+        </p>
+        <ul class="notif-list">
+          @for (p of pushes; track p.name) {
+            <li class="notif">
+              <div class="notif-head">
+                <strong>{{ p.name }}</strong>
+              </div>
+              <p><span class="notif-label">Mikor:</span> {{ p.when }}</p>
+              <p><span class="notif-label">Kinek:</span> {{ p.who }}</p>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
   </section>
 </div>
