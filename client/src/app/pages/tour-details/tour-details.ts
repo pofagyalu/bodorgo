@@ -1,4 +1,13 @@
-import { Component, inject, signal, computed, effect, OnDestroy, ViewChild } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  inject,
+  signal,
+  computed,
+  effect,
+  OnDestroy,
+  ViewChild,
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -24,6 +33,7 @@ import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { shuffledLogoColors } from '../../shared/logo-colors';
 import { formatDrivingDuration } from '../../shared/format';
+import { CalendarEvent, downloadIcs, googleCalendarUrl } from '../../shared/calendar-event';
 import { TourEvent } from './tour-event/tour-event';
 import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
@@ -497,6 +507,54 @@ export class TourDetails implements OnDestroy {
           ? { text, tel: text.replace(/[^\d+]/g, '') }
           : { text },
       );
+  }
+
+  // --- Mentés a naptárba: the calendar icon's menu (Google Calendar, or an
+  // .ics file for Apple Calendar / Outlook - see shared/calendar-event.ts).
+
+  showCalendarMenu = signal(false);
+
+  toggleCalendarMenu(event: Event) {
+    event.stopPropagation();
+    this.showCalendarMenu.update((open) => !open);
+  }
+
+  @HostListener('document:click')
+  closeCalendarMenu() {
+    this.showCalendarMenu.set(false);
+  }
+
+  private calendarEvent(t: Tour): CalendarEvent {
+    const start = new Intl.DateTimeFormat('hu-HU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Budapest',
+    }).format(new Date(t.startDate));
+    const place = [t.location.description, t.location.address].filter(Boolean).join(', ');
+    return {
+      title: `${t.order}. Bódorgó – ${t.title}`,
+      start: new Date(t.startDate),
+      days: t.duration,
+      description: [
+        `Kezdés: ${start}`,
+        `${t.duration} nap / ${t.duration - 1} éjszaka`,
+        ...(place ? [`Helyszín: ${place}`] : []),
+      ].join('\n'),
+      location: place || undefined,
+      url: `${window.location.origin}/taborok/${t.slug || t._id}`,
+    };
+  }
+
+  googleCalendarLink(t: Tour): string {
+    return googleCalendarUrl(this.calendarEvent(t));
+  }
+
+  saveIcs(t: Tour) {
+    downloadIcs(this.calendarEvent(t), `bodorgo-${t.order}.ics`);
+    this.showCalendarMenu.set(false);
   }
 
   wazeUrl(t: Tour): string {

@@ -191,11 +191,15 @@
   display: inline-flex;
   line-height: 0;
   opacity: 0.85;
-  transition: opacity 0.15s;
+  // The same small zoom on hover as the calendar icon (.calendar-btn).
+  transition:
+    opacity 0.15s,
+    transform 0.15s ease;
   margin: 0 0.15rem;
 
   &:hover {
     opacity: 1;
+    transform: scale(1.1);
   }
 
   img {
@@ -955,4 +959,71 @@
   text-decoration: underline;
   text-underline-offset: 2px;
   white-space: nowrap;
+}
+
+// Mentés a naptárba: the date line's icon as a button, and its small menu.
+.calendar-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.calendar-btn {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  mat-icon {
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+.calendar-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 230px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e4eae7;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+
+  a,
+  button {
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: #1c2d38;
+    font: inherit;
+    font-size: 0.95rem;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      background: #eef6f2;
+    }
+  }
+}
+
+.calendar-menu-title {
+  padding: 4px 12px 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7780;
 }

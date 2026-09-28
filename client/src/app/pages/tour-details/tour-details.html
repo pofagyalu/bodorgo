@@ -94,7 +94,36 @@
         }
 
         <div class="info-line">
-          <mat-icon [style.color]="dateIconColor">event</mat-icon>
+          <!-- Mentés a naptárba: the icon opens a small menu (Google Calendar,
+               or an .ics file for Apple Calendar / Outlook). -->
+          <span class="calendar-anchor">
+            <button
+              type="button"
+              class="calendar-btn"
+              title="Mentés a naptárba"
+              aria-label="Mentés a naptárba"
+              [attr.aria-expanded]="showCalendarMenu()"
+              (click)="toggleCalendarMenu($event)"
+            >
+              <mat-icon [style.color]="dateIconColor">event</mat-icon>
+            </button>
+            @if (showCalendarMenu()) {
+              <div class="calendar-menu" role="menu" (click)="$event.stopPropagation()">
+                <div class="calendar-menu-title">Mentés a naptárba</div>
+                <a
+                  role="menuitem"
+                  [href]="googleCalendarLink(t)"
+                  target="_blank"
+                  rel="noopener"
+                  (click)="showCalendarMenu.set(false)"
+                  >Google Naptár</a
+                >
+                <button type="button" role="menuitem" (click)="saveIcs(t)">
+                  Apple / Outlook naptár (.ics)
+                </button>
+              </div>
+            }
+          </span>
           <span
             >{{ formattedStartDate() }} · {{ t.duration }} nap / {{ t.duration - 1 }} éjszaka</span
           >
