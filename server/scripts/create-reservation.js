@@ -59,7 +59,7 @@ async function findByAnchor(anchor) {
     : User.findOne({ name: anchor });
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 let tour;
 if (mongoose.isValidObjectId(tourIdentifier)) {

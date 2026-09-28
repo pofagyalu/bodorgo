@@ -37,7 +37,7 @@ function randomDateIn(year) {
   return new Date(year, month, day);
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 const admin = await User.findOne({ role: 'admin' }).sort('createdAt');
 if (!admin) {

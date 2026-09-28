@@ -149,7 +149,7 @@ async function ensureFamily(memberDefs) {
   return members;
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 let tour;
 if (mongoose.isValidObjectId(tourIdentifier)) {

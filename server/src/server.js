@@ -19,7 +19,7 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-const DB = config.db.testUri;
+const DB = config.db.uri;
 const PORT = config.port;
 
 mongoose

@@ -26,7 +26,7 @@ if (!identifier) {
   process.exit(1);
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 // --all: every tour at once - e.g. after a change to how the weather is
 // fetched or classified (see utils/weather.js), since past days are

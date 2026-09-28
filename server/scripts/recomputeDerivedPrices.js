@@ -16,7 +16,7 @@ import mongoose from 'mongoose';
 import config from '../src/config.js';
 import Tour from '../src/models/tourModel.js';
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 const tours = await Tour.find({ accommodationPricePerNight: { $ne: null } });
 console.log(`Found ${tours.length} tour(s) with accommodationPricePerNight set.`);

@@ -68,7 +68,7 @@ async function main() {
     process.exit(1);
   }
 
-  await mongoose.connect(config.db.testUri);
+  await mongoose.connect(config.db.uri);
 
   let tour;
   if (mongoose.isValidObjectId(identifier)) {

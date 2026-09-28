@@ -23,7 +23,7 @@ if (emails.length === 0) {
   process.exit(1);
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 const users = [];
 for (const email of emails) {

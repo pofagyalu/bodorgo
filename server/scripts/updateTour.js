@@ -29,7 +29,7 @@ if (!tourIdentifier || !filePath) {
 
 const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 let tour;
 if (mongoose.isValidObjectId(tourIdentifier)) {

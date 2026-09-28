@@ -16,7 +16,7 @@ import mongoose from 'mongoose';
 import config from '../src/config.js';
 import User from '../src/models/userModel.js';
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 const result = await User.updateMany({ role: 'bodorgo' }, { $set: { role: 'member' } });
 

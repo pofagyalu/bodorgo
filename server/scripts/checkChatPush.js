@@ -14,7 +14,7 @@ import Tour from '../src/models/tourModel.js';
 import PushSubscription from '../src/models/pushSubscriptionModel.js';
 import ChatReadState from '../src/models/chatReadStateModel.js';
 
-await mongoose.connect(config.db.testUri); // the same database the app uses (src/server.js)
+await mongoose.connect(config.db.uri); // the same database the app uses (src/server.js)
 const post = await Post.findOne({ deletedAt: null })
   .sort({ createdAt: -1 })
   .populate('creator', 'name username');

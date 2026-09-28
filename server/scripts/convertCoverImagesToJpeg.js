@@ -9,7 +9,7 @@
 // this to render.
 //
 // Operates directly on the NAS's live files/DB - dev and prod share the
-// same MongoDB (see config.js's db.uri/testUri), but public/img/tours/ is
+// same MongoDB (see config.js's db.uri), but public/img/tours/ is
 // per-environment and NOT git-synced, so this only writes the new .jpg
 // files to the NAS side (TOURS_IMG_DIR below). The local dev copy under
 // server/public/img/tours/ (which does have its own real files, just the

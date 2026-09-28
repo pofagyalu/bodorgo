@@ -62,7 +62,7 @@ if (data.order === undefined) {
   process.exit(1);
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 const existing = await Tour.findOne({ order: data.order }).select('title');
 if (existing) {
