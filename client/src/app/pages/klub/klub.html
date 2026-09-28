@@ -22,15 +22,21 @@
       <a routerLink="profilom" routerLinkActive="active" class="nav-item">
         <mat-icon>person</mat-icon><span>Profilom</span>
       </a>
-      @if (isAdmin()) {
-        <a routerLink="beallitasok" routerLinkActive="active" class="nav-item">
-          <mat-icon>settings</mat-icon><span>Beállítások</span>
-        </a>
-      }
     </nav>
-    <div class="side-bottom">
-      <strong>Átlátható klubélet</strong>
-      A közös pénzügyek minden tag számára könnyen követhetők.
+    <!-- At the sidebar's bottom: Beállítások (admins), set apart from the
+         everyday pages, then the Átlátható klubélet box. -->
+    <div class="side-foot">
+      @if (isAdmin()) {
+        <nav class="klub-nav" aria-label="Klub beállítások">
+          <a routerLink="beallitasok" routerLinkActive="active" class="nav-item">
+            <mat-icon>settings</mat-icon><span>Beállítások</span>
+          </a>
+        </nav>
+      }
+      <div class="side-bottom">
+        <strong>Átlátható klubélet</strong>
+        A közös pénzügyek minden tag számára könnyen követhetők.
+      </div>
     </div>
   </aside>
 

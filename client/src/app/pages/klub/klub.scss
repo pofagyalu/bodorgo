@@ -99,11 +99,17 @@
   }
 }
 
-// Same copy/look as the club-finances-demo.html prototype's .side-bottom -
-// sits at the sidebar's own bottom (margin-top:auto, in its flex column)
-// thanks to .klub-sidebar's fixed height above.
-.side-bottom {
+// Beállítások + the .side-bottom box, together at the sidebar's own
+// bottom (margin-top:auto, in its flex column) thanks to .klub-sidebar's
+// fixed height above.
+.side-foot {
   margin-top: auto;
+  display: grid;
+  gap: 14px;
+}
+
+// Same copy/look as the club-finances-demo.html prototype's .side-bottom.
+.side-bottom {
   padding: 18px 14px;
   background: #233f50;
   border-radius: 15px;
