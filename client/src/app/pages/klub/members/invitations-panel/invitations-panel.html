@@ -34,6 +34,52 @@
       >
     </div>
 
+    <!-- The e-mail's intro, above the steps: the launch message for the
+         big day, something general later. -->
+    <div class="intro-editor">
+      <label for="invIntro">Az e-mail bevezető szövege</label>
+      <textarea
+        id="invIntro"
+        rows="6"
+        maxlength="2000"
+        [value]="intro()"
+        (input)="intro.set($any($event.target).value)"
+      ></textarea>
+      <small
+        >A „Kedves …!” megszólítás után, a lépések előtt jelenik meg. Üres sor = új bekezdés.</small
+      >
+      <div class="intro-actions">
+        <button
+          type="button"
+          class="outline-btn"
+          [disabled]="sendingTest() || !intro().trim()"
+          (click)="sendTest()"
+        >
+          <mat-icon>forward_to_inbox</mat-icon>
+          {{ sendingTest() ? 'Küldés…' : 'Próba e-mail magamnak' }}
+        </button>
+        <span class="spacer"></span>
+        @if (introDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            [disabled]="savingIntro()"
+            (click)="resetIntro()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          [disabled]="!introDirty() || !intro().trim() || savingIntro()"
+          (click)="saveIntro()"
+        >
+          {{ savingIntro() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    </div>
+
     <!-- The two batches: each only those not invited yet. -->
     <div class="batches">
       <button

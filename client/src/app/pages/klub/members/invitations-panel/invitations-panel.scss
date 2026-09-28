@@ -199,3 +199,52 @@ button {
     display: none;
   }
 }
+
+// --- The e-mail's intro text ---
+
+.intro-editor {
+  display: grid;
+  gap: 6px;
+  margin: 18px 0 0;
+  padding: 16px;
+  border: 1px solid #e7edea;
+  border-radius: 12px;
+  background: #f7faf8;
+
+  label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #2f414b;
+  }
+
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #dce5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: #283e49;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  small {
+    color: #6b7780;
+    font-size: 12px;
+  }
+}
+
+.intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.spacer {
+  flex: 1;
+}

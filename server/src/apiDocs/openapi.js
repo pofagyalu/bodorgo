@@ -1484,6 +1484,7 @@ const paths = {
       data: obj({
         enabled: bool(),
         days: int('How long a link is valid.'),
+        intro: str("The invitation e-mail's intro text (paragraphs separated by an empty line)."),
         people: arrayOf(
           obj({
             _id: id(),
@@ -1512,6 +1513,30 @@ const paths = {
         sent: arrayOf(str('Name.')),
         failed: arrayOf(obj({ name: str(), message: str() })),
       }),
+      errors: [400],
+    }),
+  },
+  '/users/invitations/intro': {
+    put: op({
+      tag: T.users,
+      role: 'admin',
+      summary: 'Set the invitation e-mail intro',
+      description:
+        'The text above the steps in every invitation e-mail sent from now on (1-2000 characters; an empty line starts a new paragraph; no HTML). Recorded in the history.',
+      body: obj({ intro: str() }, ['intro']),
+      data: obj({ intro: str() }),
+      errors: [400],
+    }),
+  },
+  '/users/invitations/test': {
+    post: op({
+      tag: T.users,
+      role: 'admin',
+      summary: 'Send me a test invitation e-mail',
+      description:
+        'The invitation e-mail as it will look - with the given (unsaved) intro, or the saved one - to the admin themselves, with a sample link that does not work. No invitation is created.',
+      body: obj({ intro: str('Optional: the text being edited.') }),
+      data: obj({ sentTo: str() }),
       errors: [400],
     }),
   },
