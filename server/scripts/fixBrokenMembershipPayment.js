@@ -19,7 +19,7 @@ import Transaction from '../src/models/transactionModel.js';
 
 const PAYMENT_ID = '6ab3b555a06b5be50d3f30c8';
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 const payment = await Payment.findById(PAYMENT_ID);
 if (!payment) {

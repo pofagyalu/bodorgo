@@ -19,7 +19,7 @@ if (!anchor) {
   process.exit(1);
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 const anchorUser = anchor.includes('@')
   ? await User.findOne({ email: anchor.toLowerCase() })

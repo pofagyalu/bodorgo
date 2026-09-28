@@ -7,7 +7,6 @@ const config = {
   resetUrl: process.env.RESET_REDIRECT_URL,
   db: {
     uri: process.env.DB_URI,
-    testUri: process.env.DB_TEST_URI,
   },
   jwt: {
     secret: process.env.JWT_SECRET,

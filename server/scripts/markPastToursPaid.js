@@ -6,7 +6,7 @@
 //
 // Dry run by default (only counts) - pass --apply to write.
 // Runs against the local .env's database (bodorgo-dev); for production:
-//   DB_TEST_URI="<live connection string>" node scripts/markPastToursPaid.js --apply
+//   DB_URI="<live connection string>" node scripts/markPastToursPaid.js --apply
 //
 // Usage: node scripts/markPastToursPaid.js [--apply]
 import 'dotenv/config';
@@ -17,7 +17,7 @@ import Reservation from '../src/models/reservationModel.js';
 import { tourHasEnded } from '../src/controllers/reviewController.js';
 
 const apply = process.argv.includes('--apply');
-await mongoose.connect(config.db.testUri); // the same database the app uses (src/server.js)
+await mongoose.connect(config.db.uri); // the same database the app uses (src/server.js)
 console.log(`database: ${mongoose.connection.name}${apply ? '' : '  [dry run]'}`);
 
 const tours = (await Tour.find().select('order title startDate duration')).filter((t) =>

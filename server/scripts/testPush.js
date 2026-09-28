@@ -15,7 +15,7 @@ if (!userId) {
   process.exit(1);
 }
 
-await mongoose.connect(config.db.testUri); // the same database the app uses (src/server.js)
+await mongoose.connect(config.db.uri); // the same database the app uses (src/server.js)
 webpush.setVapidDetails(config.push.subject, config.push.publicKey, config.push.privateKey);
 
 const subs = await PushSubscription.find({ user: userId });

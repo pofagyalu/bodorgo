@@ -43,7 +43,7 @@ async function main() {
 
   const apply = process.argv.includes('--apply');
 
-  await mongoose.connect(config.db.testUri);
+  await mongoose.connect(config.db.uri);
 
   const entries = fs.readdirSync(config.photosRoot, { withFileTypes: true });
   const folders = entries.filter((e) => e.isDirectory()).map((e) => e.name);

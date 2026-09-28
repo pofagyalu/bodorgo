@@ -6,10 +6,9 @@
 // Usage:
 //   node scripts/refreshTourPhotos.js <tourId|order|slug>
 //
-// Connects to config.db.testUri, same as both scripts this wraps -
-// override with DB_TEST_URI="<production DB_URI>" inline (not DB_URI - see
-// both wrapped scripts' own connect line) to run against production
-// instead of the local test DB.
+// Connects to the database in the local .env (bodorgo-dev) - to run it
+// against production, give the live connection string inline:
+//   DB_URI="<live DB_URI>" node scripts/refreshTourPhotos.js <tour>
 
 import 'dotenv/config';
 import mongoose from 'mongoose';
@@ -28,7 +27,7 @@ if (!config.photosRoot || !config.thumbnailsRoot) {
   process.exit(1);
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 let tour;
 if (mongoose.isValidObjectId(identifier)) {

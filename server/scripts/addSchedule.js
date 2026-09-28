@@ -37,7 +37,7 @@ if (!Array.isArray(entries) || entries.length === 0) {
   process.exit(1);
 }
 
-await mongoose.connect(config.db.testUri);
+await mongoose.connect(config.db.uri);
 
 const tour = await Tour.findById(tourId);
 if (!tour) {
