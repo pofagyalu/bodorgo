@@ -330,6 +330,77 @@
         <p class="empty-note">Betöltés...</p>
       }
     </section>
+    <!-- Születésnap: confetti and a greeting for whoever logs in on their
+         birthday - once a year (shared/birthday). -->
+    <section class="panel birthday-card">
+      <div class="panel-title">
+        <div>
+          <h2>Születésnap</h2>
+          <p class="subtext">
+            Aki a születésnapján belép, konfettit és köszöntést kap – évente egyszer, az első
+            eszközén.
+          </p>
+        </div>
+      </div>
+
+      @if (birthdaySaved()) {
+        <label class="reminder-switch">
+          <input type="checkbox" [ngModel]="bdEnabled()" (ngModelChange)="bdEnabled.set($event)" />
+          Bekapcsolva
+        </label>
+
+        <div class="chat-fields birthday-fields">
+          <label>
+            Effekt
+            <select [ngModel]="bdEffect()" (ngModelChange)="bdEffect.set($event)">
+              @for (e of birthdayEffects; track e.key) {
+                <option [value]="e.key">{{ e.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="birthday-message">
+            Üzenet
+            <input
+              type="text"
+              maxlength="200"
+              [ngModel]="bdMessage()"
+              (ngModelChange)="bdMessage.set($event)"
+            />
+            <small
+              >A <code>{{ '{' }}név{{ '}' }}</code> helyére az ünnepelt keresztneve kerül.</small
+            >
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="outline-btn" (click)="previewBirthday()">
+            <mat-icon>celebration</mat-icon>
+            Előnézet
+          </button>
+          <span class="spacer"></span>
+          @if (birthdayDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="resetBirthday()"
+              [disabled]="savingBirthday()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="saveBirthday()"
+            [disabled]="!birthdayDirty() || savingBirthday()"
+          >
+            {{ savingBirthday() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      } @else {
+        <p class="empty-note">Betöltés...</p>
+      }
+    </section>
   </div>
 
   <!-- Info only: every e-mail and push the app sends - what triggers it and

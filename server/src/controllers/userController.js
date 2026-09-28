@@ -3,9 +3,10 @@ import User from '../models/userModel.js';
 import Reservation from '../models/reservationModel.js';
 import Payment from '../models/paymentModel.js';
 import AppError from '../utils/appError.js';
-import { CLUB_FOUNDING_YEAR } from '../utils/clubSettings.js';
+import { CLUB_FOUNDING_YEAR, getClubSettings } from '../utils/clubSettings.js';
 import { toursAttendedByUser, toursAttendedOf } from '../utils/toursAttended.js';
 import { USERNAME_RULE, USERNAME_RULE_MESSAGE, usernameKey } from '../utils/usernames.js';
+import { budapestToday, fillMessage, isBirthday } from '../utils/birthday.js';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -175,6 +176,29 @@ export const updateMe = async (req, res, next) => {
 // record," with its own fixed field set. Never includes gender or
 // familyId, even about the caller's own account - see the profile page's
 // access rules (only admin ever sees/edits those, via updateUser).
+// GET /users/me/birthday - on the user's birthday (Budapest date), the
+// first time today: { celebrate: true, effect, message } - and it's marked
+// as celebrated for this year, so it's shown once, on whichever device
+// comes first. Any other time { celebrate: false }. Nothing is shown if an
+// admin turned it off on Beállítások.
+export const getMyBirthday = async (req, res) => {
+  const { birthday: settings } = await getClubSettings();
+  const year = Number(budapestToday().slice(0, 4));
+  const user = req.user;
+  if (!settings?.enabled || !isBirthday(user.birthday) || user.birthdayCelebratedYear === year) {
+    return res.status(200).json({ status: 'success', data: { celebrate: false } });
+  }
+  await User.updateOne({ _id: user._id }, { birthdayCelebratedYear: year });
+  res.status(200).json({
+    status: 'success',
+    data: {
+      celebrate: true,
+      effect: settings.effect,
+      message: fillMessage(settings.message, user),
+    },
+  });
+};
+
 export const getMe = async (req, res) => {
   const user = await User.findById(req.user._id).select(
     'name username email birthday memberSince lastLoginAt wantsEmailNotifications address photoUpdatedAt photoSetBy',

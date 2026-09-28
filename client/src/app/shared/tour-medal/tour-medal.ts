@@ -6,10 +6,10 @@ import { MatIconModule } from '@angular/material/icon';
 // 30 arany, 40 platina, 50 gyémánt.
 export const MEDALS = [
   { min: 50, key: 'diamond', name: 'Gyémánt', icon: 'diamond' },
-  { min: 40, key: 'platinum', name: 'Platina', icon: 'military_tech' },
-  { min: 30, key: 'gold', name: 'Arany', icon: 'military_tech' },
-  { min: 20, key: 'silver', name: 'Ezüst', icon: 'military_tech' },
-  { min: 10, key: 'bronze', name: 'Bronz', icon: 'military_tech' },
+  { min: 40, key: 'platinum', name: 'Platina', icon: 'workspace_premium' },
+  { min: 30, key: 'gold', name: 'Arany', icon: 'workspace_premium' },
+  { min: 20, key: 'silver', name: 'Ezüst', icon: 'workspace_premium' },
+  { min: 10, key: 'bronze', name: 'Bronz', icon: 'workspace_premium' },
 ] as const;
 
 export type Medal = (typeof MEDALS)[number];

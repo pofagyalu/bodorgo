@@ -1,0 +1,58 @@
+// In the middle of the screen, above everything (the confetti canvas is
+// at 40000, this just above it); it pops in, then fades out by itself.
+.greeting {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 40001;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(460px, calc(100vw - 32px));
+  padding: 28px 26px;
+  border: 0;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 70px rgba(16, 37, 54, 0.35);
+  color: #1b3346;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  animation:
+    greeting-in 0.5s cubic-bezier(0.34, 1.5, 0.55, 1),
+    greeting-out 0.6s ease 4.4s forwards;
+}
+
+.cake {
+  font-size: 54px;
+  line-height: 1;
+}
+
+.text {
+  font-size: clamp(22px, 5vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+@keyframes greeting-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+}
+
+@keyframes greeting-out {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .greeting {
+    animation: greeting-out 0.6s ease 4.4s forwards;
+  }
+}

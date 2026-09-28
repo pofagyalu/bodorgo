@@ -1,12 +1,14 @@
 import express from 'express';
 import {
   getBarionSettings,
+  getBirthdaySettings,
   getChatImageSettings,
   getMembershipFees,
   getMembershipReminder,
   testMembershipReminder,
   updateMembershipFees,
   updateBarionWallet,
+  updateBirthdaySettings,
   updateChatImageSettings,
   updateMembershipReminder,
 } from '../controllers/settingsController.js';
@@ -38,5 +40,11 @@ router
 // Barion wallets: payees, API keys, bank accounts - admins only.
 router.get('/barion', requireAuth, restrictTo('admin'), getBarionSettings);
 router.put('/barion/:wallet', requireAuth, restrictTo('admin'), updateBarionWallet);
+
+// Születésnap: the birthday greeting - admins only.
+router
+  .route('/birthday')
+  .get(requireAuth, restrictTo('admin'), getBirthdaySettings)
+  .put(requireAuth, restrictTo('admin'), updateBirthdaySettings);
 
 export default router;

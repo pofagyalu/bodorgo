@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import type { BirthdayEffect } from '../shared/birthday/birthday.service';
 
 // The yearly membership fee, by the year each amount takes effect (see
 // server/src/utils/clubSettings.js) - set on Klub → Beállítások.
@@ -64,6 +65,13 @@ export interface BarionWallet {
 
 export type BarionWalletKey = 'membership' | 'tour';
 
+// Születésnap: the birthday greeting (see shared/birthday).
+export interface BirthdaySettings {
+  enabled: boolean;
+  effect: BirthdayEffect;
+  message: string; // {név} = the given name
+}
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private http = inject(HttpClient);
@@ -123,6 +131,16 @@ export class SettingsService {
 
   updateBarionWallet(key: BarionWalletKey, wallet: BarionWallet) {
     return this.http.put<{ data: BarionWallet }>(`${this.apiUrl}/barion/${key}`, wallet);
+  }
+
+  // --- Születésnap (admin-only) ---
+
+  getBirthdaySettings() {
+    return this.http.get<{ data: BirthdaySettings }>(`${this.apiUrl}/birthday`);
+  }
+
+  updateBirthdaySettings(settings: BirthdaySettings) {
+    return this.http.put<{ data: BirthdaySettings }>(`${this.apiUrl}/birthday`, settings);
   }
 
   // The reminder as a member would get it, to the admin themselves.
