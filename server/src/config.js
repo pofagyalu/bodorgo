@@ -14,13 +14,6 @@ const config = {
     expiry: process.env.JWT_EXPIRES_IN,
     cookieExpiry: process.env.JWT_COOKIE_EXPIRES_IN,
   },
-  mailtrap: {
-    host: process.env.MAILTRAP_EMAIL_HOST,
-    port: process.env.MAILTRAP_EMAIL_PORT,
-    user: process.env.MAILTRAP_EMAIL_USERNAME,
-    password: process.env.MAILTRAP_EMAIL_PASSWORD,
-    from: process.env.MAILTRAP_EMAIL_FROM,
-  },
   resend: {
     apiKey: process.env.RESEND_API_KEY,
     from: process.env.RESEND_EMAIL_FROM,
