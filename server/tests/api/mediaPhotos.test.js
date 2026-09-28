@@ -152,6 +152,12 @@ describe('Új média felfedezése', () => {
     expect(
       (await request(app).get('/media/photos/sinners/agnes.jpg').set(asUser(member))).status,
     ).toBe(200);
+    const mediaDownload = await request(app)
+      .get('/media/photos/sinners/agnes.jpg/download')
+      .set(asUser(member));
+    expect(mediaDownload.status).toBe(200);
+    expect(mediaDownload.headers['content-disposition']).toContain('attachment');
+    expect(mediaDownload.headers['content-disposition']).toContain('agnes.jpg');
   });
 
   it('follows deletions, and never serves anything not recorded', async () => {
@@ -174,6 +180,10 @@ describe('Új média felfedezése', () => {
           .get(`/media/photos/sinners/${encodeURIComponent('../x.jpg')}`)
           .set(asUser(member))
       ).status,
+    ).toBe(404);
+    expect(
+      (await request(app).get('/media/photos/sinners/temp.jpg/download').set(asUser(member)))
+        .status,
     ).toBe(404);
   });
 

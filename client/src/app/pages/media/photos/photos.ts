@@ -45,12 +45,15 @@ export class Photos implements OnInit, OnDestroy {
 
   // The lightbox (PhotoSwipe) - loaded only when a photo is opened.
   private lightbox: PhotoSwipeLightbox | null = null;
+  private openCategory: MediaPhotoCategory | null = null;
 
   async open(c: MediaPhotoCategory, index: number) {
+    this.openCategory = c;
     if (!this.lightbox) {
       const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
       this.lightbox = new PhotoSwipeLightbox({ pswpModule: () => import('photoswipe') });
       checkerTransparentPngs(this.lightbox);
+      this.addDownloadButton(this.lightbox);
       this.lightbox.init();
     }
     this.lightbox.loadAndOpen(
@@ -62,6 +65,41 @@ export class Photos implements OnInit, OnDestroy {
         alt: p.filename,
       })),
     );
+  }
+
+  // Download button next to zoom/close, like the tour albums' (see
+  // tour-details.ts): the /download route, which makes it a download
+  // rather than opening it in a new tab.
+  private addDownloadButton(lightbox: PhotoSwipeLightbox) {
+    lightbox.on('uiRegister', () => {
+      lightbox.pswp!.ui!.registerElement({
+        name: 'download-button',
+        order: 8,
+        isButton: true,
+        tagName: 'a',
+        title: 'Fénykép letöltése',
+        html: {
+          isCustomSVG: true,
+          size: 24,
+          inner: '<path d="M12 16l-6-6h4V4h4v6h4l-6 6zM5 18h14v2H5z" id="pswp__icn-download"/>',
+          outlineID: 'pswp__icn-download',
+        },
+        onInit: (el, pswp) => {
+          const link = el as HTMLAnchorElement;
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener');
+          const refresh = () => {
+            const photo = this.openCategory?.photos[pswp.currIndex];
+            link.href =
+              photo && this.openCategory
+                ? this.media.photoDownloadUrl(this.openCategory.key, photo.filename)
+                : '';
+          };
+          refresh();
+          pswp.on('change', refresh);
+        },
+      });
+    });
   }
 
   ngOnInit() {

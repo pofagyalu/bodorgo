@@ -8,6 +8,7 @@ import {
 } from '../controllers/mediaVideoController.js';
 import {
   getMediaDiscovery,
+  downloadMediaPhoto,
   getMediaPhoto,
   getMediaPhotoThumb,
   listMediaPhotos,
@@ -27,6 +28,7 @@ router.get('/videos/:category/:id/subtitles.vtt', getMediaVideoSubtitles);
 
 router.get('/photos', listMediaPhotos);
 router.get('/photos/:category/:filename/thumb', getMediaPhotoThumb);
+router.get('/photos/:category/:filename/download', downloadMediaPhoto);
 router.get('/photos/:category/:filename', getMediaPhoto);
 
 // "Új média felfedezése" - admins only (tour albums and Média photos).
