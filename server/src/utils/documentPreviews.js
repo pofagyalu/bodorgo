@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
-import ClubDocument from '../models/clubDocumentModel.js';
+import Document from '../models/documentModel.js';
 import { CLUB_DOCUMENTS_DIR } from './dataDirs.js';
 import { loadSharp } from '../photos/imageFiles.js';
 import logger from '../logger.js';
 
-// A club document's card on Dokumentumok shows a small picture of it: a
+// A club document's card on Dokumentumok shows a small picture of it (a
+// tour's Extrák have none): a
 // PDF's first page, or the photo/scan itself - one WebP per document in
 // documents/previews/ (not copied to the live server by sync.js - each
 // server makes its own). Made at upload, and at startup for any document
@@ -77,7 +78,7 @@ export async function tryMakeDocumentPreview(document) {
   try {
     await makeDocumentPreview(document.filename);
     if (!document.preview) {
-      await ClubDocument.updateOne({ _id: document._id }, { preview: true });
+      await Document.updateOne({ _id: document._id }, { preview: true });
       document.preview = true;
     }
   } catch (err) {
@@ -92,7 +93,7 @@ export function deleteDocumentPreview(filename) {
 // At startup, in the background: every document still without a preview
 // (uploaded before previews existed, or one that failed) gets one.
 export async function ensureDocumentPreviews() {
-  const missing = await ClubDocument.find({ preview: { $ne: true } });
+  const missing = await Document.find({ preview: { $ne: true }, tour: null });
   for (const document of missing) {
     if (fs.existsSync(path.join(CLUB_DOCUMENTS_DIR, document.filename))) {
       await tryMakeDocumentPreview(document);

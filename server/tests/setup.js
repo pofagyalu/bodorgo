@@ -31,7 +31,6 @@ process.env.AUTHENTIK_POSTLOGOUT_URI ??= 'http://localhost:4200/';
 const TEST_FILES = path.join(os.tmpdir(), `bodorgo-test-files-${process.pid}`);
 process.env.CLUB_DOCUMENTS_DIR = path.join(TEST_FILES, 'documents');
 process.env.RECEIPTS_DIR = path.join(TEST_FILES, 'receipts');
-process.env.TOUR_DOCUMENTS_DIR = path.join(TEST_FILES, 'tour-documents');
 process.env.MEDIA_VIDEOS_ROOT = path.join(TEST_FILES, 'media-videos');
 process.env.VIDEOS_ROOT = path.join(TEST_FILES, 'tour-videos');
 process.env.PHOTOS_ROOT = path.join(TEST_FILES, 'tour-photos');

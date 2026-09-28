@@ -9,6 +9,7 @@ import sendResendEmail from '../utils/resendEmail.js';
 import { formatDrivingDuration, resolveDistanceInfo } from '../utils/distance.js';
 import logger from '../logger.js';
 import { loadTourCoverBuffer } from './tourCoverController.js';
+import { tourDocuments } from './documentController.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
 // - the cover image lives under there; the logo/fonts live under
@@ -711,7 +712,8 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
   // way to reach them - the PDF can end up printed or shared beyond a
   // logged-in visitor, unlike the tour-details page's own "Extra infók"
   // cards, which link straight to each file.
-  if (tour.extraDocuments?.length > 0) {
+  const extraDocuments = await tourDocuments(tour._id);
+  if (extraDocuments.length > 0) {
     if (doc.y > 700) doc.addPage();
     doc
       .font('Heading')
@@ -736,13 +738,13 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
       );
     doc.x = PAGE_MARGIN;
     doc.moveDown(0.4);
-    for (const document of tour.extraDocuments) {
+    for (const document of extraDocuments) {
       if (doc.y > 720) doc.addPage();
       doc
         .font('Body')
         .fontSize(10)
         .fillColor('#000')
-        .text(`• ${document.title}`, PAGE_MARGIN + 10, doc.y, { width: contentWidth - 10 });
+        .text(`• ${document.name}`, PAGE_MARGIN + 10, doc.y, { width: contentWidth - 10 });
       doc.x = PAGE_MARGIN;
     }
     doc.moveDown(1);

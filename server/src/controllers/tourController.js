@@ -10,6 +10,7 @@ import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
 import { resolveDistanceInfo } from '../utils/distance.js';
+import { tourDocuments } from './documentController.js';
 
 const WEATHER_REFETCH_HOURS = 6;
 
@@ -283,6 +284,14 @@ export const getTour = async (req, res, next) => {
   // - only ids and version names; playback goes through the
   // requireAuth-gated /tours/:id/videos/... routes.
   const tourJson = tour.toObject();
+  // Its Extrák (Document collection - see documentController.js), in the
+  // shape the tour page reads.
+  tourJson.extraDocuments = (await tourDocuments(tour._id)).map((d) => ({
+    _id: d._id,
+    title: d.name,
+    filename: d.filename,
+    mimeType: d.mimeType,
+  }));
   const videos = tourVideoList(tour.order);
   const hasVideo = videos.length > 0;
 
