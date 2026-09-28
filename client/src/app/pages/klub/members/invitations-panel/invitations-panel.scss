@@ -1,0 +1,201 @@
+// Same Klub card look as members.scss.
+:host {
+  display: block;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e7edea;
+  border-radius: 17px;
+  box-shadow: 0 5px 19px #213b4110;
+  padding: 22px 24px;
+}
+
+.invitations-head {
+  h2 {
+    margin: 0 0 6px;
+    font-size: 17px;
+    letter-spacing: -0.025em;
+    color: #203747;
+  }
+
+  p {
+    margin: 0;
+    max-width: 760px;
+    color: #56666e;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+.invitations-off {
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  border-radius: 9px;
+  background: #fdecea;
+  color: #a3402a;
+  font-size: 13px;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: #56666e;
+
+  strong {
+    color: #203747;
+  }
+}
+
+.batches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0 18px;
+}
+
+.primary-btn,
+.outline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 11px 16px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 700;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+.primary-btn {
+  background: #1a796c;
+  color: #fff;
+  border: 1px solid #1a796c;
+
+  &:hover:not(:disabled) {
+    background: #16675d;
+  }
+}
+
+.outline-btn {
+  background: #fff;
+  color: #254257;
+  border: 1px solid #dce6e3;
+
+  &:hover:not(:disabled) {
+    background: #f3f7f5;
+  }
+}
+
+.invitations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    padding: 8px 10px;
+    color: #56666e;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #e7edea;
+  }
+
+  td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #f0f4f2;
+    color: #203747;
+  }
+
+  .email {
+    color: #56666e;
+    overflow-wrap: anywhere;
+  }
+
+  .actions {
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+.state {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.state--none {
+  background: #eef2f0;
+  color: #56666e;
+}
+
+.state--sent {
+  background: #e7f5ed;
+  color: #267c68;
+}
+
+.state--expired {
+  background: #fff0e5;
+  color: #b0602a;
+}
+
+.state--joined {
+  background: #e3effb;
+  color: #1e6bb0;
+}
+
+.mini-btn {
+  margin-left: 6px;
+  padding: 4px 11px;
+  border: 1px solid #dce6e3;
+  border-radius: 8px;
+  background: #fff;
+  color: #254257;
+  font-size: 12px;
+  font-weight: 650;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.mini-btn--danger {
+  border-color: #f0c9bd;
+  color: #a3402a;
+}
+
+.empty-note {
+  color: #56666e;
+  font-size: 14px;
+}
+
+// A phone: the e-mail column goes, the rest stays readable.
+@media (max-width: 640px) {
+  .invitations-table th:nth-child(2),
+  .invitations-table td:nth-child(2) {
+    display: none;
+  }
+}
