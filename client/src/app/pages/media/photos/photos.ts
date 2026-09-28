@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import type PhotoSwipeLightbox from 'photoswipe/lightbox';
+import { checkerTransparentPngs } from '../../../shared/pswp-checker';
 import { MediaPhotoCategory, MediaService } from '../../../services/media';
 
 // Média → Fotók: every category (/media/fotok), or just one
@@ -49,6 +50,7 @@ export class Photos implements OnInit, OnDestroy {
     if (!this.lightbox) {
       const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
       this.lightbox = new PhotoSwipeLightbox({ pswpModule: () => import('photoswipe') });
+      checkerTransparentPngs(this.lightbox);
       this.lightbox.init();
     }
     this.lightbox.loadAndOpen(

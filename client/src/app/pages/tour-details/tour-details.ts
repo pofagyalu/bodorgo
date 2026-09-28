@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import type PhotoSwipeLightbox from 'photoswipe/lightbox';
+import { checkerTransparentPngs } from '../../shared/pswp-checker';
 import {
   TourService,
   Tour,
@@ -702,6 +703,7 @@ export class TourDetails implements OnDestroy {
     this.lightbox = new PhotoSwipeLightbox({
       pswpModule: () => import('photoswipe'),
     });
+    checkerTransparentPngs(this.lightbox);
 
     this.lightbox.on('uiRegister', () => {
       const ui = this.lightbox!.pswp!.ui!;
