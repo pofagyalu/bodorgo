@@ -17,13 +17,22 @@ See each subproject's README for dev setup, build, and deploy instructions speci
 
 ## Data and files
 
-- **One shared database.** The local dev server (`server/.env`'s `DB_URI`, MongoDB on `192.168.1.99`) and production use the **same** database. Anything done through the local app — uploading a document or photo, suspending a user, editing a tour — changes live data immediately. Keep ad-hoc scripts read-only unless a change is actually intended.
+- **Two databases.** Production uses `bodorgo`; the local dev server uses `bodorgo-dev` (each `server/.env`'s `DB_URI`). Uploaded files live on each machine's own disk, so copying a database between the two does not bring its files along.
 - **Members-only.** Everything needs a login except the landing page and its tour ticker (`GET /tours/ticker`). `server/public/` is not served statically any more.
+- **API documentation:** `https://api.bodorgo.hu/docs` (admins only) - every endpoint, generated from `server/src/apiDocs/openapi.js`. Update that file with every endpoint change; a test fails if a route is missing from it.
 - **Where files live:**
-  - **Profile photos and tour covers** — in the database (`userphotos`, `tourcovers` collections), cropped and resized in the browser before upload, served only to logged-in users. Nothing to copy between machines. (Existing covers were imported from the old `public/img/tours/` with `server/scripts/migrateCoversToDb.js`.)
-  - **Club documents** (Klub → Dokumentumok) — files in `server/documents/`, **not in git**; `server/sync.js` copies them to the NAS on deploy (the upload lands on whichever machine's app was used, while its database record is shared).
-  - **Extra tour documents** (Extra infók) — files in `server/public/documents/tours/<tourId>/`, served only to logged-in users.
+  - **Profile photos and tour covers** — in the database (`userphotos`, `tourcovers` collections), cropped and resized in the browser before upload, served only to logged-in users. Nothing to copy between machines.
+  - **Documents** — the club's (Klub → Dokumentumok) in `server/documents/`, each tour's Extrák in `server/documents/tours/<tourId>/`; one `clubdocuments` collection for both. **Not in git and never copied between machines** — uploads happen on the live site. Previews of club documents in `server/documents/previews/`.
+  - **Kotyogó (chat) photos** — `server/chat-images/`, under a size quota set on Beállítások.
   - **Tour photos and videos** — on the NAS (`PHOTOS_ROOT`, `THUMBNAILS_ROOT`, `VIDEOS_ROOT`), served through login-only routes.
+
+## Access and roles (handover)
+
+- **Authentik is only the identity provider.** It says *who* someone is (login, e-mail, name) — nothing about their role in the club. Its `bodorgo_role` property mapping and the `bodorgo-admin/-member/-guest` groups are no longer read by the app.
+- **Only people added in the app can log in.** An admin adds each person first (Klub → Felhasználók, with the e-mail they use in Authentik); their first login links the two. Anyone else who gets through Authentik is refused ("Még nem vagy felvéve…"). *Planned:* the app sending the Authentik invitation itself through Authentik's REST API when an admin adds someone.
+- **Roles live in the app:** `admin`, `member` (dues-paying club member), `guest` (everyone else — family members, children without a login). A person added by an ordinary admin starts as `guest`.
+- **Only one admin may change roles — the role manager.** It is whoever `INITIAL_ADMIN_USER` in the live `server/.env` names (currently the founder's e-mail). At every server start, that person gets the role-manager flag (`canManageRoles`) and the `admin` role, and nobody else keeps the flag. They cannot change their own role (they always stay admin). If they have no account yet — e.g. a brand-new installation — their first login creates it.
+- **Handing the app over:** add the successor in Felhasználók (or let them log in first, if they are the new `INITIAL_ADMIN_USER`), change `INITIAL_ADMIN_USER` in `S:\bodorgo\.env` to their e-mail, and restart the server (`cd /volume2/server && pm2 restart bodorgo`). From then on only they can change roles. The same line is the way back in if the role manager is ever unavailable: whoever can edit the server's `.env` can name a new one.
 
 ## Repository layout note
 

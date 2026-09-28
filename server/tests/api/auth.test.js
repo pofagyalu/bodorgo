@@ -1,9 +1,8 @@
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createMember } from '../helpers/factories.js';
+import { createAdmin, createMember, createUser } from '../helpers/factories.js';
 import User from '../../src/models/userModel.js';
-import { roleFromClaim } from '../../src/controllers/authOidcController.js';
 
 // Authentik (openid-client) replaced: each test says which claims the
 // "logged in" person has.
@@ -28,52 +27,50 @@ const loginAs = async (c) => {
   return request(app).get('/auth/callback?code=abc&state=state');
 };
 
-describe('roles from Authentik', () => {
-  it('accepts only admin, member and guest', () => {
-    expect(roleFromClaim('admin')).toBe('admin');
-    expect(roleFromClaim('guest')).toBe('guest');
-    expect(roleFromClaim('superuser')).toBeNull();
-    expect(roleFromClaim(undefined)).toBeNull();
-  });
-});
+// tests/setup.js: INITIAL_ADMIN_USER=owner@test.local.
 
-describe('login', () => {
+describe('login - Authentik says who, the app says the role', () => {
   it('starts by redirecting to Authentik', async () => {
     const res = await request(app).get('/auth/login');
     expect(res.status).toBe(302);
     expect(res.headers.location).toContain('https://auth.test/authorize');
   });
 
-  it('creates a new user on first login, with the role from Authentik', async () => {
+  it('someone an admin added logs in with their e-mail (any case); their role stays', async () => {
+    const added = await createUser({ email: 'meglevo@test.local', role: 'member' });
     const res = await loginAs({
-      sub: 'sub-1',
-      email: 'uj@test.local',
-      name: 'Új Tag',
-      bodorgo_role: 'member',
+      sub: 'sub-2',
+      email: 'Meglevo@Test.local',
+      name: 'Meglévő Tag',
+      bodorgo_role: 'admin', // whatever Authentik says about roles is ignored
     });
     expect(res.status).toBe(302);
-    const user = await User.findOne({ sub: 'sub-1' });
-    expect(user).toMatchObject({ email: 'uj@test.local', role: 'member' });
+    expect(res.headers.location).not.toContain('error');
+    const user = await User.findById(added._id);
+    expect(user).toMatchObject({ sub: 'sub-2', role: 'member', name: 'Meglévő Tag' });
     expect(user.lastLoginAt).toBeTruthy();
+    expect(await User.countDocuments({ email: /meglevo/i })).toBe(1);
+
+    // The next login finds them by their Authentik id; the role still stays.
+    await loginAs({ sub: 'sub-2', email: 'meglevo@test.local', name: 'Meglévő Tag' });
+    expect((await User.findById(added._id)).role).toBe('member');
   });
 
-  it('links an existing record (added by an admin) by email on first login', async () => {
-    const existing = await createMember({ email: 'meglevo@test.local', role: 'guest' });
-    await loginAs({
-      sub: 'sub-2',
-      email: 'meglevo@test.local',
-      name: 'Meglévő',
-      bodorgo_role: 'admin',
-    });
-    const user = await User.findById(existing._id);
-    expect(user).toMatchObject({ sub: 'sub-2', role: 'admin', name: 'Meglévő' });
-    expect(await User.countDocuments({ email: 'meglevo@test.local' })).toBe(1);
-  });
-
-  it('refuses a login without a valid role', async () => {
-    const res = await loginAs({ sub: 'sub-3', email: 'x@test.local', bodorgo_role: 'nobody' });
-    expect(res.headers.location).toContain('login?error=no-role');
+  it('refuses anyone not added in the app - no account is created', async () => {
+    const res = await loginAs({ sub: 'sub-3', email: 'idegen@test.local', name: 'Idegen' });
+    expect(res.headers.location).toContain('login?error=not-invited');
     expect(await User.findOne({ sub: 'sub-3' })).toBeNull();
+    expect(await User.findOne({ email: 'idegen@test.local' })).toBeNull();
+  });
+
+  it('the INITIAL_ADMIN_USER can always get in: a fresh installation creates them as the role manager', async () => {
+    const res = await loginAs({ sub: 'sub-owner', email: 'Owner@test.local', name: 'Tulaj Dona' });
+    expect(res.headers.location).not.toContain('error');
+    expect(await User.findOne({ sub: 'sub-owner' })).toMatchObject({
+      role: 'admin',
+      canManageRoles: true,
+      name: 'Tulaj Dona',
+    });
   });
 
   it('answers "Login failed" when Authentik rejects the code', async () => {
@@ -90,11 +87,18 @@ describe('who am I', () => {
     expect((await request(app).get('/auth/me')).body).toEqual({ loggedIn: false });
   });
 
-  it('logged in: fresh role and photo info from the database', async () => {
+  it('logged in: fresh role, the role-manager flag and photo info from the database', async () => {
     const member = await createMember({ photoUpdatedAt: new Date() });
     const res = await request(app).get('/auth/me').set(asUser(member));
-    expect(res.body).toMatchObject({ loggedIn: true, id: String(member._id), role: 'member' });
+    expect(res.body).toMatchObject({
+      loggedIn: true,
+      id: String(member._id),
+      role: 'member',
+      canManageRoles: false,
+    });
     expect(res.body.photoUpdatedAt).toBeTruthy();
+    const owner = await createAdmin({ canManageRoles: true });
+    expect((await request(app).get('/auth/me').set(asUser(owner))).body.canManageRoles).toBe(true);
   });
 
   it('a deleted user is logged out', async () => {

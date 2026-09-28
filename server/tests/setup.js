@@ -37,6 +37,8 @@ process.env.PHOTOS_ROOT = path.join(TEST_FILES, 'tour-photos');
 process.env.THUMBNAILS_ROOT = path.join(TEST_FILES, 'thumbnails');
 process.env.MEDIA_PHOTOS_ROOT = path.join(TEST_FILES, 'media-photos');
 process.env.CHAT_IMAGES_DIR = path.join(TEST_FILES, 'chat-images');
+// The role manager (see utils/roleManager.js).
+process.env.INITIAL_ADMIN_USER = 'owner@test.local';
 // The tour wallet's API key (a secret - .env); its bank account is set
 // on Beállítások by the tests that withdraw.
 process.env.BARION_TOUR_WALLET_KEY ??= 'wallet-test';

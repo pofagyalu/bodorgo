@@ -117,6 +117,9 @@ const config = {
   // "closes in 2 hours" reminders (see server.js) - on in the live
   // server's .env.
   backgroundJobs: process.env.BACKGROUND_JOBS === 'on',
+  // The one admin who may change roles (utils/roleManager.js) - their
+  // e-mail. Checked at every start; changing it hands the app over.
+  initialAdminUser: process.env.INITIAL_ADMIN_USER?.trim().toLowerCase() || null,
   // Web push notifications (see utils/push.js) - off when the keys aren't
   // set. The same key pair on every server: a device subscribed through
   // one can only be reached with that pair.

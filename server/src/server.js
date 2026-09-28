@@ -13,6 +13,7 @@ import {
   checkMembershipReminders,
   notifyAdminsIfAllMembersPaid,
 } from './utils/membershipReminders.js';
+import { syncRoleManager } from './utils/roleManager.js';
 
 // This handler must run before anything else
 process.on('uncaughtException', (err) => {
@@ -51,6 +52,9 @@ mongoose
     // Dokumentumok: a preview for any document still without one (see
     // utils/documentPreviews.js) - in the background, every server
     // (each makes its own).
+    // The role manager (INITIAL_ADMIN_USER) - see utils/roleManager.js.
+    syncRoleManager().catch((err) => logger.error(`Role manager sync failed: ${err.message}`));
+
     ensureDocumentPreviews().catch((err) =>
       logger.error(`Document previews failed: ${err.message}`),
     );
