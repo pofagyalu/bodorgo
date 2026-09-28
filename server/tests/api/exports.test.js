@@ -10,6 +10,7 @@ import {
 } from '../helpers/factories.js';
 import TourCover from '../../src/models/tourCoverModel.js';
 import Tour from '../../src/models/tourModel.js';
+import Document from '../../src/models/documentModel.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
 
 // A tour with everything the Programfüzet and the Excel export can show:
@@ -62,10 +63,10 @@ async function richTour() {
             },
           ],
         },
-        extraDocuments: { title: 'Térkép', filename: 'terkep.pdf', mimeType: 'application/pdf' },
       },
     },
   );
+  await Document.create({ name: 'Térkép', filename: 'terkep.pdf', tour: tour._id });
   return { tour, admin, parent, kid, guest };
 }
 

@@ -62,8 +62,8 @@ export class ClubDocumentService {
   // call - the browser navigates directly (session cookie rides along
   // automatically), same convention as the original homepage document
   // links and payment.ts's receiptUrl.
-  fileUrl(filename: string, download = false): string {
-    return `${this.apiUrl}/${filename}${download ? '?download=1' : ''}`;
+  fileUrl(doc: ClubDocument, download = false): string {
+    return `${this.apiUrl}/${doc._id}/file${download ? '?download=1' : ''}`;
   }
 
   // The card's picture (server utils/documentPreviews.js).

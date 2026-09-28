@@ -30,12 +30,6 @@ import {
 } from '../controllers/chatImageController.js';
 import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
 import {
-  loadTourForUpload,
-  uploadMiddleware,
-  uploadTourDocument,
-  deleteTourDocument,
-} from '../controllers/tourDocumentController.js';
-import {
   uploadCoverMiddleware,
   uploadTourCover,
   getTourCover,
@@ -98,16 +92,8 @@ router.route('/:id/rooms').get(requireAuth, getRoomBoard);
 router.route('/:id/rooms/assignment').put(requireAuth, restrictTo('admin'), assignRoom);
 router.route('/:id/rooms/finalized').put(requireAuth, restrictTo('admin'), setFinalized);
 
-// Extra infók - admin-only upload/delete; viewing is a plain static file
-// URL under public/documents/tours/ (see tourDocumentController.js), same
-// unauthenticated-but-unlisted precedent as tour cover images, so no GET
-// route is needed here at all.
-router
-  .route('/:tourId/documents')
-  .post(requireAuth, restrictTo('admin'), loadTourForUpload, uploadMiddleware, uploadTourDocument);
-router
-  .route('/:tourId/documents/:documentId')
-  .delete(requireAuth, restrictTo('admin'), deleteTourDocument);
+// Extrák documents are uploaded, served and deleted with the club's own
+// documents - see documentRoutes.js (POST /documents with a tour).
 
 router.route('/:tourId/signup').post(requireAuth, signUpForTour);
 router

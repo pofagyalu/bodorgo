@@ -11,7 +11,7 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import config from '../src/config.js';
 import User from '../src/models/userModel.js';
-import ClubDocument from '../src/models/clubDocumentModel.js';
+import ClubDocument from '../src/models/documentModel.js';
 
 const DOCUMENTS = [
   { name: 'Klub alapító okirata', filename: 'alapito-okirat.pdf', category: 'Alapdokumentumok' },

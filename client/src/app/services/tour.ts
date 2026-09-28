@@ -276,15 +276,13 @@ export interface TourVideo {
   hasSubtitles: boolean;
 }
 
-// filename is what's actually on disk under
-// server/public/documents/tours/<tourId>/ (see TourService.documentUrl) -
-// never the original upload name.
+// A tour's Extrák document - one of the club's documents with this tour
+// set (server documentController.js); opened by its id (documentUrl).
 export interface ExtraDocument {
   _id: string;
   title: string;
   filename: string;
-  mimeType: 'application/pdf' | 'image/jpeg';
-  uploadedAt: string;
+  mimeType: 'application/pdf' | 'image/jpeg' | 'image/png';
 }
 
 // One attendee's accommodation share, computed server-side from the
@@ -526,24 +524,47 @@ export class TourService {
     return `${this.apiUrl}/${tourId}/attendees/export.xlsx`;
   }
 
-  // A plain static file URL, same as tour cover images - see
-  // tourDocumentController.js's comment on why these aren't served
-  // through a requireAuth-gated route.
-  documentUrl(tourId: string, filename: string): string {
-    return `${environment.assetUrl}/documents/tours/${tourId}/${filename}`;
+  // Extrák documents go through the same /documents routes as the club's
+  // own (server documentController.js). The file is a plain navigation -
+  // the session cookie rides along.
+  documentUrl(documentId: string): string {
+    return `${environment.apiBaseUrl}/documents/${documentId}/file`;
   }
 
   // multipart/form-data, not JSON - HttpClient sets the right Content-Type
   // (with boundary) automatically when given a FormData body.
-  uploadDocument(tourId: string, title: string, file: File): Observable<TourResponse> {
+  uploadDocument(
+    tourId: string,
+    title: string,
+    file: File,
+  ): Observable<{
+    data: {
+      document: {
+        _id: string;
+        name: string;
+        filename: string;
+        mimeType: ExtraDocument['mimeType'];
+      };
+    };
+  }> {
     const formData = new FormData();
-    formData.append('title', title);
+    formData.append('name', title);
+    formData.append('tour', tourId);
     formData.append('file', file);
-    return this.http.post<TourResponse>(`${this.apiUrl}/${tourId}/documents`, formData);
+    return this.http.post<{
+      data: {
+        document: {
+          _id: string;
+          name: string;
+          filename: string;
+          mimeType: ExtraDocument['mimeType'];
+        };
+      };
+    }>(`${environment.apiBaseUrl}/documents`, formData);
   }
 
-  deleteDocument(tourId: string, documentId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${tourId}/documents/${documentId}`);
+  deleteDocument(documentId: string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiBaseUrl}/documents/${documentId}`);
   }
 
   // Sends the same PDF pdfUrl() downloads as an email attachment to the

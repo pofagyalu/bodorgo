@@ -237,7 +237,7 @@
           <input type="text" [(ngModel)]="newDocumentTitle" placeholder="Cím" />
           <input
             type="file"
-            accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
             (change)="onDocumentFileSelected($event)"
           />
           <div class="user-form-actions">
@@ -297,7 +297,7 @@
         }
         @for (doc of t.extraDocuments ?? []; track doc._id) {
           <a
-            [href]="documentUrl(t._id, doc.filename)"
+            [href]="documentUrl(doc._id)"
             target="_blank"
             class="extra-doc-card"
             [title]="doc.title"

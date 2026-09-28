@@ -1,10 +1,9 @@
 import fs from 'fs';
-import path from 'path';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createMember, createTour } from '../helpers/factories.js';
-import Tour from '../../src/models/tourModel.js';
+import Document, { documentFilePath } from '../../src/models/documentModel.js';
 import PDFDocument from 'pdfkit';
 import sharp from 'sharp';
 import { previewPath } from '../../src/utils/documentPreviews.js';
@@ -12,32 +11,44 @@ import { previewPath } from '../../src/utils/documentPreviews.js';
 const PDF = Buffer.from('%PDF-1.4 test');
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 
-describe('Klub documents', () => {
+// One upload route for both kinds: the fields, then the file.
+const upload = (user, fields, file = PDF, type = 'application/pdf', filename = 'x.pdf') => {
+  let r = request(app).post('/documents').set(asUser(user));
+  for (const [k, v] of Object.entries(fields)) r = r.field(k, v);
+  return r.attach('file', file, { filename, contentType: type });
+};
+
+describe('club documents', () => {
   it('admin uploads; any logged-in user lists and opens; admin deletes', async () => {
     const admin = await createAdmin();
     const member = await createMember();
-    const up = await request(app)
-      .post('/documents')
-      .set(asUser(admin))
-      .field('name', 'Alapító okirat')
-      .field('category', 'Alapdokumentumok')
-      .field('year', '2019')
-      .attach('file', PDF, { filename: 'okirat.pdf', contentType: 'application/pdf' });
+    const up = await upload(admin, {
+      name: 'Alapító okirat',
+      category: 'Alapdokumentumok',
+      year: '2019',
+    });
     expect(up.status).toBe(201);
     const doc = up.body.data.document;
-    expect(doc).toMatchObject({ name: 'Alapító okirat', year: 2019 });
-    expect(fs.existsSync(path.join(process.env.CLUB_DOCUMENTS_DIR, doc.filename))).toBe(true);
+    expect(doc).toMatchObject({
+      name: 'Alapító okirat',
+      year: 2019,
+      tour: null,
+      mimeType: 'application/pdf',
+    });
+    expect(fs.existsSync(documentFilePath(await Document.findById(doc._id)))).toBe(true);
 
-    expect(
-      (await request(app).get('/documents').set(asUser(member))).body.data.documents,
-    ).toHaveLength(1);
-    const file = await request(app).get(`/documents/${doc.filename}`).set(asUser(member));
+    const list = (await request(app).get('/documents').set(asUser(member))).body.data.documents;
+    expect(list.map((d) => d._id)).toEqual([doc._id]);
+    const file = await request(app).get(`/documents/${doc._id}/file`).set(asUser(member));
     expect(file.status).toBe(200);
     const download = await request(app)
-      .get(`/documents/${doc.filename}?download=1`)
+      .get(`/documents/${doc._id}/file?download=1`)
       .set(asUser(member));
     expect(download.headers['content-disposition']).toContain('attachment');
-    expect((await request(app).get(`/documents/${doc.filename}`)).status).toBe(401);
+    // Named after the document, not the file on disk.
+    expect(download.headers['content-disposition']).toContain('.pdf');
+    expect(download.headers['content-disposition']).not.toContain('klub-dok');
+    expect((await request(app).get(`/documents/${doc._id}/file`)).status).toBe(401);
 
     expect((await request(app).delete(`/documents/${doc._id}`).set(asUser(admin))).status).toBe(
       204,
@@ -47,29 +58,18 @@ describe('Klub documents', () => {
     );
   });
 
-  it('an unknown category falls back to "Egyéb"; a name is required; only PDF/JPG/PNG', async () => {
+  it('an unknown category falls back to "Egyéb"; a name is required; PDF/JPG/PNG only; admins only', async () => {
     const admin = await createAdmin();
-    const up = (name, file = PDF, type = 'application/pdf') =>
-      request(app)
-        .post('/documents')
-        .set(asUser(admin))
-        .field('name', name)
-        .field('category', 'Nincs ilyen')
-        .attach('file', file, { filename: 'x', contentType: type });
-    expect((await up('Valami')).body.data.document.category).toBe('Egyéb');
-    expect((await up('  ')).status).toBe(400);
-    expect((await up('Zip', Buffer.from('zip'), 'application/zip')).status).toBe(400);
+    const up = (fields, file, type) =>
+      upload(admin, { category: 'Nincs ilyen', ...fields }, file, type);
+    expect((await up({ name: 'Valami' })).body.data.document.category).toBe('Egyéb');
+    expect((await up({ name: '  ' })).status).toBe(400);
+    expect((await up({ name: 'Zip' }, Buffer.from('zip'), 'application/zip')).status).toBe(400);
+    expect((await up({ name: 'Fotó' }, JPEG, 'image/jpeg')).status).toBe(201);
     expect(
       (await request(app).post('/documents').set(asUser(admin)).field('name', 'x')).status,
     ).toBe(400);
-    expect(
-      (
-        await request(app)
-          .post('/documents')
-          .set(asUser(await createMember()))
-          .field('name', 'x')
-      ).status,
-    ).toBe(403);
+    expect((await upload(await createMember(), { name: 'x' })).status).toBe(403);
   });
 
   it("each card gets a small picture - a PDF's first page, a photo itself - members only", async () => {
@@ -90,18 +90,13 @@ describe('Klub documents', () => {
     })
       .png()
       .toBuffer();
-    const upload = (file, type, filename) =>
-      request(app)
-        .post('/documents')
-        .set(asUser(admin))
-        .field('name', filename)
-        .attach('file', file, { filename, contentType: type });
 
     for (const [file, type, filename] of [
       [pdf, 'application/pdf', 'okirat.pdf'],
       [png, 'image/png', 'scan.png'],
     ]) {
-      const doc = (await upload(file, type, filename)).body.data.document;
+      const doc = (await upload(admin, { name: filename }, file, type, filename)).body.data
+        .document;
       expect(doc.preview).toBe(true);
       const preview = await request(app).get(`/documents/${doc._id}/preview`).set(asUser(member));
       expect(preview.status).toBe(200);
@@ -118,101 +113,85 @@ describe('Klub documents', () => {
     }
 
     // A file that can't be drawn still uploads - its card shows the icon.
-    const broken = (await upload(PDF, 'application/pdf', 'rossz.pdf')).body.data.document;
+    const broken = (await upload(admin, { name: 'rossz.pdf' })).body.data.document;
     expect(broken.preview).toBe(false);
     expect(
       (await request(app).get(`/documents/${broken._id}/preview`).set(asUser(member))).status,
     ).toBe(404);
   });
 
-  it('refuses file names that try to escape the folder, and missing files', async () => {
+  it('unknown or malformed ids are simply not found', async () => {
     const member = await createMember();
-    expect((await request(app).get('/documents/..%2Fsecret.pdf').set(asUser(member))).status).toBe(
-      400,
-    );
-    expect((await request(app).get('/documents/notes.txt').set(asUser(member))).status).toBe(400);
-    expect((await request(app).get('/documents/nincs-ilyen.pdf').set(asUser(member))).status).toBe(
-      404,
-    );
+    for (const id of ['nincs-ilyen.pdf', '..%2Fsecret.pdf', '000000000000000000000000']) {
+      expect((await request(app).get(`/documents/${id}/file`).set(asUser(member))).status).toBe(
+        404,
+      );
+    }
   });
 });
 
-describe('extra tour documents (Extra infók)', () => {
-  it('admin uploads (at most 5); logged-in users open them; admin deletes', async () => {
+describe("a tour's Extrák documents", () => {
+  it('admin uploads (at most 5, PDF/JPG/PNG); the tour page lists them; logged-in users open them; admin deletes', async () => {
     const admin = await createAdmin();
+    const member = await createMember();
     const tour = await createTour();
-    const upload = (title = 'Térkép') =>
-      request(app)
-        .post(`/tours/${tour._id}/documents`)
-        .set(asUser(admin))
-        .field('title', title)
-        .attach('file', PDF, { filename: 'terkep.pdf', contentType: 'application/pdf' });
+    const up = (name = 'Térkép', file, type) =>
+      upload(admin, { name, tour: String(tour._id) }, file, type);
 
-    const first = await upload();
+    const first = await up();
     expect(first.status).toBe(201);
-    const doc = first.body.data.tour.extraDocuments[0];
-    expect(doc.title).toBe('Térkép');
+    const doc = first.body.data.document;
+    expect(doc).toMatchObject({ name: 'Térkép', tour: String(tour._id), category: null });
+    expect(doc.filename).toMatch(new RegExp(`^tour-${tour.order}-`));
+    // In the tour's own folder; no preview for tour documents.
+    expect(documentFilePath(await Document.findById(doc._id))).toContain(String(tour._id));
+    expect(doc.preview).toBe(false);
 
-    const file = await request(app)
-      .get(`/documents/tours/${tour._id}/${doc.filename}`)
-      .set(asUser(await createMember()));
+    // The tour page gets them as its extraDocuments...
+    const page = (await request(app).get(`/tours/${tour._id}`).set(asUser(member))).body.data.tour;
+    expect(page.extraDocuments).toEqual([
+      { _id: doc._id, title: 'Térkép', filename: doc.filename, mimeType: 'application/pdf' },
+    ]);
+    // ...and they're not in the club's list.
+    expect((await request(app).get('/documents').set(asUser(member))).body.data.documents).toEqual(
+      [],
+    );
+    expect(
+      (await request(app).get(`/documents?tour=${tour._id}`).set(asUser(member))).body.data
+        .documents,
+    ).toHaveLength(1);
+
+    const file = await request(app).get(`/documents/${doc._id}/file`).set(asUser(member));
     expect(file.status).toBe(200);
+    // The old address still works for links already sent out.
+    const legacy = await request(app)
+      .get(`/documents/tours/${tour._id}/${doc.filename}`)
+      .set(asUser(member));
+    expect(legacy.status).toBe(200);
     expect((await request(app).get(`/documents/tours/${tour._id}/${doc.filename}`)).status).toBe(
       401,
     );
 
-    expect((await upload('  ')).status).toBe(400);
-    for (let i = 0; i < 4; i++) await upload(`Dok ${i}`);
-    const sixth = await upload('Hatodik');
+    expect((await up('Kép', JPEG, 'image/jpeg')).status).toBe(201);
+    expect((await up('PNG', Buffer.from('png'), 'image/png')).status).toBe(201);
+    for (let i = 0; i < 2; i++) await up(`Dok ${i}`);
+    const sixth = await up('Hatodik');
     expect(sixth.status).toBe(400);
     expect(sixth.body.message).toContain('Legfeljebb 5');
 
-    const del = await request(app)
-      .delete(`/tours/${tour._id}/documents/${doc._id}`)
-      .set(asUser(admin));
-    expect(del.status).toBe(204);
-    expect((await Tour.findById(tour._id)).extraDocuments).toHaveLength(4);
-    expect(
-      (await request(app).delete(`/tours/${tour._id}/documents/${doc._id}`).set(asUser(admin)))
-        .status,
-    ).toBe(404);
+    const stored = await Document.findById(doc._id);
+    expect((await request(app).delete(`/documents/${doc._id}`).set(asUser(admin))).status).toBe(
+      204,
+    );
+    expect(await Document.countDocuments({ tour: tour._id })).toBe(4);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(fs.existsSync(documentFilePath(stored))).toBe(false);
   });
 
-  it('only PDF/JPG, a real tour, and admin only', async () => {
+  it('needs a real tour', async () => {
     const admin = await createAdmin();
-    const tour = await createTour();
-    const bad = await request(app)
-      .post(`/tours/${tour._id}/documents`)
-      .set(asUser(admin))
-      .field('title', 'x')
-      .attach('file', Buffer.from('x'), { filename: 'x.png', contentType: 'image/png' });
-    expect(bad.status).toBe(400);
-    expect(
-      (
-        await request(app)
-          .post(`/tours/${tour._id}/documents`)
-          .set(asUser(admin))
-          .field('title', 'x')
-      ).status,
-    ).toBe(400);
-    expect(
-      (await request(app).post('/tours/000000000000000000000000/documents').set(asUser(admin)))
-        .status,
-    ).toBe(404);
-    expect(
-      (
-        await request(app)
-          .delete(`/tours/000000000000000000000000/documents/000000000000000000000000`)
-          .set(asUser(admin))
-      ).status,
-    ).toBe(404);
-    expect(
-      (
-        await request(app)
-          .post(`/tours/${tour._id}/documents`)
-          .set(asUser(await createMember()))
-      ).status,
-    ).toBe(403);
+    expect((await upload(admin, { name: 'x', tour: '000000000000000000000000' })).status).toBe(404);
+    expect((await upload(admin, { name: 'x', tour: 'nem-id' })).status).toBe(404);
   });
 });
 

@@ -314,34 +314,6 @@ const tourSchema = new Schema(
       },
     ],
     attachments: [String],
-    // Admin-uploaded extras shown in the tour-details page's "Extra
-    // infók" section (a map, a beszámoló, places-to-visit notes, etc.) -
-    // see tourDocumentController.js. Capped at 5: enough for the handful
-    // of documents a tour realistically needs without this becoming a
-    // general-purpose file store. filename is what's actually on disk
-    // (server/public/documents/tours/<tourId>/<filename>, so gitignored/
-    // per-environment like the cover images, not synced/committed) -
-    // never the original upload name, which could collide or contain
-    // unsafe characters.
-    extraDocuments: {
-      type: [
-        {
-          title: { type: String, required: true, trim: true },
-          filename: { type: String, required: true },
-          mimeType: {
-            type: String,
-            enum: ['application/pdf', 'image/jpeg'],
-            required: true,
-          },
-          uploadedAt: { type: Date, default: Date.now },
-        },
-      ],
-      default: [],
-      validate: {
-        validator: (docs) => docs.length <= 5,
-        message: 'Legfeljebb 5 extra dokumentum tölthető fel egy táborhoz.',
-      },
-    },
     // No longer required at creation time - a brand new tour is created
     // first (needs a real _id/order before a cover can be named after
     // it), then its cover gets uploaded separately right after (see
