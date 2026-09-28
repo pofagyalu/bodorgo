@@ -8,6 +8,9 @@ export interface ClubDocument {
   filename: string;
   category: string;
   year?: number;
+  // Its first page (or the photo) as a small picture is ready - see
+  // previewUrl.
+  preview?: boolean;
   uploadedBy: string;
   createdAt: string;
 }
@@ -61,5 +64,10 @@ export class ClubDocumentService {
   // links and payment.ts's receiptUrl.
   fileUrl(filename: string, download = false): string {
     return `${this.apiUrl}/${filename}${download ? '?download=1' : ''}`;
+  }
+
+  // The card's picture (server utils/documentPreviews.js).
+  previewUrl(id: string): string {
+    return `${this.apiUrl}/${id}/preview`;
   }
 }
