@@ -19,6 +19,7 @@ import {
 } from '../utils/barion.js';
 import { generateReceiptPdf, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
 import sendResendEmail from '../utils/resendEmail.js';
+import { notifyAdminsIfAllMembersPaid } from '../utils/membershipReminders.js';
 import AppError from '../utils/appError.js';
 import config from '../config.js';
 import logger from '../logger.js';
@@ -373,6 +374,49 @@ export const recordCashPayment = async (req, res) => {
   res.status(201).json({ status: 'success', data: { payment } });
 };
 
+// POST /payments/cash-membership - admin-only. A member handed over one
+// year's dues in cash: recorded like an online dues payment (a Payment,
+// method 'cash', and its Tagdíj income entry), just with nothing charged
+// online and no e-mail at all - an admin's misclick, undone right away,
+// leaves no trace. { userId, year } - the year must be one the member owes
+// (a member by then, not yet paid) and have a fee. If it was the year's last
+// one, the admins' "everyone paid" e-mail comes from the hourly check (see
+// utils/membershipReminders.js's checkMembershipReminders), not from here.
+export const recordCashMembershipPayment = async (req, res) => {
+  const year = Number(req.body?.year);
+  const member = await User.findById(req.body?.userId).select('name role memberSince');
+  if (!member || !['admin', 'member'].includes(member.role)) {
+    throw new AppError('Nincs ilyen klubtag.', 404);
+  }
+  const currentYear = new Date().getFullYear();
+  const firstYear = member.memberSince ?? CLUB_FOUNDING_YEAR;
+  if (!Number.isInteger(year) || year < firstYear || year > currentYear) {
+    throw new AppError(`${member.name} erre az évre nem volt tag.`, 400);
+  }
+  const alreadyPaid = await Transaction.exists({
+    type: 'income',
+    category: 'Tagdíj',
+    user: member._id,
+    membershipYear: year,
+  });
+  if (alreadyPaid)
+    throw new AppError(`${member.name} ${year}. évi tagdíja már be van fizetve.`, 400);
+  const amount = feeForYear((await getClubSettings()).membershipFees, year);
+  if (!amount) throw new AppError(`${year}-re nincs tagdíj beállítva.`, 400);
+
+  const payment = await Payment.create({
+    purpose: 'membershipFee',
+    method: 'cash',
+    createdBy: req.user._id,
+    members: [{ user: member._id, name: member.name, amount, membershipYear: year }],
+    amount,
+    status: 'Succeeded',
+  });
+  await recordMembershipTransactions(payment);
+
+  res.status(201).json({ status: 'success', data: { payment } });
+};
+
 // DELETE /payments/:id - requireAuth, restrictTo('admin'). Undoes a cash
 // entry made by mistake (wrong row clicked) - reverts every attendee it
 // covered back to unpaid and removes the record entirely. Deliberately
@@ -386,6 +430,13 @@ export const deleteCashPayment = async (req, res) => {
   }
   if (payment.method !== 'cash') {
     throw new AppError('Csak készpénzes fizetés vonható vissza így.', 400);
+  }
+
+  // A cash dues payment: its Tagdíj income entries go with it.
+  if (payment.purpose === 'membershipFee') {
+    await Transaction.deleteMany({ payment: payment._id });
+    await Payment.deleteOne({ _id: payment._id });
+    return res.status(204).json({ status: 'success', data: null });
   }
 
   for (const a of payment.attendees) {
@@ -492,42 +543,7 @@ async function markAttendeesPaid(payment) {
   }
 }
 
-// Fires once collection for the current year genuinely completes - every
-// role admin/member user eligible for it (memberSince at or before this
-// year, same rule resolvePayableMembers itself uses) has a real Tagdíj
-// Transaction for it. Only ever true right after whichever payment happens
-// to be the last outstanding one, since resolvePayableMembers would refuse
-// to charge anyone again once they're already paid - so this naturally
-// notifies exactly once per year, no separate dedup bookkeeping needed.
-async function notifyAdminsIfMembershipFullyPaid() {
-  const currentYear = new Date().getFullYear();
-  const members = await User.find({ role: { $in: ['admin', 'member'] } }).select('memberSince');
-  const eligible = members.filter((m) => (m.memberSince ?? CLUB_FOUNDING_YEAR) <= currentYear);
-  if (eligible.length === 0) return;
-
-  const paidTransactions = await Transaction.find({
-    type: 'income',
-    category: 'Tagdíj',
-    membershipYear: currentYear,
-    user: { $in: eligible.map((m) => m._id) },
-  }).select('user');
-  const paidUserIds = new Set(paidTransactions.map((t) => String(t.user)));
-  const allPaid = eligible.every((m) => paidUserIds.has(String(m._id)));
-  if (!allPaid) return;
-
-  const admins = await User.find({ role: 'admin' }).select('email');
-  const adminEmails = admins.map((a) => a.email).filter(Boolean);
-  if (adminEmails.length === 0) return;
-
-  await sendResendEmail({
-    to: adminEmails,
-    subject: `Minden klubtag befizette a(z) ${currentYear}. évi tagdíjat`,
-    text: `Minden klubtag (${eligible.length} fő) befizette a(z) ${currentYear}. évi tagdíjat.`,
-    html: `<p>Minden klubtag (${eligible.length} fő) befizette a(z) <strong>${currentYear}</strong>. évi tagdíjat.</p>`,
-  });
-}
-
-// Tour-advance equivalent of notifyAdminsIfMembershipFullyPaid above - a
+// Tour-advance equivalent of utils/membershipReminders.js's notifyAdminsIfAllMembersPaid - a
 // tour's own collection completes once every attendee who actually owes an
 // advance (same "advance != null && !paid" rule payment.ts itself filters
 // on client-side) has paid it. feeExempt attendees are always paid:true
@@ -558,11 +574,14 @@ async function notifyAdminsIfTourFullyPaid(tourId, tourTitle) {
 // immediately reflect it - plus a receipt/email, same as tourAdvance
 // below, using the dues-specific wording (see paymentReceipt.js's
 // isMembership branch and membershipReceiptEmailBody above).
-async function markMembershipPaid(payment) {
+// The Tagdíj income entries of a dues payment - one per member/year,
+// linked to the payment (and how it was paid) so a cash one can be undone
+// with its entries (see deleteCashPayment).
+async function recordMembershipTransactions(payment) {
   for (const m of payment.members) {
     await Transaction.create({
       date: new Date(),
-      name: `${m.name} tagdíja (${m.membershipYear})`,
+      name: `${m.name} tagdíja (${m.membershipYear})${payment.method === 'cash' ? ' – készpénz' : ''}`,
       type: 'income',
       category: 'Tagdíj',
       amount: m.amount,
@@ -570,8 +589,14 @@ async function markMembershipPaid(payment) {
       createdBy: payment.createdBy,
       user: m.user,
       membershipYear: m.membershipYear,
+      payment: payment._id,
+      paymentMethod: payment.method,
     });
   }
+}
+
+async function markMembershipPaid(payment) {
+  await recordMembershipTransactions(payment);
 
   // Same "don't fail the payment over a receipt/email hiccup" reasoning
   // as markPaymentSucceeded's tourAdvance path - the Transactions above
@@ -609,7 +634,7 @@ async function markMembershipPaid(payment) {
   // (e.g. Resend briefly down) shouldn't skip the other, and this check
   // needs to run regardless of whether the payer even has an email on file.
   try {
-    await notifyAdminsIfMembershipFullyPaid();
+    await notifyAdminsIfAllMembersPaid();
   } catch (err) {
     logger.error(`Payment ${payment._id}: admin full-payment notification failed: ${err.message}`);
   }

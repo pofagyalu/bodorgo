@@ -69,6 +69,17 @@ const transactionSchema = new Schema(
     membershipYear: {
       type: Number,
     },
+    // A dues payment's own record (Payment) and how it was paid - an
+    // admin-recorded cash payment can be undone (DELETE /payments/:id),
+    // which removes this transaction with it; an online one can't.
+    payment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Payment',
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['barion', 'stripe', 'cash'],
+    },
   },
   { timestamps: true },
 );

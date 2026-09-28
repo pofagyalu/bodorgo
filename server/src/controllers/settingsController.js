@@ -1,6 +1,18 @@
 import Transaction from '../models/transactionModel.js';
 import AppError from '../utils/appError.js';
-import { CLUB_FOUNDING_YEAR, feeForYear, getClubSettings } from '../utils/clubSettings.js';
+import {
+  CLUB_FOUNDING_YEAR,
+  feeForYear,
+  getClubSettings,
+  membershipFeeForYear,
+} from '../utils/clubSettings.js';
+import {
+  budapestDate,
+  reminderDates,
+  reminderEmail,
+  unpaidMembers,
+} from '../utils/membershipReminders.js';
+import sendResendEmail from '../utils/resendEmail.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
 // fee, by the year each amount takes effect (see utils/clubSettings.js).
@@ -91,4 +103,99 @@ export const updateMembershipFees = async (req, res) => {
   await settings.save();
 
   res.status(200).json({ status: 'success', data: { fees: settings.membershipFees } });
+};
+
+// --- Tagdíj emlékeztető (see utils/membershipReminders.js) ---
+
+const FREQUENCY_LABEL = { monthly: 'havonta', quarterly: 'negyedévente' };
+
+function reminderView(reminder, today = budapestDate()) {
+  const year = Number(today.slice(0, 4));
+  const dates = reminderDates(reminder, year);
+  // The next round that hasn't gone out - this year's, or next year's first.
+  const next =
+    dates.find((d) => !reminder.lastRoundSent || d > reminder.lastRoundSent) ??
+    reminderDates(reminder, year + 1)[0];
+  return {
+    enabled: reminder.enabled,
+    startMonth: reminder.startMonth,
+    startDay: reminder.startDay,
+    frequency: reminder.frequency,
+    lastRoundSent: reminder.lastRoundSent ?? null,
+    dates,
+    nextRound: reminder.enabled ? next : null,
+  };
+}
+
+// GET /settings/membership-reminder (admin) - the settings, this year's
+// rounds, and who would get one now (unpaid for this year).
+export const getMembershipReminder = async (req, res) => {
+  const settings = await getClubSettings();
+  const year = new Date().getFullYear();
+  const recipients = await unpaidMembers(year);
+  res.status(200).json({
+    status: 'success',
+    data: {
+      reminder: reminderView(settings.membershipReminder),
+      year,
+      recipients: recipients.map((m) => m.name),
+    },
+  });
+};
+
+// PUT /settings/membership-reminder (admin) - { enabled, startMonth,
+// startDay, frequency }. Switching it on, or changing the schedule, counts
+// the rounds already past as done - the first e-mails go out on the next
+// date, not the moment it's saved.
+export const updateMembershipReminder = async (req, res) => {
+  const enabled = !!req.body?.enabled;
+  const startMonth = Number(req.body?.startMonth);
+  const startDay = Number(req.body?.startDay);
+  const frequency = req.body?.frequency;
+  if (!Number.isInteger(startMonth) || startMonth < 1 || startMonth > 12) {
+    throw new AppError('A hónap 1 és 12 között lehet.', 400);
+  }
+  if (!Number.isInteger(startDay) || startDay < 1 || startDay > 28) {
+    throw new AppError('A nap 1 és 28 között lehet (minden hónapban létezzen).', 400);
+  }
+  if (!['monthly', 'quarterly'].includes(frequency)) {
+    throw new AppError('A gyakoriság havonta vagy negyedévente lehet.', 400);
+  }
+
+  const settings = await getClubSettings();
+  // A plain copy: assigning below updates the same Mongoose object in place.
+  const old = settings.membershipReminder.toObject();
+  const scheduleChanged =
+    old.startMonth !== startMonth || old.startDay !== startDay || old.frequency !== frequency;
+  const next = { enabled, startMonth, startDay, frequency, lastRoundSent: old.lastRoundSent };
+  if (enabled && (!old.enabled || scheduleChanged)) {
+    const today = budapestDate();
+    const passed = reminderDates(next, Number(today.slice(0, 4))).filter((d) => d <= today);
+    next.lastRoundSent = passed.at(-1) ?? old.lastRoundSent;
+  }
+  settings.membershipReminder = next;
+
+  const describe = (r) =>
+    r.enabled
+      ? `bekapcsolva, ${r.startMonth}.${String(r.startDay).padStart(2, '0')}.-tól ${FREQUENCY_LABEL[r.frequency]}`
+      : 'kikapcsolva';
+  if (describe(old) !== describe(next)) {
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Tagdíj emlékeztető: ${describe(old)} → ${describe(next)}`,
+    });
+  }
+  await settings.save();
+  res.status(200).json({ status: 'success', data: { reminder: reminderView(next) } });
+};
+
+// POST /settings/membership-reminder/test (admin) - the reminder as a
+// member would get it, to the admin themselves.
+export const testMembershipReminder = async (req, res) => {
+  if (!req.user.email) throw new AppError('Nincs e-mail címed a fiókodban.', 400);
+  const year = new Date().getFullYear();
+  const fee = await membershipFeeForYear(year);
+  await sendResendEmail({ to: req.user.email, ...reminderEmail(req.user.name, year, fee) });
+  res.status(200).json({ status: 'success', data: { sentTo: req.user.email } });
 };
