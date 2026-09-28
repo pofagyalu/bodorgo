@@ -189,3 +189,11 @@ h1 {
 .pswp__button--restrict-active svg {
   fill: var(--logo-orange, #f07827);
 }
+
+/* A transparent PNG opened big: a light checkerboard behind its
+   see-through parts (see shared/pswp-checker.ts). */
+.pswp__img.pswp-checker {
+  background-color: #fff;
+  background-image: conic-gradient(#d9dee0 25%, #fff 0 50%, #d9dee0 0 75%, #fff 0);
+  background-size: 24px 24px;
+}
