@@ -16,6 +16,18 @@
   gap: 10px; // compact - the date only shows on hover, floating over this gap
 }
 
+// A new day in the chat: its name, small, in the middle of the flow.
+.day-break {
+  align-self: center;
+  margin: 6px 0 2px;
+  padding: 3px 12px;
+  border-radius: 12px;
+  background: #e2e6ea;
+  color: #5b686e;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 app-compose {
   border-top: 1px solid #e0e0e0;
   background: #fff;

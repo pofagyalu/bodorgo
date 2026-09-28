@@ -1,7 +1,8 @@
-import Post from '../models/postModel.js';
+import Post, { POST_POPULATE, REACTIONS } from '../models/postModel.js';
 import logger from '../logger.js';
 import { setIo, tourRoom } from './tourEvents.js';
 import { markChatRead, notifyChatPostInBackground } from './chatNotifications.js';
+import { deleteChatImageFiles } from './chatImages.js';
 
 // One Socket.IO connection per open browser tab, shared by the tour chat
 // and its Szobabeosztás panel (see the client's TourSocketService): joining
@@ -34,9 +35,7 @@ export default function registerChatHandlers(io) {
       markRead(tourId);
 
       try {
-        const posts = await Post.find({ tourId })
-          .sort('createdAt')
-          .populate('creator', 'name username');
+        const posts = await Post.find({ tourId }).sort('createdAt').populate(POST_POPULATE);
         socket.emit('initial-posts', { tourId, posts });
       } catch (err) {
         logger.error(`chat: failed to load posts for tour ${tourId}: ${err}`);
@@ -71,7 +70,7 @@ export default function registerChatHandlers(io) {
           creator: sessionUser.id,
           text: text.trim(),
         });
-        const populated = await post.populate('creator', 'name username');
+        const populated = await post.populate(POST_POPULATE);
         io.to(tourRoom(tourId)).emit('new-post', populated);
         markRead(tourId);
         notifyChatPostInBackground(io, populated);
@@ -102,7 +101,7 @@ export default function registerChatHandlers(io) {
         post.text = text.trim();
         post.editedAt = new Date();
         await post.save();
-        const populated = await post.populate('creator', 'name username');
+        const populated = await post.populate(POST_POPULATE);
         io.to(tourRoom(post.tourId)).emit('post-updated', populated);
       } catch (err) {
         logger.error(`chat: failed to edit post ${postId}: ${err}`);
@@ -117,14 +116,45 @@ export default function registerChatHandlers(io) {
           return socket.emit('chat-error', 'Ezt az üzenetet nem törölheted.');
         }
         post.text = '';
+        if (post.image) deleteChatImageFiles(post._id);
         post.image = null;
+        post.reactions = [];
         post.deletedAt = new Date();
         await post.save();
-        const populated = await post.populate('creator', 'name username');
+        const populated = await post.populate(POST_POPULATE);
         io.to(tourRoom(post.tourId)).emit('post-updated', populated);
       } catch (err) {
         logger.error(`chat: failed to delete post ${postId}: ${err}`);
         socket.emit('chat-error', 'Could not delete message.');
+      }
+    });
+
+    // Hangulatjel: one per person on a message - another one replaces
+    // mine, the same one again takes it back. Anyone else's message (not
+    // my own, not a deleted one); everyone in the chat sees it change ('post-updated').
+    // No push notification - a 👍 shouldn't make phones buzz.
+    socket.on('react-post', async ({ postId, emoji }) => {
+      if (!sessionUser) {
+        return socket.emit('chat-error', 'Not authenticated. Please login.');
+      }
+      if (!REACTIONS.includes(emoji)) return;
+      try {
+        const post = await Post.findById(postId);
+        if (!post || post.deletedAt || String(post.creator) === sessionUser.id) return;
+        const mine = post.reactions.find((r) => String(r.user) === sessionUser.id);
+        if (mine?.emoji === emoji) {
+          post.reactions = post.reactions.filter((r) => r !== mine);
+        } else if (mine) {
+          mine.emoji = emoji;
+        } else {
+          post.reactions.push({ user: sessionUser.id, emoji });
+        }
+        await post.save();
+        const populated = await post.populate(POST_POPULATE);
+        io.to(tourRoom(post.tourId)).emit('post-updated', populated);
+      } catch (err) {
+        logger.error(`chat: failed to react to post ${postId}: ${err}`);
+        socket.emit('chat-error', 'Could not save the reaction.');
       }
     });
   });

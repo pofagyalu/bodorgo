@@ -768,6 +768,23 @@ export class TourService {
   // directly. Auth rides on the session cookie (bodorgo.hu/api.bodorgo.hu
   // share a registrable domain, so it's same-site for cookie purposes even
   // though it's cross-origin - same reasoning coverUrl above relies on).
+  // A photo sent in the tour chat (see server chatImageController.js) -
+  // same cookie-carried auth as the gallery images below.
+  sendChatImage(tourId: string, image: Blob, text: string) {
+    const form = new FormData();
+    form.append('image', image, 'foto.jpg');
+    form.append('text', text);
+    return this.http.post(`${this.apiUrl}/${tourId}/chat/images`, form);
+  }
+
+  chatImageUrl(tourId: string, postId: string): string {
+    return `${this.apiUrl}/${tourId}/chat/images/${postId}`;
+  }
+
+  chatImageThumbUrl(tourId: string, postId: string): string {
+    return `${this.chatImageUrl(tourId, postId)}/thumb`;
+  }
+
   tourImageThumbUrl(tourId: string, filename: string): string {
     return `${this.apiUrl}/${tourId}/images/${encodeURIComponent(filename)}/thumb`;
   }

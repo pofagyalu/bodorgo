@@ -85,8 +85,9 @@ export async function notifyChatPost(io, post) {
   const title = tour
     ? `${tour.order ? `${tour.order}. ` : ''}${tour.title} – chat`
     : 'Bódorgó chat';
-  const text =
-    post.text.length > SNIPPET_LENGTH ? `${post.text.slice(0, SNIPPET_LENGTH - 1)}…` : post.text;
+  // A photo (with or without text) says so - a photo alone has no text.
+  const body = post.image ? `📷 ${post.text || 'Fotó'}` : post.text;
+  const text = body.length > SNIPPET_LENGTH ? `${body.slice(0, SNIPPET_LENGTH - 1)}…` : body;
 
   for (const userId of candidates) {
     const state = stateByUser.get(userId);

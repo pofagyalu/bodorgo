@@ -48,6 +48,12 @@ export interface MembershipReminderResponse {
   data: { reminder: MembershipReminder; year: number; recipients: string[] };
 }
 
+export interface ChatImageSettings {
+  quotaMB: number;
+  dailyLimit: number;
+  usage: { bytes: number; count: number }; // the photos still on disk
+}
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private http = inject(HttpClient);
@@ -81,6 +87,20 @@ export class SettingsService {
   }) {
     return this.http.put<{ status: string; data: { reminder: MembershipReminder } }>(
       `${this.apiUrl}/membership-reminder`,
+      settings,
+    );
+  }
+
+  // --- Chat fotók (admin-only): the folder's size limit and the daily
+  // number per person (see server chat/chatImages.js) ---
+
+  getChatImageSettings() {
+    return this.http.get<{ data: ChatImageSettings }>(`${this.apiUrl}/chat-images`);
+  }
+
+  updateChatImageSettings(settings: { quotaMB: number; dailyLimit: number }) {
+    return this.http.put<{ data: ChatImageSettings & { removed: number } }>(
+      `${this.apiUrl}/chat-images`,
       settings,
     );
   }

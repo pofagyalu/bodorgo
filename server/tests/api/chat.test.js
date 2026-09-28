@@ -153,3 +153,52 @@ describe('tour chat', () => {
     expect(await Post.countDocuments()).toBe(0);
   });
 });
+
+describe('hangulatjelek (reactions)', () => {
+  it('one per person: another replaces mine, the same again takes it back; everyone sees who', async () => {
+    const tour = await createTour();
+    const alice = await createMember();
+    const bob = await createMember();
+    const a = await joined(alice, String(tour._id));
+    const b = await joined(bob, String(tour._id));
+    const created = next(a.socket, 'new-post');
+    a.socket.emit('create-post', { tourId: String(tour._id), text: 'Megjöttünk!' });
+    const post = await created;
+
+    let update = next(a.socket, 'post-updated');
+    b.socket.emit('react-post', { postId: post._id, emoji: '👍' });
+    let seen = await update;
+    expect(seen.reactions).toHaveLength(1);
+    expect(seen.reactions[0]).toMatchObject({ emoji: '👍', user: { name: bob.name } });
+
+    update = next(a.socket, 'post-updated');
+    b.socket.emit('react-post', { postId: post._id, emoji: '😂' });
+    seen = await update;
+    expect(seen.reactions.map((r) => r.emoji)).toEqual(['😂']);
+
+    update = next(a.socket, 'post-updated');
+    b.socket.emit('react-post', { postId: post._id, emoji: '😂' });
+    seen = await update;
+    expect(seen.reactions).toHaveLength(0);
+  });
+
+  it('ignores my own message, an unknown emoji and a deleted message', async () => {
+    const tour = await createTour();
+    const alice = await createMember();
+    const bob = await createMember();
+    const a = await joined(alice, String(tour._id));
+    const b = await joined(bob, String(tour._id));
+    const created = next(a.socket, 'new-post');
+    a.socket.emit('create-post', { tourId: String(tour._id), text: 'x' });
+    const post = await created;
+
+    a.socket.emit('react-post', { postId: post._id, emoji: '👍' });
+    b.socket.emit('react-post', { postId: post._id, emoji: '💩' });
+    const deleted = next(a.socket, 'post-updated');
+    a.socket.emit('delete-post', { postId: post._id });
+    await deleted;
+    b.socket.emit('react-post', { postId: post._id, emoji: '👍' });
+    await new Promise((r) => setTimeout(r, 150));
+    expect((await Post.findById(post._id)).reactions).toHaveLength(0);
+  });
+});

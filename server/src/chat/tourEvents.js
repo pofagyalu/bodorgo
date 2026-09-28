@@ -10,6 +10,10 @@ export function setIo(io) {
   ioInstance = io;
 }
 
+// The Socket.IO server itself - for what needs more than a room broadcast
+// (e.g. chatNotifications.js's check of who's looking at a chat).
+export const getIo = () => ioInstance;
+
 export function emitToTour(tourId, event, payload) {
   ioInstance?.to(tourRoom(String(tourId))).emit(event, payload);
 }

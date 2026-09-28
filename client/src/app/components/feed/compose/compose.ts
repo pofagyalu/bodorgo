@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { shrinkImage } from '../../../shared/image-resize';
 
 // Someone who can be "@mentioned" in this tour's chat.
 export interface Mentionable {
@@ -36,7 +37,36 @@ export class Compose {
 
   private messageInput = viewChild<ElementRef<HTMLTextAreaElement>>('messageInput');
 
-  @Output() send = new EventEmitter<{ text: string }>();
+  // image: a photo picked with the 📷 button, already shrunk (see
+  // shared/image-resize.ts) - sent by the chat as an upload, not over the socket.
+  @Output() send = new EventEmitter<{ text: string; image?: Blob }>();
+  // True while the chat uploads a photo - the send button waits.
+  sending = input(false);
+
+  // The photo about to be sent, with a preview URL for the thumbnail.
+  photo = signal<{ blob: Blob; url: string } | null>(null);
+  photoError = signal<string | null>(null);
+
+  async pickPhoto(event: Event) {
+    const inputEl = event.target as HTMLInputElement;
+    const file = inputEl.files?.[0];
+    inputEl.value = ''; // picking the same file again still triggers change
+    if (!file) return;
+    this.photoError.set(null);
+    try {
+      const blob = await shrinkImage(file);
+      this.removePhoto();
+      this.photo.set({ blob, url: URL.createObjectURL(blob) });
+    } catch {
+      this.photoError.set('Ez a fájl nem olvasható képként.');
+    }
+  }
+
+  removePhoto() {
+    const p = this.photo();
+    if (p) URL.revokeObjectURL(p.url);
+    this.photo.set(null);
+  }
   // The 📊 button - the chat opens the "Új szavazás" form.
   @Output() pollRequested = new EventEmitter<void>();
 
@@ -136,10 +166,12 @@ export class Compose {
 
   submit() {
     const message = this.text().trim();
-    if (!message) return;
+    const photo = this.photo();
+    if ((!message && !photo) || this.sending()) return;
 
-    this.send.emit({ text: message });
+    this.send.emit({ text: message, image: photo?.blob });
     this.text.set(''); // Clear textbox
+    this.removePhoto();
     this.mentionQuery.set(null);
   }
 }

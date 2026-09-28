@@ -13,6 +13,7 @@ import {
   unpaidMembers,
 } from '../utils/membershipReminders.js';
 import sendResendEmail from '../utils/resendEmail.js';
+import { chatImagesUsage, enforceChatImageQuota } from '../chat/chatImages.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
 // fee, by the year each amount takes effect (see utils/clubSettings.js).
@@ -198,4 +199,50 @@ export const testMembershipReminder = async (req, res) => {
   const fee = await membershipFeeForYear(year);
   await sendResendEmail({ to: req.user.email, ...reminderEmail(req.user.name, year, fee) });
   res.status(200).json({ status: 'success', data: { sentTo: req.user.email } });
+};
+
+// --- Chat photos (see chat/chatImages.js) ---
+
+// GET /settings/chat-images (admin) - the quota, the daily limit, and how
+// much the photos take up now.
+export const getChatImageSettings = async (req, res) => {
+  const { chatImages } = await getClubSettings();
+  res.status(200).json({
+    status: 'success',
+    data: {
+      quotaMB: chatImages.quotaMB,
+      dailyLimit: chatImages.dailyLimit,
+      usage: await chatImagesUsage(),
+    },
+  });
+};
+
+// PUT /settings/chat-images (admin) - { quotaMB, dailyLimit }. A smaller
+// quota takes effect right away: the oldest photos go until it fits.
+export const updateChatImageSettings = async (req, res) => {
+  const quotaMB = Number(req.body?.quotaMB);
+  const dailyLimit = Number(req.body?.dailyLimit);
+  if (!Number.isInteger(quotaMB) || quotaMB < 50 || quotaMB > 100000) {
+    throw new AppError('A keret 50 és 100 000 MB között lehet.', 400);
+  }
+  if (!Number.isInteger(dailyLimit) || dailyLimit < 1 || dailyLimit > 1000) {
+    throw new AppError('A napi korlát 1 és 1000 között lehet.', 400);
+  }
+  const settings = await getClubSettings();
+  const before = `${settings.chatImages.quotaMB} MB, napi ${settings.chatImages.dailyLimit}`;
+  settings.chatImages = { quotaMB, dailyLimit };
+  const after = `${quotaMB} MB, napi ${dailyLimit}`;
+  if (before !== after) {
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Chat fotók: ${before} → ${after}`,
+    });
+  }
+  await settings.save();
+  const removed = await enforceChatImageQuota();
+  res.status(200).json({
+    status: 'success',
+    data: { quotaMB, dailyLimit, usage: await chatImagesUsage(), removed },
+  });
 };

@@ -75,7 +75,7 @@ const UNTIL: Record<Medal['key'], string> = {
       width: 18px;
       height: 18px;
     }
-    // The colour of wherever it sits (white on the dark Profilom banner).
+    /* The colour of wherever it sits (white on the dark Profilom banner). */
     .medal-label {
       font-size: 13px;
       color: inherit;

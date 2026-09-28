@@ -17,6 +17,29 @@
     </ul>
   }
 
+  <!-- The photo about to be sent (📷 below), with ✕ to drop it. -->
+  @if (photo(); as p) {
+    <div class="photo-preview">
+      <img [src]="p.url" alt="A küldendő fotó" />
+      <button
+        type="button"
+        class="photo-remove"
+        aria-label="Fotó eltávolítása"
+        (click)="removePhoto()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  } @else if (photoError()) {
+    <div class="photo-preview photo-preview--error">{{ photoError() }}</div>
+  }
+
+  <!-- Attach a photo (shrunk on the phone before sending). -->
+  <label class="photo-btn" title="Fotó küldése" aria-label="Fotó küldése">
+    <mat-icon>photo_camera</mat-icon>
+    <input type="file" accept="image/*" hidden (change)="pickPhoto($event)" />
+  </label>
+
   <!-- Start a poll in this chat (see poll-create). -->
   <button
     type="button"
@@ -40,7 +63,7 @@
     name="message"
   ></textarea>
 
-  <button type="submit" aria-label="Küldés">
-    <mat-icon>send</mat-icon>
+  <button type="submit" aria-label="Küldés" [disabled]="sending()">
+    <mat-icon>{{ sending() ? 'hourglass_top' : 'send' }}</mat-icon>
   </button>
 </form>

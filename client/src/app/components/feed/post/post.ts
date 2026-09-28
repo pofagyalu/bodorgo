@@ -6,6 +6,7 @@ import {
   Output,
   afterRenderEffect,
   computed,
+  inject,
   signal,
   viewChild,
 } from '@angular/core';
@@ -21,6 +22,15 @@ const OTHER_NAME_COLOR = '#1e88e5';
 
 // How long a finger has to stay on a message (phone) to open its menu.
 const LONG_PRESS_MS = 500;
+
+// The hangulatjelek one can put on a message - same list as the server's
+// (models/postModel.js REACTIONS), in this order.
+export const REACTIONS = ['👍', '😂', '😮', '😢', '😭'];
+
+export interface Reaction {
+  user: { _id: string; name: string; username?: string };
+  emoji: string;
+}
 
 export interface TextPart {
   text: string;
@@ -58,13 +68,15 @@ export function splitMentions(text: string, known: Set<string>, me: string | nul
   styleUrls: ['./post.scss'],
   host: {
     '[class.own]': 'isOwn',
+    '[class.picking]': 'pickerOpen()',
+    '(document:click)': 'closePickerOutside($event)',
+    '(document:keydown.escape)': 'pickerOpen.set(false)',
   },
 })
 export class Post {
   creator = signal<string>('');
   text = signal<string>('');
   timestamp = signal<Date>(new Date());
-  imageUrl = signal<string | undefined>(undefined);
 
   @Input() isOwn = false;
 
@@ -86,8 +98,82 @@ export class Post {
     this.timestamp.set(new Date(v));
   }
 
-  @Input() set imageUrlInput(v: string | undefined) {
-    this.imageUrl.set(v);
+  // A photo sent with the message: its size (for the lightbox), the small
+  // version in the bubble and the full one on a tap. expired: the size
+  // quota removed it (see server chat/chatImages.js).
+  @Input() image: { width: number; height: number; expired?: boolean } | null = null;
+  @Input() imageThumbUrl: string | null = null;
+  @Input() imageFullUrl: string | null = null;
+
+  // Tapping the photo opens it big - PhotoSwipe, loaded only then.
+  async openPhoto(event: Event) {
+    event.stopPropagation();
+    if (!this.image || !this.imageFullUrl) return;
+    const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
+    const lightbox = new PhotoSwipeLightbox({ pswpModule: () => import('photoswipe') });
+    lightbox.on('destroy', () => lightbox.destroy());
+    lightbox.init();
+    lightbox.loadAndOpen(0, [
+      { src: this.imageFullUrl, width: this.image.width, height: this.image.height, alt: '' },
+    ]);
+  }
+
+  // Hangulatjelek: one per person, on others' messages only. Shown under
+  // the bubble grouped by emoji, with a count and who put them (hover);
+  // mine highlighted. Picking one
+  // (desktop: the smiley beside the bubble, phone: the long-press menu)
+  // goes to feed.ts - the same one again takes it back.
+  private reactionList = signal<Reaction[]>([]);
+  private me = signal<string | null>(null);
+
+  @Input() set reactionsInput(v: Reaction[] | null | undefined) {
+    this.reactionList.set(v ?? []);
+  }
+
+  @Input() set currentUserIdInput(v: string | null | undefined) {
+    this.me.set(v ?? null);
+  }
+
+  @Output() reacted = new EventEmitter<string>();
+
+  reactions = REACTIONS;
+
+  myReaction = computed(
+    () => this.reactionList().find((r) => r.user?._id === this.me())?.emoji ?? null,
+  );
+
+  reactionGroups = computed(() =>
+    REACTIONS.map((emoji) => {
+      const people = this.reactionList().filter((r) => r.emoji === emoji);
+      return {
+        emoji,
+        count: people.length,
+        names: people.map((r) => r.user?.name ?? '?').join(', '),
+        mine: this.myReaction() === emoji,
+      };
+    }).filter((g) => g.count > 0),
+  );
+
+  // Desktop: the row of emojis above the smiley button. It stays open
+  // (and the side with it) until an emoji is picked, a click lands
+  // anywhere else, or Esc - the mouse may wander on the way to it.
+  pickerOpen = signal(false);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  closePickerOutside(e: Event) {
+    if (this.pickerOpen() && !this.host.nativeElement.contains(e.target as Node)) {
+      this.pickerOpen.set(false);
+    }
+  }
+
+  react(emoji: string) {
+    this.pickerOpen.set(false);
+    this.reacted.emit(emoji);
+  }
+
+  sheetReact(emoji: string) {
+    this.closeSheet();
+    this.reacted.emit(emoji);
   }
 
   // "@username" mentions: every username in this tour (lower-cased), and

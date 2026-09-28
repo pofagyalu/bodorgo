@@ -27,6 +27,13 @@ const clubSettingsSchema = new Schema(
     // to the admins - so it's sent once a year (see
     // utils/membershipReminders.js's notifyAdminsIfAllMembersPaid).
     allPaidNotifiedYear: Number,
+    // Chat photos (see chat/chatImages.js): the folder's size limit (the
+    // oldest go first when it's exceeded) and how many one person may send
+    // a day.
+    chatImages: {
+      quotaMB: { type: Number, default: 1024, min: 50, max: 100000 },
+      dailyLimit: { type: Number, default: 10, min: 1, max: 1000 },
+    },
     // Who changed what, when - shown on the settings page.
     history: [{ _id: false, at: Date, byName: String, change: String }],
   },
