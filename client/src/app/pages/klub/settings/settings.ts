@@ -91,13 +91,13 @@ const EMAILS: (NotificationInfo & { note?: string })[] = [
 
 const PUSHES: NotificationInfo[] = [
   {
-    name: 'Új chatüzenet',
-    when: 'Valaki ír a tábor chatjébe.',
-    who: 'A tábor résztvevői, akik nem nézik épp a chatet. Egy csörgés, utána csendben frissül, amíg meg nem nyitják; megemlítés (@név) mindig csörög; a chat némítható.',
+    name: 'Új Kotyogó-üzenet',
+    when: 'Valaki ír a tábor Kotyogójába.',
+    who: 'A tábor résztvevői, akik nem nézik épp a Kotyogót. Egy csörgés, utána csendben frissül, amíg meg nem nyitják; megemlítés (@név) mindig csörög; a Kotyogó némítható.',
   },
   {
     name: 'Új szavazás',
-    when: 'Valaki szavazást indít a chatben.',
+    when: 'Valaki szavazást indít a Kotyogóban.',
     who: 'A tábor résztvevői.',
   },
   {
@@ -411,8 +411,8 @@ export class KlubSettings implements OnInit {
           this.savingChatImages.set(false);
           this.notifications.addSuccess(
             res.data.removed
-              ? `Chat fotók mentve – ${res.data.removed} régi fotó törölve, hogy beférjen.`
-              : 'Chat fotók mentve.',
+              ? `Kotyogó fotók mentve – ${res.data.removed} régi fotó törölve, hogy beférjen.`
+              : 'Kotyogó fotók mentve.',
           );
         },
         error: (err) => {

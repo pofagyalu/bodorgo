@@ -92,7 +92,7 @@ describe('chat notifications: one buzz, then quiet until read', () => {
     await notifyChatPost(fakeIo(), await post(tour, anna, 'Hozzatok kenyeret is'));
     const [first, second] = sentPushes().map(([, p]) => p);
     expect(first).toMatchObject({
-      title: '25. Sarud – chat',
+      title: '25. Sarud – Kotyogó',
       body: 'anna: Holnap 8-kor indulunk',
       tag: `chat-${tour._id}`,
       silent: false,

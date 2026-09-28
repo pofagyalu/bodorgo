@@ -5,9 +5,6 @@ import { execSync } from 'child_process';
 
 const dest = 'S:/bodorgo';
 
-fs.cpSync(path.resolve('dist'), dest, { recursive: true, force: true });
-console.log('✓ Synced dist → S:/bodorgo');
-
 // documents/ holds files served only through the requireAuth-gated
 // /documents route (see documentController.js) - not part of dist/, so it
 // needs its own copy step, same reasoning as why public/img isn't just
@@ -167,3 +164,9 @@ if (!fs.existsSync(pdfMarker) || fs.readFileSync(pdfMarker, 'utf8') !== pdfVersi
 } else {
   console.log(`✓ ${pdfVersions} (Linux x64) already on S:/bodorgo`);
 }
+
+// server.js last: pm2 restarts the live server the moment it changes, so
+// every package it needs (pdf.js, sharp...) must already be in place -
+// otherwise the first start after a new one misses it.
+fs.cpSync(path.resolve('dist'), dest, { recursive: true, force: true });
+console.log('✓ Synced dist → S:/bodorgo');

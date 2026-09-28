@@ -78,7 +78,7 @@ export class PollService {
   private apiUrl = `${environment.apiBaseUrl}/polls`;
 
   // How many open polls on my tours still wait for my vote - the
-  // Szavazások menu's badge. Refreshed on page changes (see header.ts) and
+  // Voks menu's badge. Refreshed on page changes (see header.ts) and
   // after anything that changes it here.
   readonly pendingCount = signal(0);
 

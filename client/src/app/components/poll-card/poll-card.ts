@@ -15,7 +15,7 @@ import { Poll, PollService } from '../../services/poll';
 import { TourSocketService } from '../../services/tour-socket';
 import { NotificationsService } from '../../notifications/notifications.service';
 
-// One poll, the same in the chat and on the Szavazások page: tap an answer
+// One poll, the same in the chat and on the Voks page: tap an answer
 // to vote (tap another to change it), counts and bars, who voted what on
 // an open ('Nyílt') poll, progress towards a minimum ("3 / 5 fő"), the
 // deadline, and close/delete for whoever started it (or an admin).
@@ -33,11 +33,11 @@ export class PollCard implements OnInit, OnDestroy {
   private notifications = inject(NotificationsService);
 
   pollId = input.required<string>();
-  // Already loaded (the Szavazások list) - no extra request then.
+  // Already loaded (the Voks list) - no extra request then.
   initial = input<Poll | null>(null);
-  // In a tour chat: follow votes live, link to Szavazások.
+  // In a tour chat: follow votes live, link to Voks.
   live = input(false);
-  // On Szavazások: which tour it belongs to, and a link to its chat.
+  // On Voks: which tour it belongs to, and a link to its chat.
   showTour = input(false);
 
   // Deleted - the parent drops it from its list.
@@ -71,7 +71,7 @@ export class PollCard implements OnInit, OnDestroy {
   });
 
   constructor() {
-    // A new `initial` (e.g. the Szavazások page saved an edit) replaces it.
+    // A new `initial` (e.g. the Voks page saved an edit) replaces it.
     effect(() => {
       const initial = this.initial();
       if (initial) this.poll.set(initial);

@@ -42,7 +42,7 @@ export class Header implements OnDestroy {
 
   private userService = inject(UserService);
 
-  // Szavazások badge: open polls on my tours still waiting for my vote.
+  // Voks badge: open polls on my tours still waiting for my vote.
   // Refreshed on every page change and every 2 minutes (and by PollService
   // itself after a vote or a new poll).
   private pollService = inject(PollService);
@@ -59,12 +59,13 @@ export class Header implements OnDestroy {
     else this.pollService.pendingCount.set(0);
   });
 
-  // The soap bubble behind the menu: it sits on the selected item, floats
-  // over to whichever one the mouse is on (stretching to its width) and
+  // The soap bubble behind the logo and the menu: it sits on the selected
+  // item (the logo on the home page), floats over to whichever one the
+  // mouse is on (stretching to its width) and
   // back when the mouse leaves the menu. Placed after every render too, so
   // it follows a page change (routerLinkActive) and a menu item changing
-  // width (the Szavazások badge, the font loading in).
-  private menu = viewChild<ElementRef<HTMLElement>>('menu');
+  // width (the Voks badge, the font loading in).
+  private header = viewChild<ElementRef<HTMLElement>>('header');
   private bubble = viewChild<ElementRef<HTMLElement>>('bubble');
   private hovered: HTMLElement | null = null;
   private bubbleTarget: HTMLElement | null = null;
@@ -80,17 +81,22 @@ export class Header implements OnDestroy {
   @HostListener('window:resize')
   placeBubble() {
     const bubble = this.bubble()?.nativeElement;
-    const menu = this.menu()?.nativeElement;
-    if (!bubble || !menu) return;
+    const header = this.header()?.nativeElement;
+    if (!bubble || !header) return;
 
-    const target = this.hovered ?? menu.querySelector<HTMLElement>('.menu-item.active');
+    const target =
+      this.hovered ??
+      header.querySelector<HTMLElement>('.menu .menu-item.active, .logo-link.active');
     if (!target) {
-      // Nothing selected (e.g. the home page) and no hover: the bubble pops.
+      // Nothing selected (e.g. Profilom) and no hover: the bubble pops.
       bubble.classList.remove('shown');
       this.bubbleTarget = null;
       return;
     }
-    const box = [target.offsetLeft, target.offsetTop, target.offsetWidth, target.offsetHeight];
+    // Where it is inside the header (the bubble's positioned parent).
+    const h = header.getBoundingClientRect();
+    const r = target.getBoundingClientRect();
+    const box = [r.left - h.left, r.top - h.top, r.width, r.height].map(Math.round);
     if (target === this.bubbleTarget && box.join() === this.bubbleBox) return;
 
     // Appearing from nowhere: it forms in place instead of flying in from

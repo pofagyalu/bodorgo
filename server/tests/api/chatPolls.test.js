@@ -133,7 +133,7 @@ describe('polls started from the chat', () => {
     expect(placeholder.poll).toBeNull();
   });
 
-  it('the Szavazások badge counts open polls on my tours I have not voted in', async () => {
+  it('the Voks badge counts open polls on my tours I have not voted in', async () => {
     const { tour, anna, bela } = await setup();
     const { _id: id, options } = (await startPoll(tour, anna)).body.data.poll;
     await startPoll(tour, anna, { question: 'Hol együnk?' });

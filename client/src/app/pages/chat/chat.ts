@@ -186,8 +186,8 @@ export class Chat implements OnInit, OnDestroy {
       next: () =>
         this.notifications.addSuccess(
           next
-            ? 'Ennek a chatnek az értesítései némítva.'
-            : 'Értesítések ebből a chatből bekapcsolva.',
+            ? 'Ennek a Kotyogónak az értesítései némítva.'
+            : 'Értesítések ebből a Kotyogóból bekapcsolva.',
         ),
       error: () => {
         this.chatMuted.set(!next);

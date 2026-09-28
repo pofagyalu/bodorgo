@@ -102,7 +102,7 @@ function cleanOptionTexts(options) {
 }
 
 // The parts a new poll is built from - shared by the admin's
-// Szavazások form and a chat-started poll. minimumCount applies to the
+// Voks form and a chat-started poll. minimumCount applies to the
 // first answer ("Igen": at least N people).
 function pollFields(body) {
   const options = cleanOptionTexts(body.options);
@@ -159,7 +159,7 @@ export const getAllPolls = async (req, res) => {
 };
 
 // GET /polls/pending - how many open polls on my tours are still waiting
-// for my vote (the Szavazások menu's badge).
+// for my vote (the Voks menu's badge).
 export const getPendingCount = async (req, res) => {
   const tourIds = await Reservation.distinct('tour', { 'attendees.user': req.user._id });
   const count = await Poll.countDocuments({
@@ -177,7 +177,7 @@ export const getPoll = async (req, res) => {
   res.status(200).json({ status: 'success', data: { poll: buildPollView(poll, req.user) } });
 };
 
-// POST /polls - admin-only (see pollRoutes.js): the Szavazások page's form.
+// POST /polls - admin-only (see pollRoutes.js): the Voks page's form.
 export const createPoll = async (req, res) => {
   const fields = pollFields(req.body);
   const poll = new Poll({ ...fields, tour: req.body.tour, createdBy: req.user._id });
@@ -190,7 +190,7 @@ export const createPoll = async (req, res) => {
 
 // POST /tours/:tourId/polls - a poll started from the tour's chat, by
 // anyone signed up for the tour (or an admin). It's a normal poll (it
-// shows on Szavazások too), plus a chat message carrying its live card;
+// shows on Voks too), plus a chat message carrying its live card;
 // the tour's attendees get a notification - a poll asks for action, so it
 // always buzzes.
 export const createTourPoll = async (req, res) => {

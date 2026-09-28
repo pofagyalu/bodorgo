@@ -85,11 +85,11 @@
       <span class="foot-actions">
         @if (showTour() && p.post) {
           <a class="foot-link" routerLink="/chat" [queryParams]="{ tabor: p.tour._id }"
-            >Ugrás a chatbe</a
+            >Ugrás a Kotyogóba</a
           >
         }
         @if (live()) {
-          <a class="foot-link" routerLink="/szavazasok">Szavazások</a>
+          <a class="foot-link" routerLink="/szavazasok">Voks</a>
         }
         @if (p.canManage) {
           @if (confirmDelete()) {
