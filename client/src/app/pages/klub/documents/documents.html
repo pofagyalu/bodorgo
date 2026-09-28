@@ -41,7 +41,7 @@
               @if (doc.preview) {
                 <a
                   class="document-preview"
-                  [href]="fileUrl(doc.filename)"
+                  [href]="fileUrl(doc)"
                   target="_blank"
                   rel="noopener"
                   tabindex="-1"
@@ -60,7 +60,7 @@
               }
               <!-- Bottom corners: view (a new tab) and download. -->
               <a
-                [href]="fileUrl(doc.filename)"
+                [href]="fileUrl(doc)"
                 target="_blank"
                 rel="noopener"
                 class="document-action document-action--view"
@@ -70,7 +70,7 @@
                 <mat-icon>search</mat-icon>
               </a>
               <a
-                [href]="fileUrl(doc.filename, true)"
+                [href]="fileUrl(doc, true)"
                 class="document-action document-action--download"
                 title="Letöltés"
                 aria-label="Dokumentum letöltése"

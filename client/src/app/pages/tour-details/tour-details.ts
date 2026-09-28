@@ -581,8 +581,8 @@ export class TourDetails implements OnDestroy {
     return this.tourService.coverUrl(t) ?? '';
   }
 
-  documentUrl(tourId: string, filename: string): string {
-    return this.tourService.documentUrl(tourId, filename);
+  documentUrl(documentId: string): string {
+    return this.tourService.documentUrl(documentId);
   }
 
   tourVideoUrl(t: Tour, v: TourVideo): string {
@@ -641,7 +641,7 @@ export class TourDetails implements OnDestroy {
       return;
     }
     if (!this.selectedDocumentFile) {
-      this.notifications.addError('Válassz ki egy PDF vagy JPG fájlt.');
+      this.notifications.addError('Válassz ki egy PDF, JPG vagy PNG fájlt.');
       return;
     }
 
@@ -650,7 +650,17 @@ export class TourDetails implements OnDestroy {
       next: (res) => {
         this.uploadingDocument.set(false);
         this.addingDocument.set(false);
-        this.tour.set(res.data.tour);
+        const d = res.data.document;
+        const t = this.tour();
+        if (t) {
+          this.tour.set({
+            ...t,
+            extraDocuments: [
+              ...(t.extraDocuments ?? []),
+              { _id: d._id, title: d.name, filename: d.filename, mimeType: d.mimeType },
+            ],
+          });
+        }
         this.notifications.addSuccess('Dokumentum feltöltve');
       },
       error: (err) => {
@@ -674,7 +684,7 @@ export class TourDetails implements OnDestroy {
     if (!ok) return;
 
     this.deletingDocument.set(true);
-    this.tourService.deleteDocument(tourId, doc._id).subscribe({
+    this.tourService.deleteDocument(doc._id).subscribe({
       next: () => {
         const t = this.tour();
         if (t) {

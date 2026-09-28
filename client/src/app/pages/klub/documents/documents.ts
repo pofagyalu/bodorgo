@@ -70,8 +70,8 @@ export class Documents implements OnInit {
     });
   }
 
-  fileUrl(filename: string, download = false): string {
-    return this.documentService.fileUrl(filename, download);
+  fileUrl(doc: ClubDocument, download = false): string {
+    return this.documentService.fileUrl(doc, download);
   }
 
   previewUrl(doc: ClubDocument): string {
