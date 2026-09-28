@@ -321,11 +321,13 @@ export class Members implements OnInit {
     this.activeTab.set(tab);
   }
 
-  // Admin-only, one at a time - toggles a member's row open to show their
-  // full year-by-year payment history (amount/date) inline in the table,
-  // in place of the old fixed detail panel above it.
+  // One at a time - opens a member's row to show their year-by-year
+  // payment history (amount/date) inline in the table: an admin anyone's,
+  // a member their own (it replaced the "Saját befizetések" panel).
+  canOpenRow = (p: { _id: string }) => this.isAdmin() || p._id === this.myId();
+
   toggleDetail(id: string) {
-    if (!this.isAdmin()) return;
+    if (!this.canOpenRow({ _id: id })) return;
     this.expandedMemberId.update((current) => (current === id ? null : id));
   }
 

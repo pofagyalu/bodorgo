@@ -115,21 +115,20 @@ const userSchema = new Schema(
       },
     },
     passwordChangedAt: Date,
-    // Role is driven entirely by Authentik on every login (see
-    // authOidcController.js's callback()) via a custom `bodorgo_role` scope
-    // claim that Authentik itself computes from the user's group membership
-    // - this app no longer maps group names to a role by hand. A login
-    // always sends a valid role or is denied outright, so 'member'/'admin'
-    // only ever land here via a real login.
-    // 'member' is an official, dues-paying club member.
-    // The 'guest' default only ever applies to a login-less dependent
-    // (e.g. a child, see addFamilyMember.js/importAttendance.js) who has
-    // never logged in and so never went through the claim above.
+    // Managed in the app only (Authentik just says who someone is): only
+    // the role manager may change it (canManageRoles below, see
+    // utils/roleManager.js). 'member' is an official, dues-paying club
+    // member; 'guest' - the default - anyone else: a family member, a child
+    // who never logs in.
     role: {
       type: String,
       enum: ['admin', 'member', 'guest'],
       default: 'guest',
     },
+    // The one admin who may change roles - whoever INITIAL_ADMIN_USER in the
+    // server's .env names; set (and taken from everyone else) at every server
+    // start. Never set through the API.
+    canManageRoles: { type: Boolean, default: false },
     // The calendar year this person officially became a dues-paying club
     // member - not tracked anywhere else (Authentik only knows the current
     // role, not history), so an admin sets it by hand (see

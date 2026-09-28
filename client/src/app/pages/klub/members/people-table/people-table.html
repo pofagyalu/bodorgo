@@ -31,7 +31,7 @@
       @for (p of sorted(); track p._id) {
         <tr
           [class.mine]="p._id === highlightId()"
-          [class.row-clickable]="rowClickable()"
+          [class.row-clickable]="canClick(p)"
           (click)="onRowClick(p)"
         >
           <td class="name-col">

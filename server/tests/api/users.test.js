@@ -119,7 +119,7 @@ describe('my own profile', () => {
 
 describe('admin user management', () => {
   it('creates, reads and edits a user', async () => {
-    const admin = await createAdmin();
+    const admin = await createAdmin({ canManageRoles: true }); // it also changes a role
     expect((await request(app).post('/users').set(asUser(admin)).send({})).status).toBe(400);
     const created = await request(app)
       .post('/users')

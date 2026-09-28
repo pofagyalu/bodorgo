@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserService, AdminUser } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
@@ -65,6 +65,22 @@ export class MemberEdit implements OnInit {
   gender = signal('');
   memberSince = signal('');
   role = signal('guest');
+
+  // Only the role manager (server utils/roleManager.js) sets roles - not
+  // their own; other admins see it, and add new people as Vendég.
+  canEditRole = computed(() => {
+    const me = this.auth.user();
+    return !!me?.canManageRoles && this.user()?._id !== me.id;
+  });
+  roleHint = computed(() => {
+    const me = this.auth.user();
+    if (me?.canManageRoles) {
+      return this.user()?._id === me.id
+        ? 'A saját szerepköröd nem módosíthatod.'
+        : 'A szerepkört csak te módosíthatod.';
+    }
+    return 'Szerepkört csak a szerepkör-kezelő admin módosíthat.';
+  });
   address = signal<AddressForm>(emptyAddress());
 
   ngOnInit() {

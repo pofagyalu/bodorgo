@@ -211,9 +211,12 @@ const schemas = {
     name: str('Full name (from Authentik).'),
     username: str('For @mentions in Kotyogó.'),
     email: str('E-mail.', { format: 'email' }),
-    role: str('Role - synced from Authentik groups at every login.', {
+    role: str('Role - managed in the app; only the role manager changes it.', {
       enum: ['admin', 'member', 'guest'],
     }),
+    canManageRoles: bool(
+      'The role manager (INITIAL_ADMIN_USER) - read-only, set by the server at start.',
+    ),
     familyId: id('Users sharing it are one family (they can sign up / pay for each other).'),
     birthday: date(),
     age: int('Computed from birthday.'),
@@ -373,9 +376,14 @@ the server keeps a **session cookie** (\`connect.sid\`, HTTP-only). Every other 
 that cookie - a browser does it by itself, so the **Try it** button here works with your
 own login. There are no API keys for users.
 
+Authentik is only the **identity provider** - it says who someone is, nothing about their
+role. Only people an admin has already added in the app (Klub → Felhasználók, with their
+e-mail) can log in; anyone else is refused. The one exception is the \`INITIAL_ADMIN_USER\`
+(see below), so a fresh installation can be entered.
+
 ## Roles
 
-Each user has one role, synced from their Authentik group at every login:
+Each user has one role, **managed in the app** - Authentik's groups don't matter:
 
 | Role | Badge | Who |
 |---|---|---|
@@ -384,6 +392,12 @@ Each user has one role, synced from their Authentik group at every login:
 | \`admin\` | Admin | Club admins |
 
 Each endpoint's badge shows the lowest role that may call it (an admin can call everything).
+
+**Only one admin may change roles** - the *role manager*: whoever \`INITIAL_ADMIN_USER\` in
+the server's \`.env\` names (\`canManageRoles\` on their user). At every server start that
+person gets the flag and the admin role, and nobody else keeps the flag - so handing the app
+over is changing that one line and restarting. Other admins can add people (as \`guest\`)
+and edit everything else about them.
 
 ## Answers
 
@@ -485,7 +499,7 @@ const paths = {
       role: 'public',
       summary: 'Login callback',
       description:
-        'Authentik returns here. Creates or updates the user (role from the Authentik group), starts the session and redirects to the app.',
+        'Authentik returns here. Finds the user an admin added (by Authentik id, or at the first login by e-mail, any case) and refreshes their name and e-mail - never their role - then starts the session and redirects to the app. Someone not added is sent back with `login?error=not-invited`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
       response: { description: 'Redirect to the app.' },
       ok: 302,
     }),
@@ -514,6 +528,7 @@ const paths = {
             schema: obj(
               {
                 loggedIn: bool(),
+                canManageRoles: bool('I am the role manager.'),
                 id: id(),
                 name: str(),
                 email: str(),
@@ -1335,7 +1350,8 @@ const paths = {
       tag: T.users,
       role: 'admin',
       summary: 'Add a person',
-      description: 'e.g. a child without an Authentik login.',
+      description:
+        'Someone who may then log in with this e-mail, or a child without a login. Other admins add a `guest`; only the role manager may give another role (403 otherwise). `canManageRoles` cannot be set.',
       body: ref('User'),
       ok: 201,
       errors: [400],
@@ -1405,9 +1421,11 @@ const paths = {
       tag: T.users,
       role: 'admin',
       summary: 'Edit a person',
+      description:
+        'Any admin edits the details. Changing `role` is for the role manager only (403 otherwise), and not their own (400). Sending the current role back unchanged is fine.',
       params: [userIdP],
       body: ref('User'),
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
     delete: op({
       tag: T.users,

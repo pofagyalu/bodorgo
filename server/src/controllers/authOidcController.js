@@ -2,26 +2,15 @@ import * as openidClient from 'openid-client';
 import config from '../config.js';
 import User from '../models/userModel.js';
 import logger from '../logger.js';
+import { emailMatch, isInitialAdmin } from '../utils/roleManager.js';
 
-// Role now comes straight from Authentik as a single claim, `bodorgo_role`,
-// via a custom scope/property mapping configured on the provider itself
-// (see authentik-integration-instructions.md) - an expression there reads
-// the user's group membership (bodorgo-admin/bodorgo-member/bodorgo-guest)
-// and returns "admin" | "member" | "guest" | null directly. This app no
-// longer maps group names to a role itself (that used to happen here via a
-// plain `groups` claim - a superseded design). Tested in
-// tests/api/auth.test.js.
-//
-// A missing or unrecognized value is treated as "not enrolled" and denies
-// login entirely (see callback()) rather than falling back to guest or
-// keeping whatever role was there before - a deliberate choice so a broken
-// invite or a removed group membership locks someone out instead of
-// silently downgrading them.
-const VALID_ROLES = ['admin', 'member', 'guest'];
-
-export function roleFromClaim(bodorgoRole) {
-  return VALID_ROLES.includes(bodorgoRole) ? bodorgoRole : null;
-}
+// Authentik is only the identity provider: it says who someone is, not
+// their role - roles live in the app (see utils/roleManager.js). Only
+// people an admin already added (Klub → Felhasználók, with their e-mail)
+// can log in; anyone else Authentik lets through is refused. The one
+// exception is INITIAL_ADMIN_USER, so a brand-new installation can be
+// entered at all: their first login creates them as the role-managing
+// admin.
 
 // In local dev, send the browser back to the Angular dev server (ng serve)
 // rather than the configured production client URL. Always ends in '/', so
@@ -72,10 +61,7 @@ export const login = async (req, res) => {
 
   const parameters = {
     redirect_uri: redirectUri,
-    // 'bodorgo_role' drives role entirely (see roleFromClaim above) -
-    // requires the matching custom scope/property mapping configured on the
-    // Authentik provider itself, not just requested here.
-    scope: 'openid email profile bodorgo_role',
+    scope: 'openid email profile',
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
     state,
@@ -108,77 +94,37 @@ export const callback = async (req, res, next) => {
     const claims = tokens.claims();
     logger.info(`ID Token Claims for sub=${claims.sub}`);
 
-    // Authentik's custom scope mappings aren't always embedded in the ID
-    // token itself (depends on how the mapping is configured on the
-    // provider) - the userinfo endpoint is the reliable place to get the
-    // claim if the ID token didn't include it.
-    let bodorgoRole = claims.bodorgo_role;
-    if (bodorgoRole === undefined) {
-      try {
-        const userinfo = await openidClient.fetchUserInfo(
-          oidcConfig,
-          tokens.access_token,
-          claims.sub,
-        );
-        bodorgoRole = userinfo.bodorgo_role;
-      } catch (err) {
-        logger.error(`Failed to fetch userinfo for bodorgo_role: ${err.message}`);
-      }
-    }
-    logger.info(`bodorgo_role for sub=${claims.sub}: ${JSON.stringify(bodorgoRole)}`);
-    const role = roleFromClaim(bodorgoRole);
-
-    // Not enrolled in any bodorgo-* group (or the claim was missing entirely
-    // - a misconfigured provider) -> deny login outright, don't create or
-    // update anything locally. A role downgrade removing someone from every
-    // group takes effect on their *next* login, not by killing an existing
-    // session immediately - simplest option, revisit if that's ever a
-    // problem in practice.
-    if (role === null) {
-      logger.error(
-        `Denying login for sub=${claims.sub}: no valid bodorgo_role (got ${JSON.stringify(bodorgoRole)})`,
-      );
-      return res.redirect(`${getClientBaseUrl(req)}login?error=no-role`);
-    }
-
+    // Who is it: known by their Authentik id, or - their first login - an
+    // account an admin added with this e-mail and nobody has claimed yet.
     let user = await User.findOne({ sub: claims.sub });
-
-    // No login yet under this sub, but a login-less dependent record (e.g.
-    // a child, see userModel.js's familyId) may already have this exact
-    // email pre-assigned in anticipation of them getting their own account
-    // one day - claim that record instead of provisioning a disconnected
-    // new one, so their whole attendance history stays attached.
     if (!user && claims.email) {
-      user = await User.findOne({ email: claims.email, sub: { $exists: false } });
-      if (user) {
-        logger.info(`Claiming existing dependent record for sub=${claims.sub}`);
-      }
+      user = await User.findOne({ ...emailMatch(claims.email), sub: { $exists: false } });
+      if (user) logger.info(`Claiming the account added for ${claims.email} (sub=${claims.sub})`);
     }
 
-    if (!user) {
-      user = await User.create({
-        sub: claims.sub,
-        email: claims.email,
-        name: claims.name || claims.preferred_username || claims.email,
-        emailVerified: !!claims.email_verified,
-        role,
-        lastLoginAt: new Date(),
-      });
-      logger.info(`Provisioned new local user for sub=${claims.sub}`);
-    } else {
-      // Keep the local record in sync with Authentik on every login - it's
-      // the source of truth for profile fields, so a name/email change made
-      // there (e.g. admin -> Gazda) should show up here without needing any
-      // manual DB edit. role is always a valid value at this point (see the
-      // deny-login check above), so it's always synced too.
-      user.sub = claims.sub; // no-op for a returning user, sets it once when claiming a dependent record
-      user.email = claims.email;
-      user.name = claims.name || claims.preferred_username || claims.email;
-      user.emailVerified = !!claims.email_verified;
-      user.lastLoginAt = new Date();
-      user.role = role;
-      await user.save();
+    const owner = isInitialAdmin(claims.email);
+    if (!user && owner) {
+      // A fresh installation: the INITIAL_ADMIN_USER creates themselves.
+      user = new User({ sub: claims.sub, role: 'admin', canManageRoles: true });
+      logger.info(`Created the role manager's account (${claims.email})`);
     }
+    if (!user) {
+      logger.error(`Denying login for sub=${claims.sub} (${claims.email}): not added in the app`);
+      return res.redirect(`${getClientBaseUrl(req)}login?error=not-invited`);
+    }
+
+    // Name and e-mail follow Authentik (the identity provider); the role is
+    // the app's own and never changes here.
+    user.sub = claims.sub;
+    user.email = claims.email;
+    user.name = claims.name || claims.preferred_username || claims.email;
+    user.emailVerified = !!claims.email_verified;
+    user.lastLoginAt = new Date();
+    if (owner) {
+      user.role = 'admin';
+      user.canManageRoles = true;
+    }
+    await user.save();
 
     req.session.regenerate((err) => {
       if (err) return next(err);
@@ -229,6 +175,8 @@ export const me = async (req, res) => {
     email: user.email,
     name: user.name,
     role: user.role,
+    // The one admin who may change roles (utils/roleManager.js).
+    canManageRoles: !!user.canManageRoles,
     familyId: user.familyId,
     wantsEmailNotifications: user.wantsEmailNotifications,
     address: user.address,

@@ -203,39 +203,6 @@
         }
       </div>
 
-      @if (me(); as mine) {
-        <section class="panel membership-detail">
-          <h2>Saját befizetések</h2>
-          <div>
-            @for (y of membershipYears(); track y) {
-              <div class="history-row">
-                <div class="history-row-label">
-                  <span
-                    class="history-dot history-dot--lg"
-                    [class.paid]="yearState(mine._id, y) === 'paid'"
-                    [class.unpaid]="yearState(mine._id, y) === 'unpaid'"
-                    [class.na]="yearState(mine._id, y) === 'na'"
-                  ></span>
-                  <strong>{{ y }}. évi tagdíj</strong>
-                </div>
-                @if (yearState(mine._id, y) === 'paid') {
-                  @if (paymentFor(mine._id, y); as payment) {
-                    <span
-                      >{{ money(payment.amount, payment.currency) }} ·
-                      {{ payment.date | date: 'yyyy. MM. dd.' }}</span
-                    >
-                  }
-                } @else if (yearState(mine._id, y) === 'unpaid') {
-                  <span>Nincs befizetve</span>
-                } @else {
-                  <span>Még nem volt tag</span>
-                }
-              </div>
-            }
-          </div>
-        </section>
-      }
-
       <section class="panel member-panel">
         <div class="member-panel-head">
           <div>
@@ -250,7 +217,7 @@
           [extraColumns]="clubExtraColumns()"
           [detailRow]="historyDetail"
           [rowActions]="cashAction"
-          [rowClickable]="isAdmin()"
+          [rowClickable]="canOpenRow"
           [highlightId]="myId()"
           [busyId]="archivingId()"
           [wide]="true"

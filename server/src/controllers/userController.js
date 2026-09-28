@@ -319,6 +319,7 @@ function parseMemberSince(value) {
 }
 
 const VALID_ROLES = ['admin', 'member', 'guest'];
+const ROLE_MANAGER_ONLY = 'Szerepkört csak a szerepkör-kezelő admin módosíthat.';
 
 // Same field set as updateUser below (role/address included) -
 // member-edit.ts/html uses one identical form for both creating a brand
@@ -335,6 +336,10 @@ export const createUser = async (req, res) => {
   }
   if (role !== undefined && !VALID_ROLES.includes(role)) {
     throw new AppError('Érvénytelen szerepkör.', 400);
+  }
+  // Only the role manager gives a role; anyone else adds a 'guest'.
+  if (role && role !== 'guest' && !req.user.canManageRoles) {
+    throw new AppError(ROLE_MANAGER_ONLY, 403);
   }
 
   const user = await User.create({
@@ -377,12 +382,8 @@ async function isUsernameTaken(username, exceptUserId) {
 // too (an admin fixing a dependent's address who can't set it themselves
 // is exactly the case that needs it), same reasoning as updateMe above.
 //
-// role here is a manual, immediate override (e.g. to fast-track someone
-// into "Klubtagok" before they've logged in themselves) - it does NOT
-// stick permanently: the next real Authentik login overwrites it again
-// with whatever bodorgo_role claim that login carries (see
-// authOidcController.js's callback). Use for a quick fix, not as the
-// long-term way to manage roles.
+// role: only the role manager (utils/roleManager.js) may change it - not
+// their own, which INITIAL_ADMIN_USER keeps admin anyway.
 export const updateUser = async (req, res) => {
   const { name, email, familyId, birthday, gender, address, memberSince, role, username } =
     req.body;
@@ -411,9 +412,13 @@ export const updateUser = async (req, res) => {
   if (gender !== undefined) user.gender = gender || undefined;
   if (address !== undefined) user.address = address;
   if (memberSince !== undefined) user.memberSince = parseMemberSince(memberSince) ?? undefined;
-  if (role !== undefined) {
+  if (role !== undefined && role !== user.role) {
     if (!VALID_ROLES.includes(role)) {
       throw new AppError('Érvénytelen szerepkör.', 400);
+    }
+    if (!req.user.canManageRoles) throw new AppError(ROLE_MANAGER_ONLY, 403);
+    if (String(user._id) === String(req.user._id)) {
+      throw new AppError('A saját szerepköröd nem módosíthatod.', 400);
     }
     user.role = role;
   }

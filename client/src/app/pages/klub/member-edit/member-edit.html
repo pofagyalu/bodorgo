@@ -136,12 +136,17 @@
 
           <div class="field">
             <label for="mRole">Szerepkör</label>
-            <select id="mRole" [value]="role()" (change)="role.set($any($event.target).value)">
+            <select
+              id="mRole"
+              [value]="role()"
+              [disabled]="!canEditRole()"
+              (change)="role.set($any($event.target).value)"
+            >
               <option value="admin">Admin</option>
               <option value="member">Klubtag</option>
               <option value="guest">Vendég</option>
             </select>
-            <small>Kézi felülírás - a következő bejelentkezéskor Authentik felülírja.</small>
+            <small>{{ roleHint() }}</small>
           </div>
 
           @if (role() !== 'guest') {
