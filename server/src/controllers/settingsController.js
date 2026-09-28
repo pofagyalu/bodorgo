@@ -16,6 +16,7 @@ import sendResendEmail from '../utils/resendEmail.js';
 import User from '../models/userModel.js';
 import logger from '../logger.js';
 import { chatImagesUsage, enforceChatImageQuota } from '../chat/chatImages.js';
+import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
 // fee, by the year each amount takes effect (see utils/clubSettings.js).
@@ -347,4 +348,56 @@ export const updateBarionWallet = async (req, res) => {
   }
 
   res.status(200).json({ status: 'success', data: walletView(after) });
+};
+
+// --- Születésnap (see utils/birthday.js) ---
+
+const EFFECT_NAMES = {
+  confetti: 'Konfetti eső',
+  fireworks: 'Tűzijáték',
+  cannons: 'Oldalsó ágyúk',
+  stars: 'Csillagszórás',
+  snow: 'Lassú konfetti',
+  emoji: 'Emoji eső',
+};
+
+const birthdayView = (b) => ({
+  enabled: b?.enabled ?? true,
+  effect: b?.effect ?? 'confetti',
+  message: b?.message ?? DEFAULT_BIRTHDAY_MESSAGE,
+});
+
+// GET /settings/birthday (admin).
+export const getBirthdaySettings = async (req, res) => {
+  const { birthday } = await getClubSettings();
+  res.status(200).json({ status: 'success', data: birthdayView(birthday) });
+};
+
+// PUT /settings/birthday (admin) - { enabled, effect, message }.
+export const updateBirthdaySettings = async (req, res) => {
+  const enabled = req.body?.enabled === true;
+  const effect = req.body?.effect;
+  const message = String(req.body?.message ?? '').trim();
+  if (!BIRTHDAY_EFFECTS.includes(effect)) throw new AppError('Ismeretlen effekt.', 400);
+  if (!message || message.length > 200) {
+    throw new AppError('Az üzenet 1-200 karakter lehet.', 400);
+  }
+  const settings = await getClubSettings();
+  const before = birthdayView(settings.birthday);
+  const after = { enabled, effect, message };
+  const changes = [
+    before.enabled !== enabled && (enabled ? 'bekapcsolva' : 'kikapcsolva'),
+    before.effect !== effect && `effekt: ${EFFECT_NAMES[before.effect]} → ${EFFECT_NAMES[effect]}`,
+    before.message !== message && `üzenet: „${message}”`,
+  ].filter(Boolean);
+  if (changes.length) {
+    settings.birthday = after;
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Születésnap: ${changes.join('; ')}`,
+    });
+    await settings.save();
+  }
+  res.status(200).json({ status: 'success', data: after });
 };

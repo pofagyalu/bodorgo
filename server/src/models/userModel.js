@@ -158,6 +158,9 @@ const userSchema = new Schema(
     retiredAt: {
       type: Date,
     },
+    // The year their birthday was last celebrated (confetti on login - see
+    // utils/birthday.js): once a year, on whichever device comes first.
+    birthdayCelebratedYear: Number,
     // Groups a real account together with the login-less dependents (and
     // any other real accounts, e.g. a spouse) it shares tour attendance
     // with - lets a logged-in parent's signup dropdown be scoped to

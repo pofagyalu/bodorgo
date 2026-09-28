@@ -340,6 +340,19 @@ const schemas = {
     createdAt: date(),
   }),
 
+  BirthdaySettings: obj(
+    {
+      enabled: bool('Greet people on their birthday.'),
+      effect: str(
+        'Konfetti eső, Tűzijáték, Oldalsó ágyúk, Csillagszórás, Lassú konfetti, Emoji eső.',
+        {
+          enum: ['confetti', 'fireworks', 'cannons', 'stars', 'snow', 'emoji'],
+        },
+      ),
+      message: str('At most 200 characters; {név} = the given name.'),
+    },
+    ['enabled', 'effect', 'message'],
+  ),
   BarionWallet: obj({
     payeeEmail: str('Barion wallet e-mail - payments land here.'),
     withdrawName: str('Account holder.'),
@@ -446,7 +459,10 @@ const tags = [
   [T.users, 'People, families, profile photos, usernames.'],
   [T.documents, "Klub → Dokumentumok and every tour's Extrák - one mechanism for both."],
   [T.media, "Média → Videók and Fotók - the club's own videos and photo folders on the NAS."],
-  [T.settings, 'Klub → Beállítások: membership fees, reminders, Kotyogó photos, Barion wallets.'],
+  [
+    T.settings,
+    'Klub → Beállítások: membership fees, reminders, Kotyogó photos, Barion wallets, the birthday greeting.',
+  ],
   [T.push, 'Phone/browser notifications and per-chat muting.'],
   [T.system, 'Health check.'],
 ].map(([name, description]) => ({ name, description }));
@@ -1341,6 +1357,21 @@ const paths = {
       errors: [400],
     }),
   },
+  '/users/me/birthday': {
+    get: op({
+      tag: T.users,
+      summary: 'Is it my birthday (the greeting)',
+      description:
+        'On my birthday (Budapest date), the first time that day: the effect and the greeting with my name - and it is then marked as celebrated for this year, so it shows once, on whichever device comes first. Otherwise `celebrate: false`. The app asks it on every start.',
+      data: obj({
+        celebrate: bool(),
+        effect: str('Only when celebrate.', {
+          enum: ['confetti', 'fireworks', 'cannons', 'stars', 'snow', 'emoji'],
+        }),
+        message: str('Only when celebrate - e.g. "Boldog születésnapot, Anna! 🎂".'),
+      }),
+    }),
+  },
   '/users/me/attendance': {
     get: op({
       tag: T.users,
@@ -1746,6 +1777,24 @@ const paths = {
     }),
   },
 
+  '/settings/birthday': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'The birthday greeting',
+      data: ref('BirthdaySettings'),
+    }),
+    put: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Set the birthday greeting',
+      description:
+        'On/off, the effect, and the message - `{név}` becomes the person’s given name. Recorded in the history.',
+      body: ref('BirthdaySettings'),
+      data: ref('BirthdaySettings'),
+      errors: [400],
+    }),
+  },
   // --- Értesítések ---
   '/push/public-key': {
     get: op({

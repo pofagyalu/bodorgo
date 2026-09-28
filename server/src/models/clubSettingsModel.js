@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js';
 
 const { Schema } = mongoose;
 
@@ -48,6 +49,13 @@ const clubSettingsSchema = new Schema(
         withdrawIban: String,
       },
       tour: { payeeEmail: String, withdrawName: String, withdrawIban: String },
+    },
+    // Születésnap: confetti and a greeting for whoever logs in on their
+    // birthday (utils/birthday.js). {név} in the message is their name.
+    birthday: {
+      enabled: { type: Boolean, default: true },
+      effect: { type: String, enum: BIRTHDAY_EFFECTS, default: 'confetti' },
+      message: { type: String, default: DEFAULT_BIRTHDAY_MESSAGE, maxlength: 200 },
     },
     history: [{ _id: false, at: Date, byName: String, change: String }],
   },
