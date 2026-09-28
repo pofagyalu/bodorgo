@@ -5,6 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createMember, createTour } from '../helpers/factories.js';
 import Tour from '../../src/models/tourModel.js';
+import PDFDocument from 'pdfkit';
+import sharp from 'sharp';
+import { previewPath } from '../../src/utils/documentPreviews.js';
 
 const PDF = Buffer.from('%PDF-1.4 test');
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
@@ -67,6 +70,59 @@ describe('Klub documents', () => {
           .field('name', 'x')
       ).status,
     ).toBe(403);
+  });
+
+  it("each card gets a small picture - a PDF's first page, a photo itself - members only", async () => {
+    const admin = await createAdmin();
+    const member = await createMember();
+    // A real one-page A4 PDF...
+    const pdf = await new Promise((resolve) => {
+      const d = new PDFDocument({ size: 'A4' });
+      const chunks = [];
+      d.on('data', (c) => chunks.push(c));
+      d.on('end', () => resolve(Buffer.concat(chunks)));
+      d.fontSize(30).text('Végzés');
+      d.end();
+    });
+    // ...and a real PNG scan.
+    const png = await sharp({
+      create: { width: 600, height: 900, channels: 3, background: '#eee' },
+    })
+      .png()
+      .toBuffer();
+    const upload = (file, type, filename) =>
+      request(app)
+        .post('/documents')
+        .set(asUser(admin))
+        .field('name', filename)
+        .attach('file', file, { filename, contentType: type });
+
+    for (const [file, type, filename] of [
+      [pdf, 'application/pdf', 'okirat.pdf'],
+      [png, 'image/png', 'scan.png'],
+    ]) {
+      const doc = (await upload(file, type, filename)).body.data.document;
+      expect(doc.preview).toBe(true);
+      const preview = await request(app).get(`/documents/${doc._id}/preview`).set(asUser(member));
+      expect(preview.status).toBe(200);
+      expect(preview.headers['content-type']).toContain('image/webp');
+      const meta = await sharp(preview.body).metadata();
+      expect(meta.width).toBe(360);
+      // Upright like the page: an A4 is ~1.41 times as tall as wide.
+      expect(meta.height / meta.width).toBeCloseTo(filename === 'scan.png' ? 1.5 : 1.414, 1);
+      expect((await request(app).get(`/documents/${doc._id}/preview`)).status).toBe(401);
+
+      await request(app).delete(`/documents/${doc._id}`).set(asUser(admin));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(fs.existsSync(previewPath(doc.filename))).toBe(false);
+    }
+
+    // A file that can't be drawn still uploads - its card shows the icon.
+    const broken = (await upload(PDF, 'application/pdf', 'rossz.pdf')).body.data.document;
+    expect(broken.preview).toBe(false);
+    expect(
+      (await request(app).get(`/documents/${broken._id}/preview`).set(asUser(member))).status,
+    ).toBe(404);
   });
 
   it('refuses file names that try to escape the folder, and missing files', async () => {

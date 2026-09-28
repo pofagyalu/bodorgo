@@ -5,6 +5,11 @@ import multer from 'multer';
 import ClubDocument, { DOCUMENT_CATEGORIES } from '../models/clubDocumentModel.js';
 import AppError from '../utils/appError.js';
 import { CLUB_DOCUMENTS_DIR } from '../utils/dataDirs.js';
+import {
+  deleteDocumentPreview,
+  previewPath,
+  tryMakeDocumentPreview,
+} from '../utils/documentPreviews.js';
 
 // Same directory documentController.js's getDocument already serves from
 // (outside public/, requireAuth-gated) - so an uploaded club document is
@@ -78,6 +83,9 @@ export const uploadClubDocument = async (req, res) => {
     year,
     uploadedBy: req.user._id,
   });
+  // Its card's picture - a moment for a PDF page; if it fails, the card
+  // shows an icon and the next server start tries again.
+  await tryMakeDocumentPreview(document);
 
   res.status(201).json({ status: 'success', data: { document } });
 };
@@ -95,8 +103,21 @@ export const deleteClubDocument = async (req, res) => {
 
   const filePath = path.join(DOCUMENTS_DIR, document.filename);
   fs.unlink(filePath, () => {}); // best-effort - a missing file shouldn't block removing the record
+  deleteDocumentPreview(document.filename);
 
   await ClubDocument.deleteOne({ _id: document._id });
 
   res.status(204).json({ status: 'success', data: null });
+};
+
+// GET /documents/:id/preview - requireAuth, like the file itself: the
+// card's small picture (a PDF's first page, or the photo).
+export const getClubDocumentPreview = async (req, res) => {
+  const document = await ClubDocument.findById(req.params.id);
+  const file = document?.preview && previewPath(document.filename);
+  if (!file || !fs.existsSync(file)) {
+    throw new AppError('Nincs előnézet.', 404);
+  }
+  res.setHeader('Cache-Control', 'private, max-age=86400');
+  res.sendFile(file);
 };

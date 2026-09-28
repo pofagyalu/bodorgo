@@ -74,6 +74,10 @@ export class Documents implements OnInit {
     return this.documentService.fileUrl(filename, download);
   }
 
+  previewUrl(doc: ClubDocument): string {
+    return this.documentService.previewUrl(doc._id);
+  }
+
   // A photographed/screenshotted paper document (see uploadMiddleware's
   // fileFilter) gets its own icon rather than the PDF one - same mat-icon
   // names as tour-details.html's own extra-doc-card for the same split.

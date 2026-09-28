@@ -135,18 +135,22 @@ button {
 
 .document-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
 }
 
+// Upright like a sheet of paper (2:3); the icon, name and year in the
+// middle, view/download in the bottom corners.
 .document-card {
   position: relative;
+  aspect-ratio: 2 / 3;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  gap: 4px;
-  padding: 14px 12px 12px;
+  gap: 6px;
+  padding: 14px 12px 52px;
   background: #f7faf8;
   border: 1px solid #e7edea;
   border-radius: 14px;
@@ -158,9 +162,9 @@ button {
 }
 
 .document-icon {
-  font-size: 1.8rem;
-  width: 1.8rem;
-  height: 1.8rem;
+  font-size: 3rem;
+  width: 3rem;
+  height: 3rem;
   line-height: 1;
   margin-bottom: 2px;
   color: #4a5b63;
@@ -171,13 +175,61 @@ button {
   color: #e02424;
 }
 
+// With a picture: it fills the card's top, like a sheet peeking out
+// (its top part, when the page is taller than the room); the icon moves
+// to the top-left corner as a small badge (the ✕ has the right one).
+.document-card--preview {
+  justify-content: flex-start;
+  padding-top: 10px;
+}
+
+.document-preview {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e3eae7;
+  box-shadow: 0 1px 4px #213b4114;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+}
+
+.document-card--preview .document-icon {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  margin: 0;
+  padding: 5px;
+  font-size: 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 4px #213b4133;
+}
+
 .document-name {
   font-weight: 700;
   color: #203747;
   font-size: 13px;
 }
 
+// On the bottom row, between the view and download buttons - leaving
+// the room above to the preview.
 .document-year {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
   display: inline-block;
   background: #e7f5ed;
   color: #267c68;
@@ -187,27 +239,51 @@ button {
   border-radius: 6px;
 }
 
-.document-actions {
+.document-action {
+  position: absolute;
+  bottom: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   display: flex;
-  gap: 14px;
-  margin-top: 4px;
-}
-
-.document-link {
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #dce6e3;
   color: #187e70;
   text-decoration: none;
-  font-weight: 750;
-  font-size: 12px;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover {
+    background: #e7f5ed;
+    transform: scale(1.1);
+  }
 }
 
-.document-link:hover {
-  text-decoration: underline;
+.document-action--view {
+  left: 10px;
 }
 
+.document-action--download {
+  right: 10px;
+}
+
+// On the card's own top-right corner, half outside it - clear of the
+// preview and its icon badge.
 .document-remove {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  z-index: 1;
+  top: -9px;
+  right: -9px;
+  box-shadow: 0 1px 4px #213b4133;
   width: 24px;
   height: 24px;
   border-radius: 50%;

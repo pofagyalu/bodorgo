@@ -23,7 +23,7 @@
         </div>
         <div class="document-grid">
           @for (doc of group.documents; track doc._id) {
-            <div class="document-card">
+            <div class="document-card" [class.document-card--preview]="doc.preview">
               @if (isAdmin()) {
                 <button
                   type="button"
@@ -35,6 +35,20 @@
                   ✕
                 </button>
               }
+              <!-- Its first page (or the photo), a click opens it - the PDF/
+                   image icon then sits in the top-left corner. Without a
+                   picture yet: just the icon, big. -->
+              @if (doc.preview) {
+                <a
+                  class="document-preview"
+                  [href]="fileUrl(doc.filename)"
+                  target="_blank"
+                  rel="noopener"
+                  tabindex="-1"
+                >
+                  <img [src]="previewUrl(doc)" alt="" loading="lazy" />
+                </a>
+              }
               <mat-icon
                 class="document-icon"
                 [class.document-icon--pdf]="icon(doc) === 'picture_as_pdf'"
@@ -42,18 +56,27 @@
               >
               <span class="document-name">{{ doc.name }}</span>
               @if (doc.year) {
-                <span class="document-year">{{ doc.year }}. év</span>
+                <span class="document-year">{{ doc.year }}</span>
               }
-              <div class="document-actions">
-                <a
-                  [href]="fileUrl(doc.filename)"
-                  target="_blank"
-                  rel="noopener"
-                  class="document-link"
-                  >Megnyitás</a
-                >
-                <a [href]="fileUrl(doc.filename, true)" class="document-link">Letöltés</a>
-              </div>
+              <!-- Bottom corners: view (a new tab) and download. -->
+              <a
+                [href]="fileUrl(doc.filename)"
+                target="_blank"
+                rel="noopener"
+                class="document-action document-action--view"
+                title="Megnyitás"
+                aria-label="Dokumentum megnyitása"
+              >
+                <mat-icon>search</mat-icon>
+              </a>
+              <a
+                [href]="fileUrl(doc.filename, true)"
+                class="document-action document-action--download"
+                title="Letöltés"
+                aria-label="Dokumentum letöltése"
+              >
+                <mat-icon>download</mat-icon>
+              </a>
             </div>
           }
         </div>

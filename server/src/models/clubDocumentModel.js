@@ -46,6 +46,12 @@ const clubDocumentSchema = new Schema(
     year: {
       type: Number,
     },
+    // Its small picture is ready (documents/previews/ - see
+    // utils/documentPreviews.js); until then the card shows an icon.
+    preview: {
+      type: Boolean,
+      default: false,
+    },
     uploadedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',

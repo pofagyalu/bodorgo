@@ -23,7 +23,11 @@ console.log('✓ Synced dist → S:/bodorgo');
 fs.cpSync(path.resolve('documents'), path.join(dest, 'documents'), {
   recursive: true,
   force: true,
-  filter: (src) => path.relative(path.resolve('documents'), src).split(path.sep)[0] !== 'payments',
+  // previews/ too: each server makes its own (utils/documentPreviews.js).
+  filter: (src) =>
+    !['payments', 'previews'].includes(
+      path.relative(path.resolve('documents'), src).split(path.sep)[0],
+    ),
 });
 console.log('✓ Synced documents → S:/bodorgo/documents');
 
@@ -119,4 +123,47 @@ if (shippedVersion !== sharpVersion) {
   console.log(`✓ Shipped sharp ${sharpVersion} (Linux x64) → S:/bodorgo/node_modules`);
 } else {
   console.log(`✓ sharp ${sharpVersion} (Linux x64) already on S:/bodorgo`);
+}
+
+// pdf.js + @napi-rs/canvas draw a club document's first page for its card
+// (utils/documentPreviews.js). pdf.js is pure JS - only the parts used in
+// Node are copied; the canvas has a native part, fetched for Linux x64
+// like sharp's. Done again only when either version changes (the marker).
+const versionOf = (pkg) =>
+  JSON.parse(fs.readFileSync(path.resolve('node_modules', pkg, 'package.json'), 'utf8')).version;
+const pdfVersions = `pdfjs-dist ${versionOf('pdfjs-dist')}, @napi-rs/canvas ${versionOf('@napi-rs/canvas')}`;
+const pdfMarker = path.join(dest, 'node_modules', 'pdfjs-dist', '.linux-x64-build');
+if (!fs.existsSync(pdfMarker) || fs.readFileSync(pdfMarker, 'utf8') !== pdfVersions) {
+  const pdfjsDest = path.join(dest, 'node_modules', 'pdfjs-dist');
+  fs.rmSync(pdfjsDest, { recursive: true, force: true });
+  for (const part of [
+    'package.json',
+    'LICENSE',
+    'legacy',
+    'standard_fonts',
+    'cmaps',
+    'iccs',
+    'wasm',
+  ]) {
+    fs.cpSync(path.resolve('node_modules/pdfjs-dist', part), path.join(pdfjsDest, part), {
+      recursive: true,
+      force: true,
+    });
+  }
+  const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'bodorgo-canvas-linux-'));
+  execSync(
+    `npm install @napi-rs/canvas@${versionOf('@napi-rs/canvas')} --os=linux --cpu=x64 --libc=glibc --no-save --no-package-lock --no-audit --no-fund --omit=dev`,
+    { cwd: staging, stdio: 'ignore' },
+  );
+  for (const pkg of ['@napi-rs/canvas', '@napi-rs/canvas-linux-x64-gnu']) {
+    fs.cpSync(path.join(staging, 'node_modules', pkg), path.join(dest, 'node_modules', pkg), {
+      recursive: true,
+      force: true,
+    });
+  }
+  fs.writeFileSync(pdfMarker, pdfVersions);
+  fs.rmSync(staging, { recursive: true, force: true });
+  console.log(`✓ Shipped ${pdfVersions} (Linux x64) → S:/bodorgo/node_modules`);
+} else {
+  console.log(`✓ ${pdfVersions} (Linux x64) already on S:/bodorgo`);
 }

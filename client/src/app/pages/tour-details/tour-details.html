@@ -222,11 +222,12 @@
         @if (auth.user()?.role === 'admin' && (t.extraDocuments ?? []).length < 5) {
           <button
             type="button"
-            class="icon-btn icon-btn--add"
-            title="Dokumentum hozzáadása"
+            class="icon-btn icon-btn--add icon-btn--upload"
+            title="Dokumentum feltöltése (PDF vagy JPG, legfeljebb 5)"
+            aria-label="Dokumentum feltöltése"
             (click)="startAddDocument()"
           >
-            <mat-icon>add</mat-icon>
+            <mat-icon>upload_file</mat-icon>
           </button>
         }
       </div>

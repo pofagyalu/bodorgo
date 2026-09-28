@@ -21,6 +21,7 @@
   "author": "Zoltán Nagy",
   "license": "ISC",
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.9",
     "archiver": "^8.0.0",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
@@ -41,6 +42,7 @@
     "morgan": "^1.10.1",
     "multer": "^2.4.0",
     "openid-client": "^6.8.1",
+    "pdfjs-dist": "^6.3.289",
     "pdfkit": "^0.20.2",
     "qrcode": "^1.5.4",
     "resend": "^6.28.1",
