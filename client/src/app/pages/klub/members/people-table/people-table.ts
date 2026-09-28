@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MemberUser } from '../../../../services/membership';
 import { Avatar } from '../../../../components/avatar/avatar';
+import { TourMedal } from '../../../../shared/tour-medal/tour-medal';
 
 // The one activity status shown per user - derived, never stored, from the
 // only two real facts: whether an admin archived them (retired, always
@@ -62,7 +63,7 @@ export interface ExtraColumn {
 // header except the extras sorts the table; each table keeps its own order.
 @Component({
   selector: 'app-people-table',
-  imports: [NgTemplateOutlet, RouterLink, MatIconModule, Avatar],
+  imports: [NgTemplateOutlet, RouterLink, MatIconModule, Avatar, TourMedal],
   templateUrl: './people-table.html',
   styleUrl: './people-table.scss',
 })
@@ -74,6 +75,9 @@ export class PeopleTable {
   // Under each person's row, e.g. Klubtagok's payment history (the page's
   // template decides whether it's open).
   detailRow = input<TemplateRef<{ $implicit: MemberUser }> | null>(null);
+  // A page's own buttons at the start of Műveletek (e.g. Klubtagok's
+  // cash dues), given the person as `let-p`.
+  rowActions = input<TemplateRef<{ $implicit: MemberUser }> | null>(null);
   rowClickable = input(false);
   highlightId = input<string | null>(null); // "me" - a tinted row
   busyId = input<string | null>(null); // a suspend/restore in progress
@@ -81,6 +85,9 @@ export class PeopleTable {
   // Wide tables (with extra columns) scroll sideways on a phone rather
   // than squeezing.
   wide = input(false);
+  // Every column the same width (e.g. Mindenki's three) instead of Név as
+  // narrow as its content and the numbers at a fixed width.
+  equalColumns = input(false);
 
   rowClick = output<MemberUser>();
   archive = output<MemberUser>();

@@ -1,5 +1,5 @@
 <div class="table-scroll">
-  <table [class.wide]="wide()">
+  <table [class.wide]="wide()" [class.equal]="equalColumns()">
     <thead>
       <tr>
         @for (col of sortColumns(); track col.key) {
@@ -56,7 +56,10 @@
               <small>{{ p.email || 'Meghívott' }}</small>
             </div>
           </td>
-          <td class="num-col">{{ p.toursAttended }}</td>
+          <td class="num-col">
+            {{ p.toursAttended }}
+            <app-tour-medal [tours]="p.toursAttended" />
+          </td>
           <td class="num-col">{{ p.age ?? '-' }}</td>
           @if (showStatus()) {
             <td class="status-col">
@@ -78,6 +81,9 @@
           @if (showActions()) {
             <td class="actions-cell">
               <div class="row-actions">
+                @if (rowActions(); as actions) {
+                  <ng-container *ngTemplateOutlet="actions; context: { $implicit: p }" />
+                }
                 <a
                   [routerLink]="['/klub/felhasznalok', p._id]"
                   class="icon-btn icon-btn--edit"

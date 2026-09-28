@@ -88,7 +88,6 @@ vi.mock('web-push', () => ({
 vi.mock('../src/utils/resendEmail.js', () => ({
   default: vi.fn(async () => ({ id: 'test-email' })),
 }));
-vi.mock('../src/utils/email.js', () => ({ default: vi.fn(async () => {}) }));
 
 // Payment gateways - individual tests override these with vi.mocked(...).
 vi.mock('../src/utils/stripe.js', async (importOriginal) => ({

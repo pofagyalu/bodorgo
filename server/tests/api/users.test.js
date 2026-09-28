@@ -55,6 +55,8 @@ describe('user lists', () => {
       birthday: new Date('1990-01-01'),
       photoUpdatedAt: new Date(),
     });
+    // Only a tour that has started counts - the sign-up for one still ahead doesn't yet.
+    await createReservation(await createTour({ startDate: new Date('2024-07-10') }), [member]);
     await createReservation(await createTour(), [member]);
     const res = await request(app).get('/membership/users').set(asUser(member));
     expect(res.status).toBe(200);
@@ -68,7 +70,8 @@ describe('user lists', () => {
 describe('my own profile', () => {
   it('returns my profile with tour count and photo info', async () => {
     const member = await createMember({ username: 'teszt.elek' });
-    await createReservation(await createTour(), [member]);
+    await createReservation(await createTour({ startDate: new Date('2024-07-10') }), [member]);
+    await createReservation(await createTour(), [member]); // still ahead - not counted
     const res = await request(app).get('/users/me').set(asUser(member));
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({

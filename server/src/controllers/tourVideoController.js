@@ -123,7 +123,7 @@ export async function notifyAttendeesOfNewVideo(tour) {
   }
 }
 
-// Run every 12 hours (see server.js): e-mails the attendees of each tour
+// Run by an admin's "Új média felfedezése" (photos/discovery.js): e-mails the attendees of each tour
 // that got its first video since the last check - once per tour, a later
 // second version doesn't re-notify. The very first run ever (no tour
 // marked yet) only marks the videos already there, so nobody gets an

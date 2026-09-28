@@ -7,10 +7,9 @@ if (config.resend.redirectTo) {
   logger.warn(`EMAIL_REDIRECT_TO is set: every e-mail goes to ${config.resend.redirectTo} only`);
 }
 
-// Separate from utils/email.js's Mailtrap/nodemailer transport - that one
-// writes into Mailtrap's sandbox inbox (never reaches a real mailbox),
-// which is fine for password-reset dev testing but not for anything the
-// user actually needs to receive, like an emailed tour PDF.
+// The one way the server sends e-mail (Resend) - every e-mail the app sends
+// goes through sendResendEmail below (listed on Klub → Beállítások →
+// Értesítések).
 let client = null;
 function getClient() {
   if (!client) {

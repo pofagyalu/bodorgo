@@ -2,6 +2,7 @@ import express from 'express';
 import {
   startPayment,
   startMembershipPayment,
+  recordCashMembershipPayment,
   recordCashPayment,
   deleteCashPayment,
   getPaymentStatus,
@@ -26,6 +27,8 @@ router.post('/membership/start', requireAuth, startMembershipPayment);
 // no special raw-body handling since there's no payload to verify.
 router.get('/barion/callback', barionCallback);
 router.post('/cash', requireAuth, restrictTo('admin'), recordCashPayment);
+// A member's yearly dues handed over in cash (Klub → Felhasználók).
+router.post('/cash-membership', requireAuth, restrictTo('admin'), recordCashMembershipPayment);
 router.get('/withdraw/:purpose', requireAuth, restrictTo('admin'), getWithdrawalStatus);
 router.post('/withdraw', requireAuth, restrictTo('admin'), withdrawFunds);
 router.delete('/:id', requireAuth, restrictTo('admin'), deleteCashPayment);

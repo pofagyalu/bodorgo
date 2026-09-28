@@ -202,9 +202,12 @@ button {
   gap: 16px;
 }
 
+// align-content: start - see member-edit.scss: a field with no hint must
+// not stretch its input to the height of a neighbour that has one.
 .field {
   display: grid;
   gap: 6px;
+  align-content: start;
 }
 
 .field label,
@@ -610,4 +613,9 @@ button {
       color: var(--logo-dark-green);
     }
   }
+}
+
+// The tour medal line under the name in the banner.
+.profile-medal {
+  margin-top: 6px;
 }

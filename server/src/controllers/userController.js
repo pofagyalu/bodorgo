@@ -4,6 +4,7 @@ import Reservation from '../models/reservationModel.js';
 import Payment from '../models/paymentModel.js';
 import AppError from '../utils/appError.js';
 import { CLUB_FOUNDING_YEAR } from '../utils/clubSettings.js';
+import { toursAttendedByUser, toursAttendedOf } from '../utils/toursAttended.js';
 import { USERNAME_RULE, USERNAME_RULE_MESSAGE, usernameKey } from '../utils/usernames.js';
 
 const filterObj = (obj, ...allowedFields) => {
@@ -88,19 +89,9 @@ export const getAllUsers = async (req, res) => {
 
   const users = await User.find().select(selectFields).sort('name').lean();
 
-  // How many distinct tours each user has actually attended - counted from
-  // Reservation.attendees rather than stored on User, same source of truth
-  // getMyAttendance uses. $addToSet dedupes in case a user was somehow
-  // added as an attendee on more than one reservation for the same tour.
-  let toursAttendedById = new Map();
-  if (isAdmin) {
-    const attendanceCounts = await Reservation.aggregate([
-      { $unwind: '$attendees' },
-      { $group: { _id: '$attendees.user', tours: { $addToSet: '$tour' } } },
-      { $project: { toursAttended: { $size: '$tours' } } },
-    ]);
-    toursAttendedById = new Map(attendanceCounts.map((a) => [String(a._id), a.toursAttended]));
-  }
+  // How many tours each user has been on - already started ones only (see
+  // utils/toursAttended.js).
+  const toursAttendedById = isAdmin ? await toursAttendedByUser() : new Map();
 
   // birthday itself is only ever needed by the admin's edit form (see
   // profile.ts's startEditUser) - a 'member' viewer gets the computed age
@@ -189,12 +180,7 @@ export const getMe = async (req, res) => {
     'name username email birthday memberSince lastLoginAt wantsEmailNotifications address photoUpdatedAt photoSetBy',
   );
 
-  const attendanceCounts = await Reservation.aggregate([
-    { $unwind: '$attendees' },
-    { $match: { 'attendees.user': user._id } },
-    { $group: { _id: '$tour' } },
-    { $count: 'toursAttended' },
-  ]);
+  const toursAttended = await toursAttendedOf(user._id);
 
   res.status(200).json({
     status: 'success',
@@ -206,7 +192,7 @@ export const getMe = async (req, res) => {
       age: computeAge(user.birthday),
       memberSince: user.memberSince,
       lastLoginAt: user.lastLoginAt,
-      toursAttended: attendanceCounts[0]?.toursAttended ?? 0,
+      toursAttended,
       wantsEmailNotifications: user.wantsEmailNotifications,
       address: user.address,
       photoUpdatedAt: user.photoUpdatedAt ?? null,
@@ -273,12 +259,7 @@ export const getUser = async (req, res) => {
     throw new AppError('No user found with that ID!', 404);
   }
 
-  const attendanceCounts = await Reservation.aggregate([
-    { $unwind: '$attendees' },
-    { $match: { 'attendees.user': user._id } },
-    { $group: { _id: '$tour' } },
-    { $count: 'toursAttended' },
-  ]);
+  const toursAttended = await toursAttendedOf(user._id);
 
   res.status(200).json({
     status: 'success',
@@ -286,7 +267,7 @@ export const getUser = async (req, res) => {
       user: {
         ...user.toObject(),
         age: computeAge(user.birthday),
-        toursAttended: attendanceCounts[0]?.toursAttended ?? 0,
+        toursAttended,
       },
     },
   });

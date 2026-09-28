@@ -1,5 +1,5 @@
 import User from '../models/userModel.js';
-import Reservation from '../models/reservationModel.js';
+import { toursAttendedByUser } from '../utils/toursAttended.js';
 import { computeAge } from './userController.js';
 
 // GET /membership/users - requireAuth, restrictTo('admin', 'member'). Feeds
@@ -21,13 +21,8 @@ export const getMembers = async (req, res) => {
     .sort('name')
     .lean();
 
-  const attendanceCounts = await Reservation.aggregate([
-    { $unwind: '$attendees' },
-    { $group: { _id: '$attendees.user', tours: { $addToSet: '$tour' } } },
-    { $project: { toursAttended: { $size: '$tours' } } },
-  ]);
-
-  const toursAttendedById = new Map(attendanceCounts.map((a) => [String(a._id), a.toursAttended]));
+  // Tours already started only (see utils/toursAttended.js).
+  const toursAttendedById = await toursAttendedByUser();
 
   const usersWithAttendance = users.map((user) => {
     // The raw birthday never goes out on this members-visible list - just

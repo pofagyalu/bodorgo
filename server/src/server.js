@@ -8,6 +8,10 @@ import createSessionMiddleware from './session.js';
 import registerChatHandlers from './chat/chatSocket.js';
 import logger from './logger.js';
 import { checkPollReminders } from './chat/pollReminders.js';
+import {
+  checkMembershipReminders,
+  notifyAdminsIfAllMembersPaid,
+} from './utils/membershipReminders.js';
 
 // This handler must run before anything else
 process.on('uncaughtException', (err) => {
@@ -57,6 +61,24 @@ mongoose
             logger.error(`Poll reminders failed: ${err.message}`),
           ),
         10 * 60 * 1000,
+      );
+
+      // Every hour (see utils/membershipReminders.js): the "Tagdíj
+      // emlékeztető" round due today, if any - each round once, from 9 a.m.
+      // Budapest time - and whether the year's dues are now all in (the
+      // admins' e-mail, once a year). A cash payment recorded by an admin is
+      // only picked up here, so a misclick undone within the hour sends
+      // nothing. Only reads the database and sends e-mails.
+      setInterval(
+        () => {
+          checkMembershipReminders().catch((err) =>
+            logger.error(`Membership reminders failed: ${err.message}`),
+          );
+          notifyAdminsIfAllMembersPaid().catch((err) =>
+            logger.error(`All-paid check failed: ${err.message}`),
+          );
+        },
+        60 * 60 * 1000,
       );
     }
 

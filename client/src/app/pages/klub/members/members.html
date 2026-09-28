@@ -78,6 +78,27 @@
     </span>
   </ng-template>
 
+  <!-- Admin, Klubtagok's Műveletek: this year's dues paid in cash (the
+       rare exception) - grey records it, green undoes it. -->
+  <ng-template #cashAction let-m>
+    @if (canToggleCash(m._id, currentMembershipYear())) {
+      <button
+        type="button"
+        class="cash-btn"
+        [class.cash-btn--active]="paidInCash(m._id, currentMembershipYear())"
+        [title]="
+          paidInCash(m._id, currentMembershipYear())
+            ? currentMembershipYear() + '. évi készpénzes tagdíj visszavonása'
+            : currentMembershipYear() + '. évi tagdíj befizetve készpénzben'
+        "
+        [disabled]="cashBusy() === m._id + ':' + currentMembershipYear()"
+        (click)="toggleCashDues(m, currentMembershipYear(), $event)"
+      >
+        <mat-icon>attach_money</mat-icon>
+      </button>
+    }
+  </ng-template>
+
   <ng-template #historyCell let-m>
     <div class="history-summary">
       <div class="history-dots">
@@ -228,6 +249,7 @@
           [showActions]="isAdmin()"
           [extraColumns]="clubExtraColumns()"
           [detailRow]="historyDetail"
+          [rowActions]="cashAction"
           [rowClickable]="isAdmin()"
           [highlightId]="myId()"
           [busyId]="archivingId()"
@@ -277,7 +299,11 @@
             <h2>Mindenki</h2>
           </div>
         </div>
-        <app-people-table [people]="filteredEveryone()" [highlightId]="myId()" />
+        <app-people-table
+          [people]="filteredEveryone()"
+          [highlightId]="myId()"
+          [equalColumns]="true"
+        />
       </section>
     </div>
   }

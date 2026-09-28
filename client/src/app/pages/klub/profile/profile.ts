@@ -16,6 +16,7 @@ import { errorMessage } from '../../../shared/errors';
 import { Avatar } from '../../../components/avatar/avatar';
 import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 import { Masonry } from '../../../shared/masonry/masonry.directive';
+import { TourMedal } from '../../../shared/tour-medal/tour-medal';
 
 interface AttendanceRow {
   tour: AttendedTour;
@@ -30,7 +31,7 @@ function emptyAddress(): UserAddress {
 
 @Component({
   selector: 'app-klub-profile',
-  imports: [RouterLink, MatIconModule, Avatar, PhotoEditor, Masonry],
+  imports: [RouterLink, MatIconModule, Avatar, PhotoEditor, Masonry, TourMedal],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })

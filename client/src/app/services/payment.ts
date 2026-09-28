@@ -82,6 +82,12 @@ export class PaymentService {
     return this.http.post<{ status: string }>(`${this.apiUrl}/cash`, { tourId, attendeeIds });
   }
 
+  // Admin-only - a member handed over one year's dues in cash (see
+  // paymentController.js's recordCashMembershipPayment).
+  recordCashMembershipPayment(userId: string, year: number): Observable<{ status: string }> {
+    return this.http.post<{ status: string }>(`${this.apiUrl}/cash-membership`, { userId, year });
+  }
+
   // Admin-only - undoes a cash entry made by mistake (wrong row clicked),
   // reverting the attendee(s) it covered back to unpaid. See
   // paymentController.js's deleteCashPayment - it refuses anything that

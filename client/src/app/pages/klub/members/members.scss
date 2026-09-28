@@ -385,6 +385,46 @@ button {
   padding: 6px 21px 6px 63px;
 }
 
+// Admin, in Klubtagok's Műveletek: "Befizetve készpénzben" - the tour
+// attendee list's cash green: filled to record this year's dues as paid in
+// cash, outlined once it is (clicking then undoes it).
+.cash-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  background: #1b6548;
+  color: #fff;
+  cursor: pointer;
+
+  &:hover {
+    background: #144d37;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.cash-btn--active {
+  background: #fff;
+  color: #1b6548;
+  box-shadow: inset 0 0 0 2px #1b6548;
+
+  &:hover {
+    background: #e8f3ee;
+  }
+}
+
 .history-expanded .history-row {
   font-size: 12.5px;
 }
