@@ -236,7 +236,7 @@ export const updateChatImageSettings = async (req, res) => {
     settings.history.push({
       at: new Date(),
       byName: req.user.name,
-      change: `Chat fotók: ${before} → ${after}`,
+      change: `Kotyogó fotók: ${before} → ${after}`,
     });
   }
   await settings.save();

@@ -81,7 +81,7 @@ export class Szavazasok implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.notifications.addError('A szavazások betöltése nem sikerült.');
+        this.notifications.addError('A voks betöltése nem sikerült.');
         this.loading.set(false);
       },
     });

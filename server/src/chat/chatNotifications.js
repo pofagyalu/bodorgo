@@ -83,8 +83,8 @@ export async function notifyChatPost(io, post) {
   const usernameById = new Map(users.map((u) => [String(u._id), u.username]));
 
   const title = tour
-    ? `${tour.order ? `${tour.order}. ` : ''}${tour.title} – chat`
-    : 'Bódorgó chat';
+    ? `${tour.order ? `${tour.order}. ` : ''}${tour.title} – Kotyogó`
+    : 'Bódorgó Kotyogó';
   // A photo (with or without text) says so - a photo alone has no text.
   const body = post.image ? `📷 ${post.text || 'Fotó'}` : post.text;
   const text = body.length > SNIPPET_LENGTH ? `${body.slice(0, SNIPPET_LENGTH - 1)}…` : body;

@@ -1,8 +1,8 @@
 <div class="chat-shell">
-  <aside class="chat-sidebar" aria-label="Táborok chatjei">
+  <aside class="chat-sidebar" aria-label="Táborok Kotyogói">
     <div class="chat-brand">
       <div class="brand-mark"><mat-icon>forum</mat-icon></div>
-      <div class="brand-text"><strong>Chat</strong><small>Táboronként</small></div>
+      <div class="brand-text"><strong>Kotyogó</strong><small>Táboronként</small></div>
     </div>
 
     @if (loaded()) {
@@ -61,7 +61,7 @@
             [attr.aria-selected]="activePane() === 'chat'"
             (click)="activePane.set('chat')"
           >
-            <mat-icon>chat</mat-icon>Chat
+            <mat-icon>chat</mat-icon>Kotyogó
           </button>
           <button
             type="button"
@@ -84,7 +84,7 @@
         <section
           class="pane pane-chat"
           [class.inactive]="activePane() !== 'chat'"
-          aria-label="Chat"
+          aria-label="Kotyogó"
         >
           <!-- This tour's chat notifications on/off (see PushService). -->
           <button
@@ -93,8 +93,8 @@
             [class.muted]="chatMuted()"
             [title]="
               chatMuted()
-                ? 'Ennek a chatnek az értesítései némítva - kattints a bekapcsoláshoz'
-                : 'Értesítések ebből a chatből - kattints a némításhoz'
+                ? 'Ennek a Kotyogónak az értesítései némítva - kattints a bekapcsoláshoz'
+                : 'Értesítések ebből a Kotyogóból - kattints a némításhoz'
             "
             (click)="toggleChatMuted(t._id)"
           >

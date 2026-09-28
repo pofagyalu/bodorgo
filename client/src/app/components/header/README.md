@@ -1,6 +1,6 @@
 # The soap bubble in the main menu
 
-The main menu (Táborok, Média, Chat, Klub, Szavazások) has a bubble behind
+The main menu (Táborok, Média, Chat, Klub, Voks) has a bubble behind
 the selected item. When the mouse moves onto another item, the bubble floats
 over to it, stretches to that item's width, and wobbles like a soap bubble.
 When the mouse leaves the menu, the bubble floats back to the selected item.
@@ -189,14 +189,14 @@ trick for "change this without animating".
 
 Several things can change where the bubble should be:
 
-| What happens                                                    | What handles it                                 |
-| --------------------------------------------------------------- | ----------------------------------------------- |
-| mouse enters an item                                            | `(mouseenter)="hoverItem(...)"`                 |
-| mouse leaves the menu                                           | `(mouseleave)="hoverItem(null)"` on the `<nav>` |
-| you click an item → page changes → `active` moves               | `afterEveryRender(...)`                         |
-| the Szavazások badge appears or disappears → item width changes | `afterEveryRender(...)`                         |
-| the Marhey font finishes loading → all widths change            | `document.fonts.ready.then(...)`                |
-| the window is resized                                           | `@HostListener('window:resize')`                |
+| What happens                                              | What handles it                                 |
+| --------------------------------------------------------- | ----------------------------------------------- |
+| mouse enters an item                                      | `(mouseenter)="hoverItem(...)"`                 |
+| mouse leaves the menu                                     | `(mouseleave)="hoverItem(null)"` on the `<nav>` |
+| you click an item → page changes → `active` moves         | `afterEveryRender(...)`                         |
+| the Voks badge appears or disappears → item width changes | `afterEveryRender(...)`                         |
+| the Marhey font finishes loading → all widths change      | `document.fonts.ready.then(...)`                |
+| the window is resized                                     | `@HostListener('window:resize')`                |
 
 `afterEveryRender` is an Angular function: the callback runs after Angular
 has updated the page. That is the moment `routerLinkActive` has already

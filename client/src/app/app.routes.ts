@@ -44,16 +44,16 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./pages/tour-details/tour-details').then((m) => m.TourDetails),
   },
-  // Chat/Szavazások/Versenyek are routed but still in early development
+  // Chat/Voks/Versenyek are routed but still in early development
   {
     path: 'chat',
-    title: 'Bódorgó chat',
+    title: 'Bódorgó Kotyogó',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/chat/chat').then((m) => m.Chat),
   },
   {
     path: 'szavazasok',
-    title: 'Bódorgó szavazások',
+    title: 'Bódorgó voks',
     loadComponent: () => import('./pages/szavazasok/szavazasok').then((m) => m.Szavazasok),
   },
   {

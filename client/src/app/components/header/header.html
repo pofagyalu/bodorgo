@@ -1,4 +1,12 @@
-<header class="header-container">
+<header class="header-container" #header>
+  <!-- One bubble for the logo and the whole menu: it floats over to
+       whichever of them the mouse is on, and back to the selected one - the
+       logo on the home page (header.ts placeBubble). -->
+  @if (auth.isLoggedIn()) {
+    <span class="menu-bubble" #bubble aria-hidden="true"
+      ><span class="menu-bubble-skin"></span
+    ></span>
+  }
   <!-- Left: hamburger (mobile only) + logo, always visible -->
   <div class="left-group">
     <button
@@ -11,7 +19,14 @@
     </button>
 
     <div class="logo-container">
-      <a routerLink="/">
+      <a
+        routerLink="/"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="logo-link bubble-target"
+        (mouseenter)="hoverItem($event.currentTarget)"
+        (mouseleave)="hoverItem(null)"
+      >
         <img src="assets/images/transparent_color_logo.svg" alt="Logo" class="logo" />
       </a>
     </div>
@@ -20,11 +35,6 @@
   <!-- Middle: Menu (desktop only, hidden on mobile in favor of the hamburger) -->
   @if (auth.isLoggedIn()) {
     <nav class="menu" #menu (mouseleave)="hoverItem(null)">
-      <!-- One bubble for the whole menu: it floats over to whichever item the
-      mouse is on, and back to the selected one (header.ts placeBubble). -->
-      <span class="menu-bubble" #bubble aria-hidden="true"
-        ><span class="menu-bubble-skin"></span
-      ></span>
       <a
         routerLink="/taborok"
         routerLinkActive="active"
@@ -46,7 +56,7 @@
         routerLinkActive="active"
         (mouseenter)="hoverItem($event.currentTarget)"
         class="menu-item blue"
-        >Chat</a
+        >Kotyogó</a
       >
       <a
         routerLink="/klub"
@@ -60,7 +70,7 @@
         routerLinkActive="active"
         (mouseenter)="hoverItem($event.currentTarget)"
         class="menu-item brown"
-        >Szavazások
+        >Voks
         @if (pendingPolls()) {
           <span class="menu-badge" [title]="pendingPolls() + ' szavazás vár rád'">{{
             pendingPolls()
@@ -155,7 +165,7 @@
         routerLinkActive="active"
         (click)="closeMobileMenu()"
         class="menu-item blue"
-        >Chat</a
+        >Kotyogó</a
       >
       <a
         routerLink="/klub"
@@ -169,7 +179,7 @@
         routerLinkActive="active"
         (click)="closeMobileMenu()"
         class="menu-item brown"
-        >Szavazások
+        >Voks
         @if (pendingPolls()) {
           <span class="menu-badge">{{ pendingPolls() }}</span>
         }
