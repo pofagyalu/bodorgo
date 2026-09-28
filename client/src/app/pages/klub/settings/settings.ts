@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import {
   MembershipFee,
+  ChatImageSettings,
   MembershipReminder,
   SettingsService,
   feeForYear,
@@ -160,6 +161,7 @@ export class KlubSettings implements OnInit {
 
   ngOnInit() {
     this.loadReminder();
+    this.loadChatImages();
     this.settingsService.getMembershipFees().subscribe({
       next: (res) => {
         this.foundingYear.set(res.data.foundingYear);
@@ -356,5 +358,67 @@ export class KlubSettings implements OnInit {
   roundLabel(date: string): string {
     const [, m, d] = date.split('-').map(Number);
     return `${MONTHS[m - 1]} ${d}.`;
+  }
+
+  // --- Chat fotók: the folder's size limit and the daily number per person ---
+
+  chatImages = signal<ChatImageSettings | null>(null);
+  chatQuotaMB = signal(1024);
+  chatDailyLimit = signal(10);
+  savingChatImages = signal(false);
+
+  chatImagesDirty = computed(() => {
+    const c = this.chatImages();
+    return (
+      !!c &&
+      (c.quotaMB !== Number(this.chatQuotaMB()) || c.dailyLimit !== Number(this.chatDailyLimit()))
+    );
+  });
+
+  // How full the folder is, 0-100.
+  chatUsagePercent = computed(() => {
+    const c = this.chatImages();
+    if (!c) return 0;
+    return Math.min(100, Math.round((c.usage.bytes / (c.quotaMB * 1024 * 1024)) * 100));
+  });
+
+  chatUsageMB = computed(() => Math.round((this.chatImages()?.usage.bytes ?? 0) / (1024 * 1024)));
+
+  private loadChatImages() {
+    this.settingsService.getChatImageSettings().subscribe({
+      next: (res) => this.applyChatImages(res.data),
+      error: () => {},
+    });
+  }
+
+  applyChatImages(c: ChatImageSettings) {
+    this.chatImages.set(c);
+    this.chatQuotaMB.set(c.quotaMB);
+    this.chatDailyLimit.set(c.dailyLimit);
+  }
+
+  saveChatImages() {
+    if (this.savingChatImages()) return;
+    this.savingChatImages.set(true);
+    this.settingsService
+      .updateChatImageSettings({
+        quotaMB: Number(this.chatQuotaMB()),
+        dailyLimit: Number(this.chatDailyLimit()),
+      })
+      .subscribe({
+        next: (res) => {
+          this.applyChatImages(res.data);
+          this.savingChatImages.set(false);
+          this.notifications.addSuccess(
+            res.data.removed
+              ? `Chat fotók mentve – ${res.data.removed} régi fotó törölve, hogy beférjen.`
+              : 'Chat fotók mentve.',
+          );
+        },
+        error: (err) => {
+          this.savingChatImages.set(false);
+          this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+        },
+      });
   }
 }

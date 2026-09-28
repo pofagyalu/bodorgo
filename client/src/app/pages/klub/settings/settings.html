@@ -125,6 +125,79 @@
     }
   </section>
 
+  <!-- Chat photos: how much room they may take and how many a person may
+       send a day. Over the limit the oldest go - their messages stay. -->
+  <section class="panel chat-images">
+    <div class="panel-title">
+      <div>
+        <h2>Chat fotók</h2>
+        <p class="subtext">
+          A táborok chatjében küldött fotók. Ha betelik a keret, a legrégebbiek törlődnek – az
+          üzenet megmarad, „A fotó már nem érhető el” jelzéssel.
+        </p>
+      </div>
+    </div>
+
+    @if (chatImages(); as c) {
+      <div class="chat-usage">
+        <div class="chat-usage-bar" [class.chat-usage-bar--full]="chatUsagePercent() >= 80">
+          <span [style.width.%]="chatUsagePercent()"></span>
+        </div>
+        <small>
+          {{ chatUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} fotó ({{
+            chatUsagePercent()
+          }}%)
+        </small>
+      </div>
+
+      <div class="chat-fields">
+        <label>
+          Tárhely keret (MB)
+          <input
+            type="number"
+            min="50"
+            step="50"
+            [ngModel]="chatQuotaMB()"
+            (ngModelChange)="chatQuotaMB.set(+$event)"
+          />
+        </label>
+        <label>
+          Fotó naponta, személyenként
+          <input
+            type="number"
+            min="1"
+            [ngModel]="chatDailyLimit()"
+            (ngModelChange)="chatDailyLimit.set(+$event)"
+          />
+        </label>
+      </div>
+
+      <div class="actions">
+        <span class="spacer"></span>
+        @if (chatImagesDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="applyChatImages(c)"
+            [disabled]="savingChatImages()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="saveChatImages()"
+          [disabled]="!chatImagesDirty() || savingChatImages()"
+        >
+          {{ savingChatImages() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+
   <!-- Every e-mail and push the app sends - what triggers it and who gets
        it; the Tagdíj emlékeztető is also set here. -->
   <section class="panel notifications">

@@ -46,6 +46,33 @@
         </button>
       </div>
     }
+    @if (!isOwn && !deleted && !pollId && !editing()) {
+      <div class="react-wrap">
+        <button
+          type="button"
+          class="icon-action"
+          title="Hangulatjel"
+          aria-label="Hangulatjel hozzáadása"
+          (click)="pickerOpen.set(!pickerOpen())"
+        >
+          <mat-icon>add_reaction</mat-icon>
+        </button>
+        @if (pickerOpen()) {
+          <div class="picker" role="menu">
+            @for (emoji of reactions; track emoji) {
+              <button
+                type="button"
+                class="picker-emoji"
+                [class.picker-emoji--mine]="myReaction() === emoji"
+                (click)="react(emoji)"
+              >
+                {{ emoji }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
   </div>
 
   @if (deleted) {
@@ -76,19 +103,41 @@
     <!-- A poll started in the chat: its live card instead of text. -->
     <app-poll-card [pollId]="pollId" [live]="true" />
   } @else {
-    <!-- One line on purpose: .text keeps whitespace (pre-wrap). -->
-    <p class="text">
-      @for (part of textParts(); track $index) {
-        @if (part.mention) {
-          <span class="mention" [class.mention--me]="part.me">{{ part.text }}</span>
-        } @else {
-          {{ part.text }}
-        }
+    <!-- A photo sent with it: tap to open it big; one the size quota
+         removed says so. -->
+    @if (image) {
+      @if (image.expired) {
+        <p class="photo-expired">
+          <mat-icon>image_not_supported</mat-icon>A fotó már nem érhető el
+        </p>
+      } @else {
+        <button
+          type="button"
+          class="post-photo"
+          (click)="openPhoto($event)"
+          aria-label="Fotó megnyitása"
+        >
+          <img
+            [src]="imageThumbUrl"
+            alt=""
+            loading="lazy"
+            [style.aspect-ratio]="image.width + ' / ' + image.height"
+          />
+        </button>
       }
-    </p>
+    }
 
-    @if (imageUrl()) {
-      <img class="post-image" [src]="imageUrl()" alt="Post image" />
+    @if (text()) {
+      <!-- One line on purpose: .text keeps whitespace (pre-wrap). -->
+      <p class="text">
+        @for (part of textParts(); track $index) {
+          @if (part.mention) {
+            <span class="mention" [class.mention--me]="part.me">{{ part.text }}</span>
+          } @else {
+            {{ part.text }}
+          }
+        }
+      </p>
     }
   }
 
@@ -102,6 +151,29 @@
     </div>
   }
 </div>
+
+<!-- Hangulatjelek under the bubble: one chip per emoji with its count; who
+     put it on the hover; a click puts (or takes back) the same one - not
+     on my own messages, those I can't react to. -->
+@if (reactionGroups().length && !deleted) {
+  <div class="reactions">
+    @for (g of reactionGroups(); track g.emoji) {
+      <button
+        type="button"
+        class="reaction-chip"
+        [class.reaction-chip--mine]="g.mine"
+        [title]="g.names"
+        [disabled]="isOwn"
+        (click)="react(g.emoji)"
+      >
+        {{ g.emoji }}
+        @if (g.count > 1) {
+          <span>{{ g.count }}</span>
+        }
+      </button>
+    }
+  </div>
+}
 
 <!-- Phone: the long-press menu, sliding up from the bottom of the screen.
      A list of actions, so more can be added later (reply, react...). -->
@@ -125,6 +197,28 @@
         <mat-icon>arrow_back</mat-icon>Mégse
       </button>
     } @else {
+      @if (!deleted && !isOwn) {
+        <div class="sheet-emojis">
+          @for (emoji of reactions; track emoji) {
+            <button
+              type="button"
+              class="sheet-emoji"
+              [class.sheet-emoji--mine]="myReaction() === emoji"
+              (click)="sheetReact(emoji)"
+            >
+              {{ emoji }}
+            </button>
+          }
+        </div>
+      }
+      <!-- Who put which - on my own messages too. -->
+      @if (!deleted && reactionGroups().length) {
+        <div class="sheet-reactions">
+          @for (g of reactionGroups(); track g.emoji) {
+            <p>{{ g.emoji }} {{ g.names }}</p>
+          }
+        </div>
+      }
       @if (!deleted) {
         <button type="button" class="sheet-item" (click)="copyText()">
           <mat-icon>content_copy</mat-icon>Szöveg másolása

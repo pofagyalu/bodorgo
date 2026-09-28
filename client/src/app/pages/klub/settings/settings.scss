@@ -268,6 +268,65 @@ button {
 
 // --- Felhasználónevek ---
 
+// --- Chat fotók ---
+
+.chat-images {
+  margin-top: 18px;
+}
+
+.chat-usage {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  small {
+    color: #56666e;
+    font-size: 12px;
+  }
+}
+
+// How full the folder is - green, turning orange past 80%.
+.chat-usage-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: #edf3f0;
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #2fa583;
+    transition: width 0.3s ease;
+  }
+}
+
+.chat-usage-bar--full span {
+  background: #e08e0b;
+}
+
+.chat-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  label {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #2f414b;
+  }
+
+  input {
+    width: 150px;
+    padding: 8px 10px;
+    border: 1px solid #dce5e1;
+    border-radius: 9px;
+    color: #1c2d38;
+  }
+}
+
 // --- Értesítések: every e-mail and push, and the Tagdíj emlékeztető ---
 
 .notifications {

@@ -14,15 +14,18 @@ import { AuthService } from '../../auth/auth.service';
 import { TourSocketService } from '../../services/tour-socket';
 import { Compose, Mentionable } from './compose/compose';
 import { TourService } from '../../services/tour';
-import { Post } from './post/post';
+import { Post, Reaction } from './post/post';
 import { PollCreate } from '../poll-create/poll-create';
 import { usernameKey } from '../../shared/usernames';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 interface IPost {
   _id: string;
   creator: { _id: string; name: string; username?: string };
   text: string;
-  image?: string;
+  // A photo sent with it (see server chat/chatImages.js) - expired: the
+  // size quota removed it, the message shows it's no longer available.
+  image?: { width: number; height: number; expired?: boolean } | null;
   createdAt: string;
   updatedAt: string;
   tourId: string;
@@ -30,6 +33,25 @@ interface IPost {
   deletedAt?: string;
   // A poll started in the chat (see components/poll-card).
   poll?: string | null;
+  // Hangulatjelek, one per person (see post.ts).
+  reactions?: Reaction[];
+}
+
+function dayBreakLabel(d: Date): string {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfToday.getDate() - ((startOfToday.getDay() + 6) % 7)); // back to Monday
+
+  const weekday = new Intl.DateTimeFormat('hu-HU', { weekday: 'long' }).format(d);
+  if (d >= startOfToday) return 'ma';
+  if (d >= startOfWeek) return weekday;
+  const date = new Intl.DateTimeFormat('hu-HU', {
+    year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    month: 'short',
+    day: 'numeric',
+  }).format(d);
+  return `${weekday}, ${date}`;
 }
 
 @Component({
@@ -68,6 +90,21 @@ export class Feed implements OnInit, OnDestroy {
     return mine ? usernameKey(mine) : null;
   });
   private unsubscribers: (() => void)[] = [];
+
+  // A day's first message gets the day above it, centered: "ma", the day
+  // name this week ("péntek", from Monday), else with the date too
+  // ("péntek, okt. 9." - and the year if it wasn't this year).
+  dayBreaks = computed(() => {
+    const breaks = new Map<string, string>();
+    let lastDay = '';
+    for (const post of this.posts()) {
+      const d = new Date(post.createdAt);
+      const day = d.toDateString();
+      if (day !== lastDay) breaks.set(post._id, dayBreakLabel(d));
+      lastDay = day;
+    }
+    return breaks;
+  });
 
   private feedContainer = viewChild<ElementRef<HTMLDivElement>>('feedContainer');
 
@@ -133,7 +170,31 @@ export class Feed implements OnInit, OnDestroy {
     });
   }
 
-  onCompose(data: { text: string }) {
+  // A photo goes as an upload (the server then announces the message over
+  // the socket like any other); plain text straight over the socket.
+  sendingPhoto = signal(false);
+
+  chatThumb(postId: string): string {
+    return this.tourService.chatImageThumbUrl(this.tourId(), postId);
+  }
+
+  chatFull(postId: string): string {
+    return this.tourService.chatImageUrl(this.tourId(), postId);
+  }
+  private notifications = inject(NotificationsService);
+
+  onCompose(data: { text: string; image?: Blob }) {
+    if (data.image) {
+      this.sendingPhoto.set(true);
+      this.tourService.sendChatImage(this.tourId(), data.image, data.text).subscribe({
+        next: () => this.sendingPhoto.set(false),
+        error: (err) => {
+          this.sendingPhoto.set(false);
+          this.notifications.addError(err?.error?.message ?? 'A fotót nem sikerült elküldeni.');
+        },
+      });
+      return;
+    }
     this.tourSocket.emit('create-post', {
       tourId: this.tourId(),
       text: data.text,
@@ -148,6 +209,11 @@ export class Feed implements OnInit, OnDestroy {
 
   onDelete(postId: string) {
     this.tourSocket.emit('delete-post', { postId });
+  }
+
+  // Mine on anyone's message - the same one again takes it back.
+  onReact(postId: string, emoji: string) {
+    this.tourSocket.emit('react-post', { postId, emoji });
   }
 
   ngOnDestroy() {
