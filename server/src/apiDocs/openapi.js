@@ -1474,6 +1474,58 @@ const paths = {
       errors: [403, 404],
     }),
   },
+  '/users/invitations': {
+    get: op({
+      tag: T.users,
+      role: 'admin',
+      summary: 'Meghívók - who can be invited, and how it stands',
+      description:
+        'Everyone with an e-mail who has never logged in (and is not suspended), plus those invited who have joined since. `status`: `none` (not invited), `sent`, `expired`, `joined`. `enabled`: the server has its Authentik API token.',
+      data: obj({
+        enabled: bool(),
+        days: int('How long a link is valid.'),
+        people: arrayOf(
+          obj({
+            _id: id(),
+            name: str(),
+            email: str(),
+            role: str('', { enum: ['admin', 'member', 'guest'] }),
+            status: str('', { enum: ['none', 'sent', 'expired', 'joined'] }),
+            sentAt: { type: ['string', 'null'], format: 'date-time' },
+            expiresAt: { type: ['string', 'null'], format: 'date-time' },
+            sentByName: { type: ['string', 'null'] },
+          }),
+        ),
+      }),
+    }),
+    post: op({
+      tag: T.users,
+      role: 'admin',
+      summary: 'Send invitations',
+      description:
+        'Each person gets a new single-use Authentik invitation (their e-mail and name pre-filled; valid for 30 days) and an e-mail with their own link; a previous link of theirs stops working. Either `userIds` (one person - a test, a resend) or `group`: `members` (club members and admins) / `others` (guests) - a batch only takes those not invited yet. Someone who has logged in is never invited. One failure does not stop the others; it is listed by name.',
+      body: obj({
+        userIds: arrayOf(id()),
+        group: str('A batch.', { enum: ['members', 'others'] }),
+      }),
+      data: obj({
+        sent: arrayOf(str('Name.')),
+        failed: arrayOf(obj({ name: str(), message: str() })),
+      }),
+      errors: [400],
+    }),
+  },
+  '/users/{id}/invitation': {
+    delete: op({
+      tag: T.users,
+      role: 'admin',
+      summary: 'Take an invitation back',
+      description: 'Deletes it in Authentik - the link stops working.',
+      params: [userIdP],
+      data: { type: 'object' },
+      errors: [400, 404],
+    }),
+  },
   '/users/join-family': {
     post: op({
       tag: T.users,

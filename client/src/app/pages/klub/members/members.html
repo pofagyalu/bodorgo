@@ -38,6 +38,17 @@
       <span class="tab-count">{{ users().length }}</span>
     </button>
     @if (isAdmin()) {
+      <button
+        role="tab"
+        type="button"
+        [attr.aria-selected]="activeTab() === 'invites'"
+        [class.active]="activeTab() === 'invites'"
+        (click)="selectTab('invites')"
+      >
+        Meghívók
+      </button>
+    }
+    @if (isAdmin()) {
       <a
         [routerLink]="['/klub/felhasznalok', 'uj']"
         class="icon-btn icon-btn--add"
@@ -257,6 +268,11 @@
       <p class="member-note">
         A személyes elérhetőségek és a fiók beállításai továbbra is a saját profilban maradnak.
       </p>
+    </div>
+  } @else if (activeTab() === 'invites' && isAdmin()) {
+    <!-- Admins: sending the Authentik invitations (invitations-panel). -->
+    <div role="tabpanel">
+      <app-invitations-panel />
     </div>
   } @else {
     <div role="tabpanel">

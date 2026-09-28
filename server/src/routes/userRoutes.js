@@ -9,6 +9,11 @@ import {
   setUserPhoto,
   deleteUserPhoto,
 } from '../controllers/userPhotoController.js';
+import {
+  getInvitations,
+  revokeInvitation,
+  sendInvitations,
+} from '../controllers/invitationController.js';
 
 const router = express.Router();
 
@@ -27,6 +32,12 @@ router
   .put(requireAuth, restrictTo('admin'), photoUploadMiddleware, setUserPhoto)
   .delete(requireAuth, restrictTo('admin'), deleteUserPhoto);
 router.post('/join-family', requireAuth, restrictTo('admin'), userController.joinFamily);
+// Meghívók - Authentik invitations (invitationController.js), admins only.
+router
+  .route('/invitations')
+  .get(requireAuth, restrictTo('admin'), getInvitations)
+  .post(requireAuth, restrictTo('admin'), sendInvitations);
+router.delete('/:id/invitation', requireAuth, restrictTo('admin'), revokeInvitation);
 // Admins filling in everyone's usernames at once (Klub → Beállítások).
 router
   .route('/usernames')

@@ -1,0 +1,127 @@
+<section class="panel invitations">
+  <div class="invitations-head">
+    <div>
+      <h2>Meghívók</h2>
+      <p>
+        Aki fel van véve e-mail címmel, de még sosem lépett be, a saját meghívó linkjét kapja
+        e-mailben: regisztrál, megerősíti az e-mail címét, és belép. A linkek {{ days() }} napig
+        érvényesek, egyszer használhatók.
+      </p>
+    </div>
+  </div>
+
+  @if (!enabled()) {
+    <p class="invitations-off">
+      A meghívók nincsenek beállítva a szerveren (hiányzik az AUTHENTIK_API_TOKEN).
+    </p>
+  }
+
+  @if (loading()) {
+    <p class="empty-note">Betöltés...</p>
+  } @else {
+    <div class="summary">
+      <span
+        ><strong>{{ counts().none }}</strong> még nem kapott</span
+      >
+      <span
+        ><strong>{{ counts().sent }}</strong> meghívva</span
+      >
+      <span
+        ><strong>{{ counts().expired }}</strong> lejárt</span
+      >
+      <span
+        ><strong>{{ counts().joined }}</strong> már belépett</span
+      >
+    </div>
+
+    <!-- The two batches: each only those not invited yet. -->
+    <div class="batches">
+      <button
+        type="button"
+        class="primary-btn"
+        [disabled]="!enabled() || !membersWaiting() || busy()"
+        (click)="sendBatch('members')"
+      >
+        <mat-icon>send</mat-icon>
+        {{ busy() === 'members' ? 'Küldés…' : 'Klubtagok meghívása (' + membersWaiting() + ')' }}
+      </button>
+      <button
+        type="button"
+        class="outline-btn"
+        [disabled]="!enabled() || !othersWaiting() || busy()"
+        (click)="sendBatch('others')"
+      >
+        <mat-icon>send</mat-icon>
+        {{ busy() === 'others' ? 'Küldés…' : 'A többiek meghívása (' + othersWaiting() + ')' }}
+      </button>
+    </div>
+
+    @if (people().length) {
+      <table class="invitations-table">
+        <thead>
+          <tr>
+            <th>Név</th>
+            <th>E-mail</th>
+            <th>Szerepkör</th>
+            <th>Állapot</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of people(); track p._id) {
+            <tr>
+              <td>{{ p.name }}</td>
+              <td class="email">{{ p.email }}</td>
+              <td>{{ roleNames[p.role] }}</td>
+              <td>
+                @switch (p.status) {
+                  @case ('none') {
+                    <span class="state state--none">Még nem kapott</span>
+                  }
+                  @case ('sent') {
+                    <span class="state state--sent" [title]="'Küldte: ' + p.sentByName">
+                      Meghívva {{ p.sentAt | date: 'MM. dd.' }} · lejár
+                      {{ p.expiresAt | date: 'MM. dd.' }}
+                    </span>
+                  }
+                  @case ('expired') {
+                    <span class="state state--expired"
+                      >Lejárt ({{ p.expiresAt | date: 'MM. dd.' }})</span
+                    >
+                  }
+                  @case ('joined') {
+                    <span class="state state--joined">Belépett</span>
+                  }
+                }
+              </td>
+              <td class="actions">
+                @if (p.status !== 'joined') {
+                  <button
+                    type="button"
+                    class="mini-btn"
+                    [disabled]="!enabled() || busy()"
+                    (click)="sendOne(p)"
+                  >
+                    {{ busy() === p._id ? '…' : p.status === 'none' ? 'Meghívás' : 'Újraküldés' }}
+                  </button>
+                }
+                @if (p.status === 'sent') {
+                  <button
+                    type="button"
+                    class="mini-btn mini-btn--danger"
+                    [disabled]="busy()"
+                    (click)="revoke(p)"
+                  >
+                    Visszavonás
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p class="empty-note">Mindenki belépett már, akinek van e-mail címe.</p>
+    }
+  }
+</section>

@@ -81,6 +81,13 @@ const config = {
     postLogoutRedirectUri: process.env.AUTHENTIK_POSTLOGOUT_URI,
     clientBaseUrl: process.env.CLIENT_BASE_URL,
   },
+  // Invitations through Authentik's REST API (utils/authentikInvitations.js):
+  // the bodorgo-app service account's token, and the invitation-only
+  // registration flow's slug.
+  authentik: {
+    apiToken: process.env.AUTHENTIK_API_TOKEN,
+    invitationFlow: process.env.AUTHENTIK_INVITATION_FLOW || 'enrollment-invitation',
+  },
   clientOrigin: process.env.CLIENT_ORIGIN, // comma-separated list of allowed CORS origins
   openRouteService: {
     apiKey: process.env.OPENROUTESERVICE_API_KEY,

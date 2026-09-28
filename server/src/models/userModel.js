@@ -8,6 +8,11 @@ import { USERNAME_RULE, USERNAME_RULE_MESSAGE } from '../utils/usernames.js';
 
 const { Schema } = mongoose;
 
+const invitationSchema = new mongoose.Schema(
+  { id: String, sentAt: Date, expiresAt: Date, sentByName: String },
+  { _id: false },
+);
+
 const userSchema = new Schema(
   {
     // Absent for a dependent (e.g. a child) who has no Authentik account of
@@ -160,6 +165,10 @@ const userSchema = new Schema(
     // The year their birthday was last celebrated (confetti on login - see
     // utils/birthday.js): once a year, on whichever device comes first.
     birthdayCelebratedYear: Number,
+    // Their latest Authentik invitation (Felhasználók → Meghívók - see
+    // invitationController.js): its id there, when it was sent and by whom,
+    // and when the link expires. Cleared when it's taken back.
+    invitation: invitationSchema,
     // Groups a real account together with the login-less dependents (and
     // any other real accounts, e.g. a spouse) it shares tour attendance
     // with - lets a logged-in parent's signup dropdown be scoped to

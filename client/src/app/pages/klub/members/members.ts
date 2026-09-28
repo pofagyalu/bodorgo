@@ -10,6 +10,7 @@ import { PaymentService } from '../../../services/payment';
 import { UserService } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { InvitationsPanel } from './invitations-panel/invitations-panel';
 import { ExtraColumn, PeopleTable } from './people-table/people-table';
 import { SettingsService, MembershipFee, feeForYear } from '../../../services/settings';
 
@@ -32,7 +33,7 @@ const BARION_FEE_RATE = 0.016;
 
 @Component({
   selector: 'app-members',
-  imports: [DatePipe, RouterLink, MatIconModule, PeopleTable],
+  imports: [DatePipe, RouterLink, MatIconModule, PeopleTable, InvitationsPanel],
   templateUrl: './members.html',
   styleUrl: './members.scss',
 })
@@ -60,7 +61,7 @@ export class Members implements OnInit {
   // Map lookup.
   private paidTransactions = signal<Map<string, Transaction>>(new Map());
 
-  activeTab = signal<'club' | 'casual' | 'everyone'>('club');
+  activeTab = signal<'club' | 'casual' | 'everyone' | 'invites'>('club');
   // "Személy keresése" - one search for all three tables, by name or
   // email, kept when switching tabs.
   search = signal('');
@@ -317,7 +318,7 @@ export class Members implements OnInit {
     });
   }
 
-  selectTab(tab: 'club' | 'casual' | 'everyone') {
+  selectTab(tab: 'club' | 'casual' | 'everyone' | 'invites') {
     this.activeTab.set(tab);
   }
 
