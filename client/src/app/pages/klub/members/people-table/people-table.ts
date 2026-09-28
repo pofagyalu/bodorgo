@@ -78,7 +78,9 @@ export class PeopleTable {
   // A page's own buttons at the start of Műveletek (e.g. Klubtagok's
   // cash dues), given the person as `let-p`.
   rowActions = input<TemplateRef<{ $implicit: MemberUser }> | null>(null);
-  rowClickable = input(false);
+  // Which rows open on a click: all (true), none, or those the function
+  // allows (e.g. a member only their own).
+  rowClickable = input<boolean | ((p: MemberUser) => boolean)>(false);
   highlightId = input<string | null>(null); // "me" - a tinted row
   busyId = input<string | null>(null); // a suspend/restore in progress
   emptyText = input('Nincs ilyen nevű felhasználó.');
@@ -154,7 +156,12 @@ export class PeopleTable {
     }
   }
 
+  canClick(p: MemberUser): boolean {
+    const c = this.rowClickable();
+    return typeof c === 'function' ? c(p) : c;
+  }
+
   onRowClick(p: MemberUser) {
-    if (this.rowClickable()) this.rowClick.emit(p);
+    if (this.canClick(p)) this.rowClick.emit(p);
   }
 }
