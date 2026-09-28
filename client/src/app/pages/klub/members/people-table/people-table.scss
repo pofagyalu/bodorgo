@@ -25,6 +25,37 @@ table.wide {
   min-width: 820px;
 }
 
+// equalColumns: each column an equal share (fixed layout), the numbers
+// centred in theirs; wide enough to stay readable on a phone, which then
+// scrolls sideways.
+table.equal {
+  table-layout: fixed;
+  min-width: 480px;
+
+  .name-col,
+  th.tours-col,
+  th.age-col {
+    width: auto;
+  }
+
+  .num-col {
+    text-align: center;
+  }
+
+  // Only the name/email text is cut short (…) - never the avatar, whose
+  // admin ring and star reach past its edges.
+  .person {
+    grid-template-columns: auto minmax(0, 1fr);
+
+    strong,
+    small {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
 // Név is exactly as wide as its longest name or email - width: 1% in an
 // auto-layout table means "as narrow as the content allows", and .person
 // never wraps. The other columns share the rest (an extra column can ask

@@ -181,9 +181,15 @@ button {
   gap: 16px;
 }
 
+// align-content: start - a field keeps its label/input/hint at their own
+// height, stacked from the top. The two fields of a row are stretched to
+// the same height, and without this a field with no hint (Tagság kezdete)
+// stretched its input to match one with a hint (Szerepkör), knocking the
+// labels and boxes of the row out of line.
 .field {
   display: grid;
   gap: 6px;
+  align-content: start;
 }
 
 .field.full {

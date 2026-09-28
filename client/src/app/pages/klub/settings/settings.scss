@@ -189,19 +189,6 @@ button {
   flex: 1;
 }
 
-// Sticks to the bottom of the screen while the card is taller than it -
-// flush with the card's edges (the negative margins undo its padding).
-.actions--sticky {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  margin: 18px -24px -24px;
-  padding: 14px 24px;
-  border-top: 1px solid #eef2f0;
-  border-radius: 0 0 17px 17px;
-  background: #fffffff2;
-}
-
 .primary-btn {
   background: #1a796c;
   color: white;
@@ -281,176 +268,161 @@ button {
 
 // --- Felhasználónevek ---
 
-// The usernames card uses the whole page width (the Tagdíj card above
-// stays narrow): the people sit in a grid of tiles, not one long list.
-.usernames {
+// --- Értesítések: every e-mail and push, and the Tagdíj emlékeztető ---
+
+.notifications {
   margin-top: 18px;
-  max-width: none;
 }
 
-.username-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.search-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 220px;
-  max-width: 380px;
-  padding: 0 10px;
-  border: 1px solid #dce5e1;
-  border-radius: 9px;
-  background: #fff;
-  color: #56666e;
-
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  input {
-    flex: 1;
-    min-width: 0;
-    padding: 8px 0;
-    border: 0;
-    outline: none;
-    color: #1c2d38;
-  }
-
-  &:focus-within {
-    border-color: #1a796c;
-  }
-}
-
-.filter-chip {
-  padding: 7px 13px;
-  border: 1px solid #dce6e3;
-  border-radius: 999px;
-  background: #fff;
-  color: #2f414b;
-  font-size: 13px;
-  font-weight: 700;
-
-  &:hover {
-    background: #eef6f2;
-  }
-
-  &.active {
-    background: #1a796c;
-    border-color: #1a796c;
-    color: #fff;
-  }
-}
-
-.shown-count {
-  margin-left: auto;
+.notif-group {
+  margin: 20px 0 10px;
   font-size: 12px;
-  color: #56666e;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4c9184;
 }
 
-.missing {
-  flex: none;
-  padding: 6px 12px;
-  border-radius: 10px;
-  background: #fff0e4;
-  color: #aa6841;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.username-list {
+.notif-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
   gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
 
-  // A tile: the name on top, the @username field under it.
-  li {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-    padding: 8px 10px 10px;
-    border: 1px solid #eef2f0;
-    border-radius: 11px;
+.notif {
+  padding: 12px 14px;
+  border: 1px solid #eef2f0;
+  border-radius: 12px;
 
-    &.changed {
-      background: #f4faf7;
-    }
-
-    &.has-error {
-      background: #fff6f4;
-    }
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #2f414b;
+    line-height: 1.5;
   }
 }
 
-.person-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1c2d38;
+// The one with settings stands out a little.
+.notif--settings {
+  border-color: #cfe6dc;
+  background: #f7fbf9;
 }
 
-.username-list li.no-match {
-  grid-column: 1 / -1;
-  border: 0;
-  color: #56666e;
-  font-size: 14px;
-}
-
-.at-field {
-  display: inline-flex;
+.notif-head {
+  display: flex;
   align-items: center;
-  border: 1px solid #dce5e1;
-  border-radius: 9px;
-  background: #fff;
-  overflow: hidden;
+  gap: 8px;
 
-  .at {
-    padding: 0 2px 0 10px;
-    color: #56666e;
-    font-weight: 700;
+  strong {
+    font-size: 14px;
+    color: #1c2d38;
   }
+}
 
-  input {
-    flex: 1;
-    min-width: 0;
-    padding: 7px 10px 7px 2px;
-    border: 0;
-    outline: none;
+.notif-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e5f5ec;
+  color: #267b66;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.notif-label {
+  font-weight: 700;
+  color: #56666e;
+}
+
+.notif-note {
+  margin: 4px 0 0;
+  font-size: 12px !important;
+  color: #6b7780 !important;
+  font-style: italic;
+}
+
+.reminder {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #dfece6;
+
+  select,
+  .reminder-day {
+    padding: 7px 9px;
+    border: 1px solid #dce5e1;
+    border-radius: 9px;
+    background: #fff;
     color: #1c2d38;
   }
 
-  &:focus-within {
-    border-color: #1a796c;
+  .reminder-day {
+    width: 64px;
   }
 }
 
-.row-error {
-  font-size: 12px;
-  color: #a3402a;
+.reminder-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  input {
+    width: 17px;
+    height: 17px;
+    accent-color: #1a796c;
+  }
+}
+
+.reminder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.reminder-label {
+  font-weight: 700;
+  color: #56666e;
+}
+
+.reminder-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+
+  input {
+    accent-color: #1a796c;
+  }
+}
+
+.reminder-dates small {
+  color: #6b7780;
+}
+
+.reminder-next {
+  color: #267b66 !important;
+}
+
+.reminder-who {
+  margin-top: 8px;
+  font-size: 13px;
+
+  summary {
+    cursor: pointer;
+    color: #1a796c;
+    font-weight: 650;
+  }
 }
 
 @media (max-width: 580px) {
   .panel {
     padding: 16px;
-  }
-
-  .actions--sticky {
-    margin: 18px -16px -16px;
-    padding: 12px 16px;
   }
 
   .year-cell input,

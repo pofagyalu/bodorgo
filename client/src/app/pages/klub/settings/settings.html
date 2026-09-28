@@ -125,97 +125,166 @@
     }
   </section>
 
-  <!-- Everyone's username at once - what "@username" means in the chat. -->
-  <section class="panel usernames">
+  <!-- Every e-mail and push the app sends - what triggers it and who gets
+       it; the Tagdíj emlékeztető is also set here. -->
+  <section class="panel notifications">
     <div class="panel-title">
       <div>
-        <h2>Felhasználónevek</h2>
+        <h2>Értesítések</h2>
         <p class="subtext">
-          A chatben ezen a néven jelennek meg, és így lehet megemlíteni őket (pl.
-          <strong>&#64;Zoli</strong>). Utána mindenki a Profilomban maga is átírhatja.
+          Minden e-mail és telefonos értesítés, amit az alkalmazás küld – mikor és kinek.
         </p>
       </div>
-      @if (missingCount()) {
-        <span class="missing">{{ missingCount() }} hiányzik</span>
-      }
     </div>
 
-    <div class="username-toolbar">
-      <label class="search-field">
-        <mat-icon>search</mat-icon>
-        <input
-          type="search"
-          placeholder="Keresés névre vagy felhasználónévre"
-          [ngModel]="usernameSearch()"
-          (ngModelChange)="usernameSearch.set($event)"
-          aria-label="Keresés"
-        />
-      </label>
-      <button
-        type="button"
-        class="filter-chip"
-        [class.active]="onlyMissing()"
-        (click)="onlyMissing.set(!onlyMissing())"
-      >
-        Csak a hiányzók
-      </button>
-      <span class="shown-count">{{ shownPeople().length }} / {{ people().length }}</span>
-    </div>
+    <h3 class="notif-group">E-mailek</h3>
+    <ul class="notif-list">
+      @for (e of emails; track e.name) {
+        <li class="notif" [class.notif--settings]="e.settings">
+          <div class="notif-head">
+            <strong>{{ e.name }}</strong>
+            @if (e.settings) {
+              <span class="notif-badge">beállítható</span>
+            }
+          </div>
+          <p><span class="notif-label">Mikor:</span> {{ e.when }}</p>
+          <p><span class="notif-label">Kinek:</span> {{ e.who }}</p>
+          @if (e.note) {
+            <p class="notif-note">{{ e.note }}</p>
+          }
 
-    <!-- A grid of small tiles, as many columns as fit - not one long list. -->
-    <ul class="username-list">
-      @for (p of shownPeople(); track p.id) {
-        <li [class.changed]="p.username !== p.original" [class.has-error]="usernameErrors()[p.id]">
-          <span class="person-name">{{ p.name }}</span>
-          <span class="at-field">
-            <span class="at">&#64;</span>
-            <input
-              type="text"
-              maxlength="40"
-              [ngModel]="p.username"
-              (ngModelChange)="setUsername(p.id, $event)"
-              placeholder="nincs megadva"
-              [attr.aria-label]="p.name + ' felhasználóneve'"
-            />
-          </span>
-          @if (usernameErrors()[p.id]; as err) {
-            <span class="row-error">{{ err }}</span>
+          @if (e.settings === 'membershipReminder') {
+            <div class="reminder">
+              @if (reminderLoading()) {
+                <p class="empty-note">Betöltés...</p>
+              } @else {
+                <label class="reminder-switch">
+                  <input
+                    type="checkbox"
+                    [ngModel]="reminderEnabled()"
+                    (ngModelChange)="reminderEnabled.set($event)"
+                  />
+                  Bekapcsolva
+                </label>
+
+                <div class="reminder-row">
+                  <span class="reminder-label">Első emlékeztető:</span>
+                  <select
+                    [ngModel]="reminderMonth()"
+                    (ngModelChange)="reminderMonth.set(+$event)"
+                    aria-label="Hónap"
+                  >
+                    @for (m of months; track m; let i = $index) {
+                      <option [ngValue]="i + 1">{{ m }}</option>
+                    }
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    max="28"
+                    class="reminder-day"
+                    [ngModel]="reminderDay()"
+                    (ngModelChange)="reminderDay.set(+$event)"
+                    aria-label="Nap"
+                  />
+                  <span>.</span>
+                </div>
+
+                <div class="reminder-row">
+                  <span class="reminder-label">Utána:</span>
+                  <label class="reminder-choice">
+                    <input
+                      type="radio"
+                      name="reminderFrequency"
+                      value="quarterly"
+                      [ngModel]="reminderFrequency()"
+                      (ngModelChange)="reminderFrequency.set($event)"
+                    />
+                    negyedévente
+                  </label>
+                  <label class="reminder-choice">
+                    <input
+                      type="radio"
+                      name="reminderFrequency"
+                      value="monthly"
+                      [ngModel]="reminderFrequency()"
+                      (ngModelChange)="reminderFrequency.set($event)"
+                    />
+                    havonta
+                  </label>
+                </div>
+
+                <p class="reminder-dates">
+                  <span class="reminder-label">Idei körök:</span> {{ previewDates().join(', ') }}
+                  <small>(reggel 9 után, amíg ki nem fizeti)</small>
+                </p>
+
+                @if (reminder()?.nextRound; as next) {
+                  <p class="reminder-next">
+                    Következő kör: <strong>{{ roundLabel(next) }}</strong>
+                  </p>
+                }
+
+                <details class="reminder-who">
+                  <summary>Most {{ reminderRecipients().length }} tag kapna emlékeztetőt</summary>
+                  @if (reminderRecipients().length) {
+                    <p>{{ reminderRecipients().join(', ') }}</p>
+                  } @else {
+                    <p>Senki – mindenki befizette az idei tagdíjat.</p>
+                  }
+                </details>
+
+                <div class="actions">
+                  <button
+                    type="button"
+                    class="outline-btn"
+                    (click)="sendTestReminder()"
+                    [disabled]="sendingTest()"
+                  >
+                    <mat-icon>forward_to_inbox</mat-icon>
+                    {{ sendingTest() ? 'Küldés…' : 'Próba e-mail magamnak' }}
+                  </button>
+                  <span class="spacer"></span>
+                  @if (reminderDirty()) {
+                    <button
+                      type="button"
+                      class="outline-btn"
+                      (click)="resetReminder()"
+                      [disabled]="savingReminder()"
+                    >
+                      Mégse
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    (click)="saveReminder()"
+                    [disabled]="!reminderDirty() || savingReminder()"
+                  >
+                    {{ savingReminder() ? 'Mentés…' : 'Mentés' }}
+                  </button>
+                </div>
+              }
+            </div>
           }
         </li>
-      } @empty {
-        <li class="no-match">Nincs ilyen nevű felhasználó.</li>
       }
     </ul>
 
-    <!-- Sticky: Mentés stays in reach while scrolling through the grid. -->
-    <div class="actions actions--sticky">
-      <button
-        type="button"
-        class="outline-btn"
-        (click)="suggestUsernames()"
-        [disabled]="!missingCount() || savingUsernames()"
-      >
-        <mat-icon>auto_fix_high</mat-icon> Javaslatok kitöltése
-      </button>
-      <span class="spacer"></span>
-      @if (usernamesDirty()) {
-        <button
-          type="button"
-          class="outline-btn"
-          (click)="resetUsernames()"
-          [disabled]="savingUsernames()"
-        >
-          Mégse
-        </button>
+    <h3 class="notif-group">Telefonos értesítések (push)</h3>
+    <p class="notif-note">
+      Csak akinek a böngészőjében / telefonján be vannak kapcsolva az értesítések (Profilom).
+    </p>
+    <ul class="notif-list">
+      @for (p of pushes; track p.name) {
+        <li class="notif">
+          <div class="notif-head">
+            <strong>{{ p.name }}</strong>
+          </div>
+          <p><span class="notif-label">Mikor:</span> {{ p.when }}</p>
+          <p><span class="notif-label">Kinek:</span> {{ p.who }}</p>
+        </li>
       }
-      <button
-        type="button"
-        class="primary-btn"
-        (click)="saveUsernames()"
-        [disabled]="!usernamesDirty() || savingUsernames()"
-      >
-        {{ savingUsernames() ? 'Mentés…' : 'Mentés' }}
-      </button>
-    </div>
+    </ul>
   </section>
 </div>

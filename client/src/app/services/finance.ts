@@ -20,6 +20,10 @@ export interface Transaction {
   // absent on general/unattributed entries.
   user?: string;
   membershipYear?: number;
+  // A dues payment's own record and how it was paid - an admin-recorded
+  // cash one can be undone (PaymentService.deleteCashPayment).
+  payment?: string;
+  paymentMethod?: 'barion' | 'stripe' | 'cash';
 }
 
 export interface NewTransaction {

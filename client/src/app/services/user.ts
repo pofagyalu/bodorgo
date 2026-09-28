@@ -273,17 +273,4 @@ export class UserService {
   joinFamily(userIds: string[]): Observable<JoinFamilyResponse> {
     return this.http.post<JoinFamilyResponse>(`${this.apiUrl}/join-family`, { userIds });
   }
-
-  // Admin-only: everyone's usernames, for filling them in at once (Klub →
-  // Beállítások). Saving is all-or-nothing; a failed save's `errors` maps
-  // user ids to what's wrong with that row.
-  getUsernames() {
-    return this.http.get<{
-      data: { users: { _id: string; name: string; username?: string; role: string }[] };
-    }>(`${this.apiUrl}/usernames`);
-  }
-
-  updateUsernames(items: { id: string; username: string }[]) {
-    return this.http.put<{ data: { updated: number } }>(`${this.apiUrl}/usernames`, { items });
-  }
 }

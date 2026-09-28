@@ -29,6 +29,9 @@
             · Klubtag {{ p.memberSince }} óta
           }
         </p>
+        <!-- Tours been on (already started ones) and the medal, with how far
+             the next one is. -->
+        <app-tour-medal class="profile-medal" [tours]="p.toursAttended" [withLabel]="true" />
       </div>
     </div>
 

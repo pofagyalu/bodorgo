@@ -30,6 +30,24 @@ export function feeForYear(fees: MembershipFee[], year: number): number | null {
   return row ? row.amount : null;
 }
 
+// "Tagdíj emlékeztető" (see server/src/utils/membershipReminders.js): e-mails
+// to members who haven't paid this year, on a first date and then monthly
+// or quarterly.
+export interface MembershipReminder {
+  enabled: boolean;
+  startMonth: number;
+  startDay: number;
+  frequency: 'monthly' | 'quarterly';
+  lastRoundSent: string | null; // "YYYY-MM-DD"
+  dates: string[]; // this year's rounds
+  nextRound: string | null; // null while it's off
+}
+
+export interface MembershipReminderResponse {
+  status: string;
+  data: { reminder: MembershipReminder; year: number; recipients: string[] };
+}
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private http = inject(HttpClient);
@@ -46,6 +64,32 @@ export class SettingsService {
       {
         fees,
       },
+    );
+  }
+
+  // --- Tagdíj emlékeztető (admin-only) ---
+
+  getMembershipReminder() {
+    return this.http.get<MembershipReminderResponse>(`${this.apiUrl}/membership-reminder`);
+  }
+
+  updateMembershipReminder(settings: {
+    enabled: boolean;
+    startMonth: number;
+    startDay: number;
+    frequency: 'monthly' | 'quarterly';
+  }) {
+    return this.http.put<{ status: string; data: { reminder: MembershipReminder } }>(
+      `${this.apiUrl}/membership-reminder`,
+      settings,
+    );
+  }
+
+  // The reminder as a member would get it, to the admin themselves.
+  testMembershipReminder() {
+    return this.http.post<{ status: string; data: { sentTo: string } }>(
+      `${this.apiUrl}/membership-reminder/test`,
+      {},
     );
   }
 }

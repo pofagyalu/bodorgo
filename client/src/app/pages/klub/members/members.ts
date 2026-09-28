@@ -1,6 +1,7 @@
 import { Component, OnInit, TemplateRef, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { Observable } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../auth/auth.service';
 import { MembershipService, MemberUser } from '../../../services/membership';
@@ -357,6 +358,48 @@ export class Members implements OnInit {
   // date/amount line - undefined for 'unpaid'/'na' years.
   paymentFor(userId: string, year: number): Transaction | undefined {
     return this.paidTransactions().get(`${userId}:${year}`);
+  }
+
+  // --- Cash dues (admin): the $ button in the year column and the payment
+  // history - records a year as paid in cash, or undoes a cash one. An
+  // online payment can't be undone this way (the server refuses too).
+
+  cashBusy = signal<string | null>(null); // "userId:year" in progress
+
+  paidInCash(userId: string, year: number): boolean {
+    return this.paymentFor(userId, year)?.paymentMethod === 'cash';
+  }
+
+  // Shown on an unpaid year, and on one paid in cash (to undo it).
+  canToggleCash(userId: string, year: number): boolean {
+    const state = this.yearState(userId, year);
+    return this.isAdmin() && (state === 'unpaid' || this.paidInCash(userId, year));
+  }
+
+  toggleCashDues(m: MemberUser, year: number, event: Event) {
+    event.stopPropagation(); // the row itself opens/closes the history
+    const key = `${m._id}:${year}`;
+    if (this.cashBusy()) return;
+    this.cashBusy.set(key);
+    const cashTx = this.paidInCash(m._id, year) ? this.paymentFor(m._id, year) : undefined;
+    const request: Observable<unknown> = cashTx?.payment
+      ? this.paymentService.deleteCashPayment(cashTx.payment)
+      : this.paymentService.recordCashMembershipPayment(m._id, year);
+    request.subscribe({
+      next: () => {
+        this.cashBusy.set(null);
+        this.notifications.addSuccess(
+          cashTx
+            ? `${m.name} ${year}. évi készpénzes tagdíja visszavonva.`
+            : `${m.name} ${year}. évi tagdíja készpénzben befizetve.`,
+        );
+        this.loadTransactions();
+      },
+      error: (err) => {
+        this.cashBusy.set(null);
+        this.notifications.addError(err?.error?.message ?? 'A művelet nem sikerült.');
+      },
+    });
   }
 
   money(amount: number, currency: TransactionCurrency = 'HUF') {
