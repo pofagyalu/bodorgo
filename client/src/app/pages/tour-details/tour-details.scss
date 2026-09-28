@@ -474,6 +474,16 @@
   .section-heading {
     margin-bottom: 0;
   }
+
+  // Extrák's upload button: at the end of the heading's line - in the
+  // flow, not pinned like the day blocks' add button.
+  // Right edge in line with the days' add buttons above (they sit inside
+  // .day-block's 1.5rem padding).
+  .icon-btn--upload {
+    position: static;
+    margin-left: auto;
+    margin-right: 1.5rem;
+  }
 }
 
 .document-upload-form {
@@ -632,10 +642,14 @@
   background: #ddd;
 }
 
+// On the card's own top-right corner, half outside it - like the
+// Dokumentumok cards' ✕.
 .extra-doc-delete {
   position: absolute;
-  top: 0.3rem;
-  right: 0.3rem;
+  z-index: 1;
+  top: -0.55rem;
+  right: -0.55rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   display: inline-flex;
   align-items: center;
   justify-content: center;
