@@ -1,9 +1,11 @@
 import express from 'express';
 import {
+  getChatImageSettings,
   getMembershipFees,
   getMembershipReminder,
   testMembershipReminder,
   updateMembershipFees,
+  updateChatImageSettings,
   updateMembershipReminder,
 } from '../controllers/settingsController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
@@ -24,5 +26,11 @@ router
 router
   .route('/membership-reminder/test')
   .post(requireAuth, restrictTo('admin'), testMembershipReminder);
+
+// Chat photos: quota and daily limit - admins only.
+router
+  .route('/chat-images')
+  .get(requireAuth, restrictTo('admin'), getChatImageSettings)
+  .put(requireAuth, restrictTo('admin'), updateChatImageSettings);
 
 export default router;

@@ -1,5 +1,16 @@
 import { Schema, model } from 'mongoose';
 
+// The reactions a chat message can get: tetszik, nevetés, meglepődés,
+// szomorú, sírás.
+export const REACTIONS = ['👍', '😂', '😮', '😢', '😭'];
+
+// What a message goes out with, wherever it's sent: its author's and
+// every reacting person's name/username.
+export const POST_POPULATE = [
+  { path: 'creator', select: 'name username' },
+  { path: 'reactions.user', select: 'name username' },
+];
+
 const PostSchema = new Schema(
   {
     creator: {
@@ -21,8 +32,20 @@ const PostSchema = new Schema(
       default: '',
     },
 
+    // A photo sent with the message (see chat/chatImages.js): the files are
+    // <post id>.webp and <post id>.thumb.webp in CHAT_IMAGES_DIR. expired:
+    // removed by the size quota (oldest first) - the message stays, the
+    // photo shows as "no longer available".
     image: {
-      type: String, // store URL or file path
+      type: new Schema(
+        {
+          width: Number,
+          height: Number,
+          size: Number, // bytes, both files together
+          expired: { type: Boolean, default: false },
+        },
+        { _id: false },
+      ),
       default: null,
     },
 
@@ -32,6 +55,19 @@ const PostSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Poll',
       default: null,
+    },
+
+    // Hangulatjelek - one per person (picking another replaces it, the same
+    // one again removes it; see chatSocket.js's react-post).
+    reactions: {
+      type: [
+        {
+          _id: false,
+          user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+          emoji: { type: String, enum: REACTIONS, required: true },
+        },
+      ],
+      default: [],
     },
 
     // Set when the author edits the text afterwards - shown as

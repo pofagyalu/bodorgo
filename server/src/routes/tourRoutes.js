@@ -22,6 +22,12 @@ import {
   sendToAttendees,
 } from '../controllers/mailingController.js';
 import { createTourPoll } from '../controllers/pollController.js';
+import {
+  chatImageUpload,
+  getChatImage,
+  getChatImageThumb,
+  postChatImage,
+} from '../controllers/chatImageController.js';
 import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
 import {
   loadTourForUpload,
@@ -118,6 +124,10 @@ router
 router.route('/:tourId/cancellations').get(requireAuth, restrictTo('admin'), getCancellations);
 // A poll started from the tour's chat - by any attendee (see pollController.js).
 router.route('/:tourId/polls').post(requireAuth, createTourPoll);
+// Photos in the tour chat (see chatImageController.js).
+router.route('/:tourId/chat/images').post(requireAuth, chatImageUpload, postChatImage);
+router.route('/:tourId/chat/images/:postId').get(requireAuth, getChatImage);
+router.route('/:tourId/chat/images/:postId/thumb').get(requireAuth, getChatImageThumb);
 
 router
   .route('/:tourId/schedule/:eventId/participants')

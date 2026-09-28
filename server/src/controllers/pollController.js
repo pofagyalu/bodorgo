@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import Poll from '../models/pollModel.js';
-import Post from '../models/postModel.js';
+import Post, { POST_POPULATE } from '../models/postModel.js';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
@@ -220,7 +220,7 @@ export const createTourPoll = async (req, res) => {
   poll.post = post._id;
   await poll.save();
 
-  await post.populate('creator', 'name username');
+  await post.populate(POST_POPULATE);
   emitToTour(tourId, 'new-post', post);
 
   const author = req.user.username || req.user.name;
@@ -342,7 +342,7 @@ export const deletePoll = async (req, res) => {
       poll.post,
       { text: '', poll: null, deletedAt: new Date() },
       { returnDocument: 'after' },
-    ).populate('creator', 'name username');
+    ).populate(POST_POPULATE);
     if (post) emitToTour(refId(poll.tour), 'post-updated', post);
   }
   res.status(204).json({ status: 'success', data: null });
