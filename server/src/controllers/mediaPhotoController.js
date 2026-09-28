@@ -48,9 +48,10 @@ function insideRoot(root, relPath) {
   return full;
 }
 
-function sendOriginal(res, category, filename) {
+function sendOriginal(res, category, filename, { download = false } = {}) {
   const full = insideRoot(path.join(config.mediaPhotosRoot, category), filename);
   if (!fs.existsSync(full)) throw new AppError('A fénykép nem található a lemezen.', 404);
+  if (download) return res.download(full, path.basename(filename));
   res.sendFile(full);
 }
 
@@ -59,6 +60,16 @@ export const getMediaPhoto = async (req, res) => {
   const { category, filename } = req.params;
   await ensureRecorded(category, filename);
   sendOriginal(res, category, filename);
+};
+
+// GET /media/photos/:category/:filename/download - the same original as a
+// download (Content-Disposition: attachment) - the viewer's download
+// button; a plain <a download> doesn't work across the client's and the
+// API's subdomains (same as tourImageController.js's).
+export const downloadMediaPhoto = async (req, res) => {
+  const { category, filename } = req.params;
+  await ensureRecorded(category, filename);
+  sendOriginal(res, category, filename, { download: true });
 };
 
 // GET /media/photos/:category/:filename/thumb - the small .webp, or the

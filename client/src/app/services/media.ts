@@ -154,6 +154,11 @@ export class MediaService {
     return `${this.photoUrl(category, filename)}/thumb`;
   }
 
+  // The original as a download (the viewer's download button).
+  photoDownloadUrl(category: string, filename: string): string {
+    return `${this.photoUrl(category, filename)}/download`;
+  }
+
   // --- Új média felfedezése (admins) ---
   // The button is in the Média sidebar, the report on top of whichever
   // Média page is open (see media.html) - so the state lives here.
