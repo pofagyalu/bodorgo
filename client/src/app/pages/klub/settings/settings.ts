@@ -10,6 +10,7 @@ import {
   feeForYear,
 } from '../../../services/settings';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { BarionWithdraw } from './barion-withdraw/barion-withdraw';
 
 interface FeeRow {
   fromYear: number;
@@ -83,7 +84,7 @@ const EMAILS: (NotificationInfo & { note?: string })[] = [
   },
   {
     name: 'Tagdíj emlékeztető',
-    when: 'A lent beállított napokon.',
+    when: 'A Tagdíj emlékeztető kártyán beállított napokon.',
     who: 'Aki még nem fizette be az idei tagdíjat, és már bejelentkezett. Az adminok összesítőt kapnak róla.',
     settings: 'membershipReminder',
   },
@@ -134,7 +135,7 @@ const MONTHS = [
 // refuses it too).
 @Component({
   selector: 'app-klub-settings',
-  imports: [FormsModule, MatIconModule, DatePipe],
+  imports: [FormsModule, MatIconModule, DatePipe, BarionWithdraw],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })

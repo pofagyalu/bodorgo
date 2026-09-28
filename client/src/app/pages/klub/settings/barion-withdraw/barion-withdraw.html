@@ -1,0 +1,128 @@
+<!-- One Barion wallet (Tagdíjak / Előlegek): where its payments land and
+     its bank account (editable), then withdrawing to that account. -->
+<section class="panel withdraw-panel">
+  <div class="panel-title">
+    <h2>{{ title() }} – Barion</h2>
+    <span>kiutalás: 0,1% díj, min. 70 Ft</span>
+  </div>
+
+  <div class="account">
+    <div class="account-head">
+      <strong>Számla</strong>
+      @if (!editing()) {
+        <button
+          type="button"
+          class="icon-action"
+          title="Szerkesztés"
+          [attr.aria-label]="title() + ' számla szerkesztése'"
+          (click)="startEdit()"
+        >
+          <mat-icon>edit</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (editing()) {
+      <div class="account-form">
+        <label>
+          Barion e-mail (ide érkeznek a befizetések)
+          <input type="email" [(ngModel)]="form.payeeEmail" />
+        </label>
+        <label>
+          Számlatulajdonos
+          <input type="text" maxlength="70" [(ngModel)]="form.withdrawName" />
+        </label>
+        <label>
+          Bankszámlaszám (IBAN)
+          <input
+            type="text"
+            placeholder="HU00 0000 0000 0000 0000 0000 0000"
+            [(ngModel)]="form.withdrawIban"
+          />
+        </label>
+        <p class="account-warning">Mentéskor minden admin e-mailt kap a változásról.</p>
+        @if (formError()) {
+          <p class="withdraw-notice error">{{ formError() }}</p>
+        }
+        <div class="account-actions">
+          <button
+            type="button"
+            class="outline-btn"
+            [disabled]="saving()"
+            (click)="editing.set(false)"
+          >
+            Mégse
+          </button>
+          <button type="button" class="primary-btn" [disabled]="saving()" (click)="save()">
+            {{ saving() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      </div>
+    } @else if (account(); as a) {
+      <dl class="account-fields">
+        <dt>Barion e-mail</dt>
+        <dd>
+          @if (a.payeeEmail) {
+            {{ a.payeeEmail }}
+          } @else {
+            <span class="unset">nincs megadva</span>
+          }
+        </dd>
+        <dt>Tulajdonos</dt>
+        <dd>
+          @if (a.withdrawName) {
+            {{ a.withdrawName }}
+          } @else {
+            <span class="unset">nincs megadva</span>
+          }
+        </dd>
+        <dt>IBAN</dt>
+        <dd>
+          @if (a.withdrawIban) {
+            <span class="iban">{{ a.withdrawIban }}</span>
+          } @else {
+            <span class="unset">nincs megadva</span>
+          }
+        </dd>
+      </dl>
+    }
+  </div>
+
+  @if (notice(); as n) {
+    <p class="withdraw-notice" [class.error]="n.kind === 'error'">{{ n.text }}</p>
+  }
+
+  <div class="withdraw-row">
+    <div class="withdraw-row-head">
+      <strong>Kiutalás a számlára</strong>
+      @if (!configured()) {
+        <span class="withdraw-inactive-badge" title="Kell hozzá a számla és a tárca API kulcsa"
+          >Még nincs beállítva</span
+        >
+      }
+    </div>
+    <div class="withdraw-row-body">
+      <input
+        type="number"
+        min="1"
+        step="1"
+        placeholder="Összeg (Ft)"
+        [attr.aria-label]="'Kiutalandó összeg - ' + title()"
+        [disabled]="!configured() || withdrawing()"
+        [value]="amount()"
+        (input)="amount.set($any($event.target).valueAsNumber || null)"
+      />
+      @if (amount()) {
+        <span class="withdraw-preview"> Díj: {{ money(fee()) }} · Nettó: {{ money(net()) }} </span>
+      }
+      <button
+        class="primary-btn"
+        type="button"
+        [disabled]="!configured() || !amount() || withdrawing()"
+        (click)="withdraw()"
+      >
+        {{ withdrawing() ? 'Kiutalás...' : 'Kiutalás' }}
+      </button>
+    </div>
+  </div>
+</section>
