@@ -1,3 +1,4 @@
+import fs from 'fs';
 import esbuild from 'esbuild';
 
 esbuild
@@ -53,5 +54,14 @@ esbuild
     outfile: 'dist/server.js',
     sourcemap: false,
     minify: true,
+  })
+  .then(() => {
+    // Scalar's browser bundle for /docs (apiDocs/docsRouter.js) - served
+    // from next to server.js on the NAS, where there's no node_modules.
+    fs.mkdirSync('dist/apiDocs', { recursive: true });
+    fs.copyFileSync(
+      'node_modules/@scalar/api-reference/dist/browser/standalone.js',
+      'dist/apiDocs/scalar.js',
+    );
   })
   .catch(() => process.exit(1));

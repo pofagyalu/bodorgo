@@ -13,13 +13,12 @@ import config from './config.js';
 import tourRouter from './routes/tourRoutes.js';
 import userRouter from './routes/userRoutes.js';
 import systemRouter from './routes/systemRoutes.js';
+import docsRouter from './apiDocs/docsRouter.js';
 import authOidcRouter from './routes/authOidcRoutes.js';
 import mediaRouter from './routes/mediaRoutes.js';
 import settingsRouter from './routes/settingsRoutes.js';
 import pushRouter from './routes/pushRoutes.js';
 import documentRouter from './routes/documentRoutes.js';
-import requireAuth from './auth/requireAuth.js';
-import { TOUR_DOCUMENTS_DIR } from './utils/dataDirs.js';
 import paymentRouter from './routes/paymentRoutes.js';
 import financeRouter from './routes/financeRoutes.js';
 import membershipRouter from './routes/membershipRoutes.js';
@@ -110,14 +109,6 @@ export default function createApp(sessionMiddleware) {
   // TODO: old solution try to dins some replacement
   // app.use(mongoSanitize());
 
-  // Members-only app: nothing under public/ is served to everyone any
-  // more (tour covers moved into the database - see tourCoverModel.js).
-  // The one thing still read from there is each tour's "Extra infók"
-  // uploads (see tourDocumentController.js), and only for a logged-in
-  // user. Registered before the club documents router below, whose own
-  // '/:filename' route would otherwise never match these deeper paths
-  // anyway.
-  app.use('/documents/tours', requireAuth, express.static(TOUR_DOCUMENTS_DIR));
   app.use('/documents', documentRouter);
   app.use('/media', mediaRouter);
   app.use('/settings', settingsRouter);
@@ -138,6 +129,8 @@ export default function createApp(sessionMiddleware) {
   app.use('/membership', membershipRouter);
   app.use('/polls', pollRouter);
   app.use('/health', systemRouter);
+  // The API documentation (Scalar) - admins only, see apiDocs/docsRouter.js.
+  app.use('/docs', docsRouter);
 
   app.use((req, res, next) => {
     // Since next gets an argument Express assumes this is an error
