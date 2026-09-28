@@ -33,23 +33,19 @@ const sendErrorDev = (err, res) => {
   });
 };
 
-// TODO: loggert később beállítani
+// Production: an expected (operational) error's own message goes to the
+// user; anything else only a generic one - never a stack trace.
 const sendErrorProd = (err, res) => {
-  // Operational, trusted error: send to client
   if (err.isOperational) {
     res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
     });
-    // Programming or unknown error: don't want to leak details
   } else {
-    // 1) Log error
     logger.error('ERROR 💣', err);
-
-    // 2) Send generic message
     res.status(500).json({
       status: 'error',
-      message: 'Something went very wrong!',
+      message: 'Váratlan hiba történt. Kérjük, próbáld újra később.',
     });
   }
 };
@@ -68,10 +64,12 @@ export default (err, req, res, next) => {
   if (config.nodeEnv !== 'production') {
     sendErrorDev(err, res);
   } else {
-    let error = { ...err };
-    if (err.name === 'CastError') error = handleCastErrorDB(error);
-    if (err.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (err.name === 'ValidationError') error = handleValidationErrorsDB(error);
+    // The error itself, not a { ...err } copy - an Error's message isn't
+    // copied by a spread, which blanked every message in production.
+    let error = err;
+    if (err.name === 'CastError') error = handleCastErrorDB(err);
+    if (err.code === 11000) error = handleDuplicateFieldsDB(err);
+    if (err.name === 'ValidationError') error = handleValidationErrorsDB(err);
     if (err.name === 'JsonWebTokenError') error = handleJWTError();
     if (err.name === 'TokenExpiredError') error = handleJWTExpiredError();
     sendErrorProd(error, res);
