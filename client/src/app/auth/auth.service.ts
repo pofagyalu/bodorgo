@@ -9,6 +9,8 @@ export interface CurrentUser {
   email?: string;
   name?: string;
   role: string;
+  // The one admin who may change roles (server utils/roleManager.js).
+  canManageRoles?: boolean;
   familyId?: string;
   wantsEmailNotifications?: boolean;
   address?: UserAddress;
@@ -24,6 +26,7 @@ interface MeResponse {
   email?: string;
   name?: string;
   role?: string;
+  canManageRoles?: boolean;
   familyId?: string;
   wantsEmailNotifications?: boolean;
   address?: UserAddress;
@@ -80,6 +83,7 @@ export class AuthService {
                   // is dues-paying membership, never assumed just because a
                   // role wasn't returned.
                   role: res.role || 'guest',
+                  canManageRoles: !!res.canManageRoles,
                   familyId: res.familyId,
                   // Same default as the schema (userModel.js) - only ever
                   // false when explicitly turned off.

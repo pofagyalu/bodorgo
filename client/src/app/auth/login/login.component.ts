@@ -17,11 +17,11 @@ export class LoginComponent implements OnInit {
 
   ngOnInit() {
     // authOidcController.js's callback() redirects here with this query
-    // param when Authentik didn't send a valid bodorgo_role claim - the
-    // login was denied outright, no local session was created.
-    if (this.route.snapshot.queryParamMap.get('error') === 'no-role') {
+    // param when Authentik let someone in whom no admin has added in the
+    // app (Klub → Felhasználók) - no session was created.
+    if (this.route.snapshot.queryParamMap.get('error') === 'not-invited') {
       this.notifications.addError(
-        'Nincs érvényes szerepköröd a klubban - vedd fel a kapcsolatot egy adminnal.',
+        'Még nem vagy felvéve a klub alkalmazásába - kérd meg egy admint, hogy vegyen fel.',
       );
     }
   }
