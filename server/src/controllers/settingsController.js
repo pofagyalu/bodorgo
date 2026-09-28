@@ -13,6 +13,8 @@ import {
   unpaidMembers,
 } from '../utils/membershipReminders.js';
 import sendResendEmail from '../utils/resendEmail.js';
+import User from '../models/userModel.js';
+import logger from '../logger.js';
 import { chatImagesUsage, enforceChatImageQuota } from '../chat/chatImages.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
@@ -245,4 +247,104 @@ export const updateChatImageSettings = async (req, res) => {
     status: 'success',
     data: { quotaMB, dailyLimit, usage: await chatImagesUsage(), removed },
   });
+};
+
+// --- Barion wallets (Kiutalás Barionból) ---
+
+const WALLETS = { membership: 'Tagdíjak', tour: 'Előlegek' };
+
+// A Hungarian IBAN: HU + 26 digits, spaces allowed, and its check digits
+// right (mod 97) - a typo can't send a withdrawal to a wrong account.
+export function normalizeIban(value) {
+  const iban = String(value ?? '')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+  if (!/^HU\d{26}$/.test(iban)) return null;
+  const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (c) => c.charCodeAt(0) - 55);
+  let rest = 0;
+  for (const d of digits) rest = (rest * 10 + Number(d)) % 97;
+  return rest === 1 ? iban : null;
+}
+
+// "HU12 3456 7890 ..." - in groups of four, for reading.
+const formatIban = (iban) => (iban ? iban.replace(/(.{4})(?=.)/g, '$1 ') : '');
+
+// What the page shows of a wallet.
+function walletView(wallet = {}) {
+  return {
+    payeeEmail: wallet.payeeEmail ?? '',
+    withdrawName: wallet.withdrawName ?? '',
+    withdrawIban: formatIban(wallet.withdrawIban),
+  };
+}
+
+// GET /settings/barion (admin) - both wallets.
+export const getBarionSettings = async (req, res) => {
+  const { barion } = await getClubSettings();
+  res.status(200).json({
+    status: 'success',
+    data: { membership: walletView(barion?.membership), tour: walletView(barion?.tour) },
+  });
+};
+
+// PUT /settings/barion/:wallet (admin) - { payeeEmail, withdrawName,
+// withdrawIban }.
+// Where money goes is the most sensitive setting there is: each change is
+// in the history, and every admin gets an e-mail about it (old -> new, who).
+export const updateBarionWallet = async (req, res) => {
+  const key = req.params.wallet;
+  if (!WALLETS[key]) throw new AppError('Nincs ilyen számla.', 404);
+
+  const payeeEmail = String(req.body?.payeeEmail ?? '').trim();
+  const withdrawName = String(req.body?.withdrawName ?? '').trim();
+  const withdrawIban = normalizeIban(req.body?.withdrawIban);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payeeEmail)) {
+    throw new AppError('Adj meg egy érvényes Barion e-mail címet.', 400);
+  }
+  if (!withdrawName || withdrawName.length > 70) {
+    throw new AppError('Add meg a számlatulajdonos nevét (legfeljebb 70 karakter).', 400);
+  }
+  if (!withdrawIban) {
+    throw new AppError('Érvénytelen bankszámlaszám - magyar IBAN kell (HU + 26 számjegy).', 400);
+  }
+
+  const settings = await getClubSettings();
+  const before = settings.barion?.[key]?.toObject?.() ?? {};
+  const after = { payeeEmail, withdrawName, withdrawIban };
+
+  const changes = [
+    ['Barion e-mail', before.payeeEmail, after.payeeEmail],
+    ['Számlatulajdonos', before.withdrawName, after.withdrawName],
+    ['Bankszámla', formatIban(before.withdrawIban), formatIban(after.withdrawIban)],
+  ]
+    .filter(([, a, b]) => (a ?? '') !== b)
+    .map(([label, a, b]) => `${label}: ${a || '(nincs)'} → ${b}`);
+
+  if (changes.length) {
+    settings.set(`barion.${key}`, after);
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Barion (${WALLETS[key]}): ${changes.join('; ')}`,
+    });
+    await settings.save();
+
+    const admins = await User.find({ role: 'admin', email: { $nin: [null, ''] } }).select('email');
+    if (admins.length) {
+      const lines = changes.map((c) => `<li>${c}</li>`).join('');
+      await sendResendEmail({
+        to: admins.map((a) => a.email),
+        subject: `Bódorgó: megváltozott a Barion beállítás (${WALLETS[key]})`,
+        html: `<p>${req.user.name} megváltoztatta a(z) <strong>${WALLETS[key]}</strong> Barion-számla beállításait:</p><ul>${lines}</ul><p>Ha nem tudsz róla, azonnal nézd meg a Klub → Beállítások oldalon!</p>`,
+        text: [
+          `${req.user.name} megváltoztatta a(z) ${WALLETS[key]} Barion-számla beállításait:`,
+          ...changes,
+          '',
+          'Ha nem tudsz róla, azonnal nézd meg a Klub → Beállítások oldalon!',
+        ].join('\n'),
+      }).catch((err) => logger.error(`Barion settings e-mail failed: ${err.message}`));
+    }
+  }
+
+  res.status(200).json({ status: 'success', data: walletView(after) });
 };

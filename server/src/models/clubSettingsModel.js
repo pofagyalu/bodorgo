@@ -35,6 +35,20 @@ const clubSettingsSchema = new Schema(
       dailyLimit: { type: Number, default: 10, min: 1, max: 1000 },
     },
     // Who changed what, when - shown on the settings page.
+    // The two Barion wallets (Beállítások; were BARION_MEMBERSHIP_*/
+    // BARION_TOUR_* in .env): payeeEmail - where each purpose's payments
+    // land; withdrawName/withdrawIban - the bank account a withdrawal goes
+    // to. Only admins change them, and every change is e-mailed to all
+    // admins (settingsController.js's updateBarionWallet). The wallets' API
+    // keys are secrets and stay in .env (config.barion.walletKeys).
+    barion: {
+      membership: {
+        payeeEmail: String,
+        withdrawName: String,
+        withdrawIban: String,
+      },
+      tour: { payeeEmail: String, withdrawName: String, withdrawIban: String },
+    },
     history: [{ _id: false, at: Date, byName: String, change: String }],
   },
   { timestamps: true },

@@ -1,10 +1,12 @@
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember } from '../helpers/factories.js';
 import Transaction from '../../src/models/transactionModel.js';
 import Payment from '../../src/models/paymentModel.js';
-import { feeForYear } from '../../src/utils/clubSettings.js';
+import { feeForYear, getClubSettings } from '../../src/utils/clubSettings.js';
+import sendResendEmail from '../../src/utils/resendEmail.js';
+import { createBarionWithdrawal } from '../../src/utils/barion.js';
 
 const url = '/settings/membership-fees';
 const thisYear = new Date().getFullYear();
@@ -134,5 +136,104 @@ describe('feeForYear', () => {
     expect(feeForYear(fees, 2027)).toBe(1500);
     expect(feeForYear(fees, 2030)).toBe(1500);
     expect(feeForYear(fees, 2018)).toBeNull();
+  });
+});
+
+describe('Klub → Beállítások: Barion wallets', () => {
+  const IBAN = 'HU42117730161111101800000000';
+  const wallet = (overrides = {}) => ({
+    payeeEmail: 'klub@barion.test',
+    withdrawName: 'Bódorgó KLUB',
+    withdrawIban: 'hu42 1177 3016 1111 1018 0000 0000',
+    ...overrides,
+  });
+
+  it('an admin sets a wallet: its Barion e-mail and bank account', async () => {
+    const admin = await createAdmin({ name: 'Admin Anna' });
+    const put = await request(app)
+      .put('/settings/barion/membership')
+      .set(asUser(admin))
+      .send(wallet());
+    expect(put.status).toBe(200);
+    const got = (await request(app).get('/settings/barion').set(asUser(admin))).body.data;
+    expect(got.membership).toEqual({
+      payeeEmail: 'klub@barion.test',
+      withdrawName: 'Bódorgó KLUB',
+      withdrawIban: 'HU42 1177 3016 1111 1018 0000 0000',
+    });
+    expect(got.tour).toEqual({ payeeEmail: '', withdrawName: '', withdrawIban: '' });
+    // Stored clean: the IBAN without spaces.
+    expect((await getClubSettings()).barion.membership.withdrawIban).toBe(IBAN);
+    // Without its API key (a secret in .env) it can't be withdrawn from yet.
+    expect(
+      (await request(app).get('/payments/withdraw/membershipFee').set(asUser(admin))).body.data
+        .configured,
+    ).toBe(false);
+  });
+
+  it('every change goes to the history and to every admin by e-mail', async () => {
+    const admin = await createAdmin({ name: 'Admin Anna' });
+    await createAdmin({ name: 'Admin Béla' });
+    await request(app).put('/settings/barion/tour').set(asUser(admin)).send(wallet());
+    vi.mocked(sendResendEmail).mockClear();
+
+    const res = await request(app)
+      .put('/settings/barion/tour')
+      .set(asUser(admin))
+      .send(wallet({ withdrawName: 'Új Név' }));
+    expect(res.status).toBe(200);
+
+    const history = (await getClubSettings()).history.at(-1);
+    expect(history).toMatchObject({ byName: 'Admin Anna' });
+    expect(history.change).toBe('Barion (Előlegek): Számlatulajdonos: Bódorgó KLUB → Új Név');
+
+    expect(sendResendEmail).toHaveBeenCalledOnce();
+    const mail = vi.mocked(sendResendEmail).mock.calls[0][0];
+    expect(mail.to).toHaveLength(2);
+    expect(mail.subject).toContain('Előlegek');
+    expect(mail.text).toContain('Bódorgó KLUB → Új Név');
+
+    // Saving it unchanged: nothing to log, nobody to tell.
+    vi.mocked(sendResendEmail).mockClear();
+    await request(app)
+      .put('/settings/barion/tour')
+      .set(asUser(admin))
+      .send(wallet({ withdrawName: 'Új Név' }));
+    expect(sendResendEmail).not.toHaveBeenCalled();
+  });
+
+  it('a withdrawal goes to the account set here, with the key from .env', async () => {
+    const admin = await createAdmin();
+    await request(app).put('/settings/barion/tour').set(asUser(admin)).send(wallet());
+    vi.mocked(createBarionWithdrawal).mockClear();
+    await request(app)
+      .post('/payments/withdraw')
+      .set(asUser(admin))
+      .send({ purpose: 'tourAdvance', amount: 1000 });
+    expect(createBarionWithdrawal).toHaveBeenCalledWith({
+      walletKey: 'wallet-test',
+      amount: 1000,
+      recipientName: 'Bódorgó KLUB',
+      iban: IBAN,
+    });
+  });
+
+  it('checks the IBAN (Hungarian, right check digits), the e-mail and the name; admins only', async () => {
+    const admin = await createAdmin();
+    const put = (body, user = admin, key = 'membership') =>
+      request(app).put(`/settings/barion/${key}`).set(asUser(user)).send(body);
+    expect((await put(wallet({ withdrawIban: 'HU43117730161111101800000000' }))).status).toBe(400);
+    expect((await put(wallet({ withdrawIban: 'DE89370400440532013000' }))).status).toBe(400);
+    expect((await put(wallet({ payeeEmail: 'nem-email' }))).status).toBe(400);
+    expect((await put(wallet({ withdrawName: '  ' }))).status).toBe(400);
+    expect((await put(wallet(), admin, 'mas')).status).toBe(404);
+    expect((await put(wallet(), await createMember())).status).toBe(403);
+    expect(
+      (
+        await request(app)
+          .get('/settings/barion')
+          .set(asUser(await createMember()))
+      ).status,
+    ).toBe(403);
   });
 });

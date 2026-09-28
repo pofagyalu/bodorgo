@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import request from 'supertest';
 import Stripe from 'stripe';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import {
   createAdmin,
@@ -16,6 +16,7 @@ import Reservation from '../../src/models/reservationModel.js';
 import Transaction from '../../src/models/transactionModel.js';
 import User from '../../src/models/userModel.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
+import { getClubSettings } from '../../src/utils/clubSettings.js';
 import { createCheckoutSession, retrieveCheckoutSession } from '../../src/utils/stripe.js';
 import {
   createBarionPayment,
@@ -300,6 +301,18 @@ describe('membership dues', () => {
 });
 
 describe('withdrawals (admin)', () => {
+  // The tour wallet's bank account is set on Beállítások (its key is in
+  // the test .env); the membership one isn't set up.
+  beforeEach(async () => {
+    const settings = await getClubSettings();
+    settings.set('barion.tour', {
+      payeeEmail: 'tour@test.local',
+      withdrawName: 'Teszt Klub',
+      withdrawIban: 'HU42117730161111101800000000',
+    });
+    await settings.save();
+  });
+
   it('reports which wallets are configured', async () => {
     const admin = await createAdmin();
     expect(

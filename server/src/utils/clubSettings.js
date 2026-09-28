@@ -32,3 +32,10 @@ export function feeForYear(fees, year) {
 export async function membershipFeeForYear(year) {
   return feeForYear((await getClubSettings()).membershipFees, year);
 }
+
+// One Barion wallet's settings - 'membership' (Tagdíjak) or 'tour'
+// (Előlegek); empty until an admin sets them on Beállítások.
+export async function barionWallet(key) {
+  const wallet = (await getClubSettings()).barion?.[key];
+  return wallet?.toObject?.() ?? wallet ?? {};
+}
