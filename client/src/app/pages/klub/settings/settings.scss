@@ -523,3 +523,39 @@ button {
     padding-right: 4px;
   }
 }
+
+// --- Születésnap ---
+
+.birthday-fields {
+  margin-top: 12px;
+
+  select {
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid #dce5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: #283e49;
+    font: inherit;
+    font-size: 14px;
+  }
+
+  small {
+    color: #6b7780;
+    font-weight: 500;
+
+    code {
+      font-size: 12px;
+    }
+  }
+}
+
+// The message gets the whole row.
+.birthday-message {
+  flex: 1 1 100%;
+
+  input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

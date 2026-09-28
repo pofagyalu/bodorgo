@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import {
   MembershipFee,
+  BirthdaySettings,
   ChatImageSettings,
   MembershipReminder,
   SettingsService,
@@ -11,6 +12,12 @@ import {
 } from '../../../services/settings';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { BarionWithdraw } from './barion-withdraw/barion-withdraw';
+import {
+  BIRTHDAY_EFFECTS,
+  BirthdayEffect,
+  BirthdayService,
+} from '../../../shared/birthday/birthday.service';
+import { AuthService } from '../../../auth/auth.service';
 
 interface FeeRow {
   fromYear: number;
@@ -163,6 +170,7 @@ export class KlubSettings implements OnInit {
   ngOnInit() {
     this.loadReminder();
     this.loadChatImages();
+    this.loadBirthday();
     this.settingsService.getMembershipFees().subscribe({
       next: (res) => {
         this.foundingYear.set(res.data.foundingYear);
@@ -418,6 +426,80 @@ export class KlubSettings implements OnInit {
         },
         error: (err) => {
           this.savingChatImages.set(false);
+          this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+        },
+      });
+  }
+
+  // --- Születésnap: the birthday greeting (shared/birthday) ---
+
+  private birthday = inject(BirthdayService);
+  private auth = inject(AuthService);
+  readonly birthdayEffects = BIRTHDAY_EFFECTS;
+
+  birthdaySaved = signal<BirthdaySettings | null>(null);
+  bdEnabled = signal(true);
+  bdEffect = signal<BirthdayEffect>('confetti');
+  bdMessage = signal('');
+  savingBirthday = signal(false);
+
+  birthdayDirty = computed(() => {
+    const b = this.birthdaySaved();
+    return (
+      !!b &&
+      (b.enabled !== this.bdEnabled() ||
+        b.effect !== this.bdEffect() ||
+        b.message !== this.bdMessage().trim())
+    );
+  });
+
+  private loadBirthday() {
+    this.settingsService.getBirthdaySettings().subscribe({
+      next: (res) => this.applyBirthday(res.data),
+      error: () => {},
+    });
+  }
+
+  private applyBirthday(b: BirthdaySettings) {
+    this.birthdaySaved.set(b);
+    this.bdEnabled.set(b.enabled);
+    this.bdEffect.set(b.effect);
+    this.bdMessage.set(b.message);
+  }
+
+  resetBirthday() {
+    const b = this.birthdaySaved();
+    if (b) this.applyBirthday(b);
+  }
+
+  // Plays it on my own screen now, as set in the form (saved or not) - with
+  // my own given name in {név} (the last part of a Hungarian name).
+  previewBirthday() {
+    const myName = (this.auth.user()?.name ?? '').trim().split(/\s+/).at(-1) ?? '';
+    const text = (this.bdMessage().trim() || 'Boldog születésnapot, {név}! 🎂').replaceAll(
+      '{név}',
+      myName,
+    );
+    void this.birthday.play(this.bdEffect(), text);
+  }
+
+  saveBirthday() {
+    if (this.savingBirthday()) return;
+    this.savingBirthday.set(true);
+    this.settingsService
+      .updateBirthdaySettings({
+        enabled: this.bdEnabled(),
+        effect: this.bdEffect(),
+        message: this.bdMessage().trim(),
+      })
+      .subscribe({
+        next: (res) => {
+          this.applyBirthday(res.data);
+          this.savingBirthday.set(false);
+          this.notifications.addSuccess('Születésnap beállítás mentve.');
+        },
+        error: (err) => {
+          this.savingBirthday.set(false);
           this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
         },
       });

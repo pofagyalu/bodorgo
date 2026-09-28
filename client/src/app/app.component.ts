@@ -6,11 +6,12 @@ import { routeFadeAnimation } from './animations';
 import { AuthService } from './auth/auth.service';
 import { NotificationListComponent } from './notifications/notification-list/notification-list.component';
 import { ConfirmDialog } from './shared/confirm-dialog/confirm-dialog';
+import { BirthdayCelebration } from './shared/birthday/birthday-celebration';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [Header, RouterOutlet, NotificationListComponent, ConfirmDialog],
+  imports: [Header, RouterOutlet, NotificationListComponent, ConfirmDialog, BirthdayCelebration],
   animations: [routeFadeAnimation],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
