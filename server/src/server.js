@@ -8,6 +8,7 @@ import createSessionMiddleware from './session.js';
 import registerChatHandlers from './chat/chatSocket.js';
 import logger from './logger.js';
 import { checkPollReminders } from './chat/pollReminders.js';
+import { ensureDocumentPreviews } from './utils/documentPreviews.js';
 import {
   checkMembershipReminders,
   notifyAdminsIfAllMembersPaid,
@@ -46,6 +47,13 @@ mongoose
     server.listen(PORT, () => {
       logger.info(`App is listening on ${PORT} (Node ${process.version})`);
     });
+
+    // Dokumentumok: a preview for any document still without one (see
+    // utils/documentPreviews.js) - in the background, every server
+    // (each makes its own).
+    ensureDocumentPreviews().catch((err) =>
+      logger.error(`Document previews failed: ${err.message}`),
+    );
 
     // New tour recap videos are announced by an admin's "Új média
     // felfedezése" (see photos/discovery.js), not on a schedule - the NAS

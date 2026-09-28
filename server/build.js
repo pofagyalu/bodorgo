@@ -36,7 +36,12 @@ esbuild
     // is actually used for now - see its own comment) is wrapped in a
     // try/catch that skips the cover photo if sharp can't load, rather
     // than failing PDF generation entirely.
-    external: ['pdfkit', 'sharp'],
+    //
+    // pdfjs-dist (a club document's first page, see
+    // utils/documentPreviews.js) likewise: ESM-only, loaded by a dynamic
+    // import(), and it finds its own native canvas (@napi-rs/canvas) at
+    // runtime - both shipped by sync.js.
+    external: ['pdfkit', 'sharp', 'pdfjs-dist', '@napi-rs/canvas'],
     // Deliberately CJS (esbuild's default for platform:'node'), not ESM:
     // the deploy target (S:\bodorgo on the NAS) has no package.json, so
     // Node treats the output there as CommonJS by default regardless of
