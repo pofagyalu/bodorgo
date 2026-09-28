@@ -13,6 +13,8 @@ import {
   getInvitations,
   revokeInvitation,
   sendInvitations,
+  sendTestInvitation,
+  updateInvitationIntro,
 } from '../controllers/invitationController.js';
 
 const router = express.Router();
@@ -37,6 +39,8 @@ router
   .route('/invitations')
   .get(requireAuth, restrictTo('admin'), getInvitations)
   .post(requireAuth, restrictTo('admin'), sendInvitations);
+router.put('/invitations/intro', requireAuth, restrictTo('admin'), updateInvitationIntro);
+router.post('/invitations/test', requireAuth, restrictTo('admin'), sendTestInvitation);
 router.delete('/:id/invitation', requireAuth, restrictTo('admin'), revokeInvitation);
 // Admins filling in everyone's usernames at once (Klub → Beállítások).
 router

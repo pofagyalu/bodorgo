@@ -43,6 +43,13 @@ export class InvitationsPanel implements OnInit {
   people = signal<InvitationPerson[]>([]);
   busy = signal<string | null>(null); // a person's id, 'members' or 'others'
 
+  // The e-mail's intro text (above the steps): saved, and being edited.
+  private savedIntro = signal('');
+  intro = signal('');
+  introDirty = computed(() => this.intro().trim() !== this.savedIntro());
+  savingIntro = signal(false);
+  sendingTest = signal(false);
+
   // Not invited yet, per batch.
   private waiting = (p: InvitationPerson) => p.status === 'none';
   membersWaiting = computed(
@@ -64,12 +71,14 @@ export class InvitationsPanel implements OnInit {
   private load() {
     this.http
       .get<{
-        data: { enabled: boolean; days: number; people: InvitationPerson[] };
+        data: { enabled: boolean; days: number; intro: string; people: InvitationPerson[] };
       }>(`${this.apiUrl}/invitations`)
       .subscribe({
         next: (res) => {
           this.enabled.set(res.data.enabled);
           this.days.set(res.data.days);
+          if (!this.introDirty()) this.intro.set(res.data.intro);
+          this.savedIntro.set(res.data.intro);
           this.people.set(res.data.people);
           this.loading.set(false);
         },
@@ -145,5 +154,51 @@ export class InvitationsPanel implements OnInit {
         this.notifications.addError(err?.error?.message ?? 'A visszavonás nem sikerült.');
       },
     });
+  }
+
+  resetIntro() {
+    this.intro.set(this.savedIntro());
+  }
+
+  saveIntro() {
+    if (this.savingIntro()) return;
+    this.savingIntro.set(true);
+    this.http
+      .put<{ data: { intro: string } }>(`${this.apiUrl}/invitations/intro`, {
+        intro: this.intro().trim(),
+      })
+      .subscribe({
+        next: (res) => {
+          this.savedIntro.set(res.data.intro);
+          this.intro.set(res.data.intro);
+          this.savingIntro.set(false);
+          this.notifications.addSuccess('A meghívó szövege mentve.');
+        },
+        error: (err) => {
+          this.savingIntro.set(false);
+          this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+        },
+      });
+  }
+
+  // The whole e-mail to my own inbox - with the text as it is in the box
+  // now (saved or not) and a sample link.
+  sendTest() {
+    if (this.sendingTest()) return;
+    this.sendingTest.set(true);
+    this.http
+      .post<{ data: { sentTo: string } }>(`${this.apiUrl}/invitations/test`, {
+        intro: this.intro().trim(),
+      })
+      .subscribe({
+        next: (res) => {
+          this.sendingTest.set(false);
+          this.notifications.addSuccess(`Próba e-mail elküldve: ${res.data.sentTo}`);
+        },
+        error: (err) => {
+          this.sendingTest.set(false);
+          this.notifications.addError(err?.error?.message ?? 'A küldés nem sikerült.');
+        },
+      });
   }
 }

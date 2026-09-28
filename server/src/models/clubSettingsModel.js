@@ -57,6 +57,9 @@ const clubSettingsSchema = new Schema(
       effect: { type: String, enum: BIRTHDAY_EFFECTS, default: 'confetti' },
       message: { type: String, default: DEFAULT_BIRTHDAY_MESSAGE, maxlength: 200 },
     },
+    // Meghívók: the intro of the invitation e-mail (invitationController.js;
+    // unset = its DEFAULT_INVITATION_INTRO).
+    invitationIntro: { type: String, maxlength: 2000 },
     history: [{ _id: false, at: Date, byName: String, change: String }],
   },
   { timestamps: true },

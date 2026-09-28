@@ -154,3 +154,62 @@ describe('Felhasználók → Meghívók', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('the invitation e-mail intro', () => {
+  it('starts with the launch text; an admin edits it, and invitations use it from then on', async () => {
+    const admin = await createAdmin({ name: 'Admin Anna', sub: 'sub-admin' });
+    const list = (await request(app).get('/users/invitations').set(asUser(admin))).body.data;
+    expect(list.intro).toContain('ma elindult a Bódorgó klub új alkalmazása');
+
+    const intro = 'Szia!\n\nItt az új oldal <b>bold</b>.';
+    const put = await request(app)
+      .put('/users/invitations/intro')
+      .set(asUser(admin))
+      .send({ intro });
+    expect(put.status).toBe(200);
+    const { getClubSettings } = await import('../../src/utils/clubSettings.js');
+    expect((await getClubSettings()).history.at(-1)).toMatchObject({
+      byName: 'Admin Anna',
+      change: 'Meghívó e-mail: új bevezető szöveg',
+    });
+
+    const p = await newcomer({ name: 'Kiss Pál', email: 'pal@test.local' });
+    await request(app)
+      .post('/users/invitations')
+      .set(asUser(admin))
+      .send({ userIds: [String(p._id)] });
+    const mail = vi.mocked(sendResendEmail).mock.calls.at(-1)[0];
+    expect(mail.text).toContain('Kedves Pál!\n\nSzia!\n\nItt az új oldal <b>bold</b>.');
+    // Paragraphs, and never raw HTML from the text.
+    expect(mail.html).toContain('<p>Szia!</p>');
+    expect(mail.html).toContain('<p>Itt az új oldal &lt;b&gt;bold&lt;/b&gt;.</p>');
+
+    expect(
+      (await request(app).put('/users/invitations/intro').set(asUser(admin)).send({ intro: ' ' }))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await request(app)
+          .put('/users/invitations/intro')
+          .set(asUser(await createMember()))
+          .send({ intro: 'x' })
+      ).status,
+    ).toBe(403);
+  });
+
+  it('a test e-mail to the admin: the text being edited, a sample link, no invitation created', async () => {
+    const admin = await createAdmin({ email: 'admin@test.local', sub: 'sub-admin' });
+    const res = await request(app)
+      .post('/users/invitations/test')
+      .set(asUser(admin))
+      .send({ intro: 'Próba szöveg' });
+    expect(res.body.data).toEqual({ sentTo: 'admin@test.local' });
+    const mail = vi.mocked(sendResendEmail).mock.calls.at(-1)[0];
+    expect(mail.to).toBe('admin@test.local');
+    expect(mail.subject).toBe('[Próba] Meghívó a Bódorgó klub alkalmazásába');
+    expect(mail.text).toContain('Próba szöveg');
+    expect(mail.text).toContain('itoken=PROBA');
+    expect(createInvitation).not.toHaveBeenCalled();
+  });
+});
