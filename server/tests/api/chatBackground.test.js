@@ -64,10 +64,11 @@ describe('Kotyogó background', () => {
     expect(['wide1.jpg', 'wide2.jpg']).toContain(pick.filename);
     expect(pick.week).toBe(isoWeek());
 
-    // Pale: the dark blue test photo comes out nearly white.
+    // Pale: the dark blue test photo (red 0x20) comes out 75% white.
     const file = backgroundPath(tour._id);
     const { channels } = await sharp(file).stats();
-    expect(channels[0].mean).toBeGreaterThan(210);
+    expect(channels[0].mean).toBeGreaterThan(190);
+    expect(channels[0].mean).toBeLessThan(210);
     const madeAt = fs.statSync(file).mtimeMs;
 
     const again = await request(app).get(`/tours/${tour._id}/chat/background`).set(asUser(member));
