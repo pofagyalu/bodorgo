@@ -135,6 +135,16 @@ const config = {
     privateKey: process.env.VAPID_PRIVATE_KEY,
     subject: process.env.VAPID_SUBJECT || 'https://bodorgo.hu',
   },
+  // The background music (see music/jellyfin.js): one Jellyfin playlist,
+  // read with a server-side API key - it never reaches the browser. userId:
+  // optional - whose view lists the playlist (any user; by default the
+  // first one Jellyfin has).
+  jellyfin: {
+    url: process.env.JELLYFIN_URL?.replace(/\/+$/, ''),
+    apiKey: process.env.JELLYFIN_API_KEY,
+    playlistId: process.env.JELLYFIN_PLAYLIST_ID,
+    userId: process.env.JELLYFIN_USER_ID,
+  },
 };
 
 // Shared by Express's cors() middleware and Socket.IO's own cors option, so
