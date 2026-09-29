@@ -49,17 +49,24 @@ function familyLabel(members) {
 // optional event, matched by userId (the linked account), not attendeeId
 // (this reservation's own attendee subdocument id) - schedule
 // participants are recorded per User.
-function eventCostForAttendee(event, userId) {
+// A EUR tour's sheet is all in EUR (the house owner is paid in EUR, no
+// forints at all): the optional events' HUF prices are converted at the
+// tour's rate, rounded up to whole euros.
+function eventCostForAttendee(event, userId, tour) {
   if (!userId) return null;
   const isParticipant = (event.participants ?? []).some((p) => String(p.user) === userId);
-  return isParticipant ? event.extraCost : null;
+  if (!isParticipant) return null;
+  return tour.accommodationCurrency === 'EUR'
+    ? Math.ceil(event.extraCost / tour.eurHufExchangeRate)
+    : event.extraCost;
 }
 
 function eventColumnLabel(event) {
   return `${event.description} (${event.day}. nap)`;
 }
 
-const MONEY_FORMAT = '#,##0" Ft"';
+const HUF_FORMAT = '#,##0" Ft"';
+const EUR_FORMAT = '#,##0" €"';
 const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF445A67' } };
 const FAMILY_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCEAF3' } };
 const TOTAL_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
@@ -98,6 +105,9 @@ export const downloadAttendeesExcel = async (req, res) => {
 
   const { attendeePayments, totals } = computeAttendeePayments(tour, tour.reservations);
   const hasPricing = totals !== null;
+  // A EUR tour: every amount in EUR - the advance too (advanceInCurrency),
+  // not the forints it was paid in.
+  const MONEY_FORMAT = tour.accommodationCurrency === 'EUR' ? EUR_FORMAT : HUF_FORMAT;
   const families = groupByFamily(attendeePayments);
   const optionalEvents = (tour.schedule ?? [])
     .filter((e) => e.isOptional && e.extraCost)
@@ -149,9 +159,9 @@ export const downloadAttendeesExcel = async (req, res) => {
         members.length > 1 ? label : '',
         r.nights,
         hasPricing ? r.totalPrice : null,
-        hasPricing ? r.advance : null,
+        hasPricing ? r.advanceInCurrency : null,
         hasPricing ? r.rest : null,
-        ...optionalEvents.map((event) => eventCostForAttendee(event, r.userId)),
+        ...optionalEvents.map((event) => eventCostForAttendee(event, r.userId, tour)),
       ]);
       if (hasPricing) {
         row.getCell(4).numFmt = MONEY_FORMAT;
@@ -169,10 +179,13 @@ export const downloadAttendeesExcel = async (req, res) => {
         '',
         '',
         hasPricing ? members.reduce((sum, m) => sum + (m.totalPrice ?? 0), 0) : null,
-        hasPricing ? members.reduce((sum, m) => sum + (m.advance ?? 0), 0) : null,
+        hasPricing ? members.reduce((sum, m) => sum + (m.advanceInCurrency ?? 0), 0) : null,
         hasPricing ? members.reduce((sum, m) => sum + (m.rest ?? 0), 0) : null,
         ...optionalEvents.map((event) => {
-          const sum = members.reduce((s, m) => s + (eventCostForAttendee(event, m.userId) ?? 0), 0);
+          const sum = members.reduce(
+            (s, m) => s + (eventCostForAttendee(event, m.userId, tour) ?? 0),
+            0,
+          );
           return sum > 0 ? sum : null;
         }),
       ]);
@@ -197,11 +210,11 @@ export const downloadAttendeesExcel = async (req, res) => {
       '',
       '',
       totals.totalPrice,
-      totals.advance,
+      totals.advanceInCurrency,
       totals.rest,
       ...optionalEvents.map((event) => {
         const sum = attendeePayments.reduce(
-          (s, m) => s + (eventCostForAttendee(event, m.userId) ?? 0),
+          (s, m) => s + (eventCostForAttendee(event, m.userId, tour) ?? 0),
           0,
         );
         return sum > 0 ? sum : null;

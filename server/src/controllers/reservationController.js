@@ -281,11 +281,16 @@ export function computeAttendeePayments(tour, reservations) {
     })),
   );
 
-  // Converted to HUF up front (see tourModel.js's toHuf) - everything
-  // below operates on these already-HUF figures, so a tour quoted in EUR
-  // needs no further special-casing anywhere else in this function.
-  const nightlyRate = toHuf(tour, tour.accommodationPricePerNight);
-  const childPricePerNight = toHuf(tour, tour.childPricePerNight);
+  // Worked out in the tour's own currency (accommodationCurrency): a tour
+  // quoted in EUR is paid on site in EUR, so its Teljes ár/Fizetendő are
+  // whole euros (rounded up, like forints). Only the advance - always
+  // paid to the club, in HUF - is converted, once per person, at the
+  // tour's own rate (see advanceHufOf): `advance` is that HUF amount,
+  // `advanceInCurrency` the same advance in the tour's currency.
+  const isEur = tour.accommodationCurrency === 'EUR';
+  const advanceHufOf = (amount) => (isEur ? Math.ceil(toHuf(tour, amount)) : amount);
+  const nightlyRate = tour.accommodationPricePerNight;
+  const childPricePerNight = tour.childPricePerNight;
   const advancePct = tour.advancePaymentPercentage;
   const pricingConfigured = nightlyRate != null && advancePct != null;
 
@@ -303,6 +308,7 @@ export function computeAttendeePayments(tour, reservations) {
           feeExempt,
           totalPrice: null,
           advance: null,
+          advanceInCurrency: null,
           rest: null,
         }),
       ),
@@ -350,8 +356,9 @@ export function computeAttendeePayments(tour, reservations) {
   // AWAY, so it must never round up past what was actually budgeted - the
   // sum of N floored equal shares can never exceed the original total.
   // Ignored entirely for a tour that predates the club's founding - it
-  // couldn't have contributed money to something before it existed.
-  const subsidyEligible = new Date(tour.startDate) >= CLUB_FOUNDING_DATE;
+  // couldn't have contributed money to something before it existed - and
+  // for a tour quoted in EUR: the club doesn't subsidize those.
+  const subsidyEligible = new Date(tour.startDate) >= CLUB_FOUNDING_DATE && !isEur;
   const subsidyTotal = subsidyEligible ? tour.clubSubsidyAmount || 0 : 0;
   const clubMemberCount = rows.filter((r) => r.isClubMember).length;
   const subsidyShare = clubMemberCount > 0 ? Math.floor(subsidyTotal / clubMemberCount) : 0;
@@ -371,6 +378,7 @@ export function computeAttendeePayments(tour, reservations) {
   let totalSubsidyApplied = 0;
   let summedTotalPrice = 0;
   let summedAdvance = 0;
+  let summedAdvanceHuf = 0;
   const attendeePayments = rows.map((r) => {
     // feeExempt bypasses the pricing formula entirely rather than
     // computing normally and zeroing after - this person contributes
@@ -396,6 +404,7 @@ export function computeAttendeePayments(tour, reservations) {
         feeExempt: true,
         totalPrice: 0,
         advance: 0,
+        advanceInCurrency: 0,
         rest: 0,
       };
     }
@@ -413,9 +422,12 @@ export function computeAttendeePayments(tour, reservations) {
     const appliedSubsidy = r.isClubMember ? Math.min(subsidyShare, restBeforeSubsidy) : 0;
     const rest = restBeforeSubsidy - appliedSubsidy;
 
+    const advanceHuf = advanceHufOf(advance);
+
     totalSubsidyApplied += appliedSubsidy;
     summedTotalPrice += totalPrice;
     summedAdvance += advance;
+    summedAdvanceHuf += advanceHuf;
 
     return {
       reservationId: r.reservationId,
@@ -427,7 +439,8 @@ export function computeAttendeePayments(tour, reservations) {
       paid: r.paid,
       feeExempt: false,
       totalPrice,
-      advance,
+      advance: advanceHuf,
+      advanceInCurrency: advance,
       rest,
     };
   });
@@ -441,9 +454,10 @@ export function computeAttendeePayments(tour, reservations) {
   // true average is higher), or some attendees being children at a
   // discount (perPerson: true average is lower). Null with nobody
   // registered yet - nothing real to average.
+  // Always in HUF - it's the tour card's "Ft/fő/éj".
   const averagePricePerPersonPerNight =
     totalPersonNights > 0
-      ? Math.ceil((perPerson ? summedTotalPrice : totalHouseFee) / totalPersonNights)
+      ? Math.ceil(toHuf(tour, (perPerson ? summedTotalPrice : totalHouseFee) / totalPersonNights))
       : null;
 
   return {
@@ -451,13 +465,15 @@ export function computeAttendeePayments(tour, reservations) {
     totals: perPerson
       ? {
           totalPrice: summedTotalPrice,
-          advance: summedAdvance,
+          advance: summedAdvanceHuf,
+          advanceInCurrency: summedAdvance,
           rest: summedTotalPrice - summedAdvance - totalSubsidyApplied,
           averagePricePerPersonPerNight,
         }
       : {
           totalPrice: totalHouseFee,
-          advance: totalAdvance,
+          advance: advanceHufOf(totalAdvance),
+          advanceInCurrency: totalAdvance,
           rest: totalHouseFee - totalAdvance - totalSubsidyApplied,
           averagePricePerPersonPerNight,
         },

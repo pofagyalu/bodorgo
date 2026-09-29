@@ -160,6 +160,37 @@ describe('attendee Excel export (admin)', () => {
     expect(text).toContain('Borkóstoló');
   });
 
+  it('a EUR tour: every amount in euros, the advance and the optional events too', async () => {
+    const { tour, admin, parent } = await richTour();
+    // The house: 300 € a night, 2 nights = 600 €, over 6 person-nights.
+    await Tour.updateOne(
+      { _id: tour._id },
+      { accommodationPricePerNight: 300, accommodationCurrency: 'EUR', eurHufExchangeRate: 400 },
+    );
+    const res = await request(app)
+      .get(`/tours/${tour._id}/attendees/export.xlsx`)
+      .set(asUser(admin))
+      .buffer(true)
+      .parse((r, cb) => {
+        const chunks = [];
+        r.on('data', (c) => chunks.push(c));
+        r.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
+    const ExcelJS = (await import('exceljs')).default;
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.load(res.body);
+    const sheet = book.worksheets[0];
+    let parentRow;
+    const formats = new Set();
+    sheet.eachRow((row) => {
+      if (row.getCell(1).value === parent.name) parentRow = row;
+      row.eachCell((cell) => cell.numFmt && formats.add(cell.numFmt));
+    });
+    // 200 €, of which 30% (60 €) in advance; the 4000 Ft wine tasting: 10 €.
+    expect([4, 5, 6, 7].map((c) => parentRow.getCell(c).value)).toEqual([200, 60, 140, 10]);
+    expect([...formats].every((f) => f.includes('€') && !f.includes('Ft'))).toBe(true);
+  });
+
   it('is admin-only and 404s for an unknown tour', async () => {
     const { tour, parent, admin } = await richTour();
     expect(

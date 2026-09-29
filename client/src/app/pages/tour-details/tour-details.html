@@ -386,6 +386,8 @@
             [tourId]="t._id"
             [attendees]="allAttendees()"
             [totals]="paymentTotals()"
+            [advancePercent]="t.advancePaymentPercentage ?? null"
+            [currency]="t.accommodationCurrency ?? 'HUF'"
             [userPhotos]="userPhotos()"
             (nightsUpdated)="onAttendeeNightsUpdated()"
           />

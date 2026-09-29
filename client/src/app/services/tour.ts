@@ -290,7 +290,10 @@ export interface ExtraDocument {
 // clubSubsidyAmount (see reservationController.js's
 // computeAttendeePayments) - never stored, so editing those tour fields
 // recalculates every attendee immediately. totalPrice/advance/rest are
-// all null when the tour has no pricing configured yet. reservationId/
+// all null when the tour has no pricing configured yet. totalPrice/rest
+// are in the tour's accommodationCurrency (a EUR tour: whole euros, paid
+// on site); advance is always the HUF that's paid to the club, and
+// advanceInCurrency the same advance in the tour's currency. reservationId/
 // attendeeId identify exactly which attendee subdocument to target for
 // updateAttendeeNights.
 export interface AttendeePayment {
@@ -317,6 +320,7 @@ export interface AttendeePayment {
   feeExempt: boolean;
   totalPrice: number | null;
   advance: number | null;
+  advanceInCurrency: number | null;
   rest: number | null;
   // Which real Payment (if any) backs this attendee - null when paid is
   // false, or when it's true with nothing real behind it (legacy data,
@@ -338,9 +342,11 @@ export function isInMyPaymentGroup(payment: AttendeePayment, me: CurrentUser | n
   return payment.userId === me.id || (!!me.familyId && payment.familyId === me.familyId);
 }
 
+// Same currencies as AttendeePayment's.
 export interface PaymentTotals {
   totalPrice: number;
   advance: number;
+  advanceInCurrency: number;
   rest: number;
 }
 

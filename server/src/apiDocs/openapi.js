@@ -164,7 +164,10 @@ const schemas = {
     drivingDurationFromBudapestMinutes: num('Driving time.'),
     pricingMode: str('How the accommodation is priced.', { enum: ['perHouse', 'perPerson'] }),
     accommodationPricePerNight: num('Price per night.'),
-    accommodationCurrency: str('Currency.', { enum: ['HUF', 'EUR'] }),
+    accommodationCurrency: str(
+      'Currency of the accommodation prices - and of the attendee list and Excel amounts (not the HUF advance).',
+      { enum: ['HUF', 'EUR'] },
+    ),
     childPricePerNight: num('Child price per night.'),
     childAgeLimitYears: int('Below this age the child price applies.'),
     advancePaymentPercentage: num('Előleg - the share paid in advance (0-100).'),
@@ -607,7 +610,7 @@ const paths = {
       tag: T.tours,
       summary: 'One tour',
       description:
-        'Everything the tour page shows - schedule, accommodation, weather, Extrák, attendees with their payment rows.',
+        "Everything the tour page shows - schedule, accommodation, weather, Extrák, attendees with their payment rows. Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy.",
       params: [tourId],
       data: obj({ tour: ref('Tour') }),
       errors: [404],
@@ -873,7 +876,8 @@ const paths = {
       tag: T.tourFiles,
       role: 'admin',
       summary: 'Attendee list as Excel',
-      description: 'For the house owner: nights, price, advance, rest - grouped by family.',
+      description:
+        'For the house owner: nights, price, advance, rest - grouped by family. A EUR tour: every amount in EUR (the advance and the optional events too), no forints.',
       params: [tourId],
       response: file(
         ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],

@@ -179,17 +179,11 @@
               [(ngModel)]="form.clubSubsidyAmount"
               name="clubSubsidyAmount"
               [disabled]="!subsidyAllowed"
-              [title]="
-                subsidyAllowed
-                  ? ''
-                  : 'A klub 2019-ben alakult, korábbi táborhoz nem járulhatott hozzá.'
-              "
+              [title]="subsidyAllowed ? '' : subsidyNote"
           /></label>
         </div>
         @if (!subsidyAllowed) {
-          <p class="field-note">
-            A klub 2019-ben alakult, ezért korábbi táborokhoz nem rendelhető hozzájárulás.
-          </p>
+          <p class="field-note">{{ subsidyNote }}</p>
         }
 
         <label class="form-field-full"
