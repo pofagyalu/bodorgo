@@ -3,14 +3,10 @@ import ExcelJS from 'exceljs';
 import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
 import { computeAttendeePayments } from './reservationController.js';
+import { huDate } from '../utils/huDate.js';
 
-function formatHu(date) {
-  return new Intl.DateTimeFormat('hu-HU', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(date);
-}
+// Hungarian even on the live server (see utils/huDate.js).
+const formatHu = (date) => huDate(date);
 
 // Same grouping rule as the client's own attendee-list.ts groupedFamilies
 // - a real family (2+ members sharing a familyId) vs. each family-less

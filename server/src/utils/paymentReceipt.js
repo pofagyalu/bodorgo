@@ -3,6 +3,7 @@ import path from 'path';
 import PDFDocument from 'pdfkit';
 import slugify from 'slugify';
 import { RECEIPTS_DIR as RECEIPTS_DIR_CONFIG } from './dataDirs.js';
+import { huDate, huDateTime } from './huDate.js';
 
 // Same code-adjacent asset paths tourPdfController.js already established
 // (server/assets, git-tracked, auto-deployed - see sync.js) - duplicated
@@ -19,23 +20,9 @@ const RECEIPTS_DIR = RECEIPTS_DIR_CONFIG;
 
 const DARK_GREEN = '#1b6548';
 
-function formatHu(date) {
-  return new Intl.DateTimeFormat('hu-HU', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
-
-function formatHuDate(date) {
-  return new Intl.DateTimeFormat('hu-HU', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(date);
-}
+// Hungarian even on the live server (see utils/huDate.js).
+const formatHu = (date) => huDateTime(date);
+const formatHuDate = (date) => huDate(date);
 
 function formatForint(amount) {
   const digits = Math.round(amount).toString();

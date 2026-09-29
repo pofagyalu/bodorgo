@@ -666,7 +666,7 @@ const paths = {
       tag: T.signup,
       summary: 'Sign up for a tour',
       description:
-        'One reservation for one or more people. A member may sign up themselves and their family, a guest only themselves, an admin anyone. Closes when the tour starts (except for admins); refused when full. E-mails the registrant and those registered.',
+        'One reservation for one or more people. A member may sign up themselves and their family, a guest only themselves, an admin anyone. Closes when the tour starts (except for admins); refused when full, or for a retired person (by anyone, admins too - restore them first). E-mails the registrant and those registered.',
       params: [tourIdT],
       body: obj({ attendeeIds: arrayOf(id('User ids to sign up.')) }, ['attendeeIds']),
       ok: 201,
@@ -1544,7 +1544,12 @@ const paths = {
     }),
   },
   '/users/me/family': {
-    get: op({ tag: T.users, summary: 'My family', data: obj({ members: arrayOf(ref('User')) }) }),
+    get: op({
+      tag: T.users,
+      summary: 'My family',
+      description: 'The others in my family - not the retired ones (they can’t be signed up).',
+      data: obj({ members: arrayOf(ref('User')) }),
+    }),
   },
   '/users/me/photo': {
     put: op({

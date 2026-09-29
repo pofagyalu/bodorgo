@@ -11,6 +11,7 @@ import {
   deleteInvitation,
   invitationsEnabled,
 } from '../utils/authentikInvitations.js';
+import { huDate } from '../utils/huDate.js';
 
 // Felhasználók → Meghívók (admins): everyone an admin added who has an
 // e-mail but has never logged in gets their own Authentik invitation link
@@ -18,8 +19,7 @@ import {
 // (club members, then everyone else). Their first login then links the
 // Authentik account to their record here (authOidcController.js).
 
-const dateHu = (d) =>
-  new Intl.DateTimeFormat('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' }).format(d);
+const dateHu = (d) => huDate(d);
 
 // The intro above the steps - editable on the Meghívók tab (club
 // settings' invitationIntro): the launch announcement for the big day,

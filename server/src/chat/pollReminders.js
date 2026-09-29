@@ -1,5 +1,6 @@
 import Poll from '../models/pollModel.js';
 import { chatAudience, pushInBackground } from './chatNotifications.js';
+import { huTime } from '../utils/huDate.js';
 
 const REMINDER_BEFORE_MS = 2 * 60 * 60 * 1000;
 
@@ -23,11 +24,7 @@ export async function checkPollReminders(now = new Date()) {
     const voted = poll.votes.map((v) => v.user);
     const audience = await chatAudience(poll.tour, voted);
     const users = audience.ids;
-    const time = poll.closesAt.toLocaleTimeString('hu-HU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Budapest',
-    });
+    const time = huTime(poll.closesAt);
     pushInBackground(users, {
       title: `Még nem szavaztál – ${audience.label}`,
       body: `${poll.question} – ${time}-kor lezárul.`,
