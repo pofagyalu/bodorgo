@@ -122,9 +122,12 @@ export const getMyFamily = async (req, res) => {
     return res.status(200).json({ status: 'success', data: { members: [] } });
   }
 
+  // A retired family member (e.g. an ex-partner) isn't listed - they can't
+  // be registered for a tour anyway (see reservationController.js).
   const members = await User.find({
     familyId: req.user.familyId,
     _id: { $ne: req.user._id },
+    retired: { $ne: true },
   })
     .select('name email role photoUpdatedAt')
     .sort('name');

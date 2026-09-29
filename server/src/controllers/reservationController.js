@@ -47,6 +47,20 @@ async function assertCanRegister(user, attendeeIds) {
   }
 }
 
+// A retired (archived) person can't be registered for a tour - by anyone,
+// admins included (e.g. an ex-partner still in the family). If ever needed:
+// restore them, register them, retire them again. Only for signing up -
+// withdrawing a retired attendee still works.
+async function assertNoneRetired(attendeeIds) {
+  const retired = await User.find({ _id: { $in: attendeeIds }, retired: true }).select('name');
+  if (retired.length) {
+    throw new AppError(
+      `Visszavonult felhasználó nem jelentkeztethető: ${retired.map((u) => u.name).join(', ')}.`,
+      400,
+    );
+  }
+}
+
 // Three variants: the registrant registering themselves (+ maybe family),
 // the registrant registering only other people (e.g. an admin signing up
 // a member who called in - not attending themselves, so no "you secured
@@ -168,6 +182,7 @@ export const signUpForTour = async (req, res) => {
   ];
 
   await assertCanRegister(req.user, attendeeIds);
+  await assertNoneRetired(attendeeIds);
 
   const attendeeUsers = await User.find({ _id: { $in: attendeeIds } }).select(
     'name email lastLoginAt wantsEmailNotifications',
