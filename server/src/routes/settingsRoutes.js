@@ -3,6 +3,8 @@ import {
   getBarionSettings,
   getBirthdaySettings,
   getChatImageSettings,
+  getImageCacheSettings,
+  clearImageCacheNow,
   getMembershipFees,
   getMembershipReminder,
   testMembershipReminder,
@@ -10,6 +12,7 @@ import {
   updateBarionWallet,
   updateBirthdaySettings,
   updateChatImageSettings,
+  updateImageCacheSettings,
   updateMembershipReminder,
 } from '../controllers/settingsController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
@@ -36,6 +39,13 @@ router
   .route('/chat-images')
   .get(requireAuth, restrictTo('admin'), getChatImageSettings)
   .put(requireAuth, restrictTo('admin'), updateChatImageSettings);
+
+// Kép gyorsítótár: its quota, and emptying it - admins only.
+router
+  .route('/image-cache')
+  .get(requireAuth, restrictTo('admin'), getImageCacheSettings)
+  .put(requireAuth, restrictTo('admin'), updateImageCacheSettings)
+  .delete(requireAuth, restrictTo('admin'), clearImageCacheNow);
 
 // Barion wallets: payees, API keys, bank accounts - admins only.
 router.get('/barion', requireAuth, restrictTo('admin'), getBarionSettings);

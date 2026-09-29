@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import type PhotoSwipeLightbox from 'photoswipe/lightbox';
+import { photoSlide } from '../../shared/photo-sizes';
 import { checkerTransparentPngs } from '../../shared/pswp-checker';
 import {
   TourService,
@@ -897,12 +898,14 @@ export class TourDetails implements OnDestroy {
     if (images.length === 0 || !this.lightbox) return;
     this.lightbox.loadAndOpen(
       0,
-      images.map((img) => ({
-        src: this.galleryFullUrl(img.filename),
-        width: img.width,
-        height: img.height,
-        alt: img.filename,
-      })),
+      images.map((img) =>
+        photoSlide(
+          this.galleryFullUrl(img.filename),
+          this.galleryThumbUrl(img.filename),
+          img,
+          img.filename,
+        ),
+      ),
     );
   }
 

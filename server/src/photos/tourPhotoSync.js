@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
 import Tour from '../models/tourModel.js';
+import { removeSizedVersions } from './imageSizes.js';
 import { findFolderForOrder } from './tourFolders.js';
 import { byTakenAt, isImageFile, processPhoto, readTakenAt, thumbRelPath } from './imageFiles.js';
 
@@ -71,6 +72,10 @@ export async function syncTourPhotos(tour, sharp) {
   for (const image of removedImages) {
     fs.rmSync(path.join(thumbDir, thumbRelPath(image.filename)), { force: true });
   }
+  removeSizedVersions(
+    `tours/${tour.sourceFolder}`,
+    removedImages.map((i) => i.filename),
+  );
 
   // Photos recorded before takenAt existed get it once (null = the file has
   // none, so it isn't read again next time).

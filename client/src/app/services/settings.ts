@@ -55,6 +55,13 @@ export interface ChatImageSettings {
   usage: { bytes: number; count: number }; // the photos still on disk
 }
 
+// Kép gyorsítótár: the smaller photo versions made for the viewer (see
+// server photos/imageSizes.js).
+export interface ImageCacheSettings {
+  quotaMB: number;
+  usage: { bytes: number; count: number };
+}
+
 // One Barion wallet (Beállítások): where its payments land, and the bank
 // account withdrawals go to. (Its API key is a secret in the server's .env.)
 export interface BarionWallet {
@@ -120,6 +127,25 @@ export class SettingsService {
     return this.http.put<{ data: ChatImageSettings & { removed: number } }>(
       `${this.apiUrl}/chat-images`,
       settings,
+    );
+  }
+
+  // --- Kép gyorsítótár (admin-only): its quota, and emptying it ---
+
+  getImageCacheSettings() {
+    return this.http.get<{ data: ImageCacheSettings }>(`${this.apiUrl}/image-cache`);
+  }
+
+  updateImageCacheSettings(quotaMB: number) {
+    return this.http.put<{ data: ImageCacheSettings & { removed: number } }>(
+      `${this.apiUrl}/image-cache`,
+      { quotaMB },
+    );
+  }
+
+  clearImageCache() {
+    return this.http.delete<{ data: ImageCacheSettings & { removed: number } }>(
+      `${this.apiUrl}/image-cache`,
     );
   }
 

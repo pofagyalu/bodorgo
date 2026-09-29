@@ -5,6 +5,7 @@ import config from '../config.js';
 import MediaPhoto from '../models/mediaPhotoModel.js';
 import { byTakenAt, thumbRelPath } from '../photos/imageFiles.js';
 import { mediaThumbDir } from '../photos/mediaPhotoSync.js';
+import { LONG_CACHE, requestedWidth, sendPhoto } from '../photos/imageSizes.js';
 import { discoveryStatus, startDiscovery } from '../photos/discovery.js';
 
 // Média → Fotók (members only - see mediaRoutes.js). The categories and
@@ -48,18 +49,21 @@ function insideRoot(root, relPath) {
   return full;
 }
 
-function sendOriginal(res, category, filename, { download = false } = {}) {
-  const full = insideRoot(path.join(config.mediaPhotosRoot, category), filename);
-  if (!fs.existsSync(full)) throw new AppError('A fénykép nem található a lemezen.', 404);
-  if (download) return res.download(full, path.basename(filename));
-  res.sendFile(full);
-}
+const originalPath = (category, filename) =>
+  insideRoot(path.join(config.mediaPhotosRoot, category), filename);
 
-// GET /media/photos/:category/:filename - the original.
+// GET /media/photos/:category/:filename - the original; ?w=800/1200/1920 -
+// a smaller WebP of it instead (see photos/imageSizes.js), what the viewer
+// asks for.
 export const getMediaPhoto = async (req, res) => {
   const { category, filename } = req.params;
+  const width = requestedWidth(req.query);
   await ensureRecorded(category, filename);
-  sendOriginal(res, category, filename);
+  await sendPhoto(res, originalPath(category, filename), {
+    key: `media/${category}`,
+    filename,
+    width,
+  });
 };
 
 // GET /media/photos/:category/:filename/download - the same original as a
@@ -69,7 +73,9 @@ export const getMediaPhoto = async (req, res) => {
 export const downloadMediaPhoto = async (req, res) => {
   const { category, filename } = req.params;
   await ensureRecorded(category, filename);
-  sendOriginal(res, category, filename, { download: true });
+  const full = originalPath(category, filename);
+  if (!fs.existsSync(full)) throw new AppError('A fénykép nem található a lemezen.', 404);
+  res.download(full, path.basename(filename));
 };
 
 // GET /media/photos/:category/:filename/thumb - the small .webp, or the
@@ -78,8 +84,11 @@ export const getMediaPhotoThumb = async (req, res) => {
   const { category, filename } = req.params;
   await ensureRecorded(category, filename);
   const thumb = insideRoot(mediaThumbDir(category), thumbRelPath(filename));
-  if (fs.existsSync(thumb)) return res.sendFile(thumb);
-  sendOriginal(res, category, filename);
+  if (fs.existsSync(thumb)) {
+    res.set('Cache-Control', LONG_CACHE);
+    return res.sendFile(thumb);
+  }
+  await sendPhoto(res, originalPath(category, filename), {});
 };
 
 // POST /media/discover (admin) - starts "Új média felfedezése" in the

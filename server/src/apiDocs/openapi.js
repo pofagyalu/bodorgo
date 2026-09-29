@@ -128,6 +128,11 @@ function op({
 
 const tourId = path('id', 'The tour id.');
 const tourIdT = path('tourId', 'The tour id.');
+// ?w= on a photo: a smaller version for the viewer (photos/imageSizes.js).
+const sizeW = query('w', 'Width: `800`, `1200` or `1920`. Omit for the original.', {
+  type: 'integer',
+  enum: [800, 1200, 1920],
+});
 const userIdP = path('id', 'The user id.');
 
 // --- Schemas ---
@@ -905,10 +910,15 @@ const paths = {
   '/tours/{tourId}/images/{filename}': {
     get: op({
       tag: T.gallery,
-      summary: 'A photo (original)',
-      params: [tourIdT, path('filename', 'e.g. `mobil%2FIMG_1.jpg`.')],
-      response: file(['image/jpeg', 'image/png', 'image/webp'], 'The original.'),
-      errors: [404],
+      summary: 'A photo (original, or a smaller version)',
+      description:
+        'Without `w`: the original. With `w`: a WebP at most that wide (never enlarged), made on first request and kept in the image cache (Kép gyorsítótár). Cached by browsers for a year.',
+      params: [tourIdT, path('filename', 'e.g. `mobil%2FIMG_1.jpg`.'), sizeW],
+      response: file(
+        ['image/jpeg', 'image/png', 'image/webp'],
+        'The original, or the WebP version.',
+      ),
+      errors: [400, 404],
     }),
     patch: op({
       tag: T.gallery,
@@ -1729,13 +1739,15 @@ const paths = {
     get: op({
       tag: T.media,
       role: 'member',
-      summary: 'A photo (original)',
-      params: [path('category', 'The folder.'), path('filename', 'The photo.')],
+      summary: 'A photo (original, or a smaller version)',
+      description:
+        'Without `w`: the original. With `w`: a WebP at most that wide (never enlarged), made on first request and kept in the image cache (Kép gyorsítótár). Cached by browsers for a year.',
+      params: [path('category', 'The folder.'), path('filename', 'The photo.'), sizeW],
       response: file(
         ['image/jpeg', 'image/png', 'image/webp'],
-        'The original - a PNG keeps its transparency.',
+        'The original, or the WebP version - a PNG keeps its transparency either way.',
       ),
-      errors: [404],
+      errors: [400, 404],
     }),
   },
   '/media/photos/{category}/{filename}/thumb': {
@@ -1848,6 +1860,42 @@ const paths = {
         removed: int('Photos removed now.'),
       }),
       errors: [400],
+    }),
+  },
+  '/settings/image-cache': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Image cache (Kép gyorsítótár) settings',
+      description:
+        'The smaller photo versions made for the viewer (tour albums, Média → Fotók): the quota and what they take up now.',
+      data: obj({ quotaMB: int(), usage: obj({ bytes: int(), count: int() }) }),
+    }),
+    put: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Set the image cache quota',
+      description:
+        'A smaller quota applies at once - the least recently viewed versions go until it fits.',
+      body: obj({ quotaMB: int('100-1000000') }, ['quotaMB']),
+      data: obj({
+        quotaMB: int(),
+        usage: { type: 'object' },
+        removed: int('Versions removed now.'),
+      }),
+      errors: [400],
+    }),
+    delete: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Empty the image cache',
+      description:
+        'Every version goes; they are made again as photos are viewed. The originals are untouched.',
+      data: obj({
+        quotaMB: int(),
+        usage: { type: 'object' },
+        removed: int('Versions removed.'),
+      }),
     }),
   },
   '/settings/barion': {

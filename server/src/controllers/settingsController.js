@@ -16,6 +16,7 @@ import sendResendEmail from '../utils/resendEmail.js';
 import User from '../models/userModel.js';
 import logger from '../logger.js';
 import { chatImagesUsage, enforceChatImageQuota } from '../chat/chatImages.js';
+import { clearImageCache, enforceImageCacheQuota, imageCacheUsage } from '../photos/imageSizes.js';
 import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
@@ -247,6 +248,54 @@ export const updateChatImageSettings = async (req, res) => {
   res.status(200).json({
     status: 'success',
     data: { quotaMB, dailyLimit, usage: await chatImagesUsage(), removed },
+  });
+};
+
+// --- Kép gyorsítótár (see photos/imageSizes.js) ---
+
+// GET /settings/image-cache (admin) - the quota and how much the smaller
+// photo versions take up now.
+export const getImageCacheSettings = async (req, res) => {
+  const { imageCache } = await getClubSettings();
+  res.status(200).json({
+    status: 'success',
+    data: { quotaMB: imageCache.quotaMB, usage: imageCacheUsage() },
+  });
+};
+
+// PUT /settings/image-cache (admin) - { quotaMB }. A smaller quota takes
+// effect right away: the least recently viewed go until it fits.
+export const updateImageCacheSettings = async (req, res) => {
+  const quotaMB = Number(req.body?.quotaMB);
+  if (!Number.isInteger(quotaMB) || quotaMB < 100 || quotaMB > 1000000) {
+    throw new AppError('A keret 100 és 1 000 000 MB között lehet.', 400);
+  }
+  const settings = await getClubSettings();
+  const before = settings.imageCache.quotaMB;
+  settings.imageCache = { quotaMB };
+  if (before !== quotaMB) {
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Kép gyorsítótár: ${before} MB → ${quotaMB} MB`,
+    });
+  }
+  await settings.save();
+  const removed = await enforceImageCacheQuota();
+  res.status(200).json({
+    status: 'success',
+    data: { quotaMB, usage: imageCacheUsage(), removed },
+  });
+};
+
+// DELETE /settings/image-cache (admin) - Gyorsítótár ürítése: every
+// version goes; they're made again as photos are viewed.
+export const clearImageCacheNow = async (req, res) => {
+  const removed = clearImageCache();
+  const { imageCache } = await getClubSettings();
+  res.status(200).json({
+    status: 'success',
+    data: { quotaMB: imageCache.quotaMB, usage: imageCacheUsage(), removed },
   });
 };
 
