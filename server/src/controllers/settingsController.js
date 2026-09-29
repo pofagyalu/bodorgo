@@ -18,6 +18,7 @@ import logger from '../logger.js';
 import { chatImagesUsage, enforceChatImageQuota } from '../chat/chatImages.js';
 import { clearImageCache, enforceImageCacheQuota, imageCacheUsage } from '../photos/imageSizes.js';
 import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js';
+import { DEFAULT_RANK_MESSAGE } from '../utils/ranks.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
 // fee, by the year each amount takes effect (see utils/clubSettings.js).
@@ -445,6 +446,49 @@ export const updateBirthdaySettings = async (req, res) => {
       at: new Date(),
       byName: req.user.name,
       change: `Születésnap: ${changes.join('; ')}`,
+    });
+    await settings.save();
+  }
+  res.status(200).json({ status: 'success', data: after });
+};
+
+// --- Rangok ünneplése (see utils/ranks.js) ---
+
+const rankView = (r) => ({
+  enabled: r?.enabled ?? true,
+  effect: r?.effect ?? 'fireworks',
+  message: r?.message ?? DEFAULT_RANK_MESSAGE,
+});
+
+// GET /settings/rank (admin).
+export const getRankSettings = async (req, res) => {
+  const { rankCelebration } = await getClubSettings();
+  res.status(200).json({ status: 'success', data: rankView(rankCelebration) });
+};
+
+// PUT /settings/rank (admin) - { enabled, effect, message }.
+export const updateRankSettings = async (req, res) => {
+  const enabled = req.body?.enabled === true;
+  const effect = req.body?.effect;
+  const message = String(req.body?.message ?? '').trim();
+  if (!BIRTHDAY_EFFECTS.includes(effect)) throw new AppError('Ismeretlen effekt.', 400);
+  if (!message || message.length > 200) {
+    throw new AppError('Az üzenet 1-200 karakter lehet.', 400);
+  }
+  const settings = await getClubSettings();
+  const before = rankView(settings.rankCelebration);
+  const after = { enabled, effect, message };
+  const changes = [
+    before.enabled !== enabled && (enabled ? 'bekapcsolva' : 'kikapcsolva'),
+    before.effect !== effect && `effekt: ${EFFECT_NAMES[before.effect]} → ${EFFECT_NAMES[effect]}`,
+    before.message !== message && `üzenet: „${message}”`,
+  ].filter(Boolean);
+  if (changes.length) {
+    settings.rankCelebration = after;
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Rangok ünneplése: ${changes.join('; ')}`,
     });
     await settings.save();
   }

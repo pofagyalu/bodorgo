@@ -7,6 +7,9 @@ import { CLUB_FOUNDING_YEAR, getClubSettings } from '../utils/clubSettings.js';
 import { toursAttendedByUser, toursAttendedOf } from '../utils/toursAttended.js';
 import { USERNAME_RULE, USERNAME_RULE_MESSAGE, usernameKey } from '../utils/usernames.js';
 import { budapestToday, fillMessage, isBirthday } from '../utils/birthday.js';
+import { RANK_CELEBRATION_START, fillRankMessage, rankFor } from '../utils/ranks.js';
+import sendResendEmail from '../utils/resendEmail.js';
+import logger from '../logger.js';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -181,6 +184,66 @@ export const updateMe = async (req, res, next) => {
 // as celebrated for this year, so it's shown once, on whichever device
 // comes first. Any other time { celebrate: false }. Nothing is shown if an
 // admin turned it off on Beállítások.
+// Every admin hears about a newly reached rank - also when the
+// celebration itself is turned off.
+async function emailAdminsAboutRank(user, tours, rank) {
+  const admins = await User.find({ role: 'admin', email: { $nin: [null, ''] } }).select('email');
+  if (!admins.length) return;
+  const line = `${user.name} elérte a ${rank.name} bódorgó rangot: ${tours} táboron vett már részt.`;
+  await sendResendEmail({
+    to: admins.map((a) => a.email),
+    subject: `${user.name} elérte a ${rank.name} bódorgó rangot`,
+    text: `${line}
+
+Ma lépett be először azóta.`,
+    html: `<p>${line}</p><p>Ma lépett be először azóta.</p>`,
+  });
+}
+
+// GET /users/me/rank - the first time after reaching a new rank (10, 20,
+// ... tours - see utils/ranks.js): { celebrate: true, effect, message },
+// and it's marked as celebrated, so it's shown once, on whichever device
+// comes first; the admins are e-mailed. Any other time
+// { celebrate: false }. Ranks someone already had when this began count
+// as celebrated. Nothing is shown if an admin turned it off on
+// Beállítások (the rank is still marked, and the admins still e-mailed).
+export const getMyRank = async (req, res) => {
+  const user = req.user;
+  const none = () => res.status(200).json({ status: 'success', data: { celebrate: false } });
+
+  let celebrated = user.rankCelebrated;
+  if (celebrated == null) {
+    celebrated = rankFor(await toursAttendedOf(user._id, RANK_CELEBRATION_START))?.min ?? 0;
+    await User.updateOne({ _id: user._id }, { rankCelebrated: celebrated });
+  }
+  const tours = await toursAttendedOf(user._id);
+  const rank = rankFor(tours);
+  if (!rank || rank.min <= celebrated) return none();
+
+  // Claimed in one step, so two devices logging in at once can't both
+  // celebrate (or e-mail).
+  const claimed = await User.updateOne(
+    { _id: user._id, rankCelebrated: { $lt: rank.min } },
+    { rankCelebrated: rank.min },
+  );
+  if (!claimed.modifiedCount) return none();
+
+  emailAdminsAboutRank(user, tours, rank).catch((err) =>
+    logger.error(`rank e-mail for ${user._id} failed: ${err.message}`),
+  );
+
+  const { rankCelebration: settings } = await getClubSettings();
+  if (!settings?.enabled) return none();
+  res.status(200).json({
+    status: 'success',
+    data: {
+      celebrate: true,
+      effect: settings.effect,
+      message: fillRankMessage(settings.message, user, tours, rank),
+    },
+  });
+};
+
 export const getMyBirthday = async (req, res) => {
   const { birthday: settings } = await getClubSettings();
   const year = Number(budapestToday().slice(0, 4));

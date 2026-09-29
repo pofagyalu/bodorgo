@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js';
+import { DEFAULT_RANK_MESSAGE } from '../utils/ranks.js';
 
 const { Schema } = mongoose;
 
@@ -62,6 +63,14 @@ const clubSettingsSchema = new Schema(
       enabled: { type: Boolean, default: true },
       effect: { type: String, enum: BIRTHDAY_EFFECTS, default: 'confetti' },
       message: { type: String, default: DEFAULT_BIRTHDAY_MESSAGE, maxlength: 200 },
+    },
+    // Rangok ünneplése: the first login after reaching a new rank (10, 20,
+    // ... tours) - the effect and the message (utils/ranks.js). The admins'
+    // e-mail about it goes out even when this is off.
+    rankCelebration: {
+      enabled: { type: Boolean, default: true },
+      effect: { type: String, enum: BIRTHDAY_EFFECTS, default: 'fireworks' },
+      message: { type: String, default: DEFAULT_RANK_MESSAGE, maxlength: 200 },
     },
     // Meghívók: the intro of the invitation e-mail (invitationController.js;
     // unset = its DEFAULT_INVITATION_INTRO).
