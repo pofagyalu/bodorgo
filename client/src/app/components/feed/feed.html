@@ -1,5 +1,10 @@
 <div class="feed-wrapper">
-  <div class="feed-container" #feedContainer>
+  <div
+    class="feed-container"
+    #feedContainer
+    [class.feed-container--photo]="!!backgroundImage()"
+    [style.background-image]="backgroundImage()"
+  >
     @for (post of posts(); track post._id) {
       @if (dayBreaks().get(post._id); as day) {
         <div class="day-break">{{ day }}</div>
@@ -25,6 +30,20 @@
       />
     }
   </div>
+
+  <!-- Admins: another photo from the album behind the chat, for the rest
+       of the week. Next to the mute bell (chat.html), in the same pane. -->
+  @if (isAdmin() && backgroundImage()) {
+    <button
+      type="button"
+      class="background-btn"
+      title="Másik háttérkép a tábor fotóiból"
+      [disabled]="switchingBackground()"
+      (click)="nextBackground()"
+    >
+      <mat-icon>wallpaper</mat-icon>
+    </button>
+  }
 
   <app-compose
     [mentionables]="mentionables()"

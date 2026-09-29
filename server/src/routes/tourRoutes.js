@@ -24,8 +24,11 @@ import {
 import { createTourPoll } from '../controllers/pollController.js';
 import {
   chatImageUpload,
+  getChatBackground,
+  getChatBackgroundImage,
   getChatImage,
   getChatImageThumb,
+  nextChatBackground,
   postChatImage,
 } from '../controllers/chatImageController.js';
 import { downloadAttendeesExcel } from '../controllers/tourExcelController.js';
@@ -111,6 +114,13 @@ router.route('/:tourId/cancellations').get(requireAuth, restrictTo('admin'), get
 // A poll started from the tour's chat - by any attendee (see pollController.js).
 router.route('/:tourId/polls').post(requireAuth, createTourPoll);
 // Photos in the tour chat (see chatImageController.js).
+// The Kotyogó's background: this week's pale album photo; an admin can
+// pick another.
+router.route('/:tourId/chat/background').get(requireAuth, getChatBackground);
+router.route('/:tourId/chat/background/image').get(requireAuth, getChatBackgroundImage);
+router
+  .route('/:tourId/chat/background/next')
+  .post(requireAuth, restrictTo('admin'), nextChatBackground);
 router.route('/:tourId/chat/images').post(requireAuth, chatImageUpload, postChatImage);
 router.route('/:tourId/chat/images/:postId').get(requireAuth, getChatImage);
 router.route('/:tourId/chat/images/:postId/thumb').get(requireAuth, getChatImageThumb);

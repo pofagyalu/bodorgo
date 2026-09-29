@@ -13,7 +13,8 @@ import {
 import { AuthService } from '../../auth/auth.service';
 import { TourSocketService } from '../../services/tour-socket';
 import { Compose, Mentionable } from './compose/compose';
-import { TourService } from '../../services/tour';
+import { ChatBackground, TourService } from '../../services/tour';
+import { MatIconModule } from '@angular/material/icon';
 import { Post, Reaction } from './post/post';
 import { PollCreate } from '../poll-create/poll-create';
 import { usernameKey } from '../../shared/usernames';
@@ -57,7 +58,7 @@ function dayBreakLabel(d: Date): string {
 @Component({
   selector: 'app-feed',
   standalone: true,
-  imports: [Compose, Post, PollCreate],
+  imports: [Compose, Post, PollCreate, MatIconModule],
   templateUrl: './feed.html',
   styleUrls: ['./feed.scss'],
 })
@@ -114,6 +115,39 @@ export class Feed implements OnInit, OnDestroy {
   // under someone reading older messages when others post.
   private scrollTrigger = signal(0);
 
+  // The chat's background: this week's pale photo from the tour's album
+  // (the server bakes the paleness in), or the plain one if it has none.
+  // Admins can switch to another one for the rest of the week.
+  private background = signal<ChatBackground | null>(null);
+  backgroundImage = computed(() => {
+    const b = this.background();
+    return b ? `url("${this.tourService.chatBackgroundUrl(this.tourId(), b)}")` : null;
+  });
+  isAdmin = computed(() => this.authService.user()?.role === 'admin');
+  switchingBackground = signal(false);
+
+  private loadBackground() {
+    this.tourService.getChatBackground(this.tourId()).subscribe({
+      next: (res) => this.background.set(res.data.background),
+      error: () => {},
+    });
+  }
+
+  nextBackground() {
+    if (this.switchingBackground()) return;
+    this.switchingBackground.set(true);
+    this.tourService.nextChatBackground(this.tourId()).subscribe({
+      next: (res) => {
+        this.background.set(res.data.background);
+        this.switchingBackground.set(false);
+      },
+      error: (err) => {
+        this.switchingBackground.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Nem sikerült hátteret váltani.');
+      },
+    });
+  }
+
   constructor() {
     // A plain effect() can fire before the newly-added <app-post> child
     // component has actually rendered/laid out its content, so scrollHeight
@@ -129,6 +163,7 @@ export class Feed implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.loadBackground();
     // The shared connection (see TourSocketService) - events are checked
     // against this feed's own tour, since the same connection may just
     // have switched over from another tour.

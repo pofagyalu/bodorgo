@@ -14,6 +14,8 @@ import {
   saveChatImage,
 } from '../chat/chatImages.js';
 import { emitToTour, getIo } from '../chat/tourEvents.js';
+import { backgroundPath, currentBackground, nextBackground } from '../chat/chatBackground.js';
+import { LONG_CACHE } from '../photos/imageSizes.js';
 import { notifyChatPostInBackground } from '../chat/chatNotifications.js';
 
 // A photo sent in a tour chat (see chat/chatImages.js). Sent as a normal
@@ -109,3 +111,31 @@ function send(res, file) {
 // GET /tours/:tourId/chat/images/:postId - the photo; .../thumb - the small one.
 export const getChatImage = async (req, res) => send(res, chatImagePath(await servable(req)));
 export const getChatImageThumb = async (req, res) => send(res, chatThumbPath(await servable(req)));
+
+// --- The Kotyogó's background (see chat/chatBackground.js) ---
+
+function validTourId(tourId) {
+  if (!mongoose.isValidObjectId(tourId)) throw new AppError('Nincs ilyen tábor.', 404);
+  return tourId;
+}
+
+// GET /tours/:tourId/chat/background - { background: { version } | null }.
+export const getChatBackground = async (req, res) => {
+  const background = await currentBackground(validTourId(req.params.tourId));
+  res.status(200).json({ status: 'success', data: { background } });
+};
+
+// GET /tours/:tourId/chat/background/image?v=<version> - the pale WebP; the
+// version in the address changes with it, so browsers may keep it a year.
+export const getChatBackgroundImage = async (req, res) => {
+  const file = backgroundPath(validTourId(req.params.tourId));
+  if (!fs.existsSync(file)) throw new AppError('Ennek a Kotyogónak nincs háttérképe.', 404);
+  res.set('Cache-Control', LONG_CACHE);
+  res.sendFile(file);
+};
+
+// POST /tours/:tourId/chat/background/next (admin) - "Másik háttér".
+export const nextChatBackground = async (req, res) => {
+  const background = await nextBackground(validTourId(req.params.tourId));
+  res.status(200).json({ status: 'success', data: { background } });
+};
