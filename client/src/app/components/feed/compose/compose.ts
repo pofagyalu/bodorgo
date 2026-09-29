@@ -73,6 +73,9 @@ export class Compose {
   // The "@..." being typed right before the cursor, if any.
   private mentionQuery = signal<{ start: number; query: string } | null>(null);
   highlighted = signal(0);
+  // The message field has the focus - on a phone the 📷/📊 buttons step
+  // aside meanwhile, so the field gets the whole row (compose.scss).
+  typing = signal(false);
 
   suggestions = computed(() => {
     const q = this.mentionQuery();

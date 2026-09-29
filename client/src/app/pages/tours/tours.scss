@@ -1,11 +1,11 @@
 // Grey backdrop so the white content panel below reads as a separate
 // "card" floating on the page instead of blending into it - matches
-// tour-details.scss's and homepage.scss's identical treatment. 80px is
+// tour-details.scss's and homepage.scss's identical treatment. --header-height is
 // the sticky header's height (see chat.scss for the same convention).
 :host {
   display: block;
   background: #ececec;
-  min-height: calc(100dvh - 80px);
+  min-height: calc(100dvh - var(--header-height));
 }
 
 .tours-page {

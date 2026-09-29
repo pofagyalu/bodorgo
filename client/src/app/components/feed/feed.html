@@ -31,20 +31,6 @@
     }
   </div>
 
-  <!-- Admins: another photo from the album behind the chat, for the rest
-       of the week. Next to the mute bell (chat.html), in the same pane. -->
-  @if (isAdmin() && backgroundImage()) {
-    <button
-      type="button"
-      class="background-btn"
-      title="Másik háttérkép a tábor fotóiból"
-      [disabled]="switchingBackground()"
-      (click)="nextBackground()"
-    >
-      <mat-icon>wallpaper</mat-icon>
-    </button>
-  }
-
   <app-compose
     [mentionables]="mentionables()"
     [sending]="sendingPhoto()"

@@ -7,19 +7,33 @@ import Tour from '../models/tourModel.js';
 import { loadSharp } from '../photos/imageFiles.js';
 
 // The Kotyogó's background: a landscape photo from the tour's own album,
-// made pale (85% white baked into the file, so the browser just shows it)
+// made pale (75% white baked into the file, so the browser just shows it)
 // and changing every week by itself - worked out from the tour and the week
 // number, so nothing needs to run on Monday. An admin can pick another one
 // for the rest of the week ("Másik háttér"). One file per tour:
-// THUMBNAILS_ROOT/_backgrounds/<tourId>.webp. A tour without landscape
+// THUMBNAILS_ROOT/_backgrounds/<tourId>.w<white %>.webp - named after its
+// paleness too, so changing WHITE remakes it (same photo) by itself. A tour without landscape
 // photos keeps the plain background.
 
 const WIDTH = 1920;
-const WHITE = 0.85; // how much white is mixed into the photo
+const WHITE = 0.75; // how much white is mixed into the photo
 const LANDSCAPE_RATIO = 1.3; // at least this much wider than tall
 
+const whitePercent = Math.round(WHITE * 100);
+
 export const backgroundPath = (tourId) =>
-  path.join(config.thumbnailsRoot, '_backgrounds', `${tourId}.webp`);
+  path.join(config.thumbnailsRoot, '_backgrounds', `${tourId}.w${whitePercent}.webp`);
+
+// Files of an earlier paleness (or from before it was in the name).
+function removeOtherVersions(tourId) {
+  const dir = path.join(config.thumbnailsRoot, '_backgrounds');
+  const current = path.basename(backgroundPath(tourId));
+  for (const name of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+    if (name.startsWith(`${tourId}.`) && name.endsWith('.webp') && name !== current) {
+      fs.rmSync(path.join(dir, name), { force: true });
+    }
+  }
+}
 
 // "2026-W40" - the ISO week (Monday to Sunday).
 export function isoWeek(date = new Date()) {
@@ -58,18 +72,21 @@ async function makeBackground(tour, filename) {
       .rotate() // upright by its EXIF orientation
       .flatten({ background: '#ffffff' }) // a see-through PNG on white
       .resize({ width: WIDTH, withoutEnlargement: true })
-      .linear(1 - WHITE, 255 * WHITE) // 15% photo, 85% white
+      .linear(1 - WHITE, 255 * WHITE) // 25% photo, 75% white
       .webp({ quality: 70 })
       .toFile(tmp);
     fs.renameSync(tmp, dest);
+    removeOtherVersions(tour._id);
   } catch (err) {
     fs.rmSync(tmp, { force: true });
     throw err;
   }
 }
 
-// The browser keeps the file for a year; this changes with it.
-const versionOf = ({ week, filename }) => `${week}.${hashOf(filename).slice(0, 8)}`;
+// The browser keeps the file for a year; this changes with it - the photo,
+// the week, and the paleness.
+const versionOf = ({ week, filename }) =>
+  `${week}.${hashOf(`${filename}:${whitePercent}`).slice(0, 8)}`;
 
 async function loadTour(tourId) {
   const tour = await Tour.findById(tourId).select('+images +sourceFolder +chatBackground');

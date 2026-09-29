@@ -3,7 +3,7 @@
 :host {
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 80px);
+  min-height: calc(100dvh - var(--header-height));
   background: #ececec;
   font-family:
     Inter,

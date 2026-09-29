@@ -17,7 +17,7 @@
 .media-shell {
   display: grid;
   grid-template-columns: nav.$sidebar-width minmax(0, 1fr);
-  min-height: calc(100dvh - 80px);
+  min-height: calc(100dvh - var(--header-height));
   background: #f5f7f5;
 }
 
@@ -31,7 +31,7 @@
   // Pinned below the site header, like the Klub sidebar.
   position: sticky;
   top: 0;
-  height: calc(100dvh - 80px);
+  height: calc(100dvh - var(--header-height));
   overflow-y: auto;
 }
 

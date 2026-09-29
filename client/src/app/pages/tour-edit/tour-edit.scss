@@ -3,7 +3,7 @@
 :host {
   display: block;
   background: #ececec;
-  min-height: calc(100dvh - 80px);
+  min-height: calc(100dvh - var(--header-height));
 }
 
 .tour-edit-page {

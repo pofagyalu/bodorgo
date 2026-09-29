@@ -35,6 +35,11 @@
         </button>
       }
     </nav>
+
+    <!-- The chat's buttons, at the bottom (see chatTools below). -->
+    <div class="sidebar-tools">
+      <ng-container *ngTemplateOutlet="chatTools" />
+    </div>
   </aside>
 
   <main class="chat-main">
@@ -73,6 +78,10 @@
             <mat-icon>bed</mat-icon>Szobabeosztás
           </button>
         </div>
+        <!-- Phone (no sidebar): the chat's buttons here, on the right. -->
+        <div class="header-tools">
+          <ng-container *ngTemplateOutlet="chatTools" />
+        </div>
       </header>
 
       <div
@@ -86,20 +95,6 @@
           [class.inactive]="activePane() !== 'chat'"
           aria-label="Kotyogó"
         >
-          <!-- This tour's chat notifications on/off (see PushService). -->
-          <button
-            type="button"
-            class="mute-btn"
-            [class.muted]="chatMuted()"
-            [title]="
-              chatMuted()
-                ? 'Ennek a Kotyogónak az értesítései némítva - kattints a bekapcsoláshoz'
-                : 'Értesítések ebből a Kotyogóból - kattints a némításhoz'
-            "
-            (click)="toggleChatMuted(t._id)"
-          >
-            <mat-icon>{{ chatMuted() ? 'notifications_off' : 'notifications' }}</mat-icon>
-          </button>
           @for (id of feedKey(); track id) {
             <app-feed [tourId]="id" />
           }
@@ -132,3 +127,38 @@
     }
   </main>
 </div>
+
+<!-- The open Kotyogó's own buttons: its notifications on/off (see
+     PushService), and - admins, when it has a background photo - another
+     background (see feed.ts). In the sidebar's bottom, or on a phone in the
+     tabs' row (chat.scss). -->
+<ng-template #chatTools>
+  @if (selectedTour(); as t) {
+    <div class="chat-tools">
+      <button
+        type="button"
+        class="tool-btn"
+        [class.muted]="chatMuted()"
+        [title]="
+          chatMuted()
+            ? 'Ennek a Kotyogónak az értesítései némítva - kattints a bekapcsoláshoz'
+            : 'Értesítések ebből a Kotyogóból - kattints a némításhoz'
+        "
+        (click)="toggleChatMuted(t._id)"
+      >
+        <mat-icon>{{ chatMuted() ? 'notifications_off' : 'notifications' }}</mat-icon>
+      </button>
+      @if (canSwitchBackground()) {
+        <button
+          type="button"
+          class="tool-btn"
+          title="Másik háttérkép a tábor fotóiból"
+          [disabled]="switchingBackground()"
+          (click)="nextBackground()"
+        >
+          <mat-icon>wallpaper</mat-icon>
+        </button>
+      }
+    </div>
+  }
+</ng-template>

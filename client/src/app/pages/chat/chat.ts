@@ -10,6 +10,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
+import { AuthService } from '../../auth/auth.service';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { TourSocketService } from '../../services/tour-socket';
 import { MatIconModule } from '@angular/material/icon';
@@ -69,7 +71,7 @@ function isChatOpen(t: Tour): boolean {
 // side on a very wide screen, otherwise as two tabs.
 @Component({
   selector: 'app-chat',
-  imports: [Feed, MatIconModule, RoomBoard, CdkScrollable, TourCountdown],
+  imports: [Feed, MatIconModule, RoomBoard, CdkScrollable, TourCountdown, NgTemplateOutlet],
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
 })
@@ -118,6 +120,18 @@ export class Chat implements OnInit, OnDestroy {
   // Off the chat page: stop getting this tour's live posts/room changes.
   ngOnDestroy() {
     this.tourSocket.leaveTour();
+  }
+
+  // --- "Másik háttér" (admins): the open feed switches its own background ---
+  private auth = inject(AuthService);
+  private feed = viewChild(Feed);
+  canSwitchBackground = computed(
+    () => this.auth.user()?.role === 'admin' && !!this.feed()?.backgroundImage(),
+  );
+  switchingBackground = computed(() => this.feed()?.switchingBackground() ?? false);
+
+  nextBackground() {
+    this.feed()?.nextBackground();
   }
 
   // --- Resizable Szobabeosztás panel (side-by-side layout only) ---

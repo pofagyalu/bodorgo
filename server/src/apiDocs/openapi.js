@@ -1071,7 +1071,7 @@ const paths = {
       tag: T.chat,
       summary: "The Kotyogó's background",
       description:
-        "This week's landscape photo from the tour's album (never a restricted one), made pale (85% white) - changes every ISO week by itself. `null` if the album has no landscape photo. Made on the first request of the week.",
+        "This week's landscape photo from the tour's album (never a restricted one), made pale (75% white) - changes every ISO week by itself. `null` if the album has no landscape photo. Made on the first request of the week.",
       params: [tourIdT],
       data: obj({ background: obj({ version: str('e.g. `2026-W40.1a2b3c4d`.') }) }),
       errors: [404],
