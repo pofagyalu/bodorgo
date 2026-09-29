@@ -4,7 +4,7 @@
     {{ averageRating }}/10
     <span class="empty-note">
       @if (loaded() && canReview()) {
-        ({{ savedRating() !== null ? 'a te értékelésed ' + savedRating() : 'még nem értékeltél' }})
+        ({{ savedRating() !== null ? 'a tied ' + savedRating() : 'még nem értékeltél' }})
       } @else {
         ({{ reviewCount }} értékelés)
       }
