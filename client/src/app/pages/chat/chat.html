@@ -14,6 +14,22 @@
     }
 
     <nav class="chat-nav" aria-label="Táborok">
+      <!-- The general Kotyogó - always first, for everyone. -->
+      <button
+        type="button"
+        class="nav-item"
+        [class.active]="isGeneral()"
+        title="Általános Kotyogó - mindenkinek"
+        (click)="selectGeneral()"
+      >
+        <span class="tour-thumb tour-thumb--general">
+          <mat-icon>forum</mat-icon>
+        </span>
+        <span class="tour-text">
+          <strong>Általános</strong>
+          <small>Mindenkinek</small>
+        </span>
+      </button>
       @for (t of visibleTours(); track t._id) {
         <button
           type="button"
@@ -45,6 +61,9 @@
   <main class="chat-main">
     <!-- Phone only: the tour list as a scrolling row, like Klub's mobile nav -->
     <nav class="chat-mobile-nav" aria-label="Táborok mobilon">
+      <button type="button" [class.active]="isGeneral()" (click)="selectGeneral()">
+        Általános
+      </button>
       @for (t of visibleTours(); track t._id) {
         <button
           type="button"
@@ -56,28 +75,31 @@
       }
     </nav>
 
-    @if (selectedTour(); as t) {
-      <header class="chat-header">
-        <div class="pane-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            [class.active]="activePane() === 'chat'"
-            [attr.aria-selected]="activePane() === 'chat'"
-            (click)="activePane.set('chat')"
-          >
-            <mat-icon>chat</mat-icon>Kotyogó
-          </button>
-          <button
-            type="button"
-            role="tab"
-            [class.active]="activePane() === 'rooms'"
-            [attr.aria-selected]="activePane() === 'rooms'"
-            (click)="activePane.set('rooms')"
-          >
-            <mat-icon>bed</mat-icon>Szobabeosztás
-          </button>
-        </div>
+    @if (selected()) {
+      <header class="chat-header" [class.chat-header--general]="isGeneral()">
+        <!-- A tour's Kotyogó has a Szobabeosztás too; the general one doesn't. -->
+        @if (selectedTour()) {
+          <div class="pane-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              [class.active]="activePane() === 'chat'"
+              [attr.aria-selected]="activePane() === 'chat'"
+              (click)="activePane.set('chat')"
+            >
+              <mat-icon>chat</mat-icon>Kotyogó
+            </button>
+            <button
+              type="button"
+              role="tab"
+              [class.active]="activePane() === 'rooms'"
+              [attr.aria-selected]="activePane() === 'rooms'"
+              (click)="activePane.set('rooms')"
+            >
+              <mat-icon>bed</mat-icon>Szobabeosztás
+            </button>
+          </div>
+        }
         <!-- Phone (no sidebar): the chat's buttons here, on the right. -->
         <div class="header-tools">
           <ng-container *ngTemplateOutlet="chatTools" />
@@ -86,13 +108,14 @@
 
       <div
         class="chat-panes"
+        [class.chat-panes--single]="isGeneral()"
         #panes
         [style.--rooms-width.px]="roomsWidth()"
         [class.resizing]="resizing()"
       >
         <section
           class="pane pane-chat"
-          [class.inactive]="activePane() !== 'chat'"
+          [class.inactive]="activePane() !== 'chat' && !isGeneral()"
           aria-label="Kotyogó"
         >
           @for (f of feedKey(); track f.chatRoomId) {
@@ -100,28 +123,28 @@
           }
         </section>
 
-        <!-- Side-by-side only: drag to resize the Szobabeosztás panel, double-click to reset -->
-        <div
-          class="pane-resizer"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Szobabeosztás szélessége"
-          title="Húzd a szélesség állításához (dupla kattintás: alaphelyzet)"
-          (pointerdown)="startResize($event)"
-          (dblclick)="resetRoomsWidth()"
-        ></div>
+        @if (selectedTour(); as t) {
+          <!-- Side-by-side only: drag to resize the Szobabeosztás panel, double-click to reset -->
+          <div
+            class="pane-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Szobabeosztás szélessége"
+            title="Húzd a szélesség állításához (dupla kattintás: alaphelyzet)"
+            (pointerdown)="startResize($event)"
+            (dblclick)="resetRoomsWidth()"
+          ></div>
 
-        <section
-          class="pane pane-rooms"
-          cdkScrollable
-          [class.inactive]="activePane() !== 'rooms'"
-          aria-label="Szobabeosztás"
-        >
-          <app-room-board [tour]="t" />
-        </section>
+          <section
+            class="pane pane-rooms"
+            cdkScrollable
+            [class.inactive]="activePane() !== 'rooms'"
+            aria-label="Szobabeosztás"
+          >
+            <app-room-board [tour]="t" />
+          </section>
+        }
       </div>
-    } @else if (loaded()) {
-      <p class="chat-empty">Nincs elérhető tábor a csevegéshez.</p>
     } @else {
       <p class="chat-empty">Betöltés...</p>
     }

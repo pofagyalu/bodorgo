@@ -28,8 +28,13 @@ export type PollVisibility = 'open' | 'secret';
 
 export interface Poll {
   _id: string;
-  tour: PollTourRef;
+  tour: PollTourRef | null; // null: a general poll (the general Kotyogó)
   question: string;
+  // Rád vár: open, not voted, and mine to vote on (my tour's, or a general
+  // poll) - what the Voks badge counts.
+  awaitsMyVote: boolean;
+  // Részletek - formatted HTML under the question (cleaned by the server); '' if none.
+  details: string;
   options: PollOption[];
   closesAt: string;
   isClosed: boolean;
@@ -66,6 +71,7 @@ export interface PollResponse {
 export interface PollPayload {
   tour?: string;
   question?: string;
+  details?: string;
   options?: string[];
   closesAt?: string;
   visibility?: PollVisibility;
@@ -107,6 +113,13 @@ export class PollService {
   createTourPoll(tourId: string, payload: PollPayload): Observable<PollResponse> {
     return this.http
       .post<PollResponse>(`${environment.apiBaseUrl}/tours/${tourId}/polls`, payload)
+      .pipe(tap(() => this.refreshPending()));
+  }
+
+  // From the general Kotyogó - by anyone logged in; a poll without a tour.
+  createGeneralPoll(payload: PollPayload): Observable<PollResponse> {
+    return this.http
+      .post<PollResponse>(`${environment.apiBaseUrl}/chat-rooms/general/polls`, payload)
       .pipe(tap(() => this.refreshPending()));
   }
 

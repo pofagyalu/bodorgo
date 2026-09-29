@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { Poll, PollService } from '../../services/poll';
 import { TourSocketService } from '../../services/tour-socket';
@@ -31,6 +32,19 @@ export class PollCard implements OnInit, OnDestroy {
   private pollService = inject(PollService);
   private tourSocket = inject(TourSocketService);
   private notifications = inject(NotificationsService);
+  private sanitizer = inject(DomSanitizer);
+
+  // Részletek as HTML. The server already cleaned it (only the editor's
+  // formatting - see pollController.js), and Angular's own sanitizer would
+  // drop its colors. Kept per text, so the same text isn't re-rendered on
+  // every change detection.
+  private detailsCache: { html: string; safe: SafeHtml } | null = null;
+  detailsHtml(html: string): SafeHtml {
+    if (this.detailsCache?.html !== html) {
+      this.detailsCache = { html, safe: this.sanitizer.bypassSecurityTrustHtml(html) };
+    }
+    return this.detailsCache.safe;
+  }
 
   pollId = input.required<string>();
   // Already loaded (the Voks list) - no extra request then.
@@ -42,6 +56,9 @@ export class PollCard implements OnInit, OnDestroy {
 
   // Deleted - the parent drops it from its list.
   removed = output<string>();
+  // A fresh version from the server (a vote, a close...) - Voks re-sorts
+  // its sections by it ("Rád vár").
+  changed = output<Poll>();
 
   poll = signal<Poll | null>(null);
   busy = signal(false);
@@ -94,7 +111,7 @@ export class PollCard implements OnInit, OnDestroy {
 
   private load() {
     this.pollService.getPoll(this.pollId()).subscribe({
-      next: (res) => this.poll.set(res.data.poll),
+      next: (res) => this.update(res.data.poll),
       error: () => {},
     });
   }
@@ -105,7 +122,7 @@ export class PollCard implements OnInit, OnDestroy {
     this.busy.set(true);
     this.pollService.vote(p._id, optionId).subscribe({
       next: (res) => {
-        this.poll.set(res.data.poll);
+        this.update(res.data.poll);
         this.busy.set(false);
       },
       error: (err) => {
@@ -121,7 +138,7 @@ export class PollCard implements OnInit, OnDestroy {
     this.busy.set(true);
     this.pollService.closePoll(p._id).subscribe({
       next: (res) => {
-        this.poll.set(res.data.poll);
+        this.update(res.data.poll);
         this.busy.set(false);
       },
       error: (err) => {
@@ -148,6 +165,11 @@ export class PollCard implements OnInit, OnDestroy {
   }
 
   // "péntek 20:00" this week, otherwise "okt. 12. 20:00".
+  private update(poll: Poll) {
+    this.poll.set(poll);
+    this.changed.emit(poll);
+  }
+
   deadline(iso: string): string {
     const d = new Date(iso);
     const days = (d.getTime() - Date.now()) / 86400000;

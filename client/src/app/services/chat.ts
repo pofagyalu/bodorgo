@@ -28,6 +28,14 @@ export class ChatService {
     return this.http.get<{ data: { chatRoom: ChatRoom } }>(`${this.apiUrl}/general`);
   }
 
+  // Who can be "@"-mentioned in the general room - everyone with a
+  // username.
+  getGeneralPeople() {
+    return this.http.get<{
+      data: { people: { userId: string; name: string; username: string }[] };
+    }>(`${this.apiUrl}/general/people`);
+  }
+
   // A photo sent in a room (see server chatImageController.js). The photo
   // addresses are plain URLs for <img> - auth rides on the session cookie.
   sendChatImage(chatRoomId: string, image: Blob, text: string) {

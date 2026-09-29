@@ -22,18 +22,21 @@ const voteSchema = new Schema(
 
 const pollSchema = new Schema(
   {
-    // Every poll belongs to exactly one tour - there's no "general" poll in
-    // this app's model, by the admin's own design.
+    // The tour it's about - or none: a general poll, for everyone (started
+    // from the general Kotyogó, or on Voks without a tour).
     tour: {
       type: Schema.Types.ObjectId,
       ref: 'Tour',
-      required: [true, 'A szavazásnak kell legyen tábora.'],
+      default: null,
     },
     question: {
       type: String,
       required: [true, 'A szavazásnak kell legyen kérdése.'],
       trim: true,
     },
+    // "Részletek" - optional formatted text under the question (links,
+    // lists...), cleaned like a mailing (see pollController.js).
+    details: { type: String, default: '' },
     options: {
       type: [optionSchema],
       validate: {

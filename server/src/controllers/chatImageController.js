@@ -2,6 +2,7 @@ import fs from 'fs';
 import mongoose from 'mongoose';
 import multer from 'multer';
 import Post, { POST_POPULATE } from '../models/postModel.js';
+import User from '../models/userModel.js';
 import AppError from '../utils/appError.js';
 import logger from '../logger.js';
 import { getClubSettings } from '../utils/clubSettings.js';
@@ -149,4 +150,19 @@ export const getTourChatRoom = async (req, res) => {
 export const getGeneralChatRoom = async (req, res) => {
   const room = await generalChatRoom();
   res.status(200).json({ status: 'success', data: { chatRoom: chatRoomView(room) } });
+};
+
+// GET /chat-rooms/general/people - who can be "@"-mentioned in the general
+// room: everyone with a username who isn't retired.
+export const getGeneralPeople = async (req, res) => {
+  const users = await User.find({
+    retired: { $ne: true },
+    username: { $nin: [null, ''] },
+  }).select('name username');
+  res.status(200).json({
+    status: 'success',
+    data: {
+      people: users.map((u) => ({ userId: String(u._id), name: u.name, username: u.username })),
+    },
+  });
 };

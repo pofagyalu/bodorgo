@@ -124,6 +124,18 @@
   }
 }
 
+// The general Kotyogó's round badge - the club green, a speech icon.
+.tour-thumb--general {
+  background: #1a796c;
+  color: #fff;
+
+  mat-icon {
+    font-size: 1.375rem;
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}
+
 .tour-order {
   position: relative; // above the photo
   font-size: 13px;
@@ -392,6 +404,19 @@ $tab-curve: 0.625rem; // the inverse radius at the open tab's feet
 // needed - the chat starts right at the top.
 @media (min-width: 1300px) {
   .chat-header {
+    display: none;
+  }
+}
+
+// The general Kotyogó: just the chat, full width - no Szobabeosztás pane.
+.chat-panes.chat-panes--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+// Its header row only has a job on a phone (the bell); with the sidebar
+// there's nothing to show in it.
+@media (min-width: 581px) {
+  .chat-header--general {
     display: none;
   }
 }

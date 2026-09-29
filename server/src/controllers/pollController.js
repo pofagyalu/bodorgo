@@ -5,9 +5,10 @@ import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
 import { emitToChatRoom } from '../chat/tourEvents.js';
-import { tourChatRoom } from '../chat/chatRooms.js';
+import { generalChatRoom, tourChatRoom } from '../chat/chatRooms.js';
 import logger from '../logger.js';
-import { pushInBackground, tourAttendeeIds } from '../chat/chatNotifications.js';
+import { cleanMailHtml, isBlankMailHtml } from '../utils/mailHtml.js';
+import { chatAudience, pushInBackground } from '../chat/chatNotifications.js';
 
 const TOUR_SELECT = 'title slug order';
 
@@ -30,7 +31,27 @@ const refId = (ref) => String(ref?._id ?? ref);
 //   the time ("who's coming?");
 // - secret ('Titkos'): only counts, and only once you voted or it closed.
 // The raw votes list never leaves this function as-is.
-function buildPollView(poll, user) {
+// The tours I'm signed up for - whose open polls (and the general ones)
+// wait for my vote.
+async function myTourIds(user) {
+  return new Set((await Reservation.distinct('tour', { 'attendees.user': user._id })).map(String));
+}
+
+// "Rád vár": open, I haven't voted, and it's mine to vote on - a poll of a
+// tour I'm on, or a general one. The same rule as the Voks badge's count
+// (getPendingCount).
+function awaitsMyVote(poll, user, tourIds) {
+  if (poll.closesAt.getTime() <= Date.now()) return false;
+  if (poll.votes.some((v) => refId(v.user) === refId(user))) return false;
+  return !poll.tour || tourIds.has(refId(poll.tour));
+}
+
+// buildPollView with "Rád vár" worked out - for one poll by its id.
+async function pollViewFor(pollId, user) {
+  return buildPollView(await loadPoll(pollId), user, await myTourIds(user));
+}
+
+function buildPollView(poll, user, tourIds = new Set()) {
   const userId = refId(user);
   const isClosed = poll.closesAt.getTime() <= Date.now();
   const myVote = poll.votes.find((v) => refId(v.user) === userId);
@@ -53,6 +74,7 @@ function buildPollView(poll, user) {
     _id: poll._id,
     tour: poll.tour,
     question: poll.question,
+    details: poll.details ?? '',
     options: poll.options.map((o) => ({ _id: o._id, text: o.text })),
     closesAt: poll.closesAt,
     isClosed,
@@ -60,6 +82,7 @@ function buildPollView(poll, user) {
     myOptionId: myVote ? myVote.option : null,
     visibility: poll.visibility,
     minimum,
+    awaitsMyVote: awaitsMyVote(poll, user, tourIds),
     post: poll.post ?? null,
     createdBy: poll.createdBy?._id
       ? { _id: poll.createdBy._id, name: poll.createdBy.username || poll.createdBy.name }
@@ -106,6 +129,17 @@ function cleanOptionTexts(options) {
 // The parts a new poll is built from - shared by the admin's
 // Voks form and a chat-started poll. minimumCount applies to the
 // first answer ("Igen": at least N people).
+
+// "Részletek": optional, a few formatted sentences under the question -
+// only the mailing editor's formatting survives (utils/mailHtml.js).
+const DETAILS_MAX = 10000;
+function cleanDetails(html) {
+  if (isBlankMailHtml(html)) return '';
+  const details = cleanMailHtml(html);
+  if (details.length > DETAILS_MAX) throw new AppError('A részletek túl hosszúak.', 400);
+  return details;
+}
+
 function pollFields(body) {
   const options = cleanOptionTexts(body.options);
   if (!options || options.length < 2) {
@@ -124,6 +158,7 @@ function pollFields(body) {
   }
   return {
     question,
+    details: cleanDetails(body.details),
     options: options.map((text) => ({ text })),
     closesAt,
     visibility: body.visibility === 'open' ? 'open' : 'secret',
@@ -161,17 +196,21 @@ export const getAllPolls = async (req, res) => {
     .populate({ path: 'votes.user', select: 'name username' })
     .populate({ path: 'createdBy', select: 'name username' });
 
-  res
-    .status(200)
-    .json({ status: 'success', data: { polls: polls.map((p) => buildPollView(p, req.user)) } });
+  const tourIds = await myTourIds(req.user);
+  res.status(200).json({
+    status: 'success',
+    data: { polls: polls.map((p) => buildPollView(p, req.user, tourIds)) },
+  });
 };
 
 // GET /polls/pending - how many open polls on my tours are still waiting
 // for my vote (the Voks menu's badge).
 export const getPendingCount = async (req, res) => {
+  // My tours' polls, and the general ones (everyone's) - the same rule as
+  // awaitsMyVote above.
   const tourIds = await Reservation.distinct('tour', { 'attendees.user': req.user._id });
   const count = await Poll.countDocuments({
-    tour: { $in: tourIds },
+    $or: [{ tour: { $in: tourIds } }, { tour: null }],
     closesAt: { $gt: new Date() },
     'votes.user': { $ne: req.user._id },
   });
@@ -182,44 +221,36 @@ export const getPendingCount = async (req, res) => {
 export const getPoll = async (req, res) => {
   const poll = await loadPoll(req.params.id);
   if (!poll) throw new AppError('Nincs ilyen szavazás.', 404);
-  res.status(200).json({ status: 'success', data: { poll: buildPollView(poll, req.user) } });
+  res.status(200).json({
+    status: 'success',
+    data: { poll: buildPollView(poll, req.user, await myTourIds(req.user)) },
+  });
 };
 
 // POST /polls - admin-only (see pollRoutes.js): the Voks page's form.
 export const createPoll = async (req, res) => {
   const fields = pollFields(req.body);
-  const poll = new Poll({ ...fields, tour: req.body.tour, createdBy: req.user._id });
+  // No tour chosen: a general poll.
+  const poll = new Poll({ ...fields, tour: req.body.tour || null, createdBy: req.user._id });
   applyMinimum(poll, fields.minimumCount);
   await poll.save();
   res
     .status(201)
-    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+    .json({ status: 'success', data: { poll: await pollViewFor(poll._id, req.user) } });
 };
 
-// POST /tours/:tourId/polls - a poll started from the tour's chat, by
-// anyone signed up for the tour (or an admin). It's a normal poll (it
-// shows on Voks too), plus a chat message carrying its live card;
-// the tour's attendees get a notification - a poll asks for action, so it
-// always buzzes.
-export const createTourPoll = async (req, res) => {
-  const { tourId } = req.params;
-  if (!mongoose.isValidObjectId(tourId)) throw new AppError('Nincs ilyen tábor.', 404);
-  const tour = await Tour.findById(tourId).select('title order');
-  if (!tour) throw new AppError('Nincs ilyen tábor.', 404);
-  if (
-    !isAdmin(req.user) &&
-    !(await Reservation.exists({ tour: tourId, 'attendees.user': req.user._id }))
-  ) {
-    throw new AppError('Csak a tábor résztvevői indíthatnak szavazást.', 403);
-  }
-
+// A poll started from a chat - a tour's (tour set) or the general one
+// (tour null). It's a normal poll (it shows on Voks too), plus a chat
+// message carrying its live card; the room's audience gets a notification
+// - a poll asks for action, so it always buzzes.
+async function startChatPoll(req, res, tour) {
   const fields = pollFields(req.body);
   if (fields.closesAt.getTime() <= Date.now())
     throw new AppError('A záró időpont a jövőben legyen.', 400);
 
-  const poll = new Poll({ ...fields, tour: tourId, createdBy: req.user._id });
+  const poll = new Poll({ ...fields, tour: tour?._id ?? null, createdBy: req.user._id });
   applyMinimum(poll, fields.minimumCount);
-  const room = await tourChatRoom(tourId);
+  const room = tour ? await tourChatRoom(tour._id) : await generalChatRoom();
   const post = await Post.create({
     chatRoomId: room._id,
     creator: req.user._id,
@@ -233,17 +264,40 @@ export const createTourPoll = async (req, res) => {
   emitToChatRoom(room._id, 'new-post', post);
 
   const author = req.user.username || req.user.name;
-  pushInBackground(await tourAttendeeIds(tourId, [req.user._id]), {
-    title: `${tour.order ? `${tour.order}. ` : ''}${tour.title} – szavazás`,
+  const audience = await chatAudience(tour, [req.user._id]);
+  pushInBackground(audience.ids, {
+    title: `${audience.label} – szavazás`,
     body: `${author}: ${fields.question} – szavazz!`,
     tag: `poll-${poll._id}`,
-    url: `/chat?tabor=${tourId}`,
+    url: audience.url,
     renotify: true,
   });
 
   res
     .status(201)
-    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+    .json({ status: 'success', data: { poll: await pollViewFor(poll._id, req.user) } });
+}
+
+// POST /tours/:tourId/polls - from the tour's chat, by anyone signed up
+// for the tour (or an admin).
+export const createTourPoll = async (req, res) => {
+  const { tourId } = req.params;
+  if (!mongoose.isValidObjectId(tourId)) throw new AppError('Nincs ilyen tábor.', 404);
+  const tour = await Tour.findById(tourId).select('title order');
+  if (!tour) throw new AppError('Nincs ilyen tábor.', 404);
+  if (
+    !isAdmin(req.user) &&
+    !(await Reservation.exists({ tour: tourId, 'attendees.user': req.user._id }))
+  ) {
+    throw new AppError('Csak a tábor résztvevői indíthatnak szavazást.', 403);
+  }
+  await startChatPoll(req, res, tour);
+};
+
+// POST /chat-rooms/general/polls - from the general room, by anyone
+// logged in; everyone is told.
+export const createGeneralPoll = async (req, res) => {
+  await startChatPoll(req, res, null);
 };
 
 // PATCH /polls/:id - admin-only. Once a poll has at least one real vote,
@@ -282,7 +336,9 @@ export const updatePoll = async (req, res) => {
     );
   }
 
-  if (tour !== undefined) poll.tour = tour;
+  if (tour !== undefined) poll.tour = tour || null;
+  // The details may be fixed any time (a link, a typo) - votes or not.
+  if (req.body.details !== undefined) poll.details = cleanDetails(req.body.details);
   if (closesAt !== undefined) poll.closesAt = closesAt;
   // Secret → open would reveal how people voted in secret - only before
   // anyone voted.
@@ -315,7 +371,7 @@ export const updatePoll = async (req, res) => {
   announcePollChanged(poll);
   res
     .status(200)
-    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+    .json({ status: 'success', data: { poll: await pollViewFor(poll._id, req.user) } });
 };
 
 // POST /polls/:id/close - whoever started it, or an admin: closes it now.
@@ -332,7 +388,7 @@ export const closePoll = async (req, res) => {
   }
   res
     .status(200)
-    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+    .json({ status: 'success', data: { poll: await pollViewFor(poll._id, req.user) } });
 };
 
 // DELETE /polls/:id - whoever started it, or an admin. Its chat message
@@ -399,13 +455,14 @@ export const voteOnPoll = async (req, res) => {
   announcePollChanged(poll);
   if (justReached) {
     const answer = poll.options.id(minimumOption)?.text ?? '';
+    const where = await chatAudience(poll.tour ?? null, []);
     pushInBackground(
       onMinimum.map((v) => String(v.user)),
       {
-        title: `Összejött! – ${poll.tour?.title ?? 'szavazás'}`,
+        title: `Összejött! – ${where.label}`,
         body: `${poll.question} – megvan a ${poll.minimum.count} fő („${answer}”).`,
         tag: `poll-${poll._id}`,
-        url: poll.post ? `/chat?tabor=${refId(poll.tour)}` : '/szavazasok',
+        url: poll.post ? where.url : '/szavazasok',
         renotify: true,
       },
     );
@@ -413,5 +470,5 @@ export const voteOnPoll = async (req, res) => {
 
   res
     .status(200)
-    .json({ status: 'success', data: { poll: buildPollView(await loadPoll(poll._id), req.user) } });
+    .json({ status: 'success', data: { poll: await pollViewFor(poll._id, req.user) } });
 };

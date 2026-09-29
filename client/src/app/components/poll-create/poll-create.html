@@ -6,14 +6,27 @@
     novalidate
     role="dialog"
     aria-modal="true"
-    aria-label="Új szavazás"
+    [attr.aria-label]="poll() ? 'Szavazás szerkesztése' : 'Új szavazás'"
   >
     <header>
-      <h2><mat-icon>poll</mat-icon> Új szavazás</h2>
+      <h2><mat-icon>poll</mat-icon> {{ poll() ? 'Szavazás szerkesztése' : 'Új szavazás' }}</h2>
       <button type="button" class="icon-close" (click)="cancel()" title="Bezárás">
         <mat-icon>close</mat-icon>
       </button>
     </header>
+
+    <!-- Voks: where the poll belongs. -->
+    @if (tours(); as tours) {
+      <label class="field">
+        <span>Hol?</span>
+        <select name="place" [ngModel]="place()" (ngModelChange)="place.set($event)">
+          <option value="">Általános – mindenkinek</option>
+          @for (t of tours; track t._id) {
+            <option [value]="t._id">{{ t.order }}. {{ t.title }}</option>
+          }
+        </select>
+      </label>
+    }
 
     <label class="field">
       <span>Kérdés</span>
@@ -27,6 +40,18 @@
         autofocus
       />
     </label>
+
+    <!-- Részletek: a few formatted sentences, links, lists - only if ticked. -->
+    <label class="details-toggle">
+      <input
+        type="checkbox"
+        name="withDetails"
+        [ngModel]="withDetails()"
+        (ngModelChange)="setWithDetails($event)"
+      />
+      Részletek
+    </label>
+    <div class="details-editor" [hidden]="!withDetails()"><div #details></div></div>
 
     <div class="field">
       <span>Válaszok</span>
@@ -87,28 +112,6 @@
       </small>
     </div>
 
-    <label class="check">
-      <input
-        type="checkbox"
-        name="useMinimum"
-        [ngModel]="useMinimum()"
-        (ngModelChange)="useMinimum.set($event)"
-      />
-      <span>
-        Legalább
-        <input
-          type="number"
-          name="minimumCount"
-          min="1"
-          max="500"
-          class="small-number"
-          [ngModel]="minimumCount()"
-          (ngModelChange)="minimumCount.set(+$event); useMinimum.set(true)"
-        />
-        fő kell erre: <strong>„{{ options()[0] || 'első válasz' }}”</strong>
-      </span>
-    </label>
-
     @if (error()) {
       <p class="error">{{ error() }}</p>
     }
@@ -118,7 +121,7 @@
         Mégse
       </button>
       <button type="submit" class="btn primary" [disabled]="saving()">
-        {{ saving() ? 'Indítás…' : 'Szavazás indítása' }}
+        {{ saving() ? 'Mentés…' : poll() ? 'Mentés' : 'Szavazás indítása' }}
       </button>
     </footer>
   </form>

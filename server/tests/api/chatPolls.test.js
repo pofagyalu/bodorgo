@@ -93,8 +93,8 @@ describe('polls started from the chat', () => {
     expect(reached.body.data.poll.minimum).toMatchObject({ current: 2, reached: true });
     await vi.waitFor(() =>
       expect(pushedTo().map(([, p]) => p.title)).toEqual([
-        'Összejött! – Sarud',
-        'Összejött! – Sarud',
+        'Összejött! – 25. Sarud',
+        'Összejött! – 25. Sarud',
       ]),
     );
 
@@ -173,5 +173,123 @@ describe('the 2-hour reminder', () => {
     const fresh = (await startPoll(tour, anna, { closesAt: inHours(1) })).body.data.poll;
     await checkPollReminders();
     expect((await Poll.findById(fresh._id)).reminderSentAt).toBeInstanceOf(Date); // looked at, but nobody reminded
+  });
+});
+
+describe('polls in the general Kotyogó', () => {
+  it('anyone starts one; everyone is told; it counts on the Voks badge and gets the reminder', async () => {
+    const { generalChatRoom } = await import('../../src/chat/chatRooms.js');
+    const { createGuest } = await import('../helpers/factories.js');
+    const [guest, anna, bela] = await Promise.all([
+      createGuest({ name: 'Vendég', username: 'vendeg' }),
+      createMember({ name: 'Anna', username: 'anna' }),
+      createMember({ name: 'Béla', username: 'bela' }),
+    ]);
+    for (const u of [guest, anna, bela]) {
+      await request(app)
+        .post('/push/subscriptions')
+        .set(asUser(u))
+        .send({ endpoint: `https://push.test/g-${u._id}`, keys: { p256dh: 'p', auth: 'a' } });
+    }
+
+    const res = await request(app)
+      .post('/chat-rooms/general/polls')
+      .set(asUser(guest))
+      .send({
+        question: 'Mikor legyen a klubest?',
+        options: ['Péntek', 'Szombat'],
+        closesAt: inHours(5),
+      });
+    expect(res.status).toBe(201);
+    const poll = res.body.data.poll;
+    expect(poll.tour).toBeNull();
+
+    // In the general room, as a chat message.
+    const post = await Post.findById(poll.post);
+    expect(String(post.chatRoomId)).toBe(String((await generalChatRoom())._id));
+
+    // Everyone but the one who started it is told.
+    await vi.waitFor(() => {
+      const titles = pushedTo().map(([endpoint, p]) => [endpoint, p.title]);
+      expect(titles).toEqual(
+        expect.arrayContaining([
+          [`https://push.test/g-${anna._id}`, 'Általános – szavazás'],
+          [`https://push.test/g-${bela._id}`, 'Általános – szavazás'],
+        ]),
+      );
+      expect(titles.some(([e]) => e === `https://push.test/g-${guest._id}`)).toBe(false);
+    });
+
+    // Waiting for Anna's vote (she's on no tour at all).
+    const pending = await request(app).get('/polls/pending').set(asUser(anna));
+    expect(pending.body.data.count).toBe(1);
+
+    // Two hours before it closes: the reminder, to those who haven't voted.
+    await request(app)
+      .post(`/polls/${poll._id}/vote`)
+      .set(asUser(anna))
+      .send({ optionId: poll.options[0]._id });
+    vi.mocked(webpush.sendNotification).mockClear();
+    const [reminder] = await checkPollReminders(new Date(Date.now() + 4 * 3600 * 1000));
+    expect(reminder.users).toContain(String(bela._id));
+    expect(reminder.users).not.toContain(String(anna._id));
+    await vi.waitFor(() =>
+      expect(pushedTo().some(([, p]) => p.title === 'Még nem szavaztál – Általános')).toBe(true),
+    );
+  });
+});
+
+describe('poll details (Részletek)', () => {
+  it('keeps the formatting, drops anything else, and can be fixed even after votes', async () => {
+    const { tour, anna, bela } = await setup();
+    const res = await startPoll(tour, anna, {
+      details:
+        '<p>Nézd meg <a href="https://muzeum.hu">itt</a>:</p><ul><li><strong>10 óra</strong></li></ul><script>alert(1)</script><img src=x onerror=alert(1)>',
+    });
+    const { details, _id, options } = res.body.data.poll;
+    expect(details).toContain('<strong>10 óra</strong>');
+    expect(details).toContain('href="https://muzeum.hu"');
+    expect(details).toContain('target="_blank"');
+    expect(details).not.toContain('script');
+    expect(details).not.toContain('img');
+
+    const blank = await startPoll(tour, anna, { details: '<p><br></p>' });
+    expect(blank.body.data.poll.details).toBe('');
+
+    await request(app)
+      .post(`/polls/${_id}/vote`)
+      .set(asUser(bela))
+      .send({ optionId: options[0]._id });
+    const admin = await createAdmin();
+    const fixed = await request(app)
+      .patch(`/polls/${_id}`)
+      .set(asUser(admin))
+      .send({ details: '<p>Új link: <a href="https://uj.hu">ide</a></p>' });
+    expect(fixed.status).toBe(200);
+    expect(fixed.body.data.poll.details).toContain('https://uj.hu');
+  });
+});
+
+describe('Rád vár - the polls waiting for my vote', () => {
+  it('marks exactly what the Voks badge counts', async () => {
+    const { tour, anna, bela } = await setup();
+    const other = await createTour({ order: 26, title: 'Máshol' });
+    const outsider = await createMember();
+    await createReservation(other, [outsider]);
+    const mine = (await startPoll(tour, anna)).body.data.poll;
+    const notMine = (await startPoll(other, outsider)).body.data.poll;
+
+    const list = await request(app).get('/polls').set(asUser(bela));
+    const byId = Object.fromEntries(list.body.data.polls.map((p) => [p._id, p]));
+    expect(byId[mine._id].awaitsMyVote).toBe(true);
+    expect(byId[notMine._id].awaitsMyVote).toBe(false);
+    expect((await request(app).get('/polls/pending').set(asUser(bela))).body.data.count).toBe(1);
+
+    const voted = await request(app)
+      .post(`/polls/${mine._id}/vote`)
+      .set(asUser(bela))
+      .send({ optionId: mine.options[0]._id });
+    expect(voted.body.data.poll.awaitsMyVote).toBe(false);
+    expect((await request(app).get('/polls/pending').set(asUser(bela))).body.data.count).toBe(0);
   });
 });

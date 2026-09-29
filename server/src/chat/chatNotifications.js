@@ -10,7 +10,7 @@ import { chatChannel } from './tourEvents.js';
 import { usernameKey } from '../utils/usernames.js';
 
 // Push notifications for a chat room - a tour's goes to the tour's
-// attendees (the general one to nobody yet), without the phone ringing at
+// attendees, the general one to everyone - without the phone ringing at
 // every message:
 // - one buzz, then quiet: after a notification, further messages only
 //   update the same notification silently ("5 új üzenet") until the chat
@@ -61,33 +61,55 @@ function mentions(text, username) {
   );
 }
 
+// The general room's address in the app.
+export const GENERAL_CHAT_URL = '/chat?kotyogo=altalanos';
+
+// Everyone who can use the general room - every account that isn't
+// retired - minus `except`.
+export async function generalAudienceIds(except = []) {
+  const skip = new Set(except.map(String));
+  const users = await User.find({ retired: { $ne: true } }).select('_id');
+  return users.map((u) => String(u._id)).filter((id) => !skip.has(id));
+}
+
+// Who hears about what happens in a tour's chat, or the general one (tour
+// null), and how it's labelled: "25. Sarud" / "Általános" and where a tap
+// leads. The same for messages and polls.
+export async function chatAudience(tour, except = []) {
+  if (!tour) {
+    return { ids: await generalAudienceIds(except), label: 'Általános', url: GENERAL_CHAT_URL };
+  }
+  const tourId = String(tour._id ?? tour);
+  const t = tour.title ? tour : await Tour.findById(tourId).select('title order');
+  return {
+    ids: await tourAttendeeIds(tourId, except),
+    label: t ? `${t.order ? `${t.order}. ` : ''}${t.title}` : 'Tábor',
+    url: `/chat?tabor=${tourId}`,
+  };
+}
+
 export async function notifyChatPost(io, post) {
   const chatRoomId = String(post.chatRoomId);
   const room = await ChatRoom.findById(chatRoomId);
-  // The general Kotyogó doesn't notify anyone (yet).
-  if (room?.type !== 'tour') return;
-  const tourId = String(room.tourId);
+  if (!room) return;
   const authorId = String(post.creator._id ?? post.creator);
   const authorName = post.creator.username || post.creator.name || 'Valaki';
 
-  const attendeeIds = await tourAttendeeIds(tourId, [authorId]);
-  if (!attendeeIds.length) return;
+  const audience = await chatAudience(room.type === 'tour' ? room.tourId : null, [authorId]);
+  if (!audience.ids.length) return;
 
   const watching = await watchingUserIds(io, chatRoomId);
-  const candidates = attendeeIds.filter((id) => !watching.has(id));
+  const candidates = audience.ids.filter((id) => !watching.has(id));
   if (!candidates.length) return;
 
-  const [tour, users, states] = await Promise.all([
-    Tour.findById(tourId).select('title order'),
+  const [users, states] = await Promise.all([
     User.find({ _id: { $in: candidates } }).select('username'),
     ChatReadState.find({ chatRoom: chatRoomId, user: { $in: candidates } }),
   ]);
   const stateByUser = new Map(states.map((s) => [String(s.user), s]));
   const usernameById = new Map(users.map((u) => [String(u._id), u.username]));
 
-  const title = tour
-    ? `${tour.order ? `${tour.order}. ` : ''}${tour.title} – Kotyogó`
-    : 'Bódorgó Kotyogó';
+  const title = `${audience.label} – Kotyogó`;
   // A photo (with or without text) says so - a photo alone has no text.
   const body = post.image ? `📷 ${post.text || 'Fotó'}` : post.text;
   const text = body.length > SNIPPET_LENGTH ? `${body.slice(0, SNIPPET_LENGTH - 1)}…` : body;
@@ -113,8 +135,8 @@ export async function notifyChatPost(io, post) {
     const sent = await sendPushToUsers([userId], {
       title,
       body: unread > 1 ? `${unread} új üzenet · ${authorName}: ${text}` : `${authorName}: ${text}`,
-      tag: `chat-${tourId}`,
-      url: `/chat?tabor=${tourId}`,
+      tag: `chat-${chatRoomId}`,
+      url: audience.url,
       silent: !loud,
       renotify: loud,
     });

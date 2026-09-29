@@ -32,6 +32,7 @@
                 [pollId]="poll._id"
                 [initial]="poll"
                 [showTour]="true"
+                (changed)="onChanged($event)"
                 (removed)="onRemoved($event)"
               />
             </div>
@@ -42,103 +43,11 @@
   }
 </div>
 
-@if (showForm()) {
-  <div class="modal-backdrop" (click)="closeForm()"></div>
-  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pollDialogTitle">
-    <form (submit)="onSubmit($event)" novalidate>
-      <div class="modal-head">
-        <h2 id="pollDialogTitle">{{ editingId() ? 'Szavazás szerkesztése' : 'Új szavazás' }}</h2>
-        <button class="icon-btn" type="button" aria-label="Bezárás" (click)="closeForm()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="field">
-          <label for="pollTour">Tábor</label>
-          <select id="pollTour" [(ngModel)]="form.tour" name="tour">
-            <option value="" disabled>Válassz tábort</option>
-            @for (t of tours(); track t._id) {
-              <option [value]="t._id">{{ t.order }}. {{ t.title }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="pollQuestion">Kérdés</label>
-          <input id="pollQuestion" type="text" [(ngModel)]="form.question" name="question" />
-        </div>
-
-        <div class="field">
-          <label>Válaszlehetőségek</label>
-          @for (opt of form.options; track $index) {
-            <div class="option-row">
-              <input
-                type="text"
-                [(ngModel)]="form.options[$index]"
-                [name]="'option' + $index"
-                [placeholder]="'Válasz ' + ($index + 1)"
-              />
-              @if (form.options.length > 2) {
-                <button
-                  type="button"
-                  class="icon-btn"
-                  title="Válasz törlése"
-                  (click)="removeOptionField($index)"
-                >
-                  <mat-icon>close</mat-icon>
-                </button>
-              }
-            </div>
-          }
-          <button type="button" class="link-btn" (click)="addOptionField()">+ Új válasz</button>
-        </div>
-
-        <div class="field">
-          <label for="pollCloses">Lezárás időpontja</label>
-          <input
-            id="pollCloses"
-            type="datetime-local"
-            [(ngModel)]="form.closesAtLocal"
-            name="closesAt"
-          />
-        </div>
-
-        <div class="field">
-          <label>Láthatóság</label>
-          <div class="visibility-choice">
-            <label
-              ><input type="radio" name="visibility" value="secret" [(ngModel)]="form.visibility" />
-              Titkos – csak az eredmény látszik</label
-            >
-            <label
-              ><input type="radio" name="visibility" value="open" [(ngModel)]="form.visibility" />
-              Nyílt – látszik, ki mire szavazott</label
-            >
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="pollMinimum">Minimum az első válaszra (nem kötelező)</label>
-          <input
-            id="pollMinimum"
-            type="number"
-            min="1"
-            max="500"
-            placeholder="pl. 5"
-            [(ngModel)]="form.minimumCount"
-            name="minimumCount"
-          />
-        </div>
-
-        @if (formError()) {
-          <p class="error-note">{{ formError() }}</p>
-        }
-
-        <div class="modal-actions">
-          <button class="btn btn--grey" type="button" (click)="closeForm()">Mégse</button>
-          <button class="btn btn--green" type="submit" [disabled]="saving()">
-            {{ saving() ? 'Mentés...' : 'Mentés' }}
-          </button>
-        </div>
-      </div>
-    </form>
-  </div>
+@if (showForm() && tours().length) {
+  <app-poll-create
+    [tours]="tours()"
+    [poll]="editingPoll()"
+    (saved)="onSaved($event)"
+    (closed)="showForm.set(false)"
+  />
 }

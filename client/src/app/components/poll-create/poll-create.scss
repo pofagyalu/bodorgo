@@ -77,7 +77,8 @@
 
 input[type='text'],
 input[type='datetime-local'],
-input[type='number'] {
+input[type='number'],
+select {
   padding: 9px 11px;
   border: 1px solid #d4dfda;
   border-radius: 9px;
@@ -139,26 +140,6 @@ input[type='number'] {
   }
 }
 
-.check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-
-  > input {
-    width: 18px;
-    height: 18px;
-    accent-color: #1a796c;
-  }
-}
-
-.small-number {
-  width: 64px;
-  padding: 5px 8px !important;
-  margin: 0 3px;
-}
-
 .error {
   margin: 0;
   color: #a3402a;
@@ -187,5 +168,79 @@ input[type='number'] {
   &:disabled {
     opacity: 0.6;
     cursor: default;
+  }
+}
+
+// The "Részletek" tick box, right under the question.
+.details-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: -0.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2f414b;
+  cursor: pointer;
+
+  input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #1a796c;
+  }
+}
+
+.details-editor[hidden] {
+  display: none;
+}
+
+// Részletek: the tour mailing's editor (Quill, snow theme), compact - a
+// small toolbar and a few lines that grow, then scroll.
+.details-editor {
+  font-weight: 400;
+
+  ::ng-deep .ql-toolbar.ql-snow {
+    padding: 0.25rem 0.375rem;
+    border: 1px solid #d4dfda;
+    border-radius: 9px 9px 0 0;
+    background: #f7faf8;
+
+    .ql-formats {
+      margin-right: 0.5rem;
+    }
+
+    button {
+      width: 1.5rem;
+      height: 1.375rem;
+      padding: 0.125rem;
+    }
+
+    .ql-picker {
+      height: 1.375rem;
+    }
+  }
+
+  ::ng-deep .ql-container.ql-snow {
+    // Quill's own height: 100% counts the toolbar too inside this dialog,
+    // pushing the text out below the box (over "Válaszok") - its own size.
+    height: auto;
+    border: 1px solid #d4dfda;
+    border-top: 0;
+    border-radius: 0 0 9px 9px;
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+
+  ::ng-deep .ql-editor {
+    min-height: 3.5rem;
+    max-height: 10rem;
+    padding: 0.5rem 0.6875rem;
+    line-height: 1.45;
+    color: #1c2d38;
+  }
+
+  ::ng-deep .ql-editor.ql-blank::before {
+    left: 0.6875rem;
+    font-style: normal;
+    color: #8a979d;
   }
 }

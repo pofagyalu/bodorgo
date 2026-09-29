@@ -1,5 +1,5 @@
 @if (poll(); as p) {
-  <div class="poll" [class.closed]="p.isClosed">
+  <div class="poll" [class.closed]="p.isClosed" [class.poll--awaits]="p.awaitsMyVote">
     <div class="poll-head">
       <span class="kind"><mat-icon>poll</mat-icon> Szavazás</span>
       <span
@@ -13,6 +13,9 @@
         <mat-icon>{{ p.visibility === 'open' ? 'visibility' : 'lock' }}</mat-icon>
         {{ p.visibility === 'open' ? 'Nyílt' : 'Titkos' }}
       </span>
+      @if (p.awaitsMyVote) {
+        <span class="awaits" title="Még nem szavaztál">Szavazz!</span>
+      }
       <span class="deadline">
         @if (p.isClosed) {
           Lezárva
@@ -23,9 +26,19 @@
     </div>
 
     @if (showTour()) {
-      <div class="tour-line">{{ p.tour.order }}. {{ p.tour.title }}</div>
+      <div class="tour-line">
+        @if (p.tour; as t) {
+          {{ t.order }}. {{ t.title }}
+        } @else {
+          Általános
+        }
+      </div>
     }
     <h3 class="question">{{ p.question }}</h3>
+    @if (p.details) {
+      <!-- Cleaned by the server (only the editor's formatting survives). -->
+      <div class="details" [innerHTML]="detailsHtml(p.details)"></div>
+    }
 
     <div class="options">
       @for (o of p.options; track o._id) {
@@ -84,7 +97,10 @@
       </span>
       <span class="foot-actions">
         @if (showTour() && p.post) {
-          <a class="foot-link" routerLink="/chat" [queryParams]="{ tabor: p.tour._id }"
+          <a
+            class="foot-link"
+            routerLink="/chat"
+            [queryParams]="p.tour ? { tabor: p.tour._id } : { kotyogo: 'altalanos' }"
             >Ugrás a Kotyogóba</a
           >
         }
