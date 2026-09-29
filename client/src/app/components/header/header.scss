@@ -443,6 +443,31 @@
   vertical-align: 2px;
 }
 
+// PC: three columns - the logo on the left, the menu exactly in the
+// middle, the music player and the avatar on the right. The side columns
+// share the rest equally, so the menu never moves when something on the
+// right changes width (the music pill opening and folding its title).
+@media (min-width: 769px) {
+  .header-container {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .left-group {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .menu {
+    grid-column: 2;
+  }
+
+  .login-container {
+    grid-column: 3;
+    justify-self: end;
+  }
+}
+
 // Phone: three columns - the hamburger on the left, the logo exactly in
 // the middle, the avatar on the right. The two side columns are equal
 // (1fr each), so the logo stays centred even without an avatar (logged

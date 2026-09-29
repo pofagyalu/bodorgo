@@ -1,7 +1,7 @@
 import { Component, ElementRef, computed, effect, inject, input, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { MusicPlayerService } from '../../services/music-player';
+import { MusicPlayerService, PLAYLIST_NAMES } from '../../services/music-player';
 
 // The background music's controls, in the header (see MusicPlayerService,
 // which does the playing - this is only the buttons):
@@ -26,6 +26,8 @@ export class MusicPlayer {
   mode = input<'pill' | 'button'>('pill');
   panelOpen = signal(false);
   volumeOpen = signal(false);
+  // The list that's on (or starts with ▶): "Bódorgó FM" / "Buli".
+  listName = computed(() => PLAYLIST_NAMES[this.music.activeKey()]);
 
   volumeIcon = computed(() => {
     const v = this.music.volume();

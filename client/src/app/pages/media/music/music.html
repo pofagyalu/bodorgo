@@ -5,7 +5,7 @@
     <h1>Bódorgó FM <span class="tagline">– világjárók világzenei rádiója</span></h1>
   </div>
 
-  <section class="station" [class.station--on]="music.isPlaying()">
+  <section class="station" [class.station--on]="playing()">
     <!-- The radio (assets/images/bodorgo_FM.jpg): while it plays it glows
          warmly, breathes a little, and sound waves rise beside it. -->
     <div class="radio">
@@ -25,12 +25,12 @@
     <div class="deck">
       <!-- What's on: the artist's photo (or the album cover), title, artist -->
       <div class="now">
-        @if (music.currentTrack(); as t) {
+        @if (now(); as t) {
           @if (music.imageSrc(t); as src) {
             <img class="now-thumb" [src]="src" alt="" />
           }
           <div class="now-text">
-            <span class="on-air" [class.on-air--lit]="music.isPlaying()">Adásban</span>
+            <span class="on-air" [class.on-air--lit]="playing()">Adásban</span>
             <strong class="now-title">{{ t.title }}</strong>
             <span class="now-artist">{{ t.artist }}</span>
           </div>
@@ -44,90 +44,136 @@
         }
       </div>
 
+      <!-- The FM band: the whole list from 88 to 108 MHz - the needle and the
+           frequency move as it plays; the big knob tunes it (drag, wheel or
+           arrow keys) and plays from where it's let go. -->
+      <div class="band">
+        <div class="band-face">
+          <div class="band-top">
+            <span class="freq" [class.freq--tuning]="isTuning()"
+              >{{ frequency() }} <small>MHz</small></span
+            >
+            <span class="band-name">FM</span>
+          </div>
+          <div class="scale">
+            @for (label of bandLabels; track label) {
+              <span class="scale-label" [style.left.%]="((label - 88) / 20) * 100">{{
+                label
+              }}</span>
+            }
+            <span class="needle" [style.left.%]="bandShare() * 100"></span>
+          </div>
+
+          <!-- The song's own progress, and the knobs - on the same faceplate,
+               so all three rows start and end together. -->
+          <div class="dial-track">
+            <input
+              type="range"
+              min="0"
+              step="1"
+              [max]="length() || 0"
+              [value]="position()"
+              [disabled]="!length()"
+              (input)="onSeek($event)"
+              aria-label="Hol tart a dal"
+            />
+            <div class="dial-times">
+              <span class="time">{{ time(position()) }}</span>
+              <span class="time">{{ time(length()) }}</span>
+            </div>
+          </div>
+          <!-- The knobs -->
+          <div class="controls">
+            <button
+              type="button"
+              class="knob toggle"
+              [class.toggle--on]="music.shuffle()"
+              [attr.aria-pressed]="music.shuffle()"
+              title="Véletlen sorrend"
+              (click)="music.shuffle.set(!music.shuffle())"
+            >
+              <mat-icon>shuffle</mat-icon>
+            </button>
+            <button type="button" class="knob" title="Előző dal" (click)="previous()">
+              <mat-icon>skip_previous</mat-icon>
+            </button>
+            <button
+              type="button"
+              class="knob main"
+              [title]="playing() ? 'Szünet' : 'Lejátszás'"
+              [disabled]="music.loading()"
+              (click)="playPause()"
+            >
+              <mat-icon>{{ playing() ? 'pause' : 'play_arrow' }}</mat-icon>
+            </button>
+            <button type="button" class="knob" title="Leállítás" (click)="stop()">
+              <mat-icon>stop</mat-icon>
+            </button>
+            <button type="button" class="knob" title="Következő dal" (click)="next()">
+              <mat-icon>skip_next</mat-icon>
+            </button>
+            <button
+              type="button"
+              class="knob toggle"
+              [class.toggle--on]="music.repeatOne()"
+              [attr.aria-pressed]="music.repeatOne()"
+              title="Ez a dal ismétlődjön"
+              (click)="music.repeatOne.set(!music.repeatOne())"
+            >
+              <mat-icon>repeat_one</mat-icon>
+            </button>
+            <!-- Volume, at the end of the same row -->
+            <div class="volume">
+              <button
+                type="button"
+                class="knob small"
+                [title]="music.muted() ? 'Hang be' : 'Némítás'"
+                (click)="music.toggleMute()"
+              >
+                <mat-icon>{{
+                  music.muted() || music.volume() === 0
+                    ? 'volume_off'
+                    : music.volume() < 0.5
+                      ? 'volume_down'
+                      : 'volume_up'
+                }}</mat-icon>
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                [value]="music.muted() ? 0 : music.volume()"
+                (input)="onVolume($event)"
+                aria-label="Hangerő"
+              />
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="tuner"
+          role="slider"
+          aria-label="Hangolás: forgasd, hogy máshol folytatódjon a lista"
+          title="Forgasd a hangoláshoz (egérrel, görgővel vagy nyilakkal)"
+          aria-valuemin="88"
+          aria-valuemax="108"
+          [attr.aria-valuenow]="frequency()"
+          [style.--angle.deg]="knobAngle()"
+          [class.tuner--turning]="isTuning()"
+          [disabled]="!tracks().length"
+          (pointerdown)="knobDown($event)"
+          (pointermove)="knobMove($event)"
+          (pointerup)="knobUp()"
+          (pointercancel)="knobUp()"
+          (wheel)="knobWheel($event)"
+          (keydown)="knobKey($event)"
+        >
+          <span class="tuner-cap"><span class="tuner-mark"></span></span>
+        </button>
+      </div>
+
       <!-- The tuning dial: drag the needle to jump in the song -->
-      <div class="dial">
-        <span class="time">{{ time(music.currentTime()) }}</span>
-        <input
-          type="range"
-          min="0"
-          step="1"
-          [max]="music.duration() || 0"
-          [value]="music.currentTime()"
-          [disabled]="!music.duration()"
-          (input)="onSeek($event)"
-          aria-label="Hol tart a szám"
-        />
-        <span class="time">{{ time(music.duration()) }}</span>
-      </div>
-
-      <!-- The knobs -->
-      <div class="controls">
-        <button
-          type="button"
-          class="knob toggle"
-          [class.toggle--on]="music.shuffle()"
-          [attr.aria-pressed]="music.shuffle()"
-          title="Véletlen sorrend"
-          (click)="music.shuffle.set(!music.shuffle())"
-        >
-          <mat-icon>shuffle</mat-icon>
-        </button>
-        <button type="button" class="knob" title="Előző szám" (click)="music.previous()">
-          <mat-icon>skip_previous</mat-icon>
-        </button>
-        <button
-          type="button"
-          class="knob main"
-          [title]="music.isPlaying() ? 'Szünet' : 'Lejátszás'"
-          [disabled]="music.loading()"
-          (click)="music.toggle()"
-        >
-          <mat-icon>{{ music.isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
-        </button>
-        <button type="button" class="knob" title="Leállítás" (click)="music.stop()">
-          <mat-icon>stop</mat-icon>
-        </button>
-        <button type="button" class="knob" title="Következő szám" (click)="music.next()">
-          <mat-icon>skip_next</mat-icon>
-        </button>
-        <button
-          type="button"
-          class="knob toggle"
-          [class.toggle--on]="music.repeatOne()"
-          [attr.aria-pressed]="music.repeatOne()"
-          title="Ez a szám ismétlődjön"
-          (click)="music.repeatOne.set(!music.repeatOne())"
-        >
-          <mat-icon>repeat_one</mat-icon>
-        </button>
-      </div>
-
-      <!-- Volume -->
-      <div class="volume">
-        <button
-          type="button"
-          class="knob small"
-          [title]="music.muted() ? 'Hang be' : 'Némítás'"
-          (click)="music.toggleMute()"
-        >
-          <mat-icon>{{
-            music.muted() || music.volume() === 0
-              ? 'volume_off'
-              : music.volume() < 0.5
-                ? 'volume_down'
-                : 'volume_up'
-          }}</mat-icon>
-        </button>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          [value]="music.muted() ? 0 : music.volume()"
-          (input)="onVolume($event)"
-          aria-label="Hangerő"
-        />
-      </div>
     </div>
   </section>
 
@@ -135,19 +181,33 @@
   <section class="playlist">
     <div class="playlist-head">
       <h2>Műsor</h2>
-      <span class="count">{{ music.tracks().length }} szám</span>
+      <span class="count">
+        {{ tracks().length }} dal
+        @if (isAdmin()) {
+          <!-- Admins: reload the list from Jellyfin now. -->
+          <button
+            type="button"
+            class="refresh"
+            title="Lista frissítése a Jellyfinből"
+            [disabled]="refreshing()"
+            (click)="refresh()"
+          >
+            <mat-icon [class.spin]="refreshing()">refresh</mat-icon>
+          </button>
+        }
+      </span>
     </div>
     <ol class="tracks" #list>
-      @for (t of music.tracks(); track t.id; let i = $index) {
+      @for (t of tracks(); track t.id; let i = $index) {
         <li [attr.data-index]="i">
           <button
             type="button"
             class="track"
-            [class.track--current]="i === music.index()"
-            (click)="music.playAt(i)"
+            [class.track--current]="i === currentIndex()"
+            (click)="pick(i)"
           >
             <span class="num">
-              @if (i === music.index() && music.isPlaying()) {
+              @if (i === currentIndex() && playing()) {
                 <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
               } @else {
                 {{ i + 1 }}

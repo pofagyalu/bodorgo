@@ -13,21 +13,33 @@ export interface MusicTrack {
   imageUrl: string | null; // the artist's photo or the album cover (relative)
 }
 
+// The playlists, by the name in their addresses (see server
+// music/jellyfin.js): Bódorgó FM for everyone, Buli for members.
+export type PlaylistKey = 'bodorgo-fm' | 'buli';
+export const PLAYLIST_NAMES: Record<PlaylistKey, string> = {
+  'bodorgo-fm': 'Bódorgó FM',
+  buli: 'Buli',
+};
+
 const VOLUME_KEY = 'bodorgo-music-volume';
 
-// The background music: one Jellyfin playlist ("Bódorgó FM"), streamed
-// through our server. App-wide (providedIn: 'root') with a single <audio>,
-// so it keeps playing while moving between pages - the Média → Zene page
-// is its full player, the header's (shared/music-player) its small one.
-// Nothing plays until ▶ is clicked - that click is also the browser's
-// required "user gesture". In order (or shuffled), from the top again
-// after the last. Stops on logout.
+// The music: Jellyfin playlists, streamed through our server. App-wide
+// (providedIn: 'root') with a single <audio>, so it keeps playing while
+// moving between pages. One playlist plays at a time - the one started
+// last ("active"); the Média → Zene pages are the full players, the
+// header's (shared/music-player) the small one, for whatever is on (Bódorgó
+// FM if nothing yet). Nothing plays until ▶ is clicked - that click is also
+// the browser's required "user gesture". In order (or shuffled), from the
+// top again after the last. Stops on logout.
 @Injectable({ providedIn: 'root' })
 export class MusicPlayerService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
 
-  tracks = signal<MusicTrack[]>([]);
+  // Each loaded playlist's tracks; the playing one's are `tracks`.
+  lists = signal<Partial<Record<PlaylistKey, MusicTrack[]>>>({});
+  activeKey = signal<PlaylistKey>('bodorgo-fm');
+  tracks = computed(() => this.lists()[this.activeKey()] ?? []);
   index = signal(0);
   isPlaying = signal(false);
   loading = signal(false);
@@ -35,7 +47,8 @@ export class MusicPlayerService {
   currentTrack = computed(() => this.tracks()[this.index()] ?? null);
 
   // The full player's extras.
-  shuffle = signal(false);
+  // Random order by default - for every playlist (🔀 turns it off).
+  shuffle = signal(true);
   repeatOne = signal(false);
   currentTime = signal(0); // seconds
   duration = signal(0); // seconds, 0 until known
@@ -43,14 +56,22 @@ export class MusicPlayerService {
   muted = signal(false);
 
   private audio: HTMLAudioElement | null = null;
-  private loaded = false;
   private failures = 0; // tracks in a row that couldn't be played
   private history: number[] = []; // for ⏮ while shuffling
+
+  // Music in one tab at a time: a tab that starts playing tells the other
+  // tabs (of this site), and they pause - no two songs over each other.
+  private readonly tabId = Math.random().toString(36).slice(2);
+  private channel: BroadcastChannel | null =
+    typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('bodorgo-music');
 
   constructor() {
     // Logged out (or the session ended): silence, and forget the list.
     effect(() => {
       if (!this.auth.isLoggedIn()) this.reset();
+    });
+    this.channel?.addEventListener('message', (event: MessageEvent<{ playing?: string }>) => {
+      if (event.data?.playing && event.data.playing !== this.tabId) this.audio?.pause();
     });
   }
 
@@ -60,7 +81,10 @@ export class MusicPlayerService {
       this.audio = audio;
       audio.preload = 'none';
       audio.volume = this.volume();
-      audio.addEventListener('play', () => this.isPlaying.set(true));
+      audio.addEventListener('play', () => {
+        this.isPlaying.set(true);
+        this.channel?.postMessage({ playing: this.tabId });
+      });
       audio.addEventListener('playing', () => (this.failures = 0));
       audio.addEventListener('pause', () => this.isPlaying.set(false));
       audio.addEventListener('timeupdate', () => this.currentTime.set(audio.currentTime));
@@ -92,23 +116,23 @@ export class MusicPlayerService {
     return this.audio;
   }
 
-  // The track list, once - the first track becomes the current one (it
-  // doesn't start by itself).
-  async loadPlaylist(): Promise<boolean> {
-    if (this.loaded) return true;
+  // A playlist's tracks, once (or again with `reload`, after an admin's
+  // refresh). Loading doesn't start anything.
+  async loadPlaylist(key: PlaylistKey = this.activeKey(), reload = false): Promise<boolean> {
+    if (!reload && this.lists()[key]?.length) return true;
     this.loading.set(true);
     this.error.set(null);
     try {
+      const url = `${environment.apiBaseUrl}/music/${key}/${reload ? 'refresh' : 'playlist'}`;
+      const request = reload
+        ? this.http.post<{ data: { tracks: MusicTrack[] } }>(url, {})
+        : this.http.get<{ data: { tracks: MusicTrack[] } }>(url);
       const res = await new Promise<{ data: { tracks: MusicTrack[] } }>((resolve, reject) =>
-        this.http
-          .get<{ data: { tracks: MusicTrack[] } }>(`${environment.apiBaseUrl}/music/playlist`)
-          .subscribe({ next: resolve, error: reject }),
+        request.subscribe({ next: resolve, error: reject }),
       );
-      this.tracks.set(res.data.tracks);
-      this.index.set(0);
-      this.loaded = res.data.tracks.length > 0;
-      if (!this.loaded) this.error.set('A lejátszási lista üres.');
-      return this.loaded;
+      this.lists.update((lists) => ({ ...lists, [key]: res.data.tracks }));
+      if (!res.data.tracks.length) this.error.set('A lejátszási lista üres.');
+      return res.data.tracks.length > 0;
     } catch {
       this.error.set('A zene most nem érhető el.');
       return false;
@@ -117,13 +141,33 @@ export class MusicPlayerService {
     }
   }
 
+  // ▶ on a playlist's own page: that one - switching over to it if another
+  // was on (from a random song, or the first with shuffle off).
+  async playPlaylist(key: PlaylistKey) {
+    if (key === this.activeKey() && this.audio?.getAttribute('src')) {
+      await this.toggle();
+      return;
+    }
+    if (!(await this.loadPlaylist(key))) return;
+    await this.playAt(this.startIndex(key), key);
+  }
+
+  // Where a playlist starts from scratch: a random song while shuffling.
+  private startIndex(key: PlaylistKey): number {
+    const count = this.lists()[key]?.length ?? 0;
+    return this.shuffle() && count ? Math.floor(Math.random() * count) : 0;
+  }
+
   // ▶ / ⏸ - the first click also loads the list.
   async toggle() {
     if (this.isPlaying()) {
       this.player().pause();
       return;
     }
+    const fresh = !this.audio?.getAttribute('src');
     if (!(await this.loadPlaylist())) return;
+    // Nothing played yet: a random song to start (while shuffling).
+    if (fresh) this.index.set(this.startIndex(this.activeKey()));
     this.error.set(null);
     this.failures = 0;
     this.play();
@@ -137,13 +181,23 @@ export class MusicPlayerService {
     this.currentTime.set(0);
   }
 
-  // A song picked from the list: it plays.
-  async playAt(i: number) {
-    if (!(await this.loadPlaylist())) return;
-    if (i !== this.index()) this.history.push(this.index());
+  // A song picked from a playlist: it plays (that playlist becomes the
+  // one on) - from `startAt` seconds into it, if given (the FM dial's
+  // tuning knob).
+  async playAt(i: number, key: PlaylistKey = this.activeKey(), startAt = 0) {
+    if (!(await this.loadPlaylist(key))) return;
+    if (key !== this.activeKey()) {
+      this.activeKey.set(key);
+      this.history = [];
+    } else if (i !== this.index()) {
+      this.history.push(this.index());
+    }
     this.index.set(i);
     this.error.set(null);
     this.failures = 0;
+    // The new song first - then the jump lands on it, not the old one.
+    this.load();
+    if (startAt > 0) this.startFrom(startAt);
     this.play();
   }
 
@@ -181,6 +235,18 @@ export class MusicPlayerService {
   // A song's thumbnail address (on our server), or null.
   imageSrc(track: MusicTrack | null): string | null {
     return track?.imageUrl ? `${environment.apiBaseUrl}${track.imageUrl}` : null;
+  }
+
+  // Jump to `seconds` once the new song's audio is ready (setting it
+  // earlier would be ignored by some browsers).
+  private startFrom(seconds: number) {
+    const audio = this.player();
+    const go = () => {
+      audio.currentTime = seconds;
+      this.currentTime.set(seconds);
+    };
+    if (audio.readyState >= 1) go();
+    else audio.addEventListener('loadedmetadata', go, { once: true });
   }
 
   seek(seconds: number) {
@@ -233,10 +299,10 @@ export class MusicPlayerService {
   private reset() {
     this.audio?.pause();
     if (this.audio) this.audio.removeAttribute('src');
-    this.tracks.set([]);
+    this.lists.set({});
+    this.activeKey.set('bodorgo-fm');
     this.index.set(0);
     this.history = [];
-    this.loaded = false;
     this.failures = 0;
     this.currentTime.set(0);
     this.duration.set(0);
@@ -259,7 +325,7 @@ export class MusicPlayerService {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title,
       artist: track.artist,
-      album: 'Bódorgó FM',
+      album: PLAYLIST_NAMES[this.activeKey()],
       artwork: src ? [{ src, sizes: '320x320', type: 'image/jpeg' }] : [],
     });
   }
