@@ -45,6 +45,23 @@ describe('signing up for a tour', () => {
     expect(res.status).toBe(403);
   });
 
+  it('a retired person: not in the family list, and nobody can register them - not even an admin', async () => {
+    const tour = await createTour();
+    const member = await createMember({ name: 'Új Pár' });
+    const ex = await createMember({ name: 'Volt Pár', familyId: member.familyId, retired: true });
+    const kid = await createMember({ familyId: member.familyId });
+
+    const family = await request(app).get('/users/me/family').set(asUser(member));
+    expect(family.body.data.members.map((m) => String(m._id))).toEqual([String(kid._id)]);
+
+    const byMember = await signUp(tour, member, [String(member._id), String(ex._id)]);
+    expect(byMember.status).toBe(400);
+    expect(byMember.body.message).toContain('Volt Pár');
+    const byAdmin = await signUp(tour, await createAdmin(), [String(ex._id)]);
+    expect(byAdmin.status).toBe(400);
+    expect(await Reservation.countDocuments({ tour: tour._id })).toBe(0);
+  });
+
   it('lets a guest register only themselves', async () => {
     const tour = await createTour();
     const guest = await createGuest();

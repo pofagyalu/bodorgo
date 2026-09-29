@@ -1,3 +1,5 @@
+import { budapestYmd } from './huDate.js';
+
 // Születésnap: a user logging in on their birthday gets confetti and a
 // greeting (the client's birthday-celebration component) - once per year,
 // set up on Klub → Beállítások (clubSettingsModel.js's birthday).
@@ -7,11 +9,12 @@ export const BIRTHDAY_EFFECTS = ['confetti', 'fireworks', 'cannons', 'stars', 's
 
 export const DEFAULT_BIRTHDAY_MESSAGE = 'Boldog születésnapot, {név}! 🎂';
 
-// Today in Budapest, "YYYY-MM-DD". (Its own copy of membershipReminders.js's
-// budapestDate - this module is imported by clubSettingsModel.js, and must
-// import nothing that leads back to it.)
-export const budapestToday = (now = new Date()) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Budapest' }).format(now);
+// Today in Budapest, "YYYY-MM-DD" - not with the 'sv-SE' formatting trick:
+// the live server's Node has only English locale data, where that gives
+// "9/29/2026" and no birthday ever matched (see utils/huDate.js - which
+// imports nothing, so it's safe here: this module is imported by
+// clubSettingsModel.js and must import nothing that leads back to it).
+export const budapestToday = (now = new Date()) => budapestYmd(now);
 
 // Is `day` ("YYYY-MM-DD", Budapest) the birthday? Birthdays are stored as
 // midnight UTC, so their UTC month/day is the real one. 29 February is

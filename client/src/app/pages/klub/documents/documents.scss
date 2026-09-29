@@ -208,10 +208,14 @@ button {
   top: 16px;
   left: 16px;
   margin: 0;
-  padding: 5px;
-  font-size: 36px;
-  width: 36px;
-  height: 36px;
+  // The white badge (2.25rem) with the icon in its middle - the icon drawn
+  // at the size that fits inside (it used to be the badge's full size and
+  // spilled to the bottom right).
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.625rem;
   border-radius: 10px;
   background: #fff;
   box-shadow: 0 1px 4px #213b4133;

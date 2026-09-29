@@ -133,8 +133,11 @@ export class MemberEdit implements OnInit {
     this.address.update((a) => ({ ...a, [field]: value }));
   }
 
+  // Back to the list it was opened from (?lista=klubtagok / tobbiek /
+  // mindenki - see members.ts), or the first one.
   back() {
-    this.router.navigate(['/klub/felhasznalok']);
+    const lista = this.route.snapshot.queryParamMap.get('lista');
+    this.router.navigate(['/klub/felhasznalok'], lista ? { queryParams: { lista } } : {});
   }
 
   formatDateTime(dateStr: string): string {
@@ -147,18 +150,20 @@ export class MemberEdit implements OnInit {
     }).format(new Date(dateStr));
   }
 
+  // false: saved, but the address couldn't be found - worth fixing here.
   private handleSaveResult(
     res: { data: { user: AdminUser; addressResolved?: boolean | null } },
     successMessage: string,
-  ) {
+  ): boolean {
     this.saving.set(false);
     if (res.data.addressResolved === false) {
       this.notifications.addError(
         'A cím nem található be pontosan - próbáld a hivatalos (pl. angol vagy román) városnevet is, ha külföldi cím.',
       );
-    } else {
-      this.notifications.addSuccess(successMessage);
+      return false;
     }
+    this.notifications.addSuccess(successMessage);
+    return true;
   }
 
   save() {
@@ -216,7 +221,9 @@ export class MemberEdit implements OnInit {
       .subscribe({
         next: (res) => {
           this.user.set(res.data.user);
-          this.handleSaveResult(res, 'Felhasználó mentve');
+          // Done - back to the list it was opened from (unless the address
+          // needs another look).
+          if (this.handleSaveResult(res, 'Felhasználó mentve')) this.back();
         },
         error: (err) => {
           this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');

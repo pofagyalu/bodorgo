@@ -7,20 +7,21 @@
     <nav class="klub-nav" aria-label="Klub főmenü">
       @if (isMember()) {
         <a routerLink="attekintes" routerLinkActive="active" class="nav-item">
-          <mat-icon>dashboard</mat-icon><span>Áttekintés</span>
+          <mat-icon class="nav-icon nav-icon--overview">dashboard</mat-icon><span>Áttekintés</span>
         </a>
         <a routerLink="penzugyek" routerLinkActive="active" class="nav-item">
-          <mat-icon>account_balance_wallet</mat-icon><span>Pénzügyek</span>
+          <mat-icon class="nav-icon nav-icon--finance">account_balance_wallet</mat-icon
+          ><span>Pénzügyek</span>
         </a>
         <a routerLink="felhasznalok" routerLinkActive="active" class="nav-item">
-          <mat-icon>group</mat-icon><span>Felhasználók</span>
+          <mat-icon class="nav-icon nav-icon--members">group</mat-icon><span>Felhasználók</span>
         </a>
         <a routerLink="dokumentumok" routerLinkActive="active" class="nav-item">
-          <mat-icon>folder</mat-icon><span>Dokumentumok</span>
+          <mat-icon class="nav-icon nav-icon--documents">folder</mat-icon><span>Dokumentumok</span>
         </a>
       }
       <a routerLink="profilom" routerLinkActive="active" class="nav-item">
-        <mat-icon>person</mat-icon><span>Profilom</span>
+        <mat-icon class="nav-icon nav-icon--profile">person</mat-icon><span>Profilom</span>
       </a>
     </nav>
     <!-- At the sidebar's bottom: Beállítások (admins), set apart from the
@@ -29,7 +30,8 @@
       @if (isAdmin()) {
         <nav class="klub-nav" aria-label="Klub beállítások">
           <a routerLink="beallitasok" routerLinkActive="active" class="nav-item">
-            <mat-icon>settings</mat-icon><span>Beállítások</span>
+            <mat-icon class="nav-icon nav-icon--settings">settings</mat-icon
+            ><span>Beállítások</span>
           </a>
         </nav>
       }

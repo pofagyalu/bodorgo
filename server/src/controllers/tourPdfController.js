@@ -10,6 +10,7 @@ import { formatDrivingDuration, resolveDistanceInfo } from '../utils/distance.js
 import logger from '../logger.js';
 import { loadTourCoverBuffer } from './tourCoverController.js';
 import { tourDocuments } from './documentController.js';
+import { huDate, huDateWeekday } from '../utils/huDate.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
 // - the cover image lives under there; the logo/fonts live under
@@ -76,8 +77,11 @@ const COLORS = {
 // Marks the viewer's own name and room in the Szobabeosztás.
 const HIGHLIGHT = COLORS.orange;
 
-function formatHu(date, options) {
-  return new Intl.DateTimeFormat('hu-HU', options).format(date);
+// Hungarian even on the live server, whose Node has only English locale
+// data (see utils/huDate.js) - "2026. szeptember 29.", or with the day's
+// name: "2026. szeptember 29., kedd".
+function formatHu(date, format) {
+  return format === LONG_DATE_WEEKDAY ? huDateWeekday(date) : huDate(date);
 }
 
 // Mirrors pdfkit's own `fit` image option (scale down to fit inside a
@@ -91,10 +95,18 @@ function fitDims(origWidth, origHeight, boxWidth, boxHeight) {
   return { width: origWidth * scale, height: origHeight * scale };
 }
 
-const LONG_DATE = { year: 'numeric', month: 'long', day: 'numeric' };
-const LONG_DATE_WEEKDAY = { weekday: 'long', ...LONG_DATE };
+const LONG_DATE = 'date';
+const LONG_DATE_WEEKDAY = 'date-weekday';
 
 const PAGE_MARGIN = 50;
+// Half the others - the page starts higher.
+const PAGE_MARGIN_TOP = 25;
+const PAGE_MARGINS = {
+  top: PAGE_MARGIN_TOP,
+  bottom: PAGE_MARGIN,
+  left: PAGE_MARGIN,
+  right: PAGE_MARGIN,
+};
 
 // Same condition set as tour-details.ts's WEATHER_ICONS map, pre-converted
 // to PNG (client/src/assets/images/weather/*.svg, pdfkit can't embed SVG
@@ -106,6 +118,10 @@ function weatherIconPath(condition) {
   return path.join(WEATHER_ICON_DIR, `${condition}.png`);
 }
 
+// The 14pt icon glyph's middle in line with the 11pt text's (measured on a
+// rendered page - it used to sit 2pt higher).
+const ICON_NUDGE = 0;
+
 // One colored icon + label:value line, e.g. "📍 Helyszín: X" - the same
 // icon/color pairing as the tour-details page's own info-line icons.
 function infoLine(doc, x, width, color, iconName, text) {
@@ -114,7 +130,7 @@ function infoLine(doc, x, width, color, iconName, text) {
     .font('Icons')
     .fontSize(14)
     .fillColor(color)
-    .text(String.fromCodePoint(ICON_CODEPOINTS[iconName]), x, startY - 2);
+    .text(String.fromCodePoint(ICON_CODEPOINTS[iconName]), x, startY + ICON_NUDGE);
   doc
     .font('Body')
     .fontSize(11)
@@ -506,7 +522,7 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
       .font('Icons')
       .fontSize(14)
       .fillColor(COLORS.darkGreen)
-      .text(String.fromCodePoint(ICON_CODEPOINTS.location_on), infoColX, startY - 2);
+      .text(String.fromCodePoint(ICON_CODEPOINTS.location_on), infoColX, startY + ICON_NUDGE);
     const placeText = `Helyszín: ${tour.location?.description || '-'}`;
     doc.font('Body').fontSize(11).fillColor('#000');
     const placeWidth = doc.widthOfString(placeText);
@@ -533,12 +549,13 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
         doc.link(navX, iconY, iconSize, iconSize, googleUrl);
         navX += iconSize + 2;
       }
-      // Points to the footnote at the bottom of this page.
+      // Points to the footnote at the bottom of this page - big and bold
+      // in the club's orange, so it's noticed.
       doc
-        .font('Body')
-        .fontSize(11)
-        .fillColor('#666')
-        .text('*', navX, startY - 2, { lineBreak: false });
+        .font('Heading')
+        .fontSize(15)
+        .fillColor(COLORS.orange)
+        .text('*', navX + 1, startY - 3, { lineBreak: false });
     }
 
     doc.x = infoColX;
@@ -784,12 +801,24 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
     // First page only: the footnote for the "*" after the navigation icons.
     if (i === range.start && hasNavLinks) {
       const note =
-        '* Ha már beültél az autóba, és fogalmad sincs, merre tovább: bökj rá valamelyik navigációs ikonra, ' +
+        'Ha már beültél az autóba, és fogalmad sincs, merre tovább: bökj rá valamelyik navigációs ikonra, ' +
         'dőlj hátra, és kapcsolj önvezető üzemmódba (ha az autód nem tud ilyet, legalább a navigációt kövesd). ' +
         'Mi a célban várunk!';
       doc.font('Italic').fontSize(8).fillColor('#666');
-      const noteHeight = doc.heightOfString(note, { width: contentWidth });
-      doc.text(note, PAGE_MARGIN, footerY - 14 - noteHeight, { width: contentWidth });
+      const noteHeight = doc.heightOfString(`* ${note}`, { width: contentWidth });
+      // The same bold orange "*" as after the navigation icons, then the note.
+      doc
+        .font('Heading')
+        .fontSize(10)
+        .fillColor(COLORS.orange)
+        .text('* ', PAGE_MARGIN, footerY - 14 - noteHeight - 1, {
+          width: contentWidth,
+          continued: true,
+        })
+        .font('Italic')
+        .fontSize(8)
+        .fillColor('#666')
+        .text(note);
     }
 
     doc.y = footerY;
@@ -851,7 +880,7 @@ export const downloadTourPdf = async (req, res) => {
   // bufferPages: true lets the footer (which needs to know the final page
   // count) be added to every page in one pass at the very end, rather
   // than trying to predict page breaks up front.
-  const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
+  const doc = new PDFDocument({ margins: PAGE_MARGINS, size: 'A4', bufferPages: true });
   const filename = `${tour.order ? tour.order + '-' : ''}${tour.slug || 'tabor'}.pdf`;
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -867,7 +896,7 @@ export const downloadTourPdf = async (req, res) => {
 // is enough to capture every page regardless.
 export function renderTourPdfToBuffer(tour, viewer, distanceInfo) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: PAGE_MARGIN, size: 'A4', bufferPages: true });
+    const doc = new PDFDocument({ margins: PAGE_MARGINS, size: 'A4', bufferPages: true });
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
     doc.on('end', () => resolve(Buffer.concat(chunks)));

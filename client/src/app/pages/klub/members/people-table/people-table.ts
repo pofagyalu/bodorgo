@@ -69,6 +69,8 @@ export interface ExtraColumn {
 })
 export class PeopleTable {
   people = input.required<MemberUser[]>();
+  // Which Felhasználók list this is (?lista=) - the edit page returns there.
+  list = input<string | null>(null);
   showStatus = input(false);
   showActions = input(false);
   extraColumns = input<ExtraColumn[]>([]);

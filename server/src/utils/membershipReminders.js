@@ -6,6 +6,7 @@ import ClubSettings from '../models/clubSettingsModel.js';
 import sendResendEmail from './resendEmail.js';
 import { escapeHtml } from './mailHtml.js';
 import { getClubSettings, membershipFeeForYear } from './clubSettings.js';
+import { budapestParts, budapestYmd } from './huDate.js';
 
 // "Tagdíj emlékeztető": members who haven't paid this year's fee get an
 // e-mail on the rounds an admin set on Klub → Beállítások (a first date,
@@ -15,18 +16,14 @@ import { getClubSettings, membershipFeeForYear } from './clubSettings.js';
 
 // Today's date in Budapest, "YYYY-MM-DD" - the rounds are calendar days
 // there, whatever the server's own time zone.
+// (Not the 'sv-SE' formatting trick: the live server's Node has only
+// English locale data - see utils/huDate.js.)
 export function budapestDate(now = new Date()) {
-  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Budapest' }).format(now);
+  return budapestYmd(now);
 }
 
 function budapestHour(now = new Date()) {
-  return Number(
-    new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Europe/Budapest',
-      hour: '2-digit',
-      hour12: false,
-    }).format(now),
-  );
+  return budapestParts(now).hour;
 }
 
 // A year's rounds, "YYYY-MM-DD": the start date, then every month or every
