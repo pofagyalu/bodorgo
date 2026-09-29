@@ -14,7 +14,6 @@ import { AuthService } from '../../auth/auth.service';
 import { TourSocketService } from '../../services/tour-socket';
 import { Compose, Mentionable } from './compose/compose';
 import { ChatBackground, TourService } from '../../services/tour';
-import { MatIconModule } from '@angular/material/icon';
 import { Post, Reaction } from './post/post';
 import { PollCreate } from '../poll-create/poll-create';
 import { usernameKey } from '../../shared/usernames';
@@ -58,7 +57,7 @@ function dayBreakLabel(d: Date): string {
 @Component({
   selector: 'app-feed',
   standalone: true,
-  imports: [Compose, Post, PollCreate, MatIconModule],
+  imports: [Compose, Post, PollCreate],
   templateUrl: './feed.html',
   styleUrls: ['./feed.scss'],
 })
@@ -117,13 +116,13 @@ export class Feed implements OnInit, OnDestroy {
 
   // The chat's background: this week's pale photo from the tour's album
   // (the server bakes the paleness in), or the plain one if it has none.
-  // Admins can switch to another one for the rest of the week.
+  // Admins can switch to another one for the rest of the week (the button
+  // is on the chat page - chat.html's chatTools).
   private background = signal<ChatBackground | null>(null);
   backgroundImage = computed(() => {
     const b = this.background();
     return b ? `url("${this.tourService.chatBackgroundUrl(this.tourId(), b)}")` : null;
   });
-  isAdmin = computed(() => this.authService.user()?.role === 'admin');
   switchingBackground = signal(false);
 
   private loadBackground() {

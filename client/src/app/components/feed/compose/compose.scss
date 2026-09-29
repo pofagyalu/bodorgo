@@ -170,3 +170,38 @@
     height: 14px;
   }
 }
+
+// Phone: while typing, the photo and poll buttons step aside - after a
+// short pause they shrink to nothing and fade, and the field grows into
+// their place up to the left edge; once it loses the focus they come back
+// (at once, no pause). Shrinking, not display:none - that couldn't glide.
+@media (max-width: 768px) {
+  .photo-btn,
+  .poll-btn {
+    overflow: hidden;
+    transition:
+      width 0.3s ease,
+      margin 0.3s ease,
+      border-width 0.3s ease,
+      opacity 0.2s ease;
+  }
+
+  .compose-container.typing {
+    .photo-btn,
+    .poll-btn {
+      width: 0;
+      margin-right: -0.625rem; // the container's 10px gap after it
+      border-width: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition-delay: 0.15s;
+    }
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .photo-btn,
+  .poll-btn {
+    transition: none;
+  }
+}

@@ -1,4 +1,4 @@
-<form class="compose-container" (ngSubmit)="submit()">
+<form class="compose-container" [class.typing]="typing()" (ngSubmit)="submit()">
   <!-- "@" suggestions: the tour's attendees with a username. -->
   @if (suggestions().length) {
     <ul class="mention-list" role="listbox" aria-label="Megemlíthető résztvevők">
@@ -53,13 +53,14 @@
 
   <textarea
     #messageInput
-    placeholder="Írj egy üzenetet... (&#64; = megemlítés)"
+    placeholder="Üzenet"
     rows="1"
     [ngModel]="text()"
     (ngModelChange)="onTextChange($event)"
     (keydown)="onKeydown($event)"
     (click)="updateMentionQuery()"
-    (blur)="updateMentionQuery()"
+    (focus)="typing.set(true)"
+    (blur)="typing.set(false); updateMentionQuery()"
     name="message"
   ></textarea>
 
