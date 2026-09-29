@@ -34,8 +34,6 @@ export class Compose {
 
   // The tour's attendees with a username (not me) - typing "@" suggests them.
   mentionables = input<Mentionable[]>([]);
-  // Polls belong to a tour - the general room has no 📊 button.
-  pollsEnabled = input(true);
 
   private messageInput = viewChild<ElementRef<HTMLTextAreaElement>>('messageInput');
 

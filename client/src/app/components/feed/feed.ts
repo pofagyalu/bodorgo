@@ -66,7 +66,7 @@ export class Feed implements OnInit, OnDestroy {
   private authService = inject(AuthService);
 
   // The chat room shown (see ChatService), and its tour - null for the
-  // general room, which then has no background, "@" list or polls.
+  // general room (no background; everyone can be "@"-mentioned there).
   chatRoomId = input.required<string>();
   tourId = input<string | null>(null);
   currentUserId = computed(() => this.authService.user()?.id);
@@ -198,9 +198,16 @@ export class Feed implements OnInit, OnDestroy {
     ];
     this.tourSocket.joinChat(this.chatRoomId());
 
-    // A tour's attendees are who can be "@"-mentioned there.
+    // Who can be "@"-mentioned: a tour's attendees, or in the general room
+    // everyone.
     const tourId = this.tourId();
-    if (!tourId) return;
+    if (!tourId) {
+      this.chatService.getGeneralPeople().subscribe({
+        next: (res) => this.people.set(res.data.people),
+        error: () => {}, // no suggestions/highlighting - the chat itself still works
+      });
+      return;
+    }
     this.tourService.getRoomBoard(tourId).subscribe({
       next: (res) => {
         // One entry per person, even if they're on two reservations.

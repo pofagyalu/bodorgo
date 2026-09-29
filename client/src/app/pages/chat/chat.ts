@@ -70,6 +70,9 @@ function isChatOpen(t: Tour): boolean {
 // of names on a phone - all pure CSS, see chat.scss), then the selected
 // tour's chat and its Szobabeosztás (room allocation) panel - side by
 // side on a very wide screen, otherwise as two tabs.
+// The general Kotyogó's key in `selected` (tours use their ids).
+const GENERAL = 'general';
+
 @Component({
   selector: 'app-chat',
   imports: [Feed, MatIconModule, RoomBoard, CdkScrollable, TourCountdown, NgTemplateOutlet],
@@ -81,7 +84,10 @@ export class Chat implements OnInit, OnDestroy {
   private tourSocket = inject(TourSocketService);
   private route = inject(ActivatedRoute);
 
-  selectedTourId = signal<string | null>(null);
+  // What's open: the general Kotyogó ('general'), or a tour's (its id).
+  selected = signal<string | null>(null);
+  isGeneral = computed(() => this.selected() === GENERAL);
+  selectedTourId = computed(() => (this.isGeneral() ? null : this.selected()));
   visibleTours = signal<Tour[]>([]);
   loaded = signal(false);
 
@@ -93,20 +99,28 @@ export class Chat implements OnInit, OnDestroy {
     () => this.visibleTours().find((t) => t._id === this.selectedTourId()) ?? null,
   );
 
-  // The selected tour's chat room (see ChatService) - asked for whenever
-  // the tour changes; null until it's known.
+  // The open chat's room (see ChatService) - asked for whenever the
+  // selection changes; null until it's known.
   private chatService = inject(ChatService);
   chatRoomId = signal<string | null>(null);
 
   private loadChatRoom = effect(() => {
-    const tourId = this.selectedTourId();
+    const selected = this.selected();
     this.chatRoomId.set(null);
-    if (!tourId) return;
-    // The tour's channel on the shared connection: its Szobabeosztás.
-    this.tourSocket.joinTour(tourId);
-    this.chatService.getTourChatRoom(tourId).subscribe({
+    if (!selected) return;
+    if (selected === GENERAL) {
+      this.tourSocket.leaveTour(); // no Szobabeosztás here
+    } else {
+      // The tour's channel on the shared connection: its Szobabeosztás.
+      this.tourSocket.joinTour(selected);
+    }
+    const room =
+      selected === GENERAL
+        ? this.chatService.getGeneralChatRoom()
+        : this.chatService.getTourChatRoom(selected);
+    room.subscribe({
       next: (res) => {
-        if (this.selectedTourId() === tourId) this.chatRoomId.set(res.data.chatRoom._id);
+        if (this.selected() === selected) this.chatRoomId.set(res.data.chatRoom._id);
       },
       error: (err) => console.error('Failed to load the chat room', err),
     });
@@ -117,8 +131,7 @@ export class Chat implements OnInit, OnDestroy {
   // Angular just patching its inputs in place.
   feedKey = computed(() => {
     const chatRoomId = this.chatRoomId();
-    const tourId = this.selectedTourId();
-    return chatRoomId && tourId ? [{ chatRoomId, tourId }] : [];
+    return chatRoomId ? [{ chatRoomId, tourId: this.selectedTourId() }] : [];
   });
 
   ngOnInit() {
@@ -129,9 +142,9 @@ export class Chat implements OnInit, OnDestroy {
           .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
         this.visibleTours.set(list);
         // /chat?tabor=<id> - e.g. from a push notification - opens that
-        // tour's chat; otherwise the newest one.
+        // tour's chat; otherwise (or /chat?kotyogo=altalanos) the general one.
         const wanted = this.route.snapshot.queryParamMap.get('tabor');
-        this.selectedTourId.set(list.find((t) => t._id === wanted)?._id ?? list[0]?._id ?? null);
+        this.selected.set(list.find((t) => t._id === wanted)?._id ?? GENERAL);
         this.loaded.set(true);
       },
       error: (err) => {
@@ -196,8 +209,14 @@ export class Chat implements OnInit, OnDestroy {
     storeRoomsWidth(ROOMS_DEFAULT_WIDTH);
   }
 
+  // The general Kotyogó - always there, for everyone logged in.
+  selectGeneral() {
+    this.selected.set(GENERAL);
+    this.activePane.set('chat');
+  }
+
   selectTour(id: string) {
-    this.selectedTourId.set(id);
+    this.selected.set(id);
     this.activePane.set('chat');
   }
 

@@ -98,7 +98,7 @@ describe('chat notifications: one buzz, then quiet until read', () => {
     expect(first).toMatchObject({
       title: '25. Sarud – Kotyogó',
       body: 'anna: Holnap 8-kor indulunk',
-      tag: `chat-${tour._id}`,
+      tag: `chat-${await roomId(tour)}`,
       silent: false,
       renotify: true,
       url: `/chat?tabor=${tour._id}`,
@@ -120,14 +120,24 @@ describe('chat notifications: one buzz, then quiet until read', () => {
     expect(sentPushes()[3][1]).toMatchObject({ body: 'anna: Megjött a busz', silent: false });
   });
 
-  it('a message in the general room notifies nobody (yet)', async () => {
-    const [author, other] = await Promise.all([createMember(), createMember()]);
-    for (const u of [author, other]) await subscribeDevice(u);
+  it('a message in the general room notifies everyone but its author', async () => {
+    const [author, other, retired] = await Promise.all([
+      createMember({ username: 'szerzo' }),
+      createMember(),
+      createMember({ retired: true }),
+    ]);
+    for (const u of [author, other, retired]) await subscribeDevice(u);
     vi.mocked(webpush.sendNotification).mockClear();
     const general = await generalChatRoom();
     const p = await Post.create({ chatRoomId: general._id, creator: author._id, text: 'Hahó' });
     await notifyChatPost(fakeIo(), await p.populate('creator', 'name username'));
-    expect(sentPushes()).toEqual([]);
+    const sent = sentPushes();
+    expect(sent).toHaveLength(1);
+    expect(sent[0][1]).toMatchObject({
+      title: 'Általános – Kotyogó',
+      body: 'szerzo: Hahó',
+      url: '/chat?kotyogo=altalanos',
+    });
   });
 
   it('nothing for the author, a muted chat, someone watching it, or a non-attendee', async () => {

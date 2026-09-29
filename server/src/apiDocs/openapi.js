@@ -294,8 +294,14 @@ const schemas = {
 
   Poll: obj({
     _id: id(),
-    tour: { description: 'The tour (id, title, order).', type: 'object' },
+    tour: {
+      description: 'The tour (id, title, order) - null for a general poll.',
+      type: ['object', 'null'],
+    },
     question: str(),
+    details: str(
+      'Részletek - optional formatted text under the question (bold, colors, lists, links; cleaned like a mailing).',
+    ),
     options: arrayOf(
       obj({ _id: id(), text: str(), count: int('Votes (open polls, or after close).') }),
     ),
@@ -305,6 +311,9 @@ const schemas = {
       enum: ['open', 'secret'],
     }),
     minimum: obj({ option: id(), count: int('At least this many for that answer.') }),
+    awaitsMyVote: bool(
+      'Rád vár: open, not voted yet, and mine to vote on (my tour’s, or a general poll) - what the Voks badge counts.',
+    ),
     myVote: id('My chosen option, if any.'),
     createdBy: { type: 'object' },
   }),
@@ -1049,8 +1058,43 @@ const paths = {
     get: op({
       tag: T.chat,
       summary: 'The general chat room',
-      description: 'The one club-wide room, not about any tour - made on first use.',
+      description:
+        'The one club-wide room, not about any tour - open to everyone logged in; its messages notify everyone. Made on first use.',
       data: obj({ chatRoom: ref('ChatRoom') }),
+    }),
+  },
+  '/chat-rooms/general/people': {
+    get: op({
+      tag: T.chat,
+      summary: 'Who can be @-mentioned in the general room',
+      description: 'Everyone with a username who isn’t retired.',
+      data: obj({
+        people: arrayOf(obj({ userId: id(), name: str(), username: str() })),
+      }),
+    }),
+  },
+  '/chat-rooms/general/polls': {
+    post: op({
+      tag: T.polls,
+      summary: 'Start a poll in the general Kotyogó',
+      description:
+        'Anyone logged in. A general poll (no tour): shows on Voks too, and as a live card in the general room; everyone gets a notification, and the "not voted yet" reminder too.',
+      body: obj(
+        {
+          question: str(),
+          details: str(
+            'Részletek - optional formatted text under the question (bold, colors, lists, links; cleaned like a mailing).',
+          ),
+          options: arrayOf(str()),
+          closesAt: date(),
+          visibility: str('', { enum: ['open', 'secret'] }),
+          minimumCount: int('Optional minimum for the first answer.'),
+        },
+        ['question', 'options', 'closesAt'],
+      ),
+      ok: 201,
+      data: obj({ poll: ref('Poll') }),
+      errors: [400],
     }),
   },
   '/tours/{tourId}/chat-room': {
@@ -1147,8 +1191,11 @@ const paths = {
       summary: 'Create a poll (Voks page)',
       body: obj(
         {
-          tour: id('The tour it belongs to.'),
+          tour: id('The tour it belongs to - none (or empty): a general poll, for everyone.'),
           question: str(),
+          details: str(
+            'Részletek - optional formatted text under the question (bold, colors, lists, links; cleaned like a mailing).',
+          ),
           options: arrayOf(str()),
           closesAt: date(),
           visibility: str('Default: secret.', { enum: ['open', 'secret'] }),
@@ -1156,7 +1203,7 @@ const paths = {
             'Optional: the first answer needs at least this many (1-500) - they are told when reached.',
           ),
         },
-        ['tour', 'question', 'options', 'closesAt'],
+        ['question', 'options', 'closesAt'],
       ),
       ok: 201,
       data: obj({ poll: ref('Poll') }),
@@ -1167,7 +1214,7 @@ const paths = {
     get: op({
       tag: T.polls,
       summary: 'How many polls wait for my vote',
-      description: 'The Voks menu badge.',
+      description: 'The Voks menu badge - open polls of my tours and the general ones.',
       data: obj({ count: int() }),
     }),
   },
@@ -1188,6 +1235,9 @@ const paths = {
       body: obj({
         tour: id(),
         question: str(),
+        details: str(
+          'Részletek - optional formatted text under the question (bold, colors, lists, links; cleaned like a mailing).',
+        ),
         options: arrayOf(str()),
         closesAt: date(),
         visibility: str('', { enum: ['open', 'secret'] }),
@@ -1237,6 +1287,9 @@ const paths = {
       body: obj(
         {
           question: str(),
+          details: str(
+            'Részletek - optional formatted text under the question (bold, colors, lists, links; cleaned like a mailing).',
+          ),
           options: arrayOf(str()),
           closesAt: date(),
           visibility: str('', { enum: ['open', 'secret'] }),

@@ -34,14 +34,16 @@
     <div class="photo-preview photo-preview--error">{{ photoError() }}</div>
   }
 
-  <!-- Attach a photo (shrunk on the phone before sending). -->
-  <label class="photo-btn" title="Fotó küldése" aria-label="Fotó küldése">
-    <mat-icon>photo_camera</mat-icon>
-    <input type="file" accept="image/*" hidden (change)="pickPhoto($event)" />
-  </label>
+  <!-- The 📷 and 📊 buttons together - on a phone they slide out to the left
+       while typing (compose.scss). -->
+  <div class="compose-extras">
+    <!-- Attach a photo (shrunk on the phone before sending). -->
+    <label class="photo-btn" title="Fotó küldése" aria-label="Fotó küldése">
+      <mat-icon>photo_camera</mat-icon>
+      <input type="file" accept="image/*" hidden (change)="pickPhoto($event)" />
+    </label>
 
-  <!-- Start a poll in this chat (see poll-create) - a tour's only. -->
-  @if (pollsEnabled()) {
+    <!-- Start a poll in this chat (see poll-create). -->
     <button
       type="button"
       class="poll-btn"
@@ -51,7 +53,7 @@
     >
       <mat-icon>poll</mat-icon>
     </button>
-  }
+  </div>
 
   <textarea
     #messageInput

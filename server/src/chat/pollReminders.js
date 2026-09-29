@@ -1,10 +1,11 @@
 import Poll from '../models/pollModel.js';
-import { pushInBackground, tourAttendeeIds } from './chatNotifications.js';
+import { chatAudience, pushInBackground } from './chatNotifications.js';
 
 const REMINDER_BEFORE_MS = 2 * 60 * 60 * 1000;
 
 // Every few minutes (see server.js): polls closing within 2 hours remind
-// the tour's attendees who haven't voted yet - once per poll. A poll that
+// the tour's attendees (a general poll: everyone) who haven't voted yet -
+// once per poll. A poll that
 // was started with less than 2 hours to go is skipped; its "new poll"
 // notification only just went out.
 export async function checkPollReminders(now = new Date()) {
@@ -20,17 +21,18 @@ export async function checkPollReminders(now = new Date()) {
     if (poll.closesAt.getTime() - poll.createdAt.getTime() <= REMINDER_BEFORE_MS) continue;
 
     const voted = poll.votes.map((v) => v.user);
-    const users = await tourAttendeeIds(poll.tour._id, voted);
+    const audience = await chatAudience(poll.tour, voted);
+    const users = audience.ids;
     const time = poll.closesAt.toLocaleTimeString('hu-HU', {
       hour: '2-digit',
       minute: '2-digit',
       timeZone: 'Europe/Budapest',
     });
     pushInBackground(users, {
-      title: `Még nem szavaztál – ${poll.tour.title}`,
+      title: `Még nem szavaztál – ${audience.label}`,
       body: `${poll.question} – ${time}-kor lezárul.`,
       tag: `poll-${poll._id}`,
-      url: poll.post ? `/chat?tabor=${poll.tour._id}` : '/szavazasok',
+      url: poll.post ? audience.url : '/szavazasok',
       renotify: true,
     });
     reminded.push({ poll: String(poll._id), users });
