@@ -5,9 +5,9 @@ import { CHAT_IMAGES_DIR } from '../utils/dataDirs.js';
 import { getClubSettings } from '../utils/clubSettings.js';
 import { loadSharp } from '../photos/imageFiles.js';
 import { budapestDate } from '../utils/membershipReminders.js';
-import { emitToTour } from './tourEvents.js';
+import { emitToChatRoom } from './tourEvents.js';
 
-// Photos in the tour chats. The phone already shrinks a photo before
+// Photos in the chats. The phone already shrinks a photo before
 // sending it; here it's made into a WebP of at most 1600 px - about a third
 // smaller than a JPEG of the same quality - (EXIF - the
 // GPS location included - dropped: sharp writes none unless asked) and a
@@ -89,7 +89,7 @@ export async function enforceChatImageQuota() {
     post.image.expired = true;
     await post.save();
     const populated = await post.populate(POST_POPULATE);
-    emitToTour(post.tourId, 'post-updated', populated);
+    emitToChatRoom(post.chatRoomId, 'post-updated', populated);
     removed++;
   }
   await oldest.close();

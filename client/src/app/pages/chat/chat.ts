@@ -18,6 +18,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Feed } from '../../components/feed/feed';
 import { RoomBoard } from './room-board/room-board';
 import { TourService, Tour } from '../../services/tour';
+import { ChatService } from '../../services/chat';
 import { TourCountdown } from '../../shared/tour-countdown/tour-countdown';
 import { PushService } from '../../services/push';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -92,10 +93,33 @@ export class Chat implements OnInit, OnDestroy {
     () => this.visibleTours().find((t) => t._id === this.selectedTourId()) ?? null,
   );
 
-  // Forces <app-feed> to fully destroy/recreate (fresh join-tour-chat on
-  // the shared connection, fresh history) whenever the selected tour
-  // changes, instead of Angular just patching its tourId input in place.
-  feedKey = computed(() => (this.selectedTourId() ? [this.selectedTourId()!] : []));
+  // The selected tour's chat room (see ChatService) - asked for whenever
+  // the tour changes; null until it's known.
+  private chatService = inject(ChatService);
+  chatRoomId = signal<string | null>(null);
+
+  private loadChatRoom = effect(() => {
+    const tourId = this.selectedTourId();
+    this.chatRoomId.set(null);
+    if (!tourId) return;
+    // The tour's channel on the shared connection: its Szobabeosztás.
+    this.tourSocket.joinTour(tourId);
+    this.chatService.getTourChatRoom(tourId).subscribe({
+      next: (res) => {
+        if (this.selectedTourId() === tourId) this.chatRoomId.set(res.data.chatRoom._id);
+      },
+      error: (err) => console.error('Failed to load the chat room', err),
+    });
+  });
+
+  // Forces <app-feed> to fully destroy/recreate (a fresh join-chat on the
+  // shared connection, fresh history) whenever the room changes, instead of
+  // Angular just patching its inputs in place.
+  feedKey = computed(() => {
+    const chatRoomId = this.chatRoomId();
+    const tourId = this.selectedTourId();
+    return chatRoomId && tourId ? [{ chatRoomId, tourId }] : [];
+  });
 
   ngOnInit() {
     this.tourService.getTours().subscribe({
@@ -117,7 +141,8 @@ export class Chat implements OnInit, OnDestroy {
     });
   }
 
-  // Off the chat page: stop getting this tour's live posts/room changes.
+  // Off the chat page: stop getting this tour's room changes (the feed
+  // leaves its chat room itself).
   ngOnDestroy() {
     this.tourSocket.leaveTour();
   }
@@ -182,21 +207,23 @@ export class Chat implements OnInit, OnDestroy {
   chatMuted = signal(false);
 
   private loadMuted = effect(() => {
-    const id = this.selectedTourId();
+    const id = this.chatRoomId();
     this.chatMuted.set(false);
     if (!id) return;
     this.push.getChatMuted(id).subscribe({
       next: (res) => {
-        if (this.selectedTourId() === id) this.chatMuted.set(res.data.muted);
+        if (this.chatRoomId() === id) this.chatMuted.set(res.data.muted);
       },
       error: () => {},
     });
   });
 
-  toggleChatMuted(tourId: string) {
+  toggleChatMuted() {
+    const chatRoomId = this.chatRoomId();
+    if (!chatRoomId) return;
     const next = !this.chatMuted();
     this.chatMuted.set(next);
-    this.push.setChatMuted(tourId, next).subscribe({
+    this.push.setChatMuted(chatRoomId, next).subscribe({
       next: () =>
         this.notifications.addSuccess(
           next

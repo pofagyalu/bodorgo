@@ -6,6 +6,7 @@ import { createMember, createReservation, createTour } from '../helpers/factorie
 import PushSubscription from '../../src/models/pushSubscriptionModel.js';
 import Post from '../../src/models/postModel.js';
 import { markChatRead, notifyChatPost, setChatMuted } from '../../src/chat/chatNotifications.js';
+import { generalChatRoom, tourChatRoom } from '../../src/chat/chatRooms.js';
 
 let n = 0;
 const subscribeDevice = (user) =>
@@ -24,12 +25,15 @@ const sentPushes = () =>
 const fakeIo = (watching = []) => ({
   in: () => ({
     fetchSockets: async () =>
-      watching.map(([userId, tourId]) => ({ data: { userId, visibleTour: tourId } })),
+      watching.map(([userId, chatRoomId]) => ({ data: { userId, visibleChat: chatRoomId } })),
   }),
 });
 
+// A tour's chat room id (made on first use).
+const roomId = async (tour) => (await tourChatRoom(tour._id))._id;
+
 async function post(tour, author, text) {
-  const p = await Post.create({ tourId: tour._id, creator: author._id, text });
+  const p = await Post.create({ chatRoomId: await roomId(tour), creator: author._id, text });
   return p.populate('creator', 'name username');
 }
 
@@ -73,7 +77,7 @@ describe('push subscriptions', () => {
   it("mutes one tour's chat", async () => {
     const user = await createMember();
     const tour = await createTour();
-    const url = `/push/chat-mutes/${tour._id}`;
+    const url = `/push/chat-mutes/${await roomId(tour)}`;
     expect((await request(app).get(url).set(asUser(user))).body.data.muted).toBe(false);
     await request(app).put(url).set(asUser(user)).send({ muted: true });
     expect((await request(app).get(url).set(asUser(user))).body.data.muted).toBe(true);
@@ -111,9 +115,19 @@ describe('chat notifications: one buzz, then quiet until read', () => {
     expect(sentPushes()[2][1]).toMatchObject({ silent: false, renotify: true });
 
     // Béla opens the chat - the next message buzzes again, counting from there.
-    await markChatRead(bela._id, tour._id);
+    await markChatRead(bela._id, await roomId(tour));
     await notifyChatPost(fakeIo(), await post(tour, anna, 'Megjött a busz'));
     expect(sentPushes()[3][1]).toMatchObject({ body: 'anna: Megjött a busz', silent: false });
+  });
+
+  it('a message in the general room notifies nobody (yet)', async () => {
+    const [author, other] = await Promise.all([createMember(), createMember()]);
+    for (const u of [author, other]) await subscribeDevice(u);
+    vi.mocked(webpush.sendNotification).mockClear();
+    const general = await generalChatRoom();
+    const p = await Post.create({ chatRoomId: general._id, creator: author._id, text: 'Hahó' });
+    await notifyChatPost(fakeIo(), await p.populate('creator', 'name username'));
+    expect(sentPushes()).toEqual([]);
   });
 
   it('nothing for the author, a muted chat, someone watching it, or a non-attendee', async () => {
@@ -126,10 +140,10 @@ describe('chat notifications: one buzz, then quiet until read', () => {
     const outsider = await createMember();
     await createReservation(tour, [author, muted, watching]);
     for (const u of [author, muted, watching, outsider]) await subscribeDevice(u);
-    await setChatMuted(muted._id, tour._id, true);
+    await setChatMuted(muted._id, await roomId(tour), true);
 
     await notifyChatPost(
-      fakeIo([[String(watching._id), String(tour._id)]]),
+      fakeIo([[String(watching._id), String(await roomId(tour))]]),
       await post(tour, author, 'Hahó'),
     );
     expect(sentPushes()).toHaveLength(0);
@@ -141,7 +155,7 @@ describe('chat notifications: one buzz, then quiet until read', () => {
     const muted = await createMember({ username: 'Zoli' });
     await createReservation(tour, [author, muted]);
     await subscribeDevice(muted);
-    await setChatMuted(muted._id, tour._id, true);
+    await setChatMuted(muted._id, await roomId(tour), true);
 
     await notifyChatPost(fakeIo(), await post(tour, author, 'Valami általános'));
     expect(sentPushes()).toHaveLength(0);
@@ -156,7 +170,7 @@ describe('chat notifications: one buzz, then quiet until read', () => {
     const bela = await createMember({ username: 'Béla' });
     await createReservation(tour, [author, bela]);
     await subscribeDevice(bela);
-    await setChatMuted(bela._id, tour._id, true);
+    await setChatMuted(bela._id, await roomId(tour), true);
 
     await notifyChatPost(fakeIo(), await post(tour, author, 'Hozod a bográcsot, @bela?'));
     expect(sentPushes()).toHaveLength(1);

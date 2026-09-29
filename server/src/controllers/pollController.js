@@ -4,7 +4,9 @@ import Post, { POST_POPULATE } from '../models/postModel.js';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
-import { emitToTour } from '../chat/tourEvents.js';
+import { emitToChatRoom } from '../chat/tourEvents.js';
+import { tourChatRoom } from '../chat/chatRooms.js';
+import logger from '../logger.js';
 import { pushInBackground, tourAttendeeIds } from '../chat/chatNotifications.js';
 
 const TOUR_SELECT = 'title slug order';
@@ -133,13 +135,19 @@ function applyMinimum(poll, minimumCount) {
   poll.minimum = minimumCount ? { option: poll.options[0]._id, count: minimumCount } : undefined;
 }
 
-// Everyone looking at the tour's chat re-fetches the poll (each gets their
-// own view of it - see buildPollView).
+// Everyone looking at the chat the poll was posted in re-fetches it (each
+// gets their own view of it - see buildPollView). Fire-and-forget.
 function announcePollChanged(poll) {
-  emitToTour(refId(poll.tour), 'poll-updated', {
-    pollId: String(poll._id),
-    tourId: refId(poll.tour),
-  });
+  Post.findById(poll.post)
+    .select('chatRoomId')
+    .then((post) => {
+      if (!post) return;
+      emitToChatRoom(post.chatRoomId, 'poll-updated', {
+        pollId: String(poll._id),
+        tourId: refId(poll.tour),
+      });
+    })
+    .catch((err) => logger.error(`poll ${poll._id} update announce failed: ${err.message}`));
 }
 
 // GET /polls - requireAuth (any logged-in role, see pollRoutes.js). Every
@@ -211,8 +219,9 @@ export const createTourPoll = async (req, res) => {
 
   const poll = new Poll({ ...fields, tour: tourId, createdBy: req.user._id });
   applyMinimum(poll, fields.minimumCount);
+  const room = await tourChatRoom(tourId);
   const post = await Post.create({
-    tourId,
+    chatRoomId: room._id,
     creator: req.user._id,
     text: fields.question,
     poll: poll._id,
@@ -221,7 +230,7 @@ export const createTourPoll = async (req, res) => {
   await poll.save();
 
   await post.populate(POST_POPULATE);
-  emitToTour(tourId, 'new-post', post);
+  emitToChatRoom(room._id, 'new-post', post);
 
   const author = req.user.username || req.user.name;
   pushInBackground(await tourAttendeeIds(tourId, [req.user._id]), {
@@ -343,7 +352,7 @@ export const deletePoll = async (req, res) => {
       { text: '', poll: null, deletedAt: new Date() },
       { returnDocument: 'after' },
     ).populate(POST_POPULATE);
-    if (post) emitToTour(refId(poll.tour), 'post-updated', post);
+    if (post) emitToChatRoom(post.chatRoomId, 'post-updated', post);
   }
   res.status(204).json({ status: 'success', data: null });
 };

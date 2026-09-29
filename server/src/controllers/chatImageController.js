@@ -2,7 +2,6 @@ import fs from 'fs';
 import mongoose from 'mongoose';
 import multer from 'multer';
 import Post, { POST_POPULATE } from '../models/postModel.js';
-import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
 import logger from '../logger.js';
 import { getClubSettings } from '../utils/clubSettings.js';
@@ -13,12 +12,13 @@ import {
   photosSentToday,
   saveChatImage,
 } from '../chat/chatImages.js';
-import { emitToTour, getIo } from '../chat/tourEvents.js';
+import { emitToChatRoom, getIo } from '../chat/tourEvents.js';
+import { chatRoomView, generalChatRoom, loadChatRoom, tourChatRoom } from '../chat/chatRooms.js';
 import { backgroundPath, currentBackground, nextBackground } from '../chat/chatBackground.js';
 import { LONG_CACHE } from '../photos/imageSizes.js';
 import { notifyChatPostInBackground } from '../chat/chatNotifications.js';
 
-// A photo sent in a tour chat (see chat/chatImages.js). Sent as a normal
+// A photo sent in a chat room (see chat/chatImages.js). Sent as a normal
 // request, not over the chat socket - the message then appears live for
 // everyone the same way (new-post), with the usual push notification.
 
@@ -46,12 +46,9 @@ export const chatImageUpload = (req, res, next) =>
     next(err);
   });
 
-// POST /tours/:tourId/chat/images - multipart: image (+ optional text).
+// POST /chat-rooms/:chatRoomId/images - multipart: image (+ optional text).
 export const postChatImage = async (req, res) => {
-  const { tourId } = req.params;
-  if (!mongoose.isValidObjectId(tourId) || !(await Tour.exists({ _id: tourId }))) {
-    throw new AppError('Nincs ilyen tábor.', 404);
-  }
+  const room = await loadChatRoom(req.params.chatRoomId);
   if (!req.file) throw new AppError('Nincs kép kiválasztva.', 400);
 
   const { chatImages } = await getClubSettings();
@@ -61,7 +58,7 @@ export const postChatImage = async (req, res) => {
   }
 
   const post = new Post({
-    tourId,
+    chatRoomId: room._id,
     creator: req.user._id,
     text: String(req.body?.text ?? '')
       .trim()
@@ -70,13 +67,13 @@ export const postChatImage = async (req, res) => {
   try {
     post.image = await saveChatImage(post._id, req.file.buffer);
   } catch (err) {
-    logger.warn(`chat image for tour ${tourId} could not be read: ${err.message}`);
+    logger.warn(`chat image for chat room ${room._id} could not be read: ${err.message}`);
     throw new AppError('Ez a fájl nem kép, vagy nem olvasható.', 400);
   }
   await post.save();
 
   const populated = await post.populate(POST_POPULATE);
-  emitToTour(tourId, 'new-post', populated);
+  emitToChatRoom(room._id, 'new-post', populated);
   const io = getIo();
   if (io) notifyChatPostInBackground(io, populated);
   enforceChatImageQuota().catch((err) =>
@@ -86,13 +83,13 @@ export const postChatImage = async (req, res) => {
   res.status(201).json({ status: 'success', data: { post: populated } });
 };
 
-// A photo still on disk, of a message in this tour that wasn't deleted.
+// A photo still on disk, of a message in this chat room that wasn't deleted.
 async function servable(req) {
-  const { tourId, postId } = req.params;
+  const { chatRoomId, postId } = req.params;
   if (!mongoose.isValidObjectId(postId)) throw new AppError('Nincs ilyen fotó.', 404);
   const post = await Post.exists({
     _id: postId,
-    tourId,
+    chatRoomId,
     image: { $ne: null },
     'image.expired': { $ne: true },
     deletedAt: null,
@@ -108,7 +105,7 @@ function send(res, file) {
   res.sendFile(file);
 }
 
-// GET /tours/:tourId/chat/images/:postId - the photo; .../thumb - the small one.
+// GET /chat-rooms/:chatRoomId/images/:postId - the photo; .../thumb - the small one.
 export const getChatImage = async (req, res) => send(res, chatImagePath(await servable(req)));
 export const getChatImageThumb = async (req, res) => send(res, chatThumbPath(await servable(req)));
 
@@ -138,4 +135,18 @@ export const getChatBackgroundImage = async (req, res) => {
 export const nextChatBackground = async (req, res) => {
   const background = await nextBackground(validTourId(req.params.tourId));
   res.status(200).json({ status: 'success', data: { background } });
+};
+
+// --- The chat rooms themselves (see chat/chatRooms.js) ---
+
+// GET /tours/:tourId/chat-room - the tour's own room, made on first use.
+export const getTourChatRoom = async (req, res) => {
+  const room = await tourChatRoom(req.params.tourId);
+  res.status(200).json({ status: 'success', data: { chatRoom: chatRoomView(room) } });
+};
+
+// GET /chat-rooms/general - the club-wide room, made on first use.
+export const getGeneralChatRoom = async (req, res) => {
+  const room = await generalChatRoom();
+  res.status(200).json({ status: 'success', data: { chatRoom: chatRoomView(room) } });
 };

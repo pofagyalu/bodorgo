@@ -40,16 +40,18 @@
     <input type="file" accept="image/*" hidden (change)="pickPhoto($event)" />
   </label>
 
-  <!-- Start a poll in this chat (see poll-create). -->
-  <button
-    type="button"
-    class="poll-btn"
-    title="Szavazás indítása"
-    aria-label="Szavazás indítása"
-    (click)="pollRequested.emit()"
-  >
-    <mat-icon>poll</mat-icon>
-  </button>
+  <!-- Start a poll in this chat (see poll-create) - a tour's only. -->
+  @if (pollsEnabled()) {
+    <button
+      type="button"
+      class="poll-btn"
+      title="Szavazás indítása"
+      aria-label="Szavazás indítása"
+      (click)="pollRequested.emit()"
+    >
+      <mat-icon>poll</mat-icon>
+    </button>
+  }
 
   <textarea
     #messageInput

@@ -3,13 +3,15 @@ import Tour from '../models/tourModel.js';
 import User from '../models/userModel.js';
 import Post from '../models/postModel.js';
 import ChatReadState from '../models/chatReadStateModel.js';
+import ChatRoom from '../models/chatRoomModel.js';
 import { sendPushToUsers } from '../utils/push.js';
 import logger from '../logger.js';
-import { tourRoom } from './tourEvents.js';
+import { chatChannel } from './tourEvents.js';
 import { usernameKey } from '../utils/usernames.js';
 
-// Push notifications for a tour's chat - to the tour's attendees, without
-// the phone ringing at every message:
+// Push notifications for a chat room - a tour's goes to the tour's
+// attendees (the general one to nobody yet), without the phone ringing at
+// every message:
 // - one buzz, then quiet: after a notification, further messages only
 //   update the same notification silently ("5 új üzenet") until the chat
 //   is opened again;
@@ -20,32 +22,32 @@ import { usernameKey } from '../utils/usernames.js';
 const SNIPPET_LENGTH = 90;
 
 // The user had the chat open - notifications may buzz again next time.
-export async function markChatRead(userId, tourId) {
+export async function markChatRead(userId, chatRoomId) {
   await ChatReadState.updateOne(
-    { user: userId, tour: tourId },
+    { user: userId, chatRoom: chatRoomId },
     { readAt: new Date() },
     { upsert: true },
   );
 }
 
-export async function setChatMuted(userId, tourId, muted) {
+export async function setChatMuted(userId, chatRoomId, muted) {
   await ChatReadState.updateOne(
-    { user: userId, tour: tourId },
+    { user: userId, chatRoom: chatRoomId },
     { muted: !!muted },
     { upsert: true },
   );
 }
 
-export async function isChatMuted(userId, tourId) {
-  return !!(await ChatReadState.exists({ user: userId, tour: tourId, muted: true }));
+export async function isChatMuted(userId, chatRoomId) {
+  return !!(await ChatReadState.exists({ user: userId, chatRoom: chatRoomId, muted: true }));
 }
 
 // Users with the chat open and visible on some device right now (see the
 // 'chat-visible' event in chatSocket.js).
-async function watchingUserIds(io, tourId) {
-  const sockets = await io.in(tourRoom(tourId)).fetchSockets();
+async function watchingUserIds(io, chatRoomId) {
+  const sockets = await io.in(chatChannel(chatRoomId)).fetchSockets();
   return new Set(
-    sockets.filter((s) => s.data.visibleTour === String(tourId)).map((s) => s.data.userId),
+    sockets.filter((s) => s.data.visibleChat === String(chatRoomId)).map((s) => s.data.userId),
   );
 }
 
@@ -60,24 +62,25 @@ function mentions(text, username) {
 }
 
 export async function notifyChatPost(io, post) {
-  const tourId = String(post.tourId);
+  const chatRoomId = String(post.chatRoomId);
+  const room = await ChatRoom.findById(chatRoomId);
+  // The general Kotyogó doesn't notify anyone (yet).
+  if (room?.type !== 'tour') return;
+  const tourId = String(room.tourId);
   const authorId = String(post.creator._id ?? post.creator);
   const authorName = post.creator.username || post.creator.name || 'Valaki';
 
-  const reservations = await Reservation.find({ tour: tourId }).select('attendees.user');
-  const attendeeIds = [
-    ...new Set(reservations.flatMap((r) => r.attendees.map((a) => String(a.user)))),
-  ].filter((id) => id !== authorId);
+  const attendeeIds = await tourAttendeeIds(tourId, [authorId]);
   if (!attendeeIds.length) return;
 
-  const watching = await watchingUserIds(io, tourId);
+  const watching = await watchingUserIds(io, chatRoomId);
   const candidates = attendeeIds.filter((id) => !watching.has(id));
   if (!candidates.length) return;
 
   const [tour, users, states] = await Promise.all([
     Tour.findById(tourId).select('title order'),
     User.find({ _id: { $in: candidates } }).select('username'),
-    ChatReadState.find({ tour: tourId, user: { $in: candidates } }),
+    ChatReadState.find({ chatRoom: chatRoomId, user: { $in: candidates } }),
   ]);
   const stateByUser = new Map(states.map((s) => [String(s.user), s]));
   const usernameById = new Map(users.map((u) => [String(u._id), u.username]));
@@ -97,7 +100,7 @@ export async function notifyChatPost(io, post) {
     const readAt = state?.readAt ?? new Date(0);
 
     const unread = await Post.countDocuments({
-      tourId,
+      chatRoomId,
       createdAt: { $gt: readAt },
       creator: { $ne: userId },
       deletedAt: null,
@@ -117,7 +120,7 @@ export async function notifyChatPost(io, post) {
     });
     if (sent && loud) {
       await ChatReadState.updateOne(
-        { user: userId, tour: tourId },
+        { user: userId, chatRoom: chatRoomId },
         { notifiedAt: new Date() },
         { upsert: true },
       );

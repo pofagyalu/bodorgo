@@ -23,6 +23,7 @@ import paymentRouter from './routes/paymentRoutes.js';
 import financeRouter from './routes/financeRoutes.js';
 import membershipRouter from './routes/membershipRoutes.js';
 import pollRouter from './routes/pollRoutes.js';
+import chatRoomRouter from './routes/chatRoomRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
@@ -128,6 +129,7 @@ export default function createApp(sessionMiddleware) {
   app.use('/finance', financeRouter);
   app.use('/membership', membershipRouter);
   app.use('/polls', pollRouter);
+  app.use('/chat-rooms', chatRoomRouter);
   app.use('/health', systemRouter);
   // The API documentation (Scalar) - admins only, see apiDocs/docsRouter.js.
   app.use('/docs', docsRouter);
