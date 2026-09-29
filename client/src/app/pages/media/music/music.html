@@ -1,0 +1,175 @@
+<div class="content">
+  <!-- One line: the station's name and what it is. -->
+  <div class="heading">
+    <div class="kicker">Média · Zene</div>
+    <h1>Bódorgó FM <span class="tagline">– világjárók világzenei rádiója</span></h1>
+  </div>
+
+  <section class="station" [class.station--on]="music.isPlaying()">
+    <!-- The radio (assets/images/bodorgo_FM.jpg): while it plays it glows
+         warmly, breathes a little, and sound waves rise beside it. -->
+    <div class="radio">
+      <img src="assets/images/bodorgo_FM.jpg" alt="Bódorgó FM – a klub rádiója" />
+      <svg class="waves waves--left" viewBox="0 0 60 120" aria-hidden="true">
+        <path class="wave w1" d="M50 40 Q30 60 50 80" />
+        <path class="wave w2" d="M38 25 Q10 60 38 95" />
+        <path class="wave w3" d="M26 10 Q-10 60 26 110" />
+      </svg>
+      <svg class="waves waves--right" viewBox="0 0 60 120" aria-hidden="true">
+        <path class="wave w1" d="M10 40 Q30 60 10 80" />
+        <path class="wave w2" d="M22 25 Q50 60 22 95" />
+        <path class="wave w3" d="M34 10 Q70 60 34 110" />
+      </svg>
+    </div>
+
+    <div class="deck">
+      <!-- What's on: the artist's photo (or the album cover), title, artist -->
+      <div class="now">
+        @if (music.currentTrack(); as t) {
+          @if (music.imageSrc(t); as src) {
+            <img class="now-thumb" [src]="src" alt="" />
+          }
+          <div class="now-text">
+            <span class="on-air" [class.on-air--lit]="music.isPlaying()">Adásban</span>
+            <strong class="now-title">{{ t.title }}</strong>
+            <span class="now-artist">{{ t.artist }}</span>
+          </div>
+        } @else {
+          <div class="now-text">
+            <span class="on-air">Adásban</span>
+            <strong class="now-title">{{
+              music.loading() ? 'Hangolás…' : (music.error() ?? 'Bódorgó FM')
+            }}</strong>
+          </div>
+        }
+      </div>
+
+      <!-- The tuning dial: drag the needle to jump in the song -->
+      <div class="dial">
+        <span class="time">{{ time(music.currentTime()) }}</span>
+        <input
+          type="range"
+          min="0"
+          step="1"
+          [max]="music.duration() || 0"
+          [value]="music.currentTime()"
+          [disabled]="!music.duration()"
+          (input)="onSeek($event)"
+          aria-label="Hol tart a szám"
+        />
+        <span class="time">{{ time(music.duration()) }}</span>
+      </div>
+
+      <!-- The knobs -->
+      <div class="controls">
+        <button
+          type="button"
+          class="knob toggle"
+          [class.toggle--on]="music.shuffle()"
+          [attr.aria-pressed]="music.shuffle()"
+          title="Véletlen sorrend"
+          (click)="music.shuffle.set(!music.shuffle())"
+        >
+          <mat-icon>shuffle</mat-icon>
+        </button>
+        <button type="button" class="knob" title="Előző szám" (click)="music.previous()">
+          <mat-icon>skip_previous</mat-icon>
+        </button>
+        <button
+          type="button"
+          class="knob main"
+          [title]="music.isPlaying() ? 'Szünet' : 'Lejátszás'"
+          [disabled]="music.loading()"
+          (click)="music.toggle()"
+        >
+          <mat-icon>{{ music.isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+        </button>
+        <button type="button" class="knob" title="Leállítás" (click)="music.stop()">
+          <mat-icon>stop</mat-icon>
+        </button>
+        <button type="button" class="knob" title="Következő szám" (click)="music.next()">
+          <mat-icon>skip_next</mat-icon>
+        </button>
+        <button
+          type="button"
+          class="knob toggle"
+          [class.toggle--on]="music.repeatOne()"
+          [attr.aria-pressed]="music.repeatOne()"
+          title="Ez a szám ismétlődjön"
+          (click)="music.repeatOne.set(!music.repeatOne())"
+        >
+          <mat-icon>repeat_one</mat-icon>
+        </button>
+      </div>
+
+      <!-- Volume -->
+      <div class="volume">
+        <button
+          type="button"
+          class="knob small"
+          [title]="music.muted() ? 'Hang be' : 'Némítás'"
+          (click)="music.toggleMute()"
+        >
+          <mat-icon>{{
+            music.muted() || music.volume() === 0
+              ? 'volume_off'
+              : music.volume() < 0.5
+                ? 'volume_down'
+                : 'volume_up'
+          }}</mat-icon>
+        </button>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          [value]="music.muted() ? 0 : music.volume()"
+          (input)="onVolume($event)"
+          aria-label="Hangerő"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- The whole playlist - tap a song to play it -->
+  <section class="playlist">
+    <div class="playlist-head">
+      <h2>Műsor</h2>
+      <span class="count">{{ music.tracks().length }} szám</span>
+    </div>
+    <ol class="tracks" #list>
+      @for (t of music.tracks(); track t.id; let i = $index) {
+        <li [attr.data-index]="i">
+          <button
+            type="button"
+            class="track"
+            [class.track--current]="i === music.index()"
+            (click)="music.playAt(i)"
+          >
+            <span class="num">
+              @if (i === music.index() && music.isPlaying()) {
+                <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+              } @else {
+                {{ i + 1 }}
+              }
+            </span>
+            @if (music.imageSrc(t); as src) {
+              <img class="thumb" [src]="src" alt="" loading="lazy" />
+            } @else {
+              <span class="thumb thumb--none"><mat-icon>music_note</mat-icon></span>
+            }
+            <span class="track-text">
+              <strong>{{ t.title }}</strong>
+              <span>{{ t.artist }}</span>
+            </span>
+            <span class="len">{{ t.durationMs ? time(t.durationMs / 1000) : '' }}</span>
+          </button>
+        </li>
+      } @empty {
+        <li class="empty-note">
+          {{ music.loading() ? 'Betöltés...' : (music.error() ?? 'Üres a lista.') }}
+        </li>
+      }
+    </ol>
+  </section>
+</div>

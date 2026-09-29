@@ -89,6 +89,8 @@
     @if (!auth.isLoggedIn()) {
       <button class="login-btn" (click)="login()">Gyere bé!</button>
     } @else {
+      <!-- The background music (shared/music-player). -->
+      <app-music-player mode="pill" />
       <a
         routerLink="/klub/profilom"
         routerLinkActive="active"
@@ -106,21 +108,25 @@
     }
   </div>
 
-  <!-- Mobile only: just the avatar, no logout - that lives in the hamburger menu -->
+  <!-- Mobile only: the music's ♫ and the avatar - no logout, that lives in
+       the hamburger menu -->
   @if (auth.isLoggedIn()) {
-    <a
-      routerLink="/klub/profilom"
-      routerLinkActive="active"
-      class="user-avatar mobile-user-avatar"
-      [style.background]="avatarColor(auth.user()?.name)"
-      [title]="auth.user()?.name"
-    >
-      @if (photoUrl(); as url) {
-        <img class="user-avatar-photo" [src]="url" alt="" />
-      } @else {
-        <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
-      }
-    </a>
+    <div class="mobile-right">
+      <app-music-player mode="button" />
+      <a
+        routerLink="/klub/profilom"
+        routerLinkActive="active"
+        class="user-avatar mobile-user-avatar"
+        [style.background]="avatarColor(auth.user()?.name)"
+        [title]="auth.user()?.name"
+      >
+        @if (photoUrl(); as url) {
+          <img class="user-avatar-photo" [src]="url" alt="" />
+        } @else {
+          <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
+        }
+      </a>
+    </div>
   }
 </header>
 

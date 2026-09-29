@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { MusicPlayer } from '../../shared/music-player/music-player';
 import { filter } from 'rxjs';
 import { PollService } from '../../services/poll';
 import { AuthService } from '../../auth/auth.service';
@@ -31,7 +32,7 @@ const AVATAR_COLOR_VARS = [
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, MusicPlayer],
   templateUrl: './header.html',
   styleUrl: './header.scss',
 })

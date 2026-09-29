@@ -476,6 +476,7 @@ const T = {
   users: 'Felhasználók',
   documents: 'Dokumentumok',
   media: 'Média',
+  music: 'Zene',
   settings: 'Beállítások',
   push: 'Értesítések',
   system: 'Rendszer',
@@ -506,6 +507,10 @@ const tags = [
   [T.users, 'People, families, profile photos, usernames.'],
   [T.documents, "Klub → Dokumentumok and every tour's Extrák - one mechanism for both."],
   [T.media, "Média → Videók and Fotók - the club's own videos and photo folders on the NAS."],
+  [
+    T.music,
+    'The background music: one Jellyfin playlist, streamed through this server (the Jellyfin key never reaches the browser).',
+  ],
   [
     T.settings,
     'Klub → Beállítások: membership fees, reminders, Kotyogó photos, Barion wallets, the birthday greeting.',
@@ -2148,6 +2153,51 @@ const paths = {
       body: obj({ muted: bool() }, ['muted']),
       data: obj({ muted: bool() }),
       errors: [404],
+    }),
+  },
+
+  // --- Zene ---
+  '/music/playlist': {
+    get: op({
+      tag: T.music,
+      summary: 'The music playlist',
+      description:
+        'The Jellyfin playlist’s tracks, in order (cached for a few minutes). 503 if the music isn’t set up (JELLYFIN_* settings), 502 if Jellyfin can’t be reached.',
+      data: obj({
+        tracks: arrayOf(
+          obj({
+            id: str('The Jellyfin item id.'),
+            title: str(),
+            artist: str(),
+            durationMs: int('May be null.'),
+            streamUrl: str('Relative - `/music/stream/{itemId}` on this server.'),
+            imageUrl: str('Relative - `/music/image/{itemId}`, or null if there is no picture.'),
+          }),
+        ),
+      }),
+      errors: [502, 503],
+    }),
+  },
+  '/music/image/{itemId}': {
+    get: op({
+      tag: T.music,
+      summary: 'One track’s thumbnail',
+      description:
+        'The artist’s photo if Jellyfin has one, otherwise the album cover (or the track’s own picture) - square, resized by Jellyfin, cached a day. Only a track of the playlist.',
+      params: [path('itemId', 'A track’s id from the playlist.')],
+      response: file(['image/jpeg'], 'The picture.'),
+      errors: [404, 502],
+    }),
+  },
+  '/music/stream/{itemId}': {
+    get: op({
+      tag: T.music,
+      summary: 'One track’s audio',
+      description:
+        'Piped through from Jellyfin, the original file (no transcoding). Byte ranges (`Range`) are passed on - 206 with `Content-Range`, which Safari needs. Only a track of the playlist.',
+      params: [path('itemId', 'A track’s id from the playlist.')],
+      response: file(['audio/mpeg', 'audio/flac', 'audio/mp4'], 'The audio.'),
+      errors: [404, 502],
     }),
   },
 

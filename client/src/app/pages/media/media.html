@@ -54,6 +54,22 @@
           </a>
         }
       </div>
+
+      <a routerLink="zene" routerLinkActive="active" class="nav-item" title="Zene">
+        <mat-icon>library_music</mat-icon><span>Zene</span>
+      </a>
+      <!-- The club's radio - one playlist (Jellyfin), for now. -->
+      <div class="sub-nav">
+        <a
+          routerLink="zene/bodorgo-fm"
+          routerLinkActive="active"
+          class="sub-item"
+          title="Bódorgó FM"
+        >
+          <mat-icon [style.color]="'#f6b528'">radio</mat-icon>
+          <span class="sub-title">Bódorgó FM</span>
+        </a>
+      </div>
     </nav>
 
     <div class="side-bottom">
@@ -85,6 +101,7 @@
     <nav class="media-mobile-nav" aria-label="Média főmenü mobilon">
       <a routerLink="videok" routerLinkActive="active">Videók</a>
       <a routerLink="fotok" routerLinkActive="active">Fotók</a>
+      <a routerLink="zene" routerLinkActive="active">Zene</a>
       @if (isAdmin()) {
         <button
           type="button"

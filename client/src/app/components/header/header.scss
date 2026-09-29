@@ -406,6 +406,10 @@
 
 // Mobile-only: just the avatar (no logout - that lives in the hamburger
 // menu), pushed to the far right of the row by margin-left:auto.
+.mobile-right {
+  display: none;
+}
+
 .mobile-user-avatar {
   display: none;
   width: 2.3rem; // ~1.2x the old 1.9rem
@@ -468,9 +472,16 @@
     margin: 0;
   }
 
-  .mobile-user-avatar {
+  // The music's ♫ and the avatar, together on the right.
+  .mobile-right {
     grid-column: 3;
     justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mobile-user-avatar {
     margin: 0;
   }
 }

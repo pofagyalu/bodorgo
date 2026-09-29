@@ -1,0 +1,608 @@
+// Bódorgó FM - a retro radio station, in the colors of the radio photo:
+// warm cream paper, dark brown ink, brass and amber. The page is as wide as
+// the other Média pages (videos.scss).
+$paper: #f6ecd6;
+$paper-deep: #efdfbd;
+$ink: #4a2f1c;
+$ink-soft: #7a5a3f;
+$brass: #c9a25a;
+$brass-dark: #9c7a3c;
+$amber: #e08a2e;
+$bakelite: #5a3a22;
+$needle: #c8321f;
+
+:host {
+  display: block;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  color: $ink;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.content {
+  max-width: 1390px;
+  margin: auto;
+  padding: 2.375rem clamp(1.375rem, 4vw, 3.625rem) 4.375rem;
+  display: grid;
+  gap: 1.125rem;
+}
+
+.kicker {
+  color: $brass-dark;
+  font-size: 0.6875rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+// "Bódorgó FM – világjárók világzenei rádiója", on one line (wraps only when
+// it must).
+.heading h1 {
+  margin: 0.25rem 0 0;
+  font-family: 'Marhey', sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 400;
+  line-height: 1.15;
+  color: $ink;
+}
+
+.tagline {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.55em;
+  font-style: italic;
+  color: $ink-soft;
+  white-space: nowrap;
+}
+
+// A paper panel - cream, with a thin brass edge.
+@mixin paper {
+  background: radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.55), transparent 55%), $paper;
+  border: 1px solid $brass;
+  border-radius: 1.0625rem;
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 250, 238, 0.7),
+    0 5px 19px rgba(74, 47, 28, 0.12);
+}
+
+// --- The station: the radio photo on the left, the deck beside it ---
+
+.station {
+  @include paper;
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) 1fr;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  padding: 1.375rem clamp(1.375rem, 3vw, 2.25rem);
+}
+
+.radio {
+  position: relative;
+
+  img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 1rem;
+    border: 3px solid $paper-deep;
+    box-shadow: 0 0.75rem 1.75rem rgba(80, 50, 20, 0.28);
+    transition: box-shadow 0.6s ease;
+  }
+}
+
+.station--on .radio img {
+  animation: breathe 3.2s ease-in-out infinite;
+  box-shadow:
+    0 0.75rem 1.75rem rgba(80, 50, 20, 0.28),
+    0 0 2.75rem rgba(246, 181, 40, 0.5);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.012);
+  }
+}
+
+// Sound waves on both sides - only while playing.
+.waves {
+  position: absolute;
+  top: 36%;
+  width: 2.5rem;
+  height: 5rem;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+
+  path {
+    fill: none;
+    stroke: $amber;
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+}
+
+.waves--left {
+  left: -2.25rem;
+}
+
+.waves--right {
+  right: -2.25rem;
+}
+
+.station--on .waves {
+  opacity: 1;
+
+  .wave {
+    animation: wave 1.5s ease-out infinite;
+  }
+
+  .w2 {
+    animation-delay: 0.25s;
+  }
+
+  .w3 {
+    animation-delay: 0.5s;
+  }
+}
+
+@keyframes wave {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.deck {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+// What's on.
+.now {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 4.5rem;
+}
+
+.now-thumb {
+  width: 4.5rem;
+  height: 4.5rem;
+  flex: none;
+  object-fit: cover;
+  border-radius: 0.625rem;
+  border: 2px solid $brass;
+  filter: sepia(0.25);
+}
+
+.now-text {
+  display: grid;
+  min-width: 0;
+
+  .now-title,
+  .now-artist {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+// The "on air" lamp - lit red while playing.
+.on-air {
+  justify-self: start;
+  margin-bottom: 0.25rem;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid $brass-dark;
+  border-radius: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: $ink-soft;
+  background: $paper-deep;
+}
+
+.on-air--lit {
+  border-color: $needle;
+  background: $needle;
+  color: #fff4e0;
+  box-shadow: 0 0 0.75rem rgba(200, 50, 31, 0.55);
+}
+
+.now-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+  color: $ink;
+}
+
+.now-artist {
+  font-style: italic;
+  color: $ink-soft;
+}
+
+// The tuning dial: a scale of tick marks, the red needle as the thumb.
+.dial {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.time {
+  min-width: 2.75rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: $ink-soft;
+  text-align: center;
+}
+
+.dial input[type='range'] {
+  flex: 1;
+  height: 1.75rem;
+  margin: 0;
+  appearance: none;
+  background:
+    repeating-linear-gradient(90deg, $brass-dark 0 1px, transparent 1px 10%),
+    linear-gradient($paper-deep, $paper-deep);
+  background-size:
+    100% 40%,
+    100% 100%;
+  background-position:
+    0 50%,
+    0 0;
+  background-repeat: no-repeat;
+  border: 1px solid $brass;
+  border-radius: 0.375rem;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 4px;
+    height: 1.75rem;
+    border-radius: 2px;
+    background: $needle;
+    box-shadow: 0 0 0.375rem rgba(200, 50, 31, 0.6);
+  }
+
+  &::-moz-range-thumb {
+    width: 4px;
+    height: 1.75rem;
+    border: 0;
+    border-radius: 2px;
+    background: $needle;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+}
+
+// The knobs: brass buttons, the big one dark bakelite.
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.knob {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid $brass-dark;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f3dca3, $brass 55%, $brass-dark);
+  color: $ink;
+  box-shadow:
+    inset 0 -2px 3px rgba(74, 47, 28, 0.35),
+    0 2px 5px rgba(74, 47, 28, 0.25);
+  transition:
+    transform 0.1s,
+    filter 0.15s;
+
+  mat-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 1.5rem;
+  }
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.knob.main {
+  width: 4rem;
+  height: 4rem;
+  border-color: #2e1d10;
+  background: radial-gradient(circle at 35% 30%, #8a5b36, $bakelite 60%, #2e1d10);
+  color: #fbeac4;
+
+  mat-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 2.25rem;
+  }
+}
+
+// Shuffle / repeat one: dim when off, glowing amber when on.
+.toggle {
+  opacity: 0.7;
+}
+
+.toggle--on {
+  opacity: 1;
+  background: radial-gradient(circle at 35% 30%, #ffd98a, $amber 60%, #a85f18);
+  box-shadow:
+    inset 0 -2px 3px rgba(74, 47, 28, 0.35),
+    0 0 0.625rem rgba(224, 138, 46, 0.6);
+}
+
+.knob.small {
+  width: 2.25rem;
+  height: 2.25rem;
+
+  mat-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 1.25rem;
+  }
+}
+
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(16rem, 100%);
+
+  input[type='range'] {
+    flex: 1;
+    accent-color: $amber;
+    cursor: pointer;
+  }
+}
+
+// --- The playlist ("Műsor") ---
+
+.playlist {
+  @include paper;
+  padding: 1.125rem clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.playlist-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.625rem;
+
+  h2 {
+    margin: 0;
+    font-family: 'Marhey', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+  }
+}
+
+.count {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: $ink-soft;
+}
+
+.tracks {
+  max-height: 28rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px dashed $brass;
+}
+
+.track {
+  display: grid;
+  grid-template-columns: 2rem 2.75rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.4375rem 0.625rem;
+  border: 0;
+  border-bottom: 1px dashed rgba(201, 162, 90, 0.55);
+  background: none;
+  text-align: left;
+  color: inherit;
+
+  &:hover {
+    background: rgba(255, 250, 238, 0.7);
+  }
+}
+
+.track--current {
+  background: linear-gradient(90deg, rgba(224, 138, 46, 0.22), rgba(224, 138, 46, 0.06));
+
+  strong {
+    color: #9a4d0c;
+  }
+}
+
+.num {
+  display: grid;
+  place-items: center;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.85rem;
+  color: $ink-soft;
+  font-variant-numeric: tabular-nums;
+}
+
+.thumb {
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: cover;
+  border-radius: 0.4375rem;
+  border: 1px solid $brass;
+  filter: sepia(0.25);
+}
+
+.thumb--none {
+  display: grid;
+  place-items: center;
+  background: $paper-deep;
+  color: $brass-dark;
+}
+
+.track-text {
+  display: grid;
+  min-width: 0;
+
+  strong,
+  span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  strong {
+    font-size: 0.925rem;
+    font-weight: 650;
+  }
+
+  span {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: $ink-soft;
+  }
+}
+
+.len {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.8rem;
+  color: $ink-soft;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty-note {
+  padding: 1rem 0.625rem;
+  color: $ink-soft;
+}
+
+// The playing song's bouncing bars.
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 0.875rem;
+
+  i {
+    display: block;
+    width: 3px;
+    height: 100%;
+    border-radius: 1px;
+    background: $amber;
+    transform-origin: bottom;
+    animation: eq 0.9s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: -0.3s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: -0.6s;
+    }
+  }
+}
+
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+// Narrower: the photo above the deck, smaller.
+@media (max-width: 720px) {
+  .station {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .radio {
+    width: min(14rem, 70%);
+  }
+
+  .deck {
+    width: 100%;
+  }
+
+  .controls {
+    justify-content: center;
+  }
+
+  .volume {
+    justify-self: center;
+  }
+
+  .waves--left {
+    left: -1.75rem;
+  }
+
+  .waves--right {
+    right: -1.75rem;
+  }
+}
+
+@media (max-width: 580px) {
+  .knob {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .knob.main {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  .tagline {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station--on .radio img,
+  .station--on .waves .wave,
+  .eq i {
+    animation: none;
+  }
+}
