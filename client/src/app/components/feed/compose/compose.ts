@@ -34,6 +34,8 @@ export class Compose {
 
   // The tour's attendees with a username (not me) - typing "@" suggests them.
   mentionables = input<Mentionable[]>([]);
+  // Polls belong to a tour - the general room has no 📊 button.
+  pollsEnabled = input(true);
 
   private messageInput = viewChild<ElementRef<HTMLTextAreaElement>>('messageInput');
 
@@ -102,8 +104,14 @@ export class Compose {
       this.text();
       const el = this.messageInput()?.nativeElement;
       if (el) {
+        // scrollHeight leaves out the border, and the height (border-box)
+        // includes it - without adding it back the text is 2px too tall
+        // for the box and a needless scrollbar appears. A scrollbar only
+        // once it's reached its max-height (compose.scss).
         el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
+        const border = el.offsetHeight - el.clientHeight;
+        el.style.height = `${el.scrollHeight + border}px`;
+        el.style.overflowY = el.scrollHeight + border > el.offsetHeight ? 'auto' : 'hidden';
       }
     });
   }

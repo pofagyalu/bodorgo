@@ -20,7 +20,7 @@
     min-width: 0;
     width: 100%;
     resize: none;
-    overflow-y: auto;
+    overflow-y: hidden; // compose.ts turns it on past max-height
     max-height: 120px; // ~5 lines before it scrolls internally instead of growing forever
     padding: 10px 14px;
     border-radius: 20px;
