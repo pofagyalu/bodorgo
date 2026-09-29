@@ -37,7 +37,11 @@
       <section class="panel video-group">
         <div class="group-head">
           @if (c.hasCover) {
-            <img class="group-cover" [src]="categoryCoverUrl(c)" alt="" />
+            <!-- Hovered: the whole image, bigger, in its own proportions. -->
+            <span class="group-cover-wrap" (mouseenter)="placeCoverPreview($event)">
+              <img class="group-cover" [src]="categoryCoverUrl(c)" alt="" />
+              <img class="group-cover-preview" [src]="categoryCoverUrl(c)" alt="" />
+            </span>
           } @else {
             <div class="group-cover group-cover--empty"><mat-icon>movie</mat-icon></div>
           }

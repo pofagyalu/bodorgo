@@ -414,6 +414,12 @@ export interface SignUpResponse {
   };
 }
 
+// The Kotyogó's background - version changes with the image (the week, or
+// an admin's "Másik háttér").
+export interface ChatBackground {
+  version: string;
+}
+
 // width/height are what PhotoSwipe needs upfront for every slide to size
 // and zoom correctly; size (bytes) drives the "download all" zip button's
 // total-size tooltip. restricted (admin-only, set by hand per photo) means
@@ -804,6 +810,25 @@ export class TourService {
 
   chatImageThumbUrl(tourId: string, postId: string): string {
     return `${this.chatImageUrl(tourId, postId)}/thumb`;
+  }
+
+  // The Kotyogó's background: this week's pale album photo, or null (see
+  // server chat/chatBackground.js); an admin can pick another.
+  getChatBackground(tourId: string) {
+    return this.http.get<{ data: { background: ChatBackground | null } }>(
+      `${this.apiUrl}/${tourId}/chat/background`,
+    );
+  }
+
+  nextChatBackground(tourId: string) {
+    return this.http.post<{ data: { background: ChatBackground } }>(
+      `${this.apiUrl}/${tourId}/chat/background/next`,
+      {},
+    );
+  }
+
+  chatBackgroundUrl(tourId: string, background: ChatBackground): string {
+    return `${this.apiUrl}/${tourId}/chat/background/image?v=${encodeURIComponent(background.version)}`;
   }
 
   tourImageThumbUrl(tourId: string, filename: string): string {

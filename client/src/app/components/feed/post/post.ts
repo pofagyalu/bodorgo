@@ -105,13 +105,29 @@ export class Post {
   @Input() imageThumbUrl: string | null = null;
   @Input() imageFullUrl: string | null = null;
 
+  // A photo message is the photo itself, rounded - no bubble around it; its
+  // text (if any) goes in a band of the bubble's color under it.
+  get hasPhoto(): boolean {
+    return !!this.image && !this.image.expired && !this.deleted && !this.pollId && !this.editing();
+  }
+
+  // The photo's shown width: at most 260 px wide or 320 px tall, never
+  // enlarged - the band under it is exactly as wide (the text wraps).
+  get photoWidth(): number {
+    const { width, height } = this.image!;
+    return Math.round(Math.min(260, width, height ? (width * 320) / height : 260));
+  }
+
   // Tapping the photo opens it big - PhotoSwipe, loaded only then.
   async openPhoto(event: Event) {
     event.stopPropagation();
     if (!this.image || !this.imageFullUrl) return;
     const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
     const lightbox = new PhotoSwipeLightbox({ pswpModule: () => import('photoswipe') });
-    lightbox.on('destroy', () => lightbox.destroy());
+    // Cleaned up once it has closed - not inside its own 'destroy' event:
+    // that would destroy it again, endlessly, and leave its invisible layer
+    // over the page (no clicks got through).
+    lightbox.on('destroy', () => setTimeout(() => lightbox.destroy()));
     lightbox.init();
     lightbox.loadAndOpen(0, [
       { src: this.imageFullUrl, width: this.image.width, height: this.image.height, alt: '' },

@@ -1062,6 +1062,38 @@ const paths = {
       errors: [404],
     }),
   },
+  '/tours/{tourId}/chat/background': {
+    get: op({
+      tag: T.chat,
+      summary: "The Kotyogó's background",
+      description:
+        "This week's landscape photo from the tour's album (never a restricted one), made pale (85% white) - changes every ISO week by itself. `null` if the album has no landscape photo. Made on the first request of the week.",
+      params: [tourIdT],
+      data: obj({ background: obj({ version: str('e.g. `2026-W40.1a2b3c4d`.') }) }),
+      errors: [404],
+    }),
+  },
+  '/tours/{tourId}/chat/background/image': {
+    get: op({
+      tag: T.chat,
+      summary: "The Kotyogó's background image",
+      description: 'Cached by browsers for a year - the `v` in the address changes with it.',
+      params: [tourIdT, query('v', 'The `version` from the call above.')],
+      response: file(['image/webp'], 'WebP, at most 1920 px wide.'),
+      errors: [404],
+    }),
+  },
+  '/tours/{tourId}/chat/background/next': {
+    post: op({
+      tag: T.chat,
+      role: 'admin',
+      summary: 'Another background ("Másik háttér")',
+      description: 'Another landscape photo from the album, for the rest of the week.',
+      params: [tourIdT],
+      data: obj({ background: obj({ version: str() }) }),
+      errors: [404, 409],
+    }),
+  },
 
   // --- Voks ---
   '/polls': {

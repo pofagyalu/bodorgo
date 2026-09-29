@@ -91,6 +91,40 @@
   }
 }
 
+// A photo message: no padding around the photo - it fills the card
+// (rounded like it), and the text, if any, is a band of the bubble's color
+// under it. Just a photo: no bubble at all.
+.post-card--photo {
+  max-width: 100%;
+  padding: 0;
+  border-radius: 20px 20px 12px 12px; // rounder on top
+
+  .post-photo {
+    margin: 0;
+
+    img {
+      width: 100%;
+      max-width: none;
+      max-height: none;
+      border-radius: 20px 20px 0 0;
+    }
+  }
+
+  .text {
+    padding: 6px 12px 8px;
+  }
+}
+
+.post-card--photo-only {
+  background: none !important;
+  box-shadow: none;
+
+  .post-photo img {
+    border-radius: 20px 20px 12px 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
 // A photo the size quota removed.
 .photo-expired {
   display: flex;

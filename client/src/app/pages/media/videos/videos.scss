@@ -139,6 +139,49 @@ button {
   background: #edf4f1;
 }
 
+// The category image, bigger and uncropped, to the left of it while the
+// mouse is over it (placed by videos.ts's placeCoverPreview) - only where
+// there is a mouse (a tap on a phone would just leave it open).
+.group-cover-wrap {
+  position: relative;
+  flex: none;
+  display: flex;
+}
+
+.group-cover-preview {
+  display: none;
+}
+
+@media (hover: hover) {
+  .group-cover-wrap:hover .group-cover-preview {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: calc(100% + 10px); // left of the small image
+    z-index: 20;
+    width: auto;
+    height: auto;
+    max-width: min(320px, 80vw);
+    max-height: 320px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(20, 42, 60, 0.28);
+    pointer-events: none;
+  }
+
+  // Near the bottom of the screen: upward, from the small image's bottom.
+  .group-cover-wrap--up:hover .group-cover-preview {
+    top: auto;
+    bottom: 0;
+  }
+
+  // No room on the left (a narrow window): to its right instead.
+  .group-cover-wrap--right:hover .group-cover-preview {
+    right: auto;
+    left: calc(100% + 10px);
+  }
+}
+
 .group-cover--empty {
   display: grid;
   place-items: center;

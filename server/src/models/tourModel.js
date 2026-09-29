@@ -363,6 +363,12 @@ const tourSchema = new Schema(
       ],
       select: false,
     },
+    // The Kotyogó's background this week (see chat/chatBackground.js): the
+    // album photo its file was made from, and the ISO week it's for.
+    chatBackground: {
+      type: { _id: false, filename: String, week: String },
+      select: false,
+    },
     secretTour: {
       type: Boolean,
       default: false,

@@ -15,6 +15,13 @@ interface Playing {
 // Média → Videók: every category (/media/videok), or just one
 // (/media/videok/<key>) as picked in the Média sidebar. The data itself is
 // loaded once by the Média shell (see MediaService).
+// The hover preview's largest side (px), its gap from the small image, and
+// the gap it keeps from the window's edge - keep PREVIEW_MAX and
+// PREVIEW_GAP in step with videos.scss.
+const PREVIEW_MAX = 320;
+const PREVIEW_GAP = 10;
+const EDGE_GAP = 8;
+
 @Component({
   selector: 'app-media-videos',
   imports: [MatIconModule, RouterLink, RouterLinkActive, VideoCard, VideoPlayer],
@@ -49,6 +56,30 @@ export class Videos {
 
   categoryCoverUrl(category: MediaVideoCategory): string {
     return this.media.categoryCoverUrl(category.key);
+  }
+
+  // The hovered category image shows to the left of the small one (to its
+  // right only if it wouldn't fit on the screen there), opening downward -
+  // or upward, if it wouldn't fit below it (hovering near the bottom). Its
+  // size comes from the image's own proportions, within the
+  // .group-cover-preview limits (videos.scss).
+  placeCoverPreview(event: MouseEvent) {
+    const wrap = event.currentTarget as HTMLElement;
+    const img = wrap.querySelector<HTMLImageElement>('.group-cover-preview');
+    let width = PREVIEW_MAX;
+    let height = PREVIEW_MAX;
+    if (img?.naturalWidth) {
+      const maxWidth = Math.min(PREVIEW_MAX, window.innerWidth * 0.8);
+      const scale = Math.min(1, maxWidth / img.naturalWidth, PREVIEW_MAX / img.naturalHeight);
+      width = img.naturalWidth * scale;
+      height = img.naturalHeight * scale;
+    }
+    const rect = wrap.getBoundingClientRect();
+    const roomBelow = window.innerHeight - rect.top;
+    const up = height + EDGE_GAP > roomBelow && rect.bottom > roomBelow;
+    const right = rect.left - PREVIEW_GAP - width < EDGE_GAP;
+    wrap.classList.toggle('group-cover-wrap--up', up);
+    wrap.classList.toggle('group-cover-wrap--right', right);
   }
 
   videoUrl(p: Playing): string {

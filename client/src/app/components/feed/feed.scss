@@ -16,6 +16,46 @@
   gap: 10px; // compact - the date only shows on hover, floating over this gap
 }
 
+// This week's pale album photo behind the messages (see feed.ts) - it
+// stays put while they scroll over it (a scrolling box's own background
+// doesn't move with its content).
+.feed-container--photo {
+  background-color: #fff;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+// "Másik háttér" (admins) - left of the mute bell (chat.scss's .mute-btn),
+// in the same look; positioned in the same chat pane.
+.background-btn {
+  position: absolute;
+  top: 10px;
+  right: 56px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #dfe8e4;
+  border-radius: 50%;
+  background: #ffffffe6;
+  color: #1a796c;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #0000000f;
+
+  &:disabled {
+    cursor: progress;
+    opacity: 0.6;
+  }
+
+  mat-icon {
+    font-size: 19px;
+    width: 19px;
+    height: 19px;
+  }
+}
+
 // A new day in the chat: its name, small, in the middle of the flow.
 .day-break {
   align-self: center;
