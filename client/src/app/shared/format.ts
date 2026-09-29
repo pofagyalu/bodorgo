@@ -12,16 +12,17 @@ export function formatForint(amount: number | null): string {
   return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
-// "kb. 2 óra 45 perc" / "kb. 45 perc" / "kb. 2 óra" - "kb." (approx.)
-// since this is a routing estimate (see distance.js server-side), not a
-// promise - traffic/weather/actual driving style all vary. Mirrors
-// server/src/utils/distance.js's formatDrivingDuration (used in the PDF)
-// so the wording matches wherever it's shown.
+// "kb. 2ó 45p" / "kb. 45p" / "kb. 2ó" - short, it's in brackets
+// after the distance on the tour page. "kb." (approx.) since this is a
+// routing estimate (see distance.js server-side), not a promise -
+// traffic/weather/actual driving style all vary. The PDF
+// (server/src/utils/distance.js's formatDrivingDuration) writes it out
+// in full ("óra"/"perc").
 export function formatDrivingDuration(minutes: number | null | undefined): string {
   if (minutes == null) return '';
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  if (hours === 0) return `kb. ${mins} perc`;
-  if (mins === 0) return `kb. ${hours} óra`;
-  return `kb. ${hours} óra ${mins} perc`;
+  if (hours === 0) return `kb. ${mins}p`;
+  if (mins === 0) return `kb. ${hours}ó`;
+  return `kb. ${hours}ó ${mins}p`;
 }
