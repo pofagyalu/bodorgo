@@ -100,12 +100,17 @@ export const routes: Routes = [
         title: 'Média – Fotók',
         loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
       },
-      // Zene: one playlist for now - Bódorgó FM (pages/media/music).
+      // Zene: the playlists - Bódorgó FM and Buli (pages/media/music).
       { path: 'zene', pathMatch: 'full', redirectTo: 'zene/bodorgo-fm' },
       {
         path: 'zene/bodorgo-fm',
         title: 'Média – Bódorgó FM',
         loadComponent: () => import('./pages/media/music/music').then((m) => m.Music),
+      },
+      {
+        path: 'zene/buli',
+        title: 'Média – Buli',
+        loadComponent: () => import('./pages/media/music/party').then((m) => m.Party),
       },
     ],
   },

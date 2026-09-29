@@ -58,7 +58,7 @@
       <a routerLink="zene" routerLinkActive="active" class="nav-item" title="Zene">
         <mat-icon>library_music</mat-icon><span>Zene</span>
       </a>
-      <!-- The club's radio - one playlist (Jellyfin), for now. -->
+      <!-- The playlists (Jellyfin): the club radio and the party list. -->
       <div class="sub-nav">
         <a
           routerLink="zene/bodorgo-fm"
@@ -68,6 +68,10 @@
         >
           <mat-icon [style.color]="'#f6b528'">radio</mat-icon>
           <span class="sub-title">Bódorgó FM</span>
+        </a>
+        <a routerLink="zene/buli" routerLinkActive="active" class="sub-item" title="Buli">
+          <mat-icon [style.color]="'#ff2e93'">celebration</mat-icon>
+          <span class="sub-title">Buli</span>
         </a>
       </div>
     </nav>

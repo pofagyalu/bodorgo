@@ -1,24 +1,56 @@
 import { Readable } from 'stream';
 import AppError from '../utils/appError.js';
 import logger from '../logger.js';
-import { fetchTrackAudio, fetchTrackImage, playlistTracks } from '../music/jellyfin.js';
+import {
+  fetchTrackAudio,
+  fetchTrackImage,
+  playlistByKey,
+  playlistTracks,
+} from '../music/jellyfin.js';
 
-// The background music player (see music/jellyfin.js) - for anyone logged
-// in. The browser gets the track list and the audio from here; Jellyfin
-// and its key stay on the server.
+// The music (see music/jellyfin.js): the playlists' tracks, audio and
+// pictures, by the playlist's name (/music/bodorgo-fm/..., /music/buli/...).
+// Jellyfin and its key stay on the server.
 
-// GET /music/playlist - the playlist's tracks, in order.
+// Every /music/:key route: the playlist must exist and be set up, and a
+// members-only one (Buli) isn't for guests.
+export const playlistAccess = (req, res, next) => {
+  const playlist = playlistByKey(req.params.key);
+  if (playlist.membersOnly && req.user.role === 'guest') {
+    throw new AppError('Ez a lejátszási lista csak klubtagoknak szól.', 403);
+  }
+  next();
+};
+
+// imageFrom (which Jellyfin item the picture is) stays on the server.
+const forClient = (tracks) => tracks.map(({ imageFrom: _imageFrom, ...track }) => track);
+
+// GET /music/:key/playlist - the tracks, in order.
 export const getPlaylist = async (req, res) => {
-  // imageFrom (which Jellyfin item the picture is) stays on the server.
-  const tracks = (await playlistTracks()).map(({ imageFrom, ...track }) => track);
+  const tracks = forClient(await playlistTracks(req.params.key));
+  // The browser may keep it a while too (the lists rarely change).
+  res.setHeader('Cache-Control', 'private, max-age=1800');
   res.status(200).json({ status: 'success', results: tracks.length, data: { tracks } });
 };
 
-// GET /music/image/:itemId - a song's thumbnail (the artist's photo, or the
-// album cover - see music/jellyfin.js). Only a song of the playlist.
+// POST /music/:key/refresh (admin) - reloaded from Jellyfin now, after a
+// change there (otherwise every 12 hours).
+export const refreshPlaylist = async (req, res) => {
+  const tracks = forClient(await playlistTracks(req.params.key, { fresh: true }));
+  res.status(200).json({ status: 'success', results: tracks.length, data: { tracks } });
+};
+
+async function trackOf(req) {
+  const track = (await playlistTracks(req.params.key)).find((t) => t.id === req.params.itemId);
+  if (!track) throw new AppError('Nincs ilyen zeneszám.', 404);
+  return track;
+}
+
+// GET /music/:key/image/:itemId - a song's thumbnail (the artist's photo,
+// or the album cover). Only a song of that playlist.
 export const getTrackImage = async (req, res) => {
-  const track = (await playlistTracks()).find((t) => t.id === req.params.itemId);
-  if (!track?.imageFrom) throw new AppError('Nincs kép ehhez a számhoz.', 404);
+  const track = await trackOf(req);
+  if (!track.imageFrom) throw new AppError('Nincs kép ehhez a számhoz.', 404);
   const upstream = await fetchTrackImage(track.imageFrom);
   res.setHeader('Content-Type', upstream.headers.get('content-type') ?? 'image/jpeg');
   res.setHeader('Cache-Control', 'private, max-age=86400');
@@ -29,12 +61,11 @@ export const getTrackImage = async (req, res) => {
 // and seek (Range → 206 + Content-Range).
 const PASSED_HEADERS = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
 
-// GET /music/stream/:itemId - one track's audio, piped through. Only a
-// track of the playlist - not any Jellyfin item by its id.
+// GET /music/:key/stream/:itemId - one song's audio, piped through. Only a
+// song of that playlist - not any Jellyfin item by its id.
 export const streamTrack = async (req, res) => {
   const { itemId } = req.params;
-  const tracks = await playlistTracks();
-  if (!tracks.some((t) => t.id === itemId)) throw new AppError('Nincs ilyen zeneszám.', 404);
+  await trackOf(req);
 
   // The listener skipped or left: stop fetching from Jellyfin too.
   const abort = new AbortController();

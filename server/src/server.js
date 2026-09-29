@@ -8,6 +8,7 @@ import createSessionMiddleware from './session.js';
 import registerChatHandlers from './chat/chatSocket.js';
 import logger from './logger.js';
 import { checkPollReminders } from './chat/pollReminders.js';
+import { warmUpMusic } from './music/jellyfin.js';
 import { ensureDocumentPreviews } from './utils/documentPreviews.js';
 import {
   checkMembershipReminders,
@@ -48,6 +49,9 @@ mongoose
     server.listen(PORT, () => {
       logger.info(`App is listening on ${PORT} (Node ${process.version})`);
     });
+
+    // Bódorgó FM: the playlist loaded now, so nobody waits for it later.
+    warmUpMusic();
 
     // Dokumentumok: a preview for any document still without one (see
     // utils/documentPreviews.js) - in the background, every server

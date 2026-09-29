@@ -35,8 +35,8 @@
       <button
         type="button"
         class="skip"
-        title="Következő szám"
-        aria-label="Következő szám"
+        title="Következő dal"
+        aria-label="Következő dal"
         (click)="music.next()"
       >
         <mat-icon>skip_next</mat-icon>
@@ -78,12 +78,12 @@
           <strong>{{ t.title }}</strong>
           <span>{{ t.artist }}</span>
         } @else {
-          <strong>{{ music.error() ?? 'Bódorgó FM' }}</strong>
+          <strong>{{ music.error() ?? listName() }}</strong>
           <span>Nyomd meg a ▶-t</span>
         }
       </div>
       @if (music.currentTrack()) {
-        <button type="button" class="skip" aria-label="Következő szám" (click)="music.next()">
+        <button type="button" class="skip" aria-label="Következő dal" (click)="music.next()">
           <mat-icon>skip_next</mat-icon>
         </button>
       }
