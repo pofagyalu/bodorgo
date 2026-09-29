@@ -283,8 +283,18 @@ export class TourDetails implements OnDestroy {
   allAttendees = computed<AttendeeListPayment[]>(() => {
     if (!this.tour()?.reservations) return [];
     const programCosts = this.optionalProgramsCostByUserId();
+    // The programs' prices are in HUF; on a EUR tour the list shows them in
+    // EUR like the rest (the tour's rate, rounded up to whole euros).
+    const t = this.tour();
+    const inTourCurrency = (huf: number) =>
+      t?.accommodationCurrency === 'EUR' && t.eurHufExchangeRate
+        ? Math.ceil(huf / t.eurHufExchangeRate)
+        : huf;
     return [...this.attendeePayments()]
-      .map((p) => ({ ...p, optionalProgramsCost: (p.userId && programCosts.get(p.userId)) || 0 }))
+      .map((p) => ({
+        ...p,
+        optionalProgramsCost: inTourCurrency((p.userId && programCosts.get(p.userId)) || 0),
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, 'hu'));
   });
 

@@ -207,19 +207,53 @@ describe('computeAttendeePayments - per person and unconfigured', () => {
     expect(totals).toMatchObject({ totalPrice: 33000, advance: 6600 });
   });
 
-  it('converts a EUR price to HUF with the tour exchange rate', () => {
+  it('a EUR tour: prices in whole euros (rounded up), only the advance in HUF', () => {
+    const tour = {
+      startDate: '2024-01-01',
+      duration: 4,
+      accommodationPricePerNight: 100, // the house, per night: 300 € in all
+      accommodationCurrency: 'EUR',
+      eurHufExchangeRate: 395.5,
+      advancePaymentPercentage: 25,
+      clubSubsidyAmount: 30000, // not given on a EUR tour
+    };
+    const { attendeePayments, totals } = computeAttendeePayments(tour, [
+      reservation('r1', [
+        { name: 'A', nights: 3, user: { role: 'member' } },
+        { name: 'B', nights: 3, user: { role: 'member' } },
+        { name: 'C', nights: 1, user: { role: 'guest' } },
+      ]),
+    ]);
+    const p = byName(attendeePayments);
+    // 300 € / 7 person-nights: A 128.57 -> 129 €, advance 25% -> 33 €.
+    expect(p.A).toMatchObject({
+      totalPrice: 129,
+      advanceInCurrency: 33,
+      advance: Math.ceil(33 * 395.5), // 13052 Ft
+      rest: 96,
+    });
+    expect(p.C).toMatchObject({ totalPrice: 43, advanceInCurrency: 11, advance: 4351, rest: 32 });
+    expect(totals).toMatchObject({
+      totalPrice: 300,
+      advanceInCurrency: 75,
+      advance: Math.ceil(75 * 395.5),
+      rest: 225, // no subsidy taken off
+      // The tour card's Ft/fő/éj stays in HUF.
+      averagePricePerPersonPerNight: Math.ceil((300 / 7) * 395.5),
+    });
+  });
+
+  it('a HUF tour: the advance is the same in both fields', () => {
     const tour = {
       startDate: '2024-01-01',
       duration: 2,
-      accommodationPricePerNight: 100,
-      accommodationCurrency: 'EUR',
-      eurHufExchangeRate: 400,
+      accommodationPricePerNight: 10000,
       advancePaymentPercentage: 10,
     };
     const [row] = computeAttendeePayments(tour, [
-      reservation('r1', [{ name: 'E', nights: 1, user: { role: 'member' } }]),
+      reservation('r1', [{ name: 'H', nights: 1, user: { role: 'member' } }]),
     ]).attendeePayments;
-    expect(row.totalPrice).toBe(40000);
+    expect(row).toMatchObject({ totalPrice: 10000, advance: 1000, advanceInCurrency: 1000 });
   });
 
   it('returns rows without amounts while pricing is not set up', () => {

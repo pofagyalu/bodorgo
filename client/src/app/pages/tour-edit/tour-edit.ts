@@ -128,8 +128,17 @@ export class TourEdit implements OnDestroy {
   private static readonly CLUB_FOUNDING_DATE = new Date('2019-01-01T00:00:00.000Z');
 
   get subsidyAllowed(): boolean {
+    // A tour quoted in EUR gets no club subsidy (see computeAttendeePayments).
+    if (this.form.accommodationCurrency === 'EUR') return false;
     if (!this.form.startDateLocal) return true; // no date chosen yet - don't block the field prematurely
     return new Date(this.form.startDateLocal) >= TourEdit.CLUB_FOUNDING_DATE;
+  }
+
+  // Why the subsidy field is off.
+  get subsidyNote(): string {
+    return this.form.accommodationCurrency === 'EUR'
+      ? 'EUR-ban fizetett táborhoz a klub nem ad hozzájárulást.'
+      : 'A klub 2019-ben alakult, ezért korábbi táborokhoz nem rendelhető hozzájárulás.';
   }
 
   constructor() {

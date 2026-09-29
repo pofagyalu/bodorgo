@@ -5,7 +5,14 @@
       <th>Éjszakák</th>
       @if (hasPricing()) {
         <th>Teljes ár</th>
-        <th>Előleg</th>
+        <th>
+          <!-- The advance's % as a small raised label: no wider column, no
+               taller row. -->
+          Előleg
+          @if (advancePercent !== null) {
+            <sup class="th-pct">{{ advancePercent }}%</sup>
+          }
+        </th>
         <th>Fizetendő</th>
       }
       @if (hasOptionalPrograms) {
@@ -52,14 +59,16 @@
           }
 
           @if (hasPricing()) {
-            <td>{{ formatForint(a.totalPrice) }} Ft</td>
-            <td>{{ formatForint(a.advance) }} Ft</td>
-            <td>{{ formatForint(a.rest) }} Ft</td>
+            <td>{{ money(a.totalPrice) }}</td>
+            <td [attr.title]="advanceTitle(a.advanceInCurrency)">
+              {{ formatForint(a.advance) }} Ft
+            </td>
+            <td>{{ money(a.rest) }}</td>
           }
           @if (hasOptionalPrograms) {
             <td class="optional-col">
               @if (a.optionalProgramsCost > 0) {
-                {{ formatForint(a.optionalProgramsCost) }} Ft
+                {{ money(a.optionalProgramsCost) }}
               }
             </td>
           }
@@ -172,22 +181,24 @@
           </td>
           @if (hasPricing()) {
             <td class="family-value-cell">
-              <span class="family-value"
-                >{{ formatForint(familySubtotal(group).totalPrice) }} Ft</span
+              <span class="family-value">{{ money(familySubtotal(group).totalPrice) }}</span>
+            </td>
+            <td class="family-value-cell">
+              <span
+                class="family-value"
+                [attr.title]="advanceTitle(familySubtotal(group).advanceInCurrency)"
+                >{{ formatForint(familySubtotal(group).advance) }} Ft</span
               >
             </td>
             <td class="family-value-cell">
-              <span class="family-value">{{ formatForint(familySubtotal(group).advance) }} Ft</span>
-            </td>
-            <td class="family-value-cell">
-              <span class="family-value">{{ formatForint(familySubtotal(group).rest) }} Ft</span>
+              <span class="family-value">{{ money(familySubtotal(group).rest) }}</span>
             </td>
           }
           @if (hasOptionalPrograms) {
             <td class="optional-col family-value-cell">
-              <span class="family-value"
-                >{{ formatForint(familySubtotal(group).optionalProgramsCost) }} Ft</span
-              >
+              <span class="family-value">{{
+                money(familySubtotal(group).optionalProgramsCost)
+              }}</span>
             </td>
           }
           @if (hasPricing()) {
@@ -212,11 +223,13 @@
       <tr class="totals-row">
         <td>Összesen</td>
         <td></td>
-        <td>{{ formatForint(totals.totalPrice) }} Ft</td>
-        <td>{{ formatForint(totals.advance) }} Ft</td>
-        <td>{{ formatForint(totals.rest) }} Ft</td>
+        <td>{{ money(totals.totalPrice) }}</td>
+        <td [attr.title]="advanceTitle(totals.advanceInCurrency)">
+          {{ formatForint(totals.advance) }} Ft
+        </td>
+        <td>{{ money(totals.rest) }}</td>
         @if (hasOptionalPrograms) {
-          <td class="optional-col">{{ formatForint(totalOptionalProgramsCost) }} Ft</td>
+          <td class="optional-col">{{ money(totalOptionalProgramsCost) }}</td>
         }
         <td class="paid-col"></td>
         @if (showActions) {

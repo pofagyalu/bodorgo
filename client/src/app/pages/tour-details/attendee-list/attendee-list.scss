@@ -19,6 +19,18 @@
   }
 }
 
+// The advance's % after "Előleg": small and raised by shifting it, not
+// by vertical-align (which would make the row taller).
+.th-pct {
+  position: relative;
+  top: -0.55em;
+  vertical-align: baseline;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 0;
+  color: #1a796c;
+}
+
 // Name with its avatar (photo, or initials - see components/avatar).
 .attendee-name {
   display: inline-flex;

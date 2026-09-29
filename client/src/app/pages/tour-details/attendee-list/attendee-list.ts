@@ -28,7 +28,8 @@ export interface AttendeeListRow {
   // Used by tour-details.ts to build the schedule opt-in candidate list.
   userId: string | null;
   totalPrice: number | null;
-  advance: number | null;
+  advance: number | null; // always HUF - see tour.ts's AttendeePayment
+  advanceInCurrency: number | null;
   rest: number | null;
   paid: boolean;
   // Admin-only override - see tour.ts's own AttendeePayment comment.
@@ -42,6 +43,7 @@ export interface AttendeeListRow {
   // (see tour-details.ts's own optionalProgramsCostByUserId) - always
   // settled on-site in person, never through this app, so this is purely
   // informational: 0 when they joined none, or the tour has none at all.
+  // In the tour's currency, like totalPrice/rest.
   optionalProgramsCost: number;
 }
 
@@ -66,6 +68,7 @@ export interface FamilyGroup {
 export interface FamilySubtotal {
   totalPrice: number;
   advance: number;
+  advanceInCurrency: number;
   rest: number;
   paidCount: number;
   memberCount: number;
@@ -95,6 +98,13 @@ export class AttendeeList implements OnInit {
   @Input({ required: true }) tourId!: string;
   @Input({ required: true }) attendees!: AttendeeListRow[];
   @Input() totals: PaymentTotals | null = null;
+  // The advance's share of the price (%), set by an admin on the tour -
+  // shown small under the "Előleg" heading.
+  @Input() advancePercent: number | null = null;
+  // The tour's accommodationCurrency: Teljes ár, Fizetendő and Opciók are
+  // in it (a EUR tour is paid on site in EUR); Előleg is always HUF, paid
+  // to the club - on a EUR tour its euro amount shows on hover.
+  @Input() currency: 'HUF' | 'EUR' = 'HUF';
   // { userId: photoUpdatedAt } - see tour-details.ts's userPhotos.
   @Input() userPhotos: Record<string, string> = {};
   // Fires after a nights edit (or a cash payment gets recorded) saves
@@ -105,6 +115,18 @@ export class AttendeeList implements OnInit {
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   readonly formatForint = formatForint;
+
+  // An amount in the tour's currency: "12 500 Ft" or "129 €".
+  money(amount: number | null | undefined): string {
+    return `${formatForint(amount ?? 0)} ${this.currency === 'EUR' ? '€' : 'Ft'}`;
+  }
+
+  // On a EUR tour, the advance's euro amount - the Előleg cell's tooltip.
+  advanceTitle(inCurrency: number | null | undefined): string | null {
+    return this.currency === 'EUR' && inCurrency != null
+      ? `${formatForint(inCurrency)} € előleg, forintban fizetve`
+      : null;
+  }
   // Prices are set for this tour - only then are there amounts, or any
   // "paid / not paid" to show. A method, not a computed: `totals` is a
   // plain @Input, which a computed would never notice changing.
@@ -187,6 +209,7 @@ export class AttendeeList implements OnInit {
     return {
       totalPrice: group.members.reduce((sum, m) => sum + (m.totalPrice ?? 0), 0),
       advance: group.members.reduce((sum, m) => sum + (m.advance ?? 0), 0),
+      advanceInCurrency: group.members.reduce((sum, m) => sum + (m.advanceInCurrency ?? 0), 0),
       rest: group.members.reduce((sum, m) => sum + (m.rest ?? 0), 0),
       paidCount: group.members.filter((m) => m.paid).length,
       memberCount: group.members.length,

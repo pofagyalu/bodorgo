@@ -18,7 +18,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 // page - not just the star input. For a non-attendee, a tour that hasn't
 // ended yet (or before getMyReview() resolves) it's the plain public average + review count,
 // same as always. For an actual attendee of an ended tour it swaps the parenthetical for
-// their own status ("még nem értékeltél" / "a te értékelésed N") plus an
+// their own status ("még nem értékeltél" / "a tied N") plus an
 // Értékelek/Módosítom button that swaps the whole line for the 10-star
 // input - clicking a star submits immediately and swaps back to the
 // summary line, updated.
