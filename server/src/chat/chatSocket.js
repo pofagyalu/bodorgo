@@ -1,87 +1,100 @@
 import Post, { POST_POPULATE, REACTIONS } from '../models/postModel.js';
+import ChatRoom from '../models/chatRoomModel.js';
 import logger from '../logger.js';
-import { setIo, tourRoom } from './tourEvents.js';
+import { chatChannel, setIo, tourRoom } from './tourEvents.js';
 import { markChatRead, notifyChatPostInBackground } from './chatNotifications.js';
 import { deleteChatImageFiles } from './chatImages.js';
 
-// One Socket.IO connection per open browser tab, shared by the tour chat
-// and its Szobabeosztás panel (see the client's TourSocketService): joining
-// a tour puts the socket in that tour's room, which carries both new chat
-// posts and "rooms-changed" pushes (see tourEvents.js's emitToTour).
+// One Socket.IO connection per open browser tab (see the client's
+// TourSocketService), in two kinds of channels:
+// - a tour's (join-tour): its Szobabeosztás changes ("rooms-changed");
+// - a chat room's (join-chat): its messages, reactions and polls - the
+//   general Kotyogó or a tour's (see chatRoomModel.js).
 export default function registerChatHandlers(io) {
   setIo(io);
 
   io.on('connection', (socket) => {
     const sessionUser = socket.request.session?.user;
-    // Who this socket is, and which chat it's showing right now - so chat
-    // push notifications skip whoever is already looking at it (see
+    // Who this socket is, and which chat room it's showing right now - so
+    // chat push notifications skip whoever is already looking at it (see
     // chatNotifications.js).
     socket.data.userId = sessionUser?.id ?? null;
-    socket.data.visibleTour = null;
-    const markRead = (tourId) =>
+    socket.data.visibleChat = null;
+    const markRead = (chatRoomId) =>
       sessionUser &&
-      markChatRead(sessionUser.id, tourId).catch((err) =>
+      markChatRead(sessionUser.id, chatRoomId).catch((err) =>
         logger.error(`chat: mark read failed: ${err}`),
       );
+    const notLoggedIn = () => socket.emit('chat-error', 'Not authenticated. Please login.');
 
-    socket.on('join-tour-chat', async ({ tourId }) => {
-      if (!sessionUser) {
-        return socket.emit('chat-error', 'Not authenticated. Please login.');
-      }
-      if (!tourId) return;
+    // A tour's page: its Szobabeosztás updates.
+    socket.on('join-tour', ({ tourId } = {}) => {
+      if (!sessionUser) return notLoggedIn();
+      if (tourId) socket.join(tourRoom(tourId));
+    });
 
-      socket.join(tourRoom(tourId));
-      socket.data.visibleTour = String(tourId);
-      markRead(tourId);
+    socket.on('leave-tour', ({ tourId } = {}) => {
+      if (tourId) socket.leave(tourRoom(tourId));
+    });
 
+    // Opening a chat room: its channel, and its history.
+    socket.on('join-chat', async ({ chatRoomId } = {}) => {
+      if (!sessionUser) return notLoggedIn();
+      if (!chatRoomId) return;
       try {
-        const posts = await Post.find({ tourId }).sort('createdAt').populate(POST_POPULATE);
-        socket.emit('initial-posts', { tourId, posts });
+        if (!(await ChatRoom.exists({ _id: chatRoomId }))) {
+          return socket.emit('chat-error', 'Nincs ilyen Kotyogó.');
+        }
+        socket.join(chatChannel(chatRoomId));
+        socket.data.visibleChat = String(chatRoomId);
+        markRead(chatRoomId);
+        const posts = await Post.find({ chatRoomId }).sort('createdAt').populate(POST_POPULATE);
+        socket.emit('initial-posts', { chatRoomId: String(chatRoomId), posts });
       } catch (err) {
-        logger.error(`chat: failed to load posts for tour ${tourId}: ${err}`);
+        logger.error(`chat: failed to load posts for chat room ${chatRoomId}: ${err}`);
         socket.emit('chat-error', 'Could not load chat history.');
       }
     });
 
-    // Switching to another tour on the chat page - stop getting this one's
-    // posts/room changes on the same connection.
-    socket.on('leave-tour-chat', ({ tourId }) => {
-      if (tourId) socket.leave(tourRoom(tourId));
-      if (socket.data.visibleTour === String(tourId)) socket.data.visibleTour = null;
+    // Switching to another chat on the same connection.
+    socket.on('leave-chat', ({ chatRoomId } = {}) => {
+      if (chatRoomId) socket.leave(chatChannel(chatRoomId));
+      if (socket.data.visibleChat === String(chatRoomId)) socket.data.visibleChat = null;
     });
 
     // The chat's tab went to the background (or came back) - only a
     // visible chat counts as "already looking at it".
-    socket.on('chat-visible', ({ tourId, visible }) => {
-      if (!tourId || !socket.rooms.has(tourRoom(tourId))) return;
-      socket.data.visibleTour = visible ? String(tourId) : null;
-      if (visible) markRead(tourId);
+    socket.on('chat-visible', ({ chatRoomId, visible } = {}) => {
+      if (!chatRoomId || !socket.rooms.has(chatChannel(chatRoomId))) return;
+      socket.data.visibleChat = visible ? String(chatRoomId) : null;
+      if (visible) markRead(chatRoomId);
     });
 
-    socket.on('create-post', async ({ tourId, text }) => {
-      if (!sessionUser) {
-        return socket.emit('chat-error', 'Not authenticated. Please login.');
-      }
-      if (!tourId || !text?.trim()) return;
+    socket.on('create-post', async ({ chatRoomId, text } = {}) => {
+      if (!sessionUser) return notLoggedIn();
+      if (!chatRoomId || !text?.trim()) return;
 
       try {
+        if (!(await ChatRoom.exists({ _id: chatRoomId }))) {
+          return socket.emit('chat-error', 'Nincs ilyen Kotyogó.');
+        }
         const post = await Post.create({
-          tourId,
+          chatRoomId,
           creator: sessionUser.id,
           text: text.trim(),
         });
         const populated = await post.populate(POST_POPULATE);
-        io.to(tourRoom(tourId)).emit('new-post', populated);
-        markRead(tourId);
+        io.to(chatChannel(chatRoomId)).emit('new-post', populated);
+        markRead(chatRoomId);
         notifyChatPostInBackground(io, populated);
       } catch (err) {
-        logger.error(`chat: failed to save post for tour ${tourId}: ${err}`);
+        logger.error(`chat: failed to save post in chat room ${chatRoomId}: ${err}`);
         socket.emit('chat-error', 'Could not send message.');
       }
     });
 
     // Editing/deleting: only ever the author's own, not-yet-deleted post.
-    // Everyone in the tour's room gets the changed post ('post-updated').
+    // Everyone in the chat room gets the changed post ('post-updated').
     const loadOwnPost = async (postId) => {
       if (!sessionUser || !postId) return null;
       const post = await Post.findById(postId);
@@ -102,7 +115,7 @@ export default function registerChatHandlers(io) {
         post.editedAt = new Date();
         await post.save();
         const populated = await post.populate(POST_POPULATE);
-        io.to(tourRoom(post.tourId)).emit('post-updated', populated);
+        io.to(chatChannel(post.chatRoomId)).emit('post-updated', populated);
       } catch (err) {
         logger.error(`chat: failed to edit post ${postId}: ${err}`);
         socket.emit('chat-error', 'Could not edit message.');
@@ -122,7 +135,7 @@ export default function registerChatHandlers(io) {
         post.deletedAt = new Date();
         await post.save();
         const populated = await post.populate(POST_POPULATE);
-        io.to(tourRoom(post.tourId)).emit('post-updated', populated);
+        io.to(chatChannel(post.chatRoomId)).emit('post-updated', populated);
       } catch (err) {
         logger.error(`chat: failed to delete post ${postId}: ${err}`);
         socket.emit('chat-error', 'Could not delete message.');
@@ -151,7 +164,7 @@ export default function registerChatHandlers(io) {
         }
         await post.save();
         const populated = await post.populate(POST_POPULATE);
-        io.to(tourRoom(post.tourId)).emit('post-updated', populated);
+        io.to(chatChannel(post.chatRoomId)).emit('post-updated', populated);
       } catch (err) {
         logger.error(`chat: failed to react to post ${postId}: ${err}`);
         socket.emit('chat-error', 'Could not save the reaction.');

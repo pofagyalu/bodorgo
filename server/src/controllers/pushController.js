@@ -60,21 +60,23 @@ export const sendTest = async (req, res) => {
   res.status(200).json({ status: 'success', data: { sent } });
 };
 
-const tourIdParam = (req) => {
-  if (!mongoose.isValidObjectId(req.params.tourId)) throw new AppError('Nincs ilyen tábor.', 404);
-  return req.params.tourId;
+const chatRoomIdParam = (req) => {
+  if (!mongoose.isValidObjectId(req.params.chatRoomId)) {
+    throw new AppError('Nincs ilyen Kotyogó.', 404);
+  }
+  return req.params.chatRoomId;
 };
 
-// GET/PUT /push/chat-mutes/:tourId - one tour's chat notifications off/on.
+// GET/PUT /push/chat-mutes/:chatRoomId - one chat room's notifications off/on.
 export const getChatMute = async (req, res) => {
   res.status(200).json({
     status: 'success',
-    data: { muted: await isChatMuted(req.user._id, tourIdParam(req)) },
+    data: { muted: await isChatMuted(req.user._id, chatRoomIdParam(req)) },
   });
 };
 
 export const putChatMute = async (req, res) => {
   const muted = !!req.body?.muted;
-  await setChatMuted(req.user._id, tourIdParam(req), muted);
+  await setChatMuted(req.user._id, chatRoomIdParam(req), muted);
   res.status(200).json({ status: 'success', data: { muted } });
 };

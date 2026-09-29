@@ -128,6 +128,7 @@ function op({
 
 const tourId = path('id', 'The tour id.');
 const tourIdT = path('tourId', 'The tour id.');
+const chatRoomIdP = path('chatRoomId', 'The chat room id (the general one, or a tour’s).');
 // ?w= on a photo: a smaller version for the viewer (photos/imageSizes.js).
 const sizeW = query('w', 'Width: `800`, `1200` or `1920`. Omit for the original.', {
   type: 'integer',
@@ -308,9 +309,16 @@ const schemas = {
     createdBy: { type: 'object' },
   }),
 
+  ChatRoom: obj({
+    _id: id(),
+    type: str('`general` - the club-wide room; `tour` - a tour’s own.', {
+      enum: ['general', 'tour'],
+    }),
+    tourId: { type: ['string', 'null'], description: 'The tour - null for the general room.' },
+  }),
   Post: obj({
     _id: id(),
-    tourId: id(),
+    chatRoomId: id('The chat room it was written in.'),
     creator: obj({ _id: id(), name: str(), username: str() }),
     text: str('Message text (may be empty with a photo).'),
     image: obj({
@@ -419,22 +427,27 @@ the user. Files (photos, PDFs, videos, Excel) come as they are; videos support
 The chat and the Szobabeosztás board are live over **Socket.IO** on the same origin, with
 the same session cookie.
 
+Every message belongs to a **chat room** - the one general room, or a tour's own room
+(\`GET /chat-rooms/general\`, \`GET /tours/{tourId}/chat-room\`); the room's \`_id\` is what
+the chat events use. A tour's Szobabeosztás is its own channel (\`join-tour\`).
+
 | Direction | Event | Payload |
 |---|---|---|
-| → server | \`join-tour-chat\` | \`{ tourId }\` - join; answered by \`initial-posts\` |
-| → server | \`leave-tour-chat\` | \`{ tourId }\` |
-| → server | \`chat-visible\` | \`{ tourId, visible }\` - no push while you look at it |
-| → server | \`create-post\` | \`{ tourId, text }\` |
+| → server | \`join-chat\` | \`{ chatRoomId }\` - open a chat room; answered by \`initial-posts\` |
+| → server | \`leave-chat\` | \`{ chatRoomId }\` |
+| → server | \`chat-visible\` | \`{ chatRoomId, visible }\` - no push while you look at it |
+| → server | \`create-post\` | \`{ chatRoomId, text }\` |
+| → server | \`join-tour\` / \`leave-tour\` | \`{ tourId }\` - the tour's Szobabeosztás updates |
 | → server | \`edit-post\` / \`delete-post\` | \`{ postId, text }\` / \`{ postId }\` - own messages |
 | → server | \`react-post\` | \`{ postId, emoji }\` - 👍 😂 😮 😢 😭, others' messages; the same again takes it back |
-| ← client | \`initial-posts\` | \`{ tourId, posts }\` |
+| ← client | \`initial-posts\` | \`{ chatRoomId, posts }\` |
 | ← client | \`new-post\` / \`post-updated\` | a Post |
-| ← client | \`poll-updated\` | a poll changed (votes, closed) |
-| ← client | \`rooms-changed\` | the room board changed - reload it |
+| ← client | \`poll-updated\` | a poll in the open chat changed (votes, closed) |
+| ← client | \`rooms-changed\` | the tour's room board changed - reload it |
 | ← client | \`chat-error\` | a message |
 
-Photos are uploaded over HTTP (\`POST /tours/{tourId}/chat/images\`) and then announced as
-\`new-post\`.`;
+Photos are uploaded over HTTP (\`POST /chat-rooms/{chatRoomId}/images\`) and then announced
+as \`new-post\`.`;
 
 // --- The endpoints, by area ---
 
@@ -471,7 +484,10 @@ const tags = [
   ],
   [T.gallery, "A tour's photos (from the NAS) and its recap videos."],
   [T.mailing, 'Admins writing to all attendees of a tour.'],
-  [T.chat, 'The tour chat. Messages go over Socket.IO (see the introduction); photos over HTTP.'],
+  [
+    T.chat,
+    'The chat rooms - the general one and one per tour. Messages go over Socket.IO (see the introduction); photos over HTTP.',
+  ],
   [T.polls, "Polls - club-wide on the Voks page, or started in a tour's Kotyogó."],
   [
     T.payments,
@@ -1029,13 +1045,31 @@ const paths = {
   },
 
   // --- Kotyogó ---
-  '/tours/{tourId}/chat/images': {
+  '/chat-rooms/general': {
+    get: op({
+      tag: T.chat,
+      summary: 'The general chat room',
+      description: 'The one club-wide room, not about any tour - made on first use.',
+      data: obj({ chatRoom: ref('ChatRoom') }),
+    }),
+  },
+  '/tours/{tourId}/chat-room': {
+    get: op({
+      tag: T.chat,
+      summary: "A tour's chat room",
+      description: 'The tour’s own room - made on first use.',
+      params: [tourIdT],
+      data: obj({ chatRoom: ref('ChatRoom') }),
+      errors: [404],
+    }),
+  },
+  '/chat-rooms/{chatRoomId}/images': {
     post: op({
       tag: T.chat,
       summary: 'Send a photo',
       description:
-        'Stored as WebP (1600 px + a 480 px thumbnail, no EXIF). Limited per person per day; over the size quota the oldest photos go. Announced to the chat as `new-post`.',
-      params: [tourIdT],
+        'Stored as WebP (1600 px + a 480 px thumbnail, no EXIF). Limited per person per day; over the size quota the oldest photos go. Announced to the chat room as `new-post`.',
+      params: [chatRoomIdP],
       multipart: obj(
         {
           image: { type: 'string', format: 'binary', description: 'At most 12 MB.' },
@@ -1048,20 +1082,20 @@ const paths = {
       errors: [400, 404, 429],
     }),
   },
-  '/tours/{tourId}/chat/images/{postId}': {
+  '/chat-rooms/{chatRoomId}/images/{postId}': {
     get: op({
       tag: T.chat,
       summary: 'A chat photo',
-      params: [tourIdT, path('postId', 'The message.')],
+      params: [chatRoomIdP, path('postId', 'The message.')],
       response: file(['image/webp'], 'WebP.'),
       errors: [404],
     }),
   },
-  '/tours/{tourId}/chat/images/{postId}/thumb': {
+  '/chat-rooms/{chatRoomId}/images/{postId}/thumb': {
     get: op({
       tag: T.chat,
       summary: 'A chat photo thumbnail',
-      params: [tourIdT, path('postId', 'The message.')],
+      params: [chatRoomIdP, path('postId', 'The message.')],
       response: file(['image/webp'], 'WebP, 480 px.'),
       errors: [404],
     }),
@@ -2042,17 +2076,17 @@ const paths = {
       errors: [400],
     }),
   },
-  '/push/chat-mutes/{tourId}': {
+  '/push/chat-mutes/{chatRoomId}': {
     get: op({
       tag: T.push,
-      summary: "Is a tour's Kotyogó muted for me",
-      params: [tourIdT],
+      summary: 'Is a chat room muted for me',
+      params: [chatRoomIdP],
       data: obj({ muted: bool() }),
     }),
     put: op({
       tag: T.push,
-      summary: "Mute / unmute a tour's Kotyogó",
-      params: [tourIdT],
+      summary: 'Mute / unmute a chat room',
+      params: [chatRoomIdP],
       body: obj({ muted: bool() }, ['muted']),
       data: obj({ muted: bool() }),
       errors: [404],

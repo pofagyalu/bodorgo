@@ -95,8 +95,8 @@
           [class.inactive]="activePane() !== 'chat'"
           aria-label="Kotyogó"
         >
-          @for (id of feedKey(); track id) {
-            <app-feed [tourId]="id" />
+          @for (f of feedKey(); track f.chatRoomId) {
+            <app-feed [chatRoomId]="f.chatRoomId" [tourId]="f.tourId" />
           }
         </section>
 
@@ -133,7 +133,7 @@
      background (see feed.ts). In the sidebar's bottom, or on a phone in the
      tabs' row (chat.scss). -->
 <ng-template #chatTools>
-  @if (selectedTour(); as t) {
+  @if (chatRoomId()) {
     <div class="chat-tools">
       <button
         type="button"
@@ -144,7 +144,7 @@
             ? 'Ennek a Kotyogónak az értesítései némítva - kattints a bekapcsoláshoz'
             : 'Értesítések ebből a Kotyogóból - kattints a némításhoz'
         "
-        (click)="toggleChatMuted(t._id)"
+        (click)="toggleChatMuted()"
       >
         <mat-icon>{{ chatMuted() ? 'notifications_off' : 'notifications' }}</mat-icon>
       </button>

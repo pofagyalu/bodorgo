@@ -19,9 +19,11 @@ const PostSchema = new Schema(
       required: true,
     },
 
-    tourId: {
+    // The chat room it was written in (see chatRoomModel.js) - the general
+    // one or a tour's; never a tour directly.
+    chatRoomId: {
       type: Schema.Types.ObjectId,
-      ref: 'Tour',
+      ref: 'ChatRoom',
       required: true,
       index: true, // each chat room is efficiently searchable
     },

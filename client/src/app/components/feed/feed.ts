@@ -14,6 +14,7 @@ import { AuthService } from '../../auth/auth.service';
 import { TourSocketService } from '../../services/tour-socket';
 import { Compose, Mentionable } from './compose/compose';
 import { ChatBackground, TourService } from '../../services/tour';
+import { ChatService } from '../../services/chat';
 import { Post, Reaction } from './post/post';
 import { PollCreate } from '../poll-create/poll-create';
 import { usernameKey } from '../../shared/usernames';
@@ -28,7 +29,7 @@ interface IPost {
   image?: { width: number; height: number; expired?: boolean } | null;
   createdAt: string;
   updatedAt: string;
-  tourId: string;
+  chatRoomId: string;
   editedAt?: string;
   deletedAt?: string;
   // A poll started in the chat (see components/poll-card).
@@ -64,7 +65,10 @@ function dayBreakLabel(d: Date): string {
 export class Feed implements OnInit, OnDestroy {
   private authService = inject(AuthService);
 
-  tourId = input.required<string>();
+  // The chat room shown (see ChatService), and its tour - null for the
+  // general room, which then has no background, "@" list or polls.
+  chatRoomId = input.required<string>();
+  tourId = input<string | null>(null);
   currentUserId = computed(() => this.authService.user()?.id);
 
   posts = signal<IPost[]>([]);
@@ -72,6 +76,7 @@ export class Feed implements OnInit, OnDestroy {
   creatingPoll = signal(false);
   private tourSocket = inject(TourSocketService);
   private tourService = inject(TourService);
+  private chatService = inject(ChatService);
 
   // The tour's attendees with their usernames (from the Szobabeosztás
   // board's list) - for "@" suggestions and for highlighting mentions.
@@ -121,12 +126,15 @@ export class Feed implements OnInit, OnDestroy {
   private background = signal<ChatBackground | null>(null);
   backgroundImage = computed(() => {
     const b = this.background();
-    return b ? `url("${this.tourService.chatBackgroundUrl(this.tourId(), b)}")` : null;
+    const tourId = this.tourId();
+    return b && tourId ? `url("${this.tourService.chatBackgroundUrl(tourId, b)}")` : null;
   });
   switchingBackground = signal(false);
 
   private loadBackground() {
-    this.tourService.getChatBackground(this.tourId()).subscribe({
+    const tourId = this.tourId();
+    if (!tourId) return;
+    this.tourService.getChatBackground(tourId).subscribe({
       next: (res) => this.background.set(res.data.background),
       error: () => {},
     });
@@ -135,7 +143,9 @@ export class Feed implements OnInit, OnDestroy {
   nextBackground() {
     if (this.switchingBackground()) return;
     this.switchingBackground.set(true);
-    this.tourService.nextChatBackground(this.tourId()).subscribe({
+    const tourId = this.tourId();
+    if (!tourId) return;
+    this.tourService.nextChatBackground(tourId).subscribe({
       next: (res) => {
         this.background.set(res.data.background);
         this.switchingBackground.set(false);
@@ -164,16 +174,16 @@ export class Feed implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadBackground();
     // The shared connection (see TourSocketService) - events are checked
-    // against this feed's own tour, since the same connection may just
-    // have switched over from another tour.
+    // against this feed's own room, since the same connection may just
+    // have switched over from another one.
     this.unsubscribers = [
-      this.tourSocket.on<{ tourId: string; posts: IPost[] }>('initial-posts', (data) => {
-        if (data.tourId !== this.tourId()) return;
+      this.tourSocket.on<{ chatRoomId: string; posts: IPost[] }>('initial-posts', (data) => {
+        if (data.chatRoomId !== this.chatRoomId()) return;
         this.posts.set(data.posts);
         this.scrollTrigger.update((n) => n + 1);
       }),
       this.tourSocket.on<IPost>('new-post', (post) => {
-        if (String(post.tourId) !== this.tourId()) return;
+        if (String(post.chatRoomId) !== this.chatRoomId()) return;
         this.posts.update((p) => [...p, post]);
         if (post.creator._id === this.currentUserId()) {
           this.scrollTrigger.update((n) => n + 1);
@@ -181,14 +191,17 @@ export class Feed implements OnInit, OnDestroy {
       }),
       // Someone edited or deleted a post - swap in the new version.
       this.tourSocket.on<IPost>('post-updated', (post) => {
-        if (String(post.tourId) !== this.tourId()) return;
+        if (String(post.chatRoomId) !== this.chatRoomId()) return;
         this.posts.update((list) => list.map((p) => (p._id === post._id ? post : p)));
       }),
       this.tourSocket.on<string>('chat-error', (message) => console.error('Chat error:', message)),
     ];
-    this.tourSocket.joinTour(this.tourId());
+    this.tourSocket.joinChat(this.chatRoomId());
 
-    this.tourService.getRoomBoard(this.tourId()).subscribe({
+    // A tour's attendees are who can be "@"-mentioned there.
+    const tourId = this.tourId();
+    if (!tourId) return;
+    this.tourService.getRoomBoard(tourId).subscribe({
       next: (res) => {
         // One entry per person, even if they're on two reservations.
         const byUser = new Map(res.data.people.map((p) => [p.userId ?? p.attendeeId, p]));
@@ -209,18 +222,18 @@ export class Feed implements OnInit, OnDestroy {
   sendingPhoto = signal(false);
 
   chatThumb(postId: string): string {
-    return this.tourService.chatImageThumbUrl(this.tourId(), postId);
+    return this.chatService.chatImageThumbUrl(this.chatRoomId(), postId);
   }
 
   chatFull(postId: string): string {
-    return this.tourService.chatImageUrl(this.tourId(), postId);
+    return this.chatService.chatImageUrl(this.chatRoomId(), postId);
   }
   private notifications = inject(NotificationsService);
 
   onCompose(data: { text: string; image?: Blob }) {
     if (data.image) {
       this.sendingPhoto.set(true);
-      this.tourService.sendChatImage(this.tourId(), data.image, data.text).subscribe({
+      this.chatService.sendChatImage(this.chatRoomId(), data.image, data.text).subscribe({
         next: () => this.sendingPhoto.set(false),
         error: (err) => {
           this.sendingPhoto.set(false);
@@ -230,13 +243,13 @@ export class Feed implements OnInit, OnDestroy {
       return;
     }
     this.tourSocket.emit('create-post', {
-      tourId: this.tourId(),
+      chatRoomId: this.chatRoomId(),
       text: data.text,
     });
   }
 
   // Own posts only - the server checks it too, and answers everyone in the
-  // tour with 'post-updated'.
+  // room with 'post-updated'.
   onEdit(postId: string, text: string) {
     this.tourSocket.emit('edit-post', { postId, text });
   }
@@ -252,5 +265,6 @@ export class Feed implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.unsubscribers.forEach((off) => off());
+    this.tourSocket.leaveChat(this.chatRoomId());
   }
 }

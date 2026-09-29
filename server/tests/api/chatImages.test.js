@@ -7,8 +7,9 @@ import { createAdmin, createMember, createTour } from '../helpers/factories.js';
 import Post from '../../src/models/postModel.js';
 import ClubSettings from '../../src/models/clubSettingsModel.js';
 import { chatImagePath, enforceChatImageQuota } from '../../src/chat/chatImages.js';
+import { tourChatRoom } from '../../src/chat/chatRooms.js';
 
-// Photos in the tour chat: shrunk, stripped of their location, limited per
+// Photos in the chats: shrunk, stripped of their location, limited per
 // day, and kept under the quota - the oldest going first.
 
 // A big "phone photo" (3000x2000) carrying a GPS location in its EXIF.
@@ -18,9 +19,9 @@ const phonePhoto = () =>
     .withExif({ IFD0: { Make: 'TestPhone' }, IFD3: { GPSLatitudeRef: 'N' } })
     .toBuffer();
 
-const send = async (user, tour, { buffer, text = '', type = 'image/jpeg' } = {}) =>
+const send = async (user, room, { buffer, text = '', type = 'image/jpeg' } = {}) =>
   request(app)
-    .post(`/tours/${tour._id}/chat/images`)
+    .post(`/chat-rooms/${room._id}/images`)
     .set(asUser(user))
     .field('text', text)
     .attach('image', buffer ?? (await phonePhoto()), { filename: 'x.jpg', contentType: type });
@@ -28,8 +29,8 @@ const send = async (user, tour, { buffer, text = '', type = 'image/jpeg' } = {})
 describe('chat photos', () => {
   it('shrinks the photo to 1600 px, drops its EXIF (GPS), and serves it to logged-in users', async () => {
     const member = await createMember();
-    const tour = await createTour();
-    const res = await send(member, tour, { text: 'Nézzétek!' });
+    const room = await tourChatRoom((await createTour())._id);
+    const res = await send(member, room, { text: 'Nézzétek!' });
     expect(res.status).toBe(201);
     const { post } = res.body.data;
     expect(post).toMatchObject({ text: 'Nézzétek!', image: { width: 1600, height: 1067 } });
@@ -39,7 +40,7 @@ describe('chat photos', () => {
     expect(meta.width).toBe(1600);
     expect(meta.exif).toBeUndefined();
 
-    const url = `/tours/${tour._id}/chat/images/${post._id}`;
+    const url = `/chat-rooms/${room._id}/images/${post._id}`;
     const full = await request(app)
       .get(url)
       .set(asUser(await createMember()));
@@ -52,13 +53,13 @@ describe('chat photos', () => {
 
   it('refuses a file that is not an image', async () => {
     const member = await createMember();
-    const tour = await createTour();
-    const res = await send(member, tour, {
+    const room = await tourChatRoom((await createTour())._id);
+    const res = await send(member, room, {
       buffer: Buffer.from('not an image'),
       type: 'text/plain',
     });
     expect(res.status).toBe(400);
-    const fake = await send(member, tour, { buffer: Buffer.from('fake'), type: 'image/jpeg' });
+    const fake = await send(member, room, { buffer: Buffer.from('fake'), type: 'image/jpeg' });
     expect(fake.status).toBe(400);
     expect(await Post.countDocuments()).toBe(0);
   });
@@ -70,22 +71,22 @@ describe('chat photos', () => {
       { upsert: true },
     );
     const member = await createMember();
-    const tour = await createTour();
-    expect((await send(member, tour)).status).toBe(201);
-    expect((await send(member, tour)).status).toBe(201);
-    const third = await send(member, tour);
+    const room = await tourChatRoom((await createTour())._id);
+    expect((await send(member, room)).status).toBe(201);
+    expect((await send(member, room)).status).toBe(201);
+    const third = await send(member, room);
     expect(third.status).toBe(429);
     expect(third.body.message).toContain('holnap');
     // Somebody else still can.
-    expect((await send(await createMember(), tour)).status).toBe(201);
+    expect((await send(await createMember(), room)).status).toBe(201);
   });
 
   it('over the quota the oldest photos go - their messages stay', async () => {
     const member = await createMember();
-    const tour = await createTour();
-    const first = (await send(member, tour)).body.data.post;
-    const second = (await send(member, tour)).body.data.post;
-    const third = (await send(member, tour)).body.data.post;
+    const room = await tourChatRoom((await createTour())._id);
+    const first = (await send(member, room)).body.data.post;
+    const second = (await send(member, room)).body.data.post;
+    const third = (await send(member, room)).body.data.post;
     // Pretend they're big: 30 MB each against a 50 MB quota.
     await Post.updateMany({}, { 'image.size': 30 * 1024 * 1024 });
     await ClubSettings.findOneAndUpdate(
@@ -101,7 +102,7 @@ describe('chat photos', () => {
     expect(await expired(third._id)).toBe(false);
     expect(fs.existsSync(chatImagePath(first._id))).toBe(false);
     const gone = await request(app)
-      .get(`/tours/${tour._id}/chat/images/${first._id}`)
+      .get(`/chat-rooms/${room._id}/images/${first._id}`)
       .set(asUser(member));
     expect(gone.status).toBe(404);
   });

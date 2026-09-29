@@ -1,5 +1,6 @@
 // Read-only diagnosis: why did (or didn't) the latest chat message send a
-// push notification? For the newest post: its tour, and for every attendee
+// push notification? For the newest post: its chat room's tour (the general
+// room notifies nobody), and for every attendee
 // the things notifyChatPost (src/chat/chatNotifications.js) checks - push
 // subscriptions, mute, last read / last buzz.
 //
@@ -13,22 +14,28 @@ import User from '../src/models/userModel.js';
 import Tour from '../src/models/tourModel.js';
 import PushSubscription from '../src/models/pushSubscriptionModel.js';
 import ChatReadState from '../src/models/chatReadStateModel.js';
+import ChatRoom from '../src/models/chatRoomModel.js';
 
 await mongoose.connect(config.db.uri); // the same database the app uses (src/server.js)
 const post = await Post.findOne({ deletedAt: null })
   .sort({ createdAt: -1 })
   .populate('creator', 'name username');
-const tour = await Tour.findById(post.tourId).select('title order');
+const room = await ChatRoom.findById(post.chatRoomId);
+if (room?.type !== 'tour') {
+  console.log('The latest post is in the general Kotyogó - it notifies nobody.');
+  process.exit(0);
+}
+const tour = await Tour.findById(room.tourId).select('title order');
 console.log(
   `Latest post ${post.createdAt.toISOString()} by ${post.creator?.name} in ${tour?.order}. ${tour?.title}`,
 );
 console.log(`  text: ${post.text.slice(0, 60)}`);
 
-const reservations = await Reservation.find({ tour: post.tourId }).select('attendees.user');
+const reservations = await Reservation.find({ tour: room.tourId }).select('attendees.user');
 const ids = [...new Set(reservations.flatMap((r) => r.attendees.map((a) => String(a.user))))];
 const users = await User.find({ _id: { $in: ids } }).select('name username');
 const subs = await PushSubscription.find({});
-const states = await ChatReadState.find({ tour: post.tourId });
+const states = await ChatReadState.find({ chatRoom: room._id });
 
 console.log(`\nAttendees (${ids.length}), those with push subscriptions:`);
 for (const u of users) {

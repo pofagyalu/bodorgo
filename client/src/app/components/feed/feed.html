@@ -35,10 +35,11 @@
     [mentionables]="mentionables()"
     [sending]="sendingPhoto()"
     (send)="onCompose($event)"
+    [pollsEnabled]="!!tourId()"
     (pollRequested)="creatingPoll.set(true)"
   ></app-compose>
 
-  @if (creatingPoll()) {
-    <app-poll-create [tourId]="tourId()" (closed)="creatingPoll.set(false)" />
+  @if (creatingPoll() && tourId(); as tourId) {
+    <app-poll-create [tourId]="tourId" (closed)="creatingPoll.set(false)" />
   }
 </div>

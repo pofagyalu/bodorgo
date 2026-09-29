@@ -103,12 +103,12 @@ export class PushService {
     return this.http.post<{ data: { sent: number } }>(`${this.apiUrl}/test`, {});
   }
 
-  getChatMuted(tourId: string) {
-    return this.http.get<{ data: { muted: boolean } }>(`${this.apiUrl}/chat-mutes/${tourId}`);
+  getChatMuted(chatRoomId: string) {
+    return this.http.get<{ data: { muted: boolean } }>(`${this.apiUrl}/chat-mutes/${chatRoomId}`);
   }
 
-  setChatMuted(tourId: string, muted: boolean) {
-    return this.http.put<{ data: { muted: boolean } }>(`${this.apiUrl}/chat-mutes/${tourId}`, {
+  setChatMuted(chatRoomId: string, muted: boolean) {
+    return this.http.put<{ data: { muted: boolean } }>(`${this.apiUrl}/chat-mutes/${chatRoomId}`, {
       muted,
     });
   }

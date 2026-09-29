@@ -17,6 +17,6 @@ router.use(requireAuth);
 router.get('/public-key', getPublicKey);
 router.route('/subscriptions').post(subscribe).delete(unsubscribe);
 router.post('/test', sendTest);
-router.route('/chat-mutes/:tourId').get(getChatMute).put(putChatMute);
+router.route('/chat-mutes/:chatRoomId').get(getChatMute).put(putChatMute);
 
 export default router;
