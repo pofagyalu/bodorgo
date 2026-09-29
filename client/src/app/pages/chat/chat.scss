@@ -268,12 +268,14 @@
   place-items: center;
   width: 34px;
   height: 34px;
-  border: 1px solid #dfe8e4;
+  // Solid, with a white icon - it has to stand out on the chat's
+  // background photo too (feed.scss's .background-btn looks the same).
+  border: 0;
   border-radius: 50%;
-  background: #ffffffe6;
-  color: #1a796c;
+  background: #1a796c;
+  color: #fff;
   cursor: pointer;
-  box-shadow: 0 2px 8px #0000000f;
+  box-shadow: 0 2px 8px #0000002e;
   transition: background 0.15s;
 
   mat-icon {
@@ -283,11 +285,15 @@
   }
 
   &:hover {
-    background: #eef6f2;
+    background: #145f55;
   }
 
   &.muted {
-    color: #90a4ae;
+    background: #90a4ae;
+
+    &:hover {
+      background: #78909c;
+    }
   }
 }
 
