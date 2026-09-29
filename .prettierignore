@@ -7,6 +7,8 @@ coverage/
 # Data and assets, not code.
 **/public/
 **/assets/
+# Authentik's own copy of the e-mail template (on the NAS) - kept byte for byte.
+server/authentik/*.html
 # the club documents (see server/sync.js) - not the Dokumentumok page code
 server/documents/
 **/logs/
