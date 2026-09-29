@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getBarionSettings,
   getBirthdaySettings,
+  getRankSettings,
   getChatImageSettings,
   getImageCacheSettings,
   clearImageCacheNow,
@@ -11,6 +12,7 @@ import {
   updateMembershipFees,
   updateBarionWallet,
   updateBirthdaySettings,
+  updateRankSettings,
   updateChatImageSettings,
   updateImageCacheSettings,
   updateMembershipReminder,
@@ -56,5 +58,11 @@ router
   .route('/birthday')
   .get(requireAuth, restrictTo('admin'), getBirthdaySettings)
   .put(requireAuth, restrictTo('admin'), updateBirthdaySettings);
+
+// Rangok ünneplése: the celebration of a newly reached rank - admins only.
+router
+  .route('/rank')
+  .get(requireAuth, restrictTo('admin'), getRankSettings)
+  .put(requireAuth, restrictTo('admin'), updateRankSettings);
 
 export default router;

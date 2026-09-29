@@ -174,6 +174,7 @@ export class KlubSettings implements OnInit {
     this.loadChatImages();
     this.loadImageCache();
     this.loadBirthday();
+    this.loadRank();
     this.settingsService.getMembershipFees().subscribe({
       next: (res) => {
         this.foundingYear.set(res.data.foundingYear);
@@ -582,6 +583,76 @@ export class KlubSettings implements OnInit {
         },
         error: (err) => {
           this.savingBirthday.set(false);
+          this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+        },
+      });
+  }
+
+  // --- Rangok ünneplése: a newly reached rank (shared/birthday) ---
+
+  rankSaved = signal<BirthdaySettings | null>(null);
+  rkEnabled = signal(true);
+  rkEffect = signal<BirthdayEffect>('fireworks');
+  rkMessage = signal('');
+  savingRank = signal(false);
+
+  rankDirty = computed(() => {
+    const r = this.rankSaved();
+    return (
+      !!r &&
+      (r.enabled !== this.rkEnabled() ||
+        r.effect !== this.rkEffect() ||
+        r.message !== this.rkMessage().trim())
+    );
+  });
+
+  private loadRank() {
+    this.settingsService.getRankSettings().subscribe({
+      next: (res) => this.applyRank(res.data),
+      error: () => {},
+    });
+  }
+
+  private applyRank(r: BirthdaySettings) {
+    this.rankSaved.set(r);
+    this.rkEnabled.set(r.enabled);
+    this.rkEffect.set(r.effect);
+    this.rkMessage.set(r.message);
+  }
+
+  resetRank() {
+    const r = this.rankSaved();
+    if (r) this.applyRank(r);
+  }
+
+  // Plays it on my own screen now, as set in the form - as if I had just
+  // reached Bronz with 10 tours.
+  previewRank() {
+    const myName = (this.auth.user()?.name ?? '').trim().split(/\s+/).at(-1) ?? '';
+    const text = (this.rkMessage().trim() || 'Kedves {név}! Túléltél {szám} bódorgót!')
+      .replaceAll('{név}', myName)
+      .replaceAll('{szám}', '10')
+      .replaceAll('{rang}', 'Bronz');
+    void this.birthday.play(this.rkEffect(), text, 'rank');
+  }
+
+  saveRank() {
+    if (this.savingRank()) return;
+    this.savingRank.set(true);
+    this.settingsService
+      .updateRankSettings({
+        enabled: this.rkEnabled(),
+        effect: this.rkEffect(),
+        message: this.rkMessage().trim(),
+      })
+      .subscribe({
+        next: (res) => {
+          this.applyRank(res.data);
+          this.savingRank.set(false);
+          this.notifications.addSuccess('Rangok ünneplése mentve.');
+        },
+        error: (err) => {
+          this.savingRank.set(false);
           this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
         },
       });

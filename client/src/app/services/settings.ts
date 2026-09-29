@@ -169,6 +169,15 @@ export class SettingsService {
     return this.http.put<{ data: BirthdaySettings }>(`${this.apiUrl}/birthday`, settings);
   }
 
+  // Rangok ünneplése - the same shape as the birthday greeting's.
+  getRankSettings() {
+    return this.http.get<{ data: BirthdaySettings }>(`${this.apiUrl}/rank`);
+  }
+
+  updateRankSettings(settings: BirthdaySettings) {
+    return this.http.put<{ data: BirthdaySettings }>(`${this.apiUrl}/rank`, settings);
+  }
+
   // The reminder as a member would get it, to the admin themselves.
   testMembershipReminder() {
     return this.http.post<{ status: string; data: { sentTo: string } }>(

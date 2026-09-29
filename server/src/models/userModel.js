@@ -165,6 +165,10 @@ const userSchema = new Schema(
     // The year their birthday was last celebrated (confetti on login - see
     // utils/birthday.js): once a year, on whichever device comes first.
     birthdayCelebratedYear: Number,
+    // The highest rank already celebrated (its tour count: 10, 20, ...; 0
+    // none) - see utils/ranks.js. Unset until their first check, which
+    // starts it at the rank they had when the celebrations began.
+    rankCelebrated: Number,
     // Their latest Authentik invitation (Felhasználók → Meghívók - see
     // invitationController.js): its id there, when it was sent and by whom,
     // and when the link expires. Cleared when it's taken back.

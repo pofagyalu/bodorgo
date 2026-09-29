@@ -22,6 +22,7 @@ const router = express.Router();
 router.patch('/updateMe', requireAuth, userController.updateMe);
 router.get('/me', requireAuth, userController.getMe);
 router.get('/me/birthday', requireAuth, userController.getMyBirthday);
+router.get('/me/rank', requireAuth, userController.getMyRank);
 router.get('/me/attendance', requireAuth, userController.getMyAttendance);
 router.get('/me/family', requireAuth, userController.getMyFamily);
 router

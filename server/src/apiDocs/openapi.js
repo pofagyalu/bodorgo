@@ -1434,6 +1434,21 @@ const paths = {
       }),
     }),
   },
+  '/users/me/rank': {
+    get: op({
+      tag: T.users,
+      summary: 'Did I reach a new rank (the celebration)',
+      description:
+        'The first time after reaching a new rank (10 Bronz, 20 Ezüst, 30 Arany, 40 Platina, 50 Gyémánt started tours): the effect and the message - then it is marked as celebrated, so it shows once, on whichever device comes first, and every admin is e-mailed. Ranks already reached when this began count as celebrated. Otherwise `celebrate: false` (also when it is turned off - the rank is still marked and the admins still e-mailed). The app asks it on every start.',
+      data: obj({
+        celebrate: bool(),
+        effect: str('Only when celebrate.', {
+          enum: ['confetti', 'fireworks', 'cannons', 'stars', 'snow', 'emoji'],
+        }),
+        message: str('Only when celebrate - e.g. "Kedves Csabi! Túléltél 10+ bódorgót! …".'),
+      }),
+    }),
+  },
   '/users/me/attendance': {
     get: op({
       tag: T.users,
@@ -1969,6 +1984,24 @@ const paths = {
       summary: 'Set the birthday greeting',
       description:
         'On/off, the effect, and the message - `{név}` becomes the person’s given name. Recorded in the history.',
+      body: ref('BirthdaySettings'),
+      data: ref('BirthdaySettings'),
+      errors: [400],
+    }),
+  },
+  '/settings/rank': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'The rank celebration',
+      data: ref('BirthdaySettings'),
+    }),
+    put: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Set the rank celebration',
+      description:
+        'On/off, the effect, and the message - `{név}` becomes the person’s given name, `{szám}` the rank’s tour count ("10", or "10+" if they are past it by then), `{rang}` its name (Bronz…). Same shape as the birthday greeting. Recorded in the history.',
       body: ref('BirthdaySettings'),
       data: ref('BirthdaySettings'),
       errors: [400],

@@ -477,6 +477,84 @@
         <p class="empty-note">Betöltés...</p>
       }
     </section>
+
+    <!-- Rangok ünneplése: the first login after reaching a new rank (10, 20,
+         ... tours) - an effect and a message; the admins get an e-mail
+         about it either way (server utils/ranks.js). -->
+    <section class="panel birthday-card">
+      <div class="panel-title">
+        <div>
+          <h2>Rangok ünneplése</h2>
+          <p class="subtext">
+            Aki új rangot ér el (10, 20, 30, 40, 50 tábor: bronz, ezüst, arany, platina, gyémánt),
+            az utána első belépésekor effektet és gratulációt kap. Az adminok erről mindig e-mailt
+            kapnak – akkor is, ha ez ki van kapcsolva.
+          </p>
+        </div>
+      </div>
+
+      @if (rankSaved()) {
+        <label class="reminder-switch">
+          <input type="checkbox" [ngModel]="rkEnabled()" (ngModelChange)="rkEnabled.set($event)" />
+          Bekapcsolva
+        </label>
+
+        <div class="chat-fields birthday-fields">
+          <label>
+            Effekt
+            <select [ngModel]="rkEffect()" (ngModelChange)="rkEffect.set($event)">
+              @for (e of birthdayEffects; track e.key) {
+                <option [value]="e.key">{{ e.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="birthday-message">
+            Üzenet
+            <input
+              type="text"
+              maxlength="200"
+              [ngModel]="rkMessage()"
+              (ngModelChange)="rkMessage.set($event)"
+            />
+            <small
+              ><code>{{ '{' }}név{{ '}' }}</code
+              >: a keresztneve · <code>{{ '{' }}szám{{ '}' }}</code
+              >: a rang táborszáma (10, vagy 10+, ha azóta több) ·
+              <code>{{ '{' }}rang{{ '}' }}</code
+              >: bronz, ezüst…</small
+            >
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="outline-btn" (click)="previewRank()">
+            <mat-icon>celebration</mat-icon>
+            Előnézet
+          </button>
+          <span class="spacer"></span>
+          @if (rankDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="resetRank()"
+              [disabled]="savingRank()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="saveRank()"
+            [disabled]="!rankDirty() || savingRank()"
+          >
+            {{ savingRank() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      } @else {
+        <p class="empty-note">Betöltés...</p>
+      }
+    </section>
   </div>
 
   <!-- Info only: every e-mail and push the app sends - what triggers it and
