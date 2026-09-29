@@ -37,12 +37,17 @@
   place-items: center;
   width: 34px;
   height: 34px;
-  border: 1px solid #dfe8e4;
+  border: 0;
   border-radius: 50%;
-  background: #ffffffe6;
-  color: #1a796c;
+  background: #1a796c;
+  color: #fff;
   cursor: pointer;
-  box-shadow: 0 2px 8px #0000000f;
+  box-shadow: 0 2px 8px #0000002e;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #145f55;
+  }
 
   &:disabled {
     cursor: progress;
