@@ -140,25 +140,33 @@
                   }
                 }
               </td>
+              <!-- Round icon buttons, so the row fits a phone: send / send
+                   again / take the invitation back. -->
               <td class="actions">
                 @if (p.status !== 'joined') {
                   <button
                     type="button"
-                    class="mini-btn"
+                    class="icon-action"
+                    [title]="p.status === 'none' ? 'Meghívás' : 'Újraküldés'"
+                    [attr.aria-label]="p.status === 'none' ? 'Meghívás' : 'Újraküldés'"
                     [disabled]="!enabled() || busy()"
                     (click)="sendOne(p)"
                   >
-                    {{ busy() === p._id ? '…' : p.status === 'none' ? 'Meghívás' : 'Újraküldés' }}
+                    <mat-icon>{{
+                      busy() === p._id ? 'hourglass_top' : p.status === 'none' ? 'send' : 'replay'
+                    }}</mat-icon>
                   </button>
                 }
                 @if (p.status === 'sent') {
                   <button
                     type="button"
-                    class="mini-btn mini-btn--danger"
+                    class="icon-action icon-action--danger"
+                    title="Visszavonás"
+                    aria-label="Visszavonás"
                     [disabled]="busy()"
                     (click)="revoke(p)"
                   >
-                    Visszavonás
+                    <mat-icon>cancel_schedule_send</mat-icon>
                   </button>
                 }
               </td>

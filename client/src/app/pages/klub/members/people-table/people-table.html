@@ -86,6 +86,7 @@
                 }
                 <a
                   [routerLink]="['/klub/felhasznalok', p._id]"
+                  [queryParams]="list() ? { lista: list() } : {}"
                   class="icon-btn icon-btn--edit"
                   title="Szerkesztés"
                   aria-label="Felhasználó szerkesztése"

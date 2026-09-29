@@ -45,10 +45,13 @@ const UNTIL: Record<Medal['key'], string> = {
         <mat-icon>{{ m.icon }}</mat-icon>
         @if (withLabel()) {
           <span class="medal-label">
-            <strong>{{ m.name }} bódorgó</strong> – {{ tours() }} tábor
-            @if (next(); as n) {
-              · még {{ n.missing }} {{ until(n.medal.key) }}
-            }
+            <strong>{{ m.name }} bódorgó</strong><span class="medal-sep"> – </span
+            ><span class="medal-detail"
+              >{{ tours() }} tábor
+              @if (next(); as n) {
+                · még {{ n.missing }} {{ until(n.medal.key) }}
+              }
+            </span>
           </span>
         }
       </span>
@@ -79,6 +82,16 @@ const UNTIL: Record<Medal['key'], string> = {
     .medal-label {
       font-size: 13px;
       color: inherit;
+    }
+    /* A narrow screen: the rank on the first line, the tour count and the
+       next rank's distance on the second. */
+    @media (max-width: 580px) {
+      .medal-sep {
+        display: none;
+      }
+      .medal-detail {
+        display: block;
+      }
     }
     .medal--bronze mat-icon {
       color: #b87333;

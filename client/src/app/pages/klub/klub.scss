@@ -99,6 +99,32 @@
   }
 }
 
+// Each page's icon in its own color - the bódorgó logo's (styles.scss's
+// --logo-* colors).
+.nav-icon--overview {
+  color: var(--logo-blue);
+}
+
+.nav-icon--finance {
+  color: var(--logo-yellow);
+}
+
+.nav-icon--members {
+  color: var(--logo-green);
+}
+
+.nav-icon--documents {
+  color: var(--logo-orange);
+}
+
+.nav-icon--profile {
+  color: var(--logo-red);
+}
+
+.nav-icon--settings {
+  color: var(--logo-brown);
+}
+
 // Beállítások + the .side-bottom box, together at the sidebar's own
 // bottom (margin-top:auto, in its flex column) thanks to .klub-sidebar's
 // fixed height above.

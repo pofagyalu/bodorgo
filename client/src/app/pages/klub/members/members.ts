@@ -1,5 +1,5 @@
 import { Component, OnInit, TemplateRef, computed, inject, signal, viewChild } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { Observable } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
@@ -31,6 +31,19 @@ const CLUB_FOUNDING_YEAR = 2019;
 // way (see paymentController.js's chargeableAmount).
 const BARION_FEE_RATE = 0.016;
 
+type MembersTab = 'club' | 'casual' | 'everyone' | 'invites';
+
+// Each tab's name in the address (?lista=...).
+export const TAB_KEYS: Record<MembersTab, string> = {
+  club: 'klubtagok',
+  casual: 'tobbiek',
+  everyone: 'mindenki',
+  invites: 'meghivok',
+};
+const TAB_BY_KEY: Record<string, MembersTab> = Object.fromEntries(
+  Object.entries(TAB_KEYS).map(([tab, key]) => [key, tab as MembersTab]),
+);
+
 @Component({
   selector: 'app-members',
   imports: [DatePipe, RouterLink, MatIconModule, PeopleTable, InvitationsPanel],
@@ -61,7 +74,13 @@ export class Members implements OnInit {
   // Map lookup.
   private paidTransactions = signal<Map<string, Transaction>>(new Map());
 
-  activeTab = signal<'club' | 'casual' | 'everyone' | 'invites'>('club');
+  // The open tab - also in the address (?lista=klubtagok / tobbiek /
+  // mindenki / meghivok), so editing someone and saving comes back to the
+  // same list (member-edit.ts's back()).
+  activeTab = signal<MembersTab>(
+    TAB_BY_KEY[this.route.snapshot.queryParamMap.get('lista') ?? ''] ?? 'club',
+  );
+  private router = inject(Router);
   // "Személy keresése" - one search for all three tables, by name or
   // email, kept when switching tabs.
   search = signal('');
@@ -318,8 +337,14 @@ export class Members implements OnInit {
     });
   }
 
-  selectTab(tab: 'club' | 'casual' | 'everyone' | 'invites') {
+  selectTab(tab: MembersTab) {
     this.activeTab.set(tab);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { lista: TAB_KEYS[tab] },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   // One at a time - opens a member's row to show their year-by-year

@@ -463,7 +463,9 @@ $tab-curve: 0.625rem; // the inverse radius at the open tab's feet
     padding: 0;
   }
 
-  .chat-tools {
+  // Stacked only in the narrow sidebar - in the phone's tab row they stay
+  // side by side (one row, one height).
+  .sidebar-tools .chat-tools {
     flex-direction: column;
     align-items: center;
   }
