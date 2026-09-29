@@ -16,6 +16,15 @@
   --logo-red: #f40e0d;
   --logo-blue: #096396;
   --logo-yellow: #f6b528;
+  /* The sticky site header's height (components/header) - pages that fill
+     the screen below it subtract this. Lower on phones, to leave more room. */
+  --header-height: 5rem; /* 80px */
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height: 4rem; /* 64px */
+  }
 }
 
 /* The window never scrolls - the page does, below the header (see

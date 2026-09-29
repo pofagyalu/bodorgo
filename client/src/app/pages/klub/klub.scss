@@ -17,7 +17,7 @@
 .klub-shell {
   display: grid;
   grid-template-columns: nav.$sidebar-width minmax(0, 1fr);
-  min-height: calc(100dvh - 80px);
+  min-height: calc(100dvh - var(--header-height));
   background: #f5f7f5;
 }
 
@@ -29,11 +29,11 @@
   flex-direction: column;
   gap: 46px;
   // Pinned to the top of the page area (app.component's .page-body, right
-  // below the 80px site header) instead of scrolling away with
+  // below the site header) instead of scrolling away with
   // .klub-main's content.
   position: sticky;
   top: 0;
-  height: calc(100dvh - 80px);
+  height: calc(100dvh - var(--header-height));
   overflow-y: auto;
 }
 
