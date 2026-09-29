@@ -35,6 +35,12 @@ const clubSettingsSchema = new Schema(
       quotaMB: { type: Number, default: 1024, min: 50, max: 100000 },
       dailyLimit: { type: Number, default: 10, min: 1, max: 1000 },
     },
+    // Kép gyorsítótár (see photos/imageSizes.js): the size limit of the
+    // smaller photo versions made for the viewer - the least recently
+    // viewed go first when it's exceeded.
+    imageCache: {
+      quotaMB: { type: Number, default: 5120, min: 100, max: 1000000 },
+    },
     // Who changed what, when - shown on the settings page.
     // The two Barion wallets (Beállítások; were BARION_MEMBERSHIP_*/
     // BARION_TOUR_* in .env): payeeEmail - where each purpose's payments

@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import type PhotoSwipeLightbox from 'photoswipe/lightbox';
+import { photoSlide } from '../../../shared/photo-sizes';
 import { checkerTransparentPngs } from '../../../shared/pswp-checker';
 import { MediaPhotoCategory, MediaService } from '../../../services/media';
 
@@ -58,12 +59,14 @@ export class Photos implements OnInit, OnDestroy {
     }
     this.lightbox.loadAndOpen(
       index,
-      c.photos.map((p) => ({
-        src: this.media.photoUrl(c.key, p.filename),
-        width: p.width,
-        height: p.height,
-        alt: p.filename,
-      })),
+      c.photos.map((p) =>
+        photoSlide(
+          this.media.photoUrl(c.key, p.filename),
+          this.media.photoThumbUrl(c.key, p.filename),
+          p,
+          p.filename,
+        ),
+      ),
     );
   }
 

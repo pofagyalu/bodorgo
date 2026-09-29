@@ -7,6 +7,7 @@ import AppError from '../utils/appError.js';
 import config from '../config.js';
 import logger from '../logger.js';
 import { thumbRelPath } from '../photos/imageFiles.js';
+import { LONG_CACHE, requestedWidth, sendPhoto } from '../photos/imageSizes.js';
 
 // A restricted photo (see tourModel.js's images.restricted) is visible to
 // an admin, or to anyone who actually attended *this* tour - same
@@ -92,25 +93,26 @@ export const getTourImageThumb = async (req, res) => {
   );
 
   if (fs.existsSync(thumbPath)) {
+    res.set('Cache-Control', LONG_CACHE);
     return res.sendFile(thumbPath);
   }
 
   const fullPath = resolveImagePath(config.photosRoot, tour, req.params.filename);
-  if (!fs.existsSync(fullPath)) {
-    throw new AppError('A fénykép nem található a lemezen.', 404);
-  }
-  res.sendFile(fullPath);
+  await sendPhoto(res, fullPath, {});
 };
 
 // GET /tours/:tourId/images/:filename - the full-resolution original,
-// streamed straight from PHOTOS_ROOT.
+// streamed straight from PHOTOS_ROOT; ?w=800/1200/1920 - a smaller WebP of
+// it instead (see photos/imageSizes.js), what the viewer asks for.
 export const getTourImage = async (req, res) => {
+  const width = requestedWidth(req.query);
   const tour = await loadTourImage(req.params.tourId, req.params.filename, req.user);
   const fullPath = resolveImagePath(config.photosRoot, tour, req.params.filename);
-  if (!fs.existsSync(fullPath)) {
-    throw new AppError('A fénykép nem található a lemezen.', 404);
-  }
-  res.sendFile(fullPath);
+  await sendPhoto(res, fullPath, {
+    key: `tours/${tour.sourceFolder}`,
+    filename: req.params.filename,
+    width,
+  });
 };
 
 // GET /tours/:tourId/images/:filename/download - same original, forced as

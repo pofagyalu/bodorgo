@@ -6,11 +6,13 @@ import {
   MembershipFee,
   BirthdaySettings,
   ChatImageSettings,
+  ImageCacheSettings,
   MembershipReminder,
   SettingsService,
   feeForYear,
 } from '../../../services/settings';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { BarionWithdraw } from './barion-withdraw/barion-withdraw';
 import {
   BIRTHDAY_EFFECTS,
@@ -170,6 +172,7 @@ export class KlubSettings implements OnInit {
   ngOnInit() {
     this.loadReminder();
     this.loadChatImages();
+    this.loadImageCache();
     this.loadBirthday();
     this.settingsService.getMembershipFees().subscribe({
       next: (res) => {
@@ -429,6 +432,85 @@ export class KlubSettings implements OnInit {
           this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
         },
       });
+  }
+
+  // --- Kép gyorsítótár: the smaller photo versions for the viewer ---
+
+  private confirm = inject(ConfirmService);
+  imageCache = signal<ImageCacheSettings | null>(null);
+  imageCacheQuotaMB = signal(5120);
+  savingImageCache = signal(false);
+
+  imageCacheDirty = computed(() => {
+    const c = this.imageCache();
+    return !!c && c.quotaMB !== Number(this.imageCacheQuotaMB());
+  });
+
+  imageCachePercent = computed(() => {
+    const c = this.imageCache();
+    if (!c) return 0;
+    return Math.min(100, Math.round((c.usage.bytes / (c.quotaMB * 1024 * 1024)) * 100));
+  });
+
+  imageCacheUsageMB = computed(() =>
+    Math.round((this.imageCache()?.usage.bytes ?? 0) / (1024 * 1024)),
+  );
+
+  private loadImageCache() {
+    this.settingsService.getImageCacheSettings().subscribe({
+      next: (res) => this.applyImageCache(res.data),
+      error: () => {},
+    });
+  }
+
+  applyImageCache(c: ImageCacheSettings) {
+    this.imageCache.set(c);
+    this.imageCacheQuotaMB.set(c.quotaMB);
+  }
+
+  saveImageCache() {
+    if (this.savingImageCache()) return;
+    this.savingImageCache.set(true);
+    this.settingsService.updateImageCacheSettings(Number(this.imageCacheQuotaMB())).subscribe({
+      next: (res) => {
+        this.applyImageCache(res.data);
+        this.savingImageCache.set(false);
+        this.notifications.addSuccess(
+          res.data.removed
+            ? `Kép gyorsítótár mentve – ${res.data.removed} régóta nem nézett kép törölve, hogy beférjen.`
+            : 'Kép gyorsítótár mentve.',
+        );
+      },
+      error: (err) => {
+        this.savingImageCache.set(false);
+        this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+      },
+    });
+  }
+
+  async clearImageCache() {
+    if (this.savingImageCache()) return;
+    const ok = await this.confirm.ask({
+      message: 'Biztosan üríted a kép gyorsítótárat?',
+      detail:
+        'Az eredeti fotók megmaradnak – a kisebb változatok újra elkészülnek, ahogy megnézik őket.',
+      confirmText: 'Ürítés',
+    });
+    if (!ok) return;
+    this.savingImageCache.set(true);
+    this.settingsService.clearImageCache().subscribe({
+      next: (res) => {
+        this.applyImageCache(res.data);
+        this.savingImageCache.set(false);
+        this.notifications.addSuccess(
+          `Kép gyorsítótár kiürítve – ${res.data.removed} kép törölve.`,
+        );
+      },
+      error: (err) => {
+        this.savingImageCache.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Az ürítés nem sikerült.');
+      },
+    });
   }
 
   // --- Születésnap: the birthday greeting (shared/birthday) ---

@@ -330,6 +330,82 @@
         <p class="empty-note">Betöltés...</p>
       }
     </section>
+
+    <!-- Kép gyorsítótár: the smaller versions of the album photos the viewer
+       shows (server photos/imageSizes.js). Over the limit the least
+       recently viewed go - they're made again when needed. -->
+    <section class="panel image-cache">
+      <div class="panel-title">
+        <div>
+          <h2>Kép gyorsítótár</h2>
+          <p class="subtext">
+            A táborok és a Média fotóinak kisebb változatai, amiket a képnézegető mutat – így
+            mobilon is gyorsan betöltenek. Az első megnézéskor készülnek. Ha betelik a keret, a
+            legrégebben nézettek törlődnek, és legközelebb újra elkészülnek. Az eredeti fotókat nem
+            érinti.
+          </p>
+        </div>
+      </div>
+
+      @if (imageCache(); as c) {
+        <div class="chat-usage">
+          <div class="chat-usage-bar" [class.chat-usage-bar--full]="imageCachePercent() >= 80">
+            <span [style.width.%]="imageCachePercent()"></span>
+          </div>
+          <small>
+            {{ imageCacheUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} kép ({{
+              imageCachePercent()
+            }}%)
+          </small>
+        </div>
+
+        <div class="chat-fields">
+          <label>
+            Tárhely keret (MB)
+            <input
+              type="number"
+              min="100"
+              step="512"
+              [ngModel]="imageCacheQuotaMB()"
+              (ngModelChange)="imageCacheQuotaMB.set(+$event)"
+            />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="clearImageCache()"
+            [disabled]="savingImageCache() || !c.usage.count"
+          >
+            Gyorsítótár ürítése
+          </button>
+          <span class="spacer"></span>
+          @if (imageCacheDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="applyImageCache(c)"
+              [disabled]="savingImageCache()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="saveImageCache()"
+            [disabled]="!imageCacheDirty() || savingImageCache()"
+          >
+            {{ savingImageCache() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      } @else {
+        <p class="empty-note">Betöltés...</p>
+      }
+    </section>
+
     <!-- Születésnap: confetti and a greeting for whoever logs in on their
          birthday - once a year (shared/birthday). -->
     <section class="panel birthday-card">

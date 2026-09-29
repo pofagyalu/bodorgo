@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
 import MediaPhoto from '../models/mediaPhotoModel.js';
+import { removeSizedFolder, removeSizedVersions } from './imageSizes.js';
 import { isImageFile, processPhoto, thumbRelPath } from './imageFiles.js';
 
 // Média → Fotók: every subfolder of MEDIA_PHOTOS_ROOT is a category, its
@@ -47,6 +48,10 @@ export async function syncMediaPhotos(sharp) {
     for (const p of gone) {
       fs.rmSync(path.join(mediaThumbDir(category), thumbRelPath(p.filename)), { force: true });
     }
+    removeSizedVersions(
+      `media/${category}`,
+      gone.map((p) => p.filename),
+    );
     if (gone.length) await MediaPhoto.deleteMany({ _id: { $in: gone.map((p) => p._id) } });
 
     results.push({ title: category, added, removed: gone.length, total: files.length, failures });
@@ -55,5 +60,6 @@ export async function syncMediaPhotos(sharp) {
   // A whole category folder deleted or renamed: its records go too.
   const orphaned = await MediaPhoto.distinct('category', { category: { $nin: categories } });
   if (orphaned.length) await MediaPhoto.deleteMany({ category: { $in: orphaned } });
+  for (const category of orphaned) removeSizedFolder(`media/${category}`);
   return results;
 }
