@@ -128,6 +128,7 @@ function op({
 
 const tourId = path('id', 'The tour id.');
 const tourIdT = path('tourId', 'The tour id.');
+const musicKey = path('key', '`bodorgo-fm` (everyone) or `buli` (members only).');
 const chatRoomIdP = path('chatRoomId', 'The chat room id (the general one, or a tour’s).');
 // ?w= on a photo: a smaller version for the viewer (photos/imageSizes.js).
 const sizeW = query('w', 'Width: `800`, `1200` or `1920`. Omit for the original.', {
@@ -509,7 +510,7 @@ const tags = [
   [T.media, "Média → Videók and Fotók - the club's own videos and photo folders on the NAS."],
   [
     T.music,
-    'The background music: one Jellyfin playlist, streamed through this server (the Jellyfin key never reaches the browser).',
+    'The music: Jellyfin playlists (Bódorgó FM for everyone, Buli for members), streamed through this server - the Jellyfin key never reaches the browser.',
   ],
   [
     T.settings,
@@ -2157,12 +2158,13 @@ const paths = {
   },
 
   // --- Zene ---
-  '/music/playlist': {
+  '/music/{key}/playlist': {
     get: op({
       tag: T.music,
-      summary: 'The music playlist',
+      summary: 'A music playlist',
       description:
-        'The Jellyfin playlist’s tracks, in order (cached for a few minutes). 503 if the music isn’t set up (JELLYFIN_* settings), 502 if Jellyfin can’t be reached.',
+        'The Jellyfin playlist’s tracks, in order. `bodorgo-fm`: everyone logged in; `buli`: members and admins (403 for guests). Loaded at server start and answered from memory; refreshed in the background every 12 hours (browsers may keep it 30 minutes). 503 if not set up (JELLYFIN_* settings), 502 if Jellyfin can’t be reached on the very first load.',
+      params: [musicKey],
       data: obj({
         tracks: arrayOf(
           obj({
@@ -2170,34 +2172,47 @@ const paths = {
             title: str(),
             artist: str(),
             durationMs: int('May be null.'),
-            streamUrl: str('Relative - `/music/stream/{itemId}` on this server.'),
-            imageUrl: str('Relative - `/music/image/{itemId}`, or null if there is no picture.'),
+            streamUrl: str('Relative - `/music/{key}/stream/{itemId}` on this server.'),
+            imageUrl: str(
+              'Relative - `/music/{key}/image/{itemId}`, or null if there is no picture.',
+            ),
           }),
         ),
       }),
-      errors: [502, 503],
+      errors: [403, 404, 502, 503],
     }),
   },
-  '/music/image/{itemId}': {
+  '/music/{key}/refresh': {
+    post: op({
+      tag: T.music,
+      role: 'admin',
+      summary: 'Reload a playlist from Jellyfin now',
+      description: 'After a change in Jellyfin - otherwise it is refreshed every 12 hours.',
+      params: [musicKey],
+      data: obj({ tracks: arrayOf({ type: 'object' }) }),
+      errors: [404, 502, 503],
+    }),
+  },
+  '/music/{key}/image/{itemId}': {
     get: op({
       tag: T.music,
       summary: 'One track’s thumbnail',
       description:
-        'The artist’s photo if Jellyfin has one, otherwise the album cover (or the track’s own picture) - square, resized by Jellyfin, cached a day. Only a track of the playlist.',
-      params: [path('itemId', 'A track’s id from the playlist.')],
+        'The artist’s photo if Jellyfin has one, otherwise the album cover (or the track’s own picture) - square, resized by Jellyfin, cached a day. Only a track of that playlist.',
+      params: [musicKey, path('itemId', 'A track’s id from the playlist.')],
       response: file(['image/jpeg'], 'The picture.'),
-      errors: [404, 502],
+      errors: [403, 404, 502],
     }),
   },
-  '/music/stream/{itemId}': {
+  '/music/{key}/stream/{itemId}': {
     get: op({
       tag: T.music,
       summary: 'One track’s audio',
       description:
-        'Piped through from Jellyfin, the original file (no transcoding). Byte ranges (`Range`) are passed on - 206 with `Content-Range`, which Safari needs. Only a track of the playlist.',
-      params: [path('itemId', 'A track’s id from the playlist.')],
+        'Piped through from Jellyfin, the original file (no transcoding). Byte ranges (`Range`) are passed on - 206 with `Content-Range`, which Safari needs. Only a track of that playlist.',
+      params: [musicKey, path('itemId', 'A track’s id from the playlist.')],
       response: file(['audio/mpeg', 'audio/flac', 'audio/mp4'], 'The audio.'),
-      errors: [404, 502],
+      errors: [403, 404, 502],
     }),
   },
 

@@ -142,7 +142,8 @@ const config = {
   jellyfin: {
     url: process.env.JELLYFIN_URL?.replace(/\/+$/, ''),
     apiKey: process.env.JELLYFIN_API_KEY,
-    playlistId: process.env.JELLYFIN_PLAYLIST_ID,
+    playlistId: process.env.JELLYFIN_PLAYLIST_ID, // Bódorgó FM
+    buliPlaylistId: process.env.JELLYFIN_BULI_PLAYLIST_ID, // Buli - members only
     userId: process.env.JELLYFIN_USER_ID,
   },
 };

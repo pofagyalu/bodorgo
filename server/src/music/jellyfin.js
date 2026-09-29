@@ -1,16 +1,36 @@
 import config from '../config.js';
 import AppError from '../utils/appError.js';
+import logger from '../logger.js';
 
-// The background music: one fixed Jellyfin playlist (JELLYFIN_PLAYLIST_ID),
-// read with a server-side API key. The browser only ever talks to our own
-// /music routes (musicController.js) - never to Jellyfin, never with the
-// key. The playlist itself is managed in Jellyfin.
+// The music: a few fixed Jellyfin playlists, read with a server-side API
+// key. The browser only ever talks to our own /music routes
+// (musicController.js) - never to Jellyfin, never with the key. The
+// playlists themselves are managed in Jellyfin.
+//
+// Each by a short name used in the addresses:
+// - 'bodorgo-fm': the club radio - everyone logged in (the header player);
+// - 'buli': party music - members (and admins) only.
+export const PLAYLISTS = {
+  'bodorgo-fm': { id: () => config.jellyfin.playlistId, membersOnly: false },
+  buli: { id: () => config.jellyfin.buliPlaylistId, membersOnly: true },
+};
 
-const CACHE_MS = 5 * 60 * 1000;
-let cached = null; // { at, tracks }
+// A playlist by its name, if it's set up - a 404 otherwise.
+export function playlistByKey(key) {
+  const playlist = Object.hasOwn(PLAYLISTS, key) ? PLAYLISTS[key] : null;
+  if (!playlist) throw new AppError('Nincs ilyen lejátszási lista.', 404);
+  if (!config.jellyfin.url || !config.jellyfin.apiKey || !playlist.id()) {
+    throw new AppError('A zene nincs beállítva.', 503);
+  }
+  return playlist;
+}
 
-export const musicConfigured = () =>
-  !!(config.jellyfin.url && config.jellyfin.apiKey && config.jellyfin.playlistId);
+// The playlists change only now and then - refreshed (in the background)
+// every 12 hours; an admin can refresh one at once (POST .../refresh), and a
+// server restart reloads them all.
+const CACHE_MS = 12 * 60 * 60 * 1000;
+const cache = new Map(); // key -> { at, tracks }
+const refreshing = new Map(); // key -> the refresh in progress
 
 // The key as a header, not ?api_key= - it stays out of every log.
 const authHeaders = () => ({
@@ -28,14 +48,14 @@ const TICKS_PER_MS = 10000;
 // Jellyfin's item -> what the player needs. The stream and the picture go
 // through us. imageFrom: the Jellyfin item whose picture is shown - see
 // pictureSource (kept on the server, not sent).
-export function toTrack(item, imageFrom = null) {
+export function toTrack(key, item, imageFrom = null) {
   return {
     id: item.Id,
     title: item.Name,
     artist: item.AlbumArtist || item.Artists?.[0] || 'Ismeretlen előadó',
     durationMs: item.RunTimeTicks ? Math.round(item.RunTimeTicks / TICKS_PER_MS) : null,
-    streamUrl: `/music/stream/${item.Id}`,
-    imageUrl: imageFrom ? `/music/image/${item.Id}` : null,
+    streamUrl: `/music/${key}/stream/${item.Id}`,
+    imageUrl: imageFrom ? `/music/${key}/image/${item.Id}` : null,
     imageFrom,
   };
 }
@@ -83,14 +103,12 @@ async function listingUserId() {
   return firstUserId;
 }
 
-// The playlist's tracks, in its order - cached a few minutes.
-export async function playlistTracks({ fresh = false } = {}) {
-  if (!musicConfigured()) throw new AppError('A zene nincs beállítva.', 503);
-  if (!fresh && cached && Date.now() - cached.at < CACHE_MS) return cached.tracks;
-
+// Asks Jellyfin for a playlist's tracks (slow the first time: Jellyfin
+// wakes up, and each artist is checked for a photo).
+async function fetchPlaylist(key) {
   let url;
   try {
-    url = jellyfinUrl(`/Playlists/${config.jellyfin.playlistId}/Items`, {
+    url = jellyfinUrl(`/Playlists/${PLAYLISTS[key].id()}/Items`, {
       userId: await listingUserId(),
       fields:
         'RunTimeTicks,AlbumArtist,Artists,ImageTags,AlbumPrimaryImageTag,ArtistItems,AlbumArtists',
@@ -107,14 +125,55 @@ export async function playlistTracks({ fresh = false } = {}) {
   if (!res.ok) throw new AppError('A zenelejátszó most nem érhető el.', 502);
   const body = await res.json();
   const items = (body.Items ?? []).filter((i) => i.Id);
-  const tracks = await Promise.all(items.map(async (i) => toTrack(i, await pictureSource(i))));
-  cached = { at: Date.now(), tracks };
-  return tracks;
+  return Promise.all(items.map(async (i) => toTrack(key, i, await pictureSource(i))));
 }
 
-// For the tests: forget the cached playlist (and the listing user).
+// One refresh per playlist at a time, whoever asks.
+function refresh(key) {
+  if (!refreshing.has(key)) {
+    refreshing.set(
+      key,
+      fetchPlaylist(key)
+        .then((tracks) => {
+          cache.set(key, { at: Date.now(), tracks });
+          return tracks;
+        })
+        .finally(() => refreshing.delete(key)),
+    );
+  }
+  return refreshing.get(key);
+}
+
+// A playlist's tracks, in its order. Once loaded, always answered at once
+// from memory; when it's older than CACHE_MS it's refreshed in the
+// background (nobody waits for that). Only the very first load waits - and
+// warmUpMusic does that at server start. `fresh`: wait for Jellyfin now.
+export async function playlistTracks(key, { fresh = false } = {}) {
+  playlistByKey(key);
+  const cached = cache.get(key);
+  if (fresh || !cached) return refresh(key);
+  if (Date.now() - cached.at > CACHE_MS) {
+    refresh(key).catch((err) => logger.warn(`music ${key} refresh failed: ${err.message}`));
+  }
+  return cached.tracks;
+}
+
+// At server start: every set-up playlist loaded before anyone asks.
+export function warmUpMusic() {
+  for (const key of Object.keys(PLAYLISTS)) {
+    try {
+      playlistByKey(key);
+    } catch {
+      continue; // not set up
+    }
+    refresh(key).catch((err) => logger.warn(`music ${key} warm-up failed: ${err.message}`));
+  }
+}
+
+// For the tests: forget the cached playlists (and the listing user).
 export function clearPlaylistCache() {
-  cached = null;
+  cache.clear();
+  refreshing.clear();
   firstUserId = null;
   artistHasPhoto.clear();
 }
