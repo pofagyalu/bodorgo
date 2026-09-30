@@ -5,16 +5,13 @@ import {
   signal,
   computed,
   effect,
-  OnDestroy,
   ViewChild,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
-import type PhotoSwipeLightbox from 'photoswipe/lightbox';
-import { photoSlide } from '../../shared/photo-sizes';
-import { checkerTransparentPngs } from '../../shared/pswp-checker';
+import { GalleryPhoto, PhotoGalleryService } from '../../shared/photo-gallery';
 import {
   TourService,
   Tour,
@@ -86,7 +83,7 @@ interface PickerOption {
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
-export class TourDetails implements OnDestroy {
+export class TourDetails {
   private route = inject(ActivatedRoute);
   private tourService = inject(TourService);
   private userService = inject(UserService);
@@ -173,11 +170,11 @@ export class TourDetails implements OnDestroy {
   // anyway), so an anonymous visitor never triggers a guaranteed 401.
   // Deliberately not shown as a thumbnail grid on the page itself (that
   // was the first attempt, dropped per feedback) - clicking the cover
-  // photo is the only entry point, everything else happens inside the
-  // opened PhotoSwipe viewer (see initLightbox()).
+  // photo is the only entry point, everything else happens in the app's
+  // shared photo viewer (shared/photo-gallery).
   tourImages = signal<TourImage[]>([]);
   private imagesRequested = false;
-  private lightbox: PhotoSwipeLightbox | null = null;
+  private gallery = inject(PhotoGalleryService);
 
   currentUserId = computed(() => this.auth.user()?.id);
 
@@ -446,9 +443,7 @@ export class TourDetails implements OnDestroy {
 
     // Same "wait for both pieces of async state" pattern as the picker
     // effect above - fires once the tour is loaded AND login status is
-    // known to be true, never for an anonymous visitor. Once the images
-    // arrive, initLightbox() sets up the (DOM-independent, see below)
-    // PhotoSwipe instance once - openCoverGallery() only ever opens it.
+    // known to be true, never for an anonymous visitor.
     effect(() => {
       const t = this.tour();
       const loggedIn = this.auth.isLoggedIn();
@@ -457,7 +452,6 @@ export class TourDetails implements OnDestroy {
       this.tourService.getTourImages(t._id).subscribe({
         next: (res) => {
           this.tourImages.set(res.data.images);
-          if (res.data.images.length > 0) this.initLightbox();
         },
       });
     });
@@ -714,267 +708,61 @@ export class TourDetails implements OnDestroy {
     });
   }
 
-  // No on-page thumbnail grid (dropped per feedback - too much clutter),
-  // so there's no DOM gallery for PhotoSwipeLightbox to scan; every open
-  // instead passes an explicit dataSource built from tourImages() (see
-  // openCoverGallery()), and the two custom toolbar buttons below + the
-  // bottom filmstrip are the only way to browse once it's open.
-  private async initLightbox() {
-    const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
-    this.lightbox = new PhotoSwipeLightbox({
-      pswpModule: () => import('photoswipe'),
-    });
-    checkerTransparentPngs(this.lightbox);
-
-    this.lightbox.on('uiRegister', () => {
-      const ui = this.lightbox!.pswp!.ui!;
-
-      // Admin-only: mark/unmark the currently-viewed photo as restricted
-      // to that tour's own attendees (see
-      // tourImageController.js's canViewRestrictedImages) - for the rare
-      // sensitive photo, set by hand after upload. Only registered at all
-      // for an admin viewer; toggling patches tourImages() locally so the
-      // icon and any later re-open reflect the new state without
-      // reloading the whole gallery.
-      if (this.auth.user()?.role === 'admin') {
-        ui.registerElement({
-          name: 'restrict-button',
-          order: 7,
-          isButton: true,
-          html: {
-            isCustomSVG: true,
-            size: 24,
-            inner:
-              '<path d="M12 17a2 2 0 0 0 2-2 2 2 0 0 0-2-2 2 2 0 0 0-2 2 2 2 0 0 0 2 2m6-9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h1V6a5 5 0 0 1 10 0v2h-2V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v2z" id="pswp__icn-restrict"/>',
-            outlineID: 'pswp__icn-restrict',
-          },
-          onInit: (el, pswp) => {
-            const refresh = () => {
-              const img = this.tourImages()[pswp.currIndex];
-              el.title = img?.restricted
-                ? 'Csak a résztvevők látják - kattints a feloldáshoz'
-                : 'Mindenki látja - kattints a résztvevőkre korlátozáshoz';
-              el.classList.toggle('pswp__button--restrict-active', !!img?.restricted);
-            };
-            pswp.on('change', refresh);
-            refresh();
-
-            el.addEventListener('click', () => {
-              const img = this.tourImages()[pswp.currIndex];
-              if (img) this.toggleImageRestricted(img.filename, !img.restricted, refresh);
-            });
-          },
-        });
-      }
-
-      // Download button, next to zoom/close - see
-      // https://photoswipe.com/adding-ui-elements/. Points at the
-      // dedicated /download route (sets Content-Disposition: attachment)
-      // rather than the plain display URL - a bare <a download> is
-      // silently ignored by the browser for a cross-origin URL (client and
-      // API are on different subdomains), same reasoning as
-      // documentController.js's own download route elsewhere in this app.
-      ui.registerElement({
-        name: 'download-button',
-        order: 8,
-        isButton: true,
-        tagName: 'a',
-        title: 'Fénykép letöltése',
-        html: {
-          isCustomSVG: true,
-          size: 24,
-          inner: '<path d="M12 16l-6-6h4V4h4v6h4l-6 6zM5 18h14v2H5z" id="pswp__icn-download"/>',
-          outlineID: 'pswp__icn-download',
-        },
-        onInit: (el, pswp) => {
-          const link = el as HTMLAnchorElement;
-          link.setAttribute('target', '_blank');
-          link.setAttribute('rel', 'noopener');
-          pswp.on('change', () => {
-            const img = this.tourImages()[pswp.currIndex];
-            link.href = img ? this.galleryDownloadUrl(img.filename) : '';
-          });
-        },
-      });
-
-      // Second button - the whole gallery as a zip, same download-forcing
-      // reasoning as above. Static href/title (doesn't depend on the
-      // current slide), set once.
-      ui.registerElement({
-        name: 'download-all-button',
-        order: 9,
-        isButton: true,
-        tagName: 'a',
-        html: {
-          isCustomSVG: true,
-          size: 24,
-          inner:
-            '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16h-2v2h-2v-2h-2v-2h2v-2h2v2h2v2z" id="pswp__icn-download-all"/>',
-          outlineID: 'pswp__icn-download-all',
-        },
-        onInit: (el) => {
-          const link = el as HTMLAnchorElement;
-          link.setAttribute('target', '_blank');
-          link.setAttribute('rel', 'noopener');
-          link.href = this.galleryZipUrl();
-          const totalBytes = this.tourImages().reduce((sum, img) => sum + img.size, 0);
-          // Native title tooltips render a literal \n as a line break.
-          link.title = `Összes kép letöltése\n(zip, kb. ${this.formatBytes(totalBytes)})`;
-        },
-      });
-
-      // A phone photo (the tour folder's "mobil" subfolder): a small phone
-      // icon in the top bar while it's the one open - not a button, just
-      // telling it apart from the camera's photos at a glance.
-      ui.registerElement({
-        name: 'mobile-indicator',
-        order: 6,
-        isButton: false,
-        html: `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M16 1H8a3 3 0 0 0-3 3v16a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V4a3 3 0 0 0-3-3zm-4 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5-5H7V4h10z"/></svg>`,
-        onInit: (el, pswp) => {
-          el.classList.add('pswp__mobile-indicator');
-          el.title = 'Mobillal készült';
-          const refresh = () => {
-            el.hidden = this.tourImages()[pswp.currIndex]?.source !== 'mobile';
-          };
-          pswp.on('change', refresh);
-          refresh();
-        },
-      });
-
-      // Bottom filmstrip - click any thumbnail to jump straight to it, or
-      // use PhotoSwipe's own built-in arrows/swipe to advance one by one.
-      // Lives in PhotoSwipe's own root overlay (outside Angular's view
-      // entirely, appended straight to <body>), so it's built with plain
-      // DOM APIs rather than a template - styled globally in styles.scss
-      // since a component-scoped stylesheet could never reach it anyway.
-      ui.registerElement({
-        name: 'thumbnails-strip',
-        appendTo: 'root',
-        onInit: (el, pswp) => {
-          el.className = 'pswp__thumbnails-strip';
-          const thumbEls = this.tourImages().map((img, i) => {
-            const thumb = document.createElement('img');
-            thumb.src = this.galleryThumbUrl(img.filename);
-            thumb.loading = 'lazy';
-            thumb.className = 'pswp__thumbnails-strip-item';
-            thumb.addEventListener('click', () => pswp.goTo(i));
-            // A phone photo gets a small phone badge in its corner - the
-            // <img> itself can't hold one, hence the wrapper.
-            if (img.source === 'mobile') {
-              const cell = document.createElement('span');
-              cell.className = 'pswp__thumbnails-strip-cell';
-              cell.title = 'Mobillal készült';
-              cell.append(
-                thumb,
-                Object.assign(document.createElement('span'), {
-                  className: 'pswp__thumbnails-strip-mobile',
-                  innerHTML: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 1H8a3 3 0 0 0-3 3v16a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V4a3 3 0 0 0-3-3zm-4 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5-5H7V4h10z"/></svg>`,
-                }),
-              );
-              el.appendChild(cell);
-            } else {
-              el.appendChild(thumb);
-            }
-            return thumb;
-          });
-
-          const setActive = () => {
-            thumbEls.forEach((thumb, i) => {
-              thumb.classList.toggle('pswp__thumbnails-strip-item--active', i === pswp.currIndex);
-            });
-            thumbEls[pswp.currIndex]?.scrollIntoView({ inline: 'center', block: 'nearest' });
-          };
-          pswp.on('change', setActive);
-          pswp.on('afterInit', setActive);
-        },
-      });
-    });
-
-    this.lightbox.init();
-  }
-
-  ngOnDestroy() {
-    this.lightbox?.destroy();
-  }
-
   // Clicking the cover image opens the gallery at its first photo, rather
   // than the old separate single-image popup - the cover is just the
   // tours-list thumbnail, the gallery is the actual photo collection now
   // that one exists. A no-op if the gallery hasn't loaded (or doesn't
   // exist) yet for this tour, rather than erroring.
   openCoverGallery() {
-    const images = this.tourImages();
-    if (images.length === 0 || !this.lightbox) return;
-    this.lightbox.loadAndOpen(
-      0,
-      images.map((img) =>
-        photoSlide(
-          this.galleryFullUrl(img.filename),
-          this.galleryThumbUrl(img.filename),
-          img,
-          img.filename,
-        ),
-      ),
-    );
-  }
-
-  private toggleImageRestricted(filename: string, restricted: boolean, onDone: () => void) {
     const t = this.tour();
-    if (!t) return;
-
-    this.tourService.setImageRestricted(t._id, filename, restricted).subscribe({
-      next: () => {
-        this.tourImages.update((imgs) =>
-          imgs.map((img) => (img.filename === filename ? { ...img, restricted } : img)),
-        );
-        onDone();
-        this.notifications.addSuccess(
-          restricted
-            ? 'Fénykép korlátozva a résztvevőkre'
-            : 'Fénykép újra mindenki számára látható',
-        );
-      },
-      error: (err) => {
-        this.notifications.addError(
-          err?.error?.message ?? 'Hiba történt a korlátozás módosítása közben.',
-        );
-      },
+    const images = this.tourImages();
+    if (!t || images.length === 0) return;
+    const photos: GalleryPhoto[] = images.map((img) => ({
+      name: img.filename,
+      width: img.width,
+      height: img.height,
+      thumbUrl: this.tourService.tourImageThumbUrl(t._id, img.filename),
+      fullUrl: this.tourService.tourImageFullUrl(t._id, img.filename),
+      downloadUrl: this.tourService.tourImageDownloadUrl(t._id, img.filename),
+      mobile: img.source === 'mobile',
+      restricted: img.restricted,
+    }));
+    void this.gallery.open(photos, 0, {
+      zipUrl: this.tourService.tourImagesZipUrl(t._id),
+      zipBytes: images.reduce((sum, img) => sum + img.size, 0),
+      onRestrict:
+        this.auth.user()?.role === 'admin'
+          ? (photo, restricted) => this.setImageRestricted(photo.name, restricted)
+          : undefined,
     });
   }
 
-  // Only used from initLightbox()/openCoverGallery() now - there's no
-  // on-page gallery template binding these into anymore.
-  private galleryThumbUrl(filename: string): string {
+  // Admins, from the viewer's lock: a photo only for the tour's attendees
+  // (or for everyone again). True once saved.
+  private setImageRestricted(filename: string, restricted: boolean): Promise<boolean> {
     const t = this.tour();
-    return t ? this.tourService.tourImageThumbUrl(t._id, filename) : '';
-  }
-
-  private galleryFullUrl(filename: string): string {
-    const t = this.tour();
-    return t ? this.tourService.tourImageFullUrl(t._id, filename) : '';
-  }
-
-  private galleryDownloadUrl(filename: string): string {
-    const t = this.tour();
-    return t ? this.tourService.tourImageDownloadUrl(t._id, filename) : '';
-  }
-
-  private galleryZipUrl(): string {
-    const t = this.tour();
-    return t ? this.tourService.tourImagesZipUrl(t._id) : '';
-  }
-
-  private formatBytes(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    const units = ['KB', 'MB', 'GB'];
-    let value = bytes / 1024;
-    let unitIndex = 0;
-    while (value >= 1024 && unitIndex < units.length - 1) {
-      value /= 1024;
-      unitIndex++;
-    }
-    return `${value.toFixed(1)} ${units[unitIndex]}`;
+    if (!t) return Promise.resolve(false);
+    return new Promise((resolve) =>
+      this.tourService.setImageRestricted(t._id, filename, restricted).subscribe({
+        next: () => {
+          this.tourImages.update((imgs) =>
+            imgs.map((img) => (img.filename === filename ? { ...img, restricted } : img)),
+          );
+          this.notifications.addSuccess(
+            restricted
+              ? 'Fénykép korlátozva a résztvevőkre'
+              : 'Fénykép újra mindenki számára látható',
+          );
+          resolve(true);
+        },
+        error: (err) => {
+          this.notifications.addError(
+            err?.error?.message ?? 'Hiba történt a korlátozás módosítása közben.',
+          );
+          resolve(false);
+        },
+      }),
+    );
   }
 
   // The simple one-click case: exactly one person to offer (a guest, or a
