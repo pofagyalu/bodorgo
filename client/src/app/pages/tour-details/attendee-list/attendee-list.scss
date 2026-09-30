@@ -56,23 +56,30 @@
   background: #f7f7f7;
 }
 
-.paid-col {
-  width: 4.5rem;
-  text-align: center;
-}
-
-.paid-cell {
+// Előleg: the paid mark right before the amount - a green tick, or a
+// small orange cross while it isn't paid yet.
+.advance-cell {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
+  white-space: nowrap;
+
+  mat-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    font-size: 1.125rem;
+  }
 }
 
 .paid-icon {
-  color: #55c57a;
+  color: #2e9e57;
 }
 
-.unpaid-icon {
-  color: #ccc;
+.advance-cell .unpaid-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  font-size: 0.875rem;
+  color: #f08c00;
 }
 
 // Optional schedule events (e.g. an extra breakfast) - a genuinely
