@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PlaylistPage } from './playlist-page';
 import { HoverPreview } from '../../../shared/hover-preview';
 
@@ -8,7 +9,7 @@ import { HoverPreview } from '../../../shared/hover-preview';
 // button, a track table). The logic: PlaylistPage.
 @Component({
   selector: 'app-party',
-  imports: [MatIconModule, HoverPreview],
+  imports: [MatIconModule, HoverPreview, RouterLink, RouterLinkActive],
   templateUrl: './party.html',
   styleUrl: './party.scss',
 })

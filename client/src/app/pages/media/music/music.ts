@@ -1,5 +1,6 @@
 import { Component, computed, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgTemplateOutlet } from '@angular/common';
 import { PlaylistPage } from './playlist-page';
 import { HoverPreview } from '../../../shared/hover-preview';
@@ -21,7 +22,7 @@ const FALLBACK_SECONDS = 180;
 // the whole playlist to pick from. The rest of the logic: PlaylistPage.
 @Component({
   selector: 'app-music',
-  imports: [MatIconModule, NgTemplateOutlet, HoverPreview],
+  imports: [MatIconModule, NgTemplateOutlet, HoverPreview, RouterLink, RouterLinkActive],
   templateUrl: './music.html',
   styleUrl: './music.scss',
 })
