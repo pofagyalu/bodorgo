@@ -5,6 +5,16 @@
     <h1>Bódorgó FM <span class="tagline">– világjárók világzenei rádiója</span></h1>
   </div>
 
+  <!-- Phone (no Média sidebar): the two playlists to switch between. -->
+  <nav class="list-chips" aria-label="Lejátszási listák">
+    <a class="chip" routerLink="/media/zene/bodorgo-fm" routerLinkActive="active">
+      <mat-icon>radio</mat-icon>Bódorgó FM
+    </a>
+    <a class="chip" routerLink="/media/zene/buli" routerLinkActive="active">
+      <mat-icon>celebration</mat-icon>Buli rádió
+    </a>
+  </nav>
+
   <section class="station" [class.station--on]="playing()">
     <!-- The radio (assets/images/bodorgo_FM.jpg): while it plays it glows
          warmly, breathes a little, and sound waves rise beside it. -->
