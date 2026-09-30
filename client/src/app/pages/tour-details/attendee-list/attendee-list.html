@@ -23,9 +23,6 @@
           Opciók
         </th>
       }
-      @if (hasPricing()) {
-        <th class="paid-col"></th>
-      }
       @if (showActions) {
         <th></th>
       }
@@ -60,8 +57,17 @@
 
           @if (hasPricing()) {
             <td>{{ money(a.totalPrice) }}</td>
+            <!-- Előleg: paid (green tick) or not yet (small orange cross), then
+                 the amount. -->
             <td [attr.title]="advanceTitle(a.advanceInCurrency)">
-              {{ formatForint(a.advance) }} Ft
+              <span class="advance-cell">
+                @if (a.paid) {
+                  <mat-icon class="paid-icon" title="Előleg kifizetve">check</mat-icon>
+                } @else {
+                  <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">close</mat-icon>
+                }
+                {{ formatForint(a.advance) }} Ft
+              </span>
             </td>
             <td>{{ money(a.rest) }}</td>
           }
@@ -70,21 +76,6 @@
               @if (a.optionalProgramsCost > 0) {
                 {{ money(a.optionalProgramsCost) }}
               }
-            </td>
-          }
-
-          <!-- Paid / not paid only means something once prices are set. -->
-          @if (hasPricing()) {
-            <td class="paid-col">
-              <span class="paid-cell">
-                @if (a.paid) {
-                  <mat-icon class="paid-icon" title="Előleg kifizetve">check_circle</mat-icon>
-                } @else {
-                  <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve"
-                    >radio_button_unchecked</mat-icon
-                  >
-                }
-              </span>
             </td>
           }
 
@@ -184,11 +175,25 @@
               <span class="family-value">{{ money(familySubtotal(group).totalPrice) }}</span>
             </td>
             <td class="family-value-cell">
+              <!-- The family's advances: all paid (tick), none (cross), or
+                   how many of them. -->
               <span
-                class="family-value"
+                class="family-value advance-cell"
                 [attr.title]="advanceTitle(familySubtotal(group).advanceInCurrency)"
-                >{{ formatForint(familySubtotal(group).advance) }} Ft</span
               >
+                @if (familySubtotal(group).paidCount === familySubtotal(group).memberCount) {
+                  <mat-icon class="paid-icon" title="Előleg kifizetve">check</mat-icon>
+                } @else if (familySubtotal(group).paidCount === 0) {
+                  <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">close</mat-icon>
+                } @else {
+                  <span class="family-paid-count" title="Ennyien fizették ki az előleget"
+                    >{{ familySubtotal(group).paidCount }}/{{
+                      familySubtotal(group).memberCount
+                    }}</span
+                  >
+                }
+                {{ formatForint(familySubtotal(group).advance) }} Ft
+              </span>
             </td>
             <td class="family-value-cell">
               <span class="family-value">{{ money(familySubtotal(group).rest) }}</span>
@@ -199,16 +204,6 @@
               <span class="family-value">{{
                 money(familySubtotal(group).optionalProgramsCost)
               }}</span>
-            </td>
-          }
-          @if (hasPricing()) {
-            <td class="paid-col family-value-cell">
-              <span class="family-value family-paid-count"
-                >{{ familySubtotal(group).paidCount }}/{{
-                  familySubtotal(group).memberCount
-                }}
-                fizetve</span
-              >
             </td>
           }
           @if (showActions) {
@@ -231,7 +226,6 @@
         @if (hasOptionalPrograms) {
           <td class="optional-col">{{ money(totalOptionalProgramsCost) }}</td>
         }
-        <td class="paid-col"></td>
         @if (showActions) {
           <td></td>
         }
