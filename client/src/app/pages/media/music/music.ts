@@ -1,6 +1,8 @@
 import { Component, computed, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { NgTemplateOutlet } from '@angular/common';
 import { PlaylistPage } from './playlist-page';
+import { HoverPreview } from '../../../shared/hover-preview';
 
 // The FM band: the whole playlist, from its first second (88.0 MHz) to its
 // last (108.0 MHz).
@@ -19,7 +21,7 @@ const FALLBACK_SECONDS = 180;
 // the whole playlist to pick from. The rest of the logic: PlaylistPage.
 @Component({
   selector: 'app-music',
-  imports: [MatIconModule],
+  imports: [MatIconModule, NgTemplateOutlet, HoverPreview],
   templateUrl: './music.html',
   styleUrl: './music.scss',
 })

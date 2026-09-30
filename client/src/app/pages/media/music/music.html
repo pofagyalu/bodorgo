@@ -10,6 +10,10 @@
          warmly, breathes a little, and sound waves rise beside it. -->
     <div class="radio">
       <img src="assets/images/bodorgo_FM.jpg" alt="Bódorgó FM – a klub rádiója" />
+      <!-- Phone: the knob on the photo's right side -->
+      <div class="tuner-slot tuner-slot--photo">
+        <ng-container *ngTemplateOutlet="tunerKnob" />
+      </div>
       <svg class="waves waves--left" viewBox="0 0 60 120" aria-hidden="true">
         <path class="wave w1" d="M50 40 Q30 60 50 80" />
         <path class="wave w2" d="M38 25 Q10 60 38 95" />
@@ -27,7 +31,7 @@
       <div class="now">
         @if (now(); as t) {
           @if (music.imageSrc(t); as src) {
-            <img class="now-thumb" [src]="src" alt="" />
+            <img class="now-thumb" [src]="src" [appHoverPreview]="src" alt="" />
           }
           <div class="now-text">
             <span class="on-air" [class.on-air--lit]="playing()">Adásban</span>
@@ -150,27 +154,10 @@
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          class="tuner"
-          role="slider"
-          aria-label="Hangolás: forgasd, hogy máshol folytatódjon a lista"
-          title="Forgasd a hangoláshoz (egérrel, görgővel vagy nyilakkal)"
-          aria-valuemin="88"
-          aria-valuemax="108"
-          [attr.aria-valuenow]="frequency()"
-          [style.--angle.deg]="knobAngle()"
-          [class.tuner--turning]="isTuning()"
-          [disabled]="!tracks().length"
-          (pointerdown)="knobDown($event)"
-          (pointermove)="knobMove($event)"
-          (pointerup)="knobUp()"
-          (pointercancel)="knobUp()"
-          (wheel)="knobWheel($event)"
-          (keydown)="knobKey($event)"
-        >
-          <span class="tuner-cap"><span class="tuner-mark"></span></span>
-        </button>
+        <!-- PC: the knob beside the faceplate (on a phone it's on the photo) -->
+        <div class="tuner-slot tuner-slot--side">
+          <ng-container *ngTemplateOutlet="tunerKnob" />
+        </div>
       </div>
 
       <!-- The tuning dial: drag the needle to jump in the song -->
@@ -214,7 +201,7 @@
               }
             </span>
             @if (music.imageSrc(t); as src) {
-              <img class="thumb" [src]="src" alt="" loading="lazy" />
+              <img class="thumb" [src]="src" [appHoverPreview]="src" alt="" loading="lazy" />
             } @else {
               <span class="thumb thumb--none"><mat-icon>music_note</mat-icon></span>
             }
@@ -233,3 +220,29 @@
     </ol>
   </section>
 </div>
+
+<!-- The big tuning knob - one, shown beside the faceplate (PC) or on the
+     photo (phone). -->
+<ng-template #tunerKnob>
+  <button
+    type="button"
+    class="tuner"
+    role="slider"
+    aria-label="Hangolás: forgasd, hogy máshol folytatódjon a lista"
+    title="Forgasd a hangoláshoz (egérrel, görgővel vagy nyilakkal)"
+    aria-valuemin="88"
+    aria-valuemax="108"
+    [attr.aria-valuenow]="frequency()"
+    [style.--angle.deg]="knobAngle()"
+    [class.tuner--turning]="isTuning()"
+    [disabled]="!tracks().length"
+    (pointerdown)="knobDown($event)"
+    (pointermove)="knobMove($event)"
+    (pointerup)="knobUp()"
+    (pointercancel)="knobUp()"
+    (wheel)="knobWheel($event)"
+    (keydown)="knobKey($event)"
+  >
+    <span class="tuner-cap"><span class="tuner-mark"></span></span>
+  </button>
+</ng-template>

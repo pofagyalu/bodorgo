@@ -18,10 +18,12 @@ export interface MusicTrack {
 export type PlaylistKey = 'bodorgo-fm' | 'buli';
 export const PLAYLIST_NAMES: Record<PlaylistKey, string> = {
   'bodorgo-fm': 'Bódorgó FM',
-  buli: 'Buli',
+  buli: 'Buli rádió',
 };
 
 const VOLUME_KEY = 'bodorgo-music-volume';
+// Until someone sets their own (remembered per device): quiet, 15%.
+const DEFAULT_VOLUME = 0.15;
 
 // The music: Jellyfin playlists, streamed through our server. App-wide
 // (providedIn: 'root') with a single <audio>, so it keeps playing while
@@ -341,8 +343,8 @@ function randomOther(current: number, count: number): number {
 function readVolume(): number {
   try {
     const v = Number(localStorage.getItem(VOLUME_KEY));
-    return localStorage.getItem(VOLUME_KEY) !== null && v >= 0 && v <= 1 ? v : 0.8;
+    return localStorage.getItem(VOLUME_KEY) !== null && v >= 0 && v <= 1 ? v : DEFAULT_VOLUME;
   } catch {
-    return 0.8;
+    return DEFAULT_VOLUME;
   }
 }

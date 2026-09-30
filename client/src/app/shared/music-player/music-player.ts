@@ -26,7 +26,7 @@ export class MusicPlayer {
   mode = input<'pill' | 'button'>('pill');
   panelOpen = signal(false);
   volumeOpen = signal(false);
-  // The list that's on (or starts with ▶): "Bódorgó FM" / "Buli".
+  // The list that's on (or starts with ▶): "Bódorgó FM" / "Buli rádió".
   listName = computed(() => PLAYLIST_NAMES[this.music.activeKey()]);
 
   volumeIcon = computed(() => {

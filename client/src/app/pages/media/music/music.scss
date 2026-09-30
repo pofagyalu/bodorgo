@@ -245,6 +245,11 @@ button {
 
 // --- The FM band and its tuning knob ---
 
+// Where the knob sits: beside the faceplate on PC, on the photo on a phone.
+.tuner-slot--photo {
+  display: none;
+}
+
 .band {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -776,11 +781,40 @@ button {
   }
 }
 
-// Narrower: the photo above the deck, smaller.
+// Narrower (phone): the photo above the deck, full width and landscape
+// (half as tall), the knob on its right side - so the faceplate below can
+// use the whole width.
 @media (max-width: 720px) {
   .tuner {
     width: 4.75rem;
     height: 4.75rem;
+  }
+
+  .tuner-slot--side {
+    display: none;
+  }
+
+  .tuner-slot--photo {
+    display: block;
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    z-index: 1;
+    transform: translateY(-50%);
+
+    .tuner {
+      box-shadow:
+        0 0.375rem 1rem rgba(0, 0, 0, 0.45),
+        inset 0 0 0 2px rgba(74, 47, 28, 0.35);
+    }
+  }
+
+  .band {
+    grid-template-columns: 1fr;
+  }
+
+  .waves {
+    display: none;
   }
 
   .station {
@@ -789,8 +823,12 @@ button {
   }
 
   .radio {
-    width: min(14rem, 70%);
-    aspect-ratio: 1;
+    width: 100%;
+    aspect-ratio: 2;
+
+    img {
+      object-position: center 55%;
+    }
   }
 
   .deck {
