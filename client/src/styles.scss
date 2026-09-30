@@ -240,3 +240,17 @@ h1 {
     transform: none;
   }
 }
+
+/* The photo viewer's full-screen button (shared/photo-gallery.ts): the
+   "enter" corners, or the "exit" ones while full screen. */
+.pswp__button--fullscreen-button #pswp__icn-fullscreen-exit {
+  display: none;
+}
+
+.pswp__button--fullscreen-on #pswp__icn-fullscreen {
+  display: none;
+}
+
+.pswp__button--fullscreen-on #pswp__icn-fullscreen-exit {
+  display: inline;
+}
