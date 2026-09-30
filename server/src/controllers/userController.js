@@ -344,7 +344,7 @@ export const getMyAttendance = async (req, res) => {
 // gender/familyId/lastLoginAt, none of which a member should see about
 // anyone but never has to for their own account either (see getMe).
 export const getUser = async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).select(ADMIN_ONLY_FIELDS);
   if (!user) {
     throw new AppError('No user found with that ID!', 404);
   }
@@ -384,6 +384,20 @@ function parseMemberSince(value) {
   return year;
 }
 
+// Only the admin's own user endpoints read these (select:false).
+const ADMIN_ONLY_FIELDS = '+weightKg +weightUpdatedAt';
+
+// Súly (kg): a number, one decimal; '' / null clears it.
+function parseWeight(value) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const kg = Math.round(Number(value) * 10) / 10;
+  if (!Number.isFinite(kg) || kg < 1 || kg > 400) {
+    throw new AppError('A súly 1 és 400 kg között lehet.', 400);
+  }
+  return kg;
+}
+
 const VALID_ROLES = ['admin', 'member', 'guest'];
 const ROLE_MANAGER_ONLY = 'Szerepkört csak a szerepkör-kezelő admin módosíthat.';
 
@@ -396,7 +410,9 @@ const ROLE_MANAGER_ONLY = 'Szerepkört csak a szerepkör-kezelő admin módosít
 // just `new User(doc).save()` under the hood - so a new user's address
 // resolves exactly the same way an edited one's does.
 export const createUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, memberSince, role, address } = req.body;
+  const { name, email, familyId, birthday, gender, memberSince, role, address, weightKg } =
+    req.body;
+  const weight = parseWeight(weightKg);
   if (!name) {
     throw new AppError('A névnek nem lehet üres.', 400);
   }
@@ -417,6 +433,7 @@ export const createUser = async (req, res) => {
     memberSince: parseMemberSince(memberSince) || undefined,
     role: role || undefined,
     address: address || undefined,
+    ...(weight ? { weightKg: weight, weightUpdatedAt: new Date() } : {}),
   });
 
   res.status(201).json({
@@ -451,10 +468,20 @@ async function isUsernameTaken(username, exceptUserId) {
 // role: only the role manager (utils/roleManager.js) may change it - not
 // their own, which INITIAL_ADMIN_USER keeps admin anyway.
 export const updateUser = async (req, res) => {
-  const { name, email, familyId, birthday, gender, address, memberSince, role, username } =
-    req.body;
+  const {
+    name,
+    email,
+    familyId,
+    birthday,
+    gender,
+    address,
+    memberSince,
+    role,
+    username,
+    weightKg,
+  } = req.body;
 
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).select(ADMIN_ONLY_FIELDS);
   if (!user) {
     throw new AppError('No user found with that ID!', 404);
   }
@@ -478,6 +505,14 @@ export const updateUser = async (req, res) => {
   if (gender !== undefined) user.gender = gender || undefined;
   if (address !== undefined) user.address = address;
   if (memberSince !== undefined) user.memberSince = parseMemberSince(memberSince) ?? undefined;
+  // The weight, with the date it changed (only when its value does).
+  if (weightKg !== undefined) {
+    const weight = parseWeight(weightKg) ?? undefined;
+    if (weight !== user.weightKg) {
+      user.weightKg = weight;
+      user.weightUpdatedAt = weight === undefined ? undefined : new Date();
+    }
+  }
   if (role !== undefined && role !== user.role) {
     if (!VALID_ROLES.includes(role)) {
       throw new AppError('Érvénytelen szerepkör.', 400);

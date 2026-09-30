@@ -206,3 +206,37 @@ h1 {
   background-image: conic-gradient(#d9dee0 25%, #fff 0 50%, #d9dee0 0 75%, #fff 0);
   background-size: 24px 24px;
 }
+
+/* A picture's bigger version on hover (shared/hover-preview.ts) - the same
+   look and motion as the user avatars' preview (components/avatar). */
+.hover-preview {
+  position: fixed;
+  z-index: 30001;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 3px solid #fff;
+  box-shadow: 0 12px 40px rgba(16, 37, 54, 0.35);
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.85);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.hover-preview.below {
+  transform-origin: 50% 0;
+}
+
+.hover-preview.shown {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-preview {
+    transition: none;
+    transform: none;
+  }
+}

@@ -1,10 +1,10 @@
 <div class="party" [class.party--on]="playing()">
   <!-- The header: the cover, "Lejátszási lista", Buli, and what's in it -->
   <header class="hero">
-    <img class="cover" src="assets/images/buli-cover.svg" alt="Buli" />
+    <img class="cover" src="assets/images/buli-cover.svg" alt="Buli rádió" />
     <div class="hero-text">
       <span class="type">Lejátszási lista · csak klubtagoknak</span>
-      <h1>Buli</h1>
+      <h1>Buli rádió</h1>
       <span class="meta">
         <strong>Bódorgó</strong> · {{ tracks().length }} dal
         @if (totalLabel(); as total) {
@@ -63,7 +63,7 @@
     <div class="now-song">
       @if (now(); as t) {
         @if (music.imageSrc(t); as src) {
-          <img class="now-thumb" [src]="src" alt="" />
+          <img class="now-thumb" [src]="src" [appHoverPreview]="src" alt="" />
         }
         <div class="now-text">
           <strong>{{ t.title }}</strong>
@@ -168,7 +168,7 @@
             </span>
             <span class="song">
               @if (music.imageSrc(t); as src) {
-                <img class="thumb" [src]="src" alt="" loading="lazy" />
+                <img class="thumb" [src]="src" [appHoverPreview]="src" alt="" loading="lazy" />
               } @else {
                 <span class="thumb thumb--none"><mat-icon>music_note</mat-icon></span>
               }

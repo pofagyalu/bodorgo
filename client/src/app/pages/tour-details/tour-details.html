@@ -453,15 +453,19 @@
     @if (showAttendeePicker()) {
       <div class="attendee-modal-backdrop" (click)="closeAttendeePicker()">
         <div class="attendee-modal" (click)="$event.stopPropagation()">
-          <button
-            type="button"
-            class="attendee-modal-close"
-            aria-label="Bezárás"
-            (click)="closeAttendeePicker()"
-          >
-            ✖
-          </button>
-          <p class="picker-label">Kit szeretnél regisztrálni?</p>
+          <!-- Fixed on top: the question and ✖ - only the list scrolls, so
+               the dialog keeps its round corners. -->
+          <header class="attendee-modal-head">
+            <p class="picker-label">Kit szeretnél regisztrálni?</p>
+            <button
+              type="button"
+              class="attendee-modal-close"
+              aria-label="Bezárás"
+              (click)="closeAttendeePicker()"
+            >
+              ✖
+            </button>
+          </header>
           <ul class="picker-list">
             @for (opt of pickerOptions(); track opt._id) {
               <li>
@@ -476,20 +480,23 @@
               </li>
             }
           </ul>
-          <button
-            class="btn btn--green"
-            [disabled]="signingUp() || selectedAttendeeIds().size === 0"
-            (click)="signUpSelected()"
-          >
-            {{
-              signingUp()
-                ? 'Jelentkezés folyamatban...'
-                : 'Jelentkezés (' + selectedAttendeeIds().size + ' fő)'
-            }}
-          </button>
-          @if (signUpError()) {
-            <p class="error-note">{{ signUpError() }}</p>
-          }
+          <!-- Fixed at the bottom, on its own background: the sign-up. -->
+          <footer class="attendee-modal-foot">
+            <button
+              class="btn btn--green"
+              [disabled]="signingUp() || selectedAttendeeIds().size === 0"
+              (click)="signUpSelected()"
+            >
+              {{
+                signingUp()
+                  ? 'Jelentkezés folyamatban...'
+                  : 'Jelentkezés (' + selectedAttendeeIds().size + ' fő)'
+              }}
+            </button>
+            @if (signUpError()) {
+              <p class="error-note">{{ signUpError() }}</p>
+            }
+          </footer>
         </div>
       </div>
     }

@@ -34,6 +34,9 @@ export interface AdminUser {
   // admin-set by hand (see profile.html's admin table), undefined until
   // then. Drives the Klub "Felhasználók" page's per-year membership table.
   memberSince?: number;
+  // Súly (kg) and when it last changed - admins only (see server userModel.js).
+  weightKg?: number;
+  weightUpdatedAt?: string;
   // Admin-only, like familyId/role/lastLoginAt above - distinct tour count
   // from Reservation.attendees, not stored on the user (see
   // userController.js's getAllUsers).
@@ -144,6 +147,7 @@ export interface CreateUserPayload {
   birthday?: string;
   gender?: string;
   memberSince?: number | null;
+  weightKg?: number | null;
   // Same as UpdateUserPayload's own fields below - member-edit.ts/html
   // uses one identical form for creating a brand new person and editing an
   // existing one, so creation accepts everything editing does too.
@@ -163,6 +167,7 @@ export interface UpdateUserPayload {
   address?: UserAddress;
   // null explicitly clears it - see userController.js's parseMemberSince.
   memberSince?: number | null;
+  weightKg?: number | null;
   // Manual override, not permanent - the next real Authentik login
   // overwrites it again (see userController.js's updateUser).
   role?: string;

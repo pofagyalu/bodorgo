@@ -109,7 +109,7 @@ export const routes: Routes = [
       },
       {
         path: 'zene/buli',
-        title: 'Média – Buli',
+        title: 'Média – Buli rádió',
         loadComponent: () => import('./pages/media/music/party').then((m) => m.Party),
       },
     ],

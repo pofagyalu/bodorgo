@@ -147,6 +147,40 @@ describe('admin user management', () => {
     ).toBe(400);
   });
 
+  it('súly: only admins see and set it - with the date it last changed', async () => {
+    const admin = await createAdmin();
+    const member = await createMember();
+    const put = (body) => request(app).patch(`/users/${member._id}`).set(asUser(admin)).send(body);
+
+    const set = await put({ weightKg: '82.46' });
+    expect(set.status).toBe(200);
+    expect(set.body.data.user.weightKg).toBe(82.5);
+    const firstDate = set.body.data.user.weightUpdatedAt;
+    expect(firstDate).toBeTruthy();
+
+    // The same value again: the date stays; a new value: a new date.
+    expect((await put({ weightKg: 82.5 })).body.data.user.weightUpdatedAt).toBe(firstDate);
+    await new Promise((r) => setTimeout(r, 5));
+    const changed = await put({ weightKg: 80 });
+    expect(changed.body.data.user.weightUpdatedAt).not.toBe(firstDate);
+
+    const got = await request(app).get(`/users/${member._id}`).set(asUser(admin));
+    expect(got.body.data.user).toMatchObject({ weightKg: 80 });
+
+    // Nobody else ever gets it - not even the person themselves.
+    const me = await request(app).get('/users/me').set(asUser(member));
+    expect(JSON.stringify(me.body)).not.toContain('weight');
+    const list = await request(app).get('/users').set(asUser(member));
+    expect(JSON.stringify(list.body)).not.toContain('weight');
+    const adminList = await request(app).get('/users').set(asUser(admin));
+    expect(JSON.stringify(adminList.body)).not.toContain('weight');
+
+    expect((await put({ weightKg: 500 })).status).toBe(400);
+    const cleared = await put({ weightKg: '' });
+    expect(cleared.body.data.user.weightKg).toBeUndefined();
+    expect(cleared.body.data.user.weightUpdatedAt).toBeUndefined();
+  });
+
   it('404s for unknown users and is admin-only', async () => {
     const admin = await createAdmin();
     const member = await createMember();
