@@ -1,0 +1,202 @@
+<div class="report-backdrop" (click)="close()">
+  <div
+    class="report-panel"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Beszámoló"
+  >
+    <header class="report-head">
+      <div>
+        <h2>Beszámoló</h2>
+        <p>
+          Naponta írd le, mi történt - gépelés közben mentődik, napokig folytathatod. A
+          <strong>Kész</strong> után a tábor résztvevői PDF-ben letölthetik, az elnök nevével és a
+          viaszpecséttel.
+        </p>
+      </div>
+      <button type="button" class="icon-close" (click)="close()" title="Bezárás">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+
+    <div class="report-body">
+      @if (loading()) {
+        <p class="empty">Betöltés...</p>
+      } @else if (report(); as r) {
+        <!-- Where it stands: finished (read-only) or being edited. -->
+        @if (isFinal()) {
+          <div class="state state--final">
+            <mat-icon>verified</mat-icon>
+            <span>
+              <strong>Kész</strong> · {{ r.published?.at | date: 'yyyy. MM. dd. HH:mm' }} ({{
+                r.published?.byName
+              }}) - a résztvevők letölthetik.
+            </span>
+            <button type="button" class="btn ghost" (click)="reopen()" [disabled]="busy()">
+              <mat-icon>edit</mat-icon> Visszanyitás
+            </button>
+          </div>
+        } @else if (r.published) {
+          <div class="state state--reopened">
+            <mat-icon>history</mat-icon>
+            <span>
+              Szerkesztés alatt. A résztvevők a
+              {{ r.published.at | date: 'yyyy. MM. dd.' }}-i kész változatot töltik le, amíg újra
+              <strong>Kész</strong>-t nem nyomsz.
+            </span>
+          </div>
+        }
+
+        <!-- The PDF's header lines - empty: the tour's own. -->
+        <section class="block">
+          <h3>Fejléc</h3>
+          <div class="facts">
+            @for (f of factFields; track f.key) {
+              <label class="field">
+                <span>{{ f.label }}</span>
+                <input
+                  type="text"
+                  maxlength="300"
+                  [ngModel]="facts()[f.key]"
+                  (ngModelChange)="setFact(f.key, $event)"
+                  [placeholder]="r.auto[f.key] || '-'"
+                  [disabled]="isFinal()"
+                />
+              </label>
+            }
+          </div>
+          <small class="hint"
+            >Üresen hagyva a tábor adataiból kerül a PDF-be (a szürke szöveg).</small
+          >
+        </section>
+
+        <!-- One of the tour's own photos at the top of the PDF. -->
+        <section class="block">
+          <h3>Fotó a beszámoló tetejére</h3>
+          @if (images().length) {
+            <div class="photos" [class.photos--locked]="isFinal()">
+              <button
+                type="button"
+                class="photo photo--none"
+                [class.photo--picked]="!photo()"
+                (click)="pickPhoto(null)"
+                [disabled]="isFinal()"
+              >
+                <mat-icon>hide_image</mat-icon>
+                <span>Nincs</span>
+              </button>
+              @for (img of images(); track img.filename) {
+                <button
+                  type="button"
+                  class="photo"
+                  [class.photo--picked]="photo() === img.filename"
+                  (click)="pickPhoto(img.filename)"
+                  [disabled]="isFinal()"
+                  [title]="img.filename"
+                >
+                  <img [src]="thumbUrl(img.filename)" alt="" loading="lazy" />
+                  @if (photo() === img.filename) {
+                    <mat-icon class="picked-mark">check_circle</mat-icon>
+                  }
+                </button>
+              }
+            </div>
+          } @else {
+            <p class="empty">
+              Ennek a tábornak még nincsenek fotói - a beszámoló fotó nélkül készül.
+            </p>
+          }
+        </section>
+
+        <!-- The days, one editor each. -->
+        <section class="block">
+          <h3>Tevékenységek</h3>
+          @for (label of r.dayLabels; track $index; let i = $index) {
+            <div class="day" [class.day--filled]="filledDays()[i]">
+              <div class="day-head">
+                <span class="day-pill">{{ i + 1 }}. nap</span>
+                <span class="day-date">{{ label }}</span>
+              </div>
+              <div class="editor-wrap" [class.is-locked]="isFinal()">
+                <div #dayEditor class="editor"></div>
+              </div>
+            </div>
+          }
+        </section>
+
+        <div class="status-row">
+          <span class="save-state" [class.error]="saveState() === 'error'">
+            @switch (saveState()) {
+              @case ('pending') {
+                Szerkesztés…
+              }
+              @case ('saving') {
+                Mentés…
+              }
+              @case ('error') {
+                <mat-icon>error_outline</mat-icon> Nem sikerült menteni - újrapróbálom a következő
+                változásnál
+              }
+              @default {
+                @if (savedAt(); as at) {
+                  <mat-icon>cloud_done</mat-icon> Mentve {{ at | date: 'MMM d. HH:mm' }}
+                } @else {
+                  Gépelés közben automatikusan mentődik.
+                }
+              }
+            }
+          </span>
+        </div>
+
+        @if (confirming()) {
+          <div class="confirm">
+            <mat-icon>history_edu</mat-icon>
+            <div>
+              <strong>Kész a beszámoló?</strong>
+              <span
+                >Ettől kezdve a tábor résztvevői letölthetik. Később visszanyithatod
+                javításra.</span
+              >
+            </div>
+            <div class="confirm-actions">
+              <button
+                type="button"
+                class="btn ghost"
+                (click)="confirming.set(false)"
+                [disabled]="busy()"
+              >
+                Mégse
+              </button>
+              <button type="button" class="btn primary" (click)="finish()" [disabled]="busy()">
+                {{ busy() ? 'Mentés…' : 'Igen, kész' }}
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="actions">
+            <button
+              type="button"
+              class="btn ghost"
+              (click)="preview()"
+              [disabled]="busy() || (!isFinal() && !hasText())"
+            >
+              <mat-icon>picture_as_pdf</mat-icon>
+              {{ isFinal() ? 'PDF letöltése' : 'Előnézet (PDF)' }}
+            </button>
+            @if (!isFinal()) {
+              <button
+                type="button"
+                class="btn primary"
+                (click)="askFinish()"
+                [disabled]="busy() || !hasText()"
+              >
+                <mat-icon>verified</mat-icon> Kész
+              </button>
+            }
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>

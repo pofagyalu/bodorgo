@@ -555,6 +555,59 @@
         <p class="empty-note">Betöltés...</p>
       }
     </section>
+
+    <!-- Elnök: named at the end of a tour's beszámoló, with the wax seal
+         (server utils/waxSeal.js) - which carries this name too. -->
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2>Elnök</h2>
+          <p class="subtext">
+            A táborok beszámolójának végén szerepel („Elnök: …”), és a viaszpecsét peremén is ez a
+            név áll.
+          </p>
+        </div>
+      </div>
+
+      @if (presidentSaved() !== null) {
+        <div class="chat-fields president-row">
+          <img class="president-seal" [src]="sealUrl()" alt="A beszámoló viaszpecsétje" />
+          <label>
+            Név
+            <input
+              type="text"
+              maxlength="100"
+              [ngModel]="presidentName()"
+              (ngModelChange)="presidentName.set($event)"
+            />
+          </label>
+        </div>
+
+        <div class="actions">
+          <span class="spacer"></span>
+          @if (presidentDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="presidentName.set(presidentSaved() ?? '')"
+              [disabled]="savingPresident()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="savePresident()"
+            [disabled]="!presidentDirty() || !presidentName().trim() || savingPresident()"
+          >
+            {{ savingPresident() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      } @else {
+        <p class="empty-note">Betöltés...</p>
+      }
+    </section>
   </div>
 
   <!-- Info only: every e-mail and push the app sends - what triggers it and

@@ -265,6 +265,33 @@ export interface MailingsResponse {
   };
 }
 
+// A tour's beszámoló (server tourReportController.js). The header lines
+// the admin can change - empty means the tour's own (auto).
+export interface ReportFacts {
+  place: string;
+  dates: string;
+  headcount: string;
+}
+
+// The admin's working copy: one editor content (Quill delta) per day, and
+// the album photo at the top of the PDF.
+export interface TourReport {
+  status: 'draft' | 'final';
+  days: (unknown | null)[];
+  dayLabels: string[];
+  facts: ReportFacts;
+  auto: ReportFacts;
+  photo: string | null;
+  updatedAt: string | null;
+  updatedByName: string | null;
+  published: { at: string; byName: string } | null;
+}
+
+export interface ReportResponse {
+  status: string;
+  data: { canDownload: boolean; publishedAt: string | null; report?: TourReport };
+}
+
 // One version of a tour's recap video - matched to the tour by its file
 // name on the NAS (see server/src/utils/tourVideos.js). Most tours have
 // one with no label; a tour with two cuts has one per cut ("Directors
@@ -599,6 +626,45 @@ export class TourService {
       `${this.apiUrl}/${tourId}/mailings/draft`,
       draft,
     );
+  }
+
+  // --- Beszámoló (server tourReportController.js) ---
+
+  // Whether I can download it; an admin also gets the working copy.
+  getReport(tourId: string): Observable<ReportResponse> {
+    return this.http.get<ReportResponse>(`${this.apiUrl}/${tourId}/report`);
+  }
+
+  saveReport(
+    tourId: string,
+    report: { days: unknown[]; facts: ReportFacts; photo: string | null },
+  ) {
+    return this.http.put<{ status: string; data: { updatedAt: string } }>(
+      `${this.apiUrl}/${tourId}/report`,
+      report,
+    );
+  }
+
+  // Kész: the attendees can download it from now on.
+  finishReport(tourId: string) {
+    return this.http.post<{ status: string; data: { report: TourReport } }>(
+      `${this.apiUrl}/${tourId}/report/finish`,
+      {},
+    );
+  }
+
+  // Visszanyitás: editable again (the attendees keep the finished one).
+  reopenReport(tourId: string) {
+    return this.http.post<{ status: string; data: { report: TourReport } }>(
+      `${this.apiUrl}/${tourId}/report/reopen`,
+      {},
+    );
+  }
+
+  // The PDF - a plain download link; draft: the admin's preview of the
+  // working copy (marked PISZKOZAT).
+  reportPdfUrl(tourId: string, draft = false): string {
+    return `${this.apiUrl}/${tourId}/report/pdf${draft ? '?draft=1' : ''}`;
   }
 
   // The saved draft to the admin themselves only.

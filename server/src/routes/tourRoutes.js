@@ -16,6 +16,13 @@ import {
 import * as reviewController from '../controllers/reviewController.js';
 import { downloadTourPdf, emailTourPdf } from '../controllers/tourPdfController.js';
 import {
+  downloadReportPdf,
+  finishReport,
+  getReport,
+  reopenReport,
+  saveReport,
+} from '../controllers/tourReportController.js';
+import {
   getMailings,
   saveDraft,
   sendTest,
@@ -66,6 +73,15 @@ router
 // be a real logged-in user to attribute it to.
 router.route('/:id/pdf').get(requireAuth, downloadTourPdf);
 router.route('/:id/pdf/email').post(requireAuth, emailTourPdf);
+// Beszámoló (see tourReportController.js): written by an admin, day by
+// day; once Kész, the tour's attendees download it as a PDF.
+router
+  .route('/:id/report')
+  .get(requireAuth, getReport)
+  .put(requireAuth, restrictTo('admin'), saveReport);
+router.route('/:id/report/finish').post(requireAuth, restrictTo('admin'), finishReport);
+router.route('/:id/report/reopen').post(requireAuth, restrictTo('admin'), reopenReport);
+router.route('/:id/report/pdf').get(requireAuth, downloadReportPdf);
 // Letters to the tour's attendees (admin) - see mailingController.js.
 router.route('/:id/mailings').get(requireAuth, restrictTo('admin'), getMailings);
 router.route('/:id/mailings/draft').put(requireAuth, restrictTo('admin'), saveDraft);

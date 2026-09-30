@@ -336,6 +336,27 @@ button {
   }
 }
 
+// Elnök: the seal beside the name.
+.president-row {
+  flex-wrap: nowrap;
+  align-items: center;
+
+  label {
+    flex: 1;
+  }
+
+  input {
+    width: 100%;
+  }
+}
+
+.president-seal {
+  width: 6rem;
+  height: 6rem;
+  flex: none;
+  transform: rotate(-9deg);
+}
+
 // --- Értesítések: every e-mail and push (info), under the settings ---
 
 // A column's last card loses its bottom margin (the column ends there),

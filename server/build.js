@@ -42,7 +42,9 @@ esbuild
     // utils/documentPreviews.js) likewise: ESM-only, loaded by a dynamic
     // import(), and it finds its own native canvas (@napi-rs/canvas) at
     // runtime - both shipped by sync.js.
-    external: ['pdfkit', 'sharp', 'pdfjs-dist', '@napi-rs/canvas'],
+    // fontkit (the wax seal's ring text, utils/waxSeal.js) is one of pdfkit's
+    // own dependencies - sync.js already ships it.
+    external: ['pdfkit', 'fontkit', 'sharp', 'pdfjs-dist', '@napi-rs/canvas'],
     // Deliberately CJS (esbuild's default for platform:'node'), not ESM:
     // the deploy target (S:\bodorgo on the NAS) has no package.json, so
     // Node treats the output there as CommonJS by default regardless of

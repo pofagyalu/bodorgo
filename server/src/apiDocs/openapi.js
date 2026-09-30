@@ -495,7 +495,7 @@ const tags = [
   [T.rooms, 'Houses and rooms, and who sleeps where (Szobabeosztás).'],
   [
     T.tourFiles,
-    'Cover picture, the Programfüzet PDF, the attendee Excel. (Extrák documents: see Dokumentumok.)',
+    'Cover picture, the Programfüzet PDF, the beszámoló, the attendee Excel. (Extrák documents: see Dokumentumok.)',
   ],
   [T.gallery, "A tour's photos (from the NAS) and its recap videos."],
   [T.mailing, 'Admins writing to all attendees of a tour.'],
@@ -904,6 +904,74 @@ const paths = {
       params: [tourId],
       data: obj({ sentTo: str() }),
       errors: [400, 404],
+    }),
+  },
+  // --- Beszámoló ---
+  '/tours/{id}/report': {
+    get: op({
+      tag: T.tourFiles,
+      summary: 'The beszámoló',
+      description:
+        "Whether I can download the finished beszámoló (it is Kész, and I was on the tour - or I'm an admin). An admin also gets the working copy: the days (the editor's content), the header lines and what they'd be when left empty (`auto`, from the tour), the picked album photo, and when it was last finished.",
+      params: [tourId],
+      data: obj({
+        canDownload: bool(),
+        publishedAt: {
+          ...date('When it was last finished (only if I can download it).'),
+          nullable: true,
+        },
+        report: { type: 'object', description: 'Admins only - the working copy.' },
+      }),
+      errors: [404],
+    }),
+    put: op({
+      tag: T.tourFiles,
+      role: 'admin',
+      summary: 'Save the beszámoló',
+      description:
+        "Saved as the admin types. `days`: one editor content (Quill delta) per day, or null - only text, bold/italic/underline and bullet/numbered lists with their levels are kept. `facts`: the header lines (place, dates, headcount); empty = the tour's own. `photo`: one of the tour's album photos (file name), or null. Refused while it's Kész.",
+      params: [tourId],
+      body: obj({
+        days: arrayOf({ type: ['object', 'null'], description: 'Quill delta.' }),
+        facts: obj({ place: str(), dates: str(), headcount: str() }),
+        photo: { type: ['string', 'null'], description: 'An album photo’s file name.' },
+      }),
+      data: obj({ updatedAt: date() }),
+      errors: [400, 404, 409],
+    }),
+  },
+  '/tours/{id}/report/finish': {
+    post: op({
+      tag: T.tourFiles,
+      role: 'admin',
+      summary: 'Kész - publish the beszámoló',
+      description:
+        "Locks the working copy and makes it the one the tour's attendees download. Needs text on at least one day.",
+      params: [tourId],
+      data: obj({ report: { type: 'object' } }),
+      errors: [400, 404],
+    }),
+  },
+  '/tours/{id}/report/reopen': {
+    post: op({
+      tag: T.tourFiles,
+      role: 'admin',
+      summary: 'Visszanyitás - edit it again',
+      description: 'The attendees keep downloading the last finished one until the next Kész.',
+      params: [tourId],
+      data: obj({ report: { type: 'object' } }),
+      errors: [404],
+    }),
+  },
+  '/tours/{id}/report/pdf': {
+    get: op({
+      tag: T.tourFiles,
+      summary: 'Beszámoló PDF',
+      description:
+        "The finished beszámoló - the tour's attendees and admins. The picked album photo, place, dates, headcount, the days as bullet points, and at the end the club, the elnök and a wax seal with the elnök's name. `?draft=1` (admin): the working copy as it is now, marked PISZKOZAT.",
+      params: [tourId, query('draft', "`1`: the admin's preview of the working copy.")],
+      response: file(['application/pdf'], 'The PDF.'),
+      errors: [403, 404],
     }),
   },
   '/tours/{id}/attendees/export.xlsx': {
@@ -2107,6 +2175,33 @@ const paths = {
       body: ref('BirthdaySettings'),
       data: ref('BirthdaySettings'),
       errors: [400],
+    }),
+  },
+  '/settings/president': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'The elnök',
+      description: "Named at the end of a tour's beszámoló, and around its wax seal.",
+      data: obj({ presidentName: str() }),
+    }),
+    put: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Set the elnök',
+      description: 'The name, 1-100 characters. Recorded in the history.',
+      body: obj({ presidentName: str() }, ['presidentName']),
+      data: obj({ presidentName: str() }),
+      errors: [400],
+    }),
+  },
+  '/settings/president/seal.png': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'The wax seal',
+      description: "As it appears on the beszámoló, with the saved elnök's name.",
+      response: file(['image/png'], 'The seal (600×600, transparent around the wax).'),
     }),
   },
   // --- Értesítések ---

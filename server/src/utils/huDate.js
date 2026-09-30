@@ -71,3 +71,31 @@ export function huTime(date) {
 export function huDateTime(date) {
   return `${huDate(date)} ${huTime(date)}`;
 }
+
+// A tour's days, from its first to its last: "2023. október 20–23.", or
+// across a month "2023. október 30. – november 2.", or a year "2023.
+// december 30. – 2024. január 2.".
+export function huDateRange(start, days) {
+  const first = budapestParts(start);
+  const lastUtc = new Date(
+    Date.UTC(first.year, first.month - 1, first.day + Math.max(1, days) - 1),
+  );
+  const last = {
+    year: lastUtc.getUTCFullYear(),
+    month: lastUtc.getUTCMonth() + 1,
+    day: lastUtc.getUTCDate(),
+  };
+  const head = `${first.year}. ${MONTHS[first.month - 1]} ${first.day}`;
+  if (last.year !== first.year) {
+    return `${head}. – ${last.year}. ${MONTHS[last.month - 1]} ${last.day}.`;
+  }
+  if (last.month !== first.month) return `${head}. – ${MONTHS[last.month - 1]} ${last.day}.`;
+  return last.day === first.day ? `${head}.` : `${head}–${last.day}.`;
+}
+
+// One day of a tour, in the beszámoló editor: "október 20., péntek".
+export function huDayLabel(start, dayIndex) {
+  const first = budapestParts(start);
+  const at = new Date(Date.UTC(first.year, first.month - 1, first.day + dayIndex));
+  return `${MONTHS[at.getUTCMonth()]} ${at.getUTCDate()}., ${WEEKDAYS[at.getUTCDay()]}`;
+}

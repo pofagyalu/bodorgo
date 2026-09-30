@@ -39,6 +39,7 @@ import { ReviewStars } from './review-stars/review-stars';
 import { VideoCard } from '../../shared/video-card/video-card';
 import { VideoPlayer } from '../../shared/video-player/video-player';
 import { TourMailPanel } from './tour-mail-panel/tour-mail-panel';
+import { TourReportPanel } from './tour-report-panel/tour-report-panel';
 import { PickerOption, TourSignup } from './tour-signup/tour-signup';
 import {
   AttendeeList,
@@ -68,6 +69,7 @@ interface DayGroup {
     VideoCard,
     VideoPlayer,
     TourMailPanel,
+    TourReportPanel,
     TourSignup,
   ],
   templateUrl: './tour-details.html',
@@ -440,7 +442,32 @@ export class TourDetails {
           this.tourImages.set(res.data.images);
         },
       });
+      this.loadReportInfo(t._id);
     });
+  }
+
+  // --- Beszámoló (see tour-report-panel, server tourReportController.js) ---
+
+  // Whether this viewer can download the finished beszámoló (an attendee,
+  // or an admin) - its Extrák card.
+  reportDownload = signal<{ publishedAt: string } | null>(null);
+  // Admin-only: the writing dialog.
+  showReportPanel = signal(false);
+
+  loadReportInfo(tourId: string) {
+    this.tourService.getReport(tourId).subscribe({
+      next: (res) =>
+        this.reportDownload.set(
+          res.data.canDownload && res.data.publishedAt
+            ? { publishedAt: res.data.publishedAt }
+            : null,
+        ),
+      error: () => this.reportDownload.set(null),
+    });
+  }
+
+  reportPdfUrl(tourId: string): string {
+    return this.tourService.reportPdfUrl(tourId);
   }
 
   // Extracted out of the constructor so the attendee list's nights-edit
