@@ -39,6 +39,7 @@ import { ReviewStars } from './review-stars/review-stars';
 import { VideoCard } from '../../shared/video-card/video-card';
 import { VideoPlayer } from '../../shared/video-player/video-player';
 import { TourMailPanel } from './tour-mail-panel/tour-mail-panel';
+import { PickerOption, TourSignup } from './tour-signup/tour-signup';
 import {
   AttendeeList,
   AttendeeListRow as AttendeeListPayment,
@@ -51,18 +52,6 @@ interface DayGroup {
   label: string;
   events: ScheduleEntry[];
   weather?: DailyWeather;
-}
-
-// AttendeePayment (from the API) plus the whole-reservation `paid` flag -
-// a different, pre-existing concept ("has an admin marked this
-// reservation as settled") from the newly computed per-person amounts, so
-// it's merged in here rather than folded into computeAttendeePayments.
-// One selectable entry in the sign-up picker - a plain subset shared by
-// FamilyMember, AdminUser and the logged-in user's own auth profile, all
-// of which have _id + name but otherwise different shapes.
-interface PickerOption {
-  _id: string;
-  name: string;
 }
 
 @Component({
@@ -79,6 +68,7 @@ interface PickerOption {
     VideoCard,
     VideoPlayer,
     TourMailPanel,
+    TourSignup,
   ],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
@@ -94,7 +84,7 @@ export class TourDetails {
   environment = environment;
   readonly formatDrivingDuration = formatDrivingDuration;
 
-  // So doSignUp below can tell it to re-check "am I an attendee now" right
+  // So onSignedUp below can tell it to re-check "am I an attendee now" right
   // after a successful sign-up - review-stars.ts only ever checks that
   // once on its own (ngOnInit), and none of its @Inputs change value just
   // because the viewer signed up, so nothing would otherwise trigger a
@@ -134,8 +124,6 @@ export class TourDetails {
   videos = signal<TourVideo[]>([]);
   playingVideo = signal<TourVideo | null>(null);
   loadError = signal<string | null>(null);
-  signingUp = signal(false);
-  signUpError = signal<string | null>(null);
   showMap = signal(false);
   // Restores whatever expand/collapse choice was last made (see
   // tour.ts's showParticipantsPreference), instead of always resetting to
@@ -154,7 +142,7 @@ export class TourDetails {
     extraCost: null,
   };
 
-  // Sign-up picker: who a 'member' or 'admin' can additionally choose to
+  // Sign-up (tour-signup): who a 'member' or 'admin' can additionally choose to
   // register besides themselves - loaded once the role is known (see the
   // effect in the constructor, same pattern as profile.ts since
   // auth.user() resolves asynchronously). A 'guest' never needs either, so
@@ -162,8 +150,6 @@ export class TourDetails {
   familyMembers = signal<FamilyMember[]>([]);
   allUsers = signal<AdminUser[]>([]);
   private pickerDataRequested = false;
-  selectedAttendeeIds = signal<Set<string>>(new Set());
-  showAttendeePicker = signal(false);
 
   // Gallery (see tour-photos-implementation-plan.md) - only ever fetched
   // for a logged-in viewer (the route is requireAuth-gated server-side
@@ -765,81 +751,16 @@ export class TourDetails {
     );
   }
 
-  // The simple one-click case: exactly one person to offer (a guest, or a
-  // member/admin who has nobody else left to add) - no picker needed.
-  signUpSingle() {
-    const opt = this.pickerOptions()[0];
-    if (opt) this.doSignUp([opt._id]);
-  }
-
-  openAttendeePicker() {
-    this.signUpError.set(null);
-    this.showAttendeePicker.set(true);
-  }
-
-  closeAttendeePicker() {
-    this.showAttendeePicker.set(false);
-    this.selectedAttendeeIds.set(new Set());
-    this.signUpError.set(null);
-  }
-
-  isAttendeeSelected(id: string): boolean {
-    return this.selectedAttendeeIds().has(id);
-  }
-
-  toggleAttendeeSelected(id: string) {
-    this.selectedAttendeeIds.update((set) => {
-      const next = new Set(set);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
-  signUpSelected() {
-    this.doSignUp([...this.selectedAttendeeIds()]);
-  }
-
-  private doSignUp(attendeeIds: string[]) {
-    const t = this.tour();
-    if (!t || attendeeIds.length === 0) return;
-
-    this.signingUp.set(true);
-    this.signUpError.set(null);
-
-    this.tourService.signUp(t._id, attendeeIds).subscribe({
-      next: () => {
-        // A full reload rather than patching tour.reservations/
-        // participantCount locally (which this used to do) - attendeePayments
-        // (what the list below actually renders) was never touched by that
-        // patch at all, so newly added attendees bumped the header count but
-        // never appeared in the list itself. Same "just refetch everything"
-        // reasoning as onAttendeeNightsUpdated above - simplest way to keep
-        // every derived total (participantCount, attendeePayments,
-        // paymentTotals) genuinely in sync with the server.
-        this.loadTour(t._id);
-        // loadTour's own tour reload doesn't cover this - see reviewStars's
-        // own comment on why signing up needs its own explicit nudge.
-        this.reviewStars?.refresh();
-        this.selectedAttendeeIds.set(new Set());
-        this.signingUp.set(false);
-        // A successful submit always closes the picker - a no-op for the
-        // single-click self/guest path, which never opens it in the first
-        // place.
-        this.showAttendeePicker.set(false);
-      },
-      error: (err) => {
-        this.signUpError.set(err?.error?.message ?? 'Hiba történt a jelentkezés során.');
-        this.signingUp.set(false);
-      },
-    });
-  }
-
-  login() {
-    this.auth.login();
+  // After a sign-up (tour-signup): a full reload rather than patching
+  // tour.reservations/participantCount locally - same "just refetch
+  // everything" reasoning as onAttendeeNightsUpdated above, the simplest
+  // way to keep every derived total (participantCount, attendeePayments,
+  // paymentTotals) genuinely in sync with the server.
+  onSignedUp() {
+    this.loadTour(this.tourId);
+    // loadTour's own tour reload doesn't cover this - see reviewStars's
+    // own comment on why signing up needs its own explicit nudge.
+    this.reviewStars?.refresh();
   }
 
   openMap() {
