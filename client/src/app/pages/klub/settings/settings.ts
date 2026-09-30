@@ -175,6 +175,7 @@ export class KlubSettings implements OnInit {
     this.loadImageCache();
     this.loadBirthday();
     this.loadRank();
+    this.loadPresident();
     this.settingsService.getMembershipFees().subscribe({
       next: (res) => {
         this.foundingYear.set(res.data.foundingYear);
@@ -656,5 +657,45 @@ export class KlubSettings implements OnInit {
           this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
         },
       });
+  }
+
+  // --- Elnök: on a tour's beszámoló, and around its wax seal ---
+
+  presidentSaved = signal<string | null>(null);
+  presidentName = signal('');
+  savingPresident = signal(false);
+  // Changes with a saved name, so the seal picture is made again with it.
+  private sealVersion = signal('');
+  sealUrl = computed(() => this.settingsService.presidentSealUrl(this.sealVersion()));
+
+  presidentDirty = computed(() => this.presidentName().trim() !== (this.presidentSaved() ?? ''));
+
+  private loadPresident() {
+    this.settingsService.getPresident().subscribe({
+      next: (res) => this.applyPresident(res.data.presidentName),
+      error: () => {},
+    });
+  }
+
+  private applyPresident(name: string) {
+    this.presidentSaved.set(name);
+    this.presidentName.set(name);
+    this.sealVersion.set(name);
+  }
+
+  savePresident() {
+    if (this.savingPresident()) return;
+    this.savingPresident.set(true);
+    this.settingsService.updatePresident(this.presidentName().trim()).subscribe({
+      next: (res) => {
+        this.applyPresident(res.data.presidentName);
+        this.savingPresident.set(false);
+        this.notifications.addSuccess('Elnök mentve.');
+      },
+      error: (err) => {
+        this.savingPresident.set(false);
+        this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+      },
+    });
   }
 }

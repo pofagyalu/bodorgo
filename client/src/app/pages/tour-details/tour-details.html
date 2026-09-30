@@ -281,6 +281,18 @@
             {{ emailingPdf() ? 'Küldés...' : 'email' }}</span
           >
         </button>
+        <!-- The finished beszámoló - for the tour's attendees (and admins). -->
+        @if (reportDownload()) {
+          <a
+            [href]="reportPdfUrl(t._id)"
+            class="extra-doc-card extra-doc-card--featured"
+            title="A tábor beszámolója PDF-ben"
+          >
+            <mat-icon>history_edu</mat-icon>
+            <span class="extra-doc-title">Beszámoló</span>
+            <span class="extra-doc-action"><mat-icon>download</mat-icon> Letöltés</span>
+          </a>
+        }
         @if (auth.user()?.role === 'admin') {
           <button
             type="button"
@@ -290,6 +302,15 @@
           >
             <mat-icon>forward_to_inbox</mat-icon>
             <span>Levél a résztvevőknek</span>
+          </button>
+          <button
+            type="button"
+            class="extra-doc-card extra-doc-card--admin"
+            title="A tábor beszámolójának írása, naponta - Kész után a résztvevők letölthetik"
+            (click)="showReportPanel.set(true)"
+          >
+            <mat-icon>edit_note</mat-icon>
+            <span>Beszámoló írása</span>
           </button>
         }
         @if ((t.extraDocuments ?? []).length > 0) {
@@ -411,6 +432,16 @@
     <!-- Admin's letter to every attendee (see tour-mail-panel). -->
     @if (showMailPanel()) {
       <app-tour-mail-panel [tourId]="t._id" (closed)="showMailPanel.set(false)" />
+    }
+
+    <!-- Admin's beszámoló, day by day (see tour-report-panel). -->
+    @if (showReportPanel()) {
+      <app-tour-report-panel
+        [tourId]="t._id"
+        [images]="tourImages()"
+        (changed)="loadReportInfo(t._id)"
+        (closed)="showReportPanel.set(false)"
+      />
     }
 
     <!-- Map popup - an embedded iframe instead of a new tab, so clicking the

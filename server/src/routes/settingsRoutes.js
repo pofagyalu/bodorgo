@@ -3,6 +3,8 @@ import {
   getBarionSettings,
   getBirthdaySettings,
   getRankSettings,
+  getPresident,
+  getPresidentSeal,
   getChatImageSettings,
   getImageCacheSettings,
   clearImageCacheNow,
@@ -13,6 +15,7 @@ import {
   updateBarionWallet,
   updateBirthdaySettings,
   updateRankSettings,
+  updatePresident,
   updateChatImageSettings,
   updateImageCacheSettings,
   updateMembershipReminder,
@@ -64,5 +67,12 @@ router
   .route('/rank')
   .get(requireAuth, restrictTo('admin'), getRankSettings)
   .put(requireAuth, restrictTo('admin'), updateRankSettings);
+
+// Elnök: named, with the wax seal, on a tour's beszámoló - admins only.
+router
+  .route('/president')
+  .get(requireAuth, restrictTo('admin'), getPresident)
+  .put(requireAuth, restrictTo('admin'), updatePresident);
+router.get('/president/seal.png', requireAuth, restrictTo('admin'), getPresidentSeal);
 
 export default router;

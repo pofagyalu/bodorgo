@@ -178,6 +178,23 @@ export class SettingsService {
     return this.http.put<{ data: BirthdaySettings }>(`${this.apiUrl}/rank`, settings);
   }
 
+  // --- Elnök: named, with the wax seal, on a tour's beszámoló ---
+
+  getPresident() {
+    return this.http.get<{ data: { presidentName: string } }>(`${this.apiUrl}/president`);
+  }
+
+  updatePresident(presidentName: string) {
+    return this.http.put<{ data: { presidentName: string } }>(`${this.apiUrl}/president`, {
+      presidentName,
+    });
+  }
+
+  // The seal as it looks now (v: a fresh picture after a name change).
+  presidentSealUrl(v: string) {
+    return `${this.apiUrl}/president/seal.png?v=${encodeURIComponent(v)}`;
+  }
+
   // The reminder as a member would get it, to the admin themselves.
   testMembershipReminder() {
     return this.http.post<{ status: string; data: { sentTo: string } }>(

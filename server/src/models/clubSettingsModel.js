@@ -75,6 +75,9 @@ const clubSettingsSchema = new Schema(
     // Meghívók: the intro of the invitation e-mail (invitationController.js;
     // unset = its DEFAULT_INVITATION_INTRO).
     invitationIntro: { type: String, maxlength: 2000 },
+    // Elnök: the club's president - named, with the wax seal, at the end of
+    // a tour's beszámoló PDF (tourReportController.js, utils/waxSeal.js).
+    presidentName: { type: String, trim: true, maxlength: 100, default: 'Biró Melinda' },
     history: [{ _id: false, at: Date, byName: String, change: String }],
   },
   { timestamps: true },

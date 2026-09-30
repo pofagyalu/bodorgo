@@ -19,6 +19,7 @@ import { chatImagesUsage, enforceChatImageQuota } from '../chat/chatImages.js';
 import { clearImageCache, enforceImageCacheQuota, imageCacheUsage } from '../photos/imageSizes.js';
 import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js';
 import { DEFAULT_RANK_MESSAGE } from '../utils/ranks.js';
+import { waxSealPng } from '../utils/waxSeal.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
 // fee, by the year each amount takes effect (see utils/clubSettings.js).
@@ -493,4 +494,42 @@ export const updateRankSettings = async (req, res) => {
     await settings.save();
   }
   res.status(200).json({ status: 'success', data: after });
+};
+
+// --- Elnök (the beszámoló PDF's signature and wax seal) ---
+
+// GET /settings/president (admin).
+export const getPresident = async (req, res) => {
+  const { presidentName } = await getClubSettings();
+  res.status(200).json({ status: 'success', data: { presidentName: presidentName ?? '' } });
+};
+
+// PUT /settings/president (admin) - { presidentName }.
+export const updatePresident = async (req, res) => {
+  const presidentName = String(req.body?.presidentName ?? '').trim();
+  if (!presidentName || presidentName.length > 100) {
+    throw new AppError('Az elnök neve 1-100 karakter lehet.', 400);
+  }
+  const settings = await getClubSettings();
+  const before = settings.presidentName ?? '';
+  if (before !== presidentName) {
+    settings.presidentName = presidentName;
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Elnök: ${before || '-'} → ${presidentName}`,
+    });
+    await settings.save();
+  }
+  res.status(200).json({ status: 'success', data: { presidentName } });
+};
+
+// GET /settings/president/seal.png (admin) - the wax seal with the saved
+// name, as it appears on the beszámoló.
+export const getPresidentSeal = async (req, res) => {
+  const { presidentName } = await getClubSettings();
+  const png = await waxSealPng(presidentName);
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'private, no-cache');
+  res.send(png);
 };
