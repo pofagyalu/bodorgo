@@ -307,3 +307,9 @@ button {
     padding: 20px;
   }
 }
+
+// A small grey note under a field (e.g. when the weight last changed).
+.field-note {
+  font-size: 0.75rem;
+  color: #6b7f86;
+}

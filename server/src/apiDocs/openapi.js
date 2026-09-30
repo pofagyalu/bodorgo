@@ -232,6 +232,10 @@ const schemas = {
     age: int('Computed from birthday.'),
     gender: str('Admins only.', { enum: ['férfi', 'nő'] }),
     memberSince: int('Year the membership started.'),
+    weightKg: num(
+      'Súly (kg, one decimal) - admins only: only in GET/PATCH /users/{id} and POST /users; empty clears it.',
+    ),
+    weightUpdatedAt: date('When the weight last changed - set by the server, admins only.'),
     lastLoginAt: date(),
     photoUpdatedAt: date('Profile photo version - `/users/{id}/photo?v=`.'),
     retired: bool('Archived ("deleted") user.'),
@@ -510,7 +514,7 @@ const tags = [
   [T.media, "Média → Videók and Fotók - the club's own videos and photo folders on the NAS."],
   [
     T.music,
-    'The music: Jellyfin playlists (Bódorgó FM for everyone, Buli for members), streamed through this server - the Jellyfin key never reaches the browser.',
+    'The music: Jellyfin playlists (Bódorgó FM for everyone, Buli rádió for members), streamed through this server - the Jellyfin key never reaches the browser.',
   ],
   [
     T.settings,

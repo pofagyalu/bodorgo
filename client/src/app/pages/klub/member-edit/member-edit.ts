@@ -64,6 +64,8 @@ export class MemberEdit implements OnInit {
   birthday = signal('');
   gender = signal('');
   memberSince = signal('');
+  // Súly (kg) - admins only; the server keeps when it last changed.
+  weightKg = signal('');
   role = signal('guest');
 
   // Only the role manager (server utils/roleManager.js) sets roles - not
@@ -97,6 +99,7 @@ export class MemberEdit implements OnInit {
         this.birthday.set(u.birthday ? u.birthday.slice(0, 10) : '');
         this.gender.set(u.gender ?? '');
         this.memberSince.set(u.memberSince != null ? String(u.memberSince) : '');
+        this.weightKg.set(u.weightKg != null ? String(u.weightKg) : '');
         this.role.set(u.role);
         this.address.set({
           zipCode: u.address?.zipCode ?? '',
@@ -185,6 +188,7 @@ export class MemberEdit implements OnInit {
           birthday: this.birthday() || undefined,
           gender: this.gender() || undefined,
           memberSince: this.memberSince() ? Number(this.memberSince()) : undefined,
+          weightKg: this.weightKg() ? Number(this.weightKg()) : undefined,
           role: this.role(),
           address: this.address(),
         })
@@ -215,6 +219,7 @@ export class MemberEdit implements OnInit {
         birthday: this.birthday(),
         gender: this.gender(),
         memberSince: this.memberSince() ? Number(this.memberSince()) : null,
+        weightKg: this.weightKg() ? Number(this.weightKg()) : null,
         role: this.role(),
         address: this.address(),
       })

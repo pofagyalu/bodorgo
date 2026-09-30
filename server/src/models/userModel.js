@@ -73,6 +73,22 @@ const userSchema = new Schema(
       type: String,
       enum: ['férfi', 'nő'],
     },
+    // Súly (kg, one decimal) - admins only: select:false, so it never goes
+    // out with a user unless an admin's own endpoint asks for it
+    // (userController.js's getUser/updateUser/createUser) - not even to the
+    // person themselves.
+    weightKg: {
+      type: Number,
+      min: [1, 'A súly legalább 1 kg.'],
+      max: [400, 'A súly legfeljebb 400 kg.'],
+      select: false,
+    },
+    // When the weight was last changed (set by userController.js whenever
+    // weightKg's value changes) - admins only too.
+    weightUpdatedAt: {
+      type: Date,
+      select: false,
+    },
     // Set on every successful Authentik login (see authOidcController.js) -
     // absent entirely for a login-less dependent who's never actually
     // logged in themselves yet.
