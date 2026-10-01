@@ -96,6 +96,60 @@ describe('reading tours', () => {
     expect((await request(app).get('/tours/tour-stats')).status).toBe(401);
   });
 
+  it("the stats' attendee ages: per tour and per year, a big tour weighing more", async () => {
+    const born = (year) => createMember({ birthday: new Date(`${year}-01-01`) });
+    const big = await createTour({ startDate: new Date('2020-05-10'), title: 'Nagy' });
+    const small = await createTour({ startDate: new Date('2020-08-10'), title: 'Kicsi' });
+    const later = await createTour({ startDate: new Date('2022-06-10'), title: 'Későbbi' });
+    await createTour({ startDate: new Date('2021-06-10'), title: 'Üres' });
+    // Ages on the first day: 30, 40, 50 on the big one; 60 on the small one
+    // (and someone with no birthday on file, who doesn't count).
+    await createReservation(big, [await born(1990), await born(1980), await born(1970)]);
+    await createReservation(small, [await born(1960), await createMember()]);
+    await createReservation(later, [await born(2000)]);
+
+    const res = await request(app)
+      .get('/tours/tour-stats')
+      .set(asUser(await createMember()));
+    const { tours, years } = res.body.data.attendeeAges;
+    expect(tours.map((t) => [t.title, t.year, t.averageAge, t.count])).toEqual([
+      ['Nagy', 2020, 40, 3],
+      ['Kicsi', 2020, 60, 1],
+      ['Későbbi', 2022, 22, 1],
+    ]);
+    // 2020: (30 + 40 + 50 + 60) / 4, not the two tours' (40 + 60) / 2.
+    expect(years).toEqual([
+      { year: 2020, averageAge: 45, count: 4, total: 5, minAge: 30, maxAge: 60 },
+      { year: 2022, averageAge: 22, count: 1, total: 1, minAge: 22, maxAge: 22 },
+    ]);
+    // Known ages of everyone there, and the youngest and oldest of them.
+    expect(tours.map((t) => [t.count, t.total, t.minAge, t.maxAge])).toEqual([
+      [3, 3, 30, 50],
+      [1, 2, 60, 60],
+      [1, 1, 22, 22],
+    ]);
+
+    // A baby not yet one counts as 1, not 0; someone "born" after the
+    // tour has no age at all.
+    const family = await createTour({ startDate: new Date('2015-07-10'), title: 'Babás' });
+    await createReservation(family, [
+      await createMember({ birthday: new Date('2015-02-01') }),
+      await createMember({ birthday: new Date('1985-02-01') }),
+      await createMember({ birthday: new Date('2016-02-01') }),
+    ]);
+    const again = await request(app)
+      .get('/tours/tour-stats')
+      .set(asUser(await createMember()));
+    expect(again.body.data.attendeeAges.years[0]).toEqual({
+      year: 2015,
+      averageAge: 15.5,
+      count: 2,
+      total: 3,
+      minAge: 1,
+      maxAge: 30,
+    });
+  });
+
   it('supports filtering, sorting, field selection and paging on the list', async () => {
     await createTour({ title: 'A', duration: 2 });
     await createTour({ title: 'B', duration: 5 });

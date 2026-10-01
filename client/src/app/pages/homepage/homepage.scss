@@ -55,7 +55,8 @@
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  // Narrow enough for two cards in a row on a phone.
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: 1.2rem;
 }
 
@@ -71,7 +72,7 @@
   align-items: center;
   row-gap: 0.4rem;
   text-align: center;
-  padding: 1.5rem 1rem;
+  padding: 1rem 0.6rem;
   background: #f7f7f7;
   border-radius: 12px;
   text-decoration: none;
@@ -80,14 +81,14 @@
   mat-icon {
     // Color is set per-icon inline (randomized from the logo palette - see
     // homepage.ts), not fixed here.
-    font-size: 4rem;
-    width: 4rem;
-    height: 4rem;
+    font-size: 3rem;
+    width: 3rem;
+    height: 3rem;
   }
 }
 
 .stat-value {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #333;
 }
@@ -126,17 +127,17 @@
 }
 
 // A pure-CSS pie chart (see homepage.ts's genderPieBackground) sized to
-// match the 4rem icon used by every other stat card, so this card lines
+// match the 3rem icon used by every other stat card, so this card lines
 // up with the rest of the grid.
 .gender-pie {
-  width: 4rem;
-  height: 4rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 50%;
 }
 
 .gender-legend {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .gender-legend-item {
@@ -150,6 +151,42 @@
     font-size: 1.4rem;
     width: 1.4rem;
     height: 1.4rem;
+  }
+}
+
+// A chart under the stat cards, across the whole width.
+.chart-card {
+  margin-top: 1.2rem;
+  padding: 1.5rem 1.5rem 1rem;
+  background: #f7f7f7;
+  border-radius: 12px;
+
+  h3 {
+    margin: 0;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+  }
+}
+
+// The line under the title: the yearly aging rate.
+.chart-note {
+  margin: 0.2rem 0 0.8rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #777;
+}
+
+// Holds the chart's place until it loads (legend + canvas - see
+// age-chart.scss), so the page below doesn't jump.
+.chart-placeholder {
+  height: 18rem;
+}
+
+@media (max-width: 768px) {
+  .chart-placeholder {
+    height: 15rem;
   }
 }
 

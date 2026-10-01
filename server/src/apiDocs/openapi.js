@@ -631,7 +631,45 @@ const paths = {
     }),
   },
   '/tours/tour-stats': {
-    get: op({ tag: T.tours, summary: 'Tour statistics', description: 'Counts and averages.' }),
+    get: op({
+      tag: T.tours,
+      summary: 'Tour statistics',
+      description:
+        "Counts and averages for the homepage. `attendeeAges` feeds the age chart: `tours` is each tour's average attendee age (their age on the tour's first day; only attendees with a birthday on file - `count` is how many of the `total`; `minAge`-`maxAge` the range of those ages), `years` the yearly average over every such attendance of that year, so a tour weighs in by its `count`. Tours and years with no known age are left out; both lists are in time order.",
+      data: obj({
+        totalTours: int('Tours that have already ended.'),
+        upcomingTours: int('Tours still ahead.'),
+        totalParticipants: int('Attendances over every tour.'),
+        genderRatio: obj({ malePercentage: int('0-100'), femalePercentage: int('0-100') }),
+        attendeeAges: obj({
+          tours: arrayOf(
+            obj({
+              title: str('Tour title'),
+              order: int('Tour number'),
+              slug: str('Tour slug'),
+              year: int("Year of the tour's first day"),
+              averageAge: num('Average age, one decimal (a baby not yet one counts as 1)'),
+              count: int('Attendees with a known age'),
+              total: int('Every attendee, known age or not'),
+              minAge: int('The youngest known age'),
+              maxAge: int('The oldest known age'),
+            }),
+          ),
+          years: arrayOf(
+            obj({
+              year: int('Year'),
+              averageAge: num('Average age over the attendances of the year, one decimal'),
+              count: int('Attendances with a known age'),
+              total: int('Every attendance of the tours counted in'),
+              minAge: int('The youngest known age'),
+              maxAge: int('The oldest known age'),
+            }),
+          ),
+        }),
+        mostAttendedTour: { type: 'object' },
+        bestRatedTour: { type: 'object' },
+      }),
+    }),
   },
   '/tours/montly-plan/{year}': {
     get: op({

@@ -70,6 +70,28 @@
           </div>
         }
       </div>
+
+      <!-- Under the cards, as wide as the page. Chart.js only loads once
+           this scrolls into view - which is also when the chart rises. -->
+      @if (s.attendeeAges?.years?.length) {
+        <div class="chart-card">
+          <!-- Title, and under it the yearly aging rate. -->
+          <h3>Tapasztalat növekedési ráta</h3>
+          @if (agingRate(); as rate) {
+            <p class="chart-note">
+              Átlagos öregedési sebesség: {{ rate.text }} év/év
+              @if (rate.slower) {
+                – lassabban, mint a biológia engedné. A friss levegő teszi.
+              }
+            </p>
+          }
+          @defer (on viewport) {
+            <app-age-chart [ages]="s.attendeeAges!"></app-age-chart>
+          } @placeholder {
+            <div class="chart-placeholder"></div>
+          }
+        </div>
+      }
     } @else {
       <p class="loading-note">Statisztikák betöltése...</p>
     }

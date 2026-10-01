@@ -1,15 +1,16 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService, TourStatsResponse } from '../../services/tour';
 import { ToursMap } from '../../components/tours-map/tours-map';
+import { AgeChart } from '../../components/age-chart/age-chart';
 import { shuffledLogoColors } from '../../shared/logo-colors';
 import { SiteFooter } from '../../shared/site-footer/site-footer';
 
 @Component({
   selector: 'app-homepage',
   standalone: true,
-  imports: [MatIconModule, RouterLink, ToursMap, SiteFooter],
+  imports: [MatIconModule, RouterLink, ToursMap, SiteFooter, AgeChart],
   templateUrl: './homepage.html',
   styleUrl: './homepage.scss',
 })
@@ -43,6 +44,27 @@ export class HomePage {
   genderPieBackground(malePercentage: number): string {
     return `conic-gradient(from 180deg, ${this.maleColor} 0% ${malePercentage}%, ${this.femaleColor} ${malePercentage}% 100%)`;
   }
+
+  // How much older the attendees get a year, for the line under the age
+  // chart's title ("0,8"): the slope of the straight line that fits the
+  // yearly averages best (least squares) - every year has its say, not
+  // just the first and the last. null until there are two years to
+  // compare. `slower`: under a year a year, which is what the line's joke
+  // (slower than biology would allow) is about.
+  agingRate = computed(() => {
+    const years = this.stats()?.attendeeAges?.years ?? [];
+    if (years.length < 2) return null;
+    const meanYear = years.reduce((sum, y) => sum + y.year, 0) / years.length;
+    const meanAge = years.reduce((sum, y) => sum + y.averageAge, 0) / years.length;
+    const slope =
+      years.reduce((sum, y) => sum + (y.year - meanYear) * (y.averageAge - meanAge), 0) /
+      years.reduce((sum, y) => sum + (y.year - meanYear) ** 2, 0);
+    const text = new Intl.NumberFormat('hu-HU', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(slope);
+    return { text, slower: Math.round(slope * 10) < 10 };
+  });
 
   constructor() {
     this.tourService.getTourStats().subscribe({

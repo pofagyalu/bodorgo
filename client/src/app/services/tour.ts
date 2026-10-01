@@ -507,6 +507,24 @@ export interface SubmitReviewResponse {
   };
 }
 
+// The homepage's age chart (see tourController.js's attendeeAgeStats):
+// the age is the one on the tour's first day; count is how many of the
+// total attendees had a birthday on file, minAge-maxAge the youngest and
+// oldest of them. A year's figures are over every such attendance of that
+// year. Both lists come in time order.
+export interface AgeFigures {
+  averageAge: number;
+  count: number;
+  total: number;
+  minAge: number;
+  maxAge: number;
+}
+
+export interface AttendeeAges {
+  tours: (AgeFigures & { title: string; order: number; slug: string; year: number })[];
+  years: (AgeFigures & { year: number })[];
+}
+
 export interface TourStatsResponse {
   status: string;
   data: {
@@ -518,6 +536,7 @@ export interface TourStatsResponse {
     // every registered user - see tourController.js's getTourStats). null
     // until at least one attendee has a gender on file.
     genderRatio: { malePercentage: number; femalePercentage: number } | null;
+    attendeeAges?: AttendeeAges;
     mostAttendedTour: {
       _id: string;
       title: string;
