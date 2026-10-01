@@ -3,10 +3,10 @@ import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { MembershipService, MemberUser } from '../../../services/membership';
 import { FinanceService, Transaction, TransactionCurrency } from '../../../services/finance';
+import { SettingsService } from '../../../services/settings';
+import { RingChart } from '../../../components/ring-chart/ring-chart';
 
-// Same club-founding year as members.ts - kept in sync there since both
-// pages independently compute the same per-year eligibility.
-const CLUB_FOUNDING_YEAR = 2019;
+const monthAndDay = new Intl.DateTimeFormat('hu-HU', { month: 'long', day: 'numeric' });
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
   const formatted = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount);
@@ -15,13 +15,14 @@ function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): str
 
 @Component({
   selector: 'app-klub-overview',
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, RingChart],
   templateUrl: './overview.html',
   styleUrl: './overview.scss',
 })
 export class Overview implements OnInit {
   private membershipService = inject(MembershipService);
   private financeService = inject(FinanceService);
+  private settingsService = inject(SettingsService);
 
   readonly currentYear = new Date().getFullYear();
 
@@ -32,11 +33,10 @@ export class Overview implements OnInit {
     this.members().filter((u) => u.role === 'admin' || u.role === 'member'),
   );
 
-  membershipYears = computed(() => {
-    const years: number[] = [];
-    for (let y = this.currentYear; y >= CLUB_FOUNDING_YEAR; y--) years.push(y);
-    return years;
-  });
+  // "március 1." - the day this year's fee is due by (the first Tagdíj
+  // emlékeztető's day, see Klub → Beállítások). null until it arrives,
+  // and for someone who may not read it.
+  paymentDeadline = signal<string | null>(null);
 
   isEligible(u: MemberUser, year: number): boolean {
     return !u.memberSince || year >= u.memberSince;
@@ -75,24 +75,6 @@ export class Overview implements OnInit {
     this.transactions().reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0),
   );
 
-  yearProgress = computed(() =>
-    this.membershipYears().map((year) => {
-      const due = this.clubMembers().filter((m) => this.isEligible(m, year));
-      const done = due.filter((m) => this.isPaid(m, year));
-      return {
-        year,
-        due: due.length,
-        done: done.length,
-        pct: due.length ? (done.length / due.length) * 100 : 0,
-      };
-    }),
-  );
-
-  // Oldest-first for the bar chart, so it reads left-to-right as a trend
-  // over time - membershipYears/yearProgress themselves stay newest-first
-  // (matches the demo's own table-column convention elsewhere in Klub).
-  yearProgressChart = computed(() => [...this.yearProgress()].reverse());
-
   recentActivity = computed(() =>
     [...this.transactions()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4),
   );
@@ -105,6 +87,17 @@ export class Overview implements OnInit {
     this.financeService.getTransactions().subscribe({
       next: (res) => this.transactions.set(res.data.transactions),
       error: (err) => console.error('Failed to load transactions for overview', err),
+    });
+    this.settingsService.getMembershipFees().subscribe({
+      next: (res) => {
+        const deadline = res.data.paymentDeadline;
+        if (deadline) {
+          this.paymentDeadline.set(
+            monthAndDay.format(new Date(this.currentYear, deadline.month - 1, deadline.day)),
+          );
+        }
+      },
+      error: (err) => console.error('Failed to load the payment deadline', err),
     });
   }
 

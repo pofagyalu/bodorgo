@@ -15,6 +15,9 @@ export interface MembershipFeesResponse {
   data: {
     fees: MembershipFee[];
     foundingYear: number;
+    // The day of the year the fee is due by: the first day of the Tagdíj
+    // emlékeztető (Klub → Beállítások).
+    paymentDeadline?: { month: number; day: number };
     // Admin-only: years somebody already paid for (their fee can't
     // change), and who changed the fees when.
     paidYears?: number[];

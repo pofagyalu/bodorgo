@@ -2052,8 +2052,13 @@ const paths = {
       tag: T.settings,
       role: 'member',
       summary: 'Membership fees by year',
-      description: 'Admins also get the change history and the years already paid for (locked).',
-      data: obj({ fees: arrayOf(obj({ fromYear: int(), amount: int() })), foundingYear: int() }),
+      description:
+        "`paymentDeadline` is the day of the year the fee is due by - the first day of the Tagdíj emlékeztető (set with PUT /settings/membership-reminder's startMonth/startDay). Admins also get the change history and the years already paid for (locked).",
+      data: obj({
+        fees: arrayOf(obj({ fromYear: int(), amount: int() })),
+        foundingYear: int(),
+        paymentDeadline: obj({ month: int('1-12'), day: int('1-28') }),
+      }),
     }),
     put: op({
       tag: T.settings,

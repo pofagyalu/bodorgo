@@ -147,13 +147,17 @@ export class WaterfallChart {
           titleFont: { ...font, size: 12, weight: 'bold' },
           bodyFont: { ...font, size: 12 },
           callbacks: {
-            title: (items) => steps[items[0].dataIndex].label,
-            // Where the money stood before this step and after it - a
-            // total is just its amount.
+            // A total (Nyitó, Záró) is headed Egyenleg, with its own name
+            // before the amount: 'Nyitó: 45 000 Ft'. An income or expense
+            // says where the money stood before it and after it.
+            title: (items) => {
+              const step = steps[items[0].dataIndex];
+              return step.kind === 'total' ? 'Egyenleg' : step.label;
+            },
             label: (item) => {
               const step = steps[item.dataIndex];
               return step.kind === 'total'
-                ? money(step.to)
+                ? `${step.label}: ${money(step.to)}`
                 : `${money(step.from)} → ${money(step.to)}`;
             },
           },
