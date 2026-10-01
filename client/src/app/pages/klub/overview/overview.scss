@@ -215,7 +215,9 @@
 
 .overview-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  // Two cards: the members, the balance. (This year's dues are the ring
+  // below.)
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 17px;
   margin: 18px 0;
 }
@@ -409,6 +411,21 @@
     padding: 25px;
   }
 
+  // The two buttons always side by side: they share the row (each as wide
+  // as its text needs, the rest split between them) and never wrap.
+  .overview-actions {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  .overview-actions .primary-btn,
+  .overview-actions .outline-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0.75rem 0.6rem;
+    white-space: nowrap;
+  }
+
   .overview-stats {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -421,5 +438,15 @@
   .overview-stat strong {
     font-size: 22px;
     margin: 6px 0;
+  }
+}
+
+// The narrowest phones: slightly smaller type keeps the two buttons in
+// their one row.
+@media (max-width: 340px) {
+  .overview-actions .primary-btn,
+  .overview-actions .outline-btn {
+    padding: 0.75rem 0.4rem;
+    font-size: 0.75rem;
   }
 }
