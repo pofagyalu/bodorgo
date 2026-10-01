@@ -1,0 +1,47 @@
+<button
+  class="arrow"
+  type="button"
+  aria-label="Előző"
+  [disabled]="centered() === 0"
+  (click)="step(-1)"
+>
+  ‹
+</button>
+
+<div
+  #band
+  class="band"
+  [class.dragging]="dragging()"
+  role="group"
+  tabindex="0"
+  [attr.aria-label]="label()"
+  (scroll)="onScroll()"
+  (keydown)="onKeydown($event)"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp()"
+  (pointercancel)="onPointerUp()"
+>
+  @for (option of options(); track option.value; let i = $index) {
+    <button
+      class="item"
+      type="button"
+      tabindex="-1"
+      [class.centered]="i === centered()"
+      [attr.aria-current]="i === centered() ? 'true' : null"
+      (click)="pick(i)"
+    >
+      {{ option.label }}
+    </button>
+  }
+</div>
+
+<button
+  class="arrow"
+  type="button"
+  aria-label="Következő"
+  [disabled]="centered() === options().length - 1"
+  (click)="step(1)"
+>
+  ›
+</button>

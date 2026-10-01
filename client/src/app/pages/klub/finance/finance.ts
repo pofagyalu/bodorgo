@@ -9,21 +9,8 @@ import {
   INCOME_CATEGORIES,
   EXPENSE_CATEGORIES,
 } from '../../../services/finance';
-
-const MONTH_LABELS = [
-  'jan',
-  'feb',
-  'márc',
-  'ápr',
-  'máj',
-  'jún',
-  'júl',
-  'aug',
-  'szept',
-  'okt',
-  'nov',
-  'dec',
-];
+import { WaterfallChart, WaterfallStep } from '../../../components/waterfall-chart/waterfall-chart';
+import { PeriodBand, PeriodOption } from '../../../components/period-band/period-band';
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
   const formatted = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount);
@@ -36,7 +23,7 @@ function today(): string {
 
 @Component({
   selector: 'app-finance',
-  imports: [DatePipe],
+  imports: [DatePipe, WaterfallChart, PeriodBand],
   templateUrl: './finance.html',
   styleUrl: './finance.scss',
 })
@@ -46,7 +33,6 @@ export class Finance implements OnInit {
 
   readonly incomeCategories = INCOME_CATEGORIES;
   readonly expenseCategories = EXPENSE_CATEGORIES;
-  readonly monthLabels = MONTH_LABELS;
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
 
@@ -79,6 +65,13 @@ export class Finance implements OnInit {
     return [...years].sort((a, b) => b.localeCompare(a));
   });
 
+  // The period band: the years from the oldest on the left to the newest,
+  // then the whole history.
+  periodOptions = computed<PeriodOption[]>(() => [
+    ...[...this.availablePeriods()].reverse().map((year) => ({ value: year, label: year })),
+    { value: 'all', label: 'Összes' },
+  ]);
+
   filteredTransactions = computed(() => {
     const period = this.period();
     return this.transactions()
@@ -100,24 +93,42 @@ export class Finance implements OnInit {
 
   balance = computed(() => this.incomeTotal() - this.expenseTotal());
 
-  monthlyChart = computed(() => {
-    const months = Array.from({ length: 12 }, () => ({ income: 0, expense: 0 }));
-    for (const t of this.filteredTransactions()) {
-      const monthIndex = Number(t.date.slice(5, 7)) - 1;
-      months[monthIndex][t.type] += t.amount;
+  // The period as a waterfall: Nyitó (what the club had when it began -
+  // everything before the chosen year; nothing for the whole history),
+  // then each kind of income adds to it and each kind of expense takes
+  // from it, down to Záró. Only the kinds that had money moving, in the
+  // lists' own order (any other category after them).
+  waterfall = computed<WaterfallStep[]>(() => {
+    const period = this.period();
+    const opening =
+      period === 'all'
+        ? 0
+        : this.transactions()
+            .filter((t) => t.date.slice(0, 4) < period)
+            .reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
+
+    const steps: WaterfallStep[] = [{ label: 'Nyitó', from: 0, to: opening, kind: 'total' }];
+    let standing = opening;
+    for (const type of ['income', 'expense'] as const) {
+      const known = type === 'income' ? this.incomeCategories : this.expenseCategories;
+      const totals = new Map<string, number>(known.map((category) => [category, 0]));
+      for (const t of this.filteredTransactions().filter((x) => x.type === type)) {
+        totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
+      }
+      for (const [category, amount] of totals) {
+        if (!amount) continue;
+        const after = standing + (type === 'income' ? amount : -amount);
+        steps.push({
+          label: category,
+          from: standing,
+          to: after,
+          kind: type === 'income' ? 'in' : 'out',
+        });
+        standing = after;
+      }
     }
-    const peak = Math.max(1, ...months.flatMap((m) => [m.income, m.expense]));
-    // A tiny minimum bar height keeps a genuinely small (but nonzero)
-    // month visible instead of rounding down to nothing next to a much
-    // larger peak - zero itself still renders as a flat 0%.
-    const barPct = (value: number) => (value ? Math.max((value / peak) * 100, 2) : 0);
-    return months.map((m, i) => ({
-      label: this.monthLabels[i],
-      income: m.income,
-      expense: m.expense,
-      incomePct: barPct(m.income),
-      expensePct: barPct(m.expense),
-    }));
+    steps.push({ label: 'Záró', from: 0, to: standing, kind: 'total' });
+    return steps;
   });
 
   categoryBreakdown = computed(() => {

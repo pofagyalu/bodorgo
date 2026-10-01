@@ -6,16 +6,11 @@
       <p>Bevételek, kiadások és az egyenleg egy helyen.</p>
     </div>
     <div class="actions">
-      <select
-        aria-label="Időszak"
-        [value]="period()"
-        (change)="period.set($any($event.target).value)"
-      >
-        @for (y of availablePeriods(); track y) {
-          <option [value]="y">{{ y }}. év</option>
-        }
-        <option value="all">Teljes történet</option>
-      </select>
+      <app-period-band
+        label="Időszak"
+        [options]="periodOptions()"
+        [(value)]="period"
+      ></app-period-band>
       @if (isAdmin()) {
         <button class="primary-btn" type="button" (click)="openModal()">＋ Új tétel</button>
       }
@@ -68,40 +63,24 @@
   <div class="middle">
     <section class="panel">
       <div class="panel-title">
-        <h2>Havi pénzmozgás</h2>
+        <h2>Éves pénzmozgás</h2>
         <span>{{ period() === 'all' ? 'Teljes történet' : period() }}</span>
       </div>
       <div class="legend">
+        <span><i class="dot total"></i>Nyitó, záró</span>
         <span><i class="dot in"></i>Bevétel</span>
         <span><i class="dot out"></i>Kiadás</span>
       </div>
-      <div
-        class="chart"
-        role="img"
-        [attr.aria-label]="
+      <!-- From the opening amount through each kind of income and expense
+           to the closing one. -->
+      <app-waterfall-chart
+        [steps]="waterfall()"
+        [label]="
           period() === 'all'
-            ? 'Havi bevételek és kiadások összesítve az összes évből'
-            : 'Havi bevételek és kiadások ' + period() + ' évben'
+            ? 'Pénzmozgás a teljes történetben: nyitó, bevételek, kiadások, záró'
+            : 'Pénzmozgás ' + period() + ' évben: nyitó, bevételek, kiadások, záró'
         "
-      >
-        @for (m of monthlyChart(); track m.label) {
-          <div class="month">
-            <div class="bars">
-              <div
-                class="bar in"
-                [style.height.%]="m.incomePct"
-                [title]="m.label + ': bevétel ' + money(m.income)"
-              ></div>
-              <div
-                class="bar out"
-                [style.height.%]="m.expensePct"
-                [title]="m.label + ': kiadás ' + money(m.expense)"
-              ></div>
-            </div>
-            <span class="month-label">{{ m.label }}</span>
-          </div>
-        }
-      </div>
+      ></app-waterfall-chart>
     </section>
 
     <section class="panel">
