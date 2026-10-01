@@ -3,12 +3,17 @@
 Authentik is set up by hand in its admin UI; this folder keeps the pieces
 that live outside it, plus notes on the setup.
 
-## E-mail template
+## E-mail templates
 
-`bodorgo-email-megerosites.html` - the "confirm your e-mail" message of the
-invitation sign-up. The copy Authentik uses is on the NAS in
-`/volume2/docker/authentik/custom-templates/`; after editing it here, copy it
-there. Its logo is `client/src/assets/images/oridzsinator-logo.png`, served as
+- `bodorgo-email-megerosites.html` - the "confirm your e-mail" message of
+  the invitation sign-up.
+- `bodorgo-jelszo-visszaallitas.html` - the "set a new password" message of
+  the password recovery flow. It says the link is valid for 30 minutes -
+  the recovery e-mail stage's token expiry; change both together.
+
+The copies Authentik uses are on the NAS in
+`/volume2/docker/authentik/custom-templates/`; after editing one here, copy
+it there. Their logo is `client/src/assets/images/oridzsinator-logo.png`, served as
 https://bodorgo.hu/assets/images/oridzsinator-logo.png (deployed with the
 client).
 
