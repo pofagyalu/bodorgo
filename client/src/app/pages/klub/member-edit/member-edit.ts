@@ -5,6 +5,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { AuthService } from '../../../auth/auth.service';
 import { Avatar } from '../../../components/avatar/avatar';
 import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
+import { HuDateInput } from '../../../shared/hu-date-input/hu-date-input';
 
 interface AddressForm {
   zipCode: string;
@@ -31,7 +32,7 @@ function emptyAddress(): AddressForm {
 // create mode, since there's no Authentik account yet to source it from.
 @Component({
   selector: 'app-member-edit',
-  imports: [Avatar, PhotoEditor],
+  imports: [Avatar, PhotoEditor, HuDateInput],
   templateUrl: './member-edit.html',
   styleUrl: './member-edit.scss',
 })

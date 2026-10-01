@@ -1,3 +1,5 @@
+@use '../../../shared/fab';
+
 // Same shared Klub look as finance.scss/members.scss/overview.scss.
 :host {
   display: block;
@@ -133,6 +135,12 @@ button {
 
 // --- Document cards ---
 
+// The + icon is the phone's (the floating button); a wide screen has the
+// label "＋ Dokumentum".
+.add-doc-btn .add-icon {
+  display: none;
+}
+
 // Small enough for two in a row on a phone.
 .document-grid {
   display: grid;
@@ -148,6 +156,20 @@ button {
 
   .panel {
     padding: 1rem;
+  }
+
+  // "+ Dokumentum" out of the heading: the floating + of a phone
+  // (shared/_fab.scss).
+  .heading .add-doc-btn {
+    @include fab.button;
+  }
+
+  .add-doc-btn .add-icon {
+    display: block;
+  }
+
+  .add-text {
+    display: none;
   }
 }
 

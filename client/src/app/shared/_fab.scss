@@ -1,0 +1,48 @@
+// The floating "+" of a phone screen: a page's "add a new one" action (a
+// tour, a document, a user) as one round button over the bottom right
+// corner - the same size, color and shadow on every page.
+//
+//   @use '../../shared/fab';
+//   @media (max-width: 600px) { .my-add-button { @include fab.button; } }
+//
+// The button's own content should be a <mat-icon>add</mat-icon>; hide any
+// text label beside it.
+
+$fab-size: 3.5rem;
+$fab-color: #1a796c;
+$fab-hover: #16675d;
+
+@mixin button {
+  position: fixed;
+  right: 1.1rem;
+  // Clear of the phone's own bottom bar.
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  width: $fab-size;
+  height: $fab-size;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: $fab-color;
+  color: #fff;
+  transform: none;
+  // A soft shadow, and a thin white ring so it stands out over cards and
+  // photos.
+  box-shadow:
+    0 0.4rem 1rem rgba(0, 0, 0, 0.3),
+    0 0 0 0.2rem rgba(255, 255, 255, 0.85);
+
+  &:hover {
+    background: $fab-hover;
+  }
+
+  mat-icon {
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+  }
+}

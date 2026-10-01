@@ -12,7 +12,16 @@
         [(value)]="period"
       ></app-period-band>
       @if (isAdmin()) {
-        <button class="primary-btn" type="button" (click)="openModal()">＋ Új tétel</button>
+        <!-- On a phone: the floating + in the bottom right corner. -->
+        <button
+          class="primary-btn add-entry-btn"
+          type="button"
+          title="Új tétel"
+          aria-label="Új tétel"
+          (click)="openModal()"
+        >
+          <mat-icon class="add-icon">add</mat-icon><span class="add-text">＋ Új tétel</span>
+        </button>
       }
     </div>
   </div>

@@ -6,7 +6,16 @@
       <p>Alapdokumentumok és éves hivatalos iratok egy helyen.</p>
     </div>
     @if (isAdmin()) {
-      <button type="button" class="primary-btn" (click)="openUpload()">＋ Dokumentum</button>
+      <!-- On a phone: a round + floating in the bottom right corner. -->
+      <button
+        type="button"
+        class="primary-btn add-doc-btn"
+        title="Új dokumentum"
+        aria-label="Új dokumentum"
+        (click)="openUpload()"
+      >
+        <mat-icon class="add-icon">add</mat-icon><span class="add-text">＋ Dokumentum</span>
+      </button>
     }
   </div>
 
