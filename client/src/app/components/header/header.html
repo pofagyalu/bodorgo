@@ -87,17 +87,6 @@
           ><span class="moka-text">Móka</span></a
         >
       }
-      <!-- Versenyek (the Futókör) - for now only for whoever
-           auth/futokor.guard.ts lets in. -->
-      @if (seesFutokor()) {
-        <a
-          routerLink="/versenyek"
-          routerLinkActive="active"
-          (mouseenter)="hoverItem($event.currentTarget)"
-          class="menu-item yellow"
-          >Versenyek</a
-        >
-      }
     </nav>
   }
 
@@ -214,15 +203,6 @@
           (click)="closeMobileMenu()"
           class="menu-item"
           ><span class="moka-text">Móka</span></a
-        >
-      }
-      @if (seesFutokor()) {
-        <a
-          routerLink="/versenyek"
-          routerLinkActive="active"
-          (click)="closeMobileMenu()"
-          class="menu-item yellow"
-          >Versenyek</a
         >
       }
       <button class="menu-item logout-item" (click)="logout(); closeMobileMenu()">

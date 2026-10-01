@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-height: calc(100dvh - var(--header-height));
-  // Versenyek's own color in the menu is the logo's yellow.
+  // The race's own colors: the logo's yellow and orange.
   background:
     radial-gradient(circle at 100% 0%, #f6b52840, transparent 45%),
     radial-gradient(circle at 0% 40%, #f0782722, transparent 45%), #fffaf0;

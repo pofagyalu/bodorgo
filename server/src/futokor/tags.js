@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import config from '../config.js';
 
 // Futókör: a card's link. The QR code (and later the NFC sticker) carries
-// <the app>/versenyek/t/<token>, where the token is the card's id and a
+// <the app>/fk/<token>, where the token is the card's id and a
 // signature: "T05.k3J9xQ...". The id can be read by anyone (the phone does,
 // offline); only this server can tell a real card from a made-up one.
 
@@ -27,4 +27,4 @@ export function verifyTagToken(token) {
 }
 
 export const tagUrl = (tagId) =>
-  `${(config.oridzs.clientBaseUrl || 'https://bodorgo.hu').replace(/\/+$/, '')}/versenyek/t/${tagToken(tagId)}`;
+  `${(config.oridzs.clientBaseUrl || 'https://bodorgo.hu').replace(/\/+$/, '')}/fk/${tagToken(tagId)}`;

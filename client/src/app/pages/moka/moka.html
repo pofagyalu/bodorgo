@@ -9,6 +9,9 @@
       <a routerLink="darts" routerLinkActive="active" class="nav-item" title="Darts">
         <mat-icon>track_changes</mat-icon><span>Darts</span>
       </a>
+      <a routerLink="futokor" routerLinkActive="active" class="nav-item" title="Futókörök">
+        <mat-icon>directions_run</mat-icon><span>Futókörök</span>
+      </a>
       <!-- Not built yet - shown so it's clear what's coming. -->
       <div class="nav-item coming" title="Kvíz – hamarosan">
         <mat-icon>quiz</mat-icon><span>Kvíz</span><em class="soon">hamarosan</em>
@@ -27,6 +30,7 @@
     @if (!inGame()) {
       <nav class="moka-mobile-nav" aria-label="Móka főmenü mobilon">
         <a routerLink="darts" routerLinkActive="active">Darts</a>
+        <a routerLink="futokor" routerLinkActive="active">Futókörök</a>
         <span class="coming">Kvíz</span>
       </nav>
     }

@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, computed, inject, input, output } from '@angular/core';
-import { FutokorService, ScanAnswer, racePace, raceTime } from '../../../services/futokor';
-import { playCelebration } from '../../../shared/celebration-effects';
+import { FutokorService, ScanAnswer, racePace, raceTime } from '../../../../services/futokor';
+import { playCelebration } from '../../../../shared/celebration-effects';
 
 // "T02" → "02-es kártya" (the number printed big on the card).
 export function cardName(tagId: string | undefined): string {
@@ -129,7 +129,7 @@ export class ScanAnswerView implements OnInit, OnDestroy {
       case 'closed':
         return 'A pálya most nincs nyitva.';
       case 'noCourse':
-        return 'Nincs pálya a telefonon – nyisd meg a Versenyek oldalt, amíg van net.';
+        return 'Nincs pálya a telefonon – nyisd meg a Móka → Futókörök oldalt, amíg van net.';
       case 'gaveUp':
         return 'Ez a futás nem számít. Jöhet egy új!';
       default:

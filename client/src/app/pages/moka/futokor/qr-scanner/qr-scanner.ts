@@ -15,8 +15,9 @@ export const canScanInApp = () => !!BarcodeDetectorClass && !!navigator.mediaDev
 const LOOK_EVERY_MS = 200;
 // The same card isn't read again while it's still in front of the camera.
 const SAME_CARD_MS = 3000;
-// A card's link ends in its token: .../versenyek/t/<token>
-const CARD_LINK = /\/versenyek\/t\/([^/?#]+)/;
+// A card's link ends in its token: .../fk/<token> (the first ones:
+// .../versenyek/t/<token>).
+const CARD_LINK = /\/(?:fk|versenyek\/t)\/([^/?#]+)/;
 
 // The camera, kept on, reading the cards' QR codes right in the app: no
 // new tab for every card, and nothing to load - so it also works where
