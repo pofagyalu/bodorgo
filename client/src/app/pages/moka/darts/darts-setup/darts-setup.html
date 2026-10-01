@@ -1,0 +1,160 @@
+<section class="setup">
+  <a routerLink="/moka/darts" class="back"><mat-icon>arrow_back</mat-icon> Darts</a>
+  <h1>Új játék</h1>
+
+  <!-- What is played. -->
+  <div class="card">
+    <div class="card-head">
+      <h2><mat-icon>sports_esports</mat-icon> Mit játszunk?</h2>
+      <button type="button" class="rules-btn" (click)="rulesOpen.set(!rulesOpen())">
+        <mat-icon>info</mat-icon> Szabályok
+      </button>
+    </div>
+    <div class="choices">
+      @for (t of types; track t.value) {
+        <button
+          type="button"
+          class="choice"
+          [class.on]="type() === t.value"
+          (click)="type.set(t.value)"
+        >
+          {{ t.label }}
+        </button>
+      }
+    </div>
+
+    <!-- The chosen game's rules, in short. -->
+    @if (rulesOpen()) {
+      <div class="rules">
+        <strong>{{ rules().title }}</strong>
+        <ul>
+          @for (line of rules().lines; track $index) {
+            <li>{{ line }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (type() === 'x01') {
+      <h2><mat-icon>flag</mat-icon> Honnan indulunk?</h2>
+      <div class="choices choices--big">
+        @for (s of startScores; track s) {
+          <button
+            type="button"
+            class="choice"
+            [class.on]="startScore() === s"
+            (click)="startScore.set(s)"
+          >
+            {{ s }}
+          </button>
+        }
+      </div>
+
+      <h2><mat-icon>logout</mat-icon> Kiszálló</h2>
+      <div class="choices">
+        @for (m of outModes; track m.value) {
+          <button
+            type="button"
+            class="choice"
+            [class.on]="outMode() === m.value"
+            (click)="outMode.set(m.value)"
+          >
+            {{ m.label }}
+          </button>
+        }
+      </div>
+      <p class="hint">{{ outHint() }}</p>
+    }
+    <p class="hint">
+      A játék addig tart, amíg mindenkinek helyezése nem lesz – vagy amíg közös megegyezéssel be nem
+      fejezitek a „Befejezés” gombbal.
+    </p>
+  </div>
+
+  <!-- Who plays, in throwing order. -->
+  <div class="card">
+    <div class="card-head">
+      <h2><mat-icon>groups</mat-icon> Játékosok ({{ chosen().length }})</h2>
+      @if (chosen().length > 1) {
+        <button type="button" class="shuffle" (click)="shuffle()">
+          <mat-icon>shuffle</mat-icon> Keverés
+        </button>
+      }
+    </div>
+
+    @if (chosen().length) {
+      <ol class="chosen" cdkDropList (cdkDropListDropped)="reorder($event)">
+        @for (c of chosen(); track c.key; let i = $index) {
+          <li class="player" cdkDrag>
+            <mat-icon class="grip" cdkDragHandle>drag_indicator</mat-icon>
+            <span class="order">{{ i + 1 }}.</span>
+            <app-avatar
+              class="face"
+              [name]="c.name"
+              [userId]="c.userId"
+              [photoVersion]="c.photoUpdatedAt"
+              [preview]="false"
+            />
+            <span class="name">{{ c.name }}</span>
+            @if (!c.userId) {
+              <span class="guest-tag">vendég</span>
+            }
+            <button type="button" class="remove" (click)="remove(c.key)" aria-label="Kivétel">
+              <mat-icon>close</mat-icon>
+            </button>
+          </li>
+        }
+      </ol>
+      @if (chosen().length > 1) {
+        <p class="hint">Ebben a sorrendben dobtok – húzással átrendezheted.</p>
+      }
+    } @else {
+      <p class="hint">Még senki. Válassz lentről, vagy írj be egy vendéget.</p>
+    }
+
+    @if (!isFull()) {
+      <label class="search">
+        <mat-icon>search</mat-icon>
+        <input
+          type="search"
+          placeholder="Keresés a bódorgók között"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+      </label>
+      <div class="people">
+        @for (p of available(); track p._id) {
+          <button type="button" class="person" (click)="add(p)">
+            <app-avatar
+              class="face"
+              [name]="p.name"
+              [userId]="p._id"
+              [photoVersion]="p.photoUpdatedAt"
+              [preview]="false"
+            />
+            {{ p.name }}
+          </button>
+        } @empty {
+          <span class="hint">Nincs találat.</span>
+        }
+      </div>
+
+      <form class="guest" (submit)="addGuest(); $event.preventDefault()">
+        <input
+          type="text"
+          maxlength="30"
+          placeholder="Vendég neve (nincs a bódorgók között)"
+          [value]="guestName()"
+          (input)="guestName.set($any($event.target).value)"
+        />
+        <button type="submit" [disabled]="!guestName().trim()">
+          <mat-icon>person_add</mat-icon> Hozzáad
+        </button>
+      </form>
+    }
+  </div>
+
+  <button type="button" class="start" [disabled]="!chosen().length || starting()" (click)="start()">
+    <mat-icon>play_arrow</mat-icon> Játék indul!
+  </button>
+</section>

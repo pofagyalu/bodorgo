@@ -1,0 +1,349 @@
+@if (game(); as g) {
+  <section class="game">
+    <header class="top">
+      <a routerLink="/moka/darts" class="icon-btn" aria-label="Vissza"
+        ><mat-icon>arrow_back</mat-icon></a
+      >
+      <div class="title">
+        <strong>{{ name() }}</strong>
+        <span>
+          @if (!isCricket()) {
+            {{ g.options.outMode === 'double' ? 'dupla kiszálló' : 'sima kiszálló' }}
+          }
+          @if (g.next) {
+            · {{ g.next.round }}. kör
+          }
+        </span>
+      </div>
+      <!-- By common agreement, any time: the game ends as it stands. -->
+      @if (playing() && g.canEdit) {
+        <button type="button" class="finish" (click)="finish()">
+          <mat-icon>flag</mat-icon> Befejezés
+        </button>
+      }
+    </header>
+
+    <!-- The scores: everyone in throwing order, whoever is next lit up. -->
+    @if (isCricket()) {
+      <!-- Cricket: a line each - the hits on every number, and the points. -->
+      <div class="scores cricket">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              @for (t of targets; track t) {
+                <th [class.dead]="closedByAll(t)">{{ t === 25 ? 'B' : t }}</th>
+              }
+              <th>Pont</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of g.players; track p.idx) {
+              <tr
+                [class.current]="g.next?.playerIdx === p.idx"
+                [class.out]="p.position && playing()"
+                [style.--accent]="color(p.idx)"
+              >
+                <td class="who">
+                  @if (p.position) {
+                    <span class="row-medal">{{ medal(p.position) }}</span>
+                  }
+                  <span class="pname">{{ p.name }}</span>
+                </td>
+                @for (t of targets; track t) {
+                  <!-- A new element for every new mark, so it pops in. -->
+                  @for (m of [mark(p.marks?.[t])]; track m) {
+                    <td class="mark" [class.closed]="(p.marks?.[t] ?? 0) >= 3">{{ m }}</td>
+                  }
+                }
+                @for (score of [p.points]; track score) {
+                  <td class="points">{{ score }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="scores scoreboard">
+        @for (p of g.players; track p.idx) {
+          <div
+            class="player-card"
+            [class.current]="g.next?.playerIdx === p.idx"
+            [class.out]="p.remaining === 0"
+            [style.--accent]="color(p.idx)"
+          >
+            @if (p.position) {
+              <span class="medal" [class.provisional]="!p.positionFinal">{{
+                medal(p.position)
+              }}</span>
+            }
+            <app-avatar
+              class="face"
+              [name]="p.name"
+              [userId]="p.userId"
+              [photoVersion]="p.photoUpdatedAt"
+              [preview]="false"
+            />
+            <span class="pname">{{ p.name }}</span>
+            <!-- A new element for every new score, so it pops in each time. -->
+            @for (score of [p.remaining]; track score) {
+              <span class="remaining">{{ score }}</span>
+            }
+            <span class="avg">⌀ {{ p.average ?? '–' }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- A wide screen: the board beside the game, with the turn's darts on
+         it and the field to aim at - and a dart can be tapped onto it. -->
+    @if (wide()) {
+      <app-dart-board
+        class="side-board"
+        [darts]="shownThrows()"
+        [target]="target()"
+        [interactive]="(playing() && g.canEdit) || !!editing()"
+        (tapped)="boardHit($event)"
+      />
+    }
+
+    @if (g.status === 'abandoned') {
+      <p class="banner">Ez a játék félbemaradt.</p>
+    }
+
+    <!-- The end: the podium and everyone's numbers. -->
+    @if (g.status === 'finished' && !editing()) {
+      <div class="results">
+        <app-podium [winners]="winners()" title="Vége a játéknak!" />
+        <table class="stats">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="left">Játékos</th>
+              @if (isCricket()) {
+                <th>Pont</th>
+                <th title="Találat körönként (három nyílra)">Kör-átlag</th>
+                <th title="A legtöbb pont egy körben">Csúcs</th>
+                <th>Nyíl</th>
+              } @else {
+                <th title="Három nyíl átlaga">Átlag</th>
+                <th title="A legjobb kör">Csúcs</th>
+                <th>Nyíl</th>
+                <th>Maradt</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of ranking(); track p.idx) {
+              <tr>
+                <td>{{ medal(p.position!) }}</td>
+                <td class="left">{{ p.name }}</td>
+                @if (isCricket()) {
+                  <td>{{ p.points }}</td>
+                  <td>{{ p.average ?? '–' }}</td>
+                  <td>{{ p.highestTurn }}</td>
+                  <td>{{ p.darts }}</td>
+                } @else {
+                  <td>{{ p.average ?? '–' }}</td>
+                  <td>{{ p.highestTurn }}</td>
+                  <td>{{ p.darts }}</td>
+                  <td>{{ p.remaining }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+        <div class="end-actions">
+          <button type="button" class="big-btn rematch" (click)="rematch()">
+            <mat-icon>replay</mat-icon> Visszavágó
+          </button>
+          @if (g.canEdit) {
+            <!-- A game the players ended goes on; otherwise the last dart
+                 comes back. -->
+            <button type="button" class="big-btn plain" (click)="undo()">
+              @if (g.ended) {
+                <mat-icon>play_arrow</mat-icon> Mégis folytatjuk
+              } @else {
+                <mat-icon>undo</mat-icon> Utolsó dobás vissza
+              }
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- The current turn's three darts - or the turn being corrected. -->
+    @if (playing() || editing()) {
+      <div class="turn" [class.turn--editing]="editing()">
+        <div class="turn-who">
+          @if (editedTurn(); as t) {
+            <mat-icon>edit</mat-icon> {{ t.name }} {{ t.round }}. köre – javítás
+          } @else if (announcement(); as a) {
+            <!-- A bust, a finish, whose turn it is - for a moment, in the
+                 line that otherwise says who throws: nothing is covered. -->
+            <span class="announce announce--{{ a.kind }}" aria-live="polite">
+              <strong>{{ a.title }}</strong>
+              @if (a.sub) {
+                {{ a.sub }}
+              }
+            </span>
+          } @else {
+            {{ current()?.name }} dob
+          }
+        </div>
+        <div class="slots">
+          @for (slot of slots(); track i; let i = $index) {
+            @for (text of [slot]; track text) {
+              <span
+                class="slot"
+                [class.filled]="text !== null"
+                [class.selected]="editing()?.selected === i"
+                (click)="selectSlot(i)"
+                >{{ text ?? '·' }}</span
+              >
+            }
+          }
+          <span class="turn-total">{{ turnTotal() }}</span>
+        </div>
+        @if (checkout(); as way) {
+          <div class="checkout"><mat-icon>my_location</mat-icon> Kiszálló: {{ way }}</div>
+        }
+        @if (editing(); as e) {
+          <p class="edit-hint">
+            Koppints a hibás dobásra, aztán add meg a helyeset. A többi marad, ahogy volt.
+          </p>
+          <div class="edit-actions">
+            <button type="button" class="plain-btn" (click)="cancelEdit()">
+              <mat-icon>close</mat-icon> Mégse
+            </button>
+            <button
+              type="button"
+              class="save-btn"
+              [disabled]="!e.throws.length"
+              (click)="saveEdit()"
+            >
+              <mat-icon>check</mat-icon> Mentés
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Entering a dart: the keypad, or (on a phone) the board to tap on -
+         a swipe sideways switches between the two. -->
+    @if ((playing() && g.canEdit) || editing()) {
+      @if (!wide()) {
+        <div class="input-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            [class.on]="inputMode() === 'keypad'"
+            (click)="setInputMode('keypad')"
+          >
+            <mat-icon>dialpad</mat-icon> Billentyűzet
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.on]="inputMode() === 'board'"
+            (click)="setInputMode('board')"
+          >
+            <mat-icon>track_changes</mat-icon> Tábla
+          </button>
+        </div>
+      }
+      <div class="input" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
+        @if (wide() || inputMode() === 'keypad') {
+          <div class="keypad pane">
+            <div class="mult">
+              @for (m of multipliers; track m.value) {
+                <button
+                  type="button"
+                  class="mult-btn m{{ m.value }}"
+                  [class.on]="multiplier() === m.value"
+                  (click)="multiplier.set(m.value)"
+                >
+                  {{ m.label }}
+                </button>
+              }
+            </div>
+            <div class="numbers m{{ multiplier() }}" [class.few]="isCricket()">
+              @for (n of numbers(); track n) {
+                <button type="button" class="key" (click)="hit(n)">{{ n }}</button>
+              }
+            </div>
+            <div class="specials">
+              <button type="button" class="key miss" (click)="hit(0)">Mellé</button>
+              <button
+                type="button"
+                class="key bull"
+                [disabled]="multiplier() === 3"
+                (click)="hit(25)"
+              >
+                {{ multiplier() === 2 ? 'Bull 50' : '25' }}
+              </button>
+              <button type="button" class="key undo" (click)="undo()" aria-label="Visszavonás">
+                <mat-icon>undo</mat-icon>
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="board-pane pane">
+            <app-dart-board
+              [darts]="shownThrows()"
+              [target]="target()"
+              [interactive]="true"
+              (tapped)="boardHit($event)"
+            />
+            <div class="board-keys">
+              <button type="button" class="key miss" (click)="hit(0)">Mellé</button>
+              <button type="button" class="key undo" (click)="undo()" aria-label="Visszavonás">
+                <mat-icon>undo</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Every turn so far, the latest first - tap one to correct it. -->
+    @if (history().length) {
+      <div class="history">
+        <button type="button" class="history-toggle" (click)="historyOpen.set(!historyOpen())">
+          <mat-icon>{{ historyOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          Körök ({{ history().length }})
+        </button>
+        @if (historyOpen()) {
+          <ul>
+            @for (t of history(); track t.turnIdx) {
+              <li>
+                <button type="button" [disabled]="!g.canEdit" (click)="startEdit(t.turnIdx)">
+                  <span class="h-round">{{ t.round }}.</span>
+                  <span class="h-name" [style.color]="color(t.playerIdx)">{{ t.name }}</span>
+                  <span class="h-darts">{{ t.darts }}</span>
+                  @if (t.bust) {
+                    <span class="tag bust">besokallt</span>
+                  } @else if (t.finished) {
+                    <span class="tag out">{{ isCricket() ? 'végzett' : 'kiszállt' }}</span>
+                  } @else if (t.short) {
+                    <span class="tag bust">hiányos</span>
+                  }
+                  @if (t.editedAt) {
+                    <span title="Javított kör">✏️</span>
+                  }
+                  <strong class="h-points">{{ t.worth }}</strong>
+                </button>
+              </li>
+            }
+          </ul>
+          @if (g.canEdit) {
+            <p class="history-hint">Elírtad? Koppints a körre a javításhoz.</p>
+          }
+        }
+      </div>
+    }
+  </section>
+} @else if (loadFailed()) {
+  <p class="banner">Nincs ilyen játék. <a routerLink="/moka/darts">Vissza a Dartshoz</a></p>
+}

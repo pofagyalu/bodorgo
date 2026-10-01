@@ -1,0 +1,36 @@
+<div class="moka-shell">
+  <aside class="moka-sidebar" aria-label="Móka navigáció">
+    <div class="moka-brand">
+      <div class="brand-mark"><mat-icon>casino</mat-icon></div>
+      <div class="brand-text"><strong>Bódorgó Móka</strong><small>Játékok</small></div>
+    </div>
+
+    <nav class="moka-nav" aria-label="Móka főmenü">
+      <a routerLink="darts" routerLinkActive="active" class="nav-item" title="Darts">
+        <mat-icon>track_changes</mat-icon><span>Darts</span>
+      </a>
+      <!-- Not built yet - shown so it's clear what's coming. -->
+      <div class="nav-item coming" title="Kvíz – hamarosan">
+        <mat-icon>quiz</mat-icon><span>Kvíz</span><em class="soon">hamarosan</em>
+      </div>
+    </nav>
+
+    <div class="side-bottom">
+      <strong>Játsszunk!</strong>
+      Egy telefon, egy tábla, sok jó barát – a pontokat a Bódorgó számolja.
+    </div>
+  </aside>
+
+  <main class="moka-main">
+    <!-- The phone's tabs - not during a game, which gets the whole screen
+         (its own back arrow leads out). -->
+    @if (!inGame()) {
+      <nav class="moka-mobile-nav" aria-label="Móka főmenü mobilon">
+        <a routerLink="darts" routerLinkActive="active">Darts</a>
+        <span class="coming">Kvíz</span>
+      </nav>
+    }
+
+    <router-outlet />
+  </main>
+</div>

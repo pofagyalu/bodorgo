@@ -1,0 +1,114 @@
+<section class="darts-home">
+  <div class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">Bódorgó Móka</p>
+      <h1>Darts</h1>
+      <p class="lead">
+        301 vagy Cricket, ahányan csak vagytok. Egy telefon számol, a dobogóra hárman állhatnak fel.
+      </p>
+
+      <div class="actions">
+        <a routerLink="uj" class="action new-game">
+          <mat-icon>add_circle</mat-icon>
+          <span>Új játék</span>
+        </a>
+      </div>
+    </div>
+
+    <app-dart-board class="hero-board" />
+  </div>
+
+  <!-- Everyone's numbers from every finished game - a list per kind of game. -->
+  <h2><mat-icon>leaderboard</mat-icon> Ranglista</h2>
+  <div class="board-tabs" role="tablist">
+    @for (b of boards; track b.label) {
+      <button type="button" role="tab" [class.on]="board() === b" (click)="showBoard(b)">
+        {{ b.label }}
+      </button>
+    }
+  </div>
+  @if (leaders(); as list) {
+    @if (list.length) {
+      <div class="board-scroll">
+        <table class="leaders">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="left">Játékos</th>
+              <th title="Első helyek">🥇</th>
+              <th title="Második helyek">🥈</th>
+              <th title="Harmadik helyek">🥉</th>
+              <th title="Befejezett játékok">Játék</th>
+              @if (board().type === 'cricket') {
+                <th title="Találat körönként (három nyílra)">Kör-átlag</th>
+                <th title="A legtöbb találat egy körben">Legjobb kör</th>
+              } @else {
+                <th title="Három nyíl átlaga">Átlag</th>
+                <th title="A legjobb kör">Csúcs</th>
+                <th title="A legnagyobb kiszálló">Kiszálló</th>
+                <th>180</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of list; track p.userId; let i = $index) {
+              <tr [class.me]="p.userId === myId">
+                <td class="rank">{{ i + 1 }}.</td>
+                <td class="left who">
+                  <app-avatar
+                    class="face"
+                    [name]="p.name"
+                    [userId]="p.userId"
+                    [photoVersion]="p.photoUpdatedAt"
+                  />
+                  {{ p.name }}
+                </td>
+                <td class="gold">{{ p.firsts }}</td>
+                <td>{{ p.seconds }}</td>
+                <td>{{ p.thirds }}</td>
+                <td>{{ p.games }}</td>
+                <td>{{ p.average ?? '–' }}</td>
+                <td>{{ p.highestTurn }}</td>
+                @if (board().type !== 'cricket') {
+                  <td>{{ p.highestCheckout || '–' }}</td>
+                  <td>{{ p.count180 }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="empty">Ebből a játékból még nincs befejezett menet.</p>
+    }
+  }
+
+  <!-- My games so far (the ones I started or play in), the newest first. -->
+  @if (games(); as list) {
+    @if (list.length) {
+      <h2><mat-icon>history</mat-icon> Játékaim</h2>
+      <ul class="games">
+        @for (g of list; track g._id) {
+          <li>
+            <a [routerLink]="g._id" class="game-row" [class.live]="g.status === 'in_progress'">
+              <span class="score">{{ gameName(g) }}</span>
+              <span class="row-main">
+                <span class="standing">{{ standing(g) }}</span>
+                <small>{{ g.createdAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+              </span>
+              @switch (g.status) {
+                @case ('in_progress') {
+                  <span class="status on">folyamatban</span>
+                }
+                @case ('abandoned') {
+                  <span class="status off">félbemaradt</span>
+                }
+              }
+              <mat-icon class="chevron">chevron_right</mat-icon>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

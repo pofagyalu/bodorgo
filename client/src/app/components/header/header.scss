@@ -335,6 +335,22 @@
   color: var(--logo-yellow);
 }
 
+// Móka: the one menu item in all the logo's colors - on an inner span, so
+// the selected item's own background (the phone menu's white pill) stays.
+.moka-text {
+  background: linear-gradient(
+    90deg,
+    var(--logo-red),
+    var(--logo-orange),
+    var(--logo-yellow),
+    var(--logo-green),
+    var(--logo-blue)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
 // Avatar + Kijelentkezés side by side. A flex row centres them - left as
 // plain inline boxes they sat on the text baseline, and a photo (no
 // baseline of its own) put its bottom edge there, lifting the circle.

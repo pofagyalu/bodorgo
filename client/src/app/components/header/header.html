@@ -77,6 +77,16 @@
           }}</span>
         }
       </a>
+      <!-- Móka (the games) - for now only for whoever auth/moka.guard.ts lets in. -->
+      @if (seesMoka()) {
+        <a
+          routerLink="/moka"
+          routerLinkActive="active"
+          (mouseenter)="hoverItem($event.currentTarget)"
+          class="menu-item"
+          ><span class="moka-text">Móka</span></a
+        >
+      }
       <!-- Hidden for now, still routable - not ready for public linking yet -->
       <!-- <a routerLink="/versenyek" routerLinkActive="active"
         (mouseenter)="hoverItem($event.currentTarget)"
@@ -190,6 +200,15 @@
           <span class="menu-badge">{{ pendingPolls() }}</span>
         }
       </a>
+      @if (seesMoka()) {
+        <a
+          routerLink="/moka"
+          routerLinkActive="active"
+          (click)="closeMobileMenu()"
+          class="menu-item"
+          ><span class="moka-text">Móka</span></a
+        >
+      }
       <!-- Hidden for now, still routable - not ready for public linking yet -->
       <!-- <a
       routerLink="/versenyek"

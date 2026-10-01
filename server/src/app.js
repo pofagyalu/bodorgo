@@ -25,6 +25,7 @@ import membershipRouter from './routes/membershipRoutes.js';
 import pollRouter from './routes/pollRoutes.js';
 import chatRoomRouter from './routes/chatRoomRoutes.js';
 import musicRouter from './routes/musicRoutes.js';
+import jatekRouter from './routes/jatekRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
@@ -132,6 +133,8 @@ export default function createApp(sessionMiddleware) {
   app.use('/polls', pollRouter);
   app.use('/chat-rooms', chatRoomRouter);
   app.use('/music', musicRouter);
+  // Móka: the games (darts first) - see jatekok/access.js for who gets in.
+  app.use('/jatekok', jatekRouter);
   app.use('/health', systemRouter);
   // The API documentation (Scalar) - admins only, see apiDocs/docsRouter.js.
   app.use('/docs', docsRouter);

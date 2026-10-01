@@ -297,6 +297,91 @@ const schemas = {
     paymentMethod: str('For payments.', { enum: ['barion', 'stripe', 'cash'] }),
   }),
 
+  DartsThrow: obj(
+    {
+      segment: int('1-20, 25 (the bull), or 0: a miss.'),
+      multiplier: int('1-3 (the bull: 1 or 2 - the bullseye); 0 with a miss.'),
+    },
+    ['segment', 'multiplier'],
+  ),
+
+  DartsGame: obj({
+    _id: id(),
+    type: str('', { enum: ['x01', 'cricket'] }),
+    ended: bool('The players ended it themselves, before the rules did.'),
+    options: obj({
+      startScore: int('', { enum: [301, 201, 101] }),
+      outMode: str('', { enum: ['single', 'double'] }),
+      playUntil: str('', { enum: ['winner', 'top3', 'all'] }),
+    }),
+    status: str('', { enum: ['in_progress', 'finished', 'abandoned'] }),
+    createdBy: obj({ _id: id(), name: str() }),
+    createdAt: date(),
+    finishedAt: { type: ['string', 'null'] },
+    players: arrayOf(
+      obj({
+        idx: int('Place in the throwing order (from 0).'),
+        userId: { type: ['string', 'null'], description: 'Null for a guest.' },
+        name: str(),
+        photoUpdatedAt: { type: ['string', 'null'] },
+        remaining: int('X01 only.'),
+        marks: {
+          type: 'object',
+          description:
+            'Cricket only: the hits on 15-20 and 25 (the bull), at most 3 each - three close it.',
+        },
+        darts: int('Darts thrown.'),
+        points: int('Points scored (busts score nothing).'),
+        average: {
+          type: ['number', 'null'],
+          description: 'Per three darts: points in X01, marks in Cricket.',
+        },
+        highestTurn: int(),
+        position: {
+          type: ['integer', 'null'],
+          description: 'Once finished - and for everyone once the game is over.',
+        },
+        positionFinal: bool(
+          'False while someone still to throw in that round could take the place (same round: fewer darts in the last turn wins).',
+        ),
+      }),
+    ),
+    placings: arrayOf(int('Player idx, best first.')),
+    canEdit: bool('I may throw, undo and correct in it.'),
+    turns: {
+      description: 'Only on a single game, not in the list.',
+      ...arrayOf(
+        obj({
+          playerIdx: int(),
+          round: int(),
+          throws: arrayOf(ref('DartsThrow')),
+          startScore: int('What the player had left before it.'),
+          points: int(),
+          marks: int('Cricket only: the hits that closed or scored.'),
+          bust: bool(),
+          finished: bool(),
+          short: bool('Fewer than three darts without ending - left so by a correction.'),
+          editedAt: { type: ['string', 'null'] },
+          previousThrows: { type: ['array', 'null'], items: ref('DartsThrow') },
+        }),
+      ),
+    },
+    next: {
+      description: 'Who throws next (single game only) - null once it is over.',
+      type: ['object', 'null'],
+      properties: {
+        playerIdx: int(),
+        round: int(),
+        dartsLeft: int(),
+        checkout: {
+          type: ['array', 'null'],
+          items: ref('DartsThrow'),
+          description: 'The way to finish with the darts left in this turn, if there is one.',
+        },
+      },
+    },
+  }),
+
   Poll: obj({
     _id: id(),
     tour: {
@@ -482,6 +567,7 @@ const T = {
   documents: 'Dokumentumok',
   media: 'Média',
   music: 'Zene',
+  games: 'Móka',
   settings: 'Beállítások',
   push: 'Értesítések',
   system: 'Rendszer',
@@ -515,6 +601,10 @@ const tags = [
   [
     T.music,
     'The music: Jellyfin playlists (Bódorgó FM for everyone, Buli rádió for members), streamed through this server - the Jellyfin key never reaches the browser.',
+  ],
+  [
+    T.games,
+    'Móka: the games - Darts so far. While they are being built, every call here is refused (403) for everyone but the role manager (`INITIAL_ADMIN_USER`).',
   ],
   [
     T.settings,
@@ -2405,6 +2495,180 @@ const paths = {
       params: [musicKey, path('itemId', 'A track’s id from the playlist.')],
       response: file(['audio/mpeg', 'audio/flac', 'audio/mp4'], 'The audio.'),
       errors: [403, 404, 502],
+    }),
+  },
+
+  // --- Móka ---
+  '/jatekok/players': {
+    get: op({
+      tag: T.games,
+      summary: 'Everyone who can be picked as a player',
+      description:
+        'Every user of the app, by the name the app shows (username, or name without one), in Hungarian alphabetical order.',
+      data: obj({
+        players: arrayOf(
+          obj({ _id: id(), name: str(), photoUpdatedAt: { type: ['string', 'null'] } }),
+        ),
+      }),
+      errors: [403],
+    }),
+  },
+  '/jatekok/darts/games': {
+    get: op({
+      tag: T.games,
+      summary: 'My darts games',
+      description:
+        'The games I started or play in - nobody else sees a game, an admin neither. The newest 100 first, each as it stands - without its turns.',
+      params: [
+        query('status', 'Only these.', {
+          type: 'string',
+          enum: ['in_progress', 'finished', 'abandoned'],
+        }),
+      ],
+      data: obj({ games: arrayOf(ref('DartsGame')) }),
+      errors: [403],
+    }),
+    post: op({
+      tag: T.games,
+      summary: 'Start a darts game',
+      description:
+        'X01 or Cricket on one phone: the game starts at once, the players throw in the order given. The X01 options mean nothing in Cricket. A player is a user (`userId`, each at most once) or just a name (`guestName`, 1-30 characters).',
+      body: obj(
+        {
+          type: str(
+            'Default x01. Cricket (standard scoring): 15-20 and the bull each take three hits to close; hits on a closed number score while someone still playing has it open; whoever has closed everything with the most points has finished.',
+            { enum: ['x01', 'cricket'] },
+          ),
+          startScore: int('Default 301.', { enum: [301, 201, 101] }),
+          outMode: str('Default single: any dart may finish; double: only a double.', {
+            enum: ['single', 'double'],
+          }),
+          playUntil: str(
+            'Where it stops by itself: at the winner, once three have finished, or (default) when everyone has a place. The round is always played out. The app always uses the default - the players end a game earlier with `/finish`.',
+            { enum: ['winner', 'top3', 'all'] },
+          ),
+          players: arrayOf(obj({ userId: id(), guestName: str() })),
+        },
+        ['players'],
+      ),
+      ok: 201,
+      data: obj({ game: ref('DartsGame') }),
+      errors: [400, 403],
+    }),
+  },
+  '/jatekok/darts/games/{id}': {
+    get: op({
+      tag: T.games,
+      summary: 'One darts game',
+      description:
+        'With every turn, who throws next and the way out if there is one. Only for whoever started it or plays in it - for anyone else there is no such game (404), as on every call below.',
+      params: [path('id', 'The game.')],
+      data: obj({ game: ref('DartsGame') }),
+      errors: [403, 404],
+    }),
+  },
+  '/jatekok/darts/leaderboard': {
+    get: op({
+      tag: T.games,
+      summary: 'The darts leaderboard',
+      params: [
+        query('type', 'The kind of game - each has its own leaderboard. Default x01.', {
+          type: 'string',
+          enum: ['x01', 'cricket'],
+        }),
+        query('startScore', 'X01 only: just the games from this score.', {
+          type: 'integer',
+          enum: [301, 201, 101],
+        }),
+      ],
+      description:
+        'Everyone’s numbers from every finished game of one kind (the games themselves stay their players’). Guests - only named, not users - are not in it. Best first: the most wins, then 2nd and 3rd places, then the average.',
+      data: obj({
+        players: arrayOf(
+          obj({
+            userId: id(),
+            name: str(),
+            photoUpdatedAt: { type: ['string', 'null'] },
+            games: int('Finished games played.'),
+            firsts: int(),
+            seconds: int(),
+            thirds: int(),
+            average: {
+              type: ['number', 'null'],
+              description: 'Per three darts, over all games: points in X01, marks in Cricket.',
+            },
+            highestTurn: int('The best turn: its points in X01, its marks in Cricket.'),
+            highestCheckout: int('X01: the most points in a finishing turn.'),
+            count180: int('X01 only.'),
+          }),
+        ),
+      }),
+      errors: [403],
+    }),
+  },
+  '/jatekok/darts/games/{id}/throws': {
+    post: op({
+      tag: T.games,
+      summary: 'Throw a dart',
+      description:
+        'The next dart of whoever is next - the server works out the bust, the finish, the next player and the placings. By whoever started the game or plays in it.',
+      params: [path('id', 'The game.')],
+      body: ref('DartsThrow'),
+      data: obj({ game: ref('DartsGame') }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/jatekok/darts/games/{id}/throws/last': {
+    delete: op({
+      tag: T.games,
+      summary: 'Take the last dart back',
+      description:
+        'A bust or a finishing dart too, across turns - a finished game is on again. On a game the players ended (`/finish`) it takes the ending back instead: no dart is removed. Up to 30 minutes after the end for its players; later only those of them who are admins.',
+      params: [path('id', 'The game.')],
+      data: obj({ game: ref('DartsGame') }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/jatekok/darts/games/{id}/turns/{turnIdx}': {
+    patch: op({
+      tag: T.games,
+      summary: 'Correct an earlier turn',
+      description:
+        'Replaces the turn’s darts; everything after it is worked out again (busts, finishes, placings - later turns of someone who now finished earlier are left out). Three darts are needed unless the turn ends sooner (a bust, a finish) or it is the last, open one. The turn keeps who corrected it, when, and its previous darts - unless the darts are the same as before, which changes nothing. Up to 30 minutes after the end for the players; later only those of them who are admins.',
+      params: [
+        path('id', 'The game.'),
+        path('turnIdx', 'The turn’s place in `turns` (from 0).'),
+        query(
+          'preview',
+          '`true`: nothing is stored - the answer is the game as it would be (the app asks before a correction that changes the placings).',
+          { type: 'boolean' },
+        ),
+      ],
+      body: obj({ throws: arrayOf(ref('DartsThrow')) }, ['throws']),
+      data: obj({ game: ref('DartsGame') }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/jatekok/darts/games/{id}/finish': {
+    post: op({
+      tag: T.games,
+      summary: 'End a darts game',
+      description:
+        'Játék befejezése: the players agree it is over. The game is finished as it stands - whoever had finished keeps their place, the others are ranked by where they are (X01: the least left; Cricket: the most points, then marks). It counts on the leaderboard.',
+      params: [path('id', 'The game.')],
+      data: obj({ game: ref('DartsGame') }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/jatekok/darts/games/{id}/abandon': {
+    post: op({
+      tag: T.games,
+      summary: 'Abandon a darts game',
+      description:
+        'A game still on is given up (started by mistake, say): it stays in the list, nothing more is thrown, and it does not count on the leaderboard.',
+      params: [path('id', 'The game.')],
+      data: obj({ game: ref('DartsGame') }),
+      errors: [400, 403, 404],
     }),
   },
 

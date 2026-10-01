@@ -1,0 +1,334 @@
+.darts-home {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+// A warm card in the logo's colors, the board beside the text (under it on
+// a phone).
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(circle at 12% 0%, #f6b52855, transparent 55%),
+    radial-gradient(circle at 100% 100%, #72b45d44, transparent 50%), #fffaf0;
+  box-shadow: 0 0.625rem 2rem #213b4118;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--logo-orange);
+}
+
+h1 {
+  margin: 0.25rem 0 0.75rem;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(2.75rem, 8vw, 4.5rem);
+  line-height: 1;
+  background: linear-gradient(90deg, var(--logo-red), var(--logo-orange), var(--logo-yellow));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.lead {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: #3c4d57;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  margin-top: 1.75rem;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 3.5rem;
+  padding: 0.625rem 1.25rem;
+  border: 0;
+  border-radius: 1rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: left;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-0.125rem);
+  }
+}
+
+.new-game {
+  background: linear-gradient(135deg, var(--logo-orange), var(--logo-red));
+  box-shadow: 0 0.375rem 1rem #f0782755;
+}
+
+// --- The leaderboard ---
+
+// Which game's: 301 / 201 / 101 / Cricket.
+.board-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+
+  button {
+    min-height: 2.5rem;
+    padding: 0.25rem 1rem;
+    border: 2px solid #e4eae7;
+    border-radius: 1.25rem;
+    background: #fff;
+    color: #3c4d57;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+
+    &.on {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--logo-yellow), var(--logo-orange));
+      color: #fff;
+    }
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #fff;
+  color: #6a7a83;
+  font-size: 0.875rem;
+}
+
+// Scrolls sideways on a narrow phone instead of squeezing the numbers.
+.board-scroll {
+  overflow-x: auto;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 0.25rem 0.875rem #213b4110;
+}
+
+.leaders {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: #23354a;
+  white-space: nowrap;
+
+  th,
+  td {
+    padding: 0.5rem 0.5rem;
+    text-align: center;
+  }
+
+  th {
+    background: #fff3d1;
+    color: var(--logo-brown);
+    font-size: 0.75rem;
+  }
+
+  .left {
+    text-align: left;
+  }
+
+  tbody tr + tr td {
+    border-top: 1px solid #f0ece0;
+  }
+
+  // My own line.
+  tr.me td {
+    background: #fff8e6;
+    font-weight: 700;
+  }
+
+  // The top three, in the medals' colors.
+  tbody tr:nth-child(1) .rank {
+    color: #c99a06;
+  }
+
+  tbody tr:nth-child(2) .rank {
+    color: #8a949b;
+  }
+
+  tbody tr:nth-child(3) .rank {
+    color: #b0703c;
+  }
+}
+
+.rank {
+  font-family: Marhey, sans-serif;
+  font-size: 1rem;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 650;
+}
+
+.face {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--logo-dark-green);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.gold {
+  font-weight: 800;
+  color: var(--logo-orange);
+}
+
+// --- My games so far ---
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 2rem 0 0.75rem;
+  font-size: 1.125rem;
+  color: #23354a;
+
+  mat-icon {
+    color: var(--logo-orange);
+  }
+}
+
+.games {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 1rem;
+  background: #fff;
+  border-left: 0.3125rem solid #dce6e3;
+  box-shadow: 0 0.25rem 0.875rem #213b4110;
+  color: #23354a;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateX(0.1875rem);
+  }
+
+  // Still on: carry on with it.
+  &.live {
+    border-left-color: var(--logo-orange);
+  }
+}
+
+.score {
+  font-family: Marhey, sans-serif;
+  font-size: 1.25rem;
+  color: var(--logo-red);
+}
+
+.row-main {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+
+  small {
+    color: #8a989f;
+    font-size: 0.75rem;
+  }
+}
+
+.standing {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  flex: none;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+
+  &.on {
+    background: #f0782722;
+    color: #b5530f;
+  }
+
+  &.off {
+    background: #eef0f2;
+    color: #6a7a83;
+  }
+}
+
+.chevron {
+  flex: none;
+  color: #b3c0c6;
+}
+
+// The board sways a little, as if it had just been hung up.
+.hero-board {
+  animation: sway 6s ease-in-out infinite;
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-board {
+    max-width: 20rem;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-board {
+    animation: none;
+  }
+}
