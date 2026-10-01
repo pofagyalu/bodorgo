@@ -185,10 +185,14 @@ export const getTagSheet = async (req, res) => {
   res.setHeader('Content-Disposition', 'inline; filename="futokor-kartyak.pdf"');
   doc.pipe(res);
 
-  const [cols, rows, margin] = [2, 3, 28];
+  // Six cards fill the page: the QR code as big as a card allows (the
+  // bigger, the further a phone reads it from), its number and a small
+  // caption right under it.
+  const [cols, rows, margin] = [2, 3, 12];
   const cellW = (doc.page.width - margin * 2) / cols;
   const cellH = (doc.page.height - margin * 2) / rows;
-  const qrSize = 150;
+  const [numberSize, captionSize] = [32, 8];
+  const qrSize = Math.min(cellW - 16, cellH - numberSize * 1.3 - captionSize * 1.6 - 10);
 
   for (const [i, tag] of tags.entries()) {
     const slot = i % (cols * rows);
@@ -199,26 +203,31 @@ export const getTagSheet = async (req, res) => {
 
     // Where to cut.
     doc
-      .rect(x + 6, y + 6, cellW - 12, cellH - 12)
+      .rect(x + 2, y + 2, cellW - 4, cellH - 4)
       .dash(4, { space: 4 })
       .lineWidth(0.7)
       .stroke(startFinish ? '#f07827' : '#9aa5ab')
       .undash();
-    const qr = await QRCode.toBuffer(tagUrl(tag.tagId), { width: 600, margin: 1 });
-    doc.image(qr, x + (cellW - qrSize) / 2, y + 18, { width: qrSize });
+    const qr = await QRCode.toBuffer(tagUrl(tag.tagId), { width: 800, margin: 1 });
+    doc.image(qr, x + (cellW - qrSize) / 2, y + 6, { width: qrSize });
     doc
       .font('Heading')
-      .fontSize(startFinish ? 30 : 44)
+      .fontSize(startFinish ? 26 : numberSize)
       .fillColor(startFinish ? '#f07827' : '#1b6548')
-      .text(startFinish ? 'RAJT / CÉL' : tag.tagId.slice(1), x, y + 18 + qrSize + 2, {
+      .text(startFinish ? 'RAJT / CÉL' : tag.tagId.slice(1), x, y + 6 + qrSize, {
         width: cellW,
         align: 'center',
+        lineBreak: false,
       });
     doc
       .font('Body')
-      .fontSize(10)
+      .fontSize(captionSize)
       .fillColor('#56666e')
-      .text(`Bódorgó Futókör · ${tag.tagId}`, x, y + cellH - 26, { width: cellW, align: 'center' });
+      .text(`Bódorgó Futókör · ${tag.tagId}`, x, y + cellH - captionSize * 1.6 - 4, {
+        width: cellW,
+        align: 'center',
+        lineBreak: false,
+      });
   }
   doc.end();
 };
