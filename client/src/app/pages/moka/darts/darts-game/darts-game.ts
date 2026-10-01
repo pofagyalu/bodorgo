@@ -18,7 +18,6 @@ import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.servic
 import { playCelebration } from '../../../../shared/celebration-effects';
 import { errorMessage } from '../../../../shared/errors';
 import { Podium, PodiumWinner } from '../../../../shared/podium/podium';
-import { DartBoard } from '../dart-board/dart-board';
 import {
   CRICKET_TARGETS,
   DartThrow,
@@ -36,21 +35,12 @@ interface Announcement {
 }
 
 // A turn being corrected: it starts with the turn's own darts, and the
-// keypad (or the board) replaces the selected one instead of throwing.
+// keypad replaces the selected one instead of throwing.
 interface Editing {
   turnIdx: number;
   throws: DartThrow[];
   selected: number;
 }
-
-// How a dart is entered on a phone: typed on the keypad, or tapped on the
-// board - swiping sideways switches between the two.
-type InputMode = 'keypad' | 'board';
-const INPUT_MODE_KEY = 'darts-input-mode';
-// A sideways swipe: at least this far, and clearly more sideways than up.
-const SWIPE_MIN_PX = 60;
-// A wide screen has room for the board beside the game (see the scss).
-const WIDE_QUERY = '(min-width: 1300px)';
 
 const ANNOUNCE_MS = 1600;
 // One of the logo's colors per player, by their place in the order.
@@ -68,14 +58,13 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 const MARKS = ['', '╱', '✕', '⊗'];
 
 // Móka → Darts: a game on one phone. The scoreboard on top, the current
-// turn's three darts under it, then the keypad - or the board to tap on:
-// a swipe switches between them (on a wide screen the board is beside the
-// game all the time). Every dart goes to the server, which answers the
+// turn's three darts under it, the keypad at the bottom within thumb
+// reach. Every dart goes to the server, which answers the
 // whole game as it now stands (the rules live there) - this only shows it,
 // and celebrates.
 @Component({
   selector: 'app-darts-game',
-  imports: [RouterLink, MatIconModule, Avatar, Podium, DartBoard],
+  imports: [RouterLink, MatIconModule, Avatar, Podium],
   templateUrl: './darts-game.html',
   styleUrl: './darts-game.scss',
 })
@@ -114,6 +103,9 @@ export class DartsGamePage implements OnDestroy {
     const g = this.game();
     return g?.next ? g.players[g.next.playerIdx] : null;
   });
+  // The X01 scoreboard's cards in a row: on a phone, on a desktop.
+  cols = computed(() => Math.min(this.game()?.players.length ?? 1, 4));
+  colsWide = computed(() => Math.min(this.game()?.players.length ?? 1, 8));
   // The keypad's numbers: all twenty - in Cricket only the ones that count.
   numbers = computed(() =>
     this.isCricket() ? [20, 19, 18, 17, 16, 15] : Array.from({ length: 20 }, (_, i) => i + 1),
@@ -144,8 +136,6 @@ export class DartsGamePage implements OnDestroy {
     if (!turn) return '';
     return `${turn.marks ?? 0}✕${turn.points ? ` +${turn.points}` : ''}`;
   });
-  // The next dart of the way out - lit up on the board.
-  target = computed(() => (this.editing() ? null : (this.game()?.next?.checkout?.[0] ?? null)));
   checkout = computed(() =>
     this.editing() ? null : (this.game()?.next?.checkout?.map(dartLabel).join(' · ') ?? null),
   );
@@ -188,50 +178,14 @@ export class DartsGamePage implements OnDestroy {
     return g ? g.placings.map((idx) => g.players[idx]) : [];
   });
 
-  // --- Keypad or board ---
-
-  // A wide screen: the board is beside the game, and takes taps too.
-  wide = signal(matchMedia(WIDE_QUERY).matches);
-  private wideQuery = matchMedia(WIDE_QUERY);
-  private onWideChange = (e: MediaQueryListEvent) => this.wide.set(e.matches);
-
-  // Remembered on this phone for the next game.
-  inputMode = signal<InputMode>(
-    localStorage.getItem(INPUT_MODE_KEY) === 'board' ? 'board' : 'keypad',
-  );
-  private swipeFrom: { x: number; y: number } | null = null;
-  // A swipe that ends on the board must not also count as a tap on it.
-  private swipedAt = 0;
-
-  setInputMode(mode: InputMode) {
-    this.inputMode.set(mode);
-    localStorage.setItem(INPUT_MODE_KEY, mode);
-  }
-
-  onTouchStart(e: TouchEvent) {
-    const t = e.touches[0];
-    this.swipeFrom = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
-  }
-
-  onTouchEnd(e: TouchEvent) {
-    const from = this.swipeFrom;
-    this.swipeFrom = null;
-    if (!from || this.wide()) return;
-    const t = e.changedTouches[0];
-    const [dx, dy] = [t.clientX - from.x, t.clientY - from.y];
-    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    this.swipedAt = Date.now();
-    this.setInputMode(this.inputMode() === 'keypad' ? 'board' : 'keypad');
-  }
-
-  // The player whose turn it is stays in view on a long scoreboard.
+  // The player whose turn it is stays in view, however many play.
   private followCurrent = effect(() => {
     const idx = this.game()?.next?.playerIdx;
     if (idx === undefined) return;
     setTimeout(() =>
       this.host.nativeElement
         .querySelector('.scores .current')
-        ?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }),
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
     );
   });
 
@@ -240,7 +194,6 @@ export class DartsGamePage implements OnDestroy {
       next: (game) => this.game.set(game),
       error: () => this.loadFailed.set(true),
     });
-    this.wideQuery.addEventListener('change', this.onWideChange);
     void this.keepAwake();
   }
 
@@ -268,14 +221,6 @@ export class DartsGamePage implements OnDestroy {
     const dart: DartThrow =
       segment === 0 ? { segment: 0, multiplier: 0 } : { segment, multiplier: this.multiplier() };
     this.multiplier.set(1);
-    this.enter(dart);
-  }
-
-  // A tap on the board: the field says it all.
-  boardHit(dart: DartThrow) {
-    if (Date.now() - this.swipedAt < 400) return;
-    const g = this.game();
-    if (!this.editing() && !(g?.status === 'in_progress' && g.canEdit)) return;
     this.enter(dart);
   }
 
@@ -472,7 +417,6 @@ export class DartsGamePage implements OnDestroy {
 
   ngOnDestroy() {
     clearTimeout(this.announceTimer);
-    this.wideQuery.removeEventListener('change', this.onWideChange);
     void this.wakeLock?.release();
   }
 }

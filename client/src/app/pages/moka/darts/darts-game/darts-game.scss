@@ -14,37 +14,6 @@
   color: #23354a;
 }
 
-// A wide screen (the Móka sidebar is there too; the same width as
-// darts-game.ts's WIDE_QUERY): the board on the left, as big as the window
-// lets it be and staying in sight; the game itself in the column beside it.
-@media (min-width: 1300px) {
-  .game {
-    display: grid;
-    grid-template-columns: minmax(20rem, 1fr) minmax(0, 30rem);
-    column-gap: 2.5rem;
-    align-content: start;
-    max-width: 90rem;
-    padding-inline: 2rem;
-
-    > * {
-      grid-column: 2;
-      min-width: 0;
-    }
-  }
-
-  // (.game > …, to outweigh the column rule just above.)
-  .game > .side-board {
-    grid-column: 1;
-    grid-row: 1 / span 12;
-    align-self: start;
-    justify-self: center;
-    position: sticky;
-    top: 1rem;
-    // Never taller than the window.
-    width: min(100%, calc(100dvh - var(--header-height) - 2rem));
-  }
-}
-
 .top {
   display: flex;
   align-items: center;
@@ -189,98 +158,22 @@
   }
 }
 
-// --- Keypad or board (a phone) ---
-
-.input-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.25rem;
-  margin-top: 0.75rem;
-  padding: 0.25rem;
-  border-radius: 1rem;
-  background: #efe7d3;
-
-  button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    min-height: 2.5rem;
-    border: 0;
-    border-radius: 0.75rem;
-    background: none;
-    color: #6a5a3a;
-    font: inherit;
-    font-size: 0.875rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition:
-      background-color 0.2s ease,
-      color 0.2s ease;
-
-    mat-icon {
-      font-size: 1.125rem;
-      width: 1.125rem;
-      height: 1.125rem;
-    }
-
-    &.on {
-      background: #fff;
-      color: var(--logo-red);
-      box-shadow: 0 0.125rem 0.5rem #213b4118;
-    }
-  }
-}
-
-// Sideways swipes are the game's (they switch keypad and board); up and
-// down still scrolls the page.
-.input {
-  touch-action: pan-y;
-}
-
-.pane {
-  animation: pane-in 0.25s ease-out;
-}
-
-@keyframes pane-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-}
-
-.board-pane {
-  margin-top: 0.75rem;
-
-  app-dart-board {
-    max-width: 26rem;
-    margin: 0 auto;
-  }
-}
-
-.board-keys {
-  display: grid;
-  grid-template-columns: 1fr 4rem;
-  gap: 0.375rem;
-  margin-top: 0.75rem;
-}
-
 // --- The scoreboard ---
 
+// Everyone is in sight at once, however many play: a grid that wraps into
+// rows (--cols cards in a row, set by darts-game.ts) instead of scrolling
+// sideways.
 .scoreboard {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
   gap: 0.5rem;
-  overflow-x: auto;
   // Room for the current card's glow and lift.
-  padding: 0.75rem 0.25rem 0.75rem;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
+  padding: 0.75rem 0.125rem;
 }
 
 .player-card {
   position: relative;
-  flex: 1 0 6.25rem;
-  max-width: 9rem;
+  min-width: 0;
   display: grid;
   justify-items: center;
   gap: 0.125rem;
@@ -290,7 +183,6 @@
   border: 2px solid transparent;
   border-top: 0.3125rem solid var(--accent);
   box-shadow: 0 0.25rem 0.875rem #213b4114;
-  scroll-snap-align: center;
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease,
@@ -304,6 +196,71 @@
 
   &.out {
     opacity: 0.7;
+  }
+}
+
+// On a phone, from five players up: smaller cards - the name and what's
+// left, no photo and no average - so two rows hold eight players.
+@media (max-width: 899px) {
+  .scoreboard.compact {
+    gap: 0.375rem;
+
+    .player-card {
+      padding: 0.3125rem 0.25rem 0.25rem;
+      border-radius: 0.875rem;
+      border-top-width: 0.25rem;
+
+      &.current {
+        transform: scale(1.04);
+      }
+    }
+
+    .face,
+    .avg {
+      display: none;
+    }
+
+    .pname {
+      font-size: 0.75rem;
+    }
+
+    .remaining {
+      font-size: 1.5rem;
+    }
+
+    .medal {
+      top: -0.5rem;
+      right: -0.125rem;
+      font-size: 1.125rem;
+    }
+  }
+}
+
+// A desktop: the game area is wider - up to eight full cards in a row, the
+// results as wide - while the turn and the keypad stay a hand's width, in
+// the middle.
+@media (min-width: 900px) {
+  .game {
+    max-width: 64rem;
+  }
+
+  .scoreboard {
+    grid-template-columns: repeat(var(--cols-wide), minmax(0, 9rem));
+    justify-content: center;
+  }
+
+  .turn,
+  .keypad,
+  .history,
+  .banner {
+    max-width: 34rem;
+    margin-inline: auto;
+  }
+
+  .cricket,
+  .results {
+    max-width: 44rem;
+    margin-inline: auto;
   }
 }
 
