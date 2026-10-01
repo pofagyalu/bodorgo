@@ -608,6 +608,43 @@
         <p class="empty-note">Betöltés...</p>
       }
     </section>
+
+    <!-- Verzió: which client and server are running - each is stamped at
+         its deploy with its commit and that commit's date. -->
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2>Verzió</h2>
+          <p class="subtext">
+            A futó kliens és szerver – a telepített változat dátuma és azonosítója.
+          </p>
+        </div>
+      </div>
+      <dl class="version-list">
+        <div>
+          <dt>Kliens</dt>
+          <dd>
+            {{ clientVersion }}
+            @if (clientBuiltAt) {
+              <small>telepítve: {{ clientBuiltAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+            }
+          </dd>
+        </div>
+        <div>
+          <dt>Szerver</dt>
+          <dd>
+            @if (serverBuild(); as server) {
+              {{ server.version }}
+              @if (server.builtAt) {
+                <small>telepítve: {{ server.builtAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+              }
+            } @else {
+              …
+            }
+          </dd>
+        </div>
+      </dl>
+    </section>
   </div>
 
   <!-- Info only: every e-mail and push the app sends - what triggers it and

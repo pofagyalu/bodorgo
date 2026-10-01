@@ -13,7 +13,11 @@ import { computeAge } from './userController.js';
 // (see paymentController.js's resolvePayableMembers) - it's an opaque
 // grouping id, not personal data, and this page already shows every real
 // member's name/role/status open-book.
+//
+// Age is sensitive: only an admin gets it (since 2026-10-01) - for anyone
+// else the field isn't sent at all, not just left off the screen.
 export const getMembers = async (req, res) => {
+  const isAdmin = req.user.role === 'admin';
   const users = await User.find()
     .select(
       'name email role lastLoginAt createdAt memberSince familyId retired birthday photoUpdatedAt',
@@ -26,7 +30,7 @@ export const getMembers = async (req, res) => {
 
   const usersWithAttendance = users.map((user) => {
     // The raw birthday never goes out on this members-visible list - just
-    // the computed age. The email does (shown under each name, and no
+    // the computed age, and that to admins only. The email does (shown under each name, and no
     // email = no account of their own, see members.ts's userStatus) - the
     // whole page is members/admins-only, same as getAllUsers, which
     // already shows members everyone's email.
@@ -34,7 +38,7 @@ export const getMembers = async (req, res) => {
 
     return {
       ...rest,
-      age: computeAge(birthday),
+      ...(isAdmin ? { age: computeAge(birthday) } : {}),
       toursAttended: toursAttendedById.get(String(user._id)) ?? 0,
     };
   });

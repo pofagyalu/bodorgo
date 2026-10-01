@@ -54,6 +54,7 @@ router.route('/ticker').get(tourController.getTicker);
 
 router.route('/last-3').get(requireAuth, tourController.aliasLastTours, tourController.getAlltours);
 
+router.route('/years').get(requireAuth, tourController.getTourYears);
 router.route('/tour-stats').get(requireAuth, tourController.getTourStats);
 router.route('/montly-plan/:year').get(requireAuth, tourController.getMonthlyPlan);
 

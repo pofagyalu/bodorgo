@@ -42,12 +42,15 @@ describe('user lists', () => {
     expect((await request(app).get('/users').set(asUser(guest))).status).toBe(403);
     const asMember = await request(app).get('/users').set(asUser(member));
     expect(asMember.status).toBe(200);
-    // A member sees ages, never raw birthdays, and no tour counts.
+    // A member sees no birthdays, no ages (not even their own here) and no
+    // tour counts - ages are the admins' only.
     const me = asMember.body.data.users.find((u) => u._id === String(member._id));
     expect(me.birthday).toBeUndefined();
-    expect(me.age).toBeGreaterThan(30);
+    expect(me).not.toHaveProperty('age');
     const asAdmin = await request(app).get('/users').set(asUser(admin));
     expect(asAdmin.body.data.users[0]).toHaveProperty('toursAttended');
+    const seenByAdmin = asAdmin.body.data.users.find((u) => u._id === String(member._id));
+    expect(seenByAdmin.age).toBeGreaterThan(30);
   });
 
   it('the members list has age, tour count, email and photo version', async () => {
@@ -64,6 +67,15 @@ describe('user lists', () => {
     expect(row).toMatchObject({ toursAttended: 1, email: member.email });
     expect(row.photoUpdatedAt).toBeTruthy();
     expect(row.birthday).toBeUndefined();
+    // Ages on the Felhasználók tables are the admins' only: a member isn't
+    // even sent them.
+    expect(res.body.data.users.every((u) => !('age' in u))).toBe(true);
+    const asAdmin = await request(app)
+      .get('/membership/users')
+      .set(asUser(await createAdmin()));
+    const seenByAdmin = asAdmin.body.data.users.find((u) => u._id === String(member._id));
+    expect(seenByAdmin.age).toBeGreaterThan(30);
+    expect(seenByAdmin.birthday).toBeUndefined();
   });
 });
 

@@ -133,10 +133,22 @@ button {
 
 // --- Document cards ---
 
+// Small enough for two in a row on a phone.
 .document-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
   gap: 12px;
+}
+
+// Phones: less room around, more for the documents.
+@media (max-width: 580px) {
+  .content {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
 }
 
 // Upright like a sheet of paper (2:3); the icon, name and year in the

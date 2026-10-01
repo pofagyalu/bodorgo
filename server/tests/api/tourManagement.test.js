@@ -96,6 +96,31 @@ describe('reading tours', () => {
     expect((await request(app).get('/tours/tour-stats')).status).toBe(401);
   });
 
+  it("lists one year's tours: a range on the start date (two operators on a field)", async () => {
+    await createTour({ startDate: new Date('2023-12-30T10:00:00'), title: 'Előtte' });
+    await createTour({ startDate: new Date('2024-05-10T10:00:00'), title: 'Tavasz' });
+    await createTour({ startDate: new Date('2024-09-10T10:00:00'), title: 'Ősz' });
+    await createTour({ startDate: new Date('2025-01-02T10:00:00'), title: 'Utána' });
+    const res = await request(app)
+      .get('/tours')
+      .query({ 'startDate.gte': '2024-01-01T00:00:00', 'startDate.lt': '2025-01-01T00:00:00' })
+      .set(asUser(await createMember()));
+    expect(res.status).toBe(200);
+    expect(res.body.data.tours.map((t) => t.title).sort()).toEqual(['Tavasz', 'Ősz'].sort());
+  });
+
+  it('lists the years that had a tour, each once, oldest first', async () => {
+    await createTour({ startDate: new Date('2024-05-10') });
+    await createTour({ startDate: new Date('2019-08-10') });
+    await createTour({ startDate: new Date('2024-09-10') });
+    const res = await request(app)
+      .get('/tours/years')
+      .set(asUser(await createMember()));
+    expect(res.status).toBe(200);
+    expect(res.body.data.years).toEqual([2019, 2024]);
+    expect((await request(app).get('/tours/years')).status).toBe(401);
+  });
+
   it("the stats' attendee ages: per tour and per year, a big tour weighing more", async () => {
     const born = (year) => createMember({ birthday: new Date(`${year}-01-01`) });
     const big = await createTour({ startDate: new Date('2020-05-10'), title: 'Nagy' });

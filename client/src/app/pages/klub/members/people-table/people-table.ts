@@ -57,8 +57,9 @@ export interface ExtraColumn {
 }
 
 // The Felhasználók page's tables (Klubtagok, A többiek, Mindenki) - one
-// component: Név (avatar, name, email, the admin star), Táborok and Kor,
-// Státusz (admins only - the page decides), a page's own extra columns and
+// component: Név (avatar, name, email, the admin star), Táborok, Kor and
+// Státusz (both admins only - the page decides; age is sensitive, and the
+// server sends it to admins only), a page's own extra columns and
 // an optional detail row under each person, and the admin actions. Every
 // header except the extras sorts the table; each table keeps its own order.
 @Component({
@@ -72,6 +73,8 @@ export class PeopleTable {
   // Which Felhasználók list this is (?lista=) - the edit page returns there.
   list = input<string | null>(null);
   showStatus = input(false);
+  // The Kor column - for admins only.
+  showAge = input(false);
   showActions = input(false);
   extraColumns = input<ExtraColumn[]>([]);
   // Under each person's row, e.g. Klubtagok's payment history (the page's
@@ -89,7 +92,7 @@ export class PeopleTable {
   // Wide tables (with extra columns) scroll sideways on a phone rather
   // than squeezing.
   wide = input(false);
-  // Every column the same width (e.g. Mindenki's three) instead of Név as
+  // Every column the same width (e.g. Mindenki's) instead of Név as
   // narrow as its content and the numbers at a fixed width.
   equalColumns = input(false);
 
@@ -103,8 +106,8 @@ export class PeopleTable {
     const cols: { key: SortKey; label: string }[] = [
       { key: 'name', label: 'Név' },
       { key: 'toursAttended', label: 'Táborok' },
-      { key: 'age', label: 'Kor' },
     ];
+    if (this.showAge()) cols.push({ key: 'age', label: 'Kor' });
     if (this.showStatus()) cols.push({ key: 'status', label: 'Státusz' });
     return cols;
   });

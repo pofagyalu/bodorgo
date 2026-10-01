@@ -96,3 +96,48 @@
     cursor: default;
   }
 }
+
+// --- vertical: a wheel, one item high ---
+
+// --item-h is an item's height, --band-h the wheel's: the chosen one in the
+// middle, its neighbors above and below fading out - a hint that it rolls.
+// No box of its own -
+// it sits inside another control (the Táborok page's filter bar).
+:host(.vertical) {
+  --item: 4.4rem;
+  --item-h: 1.5rem;
+  --band-h: 3.9rem;
+  gap: 0;
+
+  .band {
+    flex-direction: column;
+    width: var(--item);
+    height: var(--band-h);
+    min-height: 0;
+    // Room above the first and below the last, so they can come to the
+    // middle too.
+    padding: calc((var(--band-h) - var(--item-h)) / 2) 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    // Rolling it doesn't carry on into scrolling the page.
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    cursor: ns-resize;
+    mask-image: linear-gradient(to bottom, transparent, black 38%, black 62%, transparent);
+
+    &.dragging {
+      scroll-snap-type: none;
+    }
+  }
+
+  // A swipe stops at the very next item - it can't fly past several.
+  .item {
+    flex: 0 0 var(--item-h);
+    width: 100%;
+    scroll-snap-stop: always;
+  }
+}

@@ -43,16 +43,24 @@ export abstract class PlaylistPage implements OnInit {
   refreshing = signal(false);
 
   constructor() {
-    // The playing song kept in view in the list.
+    // The playing song kept in view in the list - by scrolling the list
+    // itself only, never the page (scrollIntoView moved the page too).
     effect(() => {
       const i = this.currentIndex();
       this.tracks();
       if (i < 0) return;
-      queueMicrotask(() =>
-        this.list()
-          ?.nativeElement.querySelector(`[data-index="${i}"]`)
-          ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
-      );
+      queueMicrotask(() => {
+        const list = this.list()?.nativeElement;
+        const row = list?.querySelector<HTMLElement>(`[data-index="${i}"]`);
+        if (!list || !row) return;
+        const listBox = list.getBoundingClientRect();
+        const rowBox = row.getBoundingClientRect();
+        if (rowBox.top >= listBox.top && rowBox.bottom <= listBox.bottom) return;
+        // Out of sight: to the middle of the list's window.
+        const top =
+          list.scrollTop + (rowBox.top - listBox.top) - (list.clientHeight - row.clientHeight) / 2;
+        list.scrollTo({ top, behavior: 'smooth' });
+      });
     });
   }
 

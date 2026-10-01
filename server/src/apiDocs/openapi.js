@@ -630,6 +630,15 @@ const paths = {
       data: obj({ tours: arrayOf(ref('Tour')) }),
     }),
   },
+  '/tours/years': {
+    get: op({
+      tag: T.tours,
+      summary: 'The years that had a tour',
+      description:
+        "Every year with a tour (by its first day), oldest first - the Táborok page's year filter lists them without loading every tour (a year's own tours: GET /tours with startDate.gte and startDate.lt).",
+      data: obj({ years: arrayOf(int('A year, e.g. 2024')) }),
+    }),
+  },
   '/tours/tour-stats': {
     get: op({
       tag: T.tours,
@@ -1593,7 +1602,8 @@ const paths = {
       tag: T.users,
       role: 'member',
       summary: 'Everyone',
-      description: 'Admins get every field; members name, e-mail and age only.',
+      description:
+        'Admins get every field; members name and e-mail only - no birthday and no age (sensitive: admins only).',
       data: obj({ users: arrayOf(ref('User')) }),
     }),
     post: op({
@@ -1854,7 +1864,8 @@ const paths = {
       tag: T.users,
       role: 'member',
       summary: 'Members and dues (Felhasználók page)',
-      description: 'Everyone with their role, attendance and paid years.',
+      description:
+        'Everyone with their role, attendance and paid years. `age` is sent to admins only (sensitive); the raw birthday to nobody.',
       data: obj({ users: arrayOf(ref('User')) }),
     }),
   },
@@ -2367,6 +2378,20 @@ const paths = {
       summary: 'Health check',
       description: 'Uptime Kuma asks it every 5 minutes.',
       response: { description: 'Up.' },
+    }),
+  },
+  '/health/version': {
+    get: op({
+      tag: T.system,
+      summary: 'The running server\x27s version',
+      description:
+        'Which build is running: the commit it was built from and that commit\'s date - `version` is the two together ("2026.10.01 · adc1c34"; a + after it: built with uncommitted changes). `builtAt` is null when the server runs from the source instead of a build. The client shows it beside its own version (Klub → Beállítások).',
+      data: obj({
+        version: str('Date and commit, as shown'),
+        commit: str('The first seven digits of the commit'),
+        date: str('The commit\x27s date, YYYY.MM.DD'),
+        builtAt: str('When it was built (ISO), or null'),
+      }),
     }),
   },
 };

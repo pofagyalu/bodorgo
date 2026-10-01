@@ -136,6 +136,17 @@ export const aliasLastTours = async (req, res, next) => {
   next();
 };
 
+// GET /tours/years - the years that had (or will have) a tour, oldest
+// first. For the Táborok page's year filter, which lists them all without
+// loading every tour.
+export const getTourYears = async (req, res) => {
+  const tours = await Tour.find().select('startDate').lean();
+  const years = [...new Set(tours.map((t) => new Date(t.startDate).getFullYear()))].sort(
+    (a, b) => a - b,
+  );
+  res.status(200).json({ status: 'success', data: { years } });
+};
+
 export const getAlltours = async (req, res) => {
   // 0) apply alias overrides if they exist
   const customQuery = {

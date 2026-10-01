@@ -1,0 +1,64 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 0 0 auto;
+}
+
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 3.4rem;
+  height: 1.8rem;
+  border: none;
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+  background: #c62828;
+  transition: background 0.2s ease;
+}
+
+.switch--on {
+  background: #2e7d32;
+}
+
+.thumb {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.switch--on .thumb {
+  transform: translateX(1.6rem);
+}
+
+// I on the left (seen when on - the thumb is on the right), N on the right.
+.letter {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  pointer-events: none;
+}
+
+.letter--on {
+  left: 0.4rem;
+}
+
+.letter--off {
+  right: 0.4rem;
+}
+
+.label {
+  cursor: pointer;
+  user-select: none;
+}

@@ -36,18 +36,12 @@ button {
   gap: 1rem;
 }
 
-.kicker {
-  color: $brass-dark;
-  font-size: 0.6875rem;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  font-weight: 800;
-}
-
-// "Bódorgó FM – világjárók világzenei rádiója", on one line (wraps only when
-// it must).
-.heading h1 {
-  margin: 0.25rem 0 0;
+// "Bódorgó FM – világzenei rádió": the station's name in the logo's hand,
+// what it is in a serif italic - on one line (wraps only when it must),
+// across the top of the station panel.
+.station-title {
+  grid-column: 1 / -1;
+  margin: 0;
   font-family: 'Marhey', sans-serif;
   font-size: clamp(1.8rem, 3vw, 2.4rem);
   font-weight: 400;
@@ -73,10 +67,14 @@ button {
     0 5px 19px rgba(74, 47, 28, 0.12);
 }
 
+// The one card of the page: the station, and under a line the playlist.
+.radio-card {
+  @include paper;
+}
+
 // --- The station: the radio photo on the left, the deck beside it ---
 
 .station {
-  @include paper;
   display: grid;
   grid-template-columns: minmax(10rem, 15rem) 1fr;
   align-items: stretch;
@@ -307,11 +305,23 @@ button {
 .scale {
   position: relative;
   height: 1.75rem;
-  background:
-    repeating-linear-gradient(90deg, $ink-soft 0 1px, transparent 1px 5%) 0 0 / 100% 0.5rem
-      no-repeat,
-    repeating-linear-gradient(90deg, $ink 0 2px, transparent 2px 20%) 0 0 / 100% 0.875rem no-repeat;
   border-top: 1px solid $ink-soft;
+
+  // The ticks. The pattern starts with a tick at the very left (88) and
+  // has none at the very right (108) - the first few pixels are cut off,
+  // so neither end has one.
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(90deg, $ink-soft 0 1px, transparent 1px 5%) 0 0 / 100% 0.5rem
+        no-repeat,
+      repeating-linear-gradient(90deg, $ink 0 2px, transparent 2px 20%) 0 0 / 100% 0.875rem
+        no-repeat;
+    clip-path: inset(0 0 0 3px);
+    pointer-events: none;
+  }
 }
 
 .scale-label {
@@ -393,18 +403,26 @@ button {
 
 // The tuning dial: a scale of tick marks, the red needle as the thumb.
 // The song's progress: the same width as the FM scale above it.
+// Where the song is: one thin row - the time so far, a plain bar (the
+// same as the volume's), the song's length.
 .dial-track {
-  display: grid;
-  gap: 0.125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 
   input[type='range'] {
+    flex: 1;
+    min-width: 0;
     width: 100%;
-  }
-}
+    margin: 0;
+    accent-color: $amber;
+    cursor: pointer;
 
-.dial-times {
-  display: flex;
-  justify-content: space-between;
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+  }
 }
 
 .time {
@@ -413,47 +431,6 @@ button {
   font-variant-numeric: tabular-nums;
   color: $ink-soft;
   text-align: center;
-}
-
-.dial-track input[type='range'] {
-  height: 1.375rem;
-  margin: 0;
-  appearance: none;
-  background:
-    repeating-linear-gradient(90deg, $brass-dark 0 1px, transparent 1px 10%),
-    linear-gradient($paper-deep, $paper-deep);
-  background-size:
-    100% 40%,
-    100% 100%;
-  background-position:
-    0 50%,
-    0 0;
-  background-repeat: no-repeat;
-  border: 1px solid $brass;
-  border-radius: 0.375rem;
-  cursor: pointer;
-
-  &::-webkit-slider-thumb {
-    appearance: none;
-    width: 4px;
-    height: 1.375rem;
-    border-radius: 2px;
-    background: $needle;
-    box-shadow: 0 0 0.375rem rgba(200, 50, 31, 0.6);
-  }
-
-  &::-moz-range-thumb {
-    width: 4px;
-    height: 1.375rem;
-    border: 0;
-    border-radius: 2px;
-    background: $needle;
-  }
-
-  &:disabled {
-    cursor: default;
-    opacity: 0.55;
-  }
 }
 
 // The knobs: brass buttons, the big one dark bakelite.
@@ -502,18 +479,12 @@ button {
   }
 }
 
+// Play/pause: the same size as the rest - its dark bakelite is what marks
+// it out.
 .knob.main {
-  width: 3.125rem;
-  height: 3.125rem;
   border-color: #2e1d10;
   background: radial-gradient(circle at 35% 30%, #8a5b36, $bakelite 60%, #2e1d10);
   color: #fbeac4;
-
-  mat-icon {
-    width: 1.875rem;
-    height: 1.875rem;
-    font-size: 1.875rem;
-  }
 }
 
 // Shuffle / repeat one: dim when off, glowing amber when on.
@@ -563,9 +534,12 @@ button {
 
 // --- The playlist ("Műsor") ---
 
+// Under the station, in the same card - a brass line between the two,
+// as wide as what is above and below it.
 .playlist {
-  @include paper;
-  padding: 1.125rem clamp(1rem, 2.5vw, 1.75rem);
+  margin: 0 clamp(1.25rem, 3vw, 2rem);
+  padding: 1.125rem 0;
+  border-top: 1px solid $brass;
 }
 
 .playlist-head {
@@ -624,9 +598,13 @@ button {
   }
 }
 
+// The list scrolls in itself (its own scrollbar, in brass) - the page
+// stays where it is.
 .tracks {
   max-height: 28rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: $brass transparent;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -764,11 +742,24 @@ button {
 
   .content {
     height: 100%;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     padding-bottom: 1.375rem;
   }
 
+  // The card is as tall as the window allows: the station at its own
+  // height, the playlist in the rest.
+  .radio-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .station {
+    flex: none;
+  }
+
   .playlist {
+    flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -836,11 +827,15 @@ button {
     width: 100%;
   }
 
+  // The six knobs in one line, the volume on a line of its own under them.
   .controls {
     justify-content: center;
+    gap: 0.375rem 0.4rem;
   }
 
   .volume {
+    flex: 1 0 100%;
+    max-width: none;
     margin-left: 0;
   }
 
@@ -859,18 +854,13 @@ button {
     gap: 0.75rem;
   }
 
+  .tagline {
+    white-space: normal;
+  }
+
   .knob {
     width: 2.5rem;
     height: 2.5rem;
-  }
-
-  .knob.main {
-    width: 3.5rem;
-    height: 3.5rem;
-  }
-
-  .tagline {
-    white-space: normal;
   }
 }
 

@@ -1,0 +1,33 @@
+<div class="content">
+  <div class="heading">
+    <div class="kicker">Média</div>
+    <h1>Zene</h1>
+    <p>A klub két lejátszási listája – csak a klub tagjainak.</p>
+  </div>
+
+  <div class="playlist-grid">
+    @for (card of cards(); track card.key) {
+      <a
+        class="playlist-card"
+        [class.playlist-card--fm]="card.key === 'bodorgo-fm'"
+        [class.playlist-card--buli]="card.key === 'buli'"
+        [routerLink]="card.route"
+      >
+        <span class="cover"><img [src]="card.cover" alt="" /></span>
+        <div class="card-text">
+          <span class="card-kind">
+            <mat-icon>{{ card.icon }}</mat-icon>
+            @if (card.playing) {
+              <span class="on-air">Most szól</span>
+            } @else {
+              Lejátszási lista
+            }
+          </span>
+          <strong class="card-name">{{ card.name }}</strong>
+          <span class="card-tagline">{{ card.tagline }}</span>
+          <span class="card-summary">{{ card.summary ?? '…' }}</span>
+        </div>
+      </a>
+    }
+  </div>
+</div>

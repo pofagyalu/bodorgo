@@ -562,11 +562,12 @@ export class TourService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/tours`;
 
-  // Remembers the Tours page's "last 3" vs "all" choice across navigation -
-  // the Tours component gets destroyed and recreated every time you
-  // navigate back to it, wiping its own signals, but this service is a
-  // singleton that lives for the app's session.
-  showAllPreference = false;
+  // Remembers the Tours page's choice of what to show ("all" or a year;
+  // "" = not chosen yet: the latest year with a tour) across navigation -
+  // the Tours component gets destroyed and
+  // recreated every time you navigate back to it, wiping its own signals,
+  // but this service is a singleton that lives for the app's session.
+  toursPeriod = '';
 
   // Same reasoning, for the tour-details page's "Résztvevők" expand/
   // collapse toggle - remembers whether it was last left open, instead of
@@ -719,6 +720,19 @@ export class TourService {
 
   getTours(): Observable<ToursResponse> {
     return this.http.get<ToursResponse>(this.apiUrl);
+  }
+
+  /** The years that had a tour, oldest first */
+  getTourYears() {
+    return this.http.get<{ status: string; data: { years: number[] } }>(`${this.apiUrl}/years`);
+  }
+
+  /** One year's tours (by their first day) */
+  getToursOfYear(year: number): Observable<ToursResponse> {
+    return this.getToursWithParams({
+      'startDate.gte': `${year}-01-01T00:00:00`,
+      'startDate.lt': `${year + 1}-01-01T00:00:00`,
+    });
   }
 
   /** Get the last 3 tours */

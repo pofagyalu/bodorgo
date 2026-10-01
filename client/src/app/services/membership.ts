@@ -27,7 +27,8 @@ export interface MemberUser {
   // Shown under each name on both tables. No email = no account of their
   // own: can't be invited through Authentik, so can never log in.
   email?: string;
-  age: number | null;
+  // Admins only - the server doesn't send it to anyone else (sensitive).
+  age?: number | null;
   toursAttended: number;
 }
 
