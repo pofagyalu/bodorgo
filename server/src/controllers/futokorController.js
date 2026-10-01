@@ -188,7 +188,7 @@ export const getTagSheet = async (req, res) => {
   const [cols, rows, margin] = [2, 3, 28];
   const cellW = (doc.page.width - margin * 2) / cols;
   const cellH = (doc.page.height - margin * 2) / rows;
-  const qrSize = 170;
+  const qrSize = 150;
 
   for (const [i, tag] of tags.entries()) {
     const slot = i % (cols * rows);
@@ -205,12 +205,12 @@ export const getTagSheet = async (req, res) => {
       .stroke(startFinish ? '#f07827' : '#9aa5ab')
       .undash();
     const qr = await QRCode.toBuffer(tagUrl(tag.tagId), { width: 600, margin: 1 });
-    doc.image(qr, x + (cellW - qrSize) / 2, y + 22, { width: qrSize });
+    doc.image(qr, x + (cellW - qrSize) / 2, y + 18, { width: qrSize });
     doc
       .font('Heading')
       .fontSize(startFinish ? 30 : 44)
       .fillColor(startFinish ? '#f07827' : '#1b6548')
-      .text(startFinish ? 'RAJT / CÉL' : tag.tagId.slice(1), x, y + 22 + qrSize + 6, {
+      .text(startFinish ? 'RAJT / CÉL' : tag.tagId.slice(1), x, y + 18 + qrSize + 2, {
         width: cellW,
         align: 'center',
       });
@@ -218,7 +218,7 @@ export const getTagSheet = async (req, res) => {
       .font('Body')
       .fontSize(10)
       .fillColor('#56666e')
-      .text(`Bódorgó Futókör · ${tag.tagId}`, x, y + cellH - 30, { width: cellW, align: 'center' });
+      .text(`Bódorgó Futókör · ${tag.tagId}`, x, y + cellH - 26, { width: cellW, align: 'center' });
   }
   doc.end();
 };
@@ -321,7 +321,7 @@ export const updateCourse = async (req, res) => {
       throw new AppError('A pályához egy RAJT / CÉL kártya kell.', 400);
     }
     if (ids.slice(1).some((id) => kindOf[id] !== 'checkpoint')) {
-      throw new AppError('Ismeretlen vagy kivont kártya van a pontok között.', 400);
+      throw new AppError('Ismeretlen vagy letiltott kártya van a pontok között.', 400);
     }
     let previous = 0;
     course.checkpoints = [
