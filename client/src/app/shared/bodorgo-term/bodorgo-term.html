@@ -11,7 +11,12 @@
   </button>
 
   @if (open()) {
-    <span #card id="bodorgo-entry" class="card" role="note" [attr.lang]="lang">
+    <!-- A tap on the card itself closes it too: on a phone it can cover
+         the whole screen, with nowhere else left to tap. -->
+    <span #card id="bodorgo-entry" class="card" role="note" [attr.lang]="lang" (click)="close()">
+      <button class="close" type="button" [attr.aria-label]="lang === 'hu' ? 'Bezárás' : 'Close'">
+        ✕
+      </button>
       <svg
         class="contours"
         viewBox="0 0 1200 900"

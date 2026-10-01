@@ -69,6 +69,28 @@
   animation: appear 0.18s ease-out;
 }
 
+// ✕ in the card's corner (the whole card closes on a tap - this says so).
+.close {
+  position: absolute;
+  top: 0.4em;
+  right: 0.4em;
+  z-index: 1;
+  width: 2.2em;
+  height: 2.2em;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--contour);
+    color: var(--ink);
+  }
+}
+
 @keyframes appear {
   from {
     opacity: 0;

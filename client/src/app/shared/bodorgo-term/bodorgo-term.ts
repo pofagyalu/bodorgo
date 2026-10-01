@@ -21,7 +21,8 @@ const MIN_FONT_PX = 9;
 // The word "Bódorgó™", highlighted, with its dictionary entry on a card
 // under it (bodorgo-entry.ts): the card opens while the mouse is over the
 // word (or the card), and on a tap or click - another tap, a tap anywhere
-// else or Esc closes it. The card always fits on the screen whole.
+// else (the card and its ✕ too) or Esc closes it. The card always fits on
+// the screen whole.
 @Component({
   selector: 'app-bodorgo-term',
   templateUrl: './bodorgo-term.html',
@@ -96,7 +97,7 @@ export class BodorgoTerm implements OnDestroy {
     this.open.set(this.pinned);
   }
 
-  private close() {
+  close() {
     clearTimeout(this.closeTimer);
     this.pinned = false;
     this.open.set(false);
