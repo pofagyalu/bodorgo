@@ -1,0 +1,75 @@
+// "Indulhat?" - the whole screen, one big button.
+.start {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: radial-gradient(circle at 50% 30%, #fff3d1, #f6b528);
+  color: #23354a;
+  text-align: center;
+}
+
+.who {
+  margin: 0;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(1.5rem, 7vw, 2.25rem);
+  line-height: 1.2;
+}
+
+.go {
+  width: min(70vw, 16rem);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4fd27f, #12843f);
+  color: #fff;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(2.25rem, 12vw, 3.5rem);
+  box-shadow:
+    0 0.75rem 2rem #12843f77,
+    inset 0 -0.5rem 1rem #0003;
+  cursor: pointer;
+  animation: breathe 1.6s ease-in-out infinite;
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+@keyframes breathe {
+  50% {
+    box-shadow:
+      0 0.75rem 3.5rem #12843faa,
+      inset 0 -0.5rem 1rem #0003;
+    transform: scale(1.04);
+  }
+}
+
+.note {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #5a4a22;
+}
+
+.not-now {
+  min-height: 3rem;
+  padding: 0 1.5rem;
+  border: 2px solid #23354a55;
+  border-radius: 1rem;
+  background: none;
+  color: #23354a;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .go {
+    animation: none;
+  }
+}

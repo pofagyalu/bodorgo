@@ -87,10 +87,17 @@
           ><span class="moka-text">Móka</span></a
         >
       }
-      <!-- Hidden for now, still routable - not ready for public linking yet -->
-      <!-- <a routerLink="/versenyek" routerLinkActive="active"
-        (mouseenter)="hoverItem($event.currentTarget)"
-        class="menu-item yellow">Versenyek</a> -->
+      <!-- Versenyek (the Futókör) - for now only for whoever
+           auth/futokor.guard.ts lets in. -->
+      @if (seesFutokor()) {
+        <a
+          routerLink="/versenyek"
+          routerLinkActive="active"
+          (mouseenter)="hoverItem($event.currentTarget)"
+          class="menu-item yellow"
+          >Versenyek</a
+        >
+      }
     </nav>
   }
 
@@ -209,14 +216,15 @@
           ><span class="moka-text">Móka</span></a
         >
       }
-      <!-- Hidden for now, still routable - not ready for public linking yet -->
-      <!-- <a
-      routerLink="/versenyek"
-      routerLinkActive="active"
-      (click)="closeMobileMenu()"
-      class="menu-item yellow"
-      >Versenyek</a
-    > -->
+      @if (seesFutokor()) {
+        <a
+          routerLink="/versenyek"
+          routerLinkActive="active"
+          (click)="closeMobileMenu()"
+          class="menu-item yellow"
+          >Versenyek</a
+        >
+      }
       <button class="menu-item logout-item" (click)="logout(); closeMobileMenu()">
         Kijelentkezés
       </button>

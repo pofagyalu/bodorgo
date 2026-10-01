@@ -1,0 +1,56 @@
+<div class="answer answer--{{ mood() }}" role="alert" (click)="tap()">
+  <div class="sign" aria-hidden="true">
+    @switch (mood()) {
+      @case ('good') {
+        ✓
+      }
+      @case ('finish') {
+        🏁
+      }
+      @case ('neutral') {
+        ✓
+      }
+      @case ('ask') {
+        ?
+      }
+      @default {
+        ✕
+      }
+    }
+  </div>
+  <h1>{{ title() }}</h1>
+
+  @if (answer().result === 'finished') {
+    <p class="total">{{ time(answer().run?.totalMs) }}</p>
+    @if (answer().run?.paceSecPerKm; as p) {
+      <p class="detail">{{ pace(p) }}</p>
+    }
+    @if (splits().length > 1) {
+      <table class="splits">
+        @for (s of splits(); track $index) {
+          <tr>
+            <td>{{ s.to }}</td>
+            <td>{{ s.time }}</td>
+            <td>{{ s.pace }}</td>
+          </tr>
+        }
+      </table>
+    }
+    <p class="hint">Koppints a bezáráshoz</p>
+  } @else {
+    @if (detail()) {
+      <p class="detail">{{ detail() }}</p>
+    }
+    @if (nextUp()) {
+      <p class="next">{{ nextUp() }}</p>
+    }
+  }
+
+  <!-- START with checkpoints missing: go on, or start again. -->
+  @if (mood() === 'ask') {
+    <div class="choices">
+      <button type="button" class="go-on" (click)="closed.emit()">Futok tovább</button>
+      <button type="button" class="again" (click)="restart.emit()">Újrakezdem</button>
+    </div>
+  }
+</div>

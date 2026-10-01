@@ -1,0 +1,58 @@
+<section class="admin-page">
+  <a routerLink="/versenyek" class="back"><mat-icon>arrow_back</mat-icon> Futókör</a>
+  <h1>Kártyák</h1>
+  <p class="lead">
+    A futók ezeket olvassák be. Egyszer kell kinyomtatni és laminálni őket – hogy melyik kártya
+    hányadik pont, azt a pálya dönti el.
+  </p>
+
+  <div class="card actions">
+    @if (!hasStart()) {
+      <button type="button" class="primary" (click)="add(true)">
+        <mat-icon>flag</mat-icon> RAJT / CÉL kártya készítése
+      </button>
+    }
+    <div class="row">
+      <input
+        type="number"
+        min="1"
+        max="30"
+        [value]="count()"
+        (input)="count.set(+$any($event.target).value)"
+        aria-label="Hány kártya"
+      />
+      <button type="button" class="primary" (click)="add(false)">
+        <mat-icon>add</mat-icon> új pontkártya
+      </button>
+    </div>
+    @if (tags().length) {
+      <a class="secondary" [href]="sheetUrl" target="_blank" rel="noopener">
+        <mat-icon>print</mat-icon> Nyomtatható lap (PDF)
+      </a>
+    }
+  </div>
+
+  <ul class="list">
+    @for (t of tags(); track t.tagId) {
+      <li class="item" [class.retired]="t.retired">
+        <span class="big" [class.start]="t.kind === 'startFinish'">{{
+          t.kind === 'startFinish' ? 'RAJT' : t.tagId.slice(1)
+        }}</span>
+        <span class="main">
+          <strong>{{ t.tagId }}</strong>
+          <small>{{
+            t.retired ? 'kivonva – nem számít' : t.kind === 'startFinish' ? 'rajt és cél' : 'pont'
+          }}</small>
+        </span>
+        <button type="button" class="icon" (click)="copy(t)" title="Link másolása (NFC-hez)">
+          <mat-icon>link</mat-icon>
+        </button>
+        <button type="button" class="text" (click)="retire(t)">
+          {{ t.retired ? 'Visszaveszem' : 'Kivonom' }}
+        </button>
+      </li>
+    } @empty {
+      <li class="empty">Még nincs kártya.</li>
+    }
+  </ul>
+</section>
