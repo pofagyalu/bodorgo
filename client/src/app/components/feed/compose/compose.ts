@@ -98,10 +98,18 @@ export class Compose {
     // a plain <input> would. Reacts to text() and runs after render so the
     // DOM already has the up-to-date value when scrollHeight is read - same
     // timing issue afterRenderEffect solves in feed.ts.
+    //
+    // The field gets its text from ngModel a moment AFTER the render (it
+    // writes in a microtask): typed text is already in the field, but text
+    // set from here - cleared after sending, a picked @mention - isn't yet,
+    // and the field was measured with the old, long text still in it (so
+    // it stayed tall after a send). Hence the text is put in the field
+    // here first, when it differs.
     afterRenderEffect(() => {
-      this.text();
+      const text = this.text();
       const el = this.messageInput()?.nativeElement;
       if (el) {
+        if (el.value !== text) el.value = text;
         // scrollHeight leaves out the border, and the height (border-box)
         // includes it - without adding it back the text is 2px too tall
         // for the box and a needless scrollbar appears. A scrollbar only

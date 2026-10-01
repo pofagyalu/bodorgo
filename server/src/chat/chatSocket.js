@@ -2,8 +2,9 @@ import Post, { POST_POPULATE, REACTIONS } from '../models/postModel.js';
 import ChatRoom from '../models/chatRoomModel.js';
 import logger from '../logger.js';
 import { chatChannel, setIo, tourRoom } from './tourEvents.js';
-import { markChatRead, notifyChatPostInBackground } from './chatNotifications.js';
+import { lastReadAt, markChatRead, notifyChatPostInBackground } from './chatNotifications.js';
 import { deleteChatImageFiles } from './chatImages.js';
+import { CHAT_CLOSED_MESSAGE, chatRoomClosed } from './chatRooms.js';
 
 // One Socket.IO connection per open browser tab (see the client's
 // TourSocketService), in two kinds of channels:
@@ -47,9 +48,12 @@ export default function registerChatHandlers(io) {
         }
         socket.join(chatChannel(chatRoomId));
         socket.data.visibleChat = String(chatRoomId);
+        // When they last had it open - before this opening counts as one:
+        // the chat opens at the first message they haven't seen.
+        const readAt = await lastReadAt(sessionUser.id, chatRoomId);
         markRead(chatRoomId);
         const posts = await Post.find({ chatRoomId }).sort('createdAt').populate(POST_POPULATE);
-        socket.emit('initial-posts', { chatRoomId: String(chatRoomId), posts });
+        socket.emit('initial-posts', { chatRoomId: String(chatRoomId), posts, readAt });
       } catch (err) {
         logger.error(`chat: failed to load posts for chat room ${chatRoomId}: ${err}`);
         socket.emit('chat-error', 'Could not load chat history.');
@@ -57,9 +61,19 @@ export default function registerChatHandlers(io) {
     });
 
     // Switching to another chat on the same connection.
+    // What arrived while it was on screen was seen: read up to now (the
+    // list of chats shows nothing unread for it).
     socket.on('leave-chat', ({ chatRoomId } = {}) => {
       if (chatRoomId) socket.leave(chatChannel(chatRoomId));
-      if (socket.data.visibleChat === String(chatRoomId)) socket.data.visibleChat = null;
+      if (socket.data.visibleChat === String(chatRoomId)) {
+        markRead(chatRoomId);
+        socket.data.visibleChat = null;
+      }
+    });
+
+    // The same when the tab is closed with a chat on screen.
+    socket.on('disconnect', () => {
+      if (socket.data.visibleChat) markRead(socket.data.visibleChat);
     });
 
     // The chat's tab went to the background (or came back) - only a
@@ -75,9 +89,10 @@ export default function registerChatHandlers(io) {
       if (!chatRoomId || !text?.trim()) return;
 
       try {
-        if (!(await ChatRoom.exists({ _id: chatRoomId }))) {
-          return socket.emit('chat-error', 'Nincs ilyen Kotyogó.');
-        }
+        const room = await ChatRoom.findById(chatRoomId);
+        if (!room) return socket.emit('chat-error', 'Nincs ilyen Kotyogó.');
+        // A past tour's chat is an archive: read, not written.
+        if (await chatRoomClosed(room)) return socket.emit('chat-error', CHAT_CLOSED_MESSAGE);
         const post = await Post.create({
           chatRoomId,
           creator: sessionUser.id,

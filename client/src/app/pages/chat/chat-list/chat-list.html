@@ -1,0 +1,74 @@
+<h1 class="title">Dumák</h1>
+
+<label class="search">
+  <mat-icon aria-hidden="true">search</mat-icon>
+  <input
+    type="search"
+    placeholder="Keresés a Kotyogók között…"
+    aria-label="Keresés a Kotyogók között"
+    [value]="search()"
+    (input)="search.set($any($event.target).value)"
+  />
+</label>
+
+@if (!overview()) {
+  <p class="note">Betöltés...</p>
+} @else if (nothingFound()) {
+  <p class="note">Nincs ilyen Kotyogó.</p>
+} @else {
+  <!-- 1: the club's own room - always there, always first. -->
+  @if (showGeneral()) {
+    <section class="group" aria-label="Közös Kotyogó">
+      <ng-container *ngTemplateOutlet="line; context: { $implicit: generalRow() }" />
+    </section>
+  }
+
+  <!-- 2: the tours whose chat is open - coming up, or just over. -->
+  @if (active().length) {
+    <section class="group" aria-label="Aktuális táborok">
+      @for (row of active(); track row.key) {
+        <ng-container *ngTemplateOutlet="line; context: { $implicit: row }" />
+      }
+    </section>
+  }
+
+  <!-- 3: the past tours - archives, read-only. -->
+  @if (archived().length) {
+    <section class="group" aria-label="Korábbi táborok">
+      <h2 class="group-title">Korábbi táborok</h2>
+      @for (row of archived(); track row.key) {
+        <ng-container *ngTemplateOutlet="line; context: { $implicit: row }" />
+      }
+    </section>
+  }
+}
+
+<ng-template #line let-row>
+  <button type="button" class="row" (click)="pick.emit(row.key)">
+    @if (row.key === 'general') {
+      <span class="thumb thumb--general"><mat-icon>groups</mat-icon></span>
+    } @else {
+      <span class="thumb">
+        @if (row.coverUrl) {
+          <img [src]="row.coverUrl" alt="" loading="lazy" />
+        }
+        <span class="order">{{ row.order }}</span>
+      </span>
+    }
+    <span class="text">
+      <strong class="name"
+        >{{ row.title }}
+        @if (row.year) {
+          <span class="year">{{ row.year }}</span>
+        }
+      </strong>
+      <span class="last" [class.last--unread]="row.summary?.unread">{{ lastLine(row) }}</span>
+    </span>
+    <span class="meta">
+      <span class="time">{{ lastTime(row) }}</span>
+      @if (row.summary?.unread; as unread) {
+        <span class="unread" [attr.aria-label]="unread + ' olvasatlan üzenet'">{{ unread }}</span>
+      }
+    </span>
+  </button>
+</ng-template>

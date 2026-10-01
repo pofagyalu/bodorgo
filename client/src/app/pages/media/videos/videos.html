@@ -58,6 +58,7 @@
               [title]="v.title"
               [coverUrl]="v.hasCover ? coverUrl(c, v) : null"
               [badge]="v.year"
+              [badgeRight]="length(v.durationSeconds)"
               [tooltip]="v.title + (v.year ? ' (' + v.year + ')' : '')"
               (playClicked)="play(c, v)"
             />

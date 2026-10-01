@@ -14,6 +14,8 @@ export interface MediaVideo {
   episode: number | null;
   hasCover: boolean;
   hasSubtitles: boolean;
+  // Its length - null if the server couldn't read it from the file.
+  durationSeconds?: number | null;
 }
 
 export interface MediaVideoCategory {

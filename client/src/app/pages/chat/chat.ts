@@ -18,15 +18,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { Feed } from '../../components/feed/feed';
 import { RoomBoard } from './room-board/room-board';
 import { TourService, Tour } from '../../services/tour';
-import { ChatService } from '../../services/chat';
+import { ChatOverview, ChatService } from '../../services/chat';
+import { ChatList } from './chat-list/chat-list';
 import { TourCountdown } from '../../shared/tour-countdown/tour-countdown';
 import { PushService } from '../../services/push';
 import { NotificationsService } from '../../notifications/notifications.service';
 
-// Exempted from the close-after-14-days rule below so the tour we used to
-// build/test the chat feature stays reachable even though it's long past -
-// no need to keep every other past tour's (empty) chat around too.
-const TEST_TOUR_ORDER = 11;
+// What the general room is called.
+const GENERAL_NAME = 'Bódorgók';
+// Below this width there's no sidebar: the list of chats is a screen of its
+// own, and a chat opens over it (chat.scss's phone breakpoint).
+const PHONE_QUERY = '(max-width: 580px)';
+// How often the list's last messages and unread counts are asked for again,
+// and how long after leaving a chat (the server notes it as read then).
+const OVERVIEW_REFRESH_MS = 60_000;
+const OVERVIEW_AFTER_LEAVING_MS = 600;
 
 // The Szobabeosztás panel's width next to the chat, in px (see
 // startResize) - remembered per browser, just a convenience.
@@ -58,8 +64,13 @@ function finishDate(t: Tour): Date {
   return finish;
 }
 
+// The one past tour whose chat stays writable: the one the chat is tested
+// in. It's still listed among the archives.
+const ALWAYS_WRITABLE_TOUR_ORDER = 11;
+
+// A tour's chat is open until 14 days after its last day; from then on
+// it's an archive, read-only (the server's rule - chat/chatRooms.js).
 function isChatOpen(t: Tour): boolean {
-  if (t.order === TEST_TOUR_ORDER) return true;
   const closesAt = finishDate(t);
   closesAt.setDate(closesAt.getDate() + 14);
   return new Date() <= closesAt;
@@ -70,12 +81,25 @@ function isChatOpen(t: Tour): boolean {
 // of names on a phone - all pure CSS, see chat.scss), then the selected
 // tour's chat and its Szobabeosztás (room allocation) panel - side by
 // side on a very wide screen, otherwise as two tabs.
+//
+// On a phone there's no sidebar: the page opens on the full-screen list of
+// chats (chat-list - also the past tours' archives), and a chosen chat
+// opens over it, with a bar on top: ← back to the list, its name, how many
+// people it has.
 // The general Kotyogó's key in `selected` (tours use their ids).
 const GENERAL = 'general';
 
 @Component({
   selector: 'app-chat',
-  imports: [Feed, MatIconModule, RoomBoard, CdkScrollable, TourCountdown, NgTemplateOutlet],
+  imports: [
+    Feed,
+    MatIconModule,
+    RoomBoard,
+    CdkScrollable,
+    TourCountdown,
+    NgTemplateOutlet,
+    ChatList,
+  ],
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
 })
@@ -88,16 +112,122 @@ export class Chat implements OnInit, OnDestroy {
   selected = signal<string | null>(null);
   isGeneral = computed(() => this.selected() === GENERAL);
   selectedTourId = computed(() => (this.isGeneral() ? null : this.selected()));
-  visibleTours = signal<Tour[]>([]);
+  // Every tour, newest first, and the ones whose chat is open.
+  allTours = signal<Tour[]>([]);
+  visibleTours = computed(() => this.allTours().filter(isChatOpen));
+  // The past tours that were chatted in - archives, read-only (the test
+  // tour's is listed here too, though it can still be written in). A past
+  // tour nobody ever wrote in isn't listed at all: nothing will ever be
+  // said there.
+  archivedTours = computed(() => {
+    const written = new Set(
+      (this.overview()?.tours ?? []).filter((t) => t.lastPost).map((t) => t.tourId),
+    );
+    return this.allTours().filter(
+      (t) => !isChatOpen(t) && (written.has(t._id) || t.order === ALWAYS_WRITABLE_TOUR_ORDER),
+    );
+  });
   loaded = signal(false);
+  readonly generalName = GENERAL_NAME;
 
   // Which of the two panes is shown while they're tabs (narrower screens)
   // - ignored when both fit side by side.
   activePane = signal<'chat' | 'rooms'>('chat');
 
   selectedTour = computed(
-    () => this.visibleTours().find((t) => t._id === this.selectedTourId()) ?? null,
+    () => this.allTours().find((t) => t._id === this.selectedTourId()) ?? null,
   );
+  // A past tour's chat: an archive - read, not written.
+  readOnly = computed(() => {
+    const tour = this.selectedTour();
+    return !!tour && !isChatOpen(tour) && tour.order !== ALWAYS_WRITABLE_TOUR_ORDER;
+  });
+
+  // --- The list's data: last message, unread count, people per room ---
+  overview = signal<ChatOverview | null>(null);
+
+  private loadOverview() {
+    this.chatService.getOverview().subscribe({
+      next: (res) => this.overview.set(res.data),
+      error: (err) => console.error('Failed to load the chat overview', err),
+    });
+  }
+
+  private summaryOf(key: string | null) {
+    const overview = this.overview();
+    if (!overview || !key) return null;
+    return key === GENERAL ? overview.general : overview.tours.find((t) => t.tourId === key);
+  }
+
+  // Unread messages of a room - none for the one that's on screen.
+  unreadOf(key: string): number {
+    if (key === this.selected() && this.roomOnScreen()) return 0;
+    return this.summaryOf(key)?.unread ?? 0;
+  }
+
+  // The list is kept fresh while the page is open: other chats' new
+  // messages don't arrive here by themselves.
+  private overviewTimer = setInterval(() => this.loadOverview(), OVERVIEW_REFRESH_MS);
+  private onVisible = () => {
+    if (document.visibilityState === 'visible') this.loadOverview();
+  };
+
+  // The open room's bar on a phone: its name and how many people it has.
+  roomTitle = computed(() => {
+    const tour = this.selectedTour();
+    return tour ? `${tour.order}. ${tour.title}` : GENERAL_NAME;
+  });
+  roomPeople = computed(() => {
+    const count = this.summaryOf(this.selected())?.memberCount;
+    if (count == null) return '';
+    return this.isGeneral() ? `${count} tag` : `${count} résztvevő`;
+  });
+
+  // --- Phone: the list of chats first, a chat over it ---
+  // True while the list is the screen (a wider screen ignores it - both
+  // are always there).
+  listOnPhone = signal(true);
+  private phoneQuery = window.matchMedia(PHONE_QUERY);
+  private isPhone = signal(this.phoneQuery.matches);
+  private onPhoneChange = () => this.isPhone.set(this.phoneQuery.matches);
+  // Is the selected chat really shown? Always on a wide screen; on a phone
+  // only once it's been opened from the list. Only then is its feed made -
+  // a chat behind the list must not count as read.
+  roomOnScreen = computed(() => !(this.isPhone() && this.listOnPhone()));
+  // The open chat added a step to the browser's history, so the phone's
+  // own Back button returns to the list (not out of the Kotyogó).
+  private roomInHistory = false;
+  private onPopState = () => {
+    if (!this.roomInHistory) return;
+    this.roomInHistory = false;
+    this.showList();
+  };
+
+  private showList() {
+    this.listOnPhone.set(true);
+    this.refreshOverviewSoon(); // what I've just read is no longer unread
+  }
+
+  // After leaving a chat: once the server has noted it as read.
+  private refreshOverviewSoon() {
+    setTimeout(() => this.loadOverview(), OVERVIEW_AFTER_LEAVING_MS);
+  }
+
+  backToList() {
+    if (this.roomInHistory) history.back();
+    else this.showList();
+  }
+
+  private openRoom(key: string) {
+    if (key !== this.selected()) this.refreshOverviewSoon();
+    this.selected.set(key);
+    this.activePane.set('chat');
+    this.listOnPhone.set(false);
+    if (this.isPhone() && !this.roomInHistory) {
+      history.pushState({ kotyogo: key }, '');
+      this.roomInHistory = true;
+    }
+  }
 
   // The open chat's room (see ChatService) - asked for whenever the
   // selection changes; null until it's known.
@@ -131,20 +261,28 @@ export class Chat implements OnInit, OnDestroy {
   // Angular just patching its inputs in place.
   feedKey = computed(() => {
     const chatRoomId = this.chatRoomId();
-    return chatRoomId ? [{ chatRoomId, tourId: this.selectedTourId() }] : [];
+    return chatRoomId && this.roomOnScreen() ? [{ chatRoomId, tourId: this.selectedTourId() }] : [];
   });
 
   ngOnInit() {
+    window.addEventListener('popstate', this.onPopState);
+    document.addEventListener('visibilitychange', this.onVisible);
+    this.phoneQuery.addEventListener('change', this.onPhoneChange);
+    this.loadOverview();
     this.tourService.getTours().subscribe({
       next: (res) => {
-        const list = res.data.tours
-          .filter(isChatOpen)
-          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-        this.visibleTours.set(list);
+        const list = [...res.data.tours].sort(
+          (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+        );
+        this.allTours.set(list);
         // /chat?tabor=<id> - e.g. from a push notification - opens that
-        // tour's chat; otherwise (or /chat?kotyogo=altalanos) the general one.
-        const wanted = this.route.snapshot.queryParamMap.get('tabor');
-        this.selected.set(list.find((t) => t._id === wanted)?._id ?? GENERAL);
+        // tour's chat, /chat?kotyogo=altalanos the general one - on a phone
+        // too, straight away. Otherwise the general one is selected, and a
+        // phone starts on the list.
+        const params = this.route.snapshot.queryParamMap;
+        const wanted = list.find((t) => t._id === params.get('tabor'))?._id;
+        this.selected.set(wanted ?? GENERAL);
+        if (wanted || params.has('kotyogo')) this.listOnPhone.set(false);
         this.loaded.set(true);
       },
       error: (err) => {
@@ -158,6 +296,10 @@ export class Chat implements OnInit, OnDestroy {
   // leaves its chat room itself).
   ngOnDestroy() {
     this.tourSocket.leaveTour();
+    window.removeEventListener('popstate', this.onPopState);
+    document.removeEventListener('visibilitychange', this.onVisible);
+    this.phoneQuery.removeEventListener('change', this.onPhoneChange);
+    clearInterval(this.overviewTimer);
   }
 
   // --- "Másik háttér" (admins): the open feed switches its own background ---
@@ -211,13 +353,16 @@ export class Chat implements OnInit, OnDestroy {
 
   // The general Kotyogó - always there, for everyone logged in.
   selectGeneral() {
-    this.selected.set(GENERAL);
-    this.activePane.set('chat');
+    this.openRoom(GENERAL);
   }
 
   selectTour(id: string) {
-    this.selected.set(id);
-    this.activePane.set('chat');
+    this.openRoom(id);
+  }
+
+  // From the phone's list: 'general' or a tour's id.
+  selectFromList(key: string) {
+    this.openRoom(key);
   }
 
   // --- The selected chat's push notifications on/off (the bell) ---

@@ -78,6 +78,17 @@ describe('chat rooms', () => {
     expect(await error).toBe('Nincs ilyen Kotyogó.');
   });
 
+  it("a past tour's room can be read, not written in", async () => {
+    const past = await createTour({ startDate: new Date(Date.now() - 100 * 24 * 3600 * 1000) });
+    const roomId = String((await tourChatRoom(past._id))._id);
+    const { socket, history } = await joined(await createMember(), roomId);
+    expect(history).toEqual({ chatRoomId: roomId, posts: [], readAt: null });
+    const error = next(socket, 'chat-error');
+    socket.emit('create-post', { chatRoomId: roomId, text: 'még egy szó' });
+    expect(await error).toContain('lezárult');
+    expect(await Post.countDocuments({ chatRoomId: roomId })).toBe(0);
+  });
+
   it('refuses to join when logged out', async () => {
     const socket = await connect(null);
     const error = next(socket, 'chat-error');
@@ -92,7 +103,8 @@ describe('chat rooms', () => {
     const bob = await createMember();
     const a = await joined(alice, roomId);
     const b = await joined(bob, roomId);
-    expect(a.history).toEqual({ chatRoomId: roomId, posts: [] });
+    // Never opened before: no "last read" time.
+    expect(a.history).toEqual({ chatRoomId: roomId, posts: [], readAt: null });
 
     const received = next(b.socket, 'new-post');
     a.socket.emit('create-post', { chatRoomId: roomId, text: '  Sziasztok!  ' });

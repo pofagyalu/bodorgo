@@ -1,0 +1,198 @@
+// The phone's list of Kotyogós: white, full width, one chat a line.
+:host {
+  display: block;
+  padding: 0.9rem 1rem 2rem;
+  background: #fff;
+  color: #203747;
+}
+
+.title {
+  margin: 0 0 0.7rem;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+// The search: as wide as the screen.
+.search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.8rem;
+  border-radius: 0.75rem;
+  background: #eef2f0;
+  cursor: text;
+
+  mat-icon {
+    flex: none;
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #7a8a91;
+  }
+
+  input {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    padding: 0.7rem 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.95rem;
+    color: inherit;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  &:focus-within {
+    box-shadow: 0 0 0 2px #1a796c;
+  }
+}
+
+.note {
+  margin: 1.5rem 0;
+  text-align: center;
+  color: #7a8a91;
+  font-style: italic;
+}
+
+// The three groups, a line between them.
+.group {
+  padding: 0.4rem 0;
+
+  & + .group {
+    border-top: 1px solid #dfe6e3;
+  }
+}
+
+.group-title {
+  margin: 0.5rem 0 0.1rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7a8a91;
+}
+
+// A chat: picture | name over the last message | time over the unread count.
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:active {
+    background: #f1f5f3;
+  }
+}
+
+.thumb {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #2b4a5e;
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// The club's own room: a group of people on the logo's orange.
+.thumb--general {
+  background: var(--logo-orange);
+  color: #fff;
+
+  mat-icon {
+    font-size: 1.7rem;
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+}
+
+.order {
+  position: relative; // above the photo
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.text {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.year {
+  font-weight: 500;
+  color: #7a8a91;
+}
+
+.last {
+  font-size: 0.85rem;
+  color: #6b7a81;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Something unread: the last message stands out.
+.last--unread {
+  color: #203747;
+  font-weight: 600;
+}
+
+.meta {
+  flex: none;
+  display: grid;
+  justify-items: end;
+  gap: 0.25rem;
+  align-self: start;
+  padding-top: 0.15rem;
+}
+
+.time {
+  font-size: 0.72rem;
+  color: #7a8a91;
+  font-variant-numeric: tabular-nums;
+}
+
+.unread {
+  min-width: 1.3rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #1a796c;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+  box-sizing: border-box;
+}

@@ -11,10 +11,38 @@ export interface ChatRoom {
   tourId: string | null;
 }
 
+// A room in the list of Kotyogós (GET /chat-rooms/overview): its last
+// message, how many I haven't seen, how many people it has.
+export interface ChatRoomSummary {
+  chatRoomId: string | null; // null: a tour's room nobody has opened yet
+  lastPost: {
+    author: string;
+    text: string; // shortened
+    hasImage: boolean;
+    isPoll: boolean;
+    createdAt: string;
+  } | null;
+  unread: number;
+  memberCount: number;
+}
+
+export interface ChatOverview {
+  general: ChatRoomSummary;
+  // past: the tour is over (by more than two weeks) - its chat is listed
+  // among the archives; closed: it's read-only too (every past one but the
+  // test tour's).
+  tours: (ChatRoomSummary & { tourId: string; past: boolean; closed: boolean })[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/chat-rooms`;
+
+  // Every room for the list: last message, unread count, people.
+  getOverview() {
+    return this.http.get<{ data: ChatOverview }>(`${this.apiUrl}/overview`);
+  }
 
   // A tour's own room - made on first use.
   getTourChatRoom(tourId: string) {

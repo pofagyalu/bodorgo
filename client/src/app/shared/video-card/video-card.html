@@ -17,6 +17,9 @@
     @if (badge()) {
       <span class="corner-badge">{{ badge() }}</span>
     }
+    @if (badgeRight()) {
+      <span class="corner-badge corner-badge--right">{{ badgeRight() }}</span>
+    }
   </div>
   <span class="video-title">{{ title() }}</span>
 </button>

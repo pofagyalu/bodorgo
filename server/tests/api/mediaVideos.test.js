@@ -14,11 +14,26 @@ const put = (rel, content = 'x') => {
   fs.writeFileSync(path.join(root, rel), content);
 };
 
+// The smallest file an MP4 length can be read from: "ftyp", then "moov"
+// holding an "mvhd" that says duration / timescale seconds.
+function tinyMp4(seconds, timescale = 1000) {
+  const box = (type, body) => {
+    const head = Buffer.alloc(8);
+    head.writeUInt32BE(8 + body.length, 0);
+    head.write(type, 4, 'latin1');
+    return Buffer.concat([head, body]);
+  };
+  const mvhd = Buffer.alloc(100);
+  mvhd.writeUInt32BE(timescale, 12);
+  mvhd.writeUInt32BE(seconds * timescale, 16);
+  return Buffer.concat([box('ftyp', Buffer.from('isom0000isom')), box('moov', box('mvhd', mvhd))]);
+}
+
 beforeAll(() => {
   put('farsang/folder.jpg');
   put('farsang/Season 01/Farsang (2024) S01E01.mp4', 'video-2024');
   put('farsang/Season 01/Farsang (2024) S01E01-thumb.jpg', 'thumb-2024');
-  put('farsang/Season 01/Farsang (2025) S01E02.mp4', 'video-2025');
+  put('farsang/Season 01/Farsang (2025) S01E02.mp4', tinyMp4(754));
   put(
     'farsang/Season 01/Farsang (2025) S01E02.hun.srt',
     '1\n00:00:01,000 --> 00:00:02,500\nHelló\n',
@@ -41,6 +56,9 @@ describe('Média videos', () => {
       [2025, false, true],
       [2024, true, false],
     ]);
+    // The length comes from the file itself - null where it can't be read
+    // (the 2024 one here isn't a real video).
+    expect(farsang.videos.map((v) => v.durationSeconds)).toEqual([754, null]);
     // The stray space before "-thumb" still finds the cover.
     expect(reklam.videos[0]).toMatchObject({
       title: 'A magyar igazság',
