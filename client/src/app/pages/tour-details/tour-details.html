@@ -214,133 +214,13 @@
       }
     </section>
 
-    <!-- Extra infók: the always-present Programfüzet card, plus whatever
-       admin-uploaded documents (map, beszámoló, etc.) this tour has. -->
-    <section class="extra-info-section">
-      <div class="section-header-row">
-        <h2 class="section-heading">Extrák</h2>
-        @if (auth.user()?.role === 'admin' && (t.extraDocuments ?? []).length < 5) {
-          <button
-            type="button"
-            class="icon-btn icon-btn--add icon-btn--upload"
-            title="Dokumentum feltöltése (PDF vagy JPG, legfeljebb 5)"
-            aria-label="Dokumentum feltöltése"
-            (click)="startAddDocument()"
-          >
-            <mat-icon>upload_file</mat-icon>
-          </button>
-        }
-      </div>
-
-      @if (addingDocument()) {
-        <div class="document-upload-form">
-          <input type="text" [(ngModel)]="newDocumentTitle" placeholder="Cím" />
-          <input
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-            (change)="onDocumentFileSelected($event)"
-          />
-          <div class="user-form-actions">
-            <button
-              type="button"
-              class="icon-btn icon-btn--save"
-              title="Feltöltés"
-              [disabled]="uploadingDocument()"
-              (click)="saveNewDocument(t._id)"
-            >
-              <mat-icon>check</mat-icon>
-            </button>
-            <button
-              type="button"
-              class="icon-btn icon-btn--cancel"
-              title="Mégse"
-              (click)="cancelAddDocument()"
-            >
-              <mat-icon>close</mat-icon>
-            </button>
-          </div>
-        </div>
-      }
-
-      <div class="extra-docs-grid">
-        <a [href]="pdfUrl(t._id)" target="_blank" class="extra-doc-card extra-doc-card--featured">
-          <mat-icon>picture_as_pdf</mat-icon>
-          <span class="extra-doc-title">Programfüzet</span>
-          <span class="extra-doc-action"><mat-icon>download</mat-icon> Letöltés</span>
-        </a>
-        <button
-          type="button"
-          class="extra-doc-card extra-doc-card--featured"
-          [disabled]="emailingPdf()"
-          (click)="sendPdfByEmail(t._id)"
-        >
-          <mat-icon>email</mat-icon>
-          <span class="extra-doc-title">Programfüzet</span>
-          <span class="extra-doc-action"
-            ><mat-icon>{{ emailingPdf() ? 'hourglass_top' : 'send' }}</mat-icon>
-            {{ emailingPdf() ? 'Küldés...' : 'email' }}</span
-          >
-        </button>
-        <!-- The finished beszámoló - for the tour's attendees (and admins). -->
-        @if (reportDownload()) {
-          <a
-            [href]="reportPdfUrl(t._id)"
-            class="extra-doc-card extra-doc-card--featured"
-            title="A tábor beszámolója PDF-ben"
-          >
-            <mat-icon>history_edu</mat-icon>
-            <span class="extra-doc-title">Beszámoló</span>
-            <span class="extra-doc-action"><mat-icon>download</mat-icon> Letöltés</span>
-          </a>
-        }
-        @if (auth.user()?.role === 'admin') {
-          <button
-            type="button"
-            class="extra-doc-card extra-doc-card--admin"
-            title="Levél írása a tábor minden résztvevőjének - a Programfüzet is csatolható"
-            (click)="showMailPanel.set(true)"
-          >
-            <mat-icon>forward_to_inbox</mat-icon>
-            <span>Levél a résztvevőknek</span>
-          </button>
-          <button
-            type="button"
-            class="extra-doc-card extra-doc-card--admin"
-            title="A tábor beszámolójának írása, naponta - Kész után a résztvevők letölthetik"
-            (click)="showReportPanel.set(true)"
-          >
-            <mat-icon>edit_note</mat-icon>
-            <span>Beszámoló írása</span>
-          </button>
-        }
-        @if ((t.extraDocuments ?? []).length > 0) {
-          <span class="extra-docs-divider"></span>
-        }
-        @for (doc of t.extraDocuments ?? []; track doc._id) {
-          <a
-            [href]="documentUrl(doc._id)"
-            target="_blank"
-            class="extra-doc-card"
-            [title]="doc.title"
-          >
-            <mat-icon>{{
-              doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image'
-            }}</mat-icon>
-            <span>{{ doc.title }}</span>
-            @if (auth.user()?.role === 'admin') {
-              <button
-                type="button"
-                class="extra-doc-delete"
-                title="Törlés"
-                (click)="askDeleteDocument(doc, $event)"
-              >
-                <mat-icon>close</mat-icon>
-              </button>
-            }
-          </a>
-        }
-      </div>
-    </section>
+    <!-- Extrák: Programfüzet, beszámoló, uploaded documents, the admin's
+         letter and beszámoló dialogs (see tour-extras). -->
+    <app-tour-extras
+      [tour]="t"
+      [images]="tourImages()"
+      (documentsChanged)="onDocumentsChanged($event)"
+    />
 
     <!-- Post-tour recap video(s) - found on the NAS by the tour number (see
        server/src/utils/tourVideos.js). The same cards and player as Média →
@@ -429,21 +309,6 @@
       [showAdvancePayment]="!!paymentTotals() && hasUnpaidAdvanceInMyGroup()"
       (signedUp)="onSignedUp()"
     />
-
-    <!-- Admin's letter to every attendee (see tour-mail-panel). -->
-    @if (showMailPanel()) {
-      <app-tour-mail-panel [tourId]="t._id" (closed)="showMailPanel.set(false)" />
-    }
-
-    <!-- Admin's beszámoló, day by day (see tour-report-panel). -->
-    @if (showReportPanel()) {
-      <app-tour-report-panel
-        [tourId]="t._id"
-        [images]="tourImages()"
-        (changed)="loadReportInfo(t._id)"
-        (closed)="showReportPanel.set(false)"
-      />
-    }
 
     <!-- Map popup - an embedded iframe instead of a new tab, so clicking the
        location never navigates the user away from this page. -->

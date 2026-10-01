@@ -38,15 +38,13 @@ import { EventForm, EventFormModel } from './event-form/event-form';
 import { ReviewStars } from './review-stars/review-stars';
 import { VideoCard } from '../../shared/video-card/video-card';
 import { VideoPlayer } from '../../shared/video-player/video-player';
-import { TourMailPanel } from './tour-mail-panel/tour-mail-panel';
-import { TourReportPanel } from './tour-report-panel/tour-report-panel';
 import { PickerOption, TourSignup } from './tour-signup/tour-signup';
+import { TourExtras } from './tour-extras/tour-extras';
 import {
   AttendeeList,
   AttendeeListRow as AttendeeListPayment,
 } from './attendee-list/attendee-list';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 
 interface DayGroup {
   day: number;
@@ -68,9 +66,8 @@ interface DayGroup {
     AttendeeList,
     VideoCard,
     VideoPlayer,
-    TourMailPanel,
-    TourReportPanel,
     TourSignup,
+    TourExtras,
   ],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
@@ -81,7 +78,6 @@ export class TourDetails {
   private userService = inject(UserService);
   private sanitizer = inject(DomSanitizer);
   private notifications = inject(NotificationsService);
-  private confirm = inject(ConfirmService);
   auth = inject(AuthService);
   environment = environment;
   readonly formatDrivingDuration = formatDrivingDuration;
@@ -442,32 +438,7 @@ export class TourDetails {
           this.tourImages.set(res.data.images);
         },
       });
-      this.loadReportInfo(t._id);
     });
-  }
-
-  // --- Beszámoló (see tour-report-panel, server tourReportController.js) ---
-
-  // Whether this viewer can download the finished beszámoló (an attendee,
-  // or an admin) - its Extrák card.
-  reportDownload = signal<{ publishedAt: string } | null>(null);
-  // Admin-only: the writing dialog.
-  showReportPanel = signal(false);
-
-  loadReportInfo(tourId: string) {
-    this.tourService.getReport(tourId).subscribe({
-      next: (res) =>
-        this.reportDownload.set(
-          res.data.canDownload && res.data.publishedAt
-            ? { publishedAt: res.data.publishedAt }
-            : null,
-        ),
-      error: () => this.reportDownload.set(null),
-    });
-  }
-
-  reportPdfUrl(tourId: string): string {
-    return this.tourService.reportPdfUrl(tourId);
   }
 
   // Extracted out of the constructor so the attendee list's nights-edit
@@ -501,10 +472,6 @@ export class TourDetails {
     const next = !this.showParticipants();
     this.showParticipants.set(next);
     this.tourService.showParticipantsPreference = next;
-  }
-
-  pdfUrl(tourId: string): string {
-    return this.tourService.pdfUrl(tourId);
   }
 
   attendeesExcelUrl(tourId: string): string {
@@ -586,21 +553,9 @@ export class TourDetails {
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   }
 
-  // Extra infók - admin-only upload/delete of the handful of documents
-  // (map, beszámoló, places-to-visit notes) shown alongside the always-
-  // present Programfüzet card.
-  addingDocument = signal(false);
-  uploadingDocument = signal(false);
-  newDocumentTitle = '';
-  private selectedDocumentFile: File | null = null;
-
   // The login-only cover image URL ('' for a tour with no cover yet).
   coverUrl(t: Tour): string {
     return this.tourService.coverUrl(t) ?? '';
-  }
-
-  documentUrl(documentId: string): string {
-    return this.tourService.documentUrl(documentId);
   }
 
   tourVideoUrl(t: Tour, v: TourVideo): string {
@@ -615,110 +570,9 @@ export class TourDetails {
     return this.tourService.subtitlesUrl(t._id, v.id);
   }
 
-  // v1 test of the "send Programfüzet by email" card - sends to the
-  // logged-in user's own address, no recipient picker yet.
-  emailingPdf = signal(false);
-
-  sendPdfByEmail(tourId: string) {
-    if (this.emailingPdf()) return;
-    this.emailingPdf.set(true);
-    this.tourService.emailPdf(tourId).subscribe({
-      next: (res) => {
-        this.emailingPdf.set(false);
-        this.notifications.addSuccess(`Programfüzet elküldve: ${res.data.sentTo}`);
-      },
-      error: (err) => {
-        this.emailingPdf.set(false);
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a küldés során.');
-      },
-    });
-  }
-
-  // Admin-only: the "Levél a résztvevőknek" dialog (see tour-mail-panel).
-  showMailPanel = signal(false);
-
-  startAddDocument() {
-    this.newDocumentTitle = '';
-    this.selectedDocumentFile = null;
-    this.addingDocument.set(true);
-  }
-
-  cancelAddDocument() {
-    this.addingDocument.set(false);
-  }
-
-  onDocumentFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.selectedDocumentFile = input.files?.[0] ?? null;
-  }
-
-  saveNewDocument(tourId: string) {
-    const title = this.newDocumentTitle.trim();
-    if (!title) {
-      this.notifications.addError('A dokumentumnak kell legyen címe.');
-      return;
-    }
-    if (!this.selectedDocumentFile) {
-      this.notifications.addError('Válassz ki egy PDF, JPG vagy PNG fájlt.');
-      return;
-    }
-
-    this.uploadingDocument.set(true);
-    this.tourService.uploadDocument(tourId, title, this.selectedDocumentFile).subscribe({
-      next: (res) => {
-        this.uploadingDocument.set(false);
-        this.addingDocument.set(false);
-        const d = res.data.document;
-        const t = this.tour();
-        if (t) {
-          this.tour.set({
-            ...t,
-            extraDocuments: [
-              ...(t.extraDocuments ?? []),
-              { _id: d._id, title: d.name, filename: d.filename, mimeType: d.mimeType },
-            ],
-          });
-        }
-        this.notifications.addSuccess('Dokumentum feltöltve');
-      },
-      error: (err) => {
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a feltöltés során.');
-        this.uploadingDocument.set(false);
-      },
-    });
-  }
-
-  // Confirmed in the app's shared dialog (shared/confirm-dialog).
-  deletingDocument = signal(false);
-
-  async askDeleteDocument(doc: ExtraDocument, event: Event) {
-    event.preventDefault();
-    event.stopPropagation();
-    const tourId = this.tour()?._id;
-    if (!tourId || this.deletingDocument()) return;
-    const ok = await this.confirm.ask({
-      message: `Biztos, hogy törölni akarod a "${doc.title}" dokumentumot?`,
-    });
-    if (!ok) return;
-
-    this.deletingDocument.set(true);
-    this.tourService.deleteDocument(doc._id).subscribe({
-      next: () => {
-        const t = this.tour();
-        if (t) {
-          this.tour.set({
-            ...t,
-            extraDocuments: (t.extraDocuments ?? []).filter((d) => d._id !== doc._id),
-          });
-        }
-        this.deletingDocument.set(false);
-        this.notifications.addSuccess('Dokumentum törölve');
-      },
-      error: (err) => {
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt a törlés során.');
-        this.deletingDocument.set(false);
-      },
-    });
+  // Extrák (tour-extras) uploaded or deleted a document.
+  onDocumentsChanged(extraDocuments: ExtraDocument[]) {
+    this.tour.update((t) => (t ? { ...t, extraDocuments } : t));
   }
 
   // Clicking the cover image opens the gallery at its first photo, rather
