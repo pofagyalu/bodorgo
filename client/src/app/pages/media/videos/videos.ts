@@ -50,6 +50,17 @@ export class Videos {
 
   playing = signal<Playing | null>(null);
 
+  // A video's length for its card: "12:34", or "1:02:05" from an hour up -
+  // nothing when it isn't known.
+  length(seconds: number | null | undefined): string | null {
+    if (!seconds) return null;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+  }
+
   coverUrl(category: MediaVideoCategory, video: MediaVideo): string {
     return this.media.coverUrl(category.key, video.id);
   }

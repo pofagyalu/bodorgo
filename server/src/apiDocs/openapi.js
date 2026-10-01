@@ -1180,6 +1180,33 @@ const paths = {
   },
 
   // --- Kotyogó ---
+  '/chat-rooms/overview': {
+    get: op({
+      tag: T.chat,
+      summary: 'The list of chat rooms, with last message and unread count',
+      description:
+        "The general room and every tour's, for the list of Kotyogós. Each has `lastPost` (author - username, or name without one -, the text shortened to 80 characters, whether it is a photo or a poll, when; null if empty), `unread` (messages by others since the asker last had it open) and `memberCount` (a tour's attendees; everyone active for the general room). A tour's entry also has `past` (the tour ended more than 14 days ago - its chat is listed among the archives) and `closed` (it is read-only: new messages, photos and polls are refused; `unread` is 0). Every past chat is closed, except the test tour's (number 11), which stays writable. `chatRoomId` is null for a tour whose room nobody has opened yet.",
+      data: obj({
+        general: obj({
+          chatRoomId: id(),
+          lastPost: { type: 'object' },
+          unread: int(),
+          memberCount: int(),
+        }),
+        tours: arrayOf(
+          obj({
+            tourId: id(),
+            chatRoomId: id(),
+            past: { type: 'boolean' },
+            closed: { type: 'boolean' },
+            lastPost: { type: 'object' },
+            unread: int(),
+            memberCount: int(),
+          }),
+        ),
+      }),
+    }),
+  },
   '/chat-rooms/general': {
     get: op({
       tag: T.chat,
@@ -1238,7 +1265,7 @@ const paths = {
       tag: T.chat,
       summary: 'Send a photo',
       description:
-        'Stored as WebP (1600 px + a 480 px thumbnail, no EXIF). Limited per person per day; over the size quota the oldest photos go. Announced to the chat room as `new-post`.',
+        'Stored as WebP (1600 px + a 480 px thumbnail, no EXIF). Limited per person per day; over the size quota the oldest photos go. Announced to the chat room as `new-post`. Refused (403) in a past tour\x27s closed room - see GET /chat-rooms/overview.',
       params: [chatRoomIdP],
       multipart: obj(
         {
@@ -1408,7 +1435,7 @@ const paths = {
       tag: T.polls,
       summary: "Start a poll in a tour's Kotyogó",
       description:
-        'Anyone signed up for the tour (or an admin). Shows on Voks too, and as a live card in the chat; the attendees get a notification.',
+        "Anyone signed up for the tour (or an admin). Shows on Voks too, and as a live card in the chat; the attendees get a notification. Refused (403) once the tour's chat has closed - 14 days after its last day (see GET /chat-rooms/overview).",
       params: [tourIdT],
       body: obj(
         {
@@ -1952,6 +1979,8 @@ const paths = {
       tag: T.media,
       role: 'member',
       summary: 'All video categories and videos',
+      description:
+        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read).",
       data: obj({ categories: arrayOf({ type: 'object' }) }),
     }),
   },

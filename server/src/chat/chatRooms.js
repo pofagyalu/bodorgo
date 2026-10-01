@@ -38,6 +38,37 @@ export async function loadChatRoom(chatRoomId) {
   return room;
 }
 
+// A tour's Kotyogó closes this many days after the tour's last day: from
+// then on it's an archive - it can be read, but not written in.
+export const CHAT_OPEN_DAYS_AFTER_TOUR = 14;
+// One past tour's chat stays writable: the one the chat is tested in. It's
+// still a past tour - listed among the archives (the client has the same
+// exception - pages/chat/chat.ts).
+const ALWAYS_WRITABLE_TOUR_ORDER = 11;
+
+// Past: more than 14 days after the tour's last day - its chat is listed
+// among the archives.
+export function tourChatPast(tour, now = new Date()) {
+  const pastFrom = new Date(tour.startDate);
+  pastFrom.setDate(pastFrom.getDate() + Math.max(tour.duration - 1, 0) + CHAT_OPEN_DAYS_AFTER_TOUR);
+  return now > pastFrom;
+}
+
+// Closed: a past tour's chat can't be written in any more.
+export function tourChatClosed(tour, now = new Date()) {
+  return tour.order !== ALWAYS_WRITABLE_TOUR_ORDER && tourChatPast(tour, now);
+}
+
+// Is this room read-only? Only a tour's can be (the general one never
+// closes); a room whose tour is gone counts as closed.
+export async function chatRoomClosed(room) {
+  if (room.type !== 'tour') return false;
+  const tour = await Tour.findById(room.tourId).select('startDate duration order');
+  return !tour || tourChatClosed(tour);
+}
+
+export const CHAT_CLOSED_MESSAGE = 'Ez a Kotyogó már lezárult – csak olvasható.';
+
 // What the client gets about a room.
 export const chatRoomView = (room) => ({
   _id: String(room._id),

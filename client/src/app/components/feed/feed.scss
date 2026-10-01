@@ -38,6 +38,37 @@
   font-weight: 600;
 }
 
+// "Új üzenetek": a line across the chat, where I left off.
+.unread-break {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.4rem 0 0.1rem;
+  color: #c0392b;
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+}
+
+// In the message field's place, in a closed (past) chat.
+.closed-note {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-top: 1px solid #e0e0e0;
+  background: #fff;
+  color: #6b7a81;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 app-compose {
   border-top: 1px solid #e0e0e0;
   background: #fff;

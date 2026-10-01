@@ -123,6 +123,13 @@
   letter-spacing: 0.02em;
 }
 
+// The same, in the bottom right corner (the video's length).
+.corner-badge--right {
+  left: auto;
+  right: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
 .video-title {
   font-size: 14px;
   font-weight: 700;

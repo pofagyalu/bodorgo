@@ -47,7 +47,7 @@ export class HomePage {
   }
 
   // How much older the attendees get a year, for the line under the age
-  // chart's title ("0,8"): the slope of the straight line that fits the
+  // chart's title ("0,87"): the slope of the straight line that fits the
   // yearly averages best (least squares) - every year has its say, not
   // just the first and the last. null until there are two years to
   // compare. `slower`: under a year a year, which is what the line's joke
@@ -61,10 +61,10 @@ export class HomePage {
       years.reduce((sum, y) => sum + (y.year - meanYear) * (y.averageAge - meanAge), 0) /
       years.reduce((sum, y) => sum + (y.year - meanYear) ** 2, 0);
     const text = new Intl.NumberFormat('hu-HU', {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(slope);
-    return { text, slower: Math.round(slope * 10) < 10 };
+    return { text, slower: Math.round(slope * 100) < 100 };
   });
 
   constructor() {

@@ -1,4 +1,4 @@
-<div class="chat-shell">
+<div class="chat-shell" [class.chat-shell--list]="listOnPhone()">
   <aside class="chat-sidebar" aria-label="Táborok Kotyogói">
     <div class="chat-brand">
       <div class="brand-mark"><mat-icon>forum</mat-icon></div>
@@ -19,36 +19,32 @@
         type="button"
         class="nav-item"
         [class.active]="isGeneral()"
-        title="Általános Kotyogó - mindenkinek"
+        [title]="generalName + ' - a klub közös Kotyogója, mindenkinek'"
         (click)="selectGeneral()"
       >
         <span class="tour-thumb tour-thumb--general">
-          <mat-icon>forum</mat-icon>
+          <mat-icon>groups</mat-icon>
         </span>
         <span class="tour-text">
-          <strong>Általános</strong>
+          <strong>{{ generalName }}</strong>
           <small>Mindenkinek</small>
         </span>
+        @if (unreadOf('general'); as unread) {
+          <span class="unread-badge" [attr.aria-label]="unread + ' olvasatlan üzenet'">{{
+            unread
+          }}</span>
+        }
       </button>
+      <!-- The tours whose chat is open, then - under a line - the archives:
+           the past tours that were chatted in (read-only). -->
       @for (t of visibleTours(); track t._id) {
-        <button
-          type="button"
-          class="nav-item"
-          [class.active]="t._id === selectedTourId()"
-          [title]="t.order + '. ' + t.title"
-          (click)="selectTour(t._id)"
-        >
-          <span class="tour-thumb">
-            @if (coverUrl(t); as url) {
-              <img [src]="url" alt="" />
-            }
-            <span class="tour-order">{{ t.order }}</span>
-          </span>
-          <span class="tour-text">
-            <strong>{{ t.title }}</strong>
-            <small>{{ formatDate(t) }}</small>
-          </span>
-        </button>
+        <ng-container *ngTemplateOutlet="tourItem; context: { $implicit: t }" />
+      }
+      @if (archivedTours().length) {
+        <div class="nav-divider"><span>Korábbi táborok</span></div>
+        @for (t of archivedTours(); track t._id) {
+          <ng-container *ngTemplateOutlet="tourItem; context: { $implicit: t }" />
+        }
       }
     </nav>
 
@@ -58,22 +54,33 @@
     </div>
   </aside>
 
+  <!-- Phone only: the list of every chat - the screen the Kotyogó opens
+       on there (chat-list); a chosen one opens over it. -->
+  <app-chat-list
+    class="chat-list-screen"
+    [tours]="allTours()"
+    [overview]="overview()"
+    [generalName]="generalName"
+    (pick)="selectFromList($event)"
+  />
+
   <main class="chat-main">
-    <!-- Phone only: the tour list as a scrolling row, like Klub's mobile nav -->
-    <nav class="chat-mobile-nav" aria-label="Táborok mobilon">
-      <button type="button" [class.active]="isGeneral()" (click)="selectGeneral()">
-        Általános
+    <!-- Phone only: the open chat's bar - back to the list, its name, how
+         many people it has. -->
+    <div class="room-bar">
+      <button
+        type="button"
+        class="room-back"
+        aria-label="Vissza a Kotyogókhoz"
+        (click)="backToList()"
+      >
+        <mat-icon>arrow_back</mat-icon>
       </button>
-      @for (t of visibleTours(); track t._id) {
-        <button
-          type="button"
-          [class.active]="t._id === selectedTourId()"
-          (click)="selectTour(t._id)"
-        >
-          {{ t.order }}. {{ t.title }}
-        </button>
-      }
-    </nav>
+      <div class="room-name">
+        <strong>{{ roomTitle() }}</strong>
+        <small>{{ roomPeople() }}</small>
+      </div>
+    </div>
 
     @if (selected()) {
       <header class="chat-header" [class.chat-header--general]="isGeneral()">
@@ -119,7 +126,7 @@
           aria-label="Kotyogó"
         >
           @for (f of feedKey(); track f.chatRoomId) {
-            <app-feed [chatRoomId]="f.chatRoomId" [tourId]="f.tourId" />
+            <app-feed [chatRoomId]="f.chatRoomId" [tourId]="f.tourId" [readOnly]="readOnly()" />
           }
         </section>
 
@@ -184,4 +191,31 @@
       }
     </div>
   }
+</ng-template>
+
+<!-- A tour's line in the sidebar. -->
+<ng-template #tourItem let-t>
+  <button
+    type="button"
+    class="nav-item"
+    [class.active]="t._id === selectedTourId()"
+    [title]="t.order + '. ' + t.title"
+    (click)="selectTour(t._id)"
+  >
+    <span class="tour-thumb">
+      @if (coverUrl(t); as url) {
+        <img [src]="url" alt="" />
+      }
+      <span class="tour-order">{{ t.order }}</span>
+    </span>
+    <span class="tour-text">
+      <strong>{{ t.title }}</strong>
+      <small>{{ formatDate(t) }}</small>
+    </span>
+    @if (unreadOf(t._id); as unread) {
+      <span class="unread-badge" [attr.aria-label]="unread + ' olvasatlan üzenet'">{{
+        unread
+      }}</span>
+    }
+  </button>
 </ng-template>

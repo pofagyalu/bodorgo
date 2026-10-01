@@ -5,7 +5,12 @@ import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import AppError from '../utils/appError.js';
 import { emitToChatRoom } from '../chat/tourEvents.js';
-import { generalChatRoom, tourChatRoom } from '../chat/chatRooms.js';
+import {
+  CHAT_CLOSED_MESSAGE,
+  generalChatRoom,
+  tourChatClosed,
+  tourChatRoom,
+} from '../chat/chatRooms.js';
 import logger from '../logger.js';
 import { cleanMailHtml, isBlankMailHtml } from '../utils/mailHtml.js';
 import { chatAudience, pushInBackground } from '../chat/chatNotifications.js';
@@ -279,12 +284,15 @@ async function startChatPoll(req, res, tour) {
 }
 
 // POST /tours/:tourId/polls - from the tour's chat, by anyone signed up
-// for the tour (or an admin).
+// for the tour (or an admin) - while its chat is open.
 export const createTourPoll = async (req, res) => {
   const { tourId } = req.params;
   if (!mongoose.isValidObjectId(tourId)) throw new AppError('Nincs ilyen tábor.', 404);
-  const tour = await Tour.findById(tourId).select('title order');
+  const tour = await Tour.findById(tourId).select('title order startDate duration');
   if (!tour) throw new AppError('Nincs ilyen tábor.', 404);
+  // A past tour's chat is an archive - nothing new in it, a poll neither
+  // (not even by an admin).
+  if (tourChatClosed(tour)) throw new AppError(CHAT_CLOSED_MESSAGE, 403);
   if (
     !isAdmin(req.user) &&
     !(await Reservation.exists({ tour: tourId, 'attendees.user': req.user._id }))

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import AppError from '../utils/appError.js';
+import { mp4DurationSeconds } from '../utils/mp4Duration.js';
 import config from '../config.js';
 import {
   VIDEO_EXTENSIONS,
@@ -152,6 +153,9 @@ export const listMediaVideos = async (req, res) => {
           episode: parsed.episode,
           hasCover: !!findThumb(root, relPath),
           hasSubtitles: !!findSubtitlePath(root, relPath),
+          // How long it is - read from the file itself (null if it can't
+          // be: not an MP4/MOV, or unreadable).
+          durationSeconds: mp4DurationSeconds(path.join(root, relPath)),
         };
       })
       .sort(

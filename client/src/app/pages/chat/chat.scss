@@ -124,9 +124,10 @@
   }
 }
 
-// The general Kotyogó's round badge - the club green, a speech icon.
+// The general Kotyogó's (Bódorgók) round badge - a group of people on the
+// logo's orange.
 .tour-thumb--general {
-  background: #1a796c;
+  background: var(--logo-orange);
   color: #fff;
 
   mat-icon {
@@ -178,7 +179,46 @@
   overflow: hidden;
 }
 
-.chat-mobile-nav {
+// Between the open chats and the past tours' archives: a line with a
+// small label.
+.nav-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.6rem 0.5rem 0.2rem;
+  color: #7f97a3;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #2b4456;
+  }
+}
+
+// How many messages wait unread in a chat - at the end of its line.
+.unread-badge {
+  flex: none;
+  margin-left: auto;
+  min-width: 1.3rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--logo-orange);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+// The phone's own pieces (see the phone block at the end).
+.chat-list-screen,
+.room-bar {
   display: none;
 }
 
@@ -455,8 +495,26 @@ $tab-curve: 0.625rem; // the inverse radius at the open tab's feet
   }
 
   .nav-item {
+    position: relative;
     justify-content: center;
     padding: 8px;
+  }
+
+  // Icons only: the line stays, its label doesn't fit; the unread count
+  // sits on the picture's corner.
+  .nav-divider {
+    margin: 0.5rem 0;
+
+    span {
+      display: none;
+    }
+  }
+
+  .unread-badge {
+    position: absolute;
+    top: 0.1rem;
+    right: 0.1rem;
+    margin: 0;
   }
 
   .sidebar-tools {
@@ -487,32 +545,63 @@ $tab-curve: 0.625rem; // the inverse radius at the open tab's feet
     min-height: 0;
   }
 
-  .chat-mobile-nav {
+  // Either the list of chats is the screen, or the chosen chat.
+  .chat-list-screen {
+    display: block;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .chat-shell--list .chat-main,
+  .chat-shell:not(.chat-shell--list) .chat-list-screen {
+    display: none;
+  }
+
+  // The open chat's bar: ← | its name over how many people it has.
+  .room-bar {
     display: flex;
+    align-items: center;
+    gap: 0.4rem;
     flex: none;
-    gap: 5px;
-    overflow-x: auto;
-    padding: 8px 10px;
+    padding: 0.35rem 0.6rem;
     background: #fff;
     border-bottom: 1px solid #e4eae7;
+  }
 
-    button {
-      flex: none;
+  .room-back {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: #203747;
+    cursor: pointer;
+
+    &:active {
+      background: #eef2f0;
+    }
+  }
+
+  .room-name {
+    min-width: 0;
+    display: grid;
+
+    strong {
+      font-size: 1rem;
+      font-weight: 750;
+      color: #203747;
       white-space: nowrap;
-      padding: 8px 10px;
-      border: 0;
-      border-radius: 8px;
-      background: none;
-      color: #587079;
-      font: inherit;
-      font-size: 13px;
-      font-weight: 650;
-      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-      &.active {
-        background: #e5f5ec;
-        color: #1a796c;
-      }
+    small {
+      font-size: 0.75rem;
+      color: #6b7a81;
     }
   }
 

@@ -3,6 +3,7 @@ import {
   chatImageUpload,
   getChatImage,
   getChatImageThumb,
+  getChatOverview,
   getGeneralChatRoom,
   getGeneralPeople,
   postChatImage,
@@ -17,6 +18,8 @@ import requireAuth from '../auth/requireAuth.js';
 const router = express.Router();
 router.use(requireAuth);
 
+// The list of Kotyogós, each with its last message and unread count.
+router.get('/overview', getChatOverview);
 router.get('/general', getGeneralChatRoom);
 router.get('/general/people', getGeneralPeople);
 // A poll from the general room - anyone logged in (see pollController.js).

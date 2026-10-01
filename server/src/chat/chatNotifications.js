@@ -30,6 +30,14 @@ export async function markChatRead(userId, chatRoomId) {
   );
 }
 
+// When the user last had the chat open - null if never.
+export async function lastReadAt(userId, chatRoomId) {
+  const state = await ChatReadState.findOne({ user: userId, chatRoom: chatRoomId }).select(
+    'readAt',
+  );
+  return state?.readAt ?? null;
+}
+
 export async function setChatMuted(userId, chatRoomId, muted) {
   await ChatReadState.updateOne(
     { user: userId, chatRoom: chatRoomId },

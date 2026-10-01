@@ -55,6 +55,10 @@ function dayBreakLabel(d: Date): string {
   return `${weekday}, ${date}`;
 }
 
+// How far below the top of the view the "Új üzenetek" line sits when a
+// chat opens at it.
+const UNREAD_TOP_GAP_PX = 12;
+
 @Component({
   selector: 'app-feed',
   standalone: true,
@@ -69,6 +73,8 @@ export class Feed implements OnInit, OnDestroy {
   // general room (no background; everyone can be "@"-mentioned there).
   chatRoomId = input.required<string>();
   tourId = input<string | null>(null);
+  // A past tour's chat: an archive - no message field.
+  readOnly = input(false);
   currentUserId = computed(() => this.authService.user()?.id);
 
   posts = signal<IPost[]>([]);
@@ -112,12 +118,20 @@ export class Feed implements OnInit, OnDestroy {
   });
 
   private feedContainer = viewChild<ElementRef<HTMLDivElement>>('feedContainer');
+  private unreadBreak = viewChild<ElementRef<HTMLElement>>('unreadBreak');
+
+  // The first message that arrived since I last had this chat open (the
+  // server says when that was) - the chat opens there, under an "Új
+  // üzenetek" line, instead of at the very end. null: nothing new.
+  firstUnreadId = signal<string | null>(null);
 
   // Bumped when the chat history first loads (landing on the page should
   // show the latest message) and whenever *I* post something - but not on
   // incoming posts from others, so the view doesn't get yanked out from
   // under someone reading older messages when others post.
   private scrollTrigger = signal(0);
+  // The next scroll goes to the "Új üzenetek" line rather than the end.
+  private toUnreadNext = false;
 
   // The chat's background: this week's pale photo from the tour's album
   // (the server bakes the paleness in), or the plain one if it has none.
@@ -165,7 +179,16 @@ export class Feed implements OnInit, OnDestroy {
     afterRenderEffect(() => {
       this.scrollTrigger();
       const el = this.feedContainer()?.nativeElement;
-      if (el) {
+      if (!el) return;
+      // On opening: to the first unread message, if there is one (its
+      // line at the top of the view); otherwise - and after my own
+      // message - to the end.
+      const unread = this.toUnreadNext ? this.unreadBreak()?.nativeElement : null;
+      this.toUnreadNext = false;
+      if (unread) {
+        const offset = unread.getBoundingClientRect().top - el.getBoundingClientRect().top;
+        el.scrollTop += offset - UNREAD_TOP_GAP_PX;
+      } else {
         el.scrollTop = el.scrollHeight;
       }
     });
@@ -177,11 +200,28 @@ export class Feed implements OnInit, OnDestroy {
     // against this feed's own room, since the same connection may just
     // have switched over from another one.
     this.unsubscribers = [
-      this.tourSocket.on<{ chatRoomId: string; posts: IPost[] }>('initial-posts', (data) => {
-        if (data.chatRoomId !== this.chatRoomId()) return;
-        this.posts.set(data.posts);
-        this.scrollTrigger.update((n) => n + 1);
-      }),
+      this.tourSocket.on<{ chatRoomId: string; posts: IPost[]; readAt?: string | null }>(
+        'initial-posts',
+        (data) => {
+          if (data.chatRoomId !== this.chatRoomId()) return;
+          this.posts.set(data.posts);
+          // Others' messages since I was last here. (Never here before:
+          // no line - the chat just opens at its end.)
+          const readAt = data.readAt ? new Date(data.readAt).getTime() : null;
+          const firstUnread =
+            readAt === null
+              ? undefined
+              : data.posts.find(
+                  (p) =>
+                    !p.deletedAt &&
+                    p.creator._id !== this.currentUserId() &&
+                    new Date(p.createdAt).getTime() > readAt,
+                );
+          this.firstUnreadId.set(firstUnread?._id ?? null);
+          this.toUnreadNext = !!firstUnread;
+          this.scrollTrigger.update((n) => n + 1);
+        },
+      ),
       this.tourSocket.on<IPost>('new-post', (post) => {
         if (String(post.chatRoomId) !== this.chatRoomId()) return;
         this.posts.update((p) => [...p, post]);

@@ -9,6 +9,10 @@
       @if (dayBreaks().get(post._id); as day) {
         <div class="day-break">{{ day }}</div>
       }
+      <!-- Where I left off: what's under this line came since. -->
+      @if (post._id === firstUnreadId()) {
+        <div class="unread-break" #unreadBreak><span>Új üzenetek</span></div>
+      }
       <app-post
         [creatorInput]="post.creator.username || post.creator.name"
         [textInput]="post.text"
@@ -31,12 +35,17 @@
     }
   </div>
 
-  <app-compose
-    [mentionables]="mentionables()"
-    [sending]="sendingPhoto()"
-    (send)="onCompose($event)"
-    (pollRequested)="creatingPoll.set(true)"
-  ></app-compose>
+  <!-- A past tour's chat is an archive: read, not written. -->
+  @if (readOnly()) {
+    <p class="closed-note">Ez a Kotyogó lezárult – már csak olvasható.</p>
+  } @else {
+    <app-compose
+      [mentionables]="mentionables()"
+      [sending]="sendingPhoto()"
+      (send)="onCompose($event)"
+      (pollRequested)="creatingPoll.set(true)"
+    ></app-compose>
+  }
 
   @if (creatingPoll()) {
     <app-poll-create [tourId]="tourId()" (closed)="creatingPoll.set(false)" />

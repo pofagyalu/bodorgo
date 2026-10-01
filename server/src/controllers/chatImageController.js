@@ -14,7 +14,20 @@ import {
   saveChatImage,
 } from '../chat/chatImages.js';
 import { emitToChatRoom, getIo } from '../chat/tourEvents.js';
-import { chatRoomView, generalChatRoom, loadChatRoom, tourChatRoom } from '../chat/chatRooms.js';
+import {
+  CHAT_CLOSED_MESSAGE,
+  chatRoomClosed,
+  chatRoomView,
+  generalChatRoom,
+  loadChatRoom,
+  tourChatClosed,
+  tourChatPast,
+  tourChatRoom,
+} from '../chat/chatRooms.js';
+import ChatRoom from '../models/chatRoomModel.js';
+import ChatReadState from '../models/chatReadStateModel.js';
+import Reservation from '../models/reservationModel.js';
+import Tour from '../models/tourModel.js';
 import { backgroundPath, currentBackground, nextBackground } from '../chat/chatBackground.js';
 import { LONG_CACHE } from '../photos/imageSizes.js';
 import { notifyChatPostInBackground } from '../chat/chatNotifications.js';
@@ -50,6 +63,7 @@ export const chatImageUpload = (req, res, next) =>
 // POST /chat-rooms/:chatRoomId/images - multipart: image (+ optional text).
 export const postChatImage = async (req, res) => {
   const room = await loadChatRoom(req.params.chatRoomId);
+  if (await chatRoomClosed(room)) throw new AppError(CHAT_CLOSED_MESSAGE, 403);
   if (!req.file) throw new AppError('Nincs kép kiválasztva.', 400);
 
   const { chatImages } = await getClubSettings();
@@ -150,6 +164,95 @@ export const getTourChatRoom = async (req, res) => {
 export const getGeneralChatRoom = async (req, res) => {
   const room = await generalChatRoom();
   res.status(200).json({ status: 'success', data: { chatRoom: chatRoomView(room) } });
+};
+
+const OVERVIEW_SNIPPET_LENGTH = 80;
+
+// GET /chat-rooms/overview - the list of Kotyogós (the phone's first chat
+// screen): the general room and every tour's, each with its last message
+// (who and what, shortened), how many messages the asker hasn't seen yet,
+// and how many people it has - a tour's attendees, or everyone active for
+// the general one. `past`: the tour is over (by more than two weeks) -
+// its chat belongs with the archives; `closed`: it's read-only too (it has
+// no unread count) - every past one but the test tour's. A tour nobody has opened yet has no room: chatRoomId null.
+export const getChatOverview = async (req, res) => {
+  const me = req.user._id;
+  const [general, tourRooms, tours, readStates, attendeeCounts, activeUsers] = await Promise.all([
+    generalChatRoom(),
+    ChatRoom.find({ type: 'tour' }),
+    Tour.find().select('order startDate duration'),
+    ChatReadState.find({ user: me }).select('chatRoom readAt'),
+    Reservation.aggregate([
+      { $unwind: '$attendees' },
+      { $group: { _id: '$tour', count: { $sum: 1 } } },
+    ]),
+    User.countDocuments({ retired: { $ne: true } }),
+  ]);
+
+  const rooms = [general, ...tourRooms];
+  // Each room's latest message that wasn't deleted.
+  const latest = await Post.aggregate([
+    { $match: { chatRoomId: { $in: rooms.map((r) => r._id) }, deletedAt: null } },
+    { $sort: { createdAt: -1 } },
+    { $group: { _id: '$chatRoomId', post: { $first: '$$ROOT' } } },
+  ]);
+  const authors = await User.find({ _id: { $in: latest.map((l) => l.post.creator) } }).select(
+    'name username',
+  );
+  const authorOf = new Map(authors.map((u) => [String(u._id), u.username || u.name]));
+  const lastPostOf = new Map(
+    latest.map(({ _id, post }) => [
+      String(_id),
+      {
+        author: authorOf.get(String(post.creator)) ?? '',
+        text: (post.text ?? '').slice(0, OVERVIEW_SNIPPET_LENGTH),
+        hasImage: !!post.image,
+        isPoll: !!post.poll,
+        createdAt: post.createdAt,
+      },
+    ]),
+  );
+
+  const readAtOf = new Map(readStates.map((s) => [String(s.chatRoom), s.readAt]));
+  const unreadIn = (room) =>
+    Post.countDocuments({
+      chatRoomId: room._id,
+      creator: { $ne: me },
+      deletedAt: null,
+      createdAt: { $gt: readAtOf.get(String(room._id)) ?? new Date(0) },
+    });
+
+  const roomOfTour = new Map(tourRooms.map((r) => [String(r.tourId), r]));
+  const attendeesOf = new Map(attendeeCounts.map((a) => [String(a._id), a.count]));
+
+  const tourEntries = await Promise.all(
+    tours.map(async (tour) => {
+      const room = roomOfTour.get(String(tour._id));
+      const closed = tourChatClosed(tour);
+      return {
+        tourId: String(tour._id),
+        chatRoomId: room ? String(room._id) : null,
+        past: tourChatPast(tour),
+        closed,
+        lastPost: (room && lastPostOf.get(String(room._id))) ?? null,
+        unread: room && !closed ? await unreadIn(room) : 0,
+        memberCount: attendeesOf.get(String(tour._id)) ?? 0,
+      };
+    }),
+  );
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      general: {
+        chatRoomId: String(general._id),
+        lastPost: lastPostOf.get(String(general._id)) ?? null,
+        unread: await unreadIn(general),
+        memberCount: activeUsers,
+      },
+      tours: tourEntries,
+    },
+  });
 };
 
 // GET /chat-rooms/general/people - who can be "@"-mentioned in the general
