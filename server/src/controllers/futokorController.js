@@ -5,8 +5,11 @@ import QRCode from 'qrcode';
 import Tour from '../models/tourModel.js';
 import { FutokorCourse, FutokorRun, FutokorScan, FutokorTag } from '../models/futokorModels.js';
 import AppError from '../utils/appError.js';
+import requireAuth from '../auth/requireAuth.js';
+import { requireFutokor } from '../futokor/access.js';
 import { isExpired, replayScans } from '../futokor/runRules.js';
 import { tagUrl, verifyTagToken } from '../futokor/tags.js';
+import { userOfFutokod } from '../utils/futokod.js';
 
 // Futókör: the checkpoint running race of a tour (Móka → Futókörök).
 // Cards (tags) are scanned by the runners' phones; the phones send their
@@ -381,27 +384,69 @@ export const deleteCourse = async (req, res) => {
 
 // --- Running ---
 
+// The course to run now: the one that's open, or else the next to open.
+async function currentCourse(now) {
+  return (
+    (await withTour(courseOpenAt(now))) ??
+    (await withTour(FutokorCourse.findOne({ opensAt: { $gt: now } }).sort('opensAt')))
+  );
+}
+
+// GET /futokor/course - the same course for a phone nobody is logged in
+// on (someone running with their futókód): public, and without any runs.
+export const getCourse = async (req, res) => {
+  const now = new Date();
+  const course = await currentCourse(now);
+  res.status(200).json({
+    status: 'success',
+    data: { course: course ? courseView(course) : null, serverTime: now },
+  });
+};
+
+// POST /futokor/runner - { code }: whose futókód it is, so the phone can
+// ask "Indulhat a futás, Peti?" before the start. Public (see the routes
+// for how guessing is slowed down); only the name is told.
+export const getRunner = async (req, res) => {
+  const user = await userOfFutokod(req.body?.code);
+  if (!user) throw new AppError('Nincs ilyen futókód.', 404);
+  res.status(200).json({ status: 'success', data: { name: shownName(user) } });
+};
+
 // GET /futokor/active - the course to run now: the one that's open, or
 // else the next one to open (so a phone can get ready for it on Wi-Fi) -
 // with my runs on it. `course` is null if there's neither.
 export const getActive = async (req, res) => {
   const now = new Date();
-  const course =
-    (await withTour(courseOpenAt(now))) ??
-    (await withTour(FutokorCourse.findOne({ opensAt: { $gt: now } }).sort('opensAt')));
+  const course = await currentCourse(now);
   res.status(200).json({
     status: 'success',
     data: {
       course: course ? courseView(course) : null,
       runs: course ? await myRuns(course, req.user) : [],
+      // Who this phone runs as: kept on it, for where there's no signal.
+      runner: { id: req.user._id, name: shownName(req.user) },
       // For the phone to notice a clock that's off.
       serverTime: now,
     },
   });
 };
 
-// POST /futokor/scans - { scans: [{ clientScanId, token, deviceTime,
-// action?, lat?, lng?, accuracyM? }] }: what the phone has collected, in
+// Who a request to /futokor/scans runs as: whoever the futókód in it
+// belongs to (`runnerCode` - a phone nobody is logged in on, or one lent
+// to someone else), otherwise whoever is logged in.
+export async function scanRunner(req, res, next) {
+  const code = req.body?.runnerCode;
+  if (code !== undefined && code !== null && code !== '') {
+    const user = await userOfFutokod(String(code));
+    if (!user) return next(new AppError('Nincs ilyen futókód.', 404));
+    req.user = user;
+    return next();
+  }
+  return requireAuth(req, res, (err) => (err ? next(err) : requireFutokor(req, res, next)));
+}
+
+// POST /futokor/scans - { runnerCode?, scans: [{ clientScanId, token,
+// deviceTime, action?, lat?, lng?, accuracyM? }] }: what the phone has collected, in
 // any order, any time later; sending one again changes nothing. A scan
 // belongs to the course that was open at its own time. Answers what came
 // of each, and my runs on the courses they touched.

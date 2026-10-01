@@ -105,6 +105,10 @@ const userSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    // Futókód: their own four-digit number for the Futókör, to run with
+    // from any phone without logging in (see utils/futokod.js) - given when
+    // the user is made, never sent to anyone but themselves and the admins.
+    futokod: { type: String, unique: true, sparse: true, select: false },
     // Profile photo - the image itself lives in its own collection (see
     // userPhotoModel.js); this is just when it last changed, doubling as
     // the client's cache-busting version (?v=...) and as "has a photo".
@@ -292,6 +296,19 @@ userSchema.methods.createPasswordResetToken = function () {
 
   return resetToken;
 };
+
+// A new user gets their futókód (see utils/futokod.js - the same rule,
+// repeated here because that file needs this model).
+userSchema.pre('save', async function () {
+  if (!this.isNew || this.futokod) return;
+  for (;;) {
+    const code = String(crypto.randomInt(1000, 10000));
+    if (!(await this.constructor.exists({ futokod: code }))) {
+      this.futokod = code;
+      return;
+    }
+  }
+});
 
 const User = mongoose.model('User', userSchema);
 

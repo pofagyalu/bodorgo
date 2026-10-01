@@ -4,6 +4,20 @@
     <h1>Futókörök</h1>
   </header>
 
+  <a routerLink="utmutato" class="guide-link">
+    <mat-icon>help</mat-icon> Hogyan kell futni? – útmutató
+  </a>
+
+  <!-- A futókód the server didn't know: that run is lost. -->
+  @if (futokor.problem(); as problem) {
+    <p class="card problem">
+      <mat-icon>error</mat-icon> {{ problem }}
+      <button type="button" (click)="futokor.problem.set('')" aria-label="Bezárás">
+        <mat-icon>close</mat-icon>
+      </button>
+    </p>
+  }
+
   @if (course(); as c) {
     <!-- The course on this phone. -->
     <div class="card course">
@@ -39,7 +53,7 @@
     <!-- The run that's on. -->
     @if (running()) {
       <div class="card run-now">
-        <p class="label">Futásban</p>
+        <p class="label">Futásban · {{ futokor.runner()?.name }}</p>
         <p class="clock">{{ elapsed() }}</p>
         <p class="next">
           @if (futokor.next(); as n) {

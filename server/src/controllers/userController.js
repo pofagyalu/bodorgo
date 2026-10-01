@@ -269,7 +269,7 @@ export const getMyBirthday = async (req, res) => {
 
 export const getMe = async (req, res) => {
   const user = await User.findById(req.user._id).select(
-    'name username email birthday memberSince lastLoginAt wantsEmailNotifications address photoUpdatedAt photoSetBy',
+    'name username email birthday memberSince lastLoginAt wantsEmailNotifications address photoUpdatedAt photoSetBy +futokod',
   );
 
   const toursAttended = await toursAttendedOf(user._id);
@@ -289,6 +289,8 @@ export const getMe = async (req, res) => {
       address: user.address,
       photoUpdatedAt: user.photoUpdatedAt ?? null,
       photoSetBy: user.photoSetBy ?? null,
+      // Their own number for the Futókör (utils/futokod.js).
+      futokod: user.futokod ?? null,
     },
   });
 };
@@ -387,7 +389,7 @@ function parseMemberSince(value) {
 }
 
 // Only the admin's own user endpoints read these (select:false).
-const ADMIN_ONLY_FIELDS = '+weightKg +weightUpdatedAt';
+const ADMIN_ONLY_FIELDS = '+weightKg +weightUpdatedAt +futokod';
 
 // Súly (kg): a number, one decimal; '' / null clears it.
 function parseWeight(value) {

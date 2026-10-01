@@ -1,15 +1,51 @@
-@if (askStart()) {
-  <div class="start">
-    <p class="who">
-      @if (runner) {
-        {{ runner }},
+@switch (step()) {
+  <!-- Who runs: their futókód, typed once at the start. -->
+  @case ('who') {
+    <div class="start">
+      <p class="who">Ki fut?</p>
+      <p class="note">
+        Írd be a négyjegyű futókódodat – a Profilodon találod, vagy egy admin megmondja.
+      </p>
+      <form class="code-form" (submit)="useCode(); $event.preventDefault()">
+        <input
+          class="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength="4"
+          placeholder="0000"
+          aria-label="Futókód"
+          [value]="code()"
+          (input)="onCode($any($event.target).value)"
+        />
+        <button type="submit" class="ok" [disabled]="code().length !== 4 || checking()">
+          {{ checking() ? 'Keresem…' : 'Tovább' }}
+        </button>
+      </form>
+      @if (codeError()) {
+        <p class="error">{{ codeError() }}</p>
       }
-      indulhat a futás?
-    </p>
-    <button type="button" class="go" (click)="start()">RAJT!</button>
-    <p class="note">Az óra a gomb megnyomásakor indul.</p>
-    <button type="button" class="not-now" (click)="done.emit()">Most nem</button>
-  </div>
-} @else if (answer(); as a) {
-  <app-scan-answer [answer]="a" (closed)="done.emit()" (restart)="restart()" />
+      @if (futokor.owner(); as me) {
+        <button type="button" class="link" (click)="asMyself()">Mégis {{ me.name }} fut</button>
+      }
+      <button type="button" class="not-now" (click)="done.emit()">Most nem</button>
+    </div>
+  }
+  <!-- "Indulhat?" - the clock starts at the tap. -->
+  @case ('go') {
+    <div class="start">
+      <p class="who">{{ futokor.runner()?.name }}, indulhat a futás?</p>
+      <button type="button" class="go" (click)="start()">RAJT!</button>
+      <p class="note">Az óra a gomb megnyomásakor indul.</p>
+      <button type="button" class="link" (click)="step.set('who')">
+        Nem te vagy? Indulás futókóddal
+      </button>
+      <button type="button" class="not-now" (click)="done.emit()">Most nem</button>
+    </div>
+  }
+  @default {
+    @if (answer(); as a) {
+      <app-scan-answer [answer]="a" (closed)="done.emit()" (restart)="restart()" />
+    }
+  }
 }

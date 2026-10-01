@@ -164,6 +164,11 @@ export const routes: Routes = [
         title: 'Móka – Futókörök',
         loadComponent: () => import('./pages/moka/futokor/futokor-home').then((m) => m.FutokorHome),
       },
+      {
+        path: 'futokor/utmutato',
+        title: 'Futókörök – Útmutató',
+        loadComponent: () => import('./pages/moka/futokor/guide/guide').then((m) => m.FutokorGuide),
+      },
       // The cards and the courses are the admins'.
       {
         path: 'futokor/kartyak',

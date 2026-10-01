@@ -220,6 +220,9 @@ const schemas = {
     _id: id(),
     name: str('Full name (from Authentik).'),
     username: str('For @mentions in Kotyogó.'),
+    futokod: str(
+      'Futókód: their own four-digit number for the Futókör, to run with from any phone without logging in. Only in my own record and in what admins get - never in anyone else’s.',
+    ),
     email: str('E-mail.', { format: 'email' }),
     role: str('Role - managed in the app; only the role manager changes it.', {
       enum: ['admin', 'member', 'guest'],
@@ -2885,19 +2888,47 @@ const paths = {
       data: obj({
         course: { oneOf: [ref('FutokorCourse'), { type: 'null' }] },
         runs: arrayOf(ref('FutokorRun')),
+        runner: obj({ id: id(), name: str() }),
         serverTime: date(),
       }),
       errors: [403],
     }),
   },
+  '/futokor/course': {
+    get: op({
+      tag: T.race,
+      role: 'public',
+      summary: 'The course to run now, for a phone nobody is logged in on',
+      description:
+        'The same course as `/futokor/active` (the open one, or the next to open), without any runs - for someone running with their futókód.',
+      data: obj({
+        course: { oneOf: [ref('FutokorCourse'), { type: 'null' }] },
+        serverTime: date(),
+      }),
+    }),
+  },
+  '/futokor/runner': {
+    post: op({
+      tag: T.race,
+      role: 'public',
+      summary: 'Whose futókód is it',
+      description:
+        'So the phone can ask "Indulhat a futás, Peti?" before the start - only the name is told. A wrong code counts against the caller’s address: after thirty in ten minutes it has to wait (429).',
+      body: obj({ code: str('Four digits.') }, ['code']),
+      data: obj({ name: str() }),
+      errors: [404, 429],
+    }),
+  },
   '/futokor/scans': {
     post: op({
       tag: T.race,
+      role: 'public',
       summary: 'Send the phone’s scans',
       description:
-        'What the phone has collected - in any order, any time later (at most 40 at once); sending a scan again changes nothing. `token` is the end of the card’s link; `deviceTime` is the phone’s clock, which the run is timed by. A scan belongs to the course that was open at its own time. `action: restart` on the START/FINISH card gives the open run up for a new one; `action: giveUp` (no token) gives the open run up. All of my scans on the course are then replayed by the rules, and the answer says what came of each: `started`, `passed`, `finished`, `gaveUp`, `duplicate`, `incomplete` (START/FINISH with checkpoints missing), `rejectedOrder`, `rejectedSpeed` (faster than 10.4 m/s), `noRun`, `unknownTag`, `noCourse` (none was open then) or `invalid`.',
+        'Whose scans they are: with `runnerCode` (a futókód) whoever that belongs to - a phone nobody is logged in on, or one lent to someone else; a wrong one is 404, and counts like on `/futokor/runner`. Without it, whoever is logged in (401 / 403 otherwise). What the phone has collected - in any order, any time later (at most 40 at once); sending a scan again changes nothing. `token` is the end of the card’s link; `deviceTime` is the phone’s clock, which the run is timed by. A scan belongs to the course that was open at its own time. `action: restart` on the START/FINISH card gives the open run up for a new one; `action: giveUp` (no token) gives the open run up. All of my scans on the course are then replayed by the rules, and the answer says what came of each: `started`, `passed`, `finished`, `gaveUp`, `duplicate`, `incomplete` (START/FINISH with checkpoints missing), `rejectedOrder`, `rejectedSpeed` (faster than 10.4 m/s), `noRun`, `unknownTag`, `noCourse` (none was open then) or `invalid`.',
       body: obj(
         {
+          runnerCode: str('A futókód - whose scans these are.'),
           scans: arrayOf(
             obj(
               {
@@ -2919,7 +2950,7 @@ const paths = {
         results: arrayOf(obj({ clientScanId: str(), result: str() })),
         runs: arrayOf(obj({ courseId: id(), runs: arrayOf(ref('FutokorRun')) })),
       }),
-      errors: [400, 403],
+      errors: [400, 401, 403, 404, 429],
     }),
   },
 
