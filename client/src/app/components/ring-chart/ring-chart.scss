@@ -1,0 +1,41 @@
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0 1rem;
+}
+
+// Chart.js sizes the canvas to its box, which has to be positioned and
+// have a size of its own. (Not named "ring": that is a Tailwind utility,
+// which drew its outline around the box.)
+.ring-box {
+  position: relative;
+  width: 11.5rem;
+  height: 11.5rem;
+}
+
+// Over the canvas, in the ring's hole.
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0 2.25rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+// The one big number. Poppins Regular (the app ships it, see styles.scss):
+// light, round figures - tabular, so it doesn't jiggle while counting.
+.percent {
+  font-family: Poppins, sans-serif;
+  font-weight: 400;
+  font-size: 2.75rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #203747;
+}

@@ -39,8 +39,10 @@ const formatFees = (fees) =>
     .join(', ');
 
 // GET /settings/membership-fees - members see the fees (the Felhasználók
-// page's pay dialog uses them); admins also get the change history and
-// which years are already paid for (locked).
+// page's pay dialog uses them) and the payment deadline (Klub →
+// Áttekintés shows it): the day of the year's first Tagdíj emlékeztető.
+// Admins also get the change history and which years are already paid for
+// (locked).
 export const getMembershipFees = async (req, res) => {
   const settings = await getClubSettings();
   const isAdmin = req.user.role === 'admin';
@@ -49,6 +51,10 @@ export const getMembershipFees = async (req, res) => {
     data: {
       fees: [...settings.membershipFees].sort((a, b) => a.fromYear - b.fromYear),
       foundingYear: CLUB_FOUNDING_YEAR,
+      paymentDeadline: {
+        month: settings.membershipReminder.startMonth,
+        day: settings.membershipReminder.startDay,
+      },
       ...(isAdmin
         ? { paidYears: await paidYears(), history: [...settings.history].reverse() }
         : {}),

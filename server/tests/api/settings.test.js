@@ -18,6 +18,8 @@ describe('Klub → Beállítások: membership fee by year', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.fees).toEqual([{ fromYear: 2019, amount: 1000 }]);
     expect(res.body.data.history).toBeUndefined();
+    // The payment deadline: the first reminder's day (1 March by default).
+    expect(res.body.data.paymentDeadline).toEqual({ month: 3, day: 1 });
 
     const admin = await request(app)
       .get(url)

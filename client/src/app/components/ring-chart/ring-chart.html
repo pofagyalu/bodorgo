@@ -1,0 +1,16 @@
+<div class="ring-box">
+  <canvas
+    baseChart
+    type="doughnut"
+    [data]="data()"
+    [options]="options"
+    role="img"
+    [attr.aria-label]="label()"
+  ></canvas>
+  <!-- The middle of the ring, over the canvas: the percentage (counting up
+       with the ring), then what the page puts inside the element. -->
+  <div class="center">
+    <strong class="percent" aria-hidden="true">{{ shownPercent() }}%</strong>
+    <ng-content></ng-content>
+  </div>
+</div>

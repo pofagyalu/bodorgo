@@ -355,6 +355,24 @@ button {
   height: 6rem;
   flex: none;
   transform: rotate(-9deg);
+  // It grows from its left edge, over the name field beside it.
+  transform-origin: left center;
+  transition: transform 0.25s ease;
+  position: relative;
+  cursor: zoom-in;
+}
+
+// Three times the size under the pointer (or a finger), to read what is on
+// it.
+.president-seal:hover {
+  transform: rotate(-9deg) scale(3);
+  z-index: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .president-seal {
+    transition: none;
+  }
 }
 
 // --- Értesítések: every e-mail and push (info), under the settings ---

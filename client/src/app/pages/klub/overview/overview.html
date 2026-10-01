@@ -2,7 +2,7 @@
   <section class="overview-hero">
     <div>
       <div class="kicker">Üdvözlünk a Bódorgó Klubban</div>
-      <h1>Közös célok.<br />Közös történet.</h1>
+      <h1>Közös célok. Közös történet.</h1>
       <p>
         A Bódorgó Klub tagjai közösen szervezik programjaikat és alakítják a klub életét. Itt
         követheted a tagság alakulását, a tagdíjakat és a közös pénzügyeket.
@@ -35,45 +35,37 @@
     <section class="overview-stat">
       <div class="label">Egyenleg</div>
       <strong>{{ money(totalBalance()) }}</strong>
-      <small>A klub jelenlegi pénzeszköze - összes bevétel mínusz összes kiadás</small>
+      <small>A klub jelenlegi pénzeszköze</small>
     </section>
   </div>
-
-  <section class="panel about-panel">
-    <dl class="about-list">
-      <div class="about-row">
-        <dt>Székhely</dt>
-        <dd>1038 Budapest, Hollós Korvin Lajos utca 4. szám 5. em. 50. ajtó</dd>
-      </div>
-      <div class="about-row">
-        <dt>Adószám</dt>
-        <dd>19168674-1-41</dd>
-      </div>
-      <div class="about-row">
-        <dt>Alapítás éve</dt>
-        <dd>2019</dd>
-      </div>
-    </dl>
-  </section>
 
   <div class="overview-grid">
     <section class="panel">
       <div class="panel-title">
         <h2>Tagdíjak befizetésének alakulása</h2>
-        <span>Évenként</span>
+        <span>{{ currentYear }}</span>
       </div>
-      <div class="year-chart" role="img" aria-label="Tagdíjak befizetésének aránya évenként">
-        @for (row of yearProgressChart(); track row.year) {
-          <div class="year-col">
-            <div class="bar-track">
-              <div
-                class="bar"
-                [style.height.%]="row.pct"
-                [title]="row.year + ': ' + row.done + ' / ' + row.due + ' fizetve'"
-              ></div>
-            </div>
-            <span class="year-label">{{ row.year }}</span>
-          </div>
+      <!-- This year's fees as a ring: paid and still to come, with the
+           share paid in the middle (the ring writes it) and the deadline under it. -->
+      <div class="fee-ring">
+        <app-ring-chart
+          [done]="paidThisYear().length"
+          [total]="eligibleThisYear().length"
+          [label]="
+            currentYear +
+            '. évi tagdíj: ' +
+            paidThisYear().length +
+            ' / ' +
+            eligibleThisYear().length +
+            ' befizetve'
+          "
+        >
+          <span class="ring-note"
+            >{{ paidThisYear().length }}/{{ eligibleThisYear().length }} befizetve</span
+          >
+        </app-ring-chart>
+        @if (paymentDeadline(); as deadline) {
+          <p class="ring-deadline">Határidő: {{ deadline }}</p>
         }
       </div>
       <a routerLink="/klub/felhasznalok" class="link-btn">Összes tag megtekintése →</a>
@@ -105,5 +97,20 @@
     </section>
   </div>
 
-  <p class="footnote">A klub bemutatkozó szövege és statisztikái valós adatokból számolódnak.</p>
+  <section class="panel about-panel">
+    <dl class="about-list">
+      <div class="about-row">
+        <dt>Székhely</dt>
+        <dd>1038 Budapest, Hollós Korvin Lajos utca 4. szám 5. em. 50. ajtó</dd>
+      </div>
+      <div class="about-row">
+        <dt>Adószám</dt>
+        <dd>19168674-1-41</dd>
+      </div>
+      <div class="about-row">
+        <dt>Alapítás éve</dt>
+        <dd>2019</dd>
+      </div>
+    </dl>
+  </section>
 </div>
