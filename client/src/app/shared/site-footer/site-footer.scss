@@ -1,14 +1,12 @@
-// One small line (wrapping on a narrow screen), the parts separated by
-// dots - present, but not competing with the page above it.
+// One small line, the parts separated by dots - present, but not
+// competing with the page above it. On a narrow screen it wraps as one
+// running text (a line breaks wherever it is full, mid-part too), not
+// part by part - that left half-empty lines and took far more room.
 :host {
   display: block;
 }
 
 .site-footer {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px 0;
   padding: 10px 16px;
   font-family:
     Inter,
@@ -22,10 +20,15 @@
   color: #5b6770;
   text-align: center;
 
-  span:not(:last-child)::after {
+  > span:not(:last-child)::after {
     content: '·';
-    margin: 0 8px;
+    margin: 0 0.5rem;
     color: #9aa5ab;
+  }
+
+  // Just a touch heavier than the text they name.
+  .label {
+    font-weight: 600;
   }
 
   a {

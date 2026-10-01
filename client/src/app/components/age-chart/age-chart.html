@@ -1,0 +1,17 @@
+<!-- Our own legend rather than Chart.js's: a line and a dot as the keys,
+     in the page's own type. -->
+<div class="legend">
+  <span class="legend-item"><span class="key key--line"></span>Éves átlag</span>
+  <span class="legend-item"><span class="key key--dot"></span>Egy-egy túra</span>
+</div>
+
+<div class="canvas-box">
+  <canvas
+    baseChart
+    type="line"
+    [data]="data()"
+    [options]="options()"
+    role="img"
+    aria-label="A résztvevők átlagéletkora évenként és túránként"
+  ></canvas>
+</div>

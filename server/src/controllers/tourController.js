@@ -5,6 +5,7 @@ import User from '../models/userModel.js';
 import Payment from '../models/paymentModel.js';
 import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservationController.js';
 import { tourHasEnded } from './reviewController.js';
+import { computeAge } from './userController.js';
 import { tourVideoList } from '../utils/tourVideos.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
@@ -553,6 +554,89 @@ export const updateScheduleEvent = async (req, res) => {
   res.status(200).json({ status: 'success', data: { event } });
 };
 
+const oneDecimal = (n) => Math.round(n * 10) / 10;
+
+// The homepage's age chart: how old the attendees were, tour by tour and
+// year by year. Age is the one on the tour's first day (not today's), and
+// only attendees with a birthday on file count (`count` of the `total`
+// who were there). A year's average is over every such attendance of that
+// year - so each tour weighs in by how many known ages it had, a big tour
+// more than a small one. Tours nobody with a known age attended are left
+// out, as are the years without such a tour.
+async function attendeeAgeStats() {
+  const tours = await Tour.find().select('title order slug startDate').sort('startDate');
+  const attendances = await Reservation.aggregate([
+    { $match: { tour: { $in: tours.map((t) => t._id) } } },
+    { $unwind: '$attendees' },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'attendees.user',
+        foreignField: '_id',
+        as: 'attendeeUser',
+      },
+    },
+    { $project: { tour: 1, birthday: { $first: '$attendeeUser.birthday' } } },
+  ]);
+
+  const newTally = () => ({ ageSum: 0, count: 0, total: 0, minAge: Infinity, maxAge: -Infinity });
+  const addTo = (tally, other) => {
+    tally.ageSum += other.ageSum;
+    tally.count += other.count;
+    tally.total += other.total;
+    tally.minAge = Math.min(tally.minAge, other.minAge);
+    tally.maxAge = Math.max(tally.maxAge, other.maxAge);
+  };
+  const figures = (tally) => ({
+    averageAge: oneDecimal(tally.ageSum / tally.count),
+    count: tally.count,
+    total: tally.total,
+    minAge: tally.minAge,
+    maxAge: tally.maxAge,
+  });
+
+  const startDates = new Map(tours.map((t) => [String(t._id), t.startDate]));
+  const byTour = new Map(); // tour id -> tally
+  for (const a of attendances) {
+    const id = String(a.tour);
+    if (!byTour.has(id)) byTour.set(id, newTally());
+    // A baby not yet one counts as 1 (in their first year), never as "0
+    // év". A birthday after the tour is a mistake in the data - no age.
+    const fullYears = computeAge(a.birthday, startDates.get(id));
+    const age = fullYears === null || fullYears < 0 ? null : Math.max(1, fullYears);
+    addTo(
+      byTour.get(id),
+      age === null
+        ? { ...newTally(), total: 1 }
+        : { ageSum: age, count: 1, total: 1, minAge: age, maxAge: age },
+    );
+  }
+
+  const byYear = new Map(); // year -> tally
+  const tourAges = [];
+  for (const tour of tours) {
+    const tally = byTour.get(String(tour._id));
+    if (!tally?.count) continue;
+    const year = tour.startDate.getFullYear();
+    tourAges.push({
+      title: tour.title,
+      order: tour.order,
+      slug: tour.slug,
+      year,
+      ...figures(tally),
+    });
+    if (!byYear.has(year)) byYear.set(year, newTally());
+    addTo(byYear.get(year), tally);
+  }
+
+  return {
+    tours: tourAges,
+    years: [...byYear.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([year, tally]) => ({ year, ...figures(tally) })),
+  };
+}
+
 export const getTourStats = async (req, res) => {
   // Was previously $match: { ratingsAverage: { $gte: 4.5 } } before counting
   // - a leftover from this codebase's Natours-tutorial origins where the
@@ -630,6 +714,8 @@ export const getTourStats = async (req, res) => {
   const genderRatio =
     malePercentage === null ? null : { malePercentage, femalePercentage: 100 - malePercentage };
 
+  const attendeeAges = await attendeeAgeStats();
+
   res.status(200).json({
     status: 'success',
     data: {
@@ -637,6 +723,7 @@ export const getTourStats = async (req, res) => {
       upcomingTours,
       totalParticipants,
       genderRatio,
+      attendeeAges,
       mostAttendedTour: mostAttendedTourDoc
         ? {
             _id: mostAttendedTourDoc._id,
