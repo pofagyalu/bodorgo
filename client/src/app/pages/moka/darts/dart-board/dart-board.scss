@@ -1,0 +1,156 @@
+:host {
+  display: block;
+}
+
+.board {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0.75rem 1.5rem #142a3c40);
+}
+
+// The board's edge, where the numbers are.
+.rim {
+  fill: #1f1f1d;
+}
+
+// The fields as on a real board: black and sisal singles, red and green
+// doubles and triples (the logo's red and green), alternating around.
+.single,
+.ring {
+  stroke: #c9ccd0; // the wires
+  stroke-width: 1;
+}
+
+.sector .single {
+  fill: #ead9b0;
+}
+
+.sector .ring {
+  fill: var(--logo-green);
+}
+
+.sector.even .single {
+  fill: #1f1f1d;
+}
+
+.sector.even .ring {
+  fill: var(--logo-red);
+}
+
+.number {
+  fill: var(--logo-yellow);
+  font-family: Marhey, sans-serif;
+  font-size: 24px; // in the drawing's own units, not screen pixels
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.outer-bull {
+  fill: var(--logo-green);
+  stroke: #c9ccd0; // the wires
+}
+
+.bull {
+  fill: var(--logo-red);
+  stroke: #c9ccd0; // the wires
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bull-beat 2.4s ease-in-out 1s infinite;
+}
+
+// The board builds up slice by slice, clockwise from the 20.
+.sector {
+  animation: slice-in 0.45s ease-out both;
+}
+
+@keyframes slice-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-20deg);
+  }
+}
+
+@keyframes bull-beat {
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+// When the board takes the darts: every field can be tapped, and answers
+// the finger by lighting up.
+.board.interactive {
+  touch-action: manipulation; // no double-tap zoom while tapping fast
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+
+  .field,
+  .rim {
+    cursor: pointer;
+  }
+
+  .field:active {
+    filter: brightness(1.6);
+  }
+
+  // The bullseye keeps still, to be hit.
+  .bull {
+    animation: none;
+  }
+
+  .number {
+    pointer-events: none;
+  }
+}
+
+// The field to aim at: a yellow glow over it, breathing.
+.target {
+  fill: var(--logo-yellow);
+  stroke: #fff;
+  stroke-width: 2;
+  pointer-events: none;
+  animation: target-glow 1.2s ease-in-out infinite;
+}
+
+@keyframes target-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+// A dart in the board: it lands with a little bounce.
+.dart {
+  fill: var(--logo-orange);
+  stroke: #fff;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 2px 2px #0008);
+  pointer-events: none; // a second dart can land in the same field
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dart-land 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+
+  &.miss {
+    fill: #8a8f96;
+  }
+}
+
+@keyframes dart-land {
+  from {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sector,
+  .bull,
+  .target,
+  .dart {
+    animation: none;
+  }
+}

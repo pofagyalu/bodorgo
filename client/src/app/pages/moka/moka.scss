@@ -1,0 +1,222 @@
+@use '../../shared/sidebar-nav' as nav;
+
+// Same layout and colors as the Klub and Média shells (klub.scss,
+// media.scss) - a persistent dark sidebar beside the page.
+:host {
+  display: block;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+.moka-shell {
+  display: grid;
+  grid-template-columns: nav.$sidebar-width minmax(0, 1fr);
+  min-height: calc(100dvh - var(--header-height));
+  background: #f5f7f5;
+}
+
+.moka-sidebar {
+  background: #142a3c;
+  color: #e7f0ee;
+  padding: 1.875rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.875rem;
+  // Pinned below the site header, like the Klub sidebar.
+  position: sticky;
+  top: 0;
+  height: calc(100dvh - var(--header-height));
+  overflow-y: auto;
+}
+
+.moka-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0.5rem;
+}
+
+.brand-mark {
+  width: 2.625rem;
+  height: 2.625rem;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  // The logo's warm colors - Móka's own in the main menu too.
+  background: linear-gradient(135deg, var(--logo-yellow), var(--logo-orange), var(--logo-red));
+  color: #fff;
+  border-radius: 0.8125rem;
+
+  mat-icon {
+    font-size: 1.625rem;
+    width: 1.625rem;
+    height: 1.625rem;
+  }
+}
+
+.brand-text strong {
+  font-size: 1.0625rem;
+  letter-spacing: -0.03em;
+}
+
+.brand-text small {
+  display: block;
+  color: #9eb5bf;
+  font-size: 0.6875rem;
+  margin-top: 0.125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.moka-nav {
+  display: grid;
+  gap: 0.4375rem;
+}
+
+.moka-nav .nav-item {
+  padding: 0.8125rem 0.9375rem;
+  border-radius: 0.6875rem;
+  color: #a9bdc5;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+
+  mat-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    font-size: 1.125rem;
+  }
+
+  &:not(.coming) {
+    @include nav.nav-item-glow;
+  }
+
+  &.active {
+    font-weight: 650;
+  }
+
+  &.coming {
+    border: 1px solid transparent;
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.soon {
+  margin-left: auto;
+  font-size: 0.625rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f7b37f;
+  background: #f0782722;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+}
+
+.side-bottom {
+  margin-top: auto;
+  padding: 1.125rem 0.875rem;
+  background: #233f50;
+  border-radius: 0.9375rem;
+  font-size: 0.8125rem;
+  color: #c1d5d7;
+  line-height: 1.5;
+}
+
+.side-bottom strong {
+  color: #fff;
+  display: block;
+  margin-bottom: 0.3125rem;
+}
+
+.moka-main {
+  min-width: 0;
+}
+
+.moka-mobile-nav {
+  display: none;
+}
+
+// Same breakpoints as the Klub shell (klub.scss): first the sidebar
+// collapses to an icon rail...
+@media (max-width: 1050px) {
+  .moka-shell {
+    grid-template-columns: 5.125rem 1fr;
+  }
+
+  .moka-sidebar {
+    padding: 1.375rem 0.875rem;
+  }
+
+  .moka-brand {
+    padding: 0;
+    justify-content: center;
+  }
+
+  .brand-text,
+  .side-bottom,
+  .soon {
+    display: none;
+  }
+
+  .moka-nav .nav-item {
+    justify-content: center;
+    padding: 0.875rem;
+  }
+
+  .moka-nav .nav-item span {
+    display: none;
+  }
+}
+
+// ...and only on a phone (narrow AND touch - a narrowed desktop window
+// keeps the icon rail) does it give way to tabs above the page.
+@media (max-width: 580px) and (hover: none) {
+  .moka-shell {
+    display: block;
+  }
+
+  .moka-sidebar {
+    display: none;
+  }
+
+  .moka-mobile-nav {
+    display: flex;
+    overflow-x: auto;
+    background: #fff;
+    border-bottom: 1px solid #e4eae7;
+    gap: 0.3125rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .moka-mobile-nav a,
+  .moka-mobile-nav .coming {
+    flex: none;
+    white-space: nowrap;
+    border-radius: 0.5rem;
+    padding: 0.5625rem 0.75rem;
+    color: #4a5b63;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    text-decoration: none;
+
+    &.active {
+      background: #e8f3ee;
+      color: #196959;
+    }
+  }
+
+  .moka-mobile-nav .coming {
+    opacity: 0.5;
+  }
+}

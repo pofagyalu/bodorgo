@@ -3,6 +3,7 @@ import { Home } from './pages/home/home';
 import { memberGuard } from './auth/member.guard';
 import { adminGuard } from './auth/admin.guard';
 import { authGuard } from './auth/auth.guard';
+import { mokaGuard } from './auth/moka.guard';
 
 // Home stays eager since it's the near-universal first page hit; every
 // other route is lazy so its own code (and whatever heavy libraries it
@@ -117,6 +118,33 @@ export const routes: Routes = [
         path: 'zene/buli',
         title: 'Média – Buli rádió',
         loadComponent: () => import('./pages/media/music/party').then((m) => m.Party),
+      },
+    ],
+  },
+  {
+    // Móka: the games - Darts first (the server's side: src/jatekok).
+    path: 'moka',
+    canActivate: [mokaGuard],
+    loadComponent: () => import('./pages/moka/moka').then((m) => m.Moka),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'darts' },
+      {
+        path: 'darts',
+        title: 'Móka – Darts',
+        loadComponent: () => import('./pages/moka/darts/darts-home').then((m) => m.DartsHome),
+      },
+      // Before darts/:id, so "uj" isn't taken for a game's id.
+      {
+        path: 'darts/uj',
+        title: 'Darts – Új játék',
+        loadComponent: () =>
+          import('./pages/moka/darts/darts-setup/darts-setup').then((m) => m.DartsSetup),
+      },
+      {
+        path: 'darts/:id',
+        title: 'Darts',
+        loadComponent: () =>
+          import('./pages/moka/darts/darts-game/darts-game').then((m) => m.DartsGamePage),
       },
     ],
   },
