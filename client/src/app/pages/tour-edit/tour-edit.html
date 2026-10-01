@@ -171,6 +171,26 @@
           </p>
         }
 
+        <!-- Fizetési módok: how the rest (Fizetendő) can be paid at the house -
+             the attendee list's Fizetendő symbol and the Programfüzet show it
+             (see pay-methods, server utils/onSitePayment.js). -->
+        <fieldset class="pay-methods form-field-full">
+          <legend>Fizetési módok a szálláson</legend>
+          <div class="pay-checks">
+            @for (m of payMethodOptions; track m.key) {
+              <label class="pay-check" [class.pay-check--on]="form.payment[m.key]">
+                <input type="checkbox" [(ngModel)]="form.payment[m.key]" [name]="'pay-' + m.key" />
+                <app-pay-method-icon [method]="m.key" />
+                {{ m.label }}
+              </label>
+            }
+          </div>
+        </fieldset>
+        <p class="field-note">
+          A résztvevők listáján a Fizetendő melletti kis jelre mutatva látszik, és a Programfüzetbe
+          is bekerül.
+        </p>
+
         <div class="form-row">
           <label
             >Klub hozzájárulása (Ft)

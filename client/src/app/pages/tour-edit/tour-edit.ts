@@ -1,7 +1,8 @@
 import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { TourService, TourPayload, AccommodationHouse } from '../../services/tour';
+import { TourService, TourPayload, AccommodationHouse, OnSitePayment } from '../../services/tour';
+import { PayMethodIcon, PayMethodKey } from '../../shared/pay-method-icon/pay-method-icon';
 import { AuthService } from '../../auth/auth.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { environment } from '../../../environments/environment';
@@ -46,6 +47,12 @@ interface TourEditForm {
   childAgeLimitYears: number | null;
   advancePaymentPercentage: number | null;
   clubSubsidyAmount: number | null;
+  // Fizetési módok: how the rest can be paid at the house.
+  payment: OnSitePayment;
+}
+
+function emptyPayment(): OnSitePayment {
+  return { cash: false, card: false, szep: false };
 }
 
 function emptyForm(): TourEditForm {
@@ -73,6 +80,7 @@ function emptyForm(): TourEditForm {
     // 0 ("no club money this time") is the common case, not an unusual
     // exception, so it starts filled in rather than blank.
     clubSubsidyAmount: 0,
+    payment: emptyPayment(),
   };
 }
 
@@ -91,7 +99,7 @@ function toDatetimeLocal(iso: string): string {
 @Component({
   selector: 'app-tour-edit',
   standalone: true,
-  imports: [FormsModule, RouterLink, CropDialog, AccommodationEditor],
+  imports: [FormsModule, RouterLink, CropDialog, AccommodationEditor, PayMethodIcon],
   templateUrl: './tour-edit.html',
   styleUrl: './tour-edit.scss',
 })
@@ -113,6 +121,14 @@ export class TourEdit implements OnDestroy {
   saving = signal(false);
   error = signal<string | null>(null);
   form: TourEditForm = emptyForm();
+
+  // --- Fizetési módok ---
+
+  readonly payMethodOptions: { key: PayMethodKey; label: string }[] = [
+    { key: 'cash', label: 'Készpénz' },
+    { key: 'card', label: 'Bankkártya' },
+    { key: 'szep', label: 'SZÉP kártya' },
+  ];
 
   get isEditMode(): boolean {
     return this.tourId !== null;
@@ -174,6 +190,7 @@ export class TourEdit implements OnDestroy {
           childAgeLimitYears: t.childAgeLimitYears ?? null,
           advancePaymentPercentage: t.advancePaymentPercentage ?? null,
           clubSubsidyAmount: t.clubSubsidyAmount ?? 0,
+          payment: t.onSitePayment ? { ...t.onSitePayment } : emptyPayment(),
         };
         this.loading.set(false);
       },
@@ -292,6 +309,7 @@ export class TourEdit implements OnDestroy {
       // anyway (see reservationController.js's CLUB_FOUNDING_DATE), but
       // there's no reason to persist a misleading number either.
       clubSubsidyAmount: this.subsidyAllowed ? (f.clubSubsidyAmount ?? undefined) : 0,
+      onSitePayment: f.payment,
     };
 
     const wasEditMode = this.isEditMode;

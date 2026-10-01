@@ -654,7 +654,8 @@ const paths = {
       tag: T.tours,
       role: 'admin',
       summary: 'Update a tour',
-      description: 'Any tour fields. Setting the advance to exactly 0 marks every attendee paid.',
+      description:
+        'Any tour fields. Setting the advance to exactly 0 marks every attendee paid. `onSitePayment` (Fizetési módok - how the rest is paid at the house): `{ cash, card, szep }` (szep: SZÉP kártya). Shown to attendees on the attendee list (the Fizetendő column) and in the Programfüzet.',
       params: [tourId],
       body: ref('Tour'),
       data: obj({ tour: ref('Tour') }),

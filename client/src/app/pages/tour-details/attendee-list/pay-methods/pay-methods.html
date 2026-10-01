@@ -1,0 +1,45 @@
+@if (hasInfo()) {
+  <!-- The whole header is the target (easy to hit by finger too), lit up
+       lightly, with a small raised symbol like the % after Előleg -
+       pointing at it (or a tap) shows how the rest can be paid. -->
+  <span
+    class="trigger"
+    [class.trigger--open]="open()"
+    tabindex="0"
+    role="button"
+    aria-label="Fizetendő - hogyan fizethető a maradék a szálláson?"
+    [attr.aria-expanded]="open()"
+    (pointerenter)="onEnter($event)"
+    (pointerleave)="onLeave($event)"
+    (click)="toggle()"
+    (keydown.enter)="toggle()"
+    (keydown.escape)="close()"
+    >{{ label() }}<span class="mark"><mat-icon>payments</mat-icon></span></span
+  >
+} @else {
+  {{ label() }}
+}
+
+<!-- The bubble: how the rest can be paid at the house. -->
+@if (open()) {
+  <div
+    class="bubble"
+    [class.bubble--below]="pos().below"
+    [style.left.px]="pos().left"
+    [style.top.px]="pos().top"
+    [style.bottom.px]="pos().bottom"
+    role="tooltip"
+    (pointerenter)="onEnter($event)"
+    (pointerleave)="onLeave($event)"
+  >
+    <p class="bubble-title">A maradékot a szálláson fizetheted:</p>
+    <ul class="bubble-methods">
+      @for (m of methods(); track m.key; let i = $index) {
+        <li [style.--i]="i">
+          <app-pay-method-icon class="bubble-icon" [method]="m.key" />
+          <span class="bubble-label">{{ m.label }}</span>
+        </li>
+      }
+    </ul>
+  </div>
+}

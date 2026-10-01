@@ -257,6 +257,13 @@ const tourSchema = new Schema(
         default: false,
       },
     },
+    // Fizetési módok: how the rest (Fizetendő) can be paid at the house -
+    // set on the tour edit form, shown on the attendee list and in the
+    // Programfüzet (see utils/onSitePayment.js). Unset until then.
+    onSitePayment: {
+      type: { _id: false, cash: Boolean, card: Boolean, szep: Boolean },
+      default: undefined,
+    },
     schedule: [
       {
         day: {

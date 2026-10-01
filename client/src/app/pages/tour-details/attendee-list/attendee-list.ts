@@ -11,12 +11,13 @@ import {
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { TourService, PaymentTotals, Cancellation } from '../../../services/tour';
+import { TourService, PaymentTotals, Cancellation, OnSitePayment } from '../../../services/tour';
 import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { formatForint } from '../../../shared/format';
 import { Avatar } from '../../../components/avatar/avatar';
+import { PayMethods } from './pay-methods/pay-methods';
 
 export interface AttendeeListRow {
   reservationId: string;
@@ -85,7 +86,7 @@ export interface FamilySubtotal {
 @Component({
   selector: 'app-attendee-list',
   standalone: true,
-  imports: [FormsModule, MatIconModule, Avatar, DatePipe],
+  imports: [FormsModule, MatIconModule, Avatar, DatePipe, PayMethods],
   templateUrl: './attendee-list.html',
   styleUrl: './attendee-list.scss',
 })
@@ -112,6 +113,9 @@ export class AttendeeList implements OnInit {
   // component recomputing totals itself, keeping the payment formula in
   // exactly one place (the server).
   @Output() nightsUpdated = new EventEmitter<void>();
+  // The tour's Fizetési módok - the Fizetendő header's bubble (see
+  // pay-methods).
+  @Input() paymentMethods: OnSitePayment | null | undefined = null;
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   readonly formatForint = formatForint;

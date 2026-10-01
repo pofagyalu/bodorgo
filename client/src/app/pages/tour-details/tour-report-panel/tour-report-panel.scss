@@ -225,10 +225,12 @@
   color: #1a796c;
 }
 
-// A day: its label (as on the PDF) and its editor.
+// A day: its label (as on the PDF) and its editor - a little apart from
+// the next one.
 .day {
   display: grid;
   gap: 0.375rem;
+  margin-bottom: 0.75rem;
 }
 
 .day-head {
@@ -271,7 +273,10 @@
     background: #f7faf8;
   }
 
+  // height: auto - Quill's own 100% made each editor taller than its box,
+  // running into the next day's (same fix as the poll dialog's).
   ::ng-deep .ql-container.ql-snow {
+    height: auto;
     border: 1px solid #d4dfda;
     border-top: 0;
     border-radius: 0 0 0.625rem 0.625rem;
