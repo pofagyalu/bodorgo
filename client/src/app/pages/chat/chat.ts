@@ -18,7 +18,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { Feed } from '../../components/feed/feed';
 import { RoomBoard } from './room-board/room-board';
 import { TourService, Tour } from '../../services/tour';
-import { ChatOverview, ChatService } from '../../services/chat';
+import { ChatGame, ChatOverview, ChatService } from '../../services/chat';
+import { Podium, PodiumWinner } from '../../shared/podium/podium';
 import { ChatList } from './chat-list/chat-list';
 import { TourCountdown } from '../../shared/tour-countdown/tour-countdown';
 import { PushService } from '../../services/push';
@@ -33,6 +34,10 @@ const PHONE_QUERY = '(max-width: 580px)';
 // and how long after leaving a chat (the server notes it as read then).
 const OVERVIEW_REFRESH_MS = 60_000;
 const OVERVIEW_AFTER_LEAVING_MS = 600;
+// The podium's try-out (?dobogo=proba): the first winner after this long,
+// the next ones this far apart - each celebration (5 s) has time to end.
+const PREVIEW_FIRST_MS = 2000;
+const PREVIEW_EVERY_MS = 7000;
 
 // The Szobabeosztás panel's width next to the chat, in px (see
 // startResize) - remembered per browser, just a convenience.
@@ -99,6 +104,7 @@ const GENERAL = 'general';
     TourCountdown,
     NgTemplateOutlet,
     ChatList,
+    Podium,
   ],
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
@@ -142,6 +148,73 @@ export class Chat implements OnInit, OnDestroy {
     const tour = this.selectedTour();
     return !!tour && !isChatOpen(tour) && tour.order !== ALWAYS_WRITABLE_TOUR_ORDER;
   });
+
+  // --- The launch game: "the first three to write in Bódorgók" ---
+  // Its podium stands at the top of the general room while there's
+  // something to show (the server decides - chat/firstWritersGame.js).
+  // Each new winner arrives over the socket ('chat-game') and is
+  // celebrated on the spot; opened later, the winners are simply there.
+  game = signal<ChatGame | null>(null);
+  private previewing = () => this.route.snapshot.queryParamMap.get('dobogo') === 'proba';
+  private podium = viewChild(Podium);
+  podiumWinners = computed<PodiumWinner[]>(() =>
+    (this.game()?.winners ?? []).map((w) => ({
+      place: w.place,
+      userId: w.userId,
+      name: w.username || w.name,
+      photoVersion: w.photoUpdatedAt,
+    })),
+  );
+  private offGame?: () => void;
+
+  private loadGame() {
+    this.chatService.getGeneralGame().subscribe({
+      next: (res) => this.game.set(res.data.game),
+      error: () => {}, // no podium - the chat itself still works
+    });
+  }
+
+  // A try-out, without the game: /chat?dobogo=proba shows the podium in
+  // the general room and fills it with three made-up winners, a few
+  // seconds apart, each with its celebration. Nothing is sent or saved.
+  private previewGame() {
+    const names = ['Próba Panni', 'Teszt Tomi', 'Minta Misi'];
+    const startedAt = new Date().toISOString();
+    const state = (count: number): ChatGame => ({
+      startedAt,
+      finishedAt: count === names.length ? new Date().toISOString() : null,
+      places: names.length,
+      winners: names.slice(0, count).map((name, i) => ({
+        place: (i + 1) as 1 | 2 | 3,
+        userId: `proba-${i}`,
+        name,
+        username: null,
+        photoUpdatedAt: null,
+        at: startedAt,
+      })),
+    });
+    this.game.set(state(0));
+    names.forEach((_, i) =>
+      setTimeout(
+        () => {
+          this.game.set(state(i + 1));
+          setTimeout(() => this.podium()?.celebrate(i + 1));
+        },
+        PREVIEW_FIRST_MS + i * PREVIEW_EVERY_MS,
+      ),
+    );
+  }
+
+  private watchGame() {
+    this.offGame = this.tourSocket.on<{ game: ChatGame | null; newPlace: number | null }>(
+      'chat-game',
+      ({ game, newPlace }) => {
+        this.game.set(game);
+        // Once the new winner is on the page.
+        if (newPlace) setTimeout(() => this.podium()?.celebrate(newPlace));
+      },
+    );
+  }
 
   // --- The list's data: last message, unread count, people per room ---
   overview = signal<ChatOverview | null>(null);
@@ -220,6 +293,8 @@ export class Chat implements OnInit, OnDestroy {
 
   private openRoom(key: string) {
     if (key !== this.selected()) this.refreshOverviewSoon();
+    // The podium as it stands now (its live changes only reach an open chat).
+    if (key === GENERAL && !this.previewing()) this.loadGame();
     this.selected.set(key);
     this.activePane.set('chat');
     this.listOnPhone.set(false);
@@ -269,6 +344,13 @@ export class Chat implements OnInit, OnDestroy {
     document.addEventListener('visibilitychange', this.onVisible);
     this.phoneQuery.addEventListener('change', this.onPhoneChange);
     this.loadOverview();
+    if (this.route.snapshot.queryParamMap.get('dobogo') === 'proba') {
+      this.listOnPhone.set(false); // straight into the general room
+      this.previewGame();
+    } else {
+      this.loadGame();
+      this.watchGame();
+    }
     this.tourService.getTours().subscribe({
       next: (res) => {
         const list = [...res.data.tours].sort(
@@ -300,6 +382,7 @@ export class Chat implements OnInit, OnDestroy {
     document.removeEventListener('visibilitychange', this.onVisible);
     this.phoneQuery.removeEventListener('change', this.onPhoneChange);
     clearInterval(this.overviewTimer);
+    this.offGame?.();
   }
 
   // --- "Másik háttér" (admins): the open feed switches its own background ---

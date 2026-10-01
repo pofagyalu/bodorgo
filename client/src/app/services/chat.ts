@@ -34,6 +34,23 @@ export interface ChatOverview {
   tours: (ChatRoomSummary & { tourId: string; past: boolean; closed: boolean })[];
 }
 
+// The launch game's podium (GET /chat-rooms/general/game, and the socket's
+// 'chat-game'): "the first three to write in Bódorgók" - see the server's
+// chat/firstWritersGame.js.
+export interface ChatGame {
+  startedAt: string;
+  finishedAt: string | null;
+  places: number;
+  winners: {
+    place: 1 | 2 | 3;
+    userId: string;
+    name: string;
+    username: string | null;
+    photoUpdatedAt: string | null;
+    at: string;
+  }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private http = inject(HttpClient);
@@ -54,6 +71,11 @@ export class ChatService {
   // The club-wide room - made on first use.
   getGeneralChatRoom() {
     return this.http.get<{ data: { chatRoom: ChatRoom } }>(`${this.apiUrl}/general`);
+  }
+
+  // The launch game's podium - null when there's nothing to show.
+  getGeneralGame() {
+    return this.http.get<{ data: { game: ChatGame | null } }>(`${this.apiUrl}/general/game`);
   }
 
   // Who can be "@"-mentioned in the general room - everyone with a

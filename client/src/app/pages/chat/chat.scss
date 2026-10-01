@@ -216,6 +216,11 @@
   box-sizing: border-box;
 }
 
+// The launch game's podium: its own height, above the chat.
+app-podium {
+  flex: none;
+}
+
 // The phone's own pieces (see the phone block at the end).
 .chat-list-screen,
 .room-bar {

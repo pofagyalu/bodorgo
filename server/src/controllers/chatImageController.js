@@ -24,6 +24,7 @@ import {
   tourChatPast,
   tourChatRoom,
 } from '../chat/chatRooms.js';
+import { currentGame } from '../chat/firstWritersGame.js';
 import ChatRoom from '../models/chatRoomModel.js';
 import ChatReadState from '../models/chatReadStateModel.js';
 import Reservation from '../models/reservationModel.js';
@@ -253,6 +254,13 @@ export const getChatOverview = async (req, res) => {
       tours: tourEntries,
     },
   });
+};
+
+// GET /chat-rooms/general/game - the launch game's podium ("the first three
+// to write in Bódorgók", see chat/firstWritersGame.js): null when there's
+// nothing to show - not started yet, or over for more than a day.
+export const getGeneralGame = async (req, res) => {
+  res.status(200).json({ status: 'success', data: { game: await currentGame() } });
 };
 
 // GET /chat-rooms/general/people - who can be "@"-mentioned in the general

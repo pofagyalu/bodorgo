@@ -1216,6 +1216,15 @@ const paths = {
       data: obj({ chatRoom: ref('ChatRoom') }),
     }),
   },
+  '/chat-rooms/general/game': {
+    get: op({
+      tag: T.chat,
+      summary: "The launch game's podium",
+      description:
+        'The one-off game "the first three to write in Bódorgók". It starts with the organizer\'s (INITIAL_ADMIN_USER) first text message in the general room; the first three other people to send a text message there (a photo or a reaction does not count) take the three places, one each. `game` is null when there is nothing to show: not started yet, or finished more than a day ago. Otherwise it has `startedAt`, `finishedAt` (null while it runs), `places` (3) and the `winners` so far in order (`place`, `userId`, `name`, `username`, `photoUpdatedAt`, `at`). Live: every new winner is sent to the room over the socket as `chat-game` ({ game, newPlace }). When the last place is taken the result is posted in the chat in the organizer\'s name.',
+      data: obj({ game: { type: 'object' } }),
+    }),
+  },
   '/chat-rooms/general/people': {
     get: op({
       tag: T.chat,

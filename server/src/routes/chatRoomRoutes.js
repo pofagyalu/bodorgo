@@ -5,6 +5,7 @@ import {
   getChatImageThumb,
   getChatOverview,
   getGeneralChatRoom,
+  getGeneralGame,
   getGeneralPeople,
   postChatImage,
 } from '../controllers/chatImageController.js';
@@ -22,6 +23,8 @@ router.use(requireAuth);
 router.get('/overview', getChatOverview);
 router.get('/general', getGeneralChatRoom);
 router.get('/general/people', getGeneralPeople);
+// The launch game's podium (chat/firstWritersGame.js).
+router.get('/general/game', getGeneralGame);
 // A poll from the general room - anyone logged in (see pollController.js).
 router.post('/general/polls', createGeneralPoll);
 router.post('/:chatRoomId/images', chatImageUpload, postChatImage);

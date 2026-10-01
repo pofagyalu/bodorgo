@@ -1,0 +1,153 @@
+// A winners' podium: three steps side by side, standing on one line - the
+// 1st in the middle and the tallest. Gold, silver and bronze.
+:host {
+  --gold: #f6b528;
+  --silver: #b8c2c9;
+  --bronze: #c98a4b;
+  display: block;
+  padding: 0.6rem 0.75rem 0;
+  background: linear-gradient(180deg, #fff8e6, #fff);
+  border-bottom: 1px solid #ecdcae;
+}
+
+.title {
+  margin: 0 0 0.4rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a6d1d;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.4rem;
+  max-width: 26rem;
+  margin: 0 auto;
+}
+
+.step {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+}
+
+// Who stands on the step: the face, the name under it.
+.standing {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+  max-width: 100%;
+  padding-bottom: 0.3rem;
+}
+
+.face {
+  display: block;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.15rem #fff;
+  // Without a photo: the initials.
+  background: #2b4a5e;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.step--first .face {
+  width: 3.2rem;
+  height: 3.2rem;
+}
+
+.face--empty {
+  display: grid;
+  place-items: center;
+  background: #eef2f0;
+  color: #9aa7ad;
+  font-weight: 800;
+}
+
+.name {
+  max-width: 100%;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #203747;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.name--empty {
+  font-weight: 500;
+  font-style: italic;
+  color: #9aa7ad;
+}
+
+// The step: a block with its number, its height by its place.
+.block {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  border-radius: 0.5rem 0.5rem 0 0;
+  color: #fff;
+  box-shadow: inset 0 0.2rem 0 rgba(255, 255, 255, 0.35);
+}
+
+.number {
+  font-size: 1.3rem;
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.step--first .block {
+  height: 3.4rem;
+  background: var(--gold);
+}
+
+.step--second .block {
+  height: 2.5rem;
+  background: var(--silver);
+}
+
+.step--third .block {
+  height: 1.8rem;
+  background: var(--bronze);
+}
+
+// Just arrived: the winner rises onto the step, which glows.
+.step--arrived .standing {
+  animation: rise 0.7s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.step--arrived .block {
+  animation: glow 1.2s ease-in-out 2;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.6);
+  }
+}
+
+@keyframes glow {
+  50% {
+    filter: brightness(1.25);
+    box-shadow:
+      inset 0 0.2rem 0 rgba(255, 255, 255, 0.35),
+      0 0 1.2rem rgba(246, 181, 40, 0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step--arrived .standing,
+  .step--arrived .block {
+    animation: none;
+  }
+}
