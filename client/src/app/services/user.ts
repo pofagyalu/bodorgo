@@ -18,6 +18,9 @@ export interface AdminUser {
   _id: string;
   name: string;
   username?: string;
+  // Their number for the Futókör - only in one user's own record (the edit
+  // page), for an admin to tell them.
+  futokod?: string;
   email?: string;
   familyId?: string;
   role: string;
@@ -128,6 +131,9 @@ export interface MyProfile {
   address?: UserAddress;
   photoUpdatedAt: string | null;
   photoSetBy: 'admin' | 'self' | null;
+  // My own four-digit number for the Futókör: to run with from any phone,
+  // without logging in.
+  futokod: string | null;
 }
 
 export interface PhotoResponse {

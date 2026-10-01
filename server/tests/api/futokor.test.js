@@ -4,6 +4,8 @@ import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember, createTour } from '../helpers/factories.js';
 import { FutokorRun, FutokorScan } from '../../src/models/futokorModels.js';
 import { tagToken, verifyTagToken } from '../../src/futokor/tags.js';
+import User from '../../src/models/userModel.js';
+import { ensureFutokodok } from '../../src/utils/futokod.js';
 
 // Futókör over HTTP (the rules of a run: tests/unit/futokorRunRules.test.js).
 
@@ -298,5 +300,76 @@ describe('Futókör: running', () => {
     });
     const { runs } = (await get(owner, '/active')).body.data;
     expect(runs).toMatchObject([{ status: 'finished', paceSecPerKm: 167, flagged: true }]);
+  });
+});
+
+describe('Futókód', () => {
+  const codeOf = async (user) => (await User.findById(user._id).select('+futokod')).futokod;
+
+  it('everyone has their own - theirs and the admins’ to see, nobody else’s', async () => {
+    const owner = await createOwner();
+    const anna = await createGuest({ name: 'Kiss Anna' });
+    const code = await codeOf(anna);
+    expect(code).toMatch(/^[1-9]\d{3}$/);
+    expect(code).not.toBe(await codeOf(owner));
+
+    const me = await request(app).get('/users/me').set(asUser(anna));
+    expect(me.body.data.futokod).toBe(code);
+    const edit = await request(app).get(`/users/${anna._id}`).set(asUser(owner));
+    expect(edit.body.data.user.futokod).toBe(code);
+    // The members' list of everyone doesn't carry it.
+    const all = await request(app)
+      .get('/users')
+      .set(asUser(await createMember()));
+    expect(JSON.stringify(all.body)).not.toContain(code);
+  });
+
+  it('is given at the server start to whoever has none', async () => {
+    const anna = await createGuest();
+    await User.updateOne({ _id: anna._id }, { $unset: { futokod: 1 } });
+    expect(await codeOf(anna)).toBeUndefined();
+    await ensureFutokodok();
+    expect(await codeOf(anna)).toMatch(/^\d{4}$/);
+  });
+
+  it('runs a course from a phone nobody is logged in on', async () => {
+    const owner = await createOwner();
+    // A child: no login, no part in what is still being built.
+    const peti = await createGuest({ name: 'Kis Peti' });
+    const code = await codeOf(peti);
+    const course = await openCourse(owner);
+
+    const bundle = await request(app).get('/futokor/course');
+    expect(bundle.status).toBe(200);
+    expect(bundle.body.data.course._id).toBe(course._id);
+    const who = await request(app).post('/futokor/runner').send({ code });
+    expect(who.body.data).toEqual({ name: 'Kis Peti' });
+    expect((await request(app).post('/futokor/runner').send({ code: '0000' })).status).toBe(404);
+
+    const sent = await request(app)
+      .post('/futokor/scans')
+      .send({ runnerCode: code, scans: lap(0, 300) });
+    expect(sent.status).toBe(200);
+    expect(sent.body.data.runs[0].runs).toMatchObject([{ status: 'finished', totalMs: 300000 }]);
+    const board = await get(owner, `/courses/${course._id}/leaderboard`);
+    expect(board.body.data.runners.map((r) => r.name)).toEqual(['Kis Peti']);
+
+    // Without a code, and not logged in: nothing. A wrong code: nobody.
+    expect((await request(app).post('/futokor/scans').send({ scans: [] })).status).toBe(401);
+    const wrong = await request(app).post('/futokor/scans').send({ runnerCode: '0000', scans: [] });
+    expect(wrong.status).toBe(404);
+  });
+
+  it('on a lent phone the code decides whose run it is, not who is logged in', async () => {
+    const owner = await createOwner();
+    const peti = await createGuest({ name: 'Kis Peti' });
+    const course = await openCourse(owner);
+    await post(owner, '/scans', { runnerCode: await codeOf(peti), scans: lap(0, 300) });
+    const board = await get(owner, `/courses/${course._id}/leaderboard`);
+    expect(board.body.data.runners.map((r) => r.name)).toEqual(['Kis Peti']);
+    expect((await get(owner, '/active')).body.data).toMatchObject({
+      runs: [],
+      runner: { name: 'Nagy Zoli' },
+    });
   });
 });

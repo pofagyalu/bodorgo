@@ -91,6 +91,14 @@
             />
           </div>
 
+          <!-- My number for the Futókör: to run with from any phone. -->
+          @if (p.futokod) {
+            <div class="field">
+              <label for="pFutokod">Futókód</label>
+              <input id="pFutokod" type="text" [value]="p.futokod" disabled />
+            </div>
+          }
+
           <div class="field">
             <label for="pLastLogin">Utolsó belépés</label>
             <input

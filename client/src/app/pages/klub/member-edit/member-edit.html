@@ -70,6 +70,15 @@
             }
           </div>
 
+          <!-- Their number for the Futókör - an admin can tell it to them
+               (a child, someone without the app). -->
+          @if (user()?.futokod; as futokod) {
+            <div class="field">
+              <label for="mFutokod">Futókód</label>
+              <input id="mFutokod" type="text" [value]="futokod" disabled />
+            </div>
+          }
+
           <div class="field">
             <label for="mEmail">E-mail cím</label>
             <input

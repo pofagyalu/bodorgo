@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 // The rules of a run: the very file the server uses (plain JavaScript, with
@@ -74,6 +74,16 @@ interface QueuedScan {
   token?: string;
   deviceTime: string;
   action?: 'restart' | 'giveUp';
+  // Whose it is, if they run with their futókód (not as whoever is logged
+  // in on this phone).
+  runnerCode?: string;
+}
+
+// Who runs on this phone: whoever is logged in on it - or someone who gave
+// their futókód (`code`), on a phone nobody is logged in on, or a lent one.
+export interface Runner {
+  name: string;
+  code?: string;
 }
 
 // What a card (or giving up) came to, for the big green / red answer. Two
@@ -88,6 +98,8 @@ export interface ScanAnswer extends Omit<ScanOutcome, 'result'> {
 const COURSE_KEY = 'futokor-course';
 const RUN_KEY = 'futokor-run';
 const QUEUE_KEY = 'futokor-queue';
+const ME_KEY = 'futokor-me';
+const CODE_RUNNER_KEY = 'futokor-runner';
 // As many as the server takes in one request.
 const BATCH = 40;
 
@@ -136,6 +148,17 @@ export class FutokorService {
   serverRuns = signal<FutokorRun[]>([]);
   syncing = signal(false);
 
+  // Whoever is logged in on this phone - remembered, so the phone knows it
+  // in the garden too, where it can't ask.
+  private me = signal<Runner | null>(load<Runner>(ME_KEY));
+  // Someone running with their futókód instead.
+  private codeRunner = signal<Runner | null>(load<Runner>(CODE_RUNNER_KEY));
+  runner = computed(() => this.codeRunner() ?? this.me());
+  // The phone's own (logged-in) runner, while someone else runs by code.
+  owner = this.me.asReadonly();
+  // Something the runner has to know: a futókód the server didn't know.
+  problem = signal('');
+
   waiting = computed(() => this.queue().length);
   // The card to find next - null when it's the FINISH (or nothing is on).
   next = computed(() => {
@@ -158,20 +181,76 @@ export class FutokorService {
   async refresh(): Promise<void> {
     try {
       const res = await firstValueFrom(
-        this.http.get<{ data: { course: FutokorCourse | null; runs: FutokorRun[] } }>(
-          `${this.apiUrl}/active`,
-        ),
+        this.http.get<{
+          data: { course: FutokorCourse | null; runs: FutokorRun[]; runner: { name: string } };
+        }>(`${this.apiUrl}/active`),
       );
-      const { course, runs } = res.data;
-      // A different course: the old one's run isn't this one's.
-      if (course?._id !== this.course()?._id) this.setRun(null);
-      this.course.set(course);
-      save(COURSE_KEY, course);
-      this.serverRuns.set(runs);
-    } catch {
-      // Offline, most likely.
+      this.setCourse(res.data.course);
+      this.me.set({ name: res.data.runner.name });
+      save(ME_KEY, this.me());
+      if (!this.codeRunner()) this.serverRuns.set(res.data.runs);
+    } catch (err) {
+      // Nobody is logged in here (or not someone who is in yet): the course
+      // is everyone's to get - they run with a futókód. Without a
+      // connection what's on the phone stays as it is.
+      if (err instanceof HttpErrorResponse && [401, 403].includes(err.status)) {
+        this.me.set(null);
+        save(ME_KEY, null);
+        await this.loadPublicCourse();
+      }
     }
     await this.sync();
+  }
+
+  private async loadPublicCourse() {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ data: { course: FutokorCourse | null } }>(`${this.apiUrl}/course`),
+      );
+      this.setCourse(res.data.course);
+    } catch {
+      // Offline.
+    }
+  }
+
+  private setCourse(course: FutokorCourse | null) {
+    // A different course: the old one's run isn't this one's.
+    if (course?._id !== this.course()?._id) this.setRun(null);
+    this.course.set(course);
+    save(COURSE_KEY, course);
+  }
+
+  // Someone gives their futókód to run with. Answers their name - 'unknown'
+  // if there's no such code, null if there's no connection to ask (the code
+  // is then taken as it is, and checked when the scans go up).
+  async runWithCode(code: string): Promise<string | 'unknown' | null> {
+    let name: string | null = null;
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{ data: { name: string } }>(`${this.apiUrl}/runner`, { code }),
+      );
+      name = res.data.name;
+    } catch (err) {
+      if (err instanceof HttpErrorResponse && err.status !== 0) return 'unknown';
+    }
+    // Another runner: the run on this phone isn't theirs.
+    if (this.codeRunner()?.code !== code) {
+      this.setRun(null);
+      this.serverRuns.set([]);
+    }
+    this.codeRunner.set({ code, name: name ?? `${code}-es futókód` });
+    save(CODE_RUNNER_KEY, this.codeRunner());
+    return name;
+  }
+
+  // Back to whoever is logged in on this phone.
+  runAsMyself() {
+    if (!this.codeRunner()) return;
+    this.codeRunner.set(null);
+    save(CODE_RUNNER_KEY, null);
+    this.setRun(null);
+    this.serverRuns.set([]);
+    void this.refresh();
   }
 
   // A card's link was opened, or its QR code read: the end of that link.
@@ -214,6 +293,7 @@ export class FutokorService {
           token: input.token,
           deviceTime: new Date(now).toISOString(),
           action: input.action,
+          runnerCode: this.codeRunner()?.code,
         },
       ]);
       void this.sync();
@@ -238,19 +318,43 @@ export class FutokorService {
     this.syncing.set(true);
     try {
       while (this.queue().length) {
-        const batch = this.queue().slice(0, BATCH);
-        const res = await firstValueFrom(
-          this.http.post<{
-            data: {
-              results: { clientScanId: string }[];
-              runs: { courseId: string; runs: FutokorRun[] }[];
-            };
-          }>(`${this.apiUrl}/scans`, { scans: batch }),
-        );
+        // One runner's scans at a time (the phone may have been lent).
+        const runnerCode = this.queue()[0].runnerCode;
+        const batch = this.queue()
+          .filter((s) => s.runnerCode === runnerCode)
+          .slice(0, BATCH);
+        let res;
+        try {
+          res = await firstValueFrom(
+            this.http.post<{
+              data: {
+                results: { clientScanId: string }[];
+                runs: { courseId: string; runs: FutokorRun[] }[];
+              };
+            }>(`${this.apiUrl}/scans`, { runnerCode, scans: batch }),
+          );
+        } catch (err) {
+          // A futókód nobody has: those scans can never count - they go,
+          // and the runner is told.
+          if (runnerCode && err instanceof HttpErrorResponse && err.status === 404) {
+            this.setQueue(this.queue().filter((s) => s.runnerCode !== runnerCode));
+            this.problem.set(
+              `Nincs ${runnerCode} futókód – az ezzel futott kör sajnos nem számít. Kérdezd meg a kódodat egy admintól.`,
+            );
+            if (this.codeRunner()?.code === runnerCode) {
+              this.codeRunner.set(null);
+              save(CODE_RUNNER_KEY, null);
+              this.setRun(null);
+            }
+            continue;
+          }
+          throw err;
+        }
         const answered = new Set(res.data.results.map((r) => r.clientScanId));
         this.setQueue(this.queue().filter((s) => !answered.has(s.clientScanId)));
         const mine = res.data.runs.find((r) => r.courseId === this.course()?._id);
-        if (mine) this.serverRuns.set(mine.runs);
+        // The list on the screen is the current runner's.
+        if (mine && runnerCode === this.codeRunner()?.code) this.serverRuns.set(mine.runs);
         if (!answered.size) break;
       }
     } catch {
