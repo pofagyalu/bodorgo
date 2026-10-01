@@ -77,11 +77,16 @@
   transform: translateX(0);
 }
 
-/* Mobile nav */
+/* Mobile nav: the items in the middle of the panel's width, from the top
+   down - it fills the panel's height, so Kijelentkezés (below) can sit at
+   its bottom. */
 .mobile-nav {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
 }
 
 .mobile-nav .menu-item {
@@ -90,13 +95,16 @@
 
 /* Kijelentkezés lives inside the mobile nav list (last item) instead of a
    separate section - it's a <button>, so reset it to look like a plain
-   text menu item (same as Táborok/Chat), just colored logo-red. */
+   text menu item (same as Táborok/Chat), just colored logo-red. Apart from
+   the rest: at the bottom of the panel. */
 .logout-item {
   background: none;
   border: none;
   font: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
+  margin-top: auto;
+  margin-bottom: 1rem;
 }
 
 // Extra specificity (over the plain .menu-item rule below, which also sets
@@ -266,7 +274,6 @@
    on white (a see-through white over the green panel washed the light
    green Táborok out completely). */
 .mobile-nav .menu-item.active {
-  align-self: flex-start;
   border: 2px solid white;
   border-radius: 14px;
   background: #fff;

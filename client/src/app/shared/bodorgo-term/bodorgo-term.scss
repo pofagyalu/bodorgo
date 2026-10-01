@@ -1,0 +1,309 @@
+// The card's own look - a page of a dictionary printed on a hiking map.
+:host {
+  --paper: #eef1e8;
+  --ink: #1f2a24;
+  --muted: #66716a;
+  --contour: #cfd8c6;
+  --trail: #2463b8;
+  --blaze: #ffffff;
+}
+
+// The word in the text it stands in: its font and size, in the logo's
+// green - something to point at.
+.word {
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--logo-dark-green);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: help;
+
+  &:hover,
+  &[aria-expanded='true'] {
+    color: var(--logo-green);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--logo-dark-green);
+    outline-offset: 0.15em;
+    border-radius: 0.2rem;
+  }
+}
+
+// ™ as an index, well above the line and small beside the word.
+.tm {
+  font-size: 0.45em;
+  font-weight: 400;
+  vertical-align: super;
+  line-height: 0;
+  margin-left: 0.05em;
+}
+
+// The card: over the page, in the middle of the screen's width. Where it
+// starts and how big its type is are set when it opens (bodorgo-term.ts's
+// fit): under the word if it fits there, and always whole on the screen -
+// it never scrolls. Every size inside it is in em, so the card's one
+// font-size scales all of it.
+.card {
+  position: fixed;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  z-index: 1100; // over the map further down (Leaflet goes up to 1000)
+  // Wide on a desktop (fewer, longer lines), the screen's width on a phone
+  // (where it is taller instead).
+  width: min(52rem, calc(100vw - 1rem));
+  box-sizing: border-box;
+  padding: 1.25em 1.25em 1.5em;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.22);
+  font-family: 'Charis SIL', Charis, Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: normal;
+  text-align: left;
+  animation: appear 0.18s ease-out;
+}
+
+// ✕ in the card's corner (the whole card closes on a tap - this says so).
+.close {
+  position: absolute;
+  top: 0.4em;
+  right: 0.4em;
+  z-index: 1;
+  width: 2.2em;
+  height: 2.2em;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--contour);
+    color: var(--ink);
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-0.4em);
+  }
+}
+
+.contours {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+
+  path {
+    fill: none;
+    stroke: var(--contour);
+    stroke-width: 1.2;
+  }
+}
+
+.entry {
+  position: relative;
+  display: block;
+}
+
+// The trail: dotted, drawn from its start to the dot at its end.
+.path {
+  width: 100%;
+  height: 3.5em;
+  display: block;
+  overflow: visible;
+
+  .route {
+    fill: none;
+    stroke: var(--trail);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 2 9;
+  }
+
+  .mask-line {
+    fill: none;
+    stroke: var(--paper);
+    stroke-width: 8;
+    stroke-dasharray: 900;
+    stroke-dashoffset: 0;
+    animation: wander 3.2s ease-in-out 0.3s forwards;
+  }
+
+  .end {
+    fill: var(--trail);
+  }
+}
+
+@keyframes wander {
+  to {
+    stroke-dashoffset: -900;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
+  .path .mask-line {
+    animation: none;
+    stroke-dashoffset: -900;
+  }
+}
+
+.headword {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  flex-wrap: wrap;
+  margin-top: 0.25em;
+}
+
+.headword-text {
+  font-size: 2.8em;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+// A trail blaze: the blue stripe on white.
+.blaze {
+  width: 2em;
+  height: 1.45em;
+  flex: none;
+  background: var(--blaze);
+  border: 1px solid var(--contour);
+  display: grid;
+  place-items: center;
+
+  span {
+    width: 100%;
+    height: 33%;
+    background: var(--trail);
+  }
+}
+
+.pron,
+.aside,
+.etym,
+.opposite,
+.sources,
+.sources-title {
+  display: block;
+}
+
+.pron {
+  margin-top: 0.8em;
+}
+
+.ipa {
+  font-size: 1.1em;
+}
+
+.respell {
+  margin-left: 0.5em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.pos {
+  color: var(--muted);
+  font-style: italic;
+  margin-left: 0.5em;
+}
+
+.aside {
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 0.25em;
+}
+
+.etym {
+  margin-top: 1.1em;
+}
+
+.senses {
+  margin: 1.2em 0 0;
+  padding-left: 1.6em;
+  list-style: decimal;
+
+  li {
+    padding-left: 0.4em;
+    margin-bottom: 0.45em;
+  }
+
+  li::marker {
+    font-weight: 700;
+    color: var(--trail);
+  }
+}
+
+.examples {
+  margin: 1.2em 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    font-style: italic;
+    color: var(--muted);
+    padding-left: 1.1em;
+    position: relative;
+    margin-bottom: 0.3em;
+  }
+
+  li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 0.4em;
+    height: 0.4em;
+    border-radius: 50%;
+    background: var(--trail);
+  }
+}
+
+.opposite {
+  margin-top: 1.2em;
+
+  b {
+    margin-right: 0.4em;
+  }
+}
+
+.sources {
+  margin-top: 1.6em;
+  padding-top: 1em;
+  border-top: 2px dotted var(--contour);
+  font-size: 0.85em;
+  color: var(--muted);
+
+  ul {
+    margin: 0;
+    padding-left: 1.2em;
+    list-style: disc;
+  }
+
+  li {
+    margin-bottom: 0.2em;
+  }
+}
+
+.sources-title {
+  font-size: 0.9em;
+  font-weight: 700;
+  margin-bottom: 0.4em;
+  color: var(--ink);
+}
