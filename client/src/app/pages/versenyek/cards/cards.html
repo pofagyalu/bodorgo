@@ -41,14 +41,14 @@
         <span class="main">
           <strong>{{ t.tagId }}</strong>
           <small>{{
-            t.retired ? 'kivonva – nem számít' : t.kind === 'startFinish' ? 'rajt és cél' : 'pont'
+            t.retired ? 'letiltva – nem számít' : t.kind === 'startFinish' ? 'rajt és cél' : 'pont'
           }}</small>
         </span>
         <button type="button" class="icon" (click)="copy(t)" title="Link másolása (NFC-hez)">
           <mat-icon>link</mat-icon>
         </button>
         <button type="button" class="text" (click)="retire(t)">
-          {{ t.retired ? 'Visszaveszem' : 'Kivonom' }}
+          {{ t.retired ? 'Újraaktiválom' : 'Letiltom' }}
         </button>
       </li>
     } @empty {
