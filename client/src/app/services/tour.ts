@@ -156,6 +156,14 @@ export interface Reservation {
   paid: boolean;
 }
 
+// How the rest (Fizetendő) can be paid at the house (server
+// utils/onSitePayment.js) - szep: SZÉP kártya.
+export interface OnSitePayment {
+  cash: boolean;
+  card: boolean;
+  szep: boolean;
+}
+
 export interface Tour {
   _id: string;
   order: number;
@@ -199,6 +207,9 @@ export interface Tour {
   // Houses -> rooms -> places, set up by an admin (see tour-edit's
   // Szállás section). Absent/empty until then.
   accommodation?: { houses: AccommodationHouse[] };
+  // Fizetési módok: how the rest can be paid at the house (unset until an
+  // admin sets it on the tour edit form).
+  onSitePayment?: OnSitePayment;
   // Only populated on the single-tour endpoint (getTour), not the list one.
   schedule?: ScheduleEntry[];
   dailyWeather?: DailyWeather[];
@@ -438,6 +449,7 @@ export interface TourPayload {
   childAgeLimitYears?: number;
   advancePaymentPercentage?: number;
   clubSubsidyAmount?: number;
+  onSitePayment?: OnSitePayment;
 }
 
 export interface SignUpResponse {

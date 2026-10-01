@@ -11,6 +11,7 @@ import AppError from '../utils/appError.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
 import { resolveDistanceInfo } from '../utils/distance.js';
 import { tourDocuments } from './documentController.js';
+import { cleanOnSitePayment } from '../utils/onSitePayment.js';
 
 const WEATHER_REFETCH_HOURS = 6;
 
@@ -315,6 +316,13 @@ export const getTour = async (req, res, next) => {
 // real ~32 historical tours aren't uploaded yet, see addTour.js), so it's
 // required explicitly here too, with the same collision check that script
 // already does.
+// The tour form's Fizetési módok (onSitePayment) - only what it offers,
+// cleaned (see utils/onSitePayment.js); the rest of the body as it is.
+function withCleanOnSitePayment(body) {
+  if (body?.onSitePayment === undefined) return body;
+  return { ...body, onSitePayment: cleanOnSitePayment(body.onSitePayment) };
+}
+
 export const createTour = async (req, res) => {
   if (req.body.order === undefined) {
     throw new AppError('A tábornak kell legyen sorszáma (order).', 400);
@@ -325,7 +333,7 @@ export const createTour = async (req, res) => {
     throw new AppError(`A ${req.body.order}. sorszám már foglalt ("${existing.title}").`, 400);
   }
 
-  const newTour = await Tour.create(req.body);
+  const newTour = await Tour.create(withCleanOnSitePayment(req.body));
 
   if (!newTour) {
     throw new AppError('Invalid data sent', 404);
@@ -357,7 +365,7 @@ export const updateTour = async (req, res) => {
     }
   }
 
-  for (const [key, value] of Object.entries(req.body)) {
+  for (const [key, value] of Object.entries(withCleanOnSitePayment(req.body))) {
     tour[key] = value;
   }
 

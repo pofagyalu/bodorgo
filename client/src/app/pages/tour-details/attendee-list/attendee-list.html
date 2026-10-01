@@ -13,7 +13,11 @@
             <sup class="th-pct">{{ advancePercent }}%</sup>
           }
         </th>
-        <th>Fizetendő</th>
+        <th>
+          <!-- How the rest can be paid at the house - icons, a bubble on
+               hover/tap; an admin sets it here (pay-methods). -->
+          <app-pay-methods [payment]="paymentMethods" />
+        </th>
       }
       @if (hasOptionalPrograms) {
         <th

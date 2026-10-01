@@ -11,6 +11,7 @@ import logger from '../logger.js';
 import { loadTourCoverBuffer } from './tourCoverController.js';
 import { tourDocuments } from './documentController.js';
 import { huDate, huDateWeekday } from '../utils/huDate.js';
+import { onSitePaymentText } from '../utils/onSitePayment.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
 // - the cover image lives under there; the logo/fonts live under
@@ -435,10 +436,16 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
   doc.registerFont('Heading', FONT_BOLD);
   doc.registerFont('Italic', FONT_ITALIC);
 
-  // Room at the bottom of the first page for the navigation footnote
-  // (drawn with the footer at the end) - content breaks to page 2 above it.
+  // Room at the bottom of the first page for its footnotes (drawn with the
+  // footer at the end) - content breaks to page 2 above them: "*" the
+  // navigation links, "**" how the rest of the accommodation can be paid
+  // at the house (the tour's Fizetési módok, once set).
   const hasNavLinks = tour.location?.coordinates?.length === 2;
-  if (hasNavLinks) doc.page.margins.bottom = PAGE_MARGIN + 45;
+  const paymentText = onSitePaymentText(tour.onSitePayment);
+  const paymentNote = paymentText ? `A szállás maradéka helyben fizethető: ${paymentText}.` : null;
+  if (hasNavLinks || paymentNote) {
+    doc.page.margins.bottom = PAGE_MARGIN + (hasNavLinks ? 45 : 0) + (paymentNote ? 16 : 0);
+  }
   doc.registerFont('Icons', FONT_ICONS);
   doc.font('Body');
 
@@ -798,27 +805,40 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
       .lineWidth(0.5)
       .stroke('#ccc');
 
-    // First page only: the footnote for the "*" after the navigation icons.
-    if (i === range.start && hasNavLinks) {
-      const note =
-        'Ha már beültél az autóba, és fogalmad sincs, merre tovább: bökj rá valamelyik navigációs ikonra, ' +
-        'dőlj hátra, és kapcsolj önvezető üzemmódba (ha az autód nem tud ilyet, legalább a navigációt kövesd). ' +
-        'Mi a célban várunk!';
-      doc.font('Italic').fontSize(8).fillColor('#666');
-      const noteHeight = doc.heightOfString(`* ${note}`, { width: contentWidth });
-      // The same bold orange "*" as after the navigation icons, then the note.
-      doc
-        .font('Heading')
-        .fontSize(10)
-        .fillColor(COLORS.orange)
-        .text('* ', PAGE_MARGIN, footerY - 14 - noteHeight - 1, {
-          width: contentWidth,
-          continued: true,
-        })
-        .font('Italic')
-        .fontSize(8)
-        .fillColor('#666')
-        .text(note);
+    // First page only: its footnotes, stacked upwards from the footer (so
+    // "**" goes first, to end up under "*") - the bold orange stars, then
+    // the note.
+    if (i === range.start) {
+      let noteBottom = footerY - 14;
+      const footnote = (stars, note) => {
+        doc.font('Italic').fontSize(8).fillColor('#666');
+        const noteHeight = doc.heightOfString(`${stars} ${note}`, { width: contentWidth });
+        noteBottom -= noteHeight + 1;
+        doc
+          .font('Heading')
+          .fontSize(10)
+          .fillColor(COLORS.orange)
+          .text(`${stars} `, PAGE_MARGIN, noteBottom, {
+            width: contentWidth,
+            continued: true,
+          })
+          .font('Italic')
+          .fontSize(8)
+          .fillColor('#666')
+          .text(note);
+        noteBottom -= 2;
+      };
+      // "**" - how the rest can be paid at the house.
+      if (paymentNote) footnote('**', paymentNote);
+      // "*" - the one after the navigation icons.
+      if (hasNavLinks) {
+        footnote(
+          '*',
+          'Ha már beültél az autóba, és fogalmad sincs, merre tovább: bökj rá valamelyik navigációs ikonra, ' +
+            'dőlj hátra, és kapcsolj önvezető üzemmódba (ha az autód nem tud ilyet, legalább a navigációt kövesd). ' +
+            'Mi a célban várunk!',
+        );
+      }
     }
 
     doc.y = footerY;

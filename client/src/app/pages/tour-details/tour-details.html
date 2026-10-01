@@ -410,6 +410,7 @@
             [advancePercent]="t.advancePaymentPercentage ?? null"
             [currency]="t.accommodationCurrency ?? 'HUF'"
             [userPhotos]="userPhotos()"
+            [paymentMethods]="t.onSitePayment"
             (nightsUpdated)="onAttendeeNightsUpdated()"
           />
         } @else {
