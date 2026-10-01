@@ -38,63 +38,140 @@
   }
 }
 
-// Same grid formula as .card-container below (minmax(18rem, 20rem), same
-// gap) - with exactly 3 filters, this reads as one row of filter "cards"
-// the same width as the tour cards underneath, wrapping the same way on
-// narrower screens too.
-.filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 20rem));
-  justify-content: center;
-  gap: 1.8rem;
-  margin: 2rem 0;
-}
-
-// Same card language as tour-card.scss's own .card (white background,
-// subtle shadow, gentle lift on hover) - a plain bordered input/select
-// looked out of place sitting right above a grid of actual cards.
-.filter-input {
-  padding: 0.9rem 1.1rem;
-  border: none;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 0.3rem 1rem rgba(0, 0, 0, 0.1);
-  font-size: 0.95rem;
-  transition: box-shadow 0.2s;
-}
-
-.filter-input:hover {
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
-}
-
-.filter-input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px #55c57a;
-}
-
-/* Center the toggle button */
-.toggle-container {
-  position: relative;
-  // No top margin now that this sits first (above the filters) - .tours-page's
-  // own top padding already provides that spacing.
-  margin: 0 0 1.5rem;
+// The filter bar and the admin's "+Tábor" on one line, in the middle.
+.top-row {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 1rem;
+  margin: 0 0 2rem;
 }
 
-// A distinct admin action, not "just another toggle button" - absolutely
-// positioned (taken out of the flex flow entirely) so it sits at the far
-// right without pulling the toggle button's own centering off to one side.
-// Same dark-filled look as the admin icon buttons on tour-details/tour-event.
+// Search, year and order as one piece: one white bar (the same card
+// language as tour-card.scss's .card - white, a soft shadow), the three
+// parts side by side with a hairline between them.
+.filters {
+  display: flex;
+  // Always one row, on any screen: the year and the order keep their
+  // width, the search field gives up its own (down to nothing).
+  flex-wrap: nowrap;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 40rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 1rem rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
+  }
+
+  &:focus-within {
+    box-shadow: 0 0 0 2px #55c57a;
+  }
+}
+
+.filter-search input {
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  padding: 0.9rem 1.1rem;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// The magnifying glass, then the field.
+.filter-search {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 0.9rem;
+  cursor: text;
+
+  mat-icon {
+    flex: none;
+    font-size: 1.3rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    color: #999;
+  }
+
+  input {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    padding-left: 0.5rem;
+    text-overflow: ellipsis;
+  }
+}
+
+// The year wheel (components/period-band, vertical).
+.filter-year {
+  flex: none;
+  border-left: 1px solid #e6e6e6;
+}
+
+// The order by date: a solid button at the bar's end, its arrow the
+// direction.
+.filter-order {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 3.2rem;
+  border: none;
+  background: #55c57a;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #28b485;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #1b6548;
+    outline-offset: -2px;
+  }
+}
+
+@media (max-width: 600px) {
+  .top-row {
+    gap: 0.5rem;
+    margin: 0 0 1.2rem;
+  }
+
+  .new-tour-btn {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .filter-search {
+    padding-left: 0.6rem;
+  }
+
+  .filter-search input {
+    padding: 0.8rem 0.5rem;
+  }
+
+  .filter-order {
+    width: 2.8rem;
+  }
+}
+
+// The admin's own action, after the filter bar on its line. Same
+// dark-filled look as the admin icon buttons on tour-details/tour-event.
 .new-tour-btn {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  // "+Tábor": the plus right against the word.
+  gap: 0;
+  white-space: nowrap;
   padding: 0.6rem 1.4rem;
   border-radius: 10rem;
   background: #445a67;
@@ -113,71 +190,22 @@
   }
 }
 
-/* ---- BUTTON STYLING (Natours style extension) ---- */
+// The cards of the year before, while the chosen one's are loading.
+.card-container {
+  transition: opacity 0.2s ease;
 
-.btn {
-  text-decoration: none;
-  padding: 0.8rem 2rem;
-  display: inline-block;
-  border-radius: 10rem;
-  transition: all 0.2s;
-  font-size: 1.1rem;
-  cursor: pointer;
-  border: none;
-  font-weight: 600;
+  &.updating {
+    opacity: 0.45;
+  }
 }
 
-/* NATOURS GREEN BUTTON */
-.btn--green {
-  background-color: #55c57a;
-  color: #fff;
-}
-
-.btn--green:hover {
-  background-color: #28b485;
-  transform: translateY(-2px);
-  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
-}
-
-/* GREY STYLE FOR "show last 3" */
-.btn--grey {
-  background-color: #f7f7f7;
-  color: #777;
-}
-
-.btn--grey:hover {
-  background-color: #eee;
-  transform: translateY(-2px);
-  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.1);
-}
-
-/* TOGGLE-SPECIFIC STYLE */
-.btn--toggle {
-  font-size: 1.4rem;
-  padding: 1.2rem 3rem;
-  min-width: 260px;
+// "Betöltés..." / "Nincs ilyen tábor." in the cards' place.
+.list-note {
+  grid-column: 1 / -1;
+  margin: 1rem 0;
   text-align: center;
-}
-
-/* Ensure buttons drop gracefully on mobile */
-@media (max-width: 600px) {
-  .btn--toggle {
-    font-size: 1.2rem;
-    padding: 1rem 2rem;
-    min-width: 200px;
-  }
-
-  // The absolutely-positioned .new-tour-btn would overlap the (wider, on
-  // mobile) toggle button here - stack them instead.
-  .toggle-container {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .new-tour-btn {
-    position: static;
-    transform: none;
-  }
+  color: #999;
+  font-style: italic;
 }
 
 .card-container {

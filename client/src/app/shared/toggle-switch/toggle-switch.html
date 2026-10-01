@@ -1,0 +1,16 @@
+<button
+  type="button"
+  class="switch"
+  role="switch"
+  [attr.aria-checked]="checked()"
+  [attr.aria-label]="label() || null"
+  [class.switch--on]="checked()"
+  (click)="checked.set(!checked())"
+>
+  <span class="letter letter--on">I</span>
+  <span class="letter letter--off">N</span>
+  <span class="thumb"></span>
+</button>
+@if (label()) {
+  <span class="label" aria-hidden="true" (click)="checked.set(!checked())">{{ label() }}</span>
+}

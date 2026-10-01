@@ -60,7 +60,9 @@
             {{ p.toursAttended }}
             <app-tour-medal [tours]="p.toursAttended" />
           </td>
-          <td class="num-col">{{ p.age ?? '-' }}</td>
+          @if (showAge()) {
+            <td class="num-col">{{ p.age ?? '-' }}</td>
+          }
           @if (showStatus()) {
             <td class="status-col">
               <span

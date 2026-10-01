@@ -100,6 +100,37 @@ button {
   white-space: nowrap;
 }
 
+// Verzió: the client's and the server's, one under the other.
+.version-list {
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+
+  > div {
+    display: grid;
+    grid-template-columns: 5rem 1fr;
+    gap: 0.75rem;
+  }
+
+  dt {
+    color: #56666e;
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    color: #203747;
+    font-variant-numeric: tabular-nums;
+  }
+
+  small {
+    display: block;
+    color: #56666e;
+    font-size: 0.8rem;
+  }
+}
+
 .empty-note {
   color: #56666e;
   font-size: 14px;

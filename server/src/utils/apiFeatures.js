@@ -17,7 +17,9 @@ export default class APIFeatures {
       const [field, operator] = key.split('.');
 
       if (operator) {
-        acc[field] = { [`$${operator}`]: value };
+        // Several operators on one field add up (a range: startDate.gte
+        // and startDate.lt) - they used to overwrite each other.
+        acc[field] = { ...acc[field], [`$${operator}`]: value };
       } else {
         acc[field] = value;
       }

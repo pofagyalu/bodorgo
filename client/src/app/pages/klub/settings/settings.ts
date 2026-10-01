@@ -20,6 +20,12 @@ import {
   BirthdayService,
 } from '../../../shared/birthday/birthday.service';
 import { AuthService } from '../../../auth/auth.service';
+import {
+  BuildVersion,
+  CLIENT_BUILD,
+  CLIENT_VERSION,
+  VersionService,
+} from '../../../services/version';
 
 interface FeeRow {
   fromYear: number;
@@ -176,6 +182,10 @@ export class KlubSettings implements OnInit {
     this.loadBirthday();
     this.loadRank();
     this.loadPresident();
+    this.versionService.getServerVersion().subscribe({
+      next: (res) => this.serverBuild.set(res.data),
+      error: () => {},
+    });
     this.settingsService.getMembershipFees().subscribe({
       next: (res) => {
         this.foundingYear.set(res.data.foundingYear);
@@ -669,6 +679,13 @@ export class KlubSettings implements OnInit {
   sealUrl = computed(() => this.settingsService.presidentSealUrl(this.sealVersion()));
 
   presidentDirty = computed(() => this.presidentName().trim() !== (this.presidentSaved() ?? ''));
+
+  // --- Verzió: which client and server are running ---
+
+  private versionService = inject(VersionService);
+  readonly clientVersion = CLIENT_VERSION;
+  readonly clientBuiltAt = CLIENT_BUILD?.builtAt ?? null;
+  serverBuild = signal<BuildVersion | null>(null);
 
   private loadPresident() {
     this.settingsService.getPresident().subscribe({

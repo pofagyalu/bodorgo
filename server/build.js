@@ -1,5 +1,6 @@
 import fs from 'fs';
 import esbuild from 'esbuild';
+import { gitStamp } from './src/utils/version.js';
 
 esbuild
   .build({
@@ -56,6 +57,11 @@ esbuild
     outfile: 'dist/server.js',
     sourcemap: false,
     minify: true,
+    // The version this build is (utils/version.js): its commit and date,
+    // and when it was built - GET /health/version tells it.
+    define: {
+      __BODORGO_BUILD__: JSON.stringify({ ...gitStamp(), builtAt: new Date().toISOString() }),
+    },
   })
   .then(() => {
     // Scalar's browser bundle for /docs (apiDocs/docsRouter.js) - served

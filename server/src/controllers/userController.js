@@ -78,9 +78,10 @@ export async function resolveFamilyId(input) {
 
 // An admin gets the full roster with every management field, including
 // the "Táborok" column's tour count; a plain 'member' can also see the
-// whole list now (name/email/age only - no familyId/role/lastLoginAt/
-// toursAttended, no raw birthday - just the computed age - and no gender,
-// which nobody but admin ever sees, not even about themselves), but never
+// whole list now (name/email only - no familyId/role/lastLoginAt/
+// toursAttended, no birthday and no age either (sensitive: admins only,
+// since 2026-10-01) - and no gender, which nobody but admin ever sees, not
+// even about themselves), but never
 // the fields that back admin-only actions like editing or the family/
 // role/tour-count columns. A 'guest' still can't call this at all (see
 // userRoutes.js's restrictTo) - they only ever see their own family, via
@@ -89,7 +90,7 @@ export const getAllUsers = async (req, res) => {
   const isAdmin = req.user.role === 'admin';
   const selectFields = isAdmin
     ? 'name email familyId role sub lastLoginAt createdAt birthday gender memberSince retired'
-    : 'name email birthday';
+    : 'name email';
 
   const users = await User.find().select(selectFields).sort('name').lean();
 
@@ -97,15 +98,16 @@ export const getAllUsers = async (req, res) => {
   // utils/toursAttended.js).
   const toursAttendedById = isAdmin ? await toursAttendedByUser() : new Map();
 
-  // birthday itself is only ever needed by the admin's edit form (see
-  // profile.ts's startEditUser) - a 'member' viewer gets the computed age
-  // only, never the raw date.
-  const withAge = users.map((u) => {
-    const age = computeAge(u.birthday);
-    if (isAdmin) return { ...u, age, toursAttended: toursAttendedById.get(String(u._id)) ?? 0 };
-    const { birthday, ...rest } = u;
-    return { ...rest, age };
-  });
+  // Birthday and age are the admin's only (the edit form needs the
+  // birthday - see profile.ts's startEditUser); a 'member' viewer gets
+  // neither.
+  const withAge = isAdmin
+    ? users.map((u) => ({
+        ...u,
+        age: computeAge(u.birthday),
+        toursAttended: toursAttendedById.get(String(u._id)) ?? 0,
+      }))
+    : users;
 
   res.status(200).json({
     status: 'success',

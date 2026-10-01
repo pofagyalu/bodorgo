@@ -1,46 +1,59 @@
 <div class="tours-page">
-  <div class="toggle-container">
-    @if (!showingAll()) {
-      <button class="btn btn--green" (click)="loadAllTours()">Összes megjelenítése</button>
-    } @else {
-      <button class="btn btn--grey" (click)="loadLast3()">Csak az utolsó 3 megjelenítése</button>
-    }
+  <!-- One line: the filter bar and, for an admin, "+Tábor" after it. -->
+  <div class="top-row">
+    <!-- One bar: search, year, and the order by date (a button that turns
+       it around). -->
+    <div class="filters">
+      <!-- Looks in the tours' titles and their short descriptions (the
+         summary on the card). -->
+      <label class="filter-search">
+        <mat-icon aria-hidden="true">search</mat-icon>
+        <input
+          type="text"
+          placeholder="Keresés címben, leírásban…"
+          aria-label="Táborok keresése címben és rövid leírásban"
+          (input)="onSearch($event.target.value)"
+        />
+      </label>
+
+      <!-- What to show: one year's tours (the page opens with the latest
+         year that has any), or every tour - on a wheel, rolled up and down. -->
+      <app-period-band
+        class="filter-year"
+        label="Mely táborok (év)"
+        [vertical]="true"
+        [loop]="true"
+        [options]="periodOptions()"
+        [value]="period()"
+        (valueChange)="choosePeriod($event)"
+      />
+
+      <!-- The arrow is the order now (down: newest first); the tooltip says
+         what a click changes it to. -->
+      <button
+        type="button"
+        class="filter-order"
+        [title]="ascending() ? 'Dátum szerint csökkenő sorrend' : 'Dátum szerint növekvő sorrend'"
+        [attr.aria-label]="
+          ascending() ? 'Dátum szerint csökkenő sorrend' : 'Dátum szerint növekvő sorrend'
+        "
+        (click)="ascending.set(!ascending())"
+      >
+        <mat-icon>{{ ascending() ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+      </button>
+    </div>
+
     @if (auth.user()?.role === 'admin') {
-      <a routerLink="/taborok/uj" class="new-tour-btn"> <mat-icon>add</mat-icon> Új tábor </a>
+      <a routerLink="/taborok/uj" class="new-tour-btn"><mat-icon>add</mat-icon>Tábor</a>
     }
   </div>
 
-  <div class="filters">
-    <!-- Search -->
-    <input
-      type="text"
-      placeholder="Táborok keresése..."
-      class="filter-input"
-      (input)="onSearch($event.target.value)"
-    />
-
-    <!-- Year filter -->
-    <select class="filter-input" (change)="year.set($any($event.target).value)">
-      <option value="">Minden év</option>
-      @for (y of availableYears(); track y) {
-        <option [value]="y">{{ y }}</option>
-      }
-    </select>
-
-    <select class="filter-input" (change)="sort.set($any($event.target).value)">
-      <option value="">Rendezés...</option>
-
-      <option value="startDate">Dátum szerint ↑</option>
-      <option value="-startDate">Dátum szerint ↓</option>
-
-      <option value="title">Cím A → Z</option>
-      <option value="-title">Cím Z → A</option>
-    </select>
-  </div>
-
-  <div class="card-container">
+  <!-- While another year is on its way the cards stay, dimmed. -->
+  <div class="card-container" [class.updating]="loadingAll()">
     @for (tour of filteredTours(); track tour.order; let i = $index) {
       <app-tour-card [tour]="tour" [priority]="i === 0" />
+    } @empty {
+      <p class="list-note">{{ loadingAll() ? 'Betöltés...' : 'Nincs ilyen tábor.' }}</p>
     }
   </div>
 </div>

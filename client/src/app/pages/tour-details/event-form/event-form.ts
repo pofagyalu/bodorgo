@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { ToggleSwitch } from '../../../shared/toggle-switch/toggle-switch';
 
 export interface EventFormModel {
   time: string;
@@ -27,7 +28,7 @@ export const EVENT_FORM_TIME_OPTIONS: string[] = Array.from({ length: 48 }, (_, 
 @Component({
   selector: 'app-event-form',
   standalone: true,
-  imports: [FormsModule, MatIconModule],
+  imports: [FormsModule, MatIconModule, ToggleSwitch],
   templateUrl: './event-form.html',
   styleUrl: './event-form.scss',
 })

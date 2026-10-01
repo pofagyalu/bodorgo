@@ -11,4 +11,8 @@
   <span><span class="label">Tárhely:</span> a Klub saját szerverén</span>
   <span><a href="mailto:info@bodorgo.hu">info&#64;bodorgo.hu</a></span>
   <span><a routerLink="/adatkezeles">Adatkezelési tájékoztató</a></span>
+  <!-- The running client's version - only for those logged in. -->
+  @if (auth.isLoggedIn()) {
+    <span><span class="label">Verzió:</span> {{ version }}</span>
+  }
 </footer>

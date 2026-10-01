@@ -55,7 +55,13 @@
         }
       </div>
 
-      <a routerLink="zene" routerLinkActive="active" class="nav-item" title="Zene">
+      <a
+        routerLink="zene"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item"
+        title="Zene"
+      >
         <mat-icon>library_music</mat-icon><span>Zene</span>
       </a>
       <!-- The playlists (Jellyfin): the club radio and the party list. -->
