@@ -82,6 +82,11 @@
       </div>
     </div>
 
+    <!-- The launch game's podium, at the top of the general room. -->
+    @if (isGeneral() && game()) {
+      <app-podium [winners]="podiumWinners()" title="Az első három, aki ír" />
+    }
+
     @if (selected()) {
       <header class="chat-header" [class.chat-header--general]="isGeneral()">
         <!-- A tour's Kotyogó has a Szobabeosztás too; the general one doesn't. -->

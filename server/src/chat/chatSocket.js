@@ -5,6 +5,7 @@ import { chatChannel, setIo, tourRoom } from './tourEvents.js';
 import { lastReadAt, markChatRead, notifyChatPostInBackground } from './chatNotifications.js';
 import { deleteChatImageFiles } from './chatImages.js';
 import { CHAT_CLOSED_MESSAGE, chatRoomClosed } from './chatRooms.js';
+import { onGeneralTextPostInBackground } from './firstWritersGame.js';
 
 // One Socket.IO connection per open browser tab (see the client's
 // TourSocketService), in two kinds of channels:
@@ -102,6 +103,8 @@ export default function registerChatHandlers(io) {
         io.to(chatChannel(chatRoomId)).emit('new-post', populated);
         markRead(chatRoomId);
         notifyChatPostInBackground(io, populated);
+        // The launch game: the first three to write in the general room.
+        if (room.type === 'general') onGeneralTextPostInBackground(io, populated);
       } catch (err) {
         logger.error(`chat: failed to save post in chat room ${chatRoomId}: ${err}`);
         socket.emit('chat-error', 'Could not send message.');
