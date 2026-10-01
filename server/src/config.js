@@ -148,6 +148,15 @@ const config = {
   },
 };
 
+// Futókör (the running race): what the cards' links are signed with (see
+// futokor/tags.js). Printed cards only work with the secret they were made
+// with, so it has its own line in .env (the same on every server whose
+// cards should be the same) and must never change afterwards; without one
+// the cookie secret stands in, so nothing breaks before it's set.
+config.futokor = {
+  tagSecret: process.env.FUTOKOR_TAG_SECRET || process.env.COOKIE_SECRET || 'futokor',
+};
+
 // Shared by Express's cors() middleware and Socket.IO's own cors option, so
 // both always agree on the same allow-list.
 config.corsOrigins = (config.clientOrigin || 'https://bodorgo.hu,http://localhost:4200')

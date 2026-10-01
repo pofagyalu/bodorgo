@@ -297,6 +297,50 @@ const schemas = {
     paymentMethod: str('For payments.', { enum: ['barion', 'stripe', 'cash'] }),
   }),
 
+  FutokorCourse: obj({
+    _id: id(),
+    tour: obj({ _id: id(), title: str() }),
+    name: str(),
+    opensAt: date(),
+    closesAt: date(),
+    distanceM: { type: ['number', 'null'], description: 'The whole loop, in metres.' },
+    flagSpeedMps: num('Faster than this between two cards flags the run.'),
+    duplicateScanWindowSec: num('The same card again this soon is the same scan.'),
+    maxRunDurationMin: num('A run left open longer than this has expired.'),
+    checkpoints: arrayOf(
+      obj({
+        id: str('The same as tagId.'),
+        tagId: str(),
+        kind: str('', { enum: ['startFinish', 'checkpoint'] }),
+        label: str(),
+        order: int('START/FINISH: 0; the checkpoints 1, 2, 3...'),
+        distanceAlongM: { type: ['number', 'null'] },
+        lat: { type: ['number', 'null'] },
+        lng: { type: ['number', 'null'] },
+      }),
+    ),
+  }),
+
+  FutokorRun: obj({
+    status: str('', { enum: ['running', 'finished', 'gave_up', 'abandoned', 'expired'] }),
+    startedAt: date(),
+    finishedAt: { type: ['string', 'null'] },
+    passed: int('Checkpoints passed.'),
+    splits: arrayOf(
+      obj({
+        fromCheckpointId: str(),
+        toCheckpointId: str(),
+        ms: int(),
+        distanceM: { type: ['number', 'null'] },
+        speedMps: { type: ['number', 'null'] },
+        paceSecPerKm: { type: ['integer', 'null'] },
+      }),
+    ),
+    totalMs: { type: ['integer', 'null'] },
+    paceSecPerKm: { type: ['integer', 'null'] },
+    flagged: bool(),
+  }),
+
   DartsThrow: obj(
     {
       segment: int('1-20, 25 (the bull), or 0: a miss.'),
@@ -568,6 +612,7 @@ const T = {
   media: 'Média',
   music: 'Zene',
   games: 'Móka',
+  race: 'Futókör',
   settings: 'Beállítások',
   push: 'Értesítések',
   system: 'Rendszer',
@@ -605,6 +650,10 @@ const tags = [
   [
     T.games,
     'Móka: the games - Darts so far. While they are being built, every call here is refused (403) for everyone but the role manager (`INITIAL_ADMIN_USER`).',
+  ],
+  [
+    T.race,
+    'Futókör (the Versenyek menu): a tour’s checkpoint running race. Cards with a QR code are scanned by the runners’ phones, which send their scans whenever they have a connection; the runs are worked out from the scans. While it is being built, every call here is refused (403) for everyone but the role manager (`INITIAL_ADMIN_USER`).',
   ],
   [
     T.settings,
@@ -2669,6 +2718,208 @@ const paths = {
       params: [path('id', 'The game.')],
       data: obj({ game: ref('DartsGame') }),
       errors: [400, 403, 404],
+    }),
+  },
+
+  // --- Futókör ---
+  '/futokor/tags': {
+    get: op({
+      tag: T.race,
+      role: 'admin',
+      summary: 'The cards',
+      description:
+        'Every card: printed once and used again on every tour - which checkpoint it is depends on the course.',
+      data: obj({
+        tags: arrayOf(
+          obj({
+            tagId: str('T01, T02... - a START/FINISH card: S1.'),
+            kind: str('', { enum: ['startFinish', 'checkpoint'] }),
+            retired: bool('Lost or damaged: its link no longer counts.'),
+            url: str('What its QR code says: the app’s /versenyek/t/<token>.'),
+            createdAt: date(),
+          }),
+        ),
+      }),
+    }),
+    post: op({
+      tag: T.race,
+      role: 'admin',
+      summary: 'Make new cards',
+      description:
+        '`count` (1-30) checkpoint cards, numbered on from the last one - or one START/FINISH card with `kind: startFinish`.',
+      body: obj({ count: int(), kind: str('', { enum: ['startFinish'] }) }),
+      ok: 201,
+      data: obj({
+        tags: arrayOf(
+          obj({
+            tagId: str('T01, T02... - a START/FINISH card: S1.'),
+            kind: str('', { enum: ['startFinish', 'checkpoint'] }),
+            retired: bool('Lost or damaged: its link no longer counts.'),
+            url: str('What its QR code says: the app’s /versenyek/t/<token>.'),
+            createdAt: date(),
+          }),
+        ),
+      }),
+      errors: [400],
+    }),
+  },
+  '/futokor/tags/sheet': {
+    get: op({
+      tag: T.race,
+      role: 'admin',
+      summary: 'The cards to print',
+      description:
+        'A PDF of every card in use, six to an A4 page: the QR code, and the card’s number in big letters (RAJT / CÉL on a START/FINISH card).',
+      response: file(['application/pdf'], 'The sheet.'),
+      errors: [404],
+    }),
+  },
+  '/futokor/tags/{tagId}': {
+    patch: op({
+      tag: T.race,
+      role: 'admin',
+      summary: 'Retire a card, or take it back',
+      params: [path('tagId', 'The card, e.g. T05.')],
+      body: obj({ retired: bool() }, ['retired']),
+      data: obj({
+        tag: obj({
+          tagId: str('T01, T02... - a START/FINISH card: S1.'),
+          kind: str('', { enum: ['startFinish', 'checkpoint'] }),
+          retired: bool('Lost or damaged: its link no longer counts.'),
+          url: str('What its QR code says: the app’s /versenyek/t/<token>.'),
+          createdAt: date(),
+        }),
+      }),
+      errors: [400, 404],
+    }),
+  },
+  '/futokor/courses': {
+    get: op({
+      tag: T.race,
+      role: 'admin',
+      summary: 'Every course',
+      description: 'The newest first.',
+      data: obj({ courses: arrayOf(ref('FutokorCourse')) }),
+    }),
+    post: op({
+      tag: T.race,
+      role: 'admin',
+      summary: 'Make a tour’s course',
+      description:
+        'One per tour. Runs count while it is open; no two courses may be open at the same time.',
+      body: obj(
+        {
+          tourId: id(),
+          name: str('Default: the tour’s title and "futókör".'),
+          opensAt: date(),
+          closesAt: date(),
+        },
+        ['tourId', 'opensAt', 'closesAt'],
+      ),
+      ok: 201,
+      data: obj({ course: ref('FutokorCourse') }),
+      errors: [400],
+    }),
+  },
+  '/futokor/courses/{id}': {
+    patch: op({
+      tag: T.race,
+      role: 'admin',
+      summary: 'Change a course',
+      description:
+        'Its name, when it is open, the longest a run may take, the loop’s length, and its cards: `startTagId` (a START/FINISH card) and `stops` - the checkpoint cards in the order they are passed, each with how far along the loop it is (growing; optional - without distances there are times but no pace and no speed check). Every runner’s runs are worked out again afterwards.',
+      params: [path('id', 'The course.')],
+      body: obj({
+        name: str(),
+        opensAt: date(),
+        closesAt: date(),
+        maxRunDurationMin: num(),
+        distanceM: { type: ['number', 'null'], description: 'The whole loop, in metres.' },
+        startTagId: str(),
+        stops: arrayOf(obj({ tagId: str(), distanceAlongM: { type: ['number', 'null'] } })),
+      }),
+      data: obj({ course: ref('FutokorCourse') }),
+      errors: [400, 404],
+    }),
+    delete: op({
+      tag: T.race,
+      role: 'admin',
+      summary: 'Delete a course',
+      description:
+        'With everything run on it: its scans and its runs go too (a trial course, say). The cards stay.',
+      params: [path('id', 'The course.')],
+      ok: 204,
+      errors: [404],
+    }),
+  },
+  '/futokor/courses/{id}/leaderboard': {
+    get: op({
+      tag: T.race,
+      summary: 'A course’s leaderboard',
+      description:
+        'Every runner by their best finished time - the earlier one first if two are the same - with how many times they finished.',
+      params: [path('id', 'The course.')],
+      data: obj({
+        runners: arrayOf(
+          obj({
+            userId: id(),
+            name: str(),
+            photoUpdatedAt: { type: ['string', 'null'] },
+            totalMs: int('Their best time.'),
+            paceSecPerKm: { type: ['integer', 'null'] },
+            finishedAt: date(),
+            flagged: bool('That run has something for an admin to look at.'),
+            finishedRuns: int(),
+          }),
+        ),
+      }),
+      errors: [403, 404],
+    }),
+  },
+  '/futokor/active': {
+    get: op({
+      tag: T.race,
+      summary: 'The course to run now',
+      description:
+        'The course that is open - or else the next one to open, so a phone can get ready for it while it has a connection - with everything the phone needs to run it offline, and my runs on it. `course` is null if there is neither.',
+      data: obj({
+        course: { oneOf: [ref('FutokorCourse'), { type: 'null' }] },
+        runs: arrayOf(ref('FutokorRun')),
+        serverTime: date(),
+      }),
+      errors: [403],
+    }),
+  },
+  '/futokor/scans': {
+    post: op({
+      tag: T.race,
+      summary: 'Send the phone’s scans',
+      description:
+        'What the phone has collected - in any order, any time later (at most 40 at once); sending a scan again changes nothing. `token` is the end of the card’s link; `deviceTime` is the phone’s clock, which the run is timed by. A scan belongs to the course that was open at its own time. `action: restart` on the START/FINISH card gives the open run up for a new one; `action: giveUp` (no token) gives the open run up. All of my scans on the course are then replayed by the rules, and the answer says what came of each: `started`, `passed`, `finished`, `gaveUp`, `duplicate`, `incomplete` (START/FINISH with checkpoints missing), `rejectedOrder`, `rejectedSpeed` (faster than 10.4 m/s), `noRun`, `unknownTag`, `noCourse` (none was open then) or `invalid`.',
+      body: obj(
+        {
+          scans: arrayOf(
+            obj(
+              {
+                clientScanId: str('Made up by the phone (a UUID).'),
+                token: str(),
+                deviceTime: date(),
+                action: str('', { enum: ['restart', 'giveUp'] }),
+                lat: num(),
+                lng: num(),
+                accuracyM: num(),
+              },
+              ['clientScanId', 'deviceTime'],
+            ),
+          ),
+        },
+        ['scans'],
+      ),
+      data: obj({
+        results: arrayOf(obj({ clientScanId: str(), result: str() })),
+        runs: arrayOf(obj({ courseId: id(), runs: arrayOf(ref('FutokorRun')) })),
+      }),
+      errors: [400, 403],
     }),
   },
 

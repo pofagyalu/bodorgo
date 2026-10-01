@@ -1,0 +1,15 @@
+@if (askStart()) {
+  <div class="start">
+    <p class="who">
+      @if (runner) {
+        {{ runner }},
+      }
+      indulhat a futás?
+    </p>
+    <button type="button" class="go" (click)="start()">RAJT!</button>
+    <p class="note">Az óra a gomb megnyomásakor indul.</p>
+    <button type="button" class="not-now" (click)="done.emit()">Most nem</button>
+  </div>
+} @else if (answer(); as a) {
+  <app-scan-answer [answer]="a" (closed)="done.emit()" (restart)="restart()" />
+}

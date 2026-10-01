@@ -1,0 +1,302 @@
+import request from 'supertest';
+import { describe, expect, it } from 'vitest';
+import { app, asUser } from '../helpers/app.js';
+import { createAdmin, createGuest, createMember, createTour } from '../helpers/factories.js';
+import { FutokorRun, FutokorScan } from '../../src/models/futokorModels.js';
+import { tagToken, verifyTagToken } from '../../src/futokor/tags.js';
+
+// Futókör over HTTP (the rules of a run: tests/unit/futokorRunRules.test.js).
+
+// While it's being built only the role manager gets in (futokor/access.js).
+const createOwner = () => createAdmin({ name: 'Nagy Zoli', canManageRoles: true });
+// Someone else who is in (as everyone will be, once it opens).
+const createRunner = (overrides = {}) => createMember({ canManageRoles: true, ...overrides });
+
+const get = (user, url) => request(app).get(`/futokor${url}`).set(asUser(user));
+const post = (user, url, body) => request(app).post(`/futokor${url}`).set(asUser(user)).send(body);
+const patch = (user, url, body) =>
+  request(app).patch(`/futokor${url}`).set(asUser(user)).send(body);
+
+const HOUR = 3600 * 1000;
+// A moment of the course's opening day, `sec` seconds after its start.
+const T0 = Date.now() - 2 * HOUR;
+const at = (sec) => new Date(T0 + sec * 1000).toISOString();
+
+// A 900 m course open now: START/FINISH and two checkpoints 300 m apart.
+async function openCourse(owner) {
+  await post(owner, '/tags', { kind: 'startFinish' });
+  await post(owner, '/tags', { count: 3 });
+  const tour = await createTour();
+  const made = await post(owner, '/courses', {
+    tourId: String(tour._id),
+    opensAt: new Date(T0 - HOUR),
+    closesAt: new Date(T0 + 24 * HOUR),
+  });
+  expect(made.status, made.body.message).toBe(201);
+  const id = made.body.data.course._id;
+  const set = await patch(owner, `/courses/${id}`, {
+    distanceM: 900,
+    startTagId: 'S1',
+    stops: [
+      { tagId: 'T02', distanceAlongM: 300 },
+      { tagId: 'T01', distanceAlongM: 600 },
+    ],
+  });
+  expect(set.status, set.body.message).toBe(200);
+  return set.body.data.course;
+}
+
+let scanCount = 0;
+const scan = (tagId, sec, extra = {}) => ({
+  clientScanId: `scan-${Date.now()}-${(scanCount += 1)}`,
+  token: tagId ? tagToken(tagId) : undefined,
+  deviceTime: at(sec),
+  ...extra,
+});
+// A whole lap: START, the two checkpoints, FINISH - `lapSec` seconds.
+const lap = (from, lapSec) => [
+  scan('S1', from),
+  scan('T02', from + lapSec / 3),
+  scan('T01', from + (2 * lapSec) / 3),
+  scan('S1', from + lapSec),
+];
+const send = (user, scans) => post(user, '/scans', { scans });
+
+describe('Futókör: who gets in', () => {
+  it('only the role manager, for now - and the cards and courses are the admins’', async () => {
+    expect((await request(app).get('/futokor/active')).status).toBe(401);
+    for (const user of [await createAdmin(), await createMember(), await createGuest()]) {
+      expect((await get(user, '/active')).status).toBe(403);
+      expect((await get(user, '/tags')).status).toBe(403);
+      expect((await send(user, [])).status).toBe(403);
+    }
+    const runner = await createRunner();
+    expect((await get(runner, '/active')).status).toBe(200);
+    expect((await get(runner, '/tags')).status).toBe(403);
+    expect((await post(runner, '/courses', {})).status).toBe(403);
+  });
+});
+
+describe('Futókör: the cards', () => {
+  it('are numbered on, each with a signed link', async () => {
+    const owner = await createOwner();
+    const first = await post(owner, '/tags', { count: 2 });
+    expect(first.status).toBe(201);
+    expect(first.body.data.tags.map((t) => t.tagId)).toEqual(['T01', 'T02']);
+    await post(owner, '/tags', { kind: 'startFinish' });
+    const more = await post(owner, '/tags', { count: 1 });
+    expect(more.body.data.tags[0].tagId).toBe('T03');
+
+    const { tags } = (await get(owner, '/tags')).body.data;
+    expect(tags.map((t) => [t.tagId, t.kind])).toEqual([
+      ['T01', 'checkpoint'],
+      ['T02', 'checkpoint'],
+      ['T03', 'checkpoint'],
+      ['S1', 'startFinish'],
+    ]);
+    const token = tags[0].url.split('/versenyek/t/')[1];
+    expect(verifyTagToken(token)).toBe('T01');
+    expect(verifyTagToken(`T01.${'x'.repeat(16)}`)).toBeNull();
+    expect(verifyTagToken('T01')).toBeNull();
+    expect(verifyTagToken(token.replace('T01', 'T02'))).toBeNull();
+
+    expect((await post(owner, '/tags', { count: 0 })).status).toBe(400);
+    expect((await post(owner, '/tags', { count: 31 })).status).toBe(400);
+  });
+
+  it('can be retired, and printed', async () => {
+    const owner = await createOwner();
+    expect((await get(owner, '/tags/sheet')).status).toBe(404);
+    await post(owner, '/tags', { count: 2 });
+    const retired = await patch(owner, '/tags/T02', { retired: true });
+    expect(retired.body.data.tag).toMatchObject({ tagId: 'T02', retired: true });
+    expect((await patch(owner, '/tags/T99', { retired: true })).status).toBe(404);
+
+    const sheet = await get(owner, '/tags/sheet');
+    expect(sheet.status).toBe(200);
+    expect(sheet.headers['content-type']).toContain('application/pdf');
+  });
+});
+
+describe('Futókör: a course', () => {
+  it('is one per tour, never open at the same time as another', async () => {
+    const owner = await createOwner();
+    const course = await openCourse(owner);
+    expect(course).toMatchObject({ distanceM: 900, name: expect.stringContaining('futókör') });
+    expect(course.checkpoints.map((c) => [c.tagId, c.label, c.order, c.distanceAlongM])).toEqual([
+      ['S1', 'RAJT / CÉL', 0, 0],
+      ['T02', '1. pont', 1, 300],
+      ['T01', '2. pont', 2, 600],
+    ]);
+
+    const window = { opensAt: new Date(T0), closesAt: new Date(T0 + HOUR) };
+    const same = await post(owner, '/courses', { tourId: course.tour._id, ...window });
+    expect(same.status).toBe(400);
+    const other = await createTour();
+    const overlap = await post(owner, '/courses', { tourId: String(other._id), ...window });
+    expect(overlap.status).toBe(400);
+    const later = await post(owner, '/courses', {
+      tourId: String(other._id),
+      opensAt: new Date(T0 + 48 * HOUR),
+      closesAt: new Date(T0 + 72 * HOUR),
+    });
+    expect(later.status).toBe(201);
+    expect((await get(owner, '/courses')).body.data.courses).toHaveLength(2);
+  });
+
+  it('refuses cards and distances that make no sense', async () => {
+    const owner = await createOwner();
+    const course = await openCourse(owner);
+    const set = (body) => patch(owner, `/courses/${course._id}`, body);
+    const bad = [
+      { startTagId: 'T01', stops: [] }, // not a START/FINISH card
+      { startTagId: 'S1', stops: [{ tagId: 'T01' }, { tagId: 'T01' }] },
+      { startTagId: 'S1', stops: [{ tagId: 'T99' }] },
+      {
+        startTagId: 'S1',
+        stops: [
+          { tagId: 'T01', distanceAlongM: 500 },
+          { tagId: 'T02', distanceAlongM: 400 },
+        ],
+      },
+      { distanceM: 500 }, // shorter than where the last checkpoint is
+      { opensAt: new Date(T0), closesAt: new Date(T0 - HOUR) },
+    ];
+    for (const body of bad) expect((await set(body)).status, JSON.stringify(body)).toBe(400);
+  });
+
+  it('is what a phone gets to run it - the open one, or the next to open', async () => {
+    const owner = await createOwner();
+    expect((await get(owner, '/active')).body.data.course).toBeNull();
+    const course = await openCourse(owner);
+    const active = (await get(owner, '/active')).body.data;
+    expect(active.course).toMatchObject({ _id: course._id, flagSpeedMps: 5.5 });
+    expect(active.runs).toEqual([]);
+
+    await patch(owner, `/courses/${course._id}`, {
+      opensAt: new Date(Date.now() + HOUR),
+      closesAt: new Date(Date.now() + 2 * HOUR),
+    });
+    expect((await get(owner, '/active')).body.data.course._id).toBe(course._id);
+  });
+});
+
+describe('Futókör: running', () => {
+  it('works a run out of the scans, however they arrive', async () => {
+    const owner = await createOwner();
+    await openCourse(owner);
+    const scans = lap(0, 300);
+
+    // The finish reaches the server first (by itself it looks like a
+    // start), the start last.
+    const first = await send(owner, [scans[3], scans[1]]);
+    expect(first.body.data.results.map((r) => r.result)).toEqual(['started', 'noRun']);
+    const rest = await send(owner, [scans[2], scans[0]]);
+    expect(rest.status).toBe(200);
+    expect(rest.body.data.runs[0].runs).toMatchObject([
+      { status: 'finished', totalMs: 300000, passed: 2, paceSecPerKm: 333, flagged: false },
+    ]);
+    // Asked again, the same scans now say what they were.
+    const again = await send(owner, scans);
+    expect(again.body.data.results.map((r) => r.result)).toEqual([
+      'started',
+      'passed',
+      'passed',
+      'finished',
+    ]);
+    expect(await FutokorScan.countDocuments()).toBe(4);
+    expect(await FutokorRun.countDocuments()).toBe(1);
+  });
+
+  it('refuses what is not a real scan', async () => {
+    const owner = await createOwner();
+    await openCourse(owner);
+    await patch(owner, '/tags/T03', { retired: true });
+    const res = await send(owner, [
+      { clientScanId: 'a', token: 'T01.aaaaaaaaaaaaaaaa', deviceTime: at(0) },
+      { clientScanId: 'b', token: tagToken('T03'), deviceTime: at(0) },
+      { clientScanId: 'c', token: tagToken('S1'), deviceTime: 'yesterday' },
+      { clientScanId: 'd', token: tagToken('S1'), deviceTime: new Date(Date.now() + HOUR) },
+      // Before the course opened.
+      { clientScanId: 'e', token: tagToken('S1'), deviceTime: new Date(T0 - 5 * HOUR) },
+    ]);
+    expect(res.body.data.results.map((r) => r.result)).toEqual([
+      'unknownTag',
+      'unknownTag',
+      'invalid',
+      'invalid',
+      'noCourse',
+    ]);
+    expect(await FutokorScan.countDocuments()).toBe(0);
+    expect((await send(owner, 'nothing')).status).toBe(400);
+  });
+
+  it('gives up, restarts - and keeps each runner’s scans their own', async () => {
+    const owner = await createOwner();
+    const anna = await createRunner({ name: 'Kiss Anna' });
+    await openCourse(owner);
+
+    const start = scan('S1', 0);
+    await send(owner, [start, scan('T02', 100), scan('S1', 200, { action: 'restart' })]);
+    const gaveUp = await send(owner, [scan(null, 250, { action: 'giveUp' })]);
+    expect(gaveUp.body.data.results[0].result).toBe('gaveUp');
+    expect(gaveUp.body.data.runs[0].runs.map((r) => r.status)).toEqual(['abandoned', 'gave_up']);
+
+    // Someone else sending my scan's id gets nothing from it.
+    const stolen = await send(anna, [start]);
+    expect(stolen.body.data.results[0].result).toBe('invalid');
+    expect(stolen.body.data.runs).toEqual([]);
+  });
+
+  it('ranks the runners by their best time', async () => {
+    const owner = await createOwner();
+    const anna = await createRunner({ name: 'Kiss Anna', username: 'anna' });
+    const course = await openCourse(owner);
+    await send(owner, [...lap(0, 300), ...lap(1000, 270)]);
+    await send(anna, lap(100, 240));
+    // 900 m in 150 s is 6 m/s: counted, but flagged.
+    const bela = await createRunner({ name: 'Nagy Béla' });
+    await send(bela, lap(200, 150));
+
+    const board = await get(anna, `/courses/${course._id}/leaderboard`);
+    expect(
+      board.body.data.runners.map((r) => [r.name, r.totalMs, r.finishedRuns, r.flagged]),
+    ).toEqual([
+      ['Nagy Béla', 150000, 1, true],
+      ['anna', 240000, 1, false],
+      ['Nagy Zoli', 270000, 2, false],
+    ]);
+    expect((await get(anna, '/courses/nonsense/leaderboard')).status).toBe(404);
+  });
+
+  it('a deleted course takes its scans and runs with it - the cards stay', async () => {
+    const owner = await createOwner();
+    const course = await openCourse(owner);
+    await send(owner, lap(0, 300));
+    const gone = await request(app).delete(`/futokor/courses/${course._id}`).set(asUser(owner));
+    expect(gone.status).toBe(204);
+    expect(await FutokorScan.countDocuments()).toBe(0);
+    expect(await FutokorRun.countDocuments()).toBe(0);
+    expect((await get(owner, '/active')).body.data.course).toBeNull();
+    expect((await get(owner, '/tags')).body.data.tags).toHaveLength(4);
+    const again = await request(app).delete(`/futokor/courses/${course._id}`).set(asUser(owner));
+    expect(again.status).toBe(404);
+  });
+
+  it('works the runs out again when the course changes', async () => {
+    const owner = await createOwner();
+    const course = await openCourse(owner);
+    await send(owner, lap(0, 300));
+    // The loop turns out to be 1800 m.
+    await patch(owner, `/courses/${course._id}`, {
+      distanceM: 1800,
+      startTagId: 'S1',
+      stops: [
+        { tagId: 'T02', distanceAlongM: 600 },
+        { tagId: 'T01', distanceAlongM: 1200 },
+      ],
+    });
+    const { runs } = (await get(owner, '/active')).body.data;
+    expect(runs).toMatchObject([{ status: 'finished', paceSecPerKm: 167, flagged: true }]);
+  });
+});

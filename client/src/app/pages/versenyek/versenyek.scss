@@ -1,0 +1,391 @@
+:host {
+  display: block;
+  min-height: calc(100dvh - var(--header-height));
+  // Versenyek's own color in the menu is the logo's yellow.
+  background:
+    radial-gradient(circle at 100% 0%, #f6b52840, transparent 45%),
+    radial-gradient(circle at 0% 40%, #f0782722, transparent 45%), #fffaf0;
+}
+
+.futokor {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: clamp(0.875rem, 4vw, 2rem) clamp(0.75rem, 4vw, 1.5rem) 3rem;
+  color: #23354a;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--logo-orange);
+}
+
+h1 {
+  margin: 0.125rem 0 1rem;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(2.25rem, 9vw, 3.25rem);
+  line-height: 1.05;
+  background: linear-gradient(90deg, var(--logo-orange), var(--logo-yellow));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.75rem 0 0.625rem;
+  font-size: 1.0625rem;
+
+  mat-icon {
+    color: var(--logo-orange);
+  }
+}
+
+.card {
+  margin: 0 0 0.75rem;
+  padding: 1rem 1.125rem;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 0.375rem 1.25rem #213b4112;
+  animation: rise 0.35s ease-out both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.625rem);
+  }
+}
+
+// --- The course ---
+
+.course-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 1.0625rem;
+}
+
+.chip {
+  flex: none;
+  padding: 0.125rem 0.625rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  &.open {
+    background: #dff3e4;
+    color: #12843f;
+  }
+
+  &.soon {
+    background: #fff0c9;
+    color: #9a6a05;
+  }
+
+  &.over {
+    background: #eef0f2;
+    color: #6a7a83;
+  }
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: #4a5b63;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--logo-orange);
+  }
+}
+
+.offline {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0.625rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #12843f;
+
+  mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+// --- The run that's on ---
+
+.run-now {
+  text-align: center;
+  background: linear-gradient(135deg, #1b6548, #12843f);
+  color: #fff;
+  animation:
+    rise 0.35s ease-out both,
+    run-glow 2s ease-in-out infinite;
+}
+
+@keyframes run-glow {
+  50% {
+    box-shadow: 0 0.375rem 2rem #12843f88;
+  }
+}
+
+.label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.clock {
+  margin: 0;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(3.5rem, 20vw, 5rem);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.next {
+  margin: 0.25rem 0 0.875rem;
+  font-size: 1.0625rem;
+}
+
+.give-up {
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border: 2px solid #fff8;
+  border-radius: 0.875rem;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+// --- Reading a card ---
+
+.scan-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 4rem;
+  margin-bottom: 0.75rem;
+  border: 0;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, var(--logo-yellow), var(--logo-orange));
+  color: #fff;
+  font-family: Marhey, sans-serif;
+  font-size: 1.125rem;
+  box-shadow: 0 0.5rem 1.5rem #f0782755;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 1.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  &:active {
+    transform: translateY(0.125rem);
+  }
+}
+
+.how {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+  color: #4a5b63;
+
+  mat-icon {
+    flex: none;
+    color: var(--logo-orange);
+  }
+}
+
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.375rem 0.875rem;
+  border: 2px dashed #e0a81f;
+  border-radius: 1rem;
+  background: #fff8e1;
+  color: #7a5604;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spin {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// --- My runs ---
+
+.runs,
+.board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.run {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.875rem;
+  background: #fff;
+  border-left: 0.3125rem solid #dce6e3;
+  color: #6a7a83;
+
+  &.done {
+    border-left-color: var(--logo-green);
+    color: #23354a;
+  }
+}
+
+.run-time {
+  min-width: 4rem;
+  font-family: Marhey, sans-serif;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.run-main {
+  display: grid;
+  font-size: 0.875rem;
+
+  small {
+    color: #8a989f;
+    font-size: 0.75rem;
+  }
+}
+
+// --- Everyone's best times ---
+
+.board li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.25rem 0.875rem;
+  border-radius: 0.875rem;
+  background: #fff;
+
+  &.me {
+    background: #fff3d1;
+    font-weight: 700;
+  }
+}
+
+.rank {
+  width: 1.75rem;
+  font-family: Marhey, sans-serif;
+  color: var(--logo-orange);
+}
+
+.face {
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--logo-dark-green);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runs-count {
+  font-size: 0.75rem;
+  color: #8a989f;
+}
+
+.best {
+  display: grid;
+  justify-items: end;
+  font-family: Marhey, sans-serif;
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+
+  small {
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 0.6875rem;
+    color: #8a989f;
+  }
+}
+
+// --- The admins' pages ---
+
+.admin {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 2rem;
+
+  a {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-height: 3rem;
+    border-radius: 0.875rem;
+    background: #142a3c;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .run-now,
+  .spin {
+    animation: none;
+  }
+}

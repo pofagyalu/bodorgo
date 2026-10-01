@@ -4,6 +4,7 @@ import { memberGuard } from './auth/member.guard';
 import { adminGuard } from './auth/admin.guard';
 import { authGuard } from './auth/auth.guard';
 import { mokaGuard } from './auth/moka.guard';
+import { futokorAdminGuard, futokorGuard } from './auth/futokor.guard';
 
 // Home stays eager since it's the near-universal first page hit; every
 // other route is lazy so its own code (and whatever heavy libraries it
@@ -45,7 +46,6 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./pages/tour-details/tour-details').then((m) => m.TourDetails),
   },
-  // Chat/Voks/Versenyek are routed but still in early development
   {
     path: 'chat',
     title: 'Bódorgó Kotyogó',
@@ -57,10 +57,32 @@ export const routes: Routes = [
     title: 'Bódorgó voks',
     loadComponent: () => import('./pages/szavazasok/szavazasok').then((m) => m.Szavazasok),
   },
+  // Versenyek: the Futókör (running race) - see auth/futokor.guard.ts for
+  // who gets in.
   {
     path: 'versenyek',
     title: 'Bódorgó versenyek',
+    canActivate: [futokorGuard],
     loadComponent: () => import('./pages/versenyek/versenyek').then((m) => m.Versenyek),
+  },
+  {
+    // Where a card's QR code leads. No guard: it has to open without a
+    // connection too.
+    path: 'versenyek/t/:token',
+    title: 'Futókör',
+    loadComponent: () => import('./pages/versenyek/tag/tag').then((m) => m.FutokorTagPage),
+  },
+  {
+    path: 'versenyek/kartyak',
+    title: 'Futókör – Kártyák',
+    canActivate: [futokorAdminGuard],
+    loadComponent: () => import('./pages/versenyek/cards/cards').then((m) => m.FutokorCards),
+  },
+  {
+    path: 'versenyek/palyak',
+    title: 'Futókör – Pályák',
+    canActivate: [futokorAdminGuard],
+    loadComponent: () => import('./pages/versenyek/courses/courses').then((m) => m.FutokorCourses),
   },
   {
     // The privacy notice - public, linked from the footer.

@@ -16,6 +16,7 @@ import { PollService } from '../../services/poll';
 import { AuthService } from '../../auth/auth.service';
 import { UserService } from '../../services/user';
 import { canSeeMoka } from '../../auth/moka.guard';
+import { canSeeFutokor } from '../../auth/futokor.guard';
 
 // Same 7 colors sampled from the bódorgó logo as shared/logo-colors.ts's
 // shuffledLogoColors, but picked deterministically per person here rather
@@ -145,6 +146,7 @@ export class Header implements OnDestroy {
   });
 
   seesMoka = computed(() => canSeeMoka(this.auth.user()));
+  seesFutokor = computed(() => canSeeFutokor(this.auth.user()));
 
   // The logged-in user's own photo in place of the colored initials, once
   // they have one. No hover preview here - it's their own face, and the

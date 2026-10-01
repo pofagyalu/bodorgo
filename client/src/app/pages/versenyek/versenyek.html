@@ -1,1 +1,149 @@
-<p>versenyek works!</p>
+<section class="futokor">
+  <header class="head">
+    <p class="eyebrow">Bódorgó versenyek</p>
+    <h1>Futókör</h1>
+  </header>
+
+  @if (course(); as c) {
+    <!-- The course on this phone. -->
+    <div class="card course">
+      <div class="course-top">
+        <strong>{{ c.name }}</strong>
+        @switch (state()) {
+          @case ('open') {
+            <span class="chip open">nyitva</span>
+          }
+          @case ('soon') {
+            <span class="chip soon">hamarosan</span>
+          }
+          @default {
+            <span class="chip over">véget ért</span>
+          }
+        }
+      </div>
+      <p class="facts">
+        @if (c.distanceM) {
+          <span><mat-icon>straighten</mat-icon> {{ c.distanceM }} m</span>
+        }
+        <span><mat-icon>flag</mat-icon> {{ stops() }} ellenőrzőpont</span>
+        <span
+          ><mat-icon>schedule</mat-icon> {{ c.opensAt | date: 'MM. dd. HH:mm' }} –
+          {{ c.closesAt | date: 'MM. dd. HH:mm' }}</span
+        >
+      </p>
+      <p class="offline">
+        <mat-icon>offline_pin</mat-icon> A pálya a telefonon van – net nélkül is megy.
+      </p>
+    </div>
+
+    <!-- The run that's on. -->
+    @if (running()) {
+      <div class="card run-now">
+        <p class="label">Futásban</p>
+        <p class="clock">{{ elapsed() }}</p>
+        <p class="next">
+          @if (futokor.next(); as n) {
+            Következő: <strong>{{ n.label }}</strong> · {{ cardName(n.tagId) }}
+          } @else {
+            Minden pont megvan – <strong>irány a CÉL!</strong>
+          }
+        </p>
+        <button type="button" class="give-up" (click)="giveUp()">Feladom</button>
+      </div>
+    }
+
+    @if (state() === 'open') {
+      @if (canScan) {
+        <button type="button" class="scan-btn" (click)="scanning.set(true)">
+          <mat-icon>qr_code_scanner</mat-icon>
+          {{ running() ? 'Kártya beolvasása' : 'Rajthoz: olvasd be a RAJT kártyát' }}
+        </button>
+      } @else {
+        <p class="card how">
+          <mat-icon>photo_camera</mat-icon>
+          A kártyák QR-kódját a telefon saját kamerájával olvasd be – az megnyitja ezt az oldalt.
+        </p>
+      }
+    }
+
+    <!-- Scans made without a connection wait here. -->
+    @if (futokor.waiting(); as n) {
+      <button type="button" class="waiting" (click)="refresh()" [disabled]="futokor.syncing()">
+        <mat-icon [class.spin]="futokor.syncing()">sync</mat-icon>
+        {{ n }} leolvasás vár feltöltésre – koppints, ha van net
+      </button>
+    }
+
+    @if (myRuns().length) {
+      <h2><mat-icon>directions_run</mat-icon> Futásaim</h2>
+      <ul class="runs">
+        @for (r of myRuns(); track r.startedAt) {
+          <li class="run" [class.done]="r.status === 'finished'">
+            <span class="run-time">{{ r.status === 'finished' ? time(r.totalMs) : '–' }}</span>
+            <span class="run-main">
+              <span
+                >{{ r.statusText }}
+                @if (r.paceSecPerKm) {
+                  · {{ pace(r.paceSecPerKm) }}
+                }
+                @if (r.flagged) {
+                  <span title="Ellenőrzésre vár">⚠️</span>
+                }
+              </span>
+              <small>{{ r.startedAt | date: 'MM. dd. HH:mm' }}</small>
+            </span>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (runners().length) {
+      <h2><mat-icon>emoji_events</mat-icon> Legjobb idők</h2>
+      <app-podium [winners]="winners()" />
+      <ol class="board">
+        @for (r of runners(); track r.userId; let i = $index) {
+          <li [class.me]="r.userId === myId">
+            <span class="rank">{{ i + 1 }}.</span>
+            <app-avatar
+              class="face"
+              [name]="r.name"
+              [userId]="r.userId"
+              [photoVersion]="r.photoUpdatedAt"
+            />
+            <span class="who">{{ r.name }}</span>
+            <span class="runs-count" title="Befejezett futások">{{ r.finishedRuns }}×</span>
+            <span class="best">
+              {{ time(r.totalMs) }}
+              @if (r.paceSecPerKm) {
+                <small>{{ pace(r.paceSecPerKm) }}</small>
+              }
+            </span>
+          </li>
+        }
+      </ol>
+    }
+  } @else if (loaded()) {
+    <p class="card how">
+      <mat-icon>hotel</mat-icon> Most nincs futókör. Majd a következő táborban!
+    </p>
+  }
+
+  <!-- The admins: the cards and the courses. -->
+  @if (isAdmin) {
+    <nav class="admin">
+      <a routerLink="kartyak"><mat-icon>qr_code_2</mat-icon> Kártyák</a>
+      <a routerLink="palyak"><mat-icon>route</mat-icon> Pályák</a>
+    </nav>
+  }
+</section>
+
+<!-- The camera, reading the cards - and what each scan came to. -->
+@if (scanning()) {
+  <app-qr-scanner (card)="onCard($event)" (closed)="scanning.set(false)" />
+}
+@if (scanned(); as token) {
+  <app-scan-flow [token]="token" (done)="onScanDone()" />
+}
+@if (answer(); as a) {
+  <app-scan-answer [answer]="a" (closed)="answer.set(null)" />
+}

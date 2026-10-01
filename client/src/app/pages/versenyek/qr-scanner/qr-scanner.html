@@ -1,0 +1,14 @@
+<div class="scanner">
+  <video #video playsinline muted></video>
+  <div class="frame" aria-hidden="true"></div>
+  <p class="tip">
+    @if (error()) {
+      {{ error() }}
+    } @else {
+      Tartsd a kamerát a kártya QR-kódja elé
+    }
+  </p>
+  <button type="button" class="close" (click)="closed.emit()" aria-label="Bezárás">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
