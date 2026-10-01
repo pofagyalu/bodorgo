@@ -9,11 +9,18 @@ describe('GET /health/version', () => {
       .get('/health/version')
       .set(asUser(await createGuest()));
     expect(res.status).toBe(200);
-    // Run from the source (as here), it's read from git and has no build time.
-    expect(res.body.data.commit).toMatch(/^[0-9a-f]{7}$/);
-    expect(res.body.data.date).toMatch(/^\d{4}\.\d{2}\.\d{2}$/);
-    expect(res.body.data.version).toContain(`${res.body.data.date} · ${res.body.data.commit}`);
-    expect(res.body.data.builtAt).toBeNull();
+    // Run from the source (as here), it's read from git and has no build
+    // time. Where git can't be asked (some CI containers), it says so
+    // instead of failing.
+    const { version, commit, date, builtAt } = res.body.data;
+    expect(builtAt).toBeNull();
+    if (commit === null) {
+      expect(version).toBe('ismeretlen');
+    } else {
+      expect(commit).toMatch(/^[0-9a-f]{7}$/);
+      expect(date).toMatch(/^\d{4}\.\d{2}\.\d{2}$/);
+      expect(version).toContain(`${date} · ${commit}`);
+    }
   });
 
   it('is not for visitors', async () => {
