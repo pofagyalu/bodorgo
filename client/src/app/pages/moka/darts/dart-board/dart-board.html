@@ -1,34 +1,14 @@
-<svg
-  class="board"
-  [class.interactive]="interactive()"
-  viewBox="-225 -225 450 450"
-  role="img"
-  aria-label="Darts tábla"
->
-  <!-- The edge around the fields: a tap here is a miss. -->
-  <circle class="rim" r="222" (click)="tap(0, 0)" />
+<svg class="board" viewBox="-225 -225 450 450" role="img" aria-label="Darts tábla">
+  <circle class="rim" r="222" />
   @for (s of sectors; track s.value) {
     <g class="sector" [class.even]="s.even" [style.animation-delay]="s.delay">
-      <path class="field single" [attr.d]="s.innerSingle" (click)="tap(s.value, 1)" />
-      <path class="field ring" [attr.d]="s.triple" (click)="tap(s.value, 3)" />
-      <path class="field single" [attr.d]="s.outerSingle" (click)="tap(s.value, 1)" />
-      <path class="field ring" [attr.d]="s.double" (click)="tap(s.value, 2)" />
+      <path class="single" [attr.d]="s.innerSingle" />
+      <path class="ring" [attr.d]="s.triple" />
+      <path class="single" [attr.d]="s.outerSingle" />
+      <path class="ring" [attr.d]="s.double" />
       <text class="number" [attr.x]="s.x" [attr.y]="s.y">{{ s.value }}</text>
     </g>
   }
-  <circle class="field outer-bull" [attr.r]="r.outerBull" (click)="tap(25, 1)" />
-  <circle class="field bull" [attr.r]="r.bull" (click)="tap(25, 2)" />
-
-  <!-- The field to aim at, glowing. -->
-  @if (targetShape(); as t) {
-    @if (t.d) {
-      <path class="target" [attr.d]="t.d" />
-    } @else {
-      <circle class="target" [attr.r]="t.bullR" />
-    }
-  }
-  <!-- The turn's darts. -->
-  @for (m of markers(); track $index) {
-    <circle class="dart" [class.miss]="m.miss" [attr.cx]="m.x" [attr.cy]="m.y" r="8" />
-  }
+  <circle class="outer-bull" [attr.r]="r.outerBull" />
+  <circle class="bull" [attr.r]="r.bull" />
 </svg>

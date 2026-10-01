@@ -65,7 +65,14 @@
         </table>
       </div>
     } @else {
-      <div class="scores scoreboard">
+      <!-- A grid, never scrolling sideways: up to four cards in a row on
+           a phone (smaller ones from five players up), eight on a desktop. -->
+      <div
+        class="scores scoreboard"
+        [class.compact]="g.players.length > 4"
+        [style.--cols]="cols()"
+        [style.--cols-wide]="colsWide()"
+      >
         @for (p of g.players; track p.idx) {
           <div
             class="player-card"
@@ -94,18 +101,6 @@
           </div>
         }
       </div>
-    }
-
-    <!-- A wide screen: the board beside the game, with the turn's darts on
-         it and the field to aim at - and a dart can be tapped onto it. -->
-    @if (wide()) {
-      <app-dart-board
-        class="side-board"
-        [darts]="shownThrows()"
-        [target]="target()"
-        [interactive]="(playing() && g.canEdit) || !!editing()"
-        (tapped)="boardHit($event)"
-      />
     }
 
     @if (g.status === 'abandoned') {
@@ -230,80 +225,35 @@
       </div>
     }
 
-    <!-- Entering a dart: the keypad, or (on a phone) the board to tap on -
-         a swipe sideways switches between the two. -->
+    <!-- The keypad, at the bottom within thumb reach. -->
     @if ((playing() && g.canEdit) || editing()) {
-      @if (!wide()) {
-        <div class="input-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            [class.on]="inputMode() === 'keypad'"
-            (click)="setInputMode('keypad')"
-          >
-            <mat-icon>dialpad</mat-icon> Billentyűzet
+      <div class="keypad">
+        <div class="mult">
+          @for (m of multipliers; track m.value) {
+            <button
+              type="button"
+              class="mult-btn m{{ m.value }}"
+              [class.on]="multiplier() === m.value"
+              (click)="multiplier.set(m.value)"
+            >
+              {{ m.label }}
+            </button>
+          }
+        </div>
+        <div class="numbers m{{ multiplier() }}" [class.few]="isCricket()">
+          @for (n of numbers(); track n) {
+            <button type="button" class="key" (click)="hit(n)">{{ n }}</button>
+          }
+        </div>
+        <div class="specials">
+          <button type="button" class="key miss" (click)="hit(0)">Mellé</button>
+          <button type="button" class="key bull" [disabled]="multiplier() === 3" (click)="hit(25)">
+            {{ multiplier() === 2 ? 'Bull 50' : '25' }}
           </button>
-          <button
-            type="button"
-            role="tab"
-            [class.on]="inputMode() === 'board'"
-            (click)="setInputMode('board')"
-          >
-            <mat-icon>track_changes</mat-icon> Tábla
+          <button type="button" class="key undo" (click)="undo()" aria-label="Visszavonás">
+            <mat-icon>undo</mat-icon>
           </button>
         </div>
-      }
-      <div class="input" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
-        @if (wide() || inputMode() === 'keypad') {
-          <div class="keypad pane">
-            <div class="mult">
-              @for (m of multipliers; track m.value) {
-                <button
-                  type="button"
-                  class="mult-btn m{{ m.value }}"
-                  [class.on]="multiplier() === m.value"
-                  (click)="multiplier.set(m.value)"
-                >
-                  {{ m.label }}
-                </button>
-              }
-            </div>
-            <div class="numbers m{{ multiplier() }}" [class.few]="isCricket()">
-              @for (n of numbers(); track n) {
-                <button type="button" class="key" (click)="hit(n)">{{ n }}</button>
-              }
-            </div>
-            <div class="specials">
-              <button type="button" class="key miss" (click)="hit(0)">Mellé</button>
-              <button
-                type="button"
-                class="key bull"
-                [disabled]="multiplier() === 3"
-                (click)="hit(25)"
-              >
-                {{ multiplier() === 2 ? 'Bull 50' : '25' }}
-              </button>
-              <button type="button" class="key undo" (click)="undo()" aria-label="Visszavonás">
-                <mat-icon>undo</mat-icon>
-              </button>
-            </div>
-          </div>
-        } @else {
-          <div class="board-pane pane">
-            <app-dart-board
-              [darts]="shownThrows()"
-              [target]="target()"
-              [interactive]="true"
-              (tapped)="boardHit($event)"
-            />
-            <div class="board-keys">
-              <button type="button" class="key miss" (click)="hit(0)">Mellé</button>
-              <button type="button" class="key undo" (click)="undo()" aria-label="Visszavonás">
-                <mat-icon>undo</mat-icon>
-              </button>
-            </div>
-          </div>
-        }
       </div>
     }
 
