@@ -6,11 +6,12 @@ import { ToursMap } from '../../components/tours-map/tours-map';
 import { AgeChart } from '../../components/age-chart/age-chart';
 import { shuffledLogoColors } from '../../shared/logo-colors';
 import { SiteFooter } from '../../shared/site-footer/site-footer';
+import { BodorgoTerm } from '../../shared/bodorgo-term/bodorgo-term';
 
 @Component({
   selector: 'app-homepage',
   standalone: true,
-  imports: [MatIconModule, RouterLink, ToursMap, SiteFooter, AgeChart],
+  imports: [MatIconModule, RouterLink, ToursMap, SiteFooter, AgeChart, BodorgoTerm],
   templateUrl: './homepage.html',
   styleUrl: './homepage.scss',
 })

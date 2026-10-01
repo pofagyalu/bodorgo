@@ -1,0 +1,88 @@
+<span class="term" (pointerenter)="onPointerEnter($event)" (pointerleave)="onPointerLeave($event)">
+  <button
+    #word
+    class="word"
+    type="button"
+    [attr.aria-expanded]="open()"
+    aria-controls="bodorgo-entry"
+    (click)="toggle()"
+  >
+    Bódorgó<sup class="tm">™</sup>
+  </button>
+
+  @if (open()) {
+    <span #card id="bodorgo-entry" class="card" role="note" [attr.lang]="lang">
+      <svg
+        class="contours"
+        viewBox="0 0 1200 900"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+      >
+        <path d="M-50 180 C 200 120, 380 260, 620 200 S 1000 90, 1260 170" />
+        <path d="M-50 240 C 220 180, 400 330, 640 270 S 1010 160, 1260 240" />
+        <path d="M-50 700 C 180 640, 420 780, 700 720 S 1050 620, 1260 690" />
+        <path d="M-50 770 C 200 710, 440 850, 720 790 S 1060 700, 1260 760" />
+        <path
+          d="M980 420 C 1040 360, 1150 380, 1160 450 S 1060 540, 1000 500 S 930 470, 980 420 Z"
+        />
+      </svg>
+
+      <span class="entry">
+        <svg class="path" viewBox="0 0 600 90" aria-hidden="true">
+          <path
+            class="route"
+            d="M4 70 C 60 10, 110 90, 170 50 S 250 5, 300 45 S 380 95, 430 40 S 520 20, 560 62"
+          />
+          <path
+            class="mask-line"
+            d="M4 70 C 60 10, 110 90, 170 50 S 250 5, 300 45 S 380 95, 430 40 S 520 20, 560 62"
+          />
+          <circle class="end" cx="560" cy="62" r="5" />
+        </svg>
+
+        <span class="headword">
+          <span class="headword-text">bódorgó</span>
+          <span class="blaze" aria-hidden="true"><span></span></span>
+        </span>
+
+        <span class="pron">
+          <span class="ipa">{{ entry.ipa }}</span>
+          @if (entry.respell) {
+            <span class="respell">{{ entry.respell }}</span>
+          }
+          <span class="pos">{{ entry.pos }}</span>
+        </span>
+        @if (entry.aside) {
+          <span class="aside">{{ entry.aside }}</span>
+        }
+
+        <span class="etym" [innerHTML]="entry.etymology"></span>
+
+        <ol class="senses">
+          @for (sense of entry.senses; track sense) {
+            <li>{{ sense }}</li>
+          }
+        </ol>
+
+        <ul class="examples">
+          @for (example of entry.examples; track example) {
+            <li>{{ example }}</li>
+          }
+        </ul>
+
+        <span class="opposite"
+          ><b>{{ entry.oppositeLabel }}</b> {{ entry.opposite }}</span
+        >
+
+        <span class="sources">
+          <span class="sources-title">{{ entry.sourcesTitle }}</span>
+          <ul>
+            @for (source of sources; track source) {
+              <li>{{ source }}</li>
+            }
+          </ul>
+        </span>
+      </span>
+    </span>
+  }
+</span>
