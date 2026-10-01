@@ -1,11 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { NotificationsService } from '../../../notifications/notifications.service';
-import { errorMessage } from '../../../shared/errors';
-import { FutokorService, FutokorTag } from '../../../services/futokor';
+import { NotificationsService } from '../../../../notifications/notifications.service';
+import { errorMessage } from '../../../../shared/errors';
+import { FutokorService, FutokorTag } from '../../../../services/futokor';
 
-// Versenyek → Kártyák (admins): the cards the runners scan. Made once,
+// Móka → Futókörök → Kártyák (admins): the cards the runners scan. Made once,
 // printed (the PDF sheet), cut and laminated, then used on every tour -
 // which checkpoint a card is depends on the course (Pályák).
 @Component({

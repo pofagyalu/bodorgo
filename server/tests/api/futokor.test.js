@@ -94,7 +94,7 @@ describe('Futókör: the cards', () => {
       ['T03', 'checkpoint'],
       ['S1', 'startFinish'],
     ]);
-    const token = tags[0].url.split('/versenyek/t/')[1];
+    const token = tags[0].url.split('/fk/')[1];
     expect(verifyTagToken(token)).toBe('T01');
     expect(verifyTagToken(`T01.${'x'.repeat(16)}`)).toBeNull();
     expect(verifyTagToken('T01')).toBeNull();

@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterStateSnapshot } from '@angular/router';
 import { map, catchError, of } from 'rxjs';
 import { AuthService, CurrentUser } from './auth.service';
 
@@ -11,13 +11,19 @@ export const canSeeMoka = (user: CurrentUser | null) => !!user?.canManageRoles;
 
 // Asks the server first (like authGuard), so it also works on a fresh page
 // load straight to a Móka URL.
-export const mokaGuard = () => {
+// Futókörök (the running race) also opens on a phone that already has a
+// course on it, whatever the server says or doesn't: in the garden there
+// may be no connection to ask, and the run must go on (what the phone
+// sends is checked by the server anyway).
+export const mokaGuard = (_route: unknown, state: RouterStateSnapshot) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const raceOnThisPhone =
+    state.url.startsWith('/moka/futokor') && !!localStorage.getItem('futokor-course');
 
   return auth.checkAuth().pipe(
     map(() => {
-      if (canSeeMoka(auth.user())) return true;
+      if (canSeeMoka(auth.user()) || raceOnThisPhone) return true;
       router.navigate(['/']);
       return false;
     }),

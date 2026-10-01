@@ -8,7 +8,7 @@ import AppError from '../utils/appError.js';
 import { isExpired, replayScans } from '../futokor/runRules.js';
 import { tagUrl, verifyTagToken } from '../futokor/tags.js';
 
-// Futókör: the checkpoint running race of a tour (the Versenyek menu).
+// Futókör: the checkpoint running race of a tour (Móka → Futókörök).
 // Cards (tags) are scanned by the runners' phones; the phones send their
 // scans here whenever they have a connection, and a runner's runs are
 // worked out from all of their scans by the rules in futokor/runRules.js -

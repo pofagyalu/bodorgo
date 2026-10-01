@@ -2,11 +2,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { NotificationsService } from '../../../notifications/notifications.service';
-import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
-import { errorMessage } from '../../../shared/errors';
-import { FutokorCourse, FutokorService, FutokorTag } from '../../../services/futokor';
-import { Tour, TourService } from '../../../services/tour';
+import { NotificationsService } from '../../../../notifications/notifications.service';
+import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
+import { errorMessage } from '../../../../shared/errors';
+import { FutokorCourse, FutokorService, FutokorTag } from '../../../../services/futokor';
+import { Tour, TourService } from '../../../../services/tour';
 
 // A course being changed: what the form holds.
 interface Draft {
@@ -29,7 +29,7 @@ const toInput = (iso: string | Date) => {
 const fromInput = (value: string) => new Date(value).toISOString();
 const numberOrNull = (value: string) => (value.trim() === '' ? null : Number(value));
 
-// Versenyek → Pályák (admins): a tour's course - when it's open, how long
+// Móka → Futókörök → Pályák (admins): a tour's course - when it's open, how long
 // the loop is, and which card is which checkpoint, in the order they're
 // passed. One per tour; a trial one can be deleted with everything run on it.
 @Component({

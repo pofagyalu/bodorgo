@@ -4,7 +4,7 @@ import { memberGuard } from './auth/member.guard';
 import { adminGuard } from './auth/admin.guard';
 import { authGuard } from './auth/auth.guard';
 import { mokaGuard } from './auth/moka.guard';
-import { futokorAdminGuard, futokorGuard } from './auth/futokor.guard';
+import { futokorAdminGuard } from './auth/futokor.guard';
 
 // Home stays eager since it's the near-universal first page hit; every
 // other route is lazy so its own code (and whatever heavy libraries it
@@ -57,33 +57,23 @@ export const routes: Routes = [
     title: 'Bódorgó voks',
     loadComponent: () => import('./pages/szavazasok/szavazasok').then((m) => m.Szavazasok),
   },
-  // Versenyek: the Futókör (running race) - see auth/futokor.guard.ts for
-  // who gets in.
   {
-    path: 'versenyek',
-    title: 'Bódorgó versenyek',
-    canActivate: [futokorGuard],
-    loadComponent: () => import('./pages/versenyek/versenyek').then((m) => m.Versenyek),
+    // Where a Futókör card's QR code leads: fk/<token> - short, so the code
+    // is coarse and reads from further away. The address is printed on the
+    // cards: it must never change. No guard: it has to open without a
+    // connection too.
+    path: 'fk/:token',
+    title: 'Futókör',
+    loadComponent: () => import('./pages/moka/futokor/tag/tag').then((m) => m.FutokorTagPage),
   },
   {
-    // Where a card's QR code leads. No guard: it has to open without a
-    // connection too.
+    // The cards' first address, from before fk/ - kept working.
     path: 'versenyek/t/:token',
     title: 'Futókör',
-    loadComponent: () => import('./pages/versenyek/tag/tag').then((m) => m.FutokorTagPage),
+    loadComponent: () => import('./pages/moka/futokor/tag/tag').then((m) => m.FutokorTagPage),
   },
-  {
-    path: 'versenyek/kartyak',
-    title: 'Futókör – Kártyák',
-    canActivate: [futokorAdminGuard],
-    loadComponent: () => import('./pages/versenyek/cards/cards').then((m) => m.FutokorCards),
-  },
-  {
-    path: 'versenyek/palyak',
-    title: 'Futókör – Pályák',
-    canActivate: [futokorAdminGuard],
-    loadComponent: () => import('./pages/versenyek/courses/courses').then((m) => m.FutokorCourses),
-  },
+  // The race's first address, from before it moved under Móka.
+  { path: 'versenyek', pathMatch: 'full', redirectTo: 'moka/futokor' },
   {
     // The privacy notice - public, linked from the footer.
     path: 'adatkezeles',
@@ -144,7 +134,8 @@ export const routes: Routes = [
     ],
   },
   {
-    // Móka: the games - Darts first (the server's side: src/jatekok).
+    // Móka: the games - Darts, and Futókörök, the running race (the
+    // server's side: src/jatekok, src/futokor).
     path: 'moka',
     canActivate: [mokaGuard],
     loadComponent: () => import('./pages/moka/moka').then((m) => m.Moka),
@@ -167,6 +158,25 @@ export const routes: Routes = [
         title: 'Darts',
         loadComponent: () =>
           import('./pages/moka/darts/darts-game/darts-game').then((m) => m.DartsGamePage),
+      },
+      {
+        path: 'futokor',
+        title: 'Móka – Futókörök',
+        loadComponent: () => import('./pages/moka/futokor/futokor-home').then((m) => m.FutokorHome),
+      },
+      // The cards and the courses are the admins'.
+      {
+        path: 'futokor/kartyak',
+        title: 'Futókörök – Kártyák',
+        canActivate: [futokorAdminGuard],
+        loadComponent: () => import('./pages/moka/futokor/cards/cards').then((m) => m.FutokorCards),
+      },
+      {
+        path: 'futokor/palyak',
+        title: 'Futókörök – Pályák',
+        canActivate: [futokorAdminGuard],
+        loadComponent: () =>
+          import('./pages/moka/futokor/courses/courses').then((m) => m.FutokorCourses),
       },
     ],
   },

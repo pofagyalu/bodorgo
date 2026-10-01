@@ -136,7 +136,7 @@ export default function createApp(sessionMiddleware) {
   app.use('/music', musicRouter);
   // Móka: the games (darts first) - see jatekok/access.js for who gets in.
   app.use('/jatekok', jatekRouter);
-  // Futókör: the running race (Versenyek) - see futokor/access.js.
+  // Futókör: the running race (Móka → Futókörök) - see futokor/access.js.
   app.use('/futokor', futokorRouter);
   app.use('/health', systemRouter);
   // The API documentation (Scalar) - admins only, see apiDocs/docsRouter.js.

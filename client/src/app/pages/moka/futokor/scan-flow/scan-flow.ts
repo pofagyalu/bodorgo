@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
-import { AuthService } from '../../../auth/auth.service';
-import { FutokorService, ScanAnswer } from '../../../services/futokor';
+import { AuthService } from '../../../../auth/auth.service';
+import { FutokorService, ScanAnswer } from '../../../../services/futokor';
 import { ScanAnswerView, unlockSound } from '../scan-answer/scan-answer';
 
 // How long after a finish the same card again is still "the same scan"

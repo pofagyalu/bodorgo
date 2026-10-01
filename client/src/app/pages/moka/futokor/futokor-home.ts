@@ -2,17 +2,17 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { Avatar } from '../../components/avatar/avatar';
-import { AuthService } from '../../auth/auth.service';
-import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
-import { Podium, PodiumWinner } from '../../shared/podium/podium';
+import { Avatar } from '../../../components/avatar/avatar';
+import { AuthService } from '../../../auth/auth.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { Podium, PodiumWinner } from '../../../shared/podium/podium';
 import {
   FutokorRunner,
   FutokorService,
   ScanAnswer,
   racePace,
   raceTime,
-} from '../../services/futokor';
+} from '../../../services/futokor';
 import { QrScanner, canScanInApp } from './qr-scanner/qr-scanner';
 import { ScanAnswerView, cardName } from './scan-answer/scan-answer';
 import { ScanFlow } from './scan-flow/scan-flow';
@@ -25,12 +25,12 @@ const STATUS_TEXT: Record<string, string> = {
   expired: 'lejárt',
 };
 
-// Versenyek → Futókör: the running race's own page on a runner's phone.
+// Móka → Futókörök: the running race's own page on a runner's phone.
 // The course (kept on the phone - it works without a signal too), the run
 // that's on with its clock and the card to find next, the camera to read
 // the cards, my runs, and everyone's best times.
 @Component({
-  selector: 'app-versenyek',
+  selector: 'app-futokor-home',
   imports: [
     RouterLink,
     DatePipe,
@@ -41,10 +41,10 @@ const STATUS_TEXT: Record<string, string> = {
     ScanFlow,
     ScanAnswerView,
   ],
-  templateUrl: './versenyek.html',
-  styleUrl: './versenyek.scss',
+  templateUrl: './futokor-home.html',
+  styleUrl: './futokor-home.scss',
 })
-export class Versenyek implements OnDestroy {
+export class FutokorHome implements OnDestroy {
   futokor = inject(FutokorService);
   private auth = inject(AuthService);
   private confirm = inject(ConfirmService);

@@ -1,10 +1,10 @@
 import AppError from '../utils/appError.js';
 
-// Who may use Futókör (the running race, under Versenyek). While it's
+// Who may use Futókör (the running race - Futókörök, a part of Móka). While it's
 // being built: only the one initial admin (the role manager, see
 // utils/roleManager.js) - not the other admins. Once it's ready, this is
 // the line that opens it to everyone logged in (the client's twin:
-// auth/moka.guard.ts's canSeeFutokor).
+// auth/futokor.guard.ts's canSeeFutokor).
 export const canUseFutokor = (user) => !!user?.canManageRoles;
 
 // After requireAuth.

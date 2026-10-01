@@ -7,7 +7,8 @@ import { filter, map, startWith } from 'rxjs';
 // A darts game's own page (moka/darts/<id>) - not the list, not "uj".
 const isGameUrl = (url: string) => /^\/moka\/darts\/(?!uj\b)[^/?#]+/.test(url);
 
-// Outer shell for moka/* - the games: Darts first, the quiz later. Same
+// Outer shell for moka/* - the games: Darts, Futókörök (the running
+// race), the quiz later. Same
 // sidebar layout as the Klub and Média shells.
 @Component({
   selector: 'app-moka',
