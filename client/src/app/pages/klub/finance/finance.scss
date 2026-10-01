@@ -1,3 +1,5 @@
+@use '../../../shared/fab';
+
 // Ported near-verbatim from club-finances-demo.html's stylesheet (same
 // colors/spacing/shadows) - scoped to this component so it can reuse the
 // demo's exact class names without colliding with the rest of the app.
@@ -89,6 +91,12 @@ select,
   font-weight: 750;
   min-height: 44px;
   box-shadow: 0 5px 13px #1a796c2b;
+}
+
+// The + icon is the phone's (the floating button); a wide screen has the
+// label "＋ Új tétel".
+.add-entry-btn .add-icon {
+  display: none;
 }
 
 .primary-btn:hover:not(:disabled) {
@@ -583,15 +591,18 @@ th:last-child {
     padding: 13px 16px;
   }
 
-  // The period band and Új tétel side by side.
-  .actions {
-    flex-wrap: nowrap;
-    gap: 0.5rem;
+  // "+ Új tétel" out of the heading: the floating + of a phone
+  // (shared/_fab.scss) - the period band has the line to itself.
+  .actions .add-entry-btn {
+    @include fab.button;
   }
 
-  .actions .primary-btn {
-    padding: 0.75rem;
-    white-space: nowrap;
+  .add-entry-btn .add-icon {
+    display: block;
+  }
+
+  .add-entry-btn .add-text {
+    display: none;
   }
 
   .metrics {

@@ -99,14 +99,15 @@
           }
 
           <div class="field">
-            <label for="mBirthday">Születési dátum</label>
-            <input
-              id="mBirthday"
-              type="date"
+            <!-- Year, month, day - not the browser's own date field, which
+                 shows the date in the browser's language (month/day/year
+                 on an English one). -->
+            <span class="field-label">Születési dátum</span>
+            <app-hu-date-input
+              label="Születési dátum"
               [min]="minBirthday"
               [max]="maxBirthday"
-              [value]="birthday()"
-              (change)="birthday.set($any($event.target).value)"
+              [(value)]="birthday"
             />
           </div>
 

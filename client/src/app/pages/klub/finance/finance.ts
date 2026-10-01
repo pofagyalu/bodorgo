@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../auth/auth.service';
 import {
   FinanceService,
@@ -23,7 +24,7 @@ function today(): string {
 
 @Component({
   selector: 'app-finance',
-  imports: [DatePipe, WaterfallChart, PeriodBand],
+  imports: [DatePipe, MatIconModule, WaterfallChart, PeriodBand],
   templateUrl: './finance.html',
   styleUrl: './finance.scss',
 })

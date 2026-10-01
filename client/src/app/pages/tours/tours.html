@@ -44,7 +44,11 @@
     </div>
 
     @if (auth.user()?.role === 'admin') {
-      <a routerLink="/taborok/uj" class="new-tour-btn"><mat-icon>add</mat-icon>Tábor</a>
+      <!-- "+Tábor" after the bar; on a phone a round + floating in the
+           bottom right corner, out of the bar's way. -->
+      <a routerLink="/taborok/uj" class="new-tour-btn" title="Új tábor" aria-label="Új tábor"
+        ><mat-icon>add</mat-icon><span class="new-tour-text">Tábor</span></a
+      >
     }
   </div>
 

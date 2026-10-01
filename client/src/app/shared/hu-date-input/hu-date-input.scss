@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+// Year, month, day side by side - the month's name needs the most room.
+.parts {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 0.9fr;
+  gap: 0.4rem;
+}
+
+// The Klub forms' field look (member-edit.scss, finance.scss) - a page's
+// own styles don't reach in here.
+select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.5rem;
+  border: 1px solid #dce5e1;
+  border-radius: 0.5625rem;
+  background: white;
+  color: #283e49;
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+select:focus-visible {
+  outline: 2px solid #1a796c;
+  outline-offset: 1px;
+}

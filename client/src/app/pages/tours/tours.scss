@@ -1,3 +1,5 @@
+@use '../../shared/fab';
+
 // Grey backdrop so the white content panel below reads as a separate
 // "card" floating on the page instead of blending into it - matches
 // tour-details.scss's and homepage.scss's identical treatment. --header-height is
@@ -146,8 +148,15 @@
     margin: 0 0 1.2rem;
   }
 
-  .new-tour-btn {
-    padding: 0.6rem 0.8rem;
+  // Out of the row: the floating + of a phone (shared/_fab.scss).
+  // (.top-row: this block comes before the button's base rule further
+  // down, which would otherwise win.)
+  .top-row .new-tour-btn {
+    @include fab.button;
+  }
+
+  .new-tour-text {
+    display: none;
   }
 
   .filter-search {

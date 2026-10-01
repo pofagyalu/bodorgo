@@ -1,0 +1,20 @@
+<div class="parts" role="group" [attr.aria-label]="label()">
+  <select aria-label="Év" (change)="choose('year', $any($event.target).value)">
+    <option value="0" [selected]="!year()">Év</option>
+    @for (y of years(); track y) {
+      <option [value]="y" [selected]="y === year()">{{ y }}</option>
+    }
+  </select>
+  <select aria-label="Hónap" (change)="choose('month', $any($event.target).value)">
+    <option value="0" [selected]="!month()">Hónap</option>
+    @for (m of months; track m; let i = $index) {
+      <option [value]="i + 1" [selected]="i + 1 === month()">{{ m }}</option>
+    }
+  </select>
+  <select aria-label="Nap" (change)="choose('day', $any($event.target).value)">
+    <option value="0" [selected]="!day()">Nap</option>
+    @for (d of days(); track d) {
+      <option [value]="d" [selected]="d === day()">{{ d }}.</option>
+    }
+  </select>
+</div>
