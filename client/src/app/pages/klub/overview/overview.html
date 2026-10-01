@@ -9,7 +9,7 @@
       </p>
       <div class="overview-actions">
         <a routerLink="/klub/felhasznalok" class="primary-btn">Tagok és tagdíjak →</a>
-        <a routerLink="/klub/penzugyek" class="outline-btn">Pénzügyek megnyitása</a>
+        <a routerLink="/klub/penzugyek" class="outline-btn">Pénzügyek →</a>
       </div>
     </div>
     <div class="intro-card">
@@ -26,11 +26,6 @@
       <div class="label">Nyilvántartott tagok</div>
       <strong>{{ clubMembers().length }}</strong>
       <small>Klubtag összesen</small>
-    </section>
-    <section class="overview-stat">
-      <div class="label">{{ currentYear }}. évi tagdíj rendezve</div>
-      <strong>{{ paidThisYear().length }} / {{ eligibleThisYear().length }}</strong>
-      <small>Tag fizetett a jogosultak közül</small>
     </section>
     <section class="overview-stat">
       <div class="label">Egyenleg</div>
