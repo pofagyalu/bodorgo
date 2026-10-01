@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+// Chart.js sizes the canvas to its box (maintainAspectRatio is off), which
+// has to be positioned and have a height of its own.
+.canvas-box {
+  position: relative;
+  height: 15rem;
+}

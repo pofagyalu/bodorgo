@@ -287,59 +287,16 @@ select,
   margin-right: 7px;
 }
 
+.dot.total {
+  background: #a9b4ba;
+}
+
 .dot.in {
   background: #32a48d;
 }
 
 .dot.out {
   background: #efa46f;
-}
-
-.chart {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 7px;
-  height: 170px;
-  align-items: end;
-}
-
-.month {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: end;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.bars {
-  height: 140px;
-  width: 100%;
-  display: flex;
-  align-items: end;
-  justify-content: center;
-  gap: 3px;
-  border-bottom: 1px solid #e8eeea;
-}
-
-.bar {
-  width: min(15px, 42%);
-  border-radius: 4px 4px 0 0;
-  min-height: 0;
-}
-
-.bar.in {
-  background: #32a48d;
-}
-
-.bar.out {
-  background: #efa46f;
-}
-
-.month-label {
-  font-size: 10px;
-  color: #56666e;
 }
 
 .category-list {
@@ -644,18 +601,6 @@ th:last-child {
 
   .panel {
     padding: 20px;
-  }
-
-  .chart {
-    gap: 3px;
-  }
-
-  .month-label {
-    font-size: 9px;
-  }
-
-  .bar {
-    width: 43%;
   }
 
   .ledger-head {

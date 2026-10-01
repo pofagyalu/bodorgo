@@ -1,0 +1,86 @@
+// An item's width - the band shows three of them: the chosen one in the
+// middle and a neighbor on each side.
+$item: 4.5rem;
+
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.band {
+  display: flex;
+  width: 3 * $item;
+  // An item's width of room on both ends, so the first and the last can
+  // come to the middle too.
+  padding: 0 $item;
+  box-sizing: border-box;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  background: white;
+  border: 1px solid #dce6e3;
+  border-radius: 0.7rem;
+  min-height: 2.75rem;
+  cursor: grab;
+  touch-action: pan-x;
+  user-select: none;
+  // The neighbors fade out towards the edges.
+  mask-image: linear-gradient(to right, transparent, black 30%, black 70%, transparent);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #1a796c;
+    outline-offset: 2px;
+  }
+
+  // Following the mouse: no snapping back under it.
+  &.dragging {
+    scroll-snap-type: none;
+    cursor: grabbing;
+  }
+}
+
+.item {
+  flex: 0 0 $item;
+  scroll-snap-align: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8a989f;
+  cursor: inherit;
+  transition:
+    color 0.2s,
+    font-size 0.2s;
+
+  &.centered {
+    font-size: 1rem;
+    font-weight: 750;
+    color: #254257;
+  }
+}
+
+.arrow {
+  width: 2rem;
+  height: 2.75rem;
+  border: 0;
+  background: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: #254257;
+  border-radius: 0.5rem;
+
+  &:hover:not(:disabled) {
+    background: #eef3f1;
+  }
+
+  &:disabled {
+    color: #c5ced2;
+    cursor: default;
+  }
+}

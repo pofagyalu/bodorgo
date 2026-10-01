@@ -1,8 +1,18 @@
 import { Component, computed, input } from '@angular/core';
-import { ChartData, ChartOptions, TooltipItem } from 'chart.js';
-import { BaseChartDirective } from 'ng2-charts';
+import {
+  ChartData,
+  ChartOptions,
+  LinearScale,
+  LineController,
+  LineElement,
+  PointElement,
+  ScatterController,
+  Tooltip,
+  TooltipItem,
+} from 'chart.js';
+import { BaseChartDirective, provideCharts } from 'ng2-charts';
 import { AgeFigures, AttendeeAges } from '../../services/tour';
-import { chartProviders, cssColor, pageFont, prefersReducedMotion } from '../../shared/charts';
+import { cssColor, pageFont, prefersReducedMotion } from '../../shared/charts';
 
 // A point of either dataset: a tour's dot or a year of the line. `title`
 // and `figures` are what its tooltip says.
@@ -34,7 +44,19 @@ const oneDecimal = new Intl.NumberFormat('hu-HU', {
   selector: 'app-age-chart',
   standalone: true,
   imports: [BaseChartDirective],
-  providers: [chartProviders],
+  // Just the Chart.js pieces this chart is made of (see shared/charts.ts).
+  providers: [
+    provideCharts({
+      registerables: [
+        LineController,
+        ScatterController,
+        LineElement,
+        PointElement,
+        LinearScale,
+        Tooltip,
+      ],
+    }),
+  ],
   templateUrl: './age-chart.html',
   styleUrl: './age-chart.scss',
 })
