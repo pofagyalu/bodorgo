@@ -60,17 +60,6 @@ export interface FutokorRun {
   flagged: boolean;
 }
 
-export interface FutokorRunner {
-  userId: string;
-  name: string;
-  photoUpdatedAt: string | null;
-  totalMs: number;
-  paceSecPerKm: number | null;
-  finishedAt: string;
-  flagged: boolean;
-  finishedRuns: number;
-}
-
 // A futókör in the list of them all.
 export interface CourseSummary {
   _id: string;
@@ -542,12 +531,6 @@ export class FutokorService {
   }
 
   // --- Results ---
-
-  getLeaderboard(courseId: string): Observable<FutokorRunner[]> {
-    return this.http
-      .get<{ data: { runners: FutokorRunner[] } }>(`${this.apiUrl}/courses/${courseId}/leaderboard`)
-      .pipe(map((res) => res.data.runners));
-  }
 
   getResults(): Observable<CourseSummary[]> {
     return this.http

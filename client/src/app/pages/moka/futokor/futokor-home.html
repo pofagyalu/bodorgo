@@ -124,32 +124,13 @@
         }
       </div>
 
+      <!-- Everyone's times on this course: under Eredmények. -->
       <div class="block-results">
-        @if (runners().length) {
-          <h2><mat-icon>emoji_events</mat-icon> Legjobb idők</h2>
-          <app-podium [winners]="winners()" />
-          <ol class="board">
-            @for (r of runners(); track r.userId; let i = $index) {
-              <li [class.me]="r.userId === myId">
-                <span class="rank">{{ i + 1 }}.</span>
-                <app-avatar
-                  class="face"
-                  [name]="r.name"
-                  [userId]="r.userId"
-                  [photoVersion]="r.photoUpdatedAt"
-                />
-                <span class="who">{{ r.name }}</span>
-                <span class="runs-count" title="Befejezett futások">{{ r.finishedRuns }}×</span>
-                <span class="best">
-                  {{ time(r.totalMs) }}
-                  @if (r.paceSecPerKm) {
-                    <small>{{ pace(r.paceSecPerKm) }}</small>
-                  }
-                </span>
-              </li>
-            }
-          </ol>
-        }
+        <a [routerLink]="['/moka/futokor/eredmenyek', c._id]" class="to-results">
+          <mat-icon>emoji_events</mat-icon>
+          <span><strong>Eredmények</strong><small>Ki mennyit futott ezen a pályán</small></span>
+          <mat-icon class="chevron">chevron_right</mat-icon>
+        </a>
       </div>
     </div>
   } @else if (loaded()) {

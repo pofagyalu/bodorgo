@@ -186,52 +186,6 @@ h1 {
   stroke-width: 3;
 }
 
-// --- The rest of Futókörök ---
-
-.more {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 0.75rem;
-  margin-top: 1.25rem;
-
-  a {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.875rem 1rem;
-    border-radius: 1.125rem;
-    background: #fff;
-    box-shadow: 0 0.25rem 0.875rem #213b4110;
-    color: #23354a;
-    text-decoration: none;
-    transition: transform 0.15s ease;
-
-    &:hover {
-      transform: translateY(-0.125rem);
-    }
-  }
-
-  mat-icon {
-    flex: none;
-    width: 2.5rem;
-    height: 2.5rem;
-    display: grid;
-    place-items: center;
-    border-radius: 0.875rem;
-    background: #fff3d1;
-    color: var(--logo-orange);
-  }
-
-  span {
-    display: grid;
-  }
-
-  small {
-    color: #6a7a83;
-    font-size: 0.8125rem;
-  }
-}
-
 @media (max-width: 760px) {
   .hero {
     grid-template-columns: minmax(0, 1fr);
@@ -345,8 +299,4 @@ h2 {
 .chevron {
   flex: none;
   color: #b3c0c6;
-}
-
-.more {
-  margin-top: 2rem;
 }
