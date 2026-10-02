@@ -1,0 +1,120 @@
+// The period picker: a button and its panel (see period-picker.ts).
+:host {
+  --accent: var(--period-picker-accent, #55c57a);
+  position: relative;
+  display: inline-block;
+}
+
+// The chosen period and a small arrow. A fixed least width, so it doesn't
+// jump between "2026" and "Összes".
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 6.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.6rem 0 1rem;
+  border: 1px solid #dce6e3;
+  border-radius: 0.7rem;
+  background: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1b6548;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+
+  mat-icon {
+    font-size: 1.3rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    color: #999;
+    transition: transform 0.2s;
+  }
+
+  &:hover,
+  &.trigger--open {
+    background: #f1f6f3;
+    border-color: var(--accent);
+  }
+
+  &.trigger--open mat-icon {
+    transform: rotate(180deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+// Every choice at once, under the button (its right end, unless the host
+// says otherwise): the wide ones across the top, then four to a row.
+.panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: var(--period-picker-left, auto);
+  right: var(--period-picker-right, 0);
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 0.6rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.22);
+  animation: panel-in 0.15s ease-out;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}
+
+.option {
+  padding: 0.65rem 0;
+  border: none;
+  border-radius: 0.5rem;
+  background: #f1f6f3;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #333;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+
+  &:hover {
+    background: #d9eee1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+.option--wide {
+  grid-column: 1 / -1;
+}
+
+// The one showing now.
+.option--current,
+.option--current:hover {
+  background: var(--accent);
+  color: #fff;
+}

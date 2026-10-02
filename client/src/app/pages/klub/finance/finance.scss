@@ -69,6 +69,11 @@ button {
   flex-wrap: wrap;
 }
 
+// The period picker in this page's teal.
+app-period-picker {
+  --period-picker-accent: #1a796c;
+}
+
 select,
 .outline-btn {
   background: white;
@@ -574,6 +579,12 @@ th:last-child {
     align-items: start;
     flex-direction: column;
   }
+
+  // The picker is on the left here: its panel opens from its left end.
+  app-period-picker {
+    --period-picker-left: 0;
+    --period-picker-right: auto;
+  }
 }
 
 @media (max-width: 580px) {
@@ -592,7 +603,7 @@ th:last-child {
   }
 
   // "+ Új tétel" out of the heading: the floating + of a phone
-  // (shared/_fab.scss) - the period band has the line to itself.
+  // (shared/_fab.scss) - the period picker has the line to itself.
   .actions .add-entry-btn {
     @include fab.button;
   }

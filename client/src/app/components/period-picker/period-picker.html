@@ -1,0 +1,42 @@
+<button
+  type="button"
+  class="trigger"
+  [class.trigger--open]="open()"
+  [title]="label()"
+  [attr.aria-label]="label()"
+  aria-haspopup="listbox"
+  [attr.aria-expanded]="open()"
+  (click)="toggle($event)"
+>
+  <span>{{ currentLabel() }}</span>
+  <mat-icon aria-hidden="true">expand_more</mat-icon>
+</button>
+
+@if (open()) {
+  <div class="panel" role="listbox" [attr.aria-label]="label()" (click)="$event.stopPropagation()">
+    @for (o of wideOptions(); track o.value) {
+      <button
+        type="button"
+        role="option"
+        class="option option--wide"
+        [class.option--current]="o.value === value()"
+        [attr.aria-selected]="o.value === value()"
+        (click)="pick(o.value)"
+      >
+        {{ o.label }}
+      </button>
+    }
+    @for (o of gridOptions(); track o.value) {
+      <button
+        type="button"
+        role="option"
+        class="option"
+        [class.option--current]="o.value === value()"
+        [attr.aria-selected]="o.value === value()"
+        (click)="pick(o.value)"
+      >
+        {{ o.label }}
+      </button>
+    }
+  </div>
+}

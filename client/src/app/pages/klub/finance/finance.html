@@ -6,11 +6,7 @@
       <p>Bevételek, kiadások és az egyenleg egy helyen.</p>
     </div>
     <div class="actions">
-      <app-period-band
-        label="Időszak"
-        [options]="periodOptions()"
-        [(value)]="period"
-      ></app-period-band>
+      <app-period-picker label="Időszak" [options]="periodOptions()" [(value)]="period" />
       @if (isAdmin()) {
         <!-- On a phone: the floating + in the bottom right corner. -->
         <button
