@@ -61,12 +61,12 @@
                 (change)="chooseBookDiagrams($any($event.target).value)"
               >
                 <option value="guitar" [selected]="bookDiagrams() === 'guitar'">
-                  gitár ábrákkal
+                  gitár akkordokkal
                 </option>
                 <option value="ukulele" [selected]="bookDiagrams() === 'ukulele'">
-                  ukulele ábrákkal
+                  ukulele akkordokkal
                 </option>
-                <option value="none" [selected]="bookDiagrams() === 'none'">ábrák nélkül</option>
+                <option value="none" [selected]="bookDiagrams() === 'none'">akkordok nélkül</option>
               </select>
               <a
                 [href]="bookUrl()"

@@ -1,0 +1,79 @@
+<svg class="circle" viewBox="0 0 500 500" role="img" aria-label="Kvintkör: a hangnemek köre">
+  @for (key of keys; track $index) {
+    @for (path of key.wedges; track $index) {
+      <path
+        class="wedge"
+        [attr.d]="path"
+        [attr.fill]="key.tint"
+        [attr.fill-opacity]="opacities[$index]"
+      />
+    }
+    <!-- One name, or two where the circle's halves meet (F# / Gb). -->
+    <text
+      class="major"
+      [class.two]="key.major.length > 1"
+      [attr.x]="key.majorAt.x"
+      [attr.y]="key.majorAt.y"
+    >
+      @for (name of key.major; track $index) {
+        <tspan
+          [attr.x]="key.majorAt.x"
+          [attr.dy]="$index ? '1.05em' : key.major.length > 1 ? '-0.15em' : '0.36em'"
+        >
+          {{ name }}
+        </tspan>
+      }
+    </text>
+    <text
+      class="minor"
+      [class.two]="key.minor.length > 1"
+      [attr.x]="key.minorAt.x"
+      [attr.y]="key.minorAt.y"
+    >
+      @for (name of key.minor; track $index) {
+        <tspan
+          [attr.x]="key.minorAt.x"
+          [attr.dy]="$index ? '1.05em' : key.minor.length > 1 ? '-0.15em' : '0.36em'"
+        >
+          {{ name }}
+        </tspan>
+      }
+    </text>
+    <text
+      class="signs"
+      [class.two]="key.signs.length > 1"
+      [attr.x]="key.signsAt.x"
+      [attr.y]="key.signsAt.y"
+    >
+      @for (sign of key.signs; track $index) {
+        <tspan
+          [attr.x]="key.signsAt.x"
+          [attr.dy]="$index ? '1.05em' : key.signs.length > 1 ? '-0.15em' : '0.36em'"
+        >
+          {{ sign }}
+        </tspan>
+      }
+    </text>
+  }
+  <circle class="rim" [attr.cx]="centre" [attr.cy]="centre" [attr.r]="outer" />
+  <text class="middle" [attr.x]="centre" [attr.y]="centre">
+    <tspan [attr.x]="centre" dy="-0.2em">dúr</tspan>
+    <tspan [attr.x]="centre" dy="1.15em">moll</tspan>
+  </text>
+</svg>
+
+<ul class="notes">
+  <li>
+    A külső körben a dúr hangnemek, alattuk a párhuzamos mollok (C-dúr – a-moll), legbelül az
+    előjegyzés: hány kereszt (#) vagy bé (b).
+  </li>
+  <li>
+    Az óramutató járása szerint egy lépés egy kvinttel feljebb visz, és eggyel több keresztet (vagy
+    eggyel kevesebb bét) jelent.
+  </li>
+  <li>
+    Egy dal három fő akkordja a körön egymás mellett áll: C mellett az F és a G. A hozzájuk tartozó
+    mollok (dm, am, em) is jól szólnak velük.
+  </li>
+  <li>A daloskönyv jelölése: H a nemzetközi B, a B pedig a Bb (bé) – a mollok kisbetűvel.</li>
+</ul>

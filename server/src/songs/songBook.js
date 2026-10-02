@@ -1,15 +1,16 @@
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import { drawCover } from './songBookCover.js';
-import { CIRCLE_TITLE, drawCircleOfFifths } from './songBookCircle.js';
+import { ANNEXES } from './songBookAnnexes.js';
 import { chordShape, parseChordPro, toBlocks, toWords, uniqueChords } from './songText.js';
 
 // The whole Daloskönyv as one PDF: a cover, the table of contents (every
 // line a link to its song, with its page number), then the songs - each
 // from a new page, the chords over their syllables, and (if asked) how the
-// song's chords are held on the guitar or the ukulele -, and the circle of
-// fifths on the last page. Every page after the contents has a link back
-// to it in its foot; the songs are in the PDF's bookmarks too.
+// song's chords are held on the guitar or the ukulele -, and two annexes:
+// the circle of fifths and the table of the keys' chords. Every page after
+// the contents has a link back to it in its foot; the songs are in the
+// PDF's bookmarks too.
 
 // Same fonts as the other PDFs (assets/ - see sync.js): Mulish has the
 // Hungarian ő and ű that pdfkit's built-in fonts lack.
@@ -71,9 +72,14 @@ export function renderSongBook(
 
     drawCover(doc, { count: songs.length, diagrams, lastAdded });
 
-    // What the contents list: the songs, and the circle of fifths that
-    // closes the book.
-    const entries = [...songs, { title: CIRCLE_TITLE, artist: '' }];
+    // What the contents list: the songs, and - under their own heading -
+    // the annexes that close the book (the circle of fifths, the keys'
+    // chords).
+    const entries = [
+      ...songs,
+      { heading: 'Mellékletek' },
+      ...ANNEXES.map((annex) => ({ title: annex.title, artist: '', draw: annex.draw })),
+    ];
 
     // The contents come before the songs but need their page numbers:
     // its pages are added empty now, and filled in at the end.
@@ -87,12 +93,14 @@ export function renderSongBook(
     for (let i = 1; i < tocPages; i += 1) doc.addPage();
 
     const pages = entries.map((entry, i) => {
+      // A heading of the contents has no page of its own.
+      if (entry.heading) return null;
       doc.addPage();
       doc.addNamedDestination(`song-${i}`);
       doc.outline.addItem(entry.artist ? `${entry.title} – ${entry.artist}` : entry.title);
       const page = pageIndex(doc);
-      if (i < songs.length) drawSong(doc, entry, diagrams);
-      else drawCircleOfFifths(doc, { margin: MARGIN, bottom: contentBottom(doc) });
+      if (entry.draw) entry.draw(doc, { margin: MARGIN, bottom: contentBottom(doc) });
+      else drawSong(doc, entry, diagrams);
       return page;
     });
 
@@ -355,6 +363,11 @@ function drawContents(doc, songs, pages, { firstTocPage, perFirstPage, perPage }
     }
     const right = contentRight(doc);
     const y = MARGIN + row * TOC_ROW;
+    // "Mellékletek": a heading among the rows, leading nowhere.
+    if (song.heading) {
+      put(doc, song.heading, left, y + 1.5, { font: 'Heading', size: 10.5, color: GREEN });
+      return;
+    }
     const number = String(pages[i] + 1);
     const numberWidth = widthOf(doc, number, 'Body', 10);
     const room = right - left - numberWidth - 14;

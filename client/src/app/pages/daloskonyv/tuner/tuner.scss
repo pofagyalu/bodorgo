@@ -1,0 +1,215 @@
+// The tuner: the note heard in big letters, a scale with a needle under
+// it, the strings to aim for. Green all over once the string is true.
+$ink: #193346;
+$muted: #56666e;
+$teal: #1a796c;
+$rust: #b5533a;
+
+:host {
+  display: block;
+}
+
+.tuner {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 0.5rem 0 1rem;
+  text-align: center;
+}
+
+.lead {
+  margin: 0;
+  color: $muted;
+  line-height: 1.55;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  border-radius: 10rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.start {
+  padding: 0.9rem 1.6rem;
+  background: $teal;
+  color: #fff;
+  font-size: 1.0625rem;
+
+  &:hover {
+    background: #16675d;
+  }
+}
+
+.stop {
+  padding: 0.6rem 1.2rem;
+  background: #e3e9e6;
+  color: $ink;
+}
+
+.error {
+  margin: 0;
+  color: #b3261e;
+  font-size: 0.9375rem;
+}
+
+.heard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 8.5rem;
+  color: $rust;
+  transition: color 0.2s ease;
+}
+
+.note-name {
+  font-size: 7.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.note-octave {
+  margin-top: 0.6rem;
+  color: $muted;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+// The scale: flat on the left, sharp on the right, true in the middle.
+.scale {
+  position: relative;
+  width: 100%;
+  height: 3.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(
+    90deg,
+    #f4d9cf 0%,
+    #f8ecd9 35%,
+    #d9efe6 45%,
+    #d9efe6 55%,
+    #f8ecd9 65%,
+    #f4d9cf 100%
+  );
+}
+
+.tick {
+  position: absolute;
+  bottom: 0.25rem;
+  color: $muted;
+  font-size: 0.75rem;
+}
+
+.tick--low {
+  left: 0.6rem;
+}
+
+.tick--high {
+  right: 0.6rem;
+}
+
+// The middle line: where the needle should stand.
+.tick--mid {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #9ccdbd;
+}
+
+.needle {
+  position: absolute;
+  top: 0.3rem;
+  bottom: 0.3rem;
+  width: 0.4rem;
+  margin-left: -0.2rem;
+  border-radius: 0.2rem;
+  background: $rust;
+  box-shadow: 0 0 0 0.15rem #ffffffb3;
+  transition:
+    left 0.12s linear,
+    background 0.2s ease;
+}
+
+.advice {
+  margin: 0;
+  min-height: 1.5rem;
+  color: $ink;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.strings {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.string {
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border: 2px solid #dce6e3;
+  border-radius: 50%;
+  color: $muted;
+  font-size: 1.125rem;
+  font-weight: 700;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.string--active {
+  border-color: $rust;
+  background: #fbeee9;
+  color: $rust;
+}
+
+// True: everything that was rust turns green.
+.tuner--true {
+  .heard,
+  .string--active {
+    color: $teal;
+  }
+
+  .needle {
+    background: $teal;
+  }
+
+  .string--active {
+    border-color: $teal;
+    background: #e3f3ed;
+  }
+
+  .advice {
+    color: $teal;
+  }
+}
+
+// The string went quiet: the last note stays, paler.
+.tuner--faded .heard,
+.tuner--faded .needle {
+  opacity: 0.45;
+}
+
+@media (max-width: 580px) {
+  .note-name {
+    font-size: 6.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .needle,
+  .heard,
+  .string {
+    transition: none;
+  }
+}

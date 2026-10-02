@@ -203,6 +203,30 @@ $line: #e4eae7;
   }
 }
 
+// The pages that aren't songs (the tuner, the annexes): before the songs,
+// each with its icon, parted from them by a thin line.
+.annex-list {
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid $line;
+
+  a {
+    align-items: center;
+  }
+}
+
+.annex-icon {
+  flex: none;
+  font-size: 1.3rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  color: $teal;
+}
+
+.song-list a.active .annex-icon {
+  color: #fff;
+}
+
 // A song played tonight: a tick before it, its name fainter.
 .played-tick {
   flex: none;

@@ -2715,7 +2715,7 @@ const paths = {
       tag: T.songs,
       summary: 'The whole songbook as a PDF',
       description:
-        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page, the chords over their syllables, and the circle of fifths (Kvintkör) on the last page. Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
+        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page, the chords over their syllables, and two annexes on the last pages: the circle of fifths (Kvintkör) and the table of every major key’s seven chords (Akkordtáblázat). Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
       params: [
         query(
           'diagrams',

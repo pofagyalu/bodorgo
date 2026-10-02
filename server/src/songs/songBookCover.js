@@ -30,7 +30,7 @@ const LOGO_LETTERS = [
   LOGO.yellow,
 ];
 
-const DIAGRAM_LABEL = { guitar: 'gitár akkordábrákkal', ukulele: 'ukulele akkordábrákkal' };
+const DIAGRAM_LABEL = { guitar: 'gitár akkordokkal', ukulele: 'ukulele akkordokkal' };
 
 // A line of text centred on the page.
 function centred(doc, text, y, { font, size, color, characterSpacing = 0 }) {

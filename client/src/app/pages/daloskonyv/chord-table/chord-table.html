@@ -1,0 +1,47 @@
+<!-- Scrolls sideways by itself on a narrow screen; the key stays in view. -->
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col" class="key-head">Hangnem</th>
+        @for (degree of degrees; track degree.roman) {
+          <th scope="col" [class.main]="degree.kind === 'major'">{{ degree.roman }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (key of keys; track key.key) {
+        <tr>
+          <th scope="row">{{ key.key }}</th>
+          @for (chord of key.chords; track $index) {
+            <td
+              [class.main]="degrees[$index].kind === 'major'"
+              [class.dim]="degrees[$index].kind === 'dim'"
+            >
+              {{ chord }}
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<ul class="notes">
+  <li>
+    Egy sor egy dúr hangnem hét akkordja. A legtöbb dal a három fő akkordból áll: az
+    <strong>I</strong>, a <strong>IV</strong> és az <strong>V</strong> (C-dúrban: C, F, G).
+  </li>
+  <li>
+    Ha egy dalban moll is szól, az leggyakrabban a <strong>vi</strong> (C-dúrban: am), utána a ii és
+    a iii.
+  </li>
+  <li>
+    Hallás után: keresd meg, melyik akkordon „ér haza” a dal – az az I. A sorában megvan a többi is.
+  </li>
+  <li>
+    Moll hangnemű dalhoz a párhuzamos dúr sorát nézd: az a-moll dal akkordjai a C-dúr sorában vannak
+    (a vi a „hazai” akkord).
+  </li>
+  <li>Gyakori menetek: I – IV – V – I, I – vi – IV – V, I – V – vi – IV.</li>
+</ul>
