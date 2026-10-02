@@ -2,7 +2,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember, createTour } from '../helpers/factories.js';
-import { FutokorRun, FutokorScan } from '../../src/models/futokorModels.js';
+import { FutokorCourse, FutokorRun, FutokorScan } from '../../src/models/futokorModels.js';
 import { tagToken, verifyTagToken } from '../../src/futokor/tags.js';
 import User from '../../src/models/userModel.js';
 import { ensureFutokodok } from '../../src/utils/futokod.js';
@@ -144,6 +144,41 @@ describe('Futókör: a course', () => {
     });
     expect(later.status).toBe(201);
     expect((await get(owner, '/courses')).body.data.courses).toHaveLength(2);
+  });
+
+  it('carries its track and where its points are - saving it again keeps them', async () => {
+    const owner = await createOwner();
+    const course = await openCourse(owner);
+    expect(course).toMatchObject({ track: [], elevationGainM: null });
+
+    // As scripts/attachFutokorTrack.mjs leaves it.
+    const stored = await FutokorCourse.findById(course._id);
+    stored.track = [
+      [47.0, 19.0],
+      [47.001, 19.0],
+    ];
+    stored.elevationGainM = 12;
+    stored.checkpoints[1].lat = 47.0005;
+    stored.checkpoints[1].lng = 19.0;
+    await stored.save();
+
+    // The cards of the two points change places on Pályák.
+    const saved = await patch(owner, `/courses/${course._id}`, {
+      startTagId: 'S1',
+      stops: [
+        { tagId: 'T01', distanceAlongM: 300 },
+        { tagId: 'T02', distanceAlongM: 600 },
+      ],
+    });
+    expect(saved.body.data.course).toMatchObject({
+      track: [
+        [47, 19],
+        [47.001, 19],
+      ],
+      elevationGainM: 12,
+    });
+    expect(saved.body.data.course.checkpoints[1]).toMatchObject({ tagId: 'T01', lat: 47.0005 });
+    expect(saved.body.data.course.checkpoints[2].lat).toBeNull();
   });
 
   it('refuses cards and distances that make no sense', async () => {

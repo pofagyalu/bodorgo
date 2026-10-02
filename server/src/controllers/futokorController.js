@@ -60,6 +60,9 @@ const courseView = (course) => ({
   name: course.name,
   opensAt: course.opensAt,
   closesAt: course.closesAt,
+  // The loop to draw on the map ([lat, lng] pairs) - empty if none yet.
+  track: course.track ?? [],
+  elevationGainM: course.elevationGainM ?? null,
   ...courseRules(course),
 });
 
@@ -336,8 +339,22 @@ export const updateCourse = async (req, res) => {
       throw new AppError('Ismeretlen vagy letiltott kártya van a pontok között.', 400);
     }
     let previous = 0;
+    // Where each point is on the map (from the course's track, see
+    // scripts/attachFutokorTrack.mjs) stays with the point - the 2nd point
+    // is where it was, whichever card hangs there now.
+    const placeOf = (order) => {
+      const was = course.checkpoints.find((c) => c.order === order);
+      return { lat: was?.lat ?? null, lng: was?.lng ?? null };
+    };
     course.checkpoints = [
-      { tagId: ids[0], kind: 'startFinish', label: 'RAJT / CÉL', order: 0, distanceAlongM: 0 },
+      {
+        tagId: ids[0],
+        kind: 'startFinish',
+        label: 'RAJT / CÉL',
+        order: 0,
+        distanceAlongM: 0,
+        ...placeOf(0),
+      },
       ...stops.map((s, i) => {
         const distanceAlongM = positiveOrNull(s.distanceAlongM ?? null, `${i + 1}. pont távolsága`);
         if (distanceAlongM !== null) {
@@ -352,6 +369,7 @@ export const updateCourse = async (req, res) => {
           label: `${i + 1}. pont`,
           order: i + 1,
           distanceAlongM,
+          ...placeOf(i + 1),
         };
       }),
     ];

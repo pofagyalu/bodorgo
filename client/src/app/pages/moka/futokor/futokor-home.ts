@@ -13,6 +13,7 @@ import {
   racePace,
   raceTime,
 } from '../../../services/futokor';
+import { CourseMap } from './course-map/course-map';
 import { QrScanner, canScanInApp } from './qr-scanner/qr-scanner';
 import { ScanAnswerView, cardName } from './scan-answer/scan-answer';
 import { ScanFlow } from './scan-flow/scan-flow';
@@ -37,6 +38,7 @@ const STATUS_TEXT: Record<string, string> = {
     MatIconModule,
     Avatar,
     Podium,
+    CourseMap,
     QrScanner,
     ScanFlow,
     ScanAnswerView,
@@ -84,6 +86,11 @@ export class FutokorHome implements OnDestroy {
     return now > Date.parse(c.closesAt) ? 'over' : 'open';
   });
   stops = computed(() => (this.course()?.checkpoints.length ?? 1) - 1);
+  // There's something to draw: the loop, or at least where the cards are.
+  hasMap = computed(() => {
+    const c = this.course();
+    return !!c && ((c.track?.length ?? 0) > 1 || c.checkpoints.some((p) => p.lat != null));
+  });
 
   // My runs, the latest first.
   myRuns = computed(() =>
