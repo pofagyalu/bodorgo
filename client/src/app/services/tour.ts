@@ -579,6 +579,8 @@ export class TourService {
   // recreated every time you navigate back to it, wiping its own signals,
   // but this service is a singleton that lives for the app's session.
   toursPeriod = '';
+  // ...and its order by date (true: oldest first), the same way.
+  toursAscending = false;
 
   // Same reasoning, for the tour-details page's "Résztvevők" expand/
   // collapse toggle - remembers whether it was last left open, instead of
