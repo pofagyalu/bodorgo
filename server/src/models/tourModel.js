@@ -250,6 +250,13 @@ const tourSchema = new Schema(
         message: 'A panoráma linkje http:// vagy https:// kezdetű cím legyen',
       },
     },
+    // Optional short name of where the panorama was taken (e.g.
+    // "Poprádi-tó") - the badge's tooltip and the beszámoló's QR card.
+    panoramaTitle: {
+      type: String,
+      trim: true,
+      maxlength: [80, 'A panoráma címe legfeljebb 80 karakter lehet'],
+    },
     description: {
       type: String,
       required: [true, 'A tábornak kell legyen leírása'],

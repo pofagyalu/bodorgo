@@ -488,6 +488,26 @@
   background: #000;
 }
 
+// The panorama's title, top-left over the frame (the close button is
+// top-right) - clicks fall through to the panorama.
+.panorama-caption {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1;
+  max-width: calc(100% - 5rem);
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 .map-modal-close {
   position: absolute;
   top: 10px;

@@ -199,8 +199,10 @@ export interface Tour {
   description: string;
   // Who to call on arrival (name, phone) - optional free text.
   contact?: string;
-  // Link to the place's 360° panorama on another site - optional.
+  // Link to the place's 360° panorama on another site - optional, and a
+  // short name of where it was taken.
   panoramaUrl?: string;
+  panoramaTitle?: string;
   // When the cover image last changed - absent until one is uploaded (see
   // tourCoverController.js). Also its cache-busting version (see
   // TourService.coverUrl).
@@ -444,6 +446,7 @@ export interface TourPayload {
   description?: string;
   contact?: string;
   panoramaUrl?: string;
+  panoramaTitle?: string;
   pricingMode?: 'perHouse' | 'perPerson';
   accommodationPricePerNight?: number;
   accommodationCurrency?: 'HUF' | 'EUR';

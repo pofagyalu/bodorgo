@@ -77,15 +77,26 @@
         </div>
 
         <!-- Optional: the 360° badge on the tour page's cover, and a QR code
-         in the beszámoló. -->
-        <label
-          >360° panoráma linkje
-          <input
-            type="url"
-            [(ngModel)]="form.panoramaUrl"
-            name="panoramaUrl"
-            placeholder="https://..."
-        /></label>
+         in the beszámoló - with a short name of where it was taken. -->
+        <div class="form-row">
+          <label
+            >360° panoráma linkje
+            <input
+              type="url"
+              [(ngModel)]="form.panoramaUrl"
+              name="panoramaUrl"
+              placeholder="https://..."
+          /></label>
+          <label
+            >360° panoráma címe
+            <input
+              type="text"
+              [(ngModel)]="form.panoramaTitle"
+              name="panoramaTitle"
+              maxlength="80"
+              placeholder="pl. Poprádi-tó"
+          /></label>
+        </div>
 
         <!-- The accommodation payment breakdown shown per-attendee on the
          tour-details page (Teljes ár/Előleg/Fizetendő) - all optional, see
