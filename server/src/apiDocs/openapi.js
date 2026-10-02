@@ -2734,7 +2734,7 @@ const paths = {
       tag: T.songs,
       summary: 'The songbook’s cover as a small picture',
       description:
-        'The PDF’s first page, 360 px wide - the picture on the Daloskönyv’s card on Klub → Dokumentumok. Made once and kept until a song is added, changed or deleted. 404 while the book is empty.',
+        'The PDF’s cover, 360 px wide - the picture on the Daloskönyv’s card on Klub → Dokumentumok. Only the cover is drawn for it (not the book), and the picture is saved beside the club documents’ previews: it is made again only when what the cover says changes - the number of songs, whose diagrams, or the day the newest song was added. Changing a song’s text does not remake it. 404 while the book is empty.',
       params: [
         query('diagrams', 'As for the PDF - the cover says whose diagrams the book has.', {
           type: 'string',
