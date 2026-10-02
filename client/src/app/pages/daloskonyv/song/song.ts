@@ -26,7 +26,6 @@ const HOLD_MS = 1200;
 
 const FONT_STEPS = [0.85, 1, 1.15, 1.3, 1.5, 1.75];
 const FONT_KEY = 'daloskonyv-font';
-const CHORDS_KEY = 'daloskonyv-chords';
 const DIAGRAMS_KEY = 'daloskonyv-diagrams';
 // The pace each song was last played at, by its slug.
 const PACE_KEY = 'daloskonyv-pace';
@@ -94,7 +93,6 @@ export class SongPage implements OnDestroy {
     Math.min(Math.max(Math.round(+stored(FONT_KEY, 1)) || 0, 0), FONT_STEPS.length - 1),
   );
   fontScale = computed(() => FONT_STEPS[this.fontStep()]);
-  showChords = signal(stored(CHORDS_KEY, true));
   // Semitones up (+) or down (-); back to 0 with every song.
   transpose = signal(0);
   transposeLabel = computed(() => {
@@ -210,11 +208,6 @@ export class SongPage implements OnDestroy {
     const step = Math.min(Math.max(this.fontStep() + by, 0), FONT_STEPS.length - 1);
     this.fontStep.set(step);
     store(FONT_KEY, step);
-  }
-
-  toggleChords() {
-    this.showChords.update((on) => !on);
-    store(CHORDS_KEY, this.showChords());
   }
 
   chooseInstrument(instrument: Instrument) {

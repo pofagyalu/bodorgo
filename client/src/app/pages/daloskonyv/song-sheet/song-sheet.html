@@ -13,13 +13,13 @@
       @for (line of block.lines; track $index) {
         @if (line.type === 'comment') {
           <p class="comment">{{ line.text }}</p>
-        } @else if (showChords() || line.type === 'lyrics') {
-          <p class="line" [class.line--chords]="line.hasChords && showChords()">
+        } @else {
+          <p class="line" [class.line--chords]="line.hasChords">
             @for (word of line.words; track $index) {
               <span class="word">
                 @for (piece of word; track $index) {
                   <span class="piece">
-                    @if (showChords() && piece.chord; as chord) {
+                    @if (piece.chord; as chord) {
                       <span
                         class="chord"
                         (pointerenter)="onEnter($event, chord)"

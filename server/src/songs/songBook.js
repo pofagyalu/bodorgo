@@ -44,6 +44,39 @@ const TOC_ROW = 15.5;
 export const BOOK_SIZES = ['A4', 'A5'];
 export const BOOK_DIAGRAMS = ['guitar', 'ukulele'];
 
+// An empty book with its fonts; resolve gets the finished PDF (a Buffer)
+// once doc.end() is called.
+function newBook(size, resolve, reject) {
+  const doc = new PDFDocument({
+    size,
+    margins: { top: MARGIN, bottom: BOTTOM, left: MARGIN, right: MARGIN },
+    bufferPages: true,
+    autoFirstPage: false,
+    info: { Title: 'Bódorgó daloskönyv', Author: 'Bódorgó Klub' },
+  });
+  const chunks = [];
+  doc.on('data', (chunk) => chunks.push(chunk));
+  doc.on('end', () => resolve(Buffer.concat(chunks)));
+  doc.on('error', reject);
+
+  doc.registerFont('Body', FONT_REGULAR);
+  doc.registerFont('Heading', FONT_BOLD);
+  doc.registerFont('Italic', FONT_ITALIC);
+  doc.registerFont('Logo', FONT_LOGO);
+  return doc;
+}
+
+// The cover alone, as a one-page PDF - for the book's small picture
+// (songController.js), without drawing the whole book for it. All the
+// cover says: how many songs, whose diagrams, when the newest came in.
+export function renderSongBookCover({ count, diagrams = null, lastAdded = new Date() }) {
+  return new Promise((resolve, reject) => {
+    const doc = newBook('A4', resolve, reject);
+    drawCover(doc, { count, diagrams, lastAdded });
+    doc.end();
+  });
+}
+
 // songs: { title, artist, chordpro } in the book's order.
 // diagrams: 'guitar', 'ukulele' or null. lastAdded: when the newest song
 // came in - the cover's "edition". Answers the PDF as a Buffer.
@@ -52,24 +85,7 @@ export function renderSongBook(
   { diagrams = null, size = 'A4', lastAdded = new Date() } = {},
 ) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      size,
-      margins: { top: MARGIN, bottom: BOTTOM, left: MARGIN, right: MARGIN },
-      bufferPages: true,
-      autoFirstPage: false,
-      info: { Title: 'Bódorgó daloskönyv', Author: 'Bódorgó Klub' },
-    });
-    const chunks = [];
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
-
-    doc.registerFont('Body', FONT_REGULAR);
-    doc.registerFont('Heading', FONT_BOLD);
-    doc.registerFont('Italic', FONT_ITALIC);
-
-    doc.registerFont('Logo', FONT_LOGO);
-
+    const doc = newBook(size, resolve, reject);
     drawCover(doc, { count: songs.length, diagrams, lastAdded });
 
     // What the contents list: the songs, and - under their own heading -

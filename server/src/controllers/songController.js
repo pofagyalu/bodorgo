@@ -1,8 +1,16 @@
+import fs from 'fs';
+import path from 'path';
 import mongoose from 'mongoose';
 import Song from '../models/songModel.js';
 import AppError from '../utils/appError.js';
-import { BOOK_DIAGRAMS, BOOK_SIZES, renderSongBook } from '../songs/songBook.js';
-import { pdfFirstPagePreview } from '../utils/documentPreviews.js';
+import {
+  BOOK_DIAGRAMS,
+  BOOK_SIZES,
+  renderSongBook,
+  renderSongBookCover,
+} from '../songs/songBook.js';
+import { DOCUMENT_PREVIEWS_DIR, pdfFirstPagePreview } from '../utils/documentPreviews.js';
+import { budapestYmd } from '../utils/huDate.js';
 
 // Daloskönyv: the club's songbook. Reading is for everyone logged in;
 // writing only for the one role manager (utils/roleManager.js) - the
@@ -91,7 +99,7 @@ async function currentBook(query) {
     const songs = await inBookOrder(Song.find().select('title artist chordpro')).lean();
     // The cover's "edition": the day the newest song came in.
     const pdf = await renderSongBook(songs, { diagrams, size, lastAdded: newest.createdAt });
-    book = { version, pdf, preview: null };
+    book = { version, pdf };
     bookCache.set(key, book);
   }
   return book;
@@ -111,14 +119,48 @@ export const getSongBook = async (req, res) => {
   res.send(book.pdf);
 };
 
+// The cover's small pictures already read from the disk, by file name.
+const coverPreviews = new Map();
+
 // GET /songs/book.webp - the book's cover as a small picture, for its card
-// on Klub → Dokumentumok (made like a club document's preview).
+// on Klub → Dokumentumok (made like a club document's preview, and kept
+// beside those). Only the cover is drawn for it, not the book - and only
+// when what the cover says has changed: the number of songs, whose
+// diagrams, or the day the newest song came in. Correcting a song's
+// chords doesn't touch it.
 export const getSongBookPreview = async (req, res) => {
-  const book = await currentBook(req.query);
-  book.preview ??= await pdfFirstPagePreview(book.pdf);
+  const diagrams = BOOK_DIAGRAMS.includes(req.query.diagrams) ? req.query.diagrams : null;
+  const [count, newest] = await Promise.all([
+    Song.countDocuments(),
+    Song.findOne().sort('-createdAt').select('createdAt'),
+  ]);
+  if (!count) throw new AppError('Még nincs dal a daloskönyvben.', 404);
+
+  const kind = `daloskonyv-${diagrams ?? 'none'}`;
+  const name = `${kind}-${count}-${budapestYmd(newest.createdAt)}.webp`;
+  let preview = coverPreviews.get(name);
+  if (!preview) {
+    const file = path.join(DOCUMENT_PREVIEWS_DIR, name);
+    if (fs.existsSync(file)) {
+      preview = fs.readFileSync(file);
+    } else {
+      const cover = await renderSongBookCover({ count, diagrams, lastAdded: newest.createdAt });
+      preview = await pdfFirstPagePreview(cover);
+      // The earlier covers of this kind are of no use any more.
+      fs.mkdirSync(DOCUMENT_PREVIEWS_DIR, { recursive: true });
+      for (const old of fs.readdirSync(DOCUMENT_PREVIEWS_DIR)) {
+        if (!old.startsWith(`${kind}-`)) continue;
+        fs.rmSync(path.join(DOCUMENT_PREVIEWS_DIR, old));
+        coverPreviews.delete(old);
+      }
+      fs.writeFileSync(file, preview);
+    }
+    coverPreviews.set(name, preview);
+  }
+
   res.setHeader('Content-Type', 'image/webp');
   res.setHeader('Cache-Control', 'private, no-cache');
-  res.send(book.preview);
+  res.send(preview);
 };
 
 // POST /songs

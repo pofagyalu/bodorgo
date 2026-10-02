@@ -42,7 +42,6 @@ export class SongSheet {
   chordpro = input.required<string>();
   // Semitones up (+) or down (-) - on the screen only.
   transpose = input(0);
-  showChords = input(true);
   // Whose diagrams - null: none.
   instrument = input<Instrument | null>(null);
   showDiagrams = input(false);
@@ -89,7 +88,7 @@ export class SongSheet {
   // Every chord of the song once, with how it's held.
   diagrams = computed(() => {
     const instrument = this.instrument();
-    if (!instrument || !this.showDiagrams() || !this.showChords()) return [];
+    if (!instrument || !this.showDiagrams()) return [];
     const chords = this.lines().flatMap((l) =>
       l.type === 'lyrics' || l.type === 'chords-only' ? l.segments.map((s) => s.chord ?? '') : [],
     );
