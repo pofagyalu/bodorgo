@@ -317,6 +317,12 @@ export class TourDetails {
   // a popup like the map's - null without a usable http(s) link, and then
   // the cover's 360° badge isn't shown either.
   showPanorama = signal(false);
+  // "360°-os panoráma: Poprádi-tó" - the badge's tooltip and the popup's
+  // caption; without a title just "360°-os panoráma".
+  panoramaLabel = computed(() => {
+    const title = this.tour()?.panoramaTitle?.trim();
+    return title ? `360°-os panoráma: ${title}` : '360°-os panoráma';
+  });
   panoramaEmbedUrl = computed<SafeResourceUrl | null>(() => {
     const url = this.tour()?.panoramaUrl?.trim();
     if (!url || !/^https?:\/\//i.test(url)) return null;

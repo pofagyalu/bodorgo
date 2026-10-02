@@ -165,6 +165,9 @@ const schemas = {
     panoramaUrl: str(
       "Optional http(s) link to the place's 360° virtual panorama - the 360° badge on the tour page, and a QR code in the beszámoló PDF.",
     ),
+    panoramaTitle: str(
+      'Optional short name of where the panorama was taken (max 80 characters) - the badge tooltip and the QR card in the beszámoló PDF.',
+    ),
     distanceFromBudapestKm: num('Driving distance.'),
     drivingDurationFromBudapestMinutes: num('Driving time.'),
     pricingMode: str('How the accommodation is priced.', { enum: ['perHouse', 'perPerson'] }),

@@ -17,8 +17,8 @@
           <button
             type="button"
             class="panorama-badge"
-            title="360°-os panoráma"
-            aria-label="360°-os panoráma megnyitása"
+            [title]="panoramaLabel()"
+            [attr.aria-label]="panoramaLabel() + ' megnyitása'"
             (click)="showPanorama.set(true)"
           >
             <mat-icon>360</mat-icon>
@@ -295,6 +295,10 @@
     @if (showPanorama()) {
       <div class="map-modal-backdrop" (click)="showPanorama.set(false)">
         <div class="map-modal map-modal--panorama" (click)="$event.stopPropagation()">
+          <!-- Where it was taken - a phone shows no tooltip on the badge. -->
+          @if (t.panoramaTitle) {
+            <span class="panorama-caption">{{ t.panoramaTitle }}</span>
+          }
           <button
             type="button"
             class="map-modal-close"
@@ -306,7 +310,7 @@
           <iframe
             class="map-modal-frame"
             [src]="panoramaEmbedUrl()"
-            title="360°-os panoráma"
+            [title]="panoramaLabel()"
             allow="fullscreen; gyroscope; accelerometer; xr-spatial-tracking"
             allowfullscreen
           ></iframe>

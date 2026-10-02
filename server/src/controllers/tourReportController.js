@@ -462,7 +462,7 @@ function drawPhoto(doc, photo) {
 // the link too, for whoever reads the PDF on one.
 const QR_SIZE = 74;
 
-function drawPanorama(doc, qr, url) {
+function drawPanorama(doc, qr, url, title) {
   if (!qr) return;
   const pad = 12;
   const width = doc.page.width - MARGIN * 2;
@@ -481,7 +481,12 @@ function drawPanorama(doc, qr, url) {
     .font('Heading')
     .fontSize(13)
     .fillColor(GREEN)
-    .text('360° panoráma', x, top + pad + 12, { width: textWidth, link: url });
+    .text(title ? `360° panoráma – ${title}` : '360° panoráma', x, top + pad + 12, {
+      width: textWidth,
+      link: url,
+      lineBreak: false,
+      ellipsis: true,
+    });
   doc
     .font('Body')
     .fontSize(BODY_SIZE)
@@ -646,7 +651,7 @@ export async function renderReport(
     if (hasText(delta)) drawDay(doc, i, dayLabels[i], delta);
   });
 
-  drawPanorama(doc, panoramaQr, tour.panoramaUrl);
+  drawPanorama(doc, panoramaQr, tour.panoramaUrl, tour.panoramaTitle);
   await drawSignature(doc, presidentName, signedAt ?? new Date());
   drawPageFrames(doc, tour, draft);
   doc.end();
