@@ -55,6 +55,13 @@ button {
   font-size: 14px;
 }
 
+// A phone's tabs (components/period-picker), beside the title - a wide
+// screen has the tab buttons.
+.tab-picker {
+  display: none;
+  --period-picker-accent: #1a796c;
+}
+
 .panel {
   background: #fff;
   border: 1px solid #e7edea;
@@ -668,9 +675,34 @@ button {
     flex-direction: column;
   }
 
-  // The tabs scroll sideways; the search gets its own full-width line.
+  // One row: the title, and the tab picker at its end; the describing
+  // sentence and the tab buttons are left out, so the list starts sooner.
+  .heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .heading-text {
+    display: none;
+  }
+
+  .tab-picker {
+    display: inline-block;
+    max-width: 62%;
+  }
+
+  .people-tabs button[role='tab'] {
+    display: none;
+  }
+
+  // Only the search is left in the bar, on its own full-width line.
   .people-tabs {
     flex-wrap: wrap;
+    border-bottom: 0;
+    margin-bottom: 0.5rem;
   }
 
   .people-tabs .member-search,
