@@ -8,7 +8,10 @@
   [attr.aria-expanded]="open()"
   (click)="toggle($event)"
 >
-  <span>{{ currentLabel() }}</span>
+  <span class="trigger-label">{{ current()?.label ?? '…' }}</span>
+  @if (current()?.count != null) {
+    <span class="count">{{ current()!.count }}</span>
+  }
   <mat-icon aria-hidden="true">expand_more</mat-icon>
 </button>
 
@@ -23,7 +26,10 @@
         [attr.aria-selected]="o.value === value()"
         (click)="pick(o.value)"
       >
-        {{ o.label }}
+        <span class="option-label">{{ o.label }}</span>
+        @if (o.count != null) {
+          <span class="count">{{ o.count }}</span>
+        }
       </button>
     }
     @for (o of gridOptions(); track o.value) {
@@ -35,7 +41,10 @@
         [attr.aria-selected]="o.value === value()"
         (click)="pick(o.value)"
       >
-        {{ o.label }}
+        <span class="option-label">{{ o.label }}</span>
+        @if (o.count != null) {
+          <span class="count">{{ o.count }}</span>
+        }
       </button>
     }
   </div>

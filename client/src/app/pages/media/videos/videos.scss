@@ -26,6 +26,34 @@ button {
   margin-bottom: 22px;
 }
 
+// A phone's category picker (components/period-picker), beside the title -
+// elsewhere the Média sidebar lists the categories.
+.category-picker {
+  display: none;
+  --period-picker-accent: #1a796c;
+}
+
+@media (max-width: 580px) and (hover: none) {
+  // One row: the title, and the picker at its end - the first category
+  // starts right under it, so the describing sentence is left out here.
+  .heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .heading-text {
+    display: none;
+  }
+
+  .category-picker {
+    display: inline-block;
+    max-width: 62%;
+  }
+}
+
 .kicker {
   color: #4c9184;
   font-size: 11px;
@@ -51,62 +79,6 @@ button {
 .empty-note {
   color: #56666e;
   font-size: 14px;
-}
-
-// --- Category chips ---
-
-// Phones only - elsewhere the Média sidebar lists the categories.
-.filter-chips {
-  display: none;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-@media (max-width: 580px) and (hover: none) {
-  .filter-chips {
-    display: flex;
-  }
-}
-
-.chip {
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid #dce6e3;
-  background: #fff;
-  color: #2f414b;
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  transition:
-    background-color 0.15s,
-    border-color 0.15s;
-
-  &:hover {
-    background: #eef6f2;
-  }
-
-  &.active {
-    background: #1a796c;
-    border-color: #1a796c;
-    color: #fff;
-  }
-}
-
-.chip-count {
-  font-size: 11px;
-  background: #edf4f1;
-  color: #4a5b63;
-  border-radius: 999px;
-  padding: 1px 7px;
-
-  .chip.active & {
-    background: #ffffff33;
-    color: #fff;
-  }
 }
 
 // --- Category panels ---
