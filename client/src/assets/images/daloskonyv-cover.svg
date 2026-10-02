@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="Daloskönyv">
+  <!-- The Daloskönyv's cover (Média → Zene → Daloskönyv): the PDF cover's
+       evening in small - cream paper in a thin frame, the sun going down
+       behind the hills, a campfire, and the song rising from it (the
+       server's songs/songBookCover.js draws the big one). -->
+  <defs>
+    <clipPath id="frame">
+      <rect x="24" y="24" width="552" height="552" rx="26" />
+    </clipPath>
+  </defs>
+  <rect width="600" height="600" fill="#f6ecd6" />
+  <g clip-path="url(#frame)">
+    <!-- The sun, and three hills from the far to the near. -->
+    <circle cx="452" cy="300" r="74" fill="#f6b528" />
+    <path d="M0 372 C210 250 400 262 600 352 L600 600 L0 600 Z" fill="#a9d08f" />
+    <path d="M0 408 C140 318 330 326 600 398 L600 600 L0 600 Z" fill="#72b45d" />
+    <path d="M0 492 C260 426 430 430 600 476 L600 600 L0 600 Z" fill="#1b6548" />
+
+    <!-- The campfire: two logs, three flames. -->
+    <g transform="translate(206 494)">
+      <rect x="-62" y="-9" width="124" height="18" rx="9" fill="#835638" transform="rotate(-14)" />
+      <rect x="-62" y="-9" width="124" height="18" rx="9" fill="#6b4429" transform="rotate(14)" />
+      <path d="M0 -4 C-46 -24 -32 -86 14 -142 C22 -86 46 -30 0 -4 Z" fill="#f40e0d" />
+      <path d="M-5 -4 C-38 -18 -28 -64 -14 -106 C6 -64 30 -24 -5 -4 Z" fill="#f07827" />
+      <path d="M4 -4 C-16 -14 -10 -40 10 -66 C14 -40 24 -18 4 -4 Z" fill="#f6b528" />
+    </g>
+
+    <!-- The song: notes rising from the fire. -->
+    <g fill="none" stroke-linecap="round">
+      <g stroke="#096396" fill="#096396">
+        <ellipse cx="290" cy="330" rx="13" ry="9.5" transform="rotate(-18 290 330)" />
+        <path d="M301 327 L301 286" stroke-width="5" />
+        <path d="M301 286 C322 292 320 306 312 314" stroke-width="5" fill="none" />
+      </g>
+      <g stroke="#f40e0d" fill="#f40e0d">
+        <ellipse cx="352" cy="246" rx="16" ry="11.5" transform="rotate(-18 352 246)" />
+        <path d="M366 242 L366 192" stroke-width="6" />
+        <path d="M366 192 C392 200 388 218 378 228" stroke-width="6" fill="none" />
+      </g>
+      <g stroke="#f07827" fill="#f07827">
+        <ellipse cx="262" cy="196" rx="11" ry="8" transform="rotate(-18 262 196)" />
+        <path d="M271 193 L271 158" stroke-width="4.5" />
+        <path d="M271 158 C288 163 286 175 280 182" stroke-width="4.5" fill="none" />
+      </g>
+      <g stroke="#835638" fill="#835638">
+        <ellipse cx="420" cy="136" rx="14" ry="10" transform="rotate(-18 420 136)" />
+        <path d="M432 133 L432 88" stroke-width="5.5" />
+        <path d="M432 88 C455 95 452 111 443 120" stroke-width="5.5" fill="none" />
+      </g>
+    </g>
+  </g>
+  <rect x="24" y="24" width="552" height="552" rx="26" fill="none" stroke="#c9a25a" stroke-width="4" />
+</svg>

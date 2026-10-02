@@ -21,6 +21,9 @@ export interface Song extends SongListItem {
   // Lyrics and chords as ChordPro text (pages/daloskonyv/chordpro.ts).
   chordpro: string;
   tags: string[];
+  // The first chord it was first written with ("am") - there once the
+  // song has been saved in another key; '' while it never was.
+  originalKey: string;
   updatedAt: string;
 }
 
@@ -29,6 +32,7 @@ export interface SongInput {
   title: string;
   artist: string;
   chordpro: string;
+  originalKey?: string;
 }
 
 // Whose chord diagrams the PDF has - or none.
@@ -151,7 +155,8 @@ export class SongService {
       .pipe(map((res) => res.data.song));
   }
 
-  updateSong(id: string, input: SongInput): Observable<Song> {
+  // Only what is sent changes.
+  updateSong(id: string, input: Partial<SongInput>): Observable<Song> {
     return this.http
       .patch<{ data: { song: Song } }>(`${this.apiUrl}/${id}`, input)
       .pipe(map((res) => res.data.song));

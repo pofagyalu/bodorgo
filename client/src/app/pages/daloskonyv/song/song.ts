@@ -13,8 +13,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { map } from 'rxjs';
 import { Song, SongService } from '../../../services/song';
+import { NotificationsService } from '../../../notifications/notifications.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { SongSheet } from '../song-sheet/song-sheet';
 import { Instrument } from '../chord-shapes';
+import { firstChord, stepsBetween, transposeChordPro } from '../chords';
 
 // The play button's paces, in rem per second at the normal letter size
 // (they grow with the letters): ▶, ▶▶, ▶▶▶.
@@ -58,6 +61,8 @@ function store(key: string, value: unknown) {
 })
 export class SongPage implements OnDestroy {
   private songService = inject(SongService);
+  private notifications = inject(NotificationsService);
+  private confirm = inject(ConfirmService);
   private host: ElementRef<HTMLElement> = inject(ElementRef);
   private slug = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('slug') ?? '')), {
     initialValue: '',
@@ -222,6 +227,64 @@ export class SongPage implements OnDestroy {
   changeTranspose(by: number) {
     // Twelve semitones is the same chords again.
     this.transpose.update((t) => (t + by) % 12);
+  }
+
+  // The key the song was first written in, while it is saved in another
+  // one: its first chord then ("am"), and how many semitones from the
+  // saved key lead back to it - null if it never moved (or is back).
+  originalKey = computed(() => {
+    const song = this.song();
+    const now = song ? firstChord(song.chordpro) : undefined;
+    if (!song?.originalKey || !now) return null;
+    const steps = stepsBetween(now, song.originalKey);
+    return steps ? { chord: song.originalKey, steps } : null;
+  });
+
+  // A look at the song in its old key - on the screen only.
+  showOriginalKey() {
+    const original = this.originalKey();
+    if (original) this.transpose.set(original.steps);
+  }
+
+  // Keeping the key tried on the screen (the songbook's owner only): the
+  // song's chords are rewritten as they show now and the song is saved -
+  // from then on this is its key, for everyone and in the PDF.
+  savingKey = signal(false);
+
+  async saveTransposed() {
+    const song = this.song();
+    const steps = this.transpose();
+    if (!song || !steps || this.savingKey()) return;
+    const ok = await this.confirm.ask({
+      title: 'Mentés ebben a hangnemben',
+      message: `A dal akkordjai ezentúl így lesznek elmentve (${this.transposeLabel()} félhang).`,
+      detail: 'Mindenkinek így jelenik meg, és a PDF-be is így kerül.',
+      confirmText: 'Mentés',
+      danger: false,
+    });
+    if (!ok) return;
+    this.savingKey.set(true);
+    this.songService
+      .updateSong(song._id, {
+        chordpro: transposeChordPro(song.chordpro, steps),
+        // What it started with is noted the first time it is moved.
+        originalKey: song.originalKey || firstChord(song.chordpro) || '',
+      })
+      .subscribe({
+        next: (saved) => {
+          // The same song, if nobody moved on to another meanwhile.
+          if (this.song()?._id === saved._id) {
+            this.song.set(saved);
+            this.transpose.set(0);
+          }
+          this.savingKey.set(false);
+          this.notifications.addSuccess('A dal ebben a hangnemben elmentve.');
+        },
+        error: (err) => {
+          this.savingKey.set(false);
+          this.notifications.addError(err?.error?.message ?? 'A dalt nem sikerült elmenteni.');
+        },
+      });
   }
 
   // The round button: starts the scrolling (at this song's last pace, after

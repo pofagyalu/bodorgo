@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MusicPlayerService, PlaylistKey } from '../../../services/music-player';
+import { SongService } from '../../../services/song';
 
 interface PlaylistCard {
   key: PlaylistKey;
@@ -43,6 +44,7 @@ const CARDS: PlaylistCard[] = [
 })
 export class MusicHome implements OnInit {
   private music = inject(MusicPlayerService);
+  private songService = inject(SongService);
 
   // Each card with its list's size ("42 dal · kb. 2 óra 10 perc" - null
   // until the list has arrived) and whether it's playing.
@@ -57,8 +59,16 @@ export class MusicHome implements OnInit {
     }),
   );
 
+  // The Daloskönyv's card: how many songs (null until the list arrives) -
+  // and, like the playlists' length, how long that lasts.
+  bookSummary = computed(() => {
+    const songs = this.songService.songs();
+    return songs ? `${songs.length} dal · kb. egy egész hétvége` : null;
+  });
+
   ngOnInit() {
     for (const card of CARDS) void this.music.loadPlaylist(card.key);
+    this.songService.loadSongs();
   }
 }
 

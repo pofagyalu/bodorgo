@@ -1,4 +1,4 @@
-import { parseChord, transposer } from './chords';
+import { firstChord, parseChord, stepsBetween, transposeChordPro, transposer } from './chords';
 
 // A song starting on `key`, moved by `steps`.
 const move = (key: string, steps: number, notation: 'international' | 'hungarian') => {
@@ -86,5 +86,60 @@ describe('transposer', () => {
 
   it('gives back what is not a chord name', () => {
     expect(move('C', 2, 'hungarian')('N.C.', '2x', '/')).toBe('N.C. 2x /');
+  });
+});
+
+describe('transposeChordPro', () => {
+  const song = [
+    '[am]Adj helyet [D]magad mellett,',
+    'Az [dm]ablakhoz én is oda[am]férjek!',
+    '',
+    '{start_of_chorus}',
+    '[C]Engedd, hogy [G/H]érezzem [/] [E7]',
+    '{end_of_chorus}',
+    '{comment: 2x}',
+  ].join('\n');
+
+  it('moves every chord of the song and leaves the rest alone', () => {
+    expect(transposeChordPro(song, 2, 'hungarian')).toBe(
+      [
+        '[hm]Adj helyet [E]magad mellett,',
+        'Az [em]ablakhoz én is oda[hm]férjek!',
+        '',
+        '{start_of_chorus}',
+        '[D]Engedd, hogy [A/C#]érezzem [/] [F#7]',
+        '{end_of_chorus}',
+        '{comment: 2x}',
+      ].join('\n'),
+    );
+  });
+
+  it('spells for the new key, taken from the song’s first chord', () => {
+    // A minor two down is G minor: flats (B is the Hungarian B flat).
+    expect(transposeChordPro('[am]la [F]la [G]la [E]la', -2, 'hungarian')).toBe(
+      '[gm]la [Eb]la [F]la [D]la',
+    );
+  });
+
+  it('gives the song back as it was at 0, and comes home after twelve', () => {
+    expect(transposeChordPro(song, 0, 'hungarian')).toBe(song);
+    expect(transposeChordPro(song, 12, 'hungarian')).toBe(song);
+    expect(transposeChordPro(transposeChordPro(song, 5, 'hungarian'), -5, 'hungarian')).toBe(song);
+  });
+});
+
+describe('firstChord and stepsBetween', () => {
+  it('finds the song’s first chord', () => {
+    expect(firstChord('Szöveg [] [am]Adj [D]helyet')).toBe('am');
+    expect(firstChord('csak szöveg')).toBeUndefined();
+  });
+
+  it('counts the semitones between two chords’ roots, the short way', () => {
+    expect(stepsBetween('hm', 'am', 'hungarian')).toBe(-2);
+    expect(stepsBetween('am', 'hm', 'hungarian')).toBe(2);
+    expect(stepsBetween('C', 'G', 'hungarian')).toBe(-5);
+    expect(stepsBetween('C', 'F#', 'hungarian')).toBe(6);
+    expect(stepsBetween('C', 'C', 'hungarian')).toBe(0);
+    expect(stepsBetween('C', '2x', 'hungarian')).toBeNull();
   });
 });
