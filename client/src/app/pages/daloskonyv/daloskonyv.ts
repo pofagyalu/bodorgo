@@ -56,7 +56,10 @@ export class Daloskonyv implements OnInit {
       filter((e) => e instanceof NavigationEnd),
       startWith(null),
       map(() => {
-        const params = this.route.firstChild?.snapshot.paramMap;
+        // Created together with its child (arriving from the editor, or
+        // straight at a song's address), the child has no snapshot yet -
+        // the NavigationEnd that follows brings it.
+        const params = this.route.firstChild?.snapshot?.paramMap;
         return { slug: params?.get('slug') ?? null, annex: params?.get('annex') ?? null };
       }),
     ),
