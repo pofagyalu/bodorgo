@@ -1,8 +1,9 @@
 import { Component, OnInit, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
+import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
 import { PhotoGalleryService } from '../../../shared/photo-gallery';
 import { MediaPhotoCategory, MediaService } from '../../../services/media';
 
@@ -13,17 +14,33 @@ import { MediaPhotoCategory, MediaService } from '../../../services/media';
 // the tour albums'.
 @Component({
   selector: 'app-media-photos',
-  imports: [MatIconModule, RouterLink, RouterLinkActive],
+  imports: [MatIconModule, PeriodPicker],
   templateUrl: './photos.html',
   styleUrl: './photos.scss',
 })
 export class Photos implements OnInit {
   media = inject(MediaService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
-  private categoryKey = toSignal(this.route.paramMap.pipe(map((p) => p.get('category'))), {
+  categoryKey = toSignal(this.route.paramMap.pipe(map((p) => p.get('category'))), {
     initialValue: null,
   });
+  // A phone's category picker beside the title (a wide screen has the
+  // Média sidebar): "Mind", then the categories, each with its count.
+  categoryOptions = computed<PeriodOption[]>(() => [
+    { value: 'all', label: 'Mind', count: this.totalCount() },
+    ...this.media.photoCategories().map((c) => ({
+      value: c.key,
+      label: c.title,
+      count: c.photos.length,
+    })),
+  ]);
+
+  chooseCategory(key: string) {
+    void this.router.navigate(key === 'all' ? ['/media/fotok'] : ['/media/fotok', key]);
+  }
+
   shownCategories = computed(() => {
     const key = this.categoryKey();
     const all = this.media.photoCategories();

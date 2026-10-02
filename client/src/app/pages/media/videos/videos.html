@@ -3,8 +3,21 @@
     <div>
       <div class="kicker">Média</div>
       <h1>Videók</h1>
-      <p>Szilveszteri műsorok, különkiadások, farsangok és reklámok – csak a klub tagjainak.</p>
+      <p class="heading-text">
+        Szilveszteri műsorok, különkiadások, farsangok és reklámok – csak a klub tagjainak.
+      </p>
     </div>
+    <!-- Narrow screens only - on a wide one the Média sidebar does this. -->
+    @if (media.categories().length) {
+      <app-period-picker
+        class="category-picker"
+        label="Kategória"
+        [list]="true"
+        [options]="categoryOptions()"
+        [value]="categoryKey() ?? 'all'"
+        (valueChange)="chooseCategory($event)"
+      />
+    }
   </div>
 
   @if (media.loading() && !media.categories().length) {
@@ -16,23 +29,6 @@
   } @else if (unknownCategory()) {
     <p class="empty-note">Nincs ilyen videókategória.</p>
   } @else {
-    <!-- Narrow screens only - on a wide one the Média sidebar does this. -->
-    <nav class="filter-chips" aria-label="Kategóriák">
-      <a
-        class="chip"
-        routerLink="/media/videok"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-      >
-        Mind <span class="chip-count">{{ totalCount() }}</span>
-      </a>
-      @for (c of media.categories(); track c.key) {
-        <a class="chip" [routerLink]="['/media/videok', c.key]" routerLinkActive="active">
-          {{ c.title }} <span class="chip-count">{{ c.videos.length }}</span>
-        </a>
-      }
-    </nav>
-
     @for (c of shownCategories(); track c.key) {
       <section class="panel video-group">
         <div class="group-head">

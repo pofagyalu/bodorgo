@@ -3,6 +3,9 @@
   --accent: var(--period-picker-accent, #55c57a);
   position: relative;
   display: inline-block;
+  // In a row with something else (a title), it may be squeezed: the
+  // button then cuts its label.
+  min-width: 0;
 }
 
 // The chosen period and a small arrow. A fixed least width, so it doesn't
@@ -13,6 +16,7 @@
   justify-content: center;
   gap: 0.1rem;
   min-width: 6.5rem;
+  max-width: 100%;
   min-height: 2.75rem;
   padding: 0 0.6rem 0 1rem;
   border: 1px solid #dce6e3;
@@ -28,6 +32,7 @@
     border-color 0.2s;
 
   mat-icon {
+    flex: none;
     font-size: 1.3rem;
     width: 1.3rem;
     height: 1.3rem;
@@ -49,6 +54,25 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
+}
+
+.trigger-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// How many there are of it: a small badge after the label.
+.count {
+  flex: none;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: #edf4f1;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #4a5b63;
 }
 
 // Every choice at once, under the button (its right end, unless the host
@@ -84,6 +108,9 @@
 }
 
 .option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.65rem 0;
   border: none;
   border-radius: 0.5rem;
@@ -117,4 +144,28 @@
 .option--current:hover {
   background: var(--accent);
   color: #fff;
+
+  .count {
+    background: #ffffff33;
+    color: #fff;
+  }
+}
+
+// --- `list`: one choice per row, the whole label, its count at the end ---
+
+:host(.list) {
+  .trigger {
+    min-width: 0;
+  }
+
+  .panel {
+    grid-template-columns: 1fr;
+  }
+
+  .option {
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    text-align: left;
+  }
 }

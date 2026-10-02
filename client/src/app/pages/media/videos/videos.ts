@@ -1,8 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
+import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
 import { MediaService, MediaVideo, MediaVideoCategory } from '../../../services/media';
 import { VideoCard } from '../../../shared/video-card/video-card';
 import { VideoPlayer } from '../../../shared/video-player/video-player';
@@ -24,17 +25,33 @@ const EDGE_GAP = 8;
 
 @Component({
   selector: 'app-media-videos',
-  imports: [MatIconModule, RouterLink, RouterLinkActive, VideoCard, VideoPlayer],
+  imports: [MatIconModule, PeriodPicker, VideoCard, VideoPlayer],
   templateUrl: './videos.html',
   styleUrl: './videos.scss',
 })
 export class Videos {
   media = inject(MediaService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
-  private categoryKey = toSignal(this.route.paramMap.pipe(map((p) => p.get('category'))), {
+  categoryKey = toSignal(this.route.paramMap.pipe(map((p) => p.get('category'))), {
     initialValue: null,
   });
+
+  // A phone's category picker beside the title (a wide screen has the
+  // Média sidebar): "Mind", then the categories, each with its count.
+  categoryOptions = computed<PeriodOption[]>(() => [
+    { value: 'all', label: 'Mind', count: this.totalCount() },
+    ...this.media.categories().map((c) => ({
+      value: c.key,
+      label: c.title,
+      count: c.videos.length,
+    })),
+  ]);
+
+  chooseCategory(key: string) {
+    void this.router.navigate(key === 'all' ? ['/media/videok'] : ['/media/videok', key]);
+  }
 
   shownCategories = computed(() => {
     const key = this.categoryKey();
