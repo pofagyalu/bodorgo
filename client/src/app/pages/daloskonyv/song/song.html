@@ -20,7 +20,7 @@
 
     <div class="tools">
       <!-- Whose chord diagrams: the guitar's or the ukulele's. -->
-      <div class="tool tool--choice" role="group" aria-label="Hangszer az akkordábrákhoz">
+      <div class="tool tool--choice" role="group" aria-label="Hangszer az akkordokhoz">
         <button
           type="button"
           [class.on]="instrument() === 'guitar'"
@@ -108,8 +108,8 @@
           [class.off]="!showDiagrams()"
           (click)="toggleDiagrams()"
           [attr.aria-pressed]="showDiagrams()"
-          title="Akkordábrák a dal fölött"
-          aria-label="Akkordábrák a dal fölött"
+          title="Akkordok a dal fölött"
+          aria-label="Akkordok a dal fölött"
         >
           <mat-icon>grid_on</mat-icon>
         </button>

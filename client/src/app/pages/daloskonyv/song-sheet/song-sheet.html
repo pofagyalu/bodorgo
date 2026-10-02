@@ -22,6 +22,7 @@
                     @if (piece.chord; as chord) {
                       <span
                         class="chord"
+                        [class.chord--label]="!isChord(chord)"
                         (pointerenter)="onEnter($event, chord)"
                         (pointerleave)="onLeave($event)"
                         (click)="onTap($event, chord)"

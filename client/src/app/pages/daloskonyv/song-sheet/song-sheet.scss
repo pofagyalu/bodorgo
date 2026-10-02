@@ -78,6 +78,16 @@ $chord: #b5533a;
   cursor: pointer;
 }
 
+// In brackets, but not a chord ("Intro", "2x"): a quiet label - nothing
+// to point at.
+.chord.chord--label,
+.lyrics--diagrams .chord.chord--label {
+  color: $muted;
+  font-weight: 500;
+  font-style: italic;
+  cursor: default;
+}
+
 // The song's chords in a row above the lyrics - wrapping on a phone.
 .diagrams {
   display: flex;

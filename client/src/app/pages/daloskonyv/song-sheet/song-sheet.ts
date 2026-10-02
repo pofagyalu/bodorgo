@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { BlockLine, Segment, parseChordPro, toBlocks, toWords } from '../chordpro';
-import { transposer } from '../chords';
+import { parseChord, transposer } from '../chords';
 import { ChordShape, Instrument, chordShape, uniqueChords } from '../chord-shapes';
 import { ChordDiagram } from '../chord-diagram/chord-diagram';
 
@@ -126,9 +126,21 @@ export class SongSheet {
     else this.open(el, name, true);
   }
 
+  // What stands in [brackets] but isn't a chord ("Intro", "2x", "/"): a
+  // label over the lyrics - drawn quieter, and with nothing to show how to
+  // hold.
+  isChord(name: string): boolean {
+    return parseChord(name) !== null;
+  }
+
   private open(anchor: HTMLElement, name: string, pinned: boolean) {
     const instrument = this.instrument();
-    if (!instrument) return;
+    const shape = instrument ? chordShape(name, instrument) : null;
+    // Not a chord: nothing pops up (and what was open closes).
+    if (!instrument || !shape) {
+      this.popup.set(null);
+      return;
+    }
     const rect = anchor.getBoundingClientRect();
     const left = Math.min(
       Math.max(rect.left + rect.width / 2 - POPUP_WIDTH / 2, 8),
@@ -139,7 +151,7 @@ export class SongSheet {
     this.popup.set({
       anchor,
       name,
-      shape: chordShape(name, instrument),
+      shape,
       left,
       top: above < 8 ? rect.bottom + 8 : above,
       pinned,
