@@ -1,0 +1,101 @@
+<div class="book" [class.book--open]="openSlug()">
+  <!-- The table of contents: the whole page until a song is chosen, then
+       the left column (hidden on a phone, where the song takes its place). -->
+  <aside class="toc" aria-label="Tartalomjegyzék">
+    <div class="heading">
+      <div class="kicker">Zene</div>
+      <h1>Daloskönyv</h1>
+      <p>A klub dalai szöveggel és akkordokkal – tábortűzhöz, gitárhoz, ukulelére.</p>
+    </div>
+
+    <!-- Whose chord diagrams the songs show. -->
+    <div class="instrument" role="group" aria-label="Hangszer az akkordábrákhoz">
+      <button
+        type="button"
+        [class.on]="instrument() === 'guitar'"
+        [attr.aria-pressed]="instrument() === 'guitar'"
+        (click)="chooseInstrument('guitar')"
+      >
+        Gitár
+      </button>
+      <button
+        type="button"
+        [class.on]="instrument() === 'ukulele'"
+        [attr.aria-pressed]="instrument() === 'ukulele'"
+        (click)="chooseInstrument('ukulele')"
+      >
+        Ukulele
+      </button>
+    </div>
+
+    <div class="top-row">
+      <label class="search">
+        <mat-icon>search</mat-icon>
+        <input
+          type="search"
+          placeholder="Keresés cím vagy előadó szerint"
+          aria-label="Keresés a dalok között"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+      </label>
+      <!-- The whole book as a PDF, with the chosen instrument's diagrams. -->
+      <a
+        class="book-btn"
+        [href]="bookUrl()"
+        title="A daloskönyv letöltése PDF-ben"
+        aria-label="A daloskönyv letöltése PDF-ben"
+      >
+        <mat-icon>picture_as_pdf</mat-icon><span class="book-text">PDF</span>
+      </a>
+      <!-- Only the songbook's owner (the role manager). -->
+      @if (canEdit()) {
+        <a [routerLink]="[base(), 'uj']" class="new-song-btn" title="Új dal" aria-label="Új dal">
+          <mat-icon>add</mat-icon><span class="new-song-text">Dal</span>
+        </a>
+      }
+    </div>
+
+    <!-- The songs played tonight carry a tick; one tap wipes them all. -->
+    @if (played().size) {
+      <button type="button" class="clear-played" (click)="clearPlayed()">
+        <mat-icon>remove_done</mat-icon>
+        Játszottak jelölésének törlése ({{ played().size }})
+      </button>
+    }
+
+    @if (songs() === null) {
+      <p class="list-note">Betöltés…</p>
+    } @else if (!songs()!.length) {
+      <p class="list-note">Még nincs dal a daloskönyvben.</p>
+    } @else if (!filtered().length) {
+      <p class="list-note">Nincs ilyen dal.</p>
+    } @else {
+      <ol class="song-list">
+        @for (song of filtered(); track song._id) {
+          <li>
+            <a
+              [routerLink]="[base(), song.slug]"
+              [class.active]="song.slug === openSlug()"
+              [class.played]="played().has(song._id)"
+            >
+              @if (played().has(song._id)) {
+                <mat-icon class="played-tick" aria-label="Már játszottuk">task_alt</mat-icon>
+              }
+              <span class="song-name">
+                <strong>{{ song.title }}</strong>
+                @if (song.artist) {
+                  <small>{{ song.artist }}</small>
+                }
+              </span>
+            </a>
+          </li>
+        }
+      </ol>
+    }
+  </aside>
+
+  <section class="song-pane">
+    <router-outlet />
+  </section>
+</div>

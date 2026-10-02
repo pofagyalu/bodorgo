@@ -8,6 +8,7 @@ import {
 } from '../../../services/club-document';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { BookDiagrams, SongService } from '../../../services/song';
 
 @Component({
   selector: 'app-klub-documents',
@@ -20,6 +21,7 @@ export class Documents implements OnInit {
   private auth = inject(AuthService);
   private notifications = inject(NotificationsService);
   private confirm = inject(ConfirmService);
+  private songService = inject(SongService);
 
   readonly categories = DOCUMENT_CATEGORIES;
   readonly currentYear = new Date().getFullYear();
@@ -31,15 +33,41 @@ export class Documents implements OnInit {
 
   // One group per fixed category, in that order, skipping any category
   // that currently has nothing in it rather than showing an empty panel.
+  // The first one (Alapdokumentumok) is always there: the Daloskönyv's PDF
+  // is its first card.
   groupedDocuments = computed(() => {
     const docs = this.documents();
     return this.categories
       .map((category) => ({
         category,
         documents: docs.filter((d) => d.category === category),
+        songbook: category === DOCUMENT_CATEGORIES[0],
       }))
-      .filter((g) => g.documents.length > 0);
+      .filter((g) => g.documents.length > 0 || g.songbook);
   });
+
+  // The Daloskönyv (pages/daloskonyv) as a PDF - not an uploaded file: the
+  // server draws it from the songs as they are now. With whose chord
+  // diagrams: what the songbook itself shows on this device, until changed.
+  bookDiagrams = signal<BookDiagrams>(this.songService.instrument());
+  bookUrl = computed(() => this.songService.bookUrl(this.bookDiagrams()));
+  bookDownloadUrl = computed(() => this.songService.bookUrl(this.bookDiagrams(), true));
+
+  // Its cover as the card's picture, and the year its songs last changed -
+  // once the songbook has told (and has any songs).
+  bookChanged = this.songService.lastChanged;
+  bookYear = computed(() => {
+    const changed = this.bookChanged();
+    return changed ? new Date(changed).getFullYear() : null;
+  });
+  bookPreviewUrl = computed(() => {
+    const changed = this.bookChanged();
+    return changed ? this.songService.bookPreviewUrl(this.bookDiagrams(), changed) : null;
+  });
+
+  chooseBookDiagrams(value: string) {
+    this.bookDiagrams.set(value === 'guitar' || value === 'ukulele' ? value : 'none');
+  }
 
   showUpload = signal(false);
   uploading = signal(false);
@@ -54,6 +82,8 @@ export class Documents implements OnInit {
 
   ngOnInit() {
     this.loadDocuments();
+    // For the Daloskönyv's card: when its songs last changed.
+    this.songService.loadSongs();
   }
 
   private loadDocuments() {

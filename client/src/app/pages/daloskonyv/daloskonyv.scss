@@ -1,0 +1,357 @@
+// Daloskönyv: the same frame and heading as the Média pages
+// (music-home.scss). Without a song the table of contents fills the page
+// (in columns on a wide screen); with one it is the left column and the
+// song has the rest.
+$ink: #193346;
+$muted: #56666e;
+$teal: #1a796c;
+$line: #e4eae7;
+
+:host {
+  display: block;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  color: #23354a;
+  background: #f5f7f5;
+  min-height: calc(100dvh - var(--header-height));
+}
+
+.toc {
+  max-width: 1390px;
+  margin: auto;
+  padding: 2.375rem clamp(1.375rem, 4vw, 3.625rem) 4.375rem;
+}
+
+.heading {
+  margin-bottom: 1.375rem;
+}
+
+.kicker {
+  color: #4c9184;
+  font-size: 0.6875rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.heading h1 {
+  font-size: clamp(1.8125rem, 3vw, 2.375rem);
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+  margin: 0.375rem 0 0.4375rem;
+  color: $ink;
+}
+
+.heading p {
+  margin: 0;
+  color: $muted;
+  font-size: 0.875rem;
+}
+
+// Gitár | Ukulele: two halves of one pill, the chosen one filled.
+.instrument {
+  display: inline-flex;
+  margin-bottom: 0.9rem;
+  padding: 0.2rem;
+  border: 1px solid #cfd9d5;
+  border-radius: 10rem;
+  background: #fff;
+
+  button {
+    padding: 0.5rem 1.1rem;
+    border: 0;
+    border-radius: 10rem;
+    background: none;
+    color: $muted;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.on {
+      background: $teal;
+      color: #fff;
+    }
+  }
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+// "+Dal": the owner's own action, after the search - the same look as
+// Táborok's "+Tábor".
+.new-song-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 0.6rem 1.2rem 0.6rem 0.9rem;
+  border-radius: 10rem;
+  background: #445a67;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    background: #37474f;
+  }
+
+  mat-icon {
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+}
+
+// "PDF": the whole book to take along - light, beside the dark "+Dal".
+.book-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.6rem 1rem 0.6rem 0.8rem;
+  border: 1px solid #cfd9d5;
+  border-radius: 10rem;
+  background: #fff;
+  color: $ink;
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    background: #e8f3ee;
+  }
+
+  mat-icon {
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+    color: #b3261e;
+  }
+}
+
+.search {
+  flex: 1;
+  // May shrink below its input's own width (the narrow column).
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 30rem;
+  padding: 0 0.9rem;
+  border: 1px solid #cfd9d5;
+  border-radius: 10rem;
+  background: #fff;
+
+  &:focus-within {
+    border-color: $teal;
+    box-shadow: 0 0 0 0.2rem #1a796c26;
+  }
+
+  mat-icon {
+    flex: none;
+    color: #7a8a90;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    font: inherit;
+    font-size: 1rem;
+    color: inherit;
+  }
+}
+
+// "Játszottak jelölésének törlése": wipes tonight's ticks.
+.clear-played {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.9rem;
+  padding: 0.45rem 0.9rem 0.45rem 0.7rem;
+  border: 1px solid #f0c9a8;
+  border-radius: 10rem;
+  background: #fff6ec;
+  color: #8a3f0d;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #ffeeda;
+  }
+
+  mat-icon {
+    flex: none;
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+// A song played tonight: a tick before it, its name fainter.
+.played-tick {
+  flex: none;
+  align-self: center;
+  font-size: 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  color: #f07827;
+}
+
+.song-list a.played:not(.active) .song-name {
+  opacity: 0.55;
+}
+
+.song-list a.played.active .played-tick {
+  color: #ffd9b3;
+}
+
+.list-note {
+  margin: 2rem 0;
+  color: #999;
+  font-style: italic;
+}
+
+// The songs: down the first column, then the next - like a book's contents.
+.song-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 19rem;
+  column-gap: 1.5rem;
+
+  li {
+    break-inside: avoid;
+  }
+
+  a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.6rem;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      background: #e8f3ee;
+    }
+
+    &.active {
+      background: $teal;
+      color: #fff;
+
+      small {
+        color: #d5ece6;
+      }
+    }
+  }
+}
+
+.song-name {
+  min-width: 0;
+  // A long title wraps - the list never scrolls sideways.
+  overflow-wrap: anywhere;
+
+  strong {
+    display: block;
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  small {
+    display: block;
+    color: $muted;
+    font-size: 0.8125rem;
+  }
+}
+
+// --- A song is open ---
+
+// Wide screen: two panes exactly as tall as the screen under the header,
+// each scrolling by itself - so the contents never move while the song
+// scrolls (by hand or by the play button, see song.ts's scrollerElement).
+@media (min-width: 901px) {
+  .book--open {
+    display: grid;
+    grid-template-columns: 21rem minmax(0, 1fr);
+    height: calc(100dvh - var(--header-height));
+    overflow: hidden;
+
+    .toc,
+    .song-pane {
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .toc {
+      overflow-x: hidden;
+    }
+
+    // Beside a song the column is the list alone: the search, the
+    // instrument switch and the owner's "+" are in the song's own bar,
+    // above the song (song.html).
+    .instrument,
+    .top-row {
+      display: none;
+    }
+
+    .toc {
+      margin: 0;
+      padding: 1.5rem 1rem 2rem 1.5rem;
+      background: #fff;
+      border-right: 1px solid $line;
+    }
+
+    .heading p {
+      display: none;
+    }
+
+    .heading h1 {
+      font-size: 1.5rem;
+    }
+
+    .song-list {
+      columns: auto;
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  // No room for both: the song alone (the page itself scrolls), its own
+  // bar leads back to the list.
+  .book--open .toc {
+    display: none;
+  }
+}
+
+@media (max-width: 580px) {
+  .toc {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .search {
+    max-width: none;
+  }
+
+  .song-list a {
+    padding: 0.7rem 0.4rem;
+  }
+}

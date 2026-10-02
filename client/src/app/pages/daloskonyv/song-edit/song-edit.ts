@@ -1,0 +1,151 @@
+import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { Song, SongService } from '../../../services/song';
+import { NotificationsService } from '../../../notifications/notifications.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { SongSheet } from '../song-sheet/song-sheet';
+import { TextEdit, insertChord, nudgeChord, wrapChorus } from '../chord-text';
+
+// The Daloskönyv's editor - a new song, or an existing one: its title
+// and artist, and the ChordPro text with the song drawn live beside
+// it (under it on a phone). Only for the role manager (song-edit.guard.ts;
+// the server checks too).
+@Component({
+  selector: 'app-song-edit',
+  imports: [RouterLink, MatIconModule, SongSheet],
+  templateUrl: './song-edit.html',
+  styleUrl: './song-edit.scss',
+})
+export class SongEdit implements OnInit {
+  private songService = inject(SongService);
+  private notifications = inject(NotificationsService);
+  private confirm = inject(ConfirmService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
+  // The preview's chords can be pointed at, like on the song page.
+  instrument = this.songService.instrument;
+
+  private textarea = viewChild<ElementRef<HTMLTextAreaElement>>('text');
+
+  // The song being changed - null for a new one.
+  song = signal<Song | null>(null);
+  isNew = !this.route.snapshot.paramMap.get('slug');
+  loading = signal(!this.isNew);
+  saving = signal(false);
+
+  title = signal('');
+  artist = signal('');
+  chordpro = signal('');
+
+  // Where "Mégse" leads: back to the song, or to the list.
+  backLink = computed(() => {
+    const song = this.song();
+    const base = this.songService.base();
+    return song ? [base, song.slug] : [base];
+  });
+
+  ngOnInit() {
+    const slug = this.route.snapshot.paramMap.get('slug');
+    if (!slug) return;
+    this.songService.getSong(slug).subscribe({
+      next: (song) => {
+        this.song.set(song);
+        this.title.set(song.title);
+        this.artist.set(song.artist);
+        this.chordpro.set(song.chordpro);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.notifications.addError('Nincs ilyen dal a daloskönyvben.');
+        void this.router.navigate([this.songService.base()]);
+      },
+    });
+  }
+
+  // --- The text's helpers (chord-text.ts) ---
+
+  private apply(edit: TextEdit | null) {
+    const el = this.textarea()?.nativeElement;
+    if (!el || !edit) return;
+    // Straight into the textarea, so the cursor can be set at once.
+    el.value = edit.text;
+    this.chordpro.set(edit.text);
+    el.focus();
+    el.setSelectionRange(edit.start, edit.end);
+  }
+
+  addChord() {
+    const el = this.textarea()?.nativeElement;
+    if (el) this.apply(insertChord(el.value, el.selectionStart, el.selectionEnd));
+  }
+
+  markChorus() {
+    const el = this.textarea()?.nativeElement;
+    if (el) this.apply(wrapChorus(el.value, el.selectionStart, el.selectionEnd));
+  }
+
+  // The chord under the cursor, a letter left or right.
+  nudge(by: -1 | 1) {
+    const el = this.textarea()?.nativeElement;
+    if (!el) return;
+    const edit = nudgeChord(el.value, el.selectionStart, by);
+    if (edit) this.apply(edit);
+    else el.focus();
+  }
+
+  // Alt + ← / →: the same from the keyboard.
+  onKeydown(event: KeyboardEvent) {
+    if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+    event.preventDefault();
+    this.nudge(event.key === 'ArrowLeft' ? -1 : 1);
+  }
+
+  // --- Saving and deleting ---
+
+  save() {
+    const title = this.title().trim();
+    if (!title) {
+      this.notifications.addError('A dalnak kell legyen címe.');
+      return;
+    }
+    const input = { title, artist: this.artist().trim(), chordpro: this.chordpro() };
+    const song = this.song();
+    this.saving.set(true);
+    (song
+      ? this.songService.updateSong(song._id, input)
+      : this.songService.createSong(input)
+    ).subscribe({
+      next: (saved) => {
+        this.notifications.addSuccess('A dal elmentve.');
+        this.songService.loadSongs();
+        void this.router.navigate([this.songService.base(), saved.slug]);
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.notifications.addError(err?.error?.message ?? 'A dalt nem sikerült elmenteni.');
+      },
+    });
+  }
+
+  async delete() {
+    const song = this.song();
+    if (!song) return;
+    const ok = await this.confirm.ask({
+      title: 'Dal törlése',
+      message: `Biztosan törlöd ezt a dalt: „${song.title}”?`,
+      detail: 'A dal szövege és akkordjai végleg elvesznek.',
+    });
+    if (!ok) return;
+    this.songService.deleteSong(song._id).subscribe({
+      next: () => {
+        this.notifications.addSuccess('A dal törölve.');
+        this.songService.loadSongs();
+        void this.router.navigate([this.songService.base()]);
+      },
+      error: (err) =>
+        this.notifications.addError(err?.error?.message ?? 'A dalt nem sikerült törölni.'),
+    });
+  }
+}

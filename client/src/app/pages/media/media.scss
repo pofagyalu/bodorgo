@@ -114,6 +114,71 @@
   padding: 2px 6px;
 }
 
+// A section's arrow, at the item's right end: down while folded, turned
+// up once its sub-menu is open.
+.media-nav .nav-item .chevron {
+  margin-left: auto;
+  color: #6f8793;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.chevron--open {
+    transform: rotate(180deg);
+  }
+}
+
+// A section's sub-menu, folded away unless one is in that section: it
+// slides open and shut (the row grows from nothing to its own height) and
+// its items fade in a moment later - never a jump.
+.sub-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.sub-fold--open {
+    grid-template-rows: 1fr;
+  }
+}
+
+.sub-clip {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  transition:
+    opacity 0.2s ease,
+    transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sub-fold--open .sub-clip {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.3s ease 0.1s,
+    transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// The grid of .media-nav puts a gap around every child - a folded
+// sub-menu shouldn't add one.
+.media-nav .sub-fold:not(.sub-fold--open) {
+  margin-top: -7px;
+}
+
+.media-nav .sub-fold {
+  transition:
+    grid-template-rows 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-top 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sub-fold,
+  .media-nav .sub-fold,
+  .sub-clip,
+  .sub-fold--open .sub-clip,
+  .media-nav .nav-item .chevron {
+    transition: none;
+  }
+}
+
 // The video categories, indented under Videók with a thin guide line.
 .sub-nav {
   display: grid;
@@ -294,7 +359,8 @@
   .side-bottom,
   .soon,
   .sub-title,
-  .sub-count {
+  .sub-count,
+  .media-nav .nav-item .chevron {
     display: none;
   }
 

@@ -1,0 +1,110 @@
+<div class="content">
+  <div class="heading">
+    <div class="kicker">Daloskönyv</div>
+    <h1>{{ isNew ? 'Új dal' : 'Dal szerkesztése' }}</h1>
+  </div>
+
+  @if (loading()) {
+    <p class="note">Betöltés…</p>
+  } @else {
+    <form class="editor" (submit)="$event.preventDefault(); save()">
+      <div class="fields">
+        <label class="field field--title">
+          <span>Cím</span>
+          <input
+            type="text"
+            maxlength="150"
+            required
+            [value]="title()"
+            (input)="title.set($any($event.target).value)"
+          />
+        </label>
+        <label class="field field--artist">
+          <span>Előadó</span>
+          <input
+            type="text"
+            maxlength="150"
+            [value]="artist()"
+            (input)="artist.set($any($event.target).value)"
+          />
+        </label>
+      </div>
+
+      <!-- The text on the left, the song as it will look on the right
+           (under it on a phone). -->
+      <div class="panes">
+        <div class="pane">
+          <div class="pane-head">
+            <strong>Szöveg és akkordok</strong>
+            <div class="text-tools">
+              <button type="button" (click)="addChord()" title="Akkord a kurzorhoz">
+                <mat-icon>add</mat-icon>[ ] Akkord
+              </button>
+              <button
+                type="button"
+                class="icon-only"
+                (click)="nudge(-1)"
+                title="Az akkord egy betűvel balra (Alt + ←)"
+                aria-label="Az akkord egy betűvel balra"
+              >
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="icon-only"
+                (click)="nudge(1)"
+                title="Az akkord egy betűvel jobbra (Alt + →)"
+                aria-label="Az akkord egy betűvel jobbra"
+              >
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+              <button type="button" (click)="markChorus()" title="A kijelölt sorok: refrén">
+                Refrén
+              </button>
+            </div>
+          </div>
+          <textarea
+            #text
+            spellcheck="false"
+            autocapitalize="off"
+            autocomplete="off"
+            maxlength="20000"
+            aria-label="A dal szövege ChordPro formában"
+            [value]="chordpro()"
+            (input)="chordpro.set($any($event.target).value)"
+            (keydown)="onKeydown($event)"
+          ></textarea>
+          <p class="hint">
+            Az akkord szögletes zárójelben áll, közvetlenül a szótagja előtt:
+            <code>[am]Adj helyet [D]magad mellett</code>. Állj a kurzorral egy akkordba, és a ‹ ›
+            gombokkal (vagy Alt + ← →) betűnként arrébb teheted. Üres sor: új versszak. Megjegyzés:
+            <code>&#123;comment: 2x&#125;</code>.
+          </p>
+        </div>
+
+        <div class="pane">
+          <div class="pane-head"><strong>Így fog kinézni</strong></div>
+          <div class="preview">
+            <h2>{{ title() || 'Cím' }}</h2>
+            @if (artist()) {
+              <p class="artist">{{ artist() }}</p>
+            }
+            <app-song-sheet [chordpro]="chordpro()" [instrument]="instrument()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        @if (!isNew) {
+          <button type="button" class="btn btn--danger" (click)="delete()" [disabled]="saving()">
+            <mat-icon>delete</mat-icon>Törlés
+          </button>
+        }
+        <a class="btn btn--grey" [routerLink]="backLink()">Mégse</a>
+        <button type="submit" class="btn btn--save" [disabled]="saving()">
+          <mat-icon>check</mat-icon>{{ saving() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

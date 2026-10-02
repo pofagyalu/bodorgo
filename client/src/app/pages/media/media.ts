@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { filter, map, startWith } from 'rxjs';
 import { MediaService } from '../../services/media';
 import { AuthService } from '../../auth/auth.service';
 
@@ -16,8 +18,20 @@ import { AuthService } from '../../auth/auth.service';
 export class Media implements OnInit {
   media = inject(MediaService);
   private auth = inject(AuthService);
+  private router = inject(Router);
   // "Új média felfedezése" - the button at the bottom of the sidebar.
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
+
+  // Which of the three one is in ("videok", "fotok", "zene") - the sidebar
+  // shows only that one's sub-menu, so it stays short as the sections grow.
+  section = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => /^\/media\/([^/?#]+)/.exec(this.router.url)?.[1] ?? ''),
+    ),
+    { initialValue: '' },
+  );
 
   // Each video category's icon in the sub-menu - all that's left of it
   // once the sidebar collapses to an icon rail.

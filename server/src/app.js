@@ -25,6 +25,7 @@ import membershipRouter from './routes/membershipRoutes.js';
 import pollRouter from './routes/pollRoutes.js';
 import chatRoomRouter from './routes/chatRoomRoutes.js';
 import musicRouter from './routes/musicRoutes.js';
+import songRouter from './routes/songRoutes.js';
 import jatekRouter from './routes/jatekRoutes.js';
 import futokorRouter from './routes/futokorRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
@@ -134,6 +135,8 @@ export default function createApp(sessionMiddleware) {
   app.use('/polls', pollRouter);
   app.use('/chat-rooms', chatRoomRouter);
   app.use('/music', musicRouter);
+  // Daloskönyv: the songbook.
+  app.use('/songs', songRouter);
   // Móka: the games (darts first) - see jatekok/access.js for who gets in.
   app.use('/jatekok', jatekRouter);
   // Futókör: the running race (Móka → Futókörök) - see futokor/access.js.

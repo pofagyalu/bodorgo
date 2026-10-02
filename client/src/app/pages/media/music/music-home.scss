@@ -194,6 +194,41 @@
   }
 }
 
+// Daloskönyv: a white sheet, the green of the app, chords in rust (the
+// song page's own colors - pages/daloskonyv).
+.playlist-card--book {
+  background: #fff;
+  border: 1px solid #cfe3dc;
+  color: #193346;
+
+  .cover--icon {
+    display: grid;
+    place-items: center;
+    background: #e8f3ee;
+    color: #1a796c;
+
+    mat-icon {
+      font-size: 3rem;
+      width: 3rem;
+      height: 3rem;
+    }
+  }
+
+  .card-kind {
+    color: #b5533a;
+  }
+
+  .card-name {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .card-tagline,
+  .card-summary {
+    color: #56666e;
+  }
+}
+
 @media (max-width: 580px) {
   .content {
     padding: 1.5rem 1rem 3rem;

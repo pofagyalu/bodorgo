@@ -499,6 +499,25 @@ const schemas = {
     createdBy: { type: 'object' },
   }),
 
+  Song: obj({
+    _id: id(),
+    title: str('The book is in the order of the titles - the songs have no numbers.'),
+    artist: str('May be empty.'),
+    slug: str('From the title, accents folded ("Eső után" → `eso-utan`) - the song’s address.'),
+    chordpro: str(
+      'Lyrics and chords as ChordPro text: chords in [brackets] right before their syllable, `{start_of_chorus}` / `{end_of_chorus}` around the chorus, `{comment: 2x}` for notes, an empty line between verses.',
+    ),
+    tags: arrayOf(str()),
+    createdAt: date(),
+    updatedAt: date(),
+  }),
+  SongInput: obj({
+    title: str('Required for a new song.'),
+    artist: str(),
+    chordpro: str('ChordPro text - see Song. At most 20 000 characters.'),
+    tags: arrayOf(str()),
+  }),
+
   ChatRoom: obj({
     _id: id(),
     type: str('`general` - the club-wide room; `tour` - a tour’s own.', {
@@ -658,6 +677,7 @@ const T = {
   documents: 'Dokumentumok',
   media: 'Média',
   music: 'Zene',
+  songs: 'Daloskönyv',
   games: 'Móka',
   race: 'Futókör',
   settings: 'Beállítások',
@@ -693,6 +713,10 @@ const tags = [
   [
     T.music,
     'The music: Jellyfin playlists (Bódorgó FM for everyone, Buli rádió for members), streamed through this server - the Jellyfin key never reaches the browser.',
+  ],
+  [
+    T.songs,
+    'Daloskönyv: the club’s songbook - songs with lyrics and chords as ChordPro text (chords in [brackets] before their syllable). Everyone logged in may read it; only the role manager (`INITIAL_ADMIN_USER`) may add, change or delete songs.',
   ],
   [
     T.games,
@@ -2647,6 +2671,109 @@ const paths = {
       params: [musicKey, path('itemId', 'A track’s id from the playlist.')],
       response: file(['audio/mpeg', 'audio/flac', 'audio/mp4'], 'The audio.'),
       errors: [403, 404, 502],
+    }),
+  },
+
+  // --- Daloskönyv ---
+  '/songs': {
+    get: op({
+      tag: T.songs,
+      summary: 'The table of contents',
+      description:
+        'Every song in the book’s order - by title, the Hungarian alphabet’s way - without the lyrics. `canEdit`: whether the caller may add and change songs (the role manager).',
+      data: obj({
+        songs: arrayOf(
+          obj({
+            _id: id(),
+            title: str(),
+            artist: str('May be empty.'),
+            slug: str('The song’s address - see GET /songs/{slug}.'),
+          }),
+        ),
+        canEdit: bool('The caller may add, change and delete songs.'),
+        lastChanged: {
+          type: ['string', 'null'],
+          format: 'date-time',
+          description:
+            'When a song was last added or changed - the book’s date on its Dokumentumok card. null while the book is empty.',
+        },
+      }),
+    }),
+    post: op({
+      tag: T.songs,
+      summary: 'Add a song',
+      description:
+        'Only the role manager (`INITIAL_ADMIN_USER`) - 403 for everyone else, admins included. The slug is made from the title (accents folded; `-2`, `-3`… if taken).',
+      body: ref('SongInput'),
+      ok: 201,
+      data: obj({ song: ref('Song') }),
+      errors: [400, 403],
+    }),
+  },
+  '/songs/book.pdf': {
+    get: op({
+      tag: T.songs,
+      summary: 'The whole songbook as a PDF',
+      description:
+        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page, the chords over their syllables, and the circle of fifths (Kvintkör) on the last page. Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
+      params: [
+        query(
+          'diagrams',
+          'Whose chord diagrams to draw under each song’s title: `guitar` or `ukulele`. Omit for none.',
+          { type: 'string', enum: ['guitar', 'ukulele'] },
+        ),
+        query('size', 'The paper. Default: A4.', { type: 'string', enum: ['A4', 'A5'] }),
+        query('download', 'Any value: sent as a download rather than shown in the browser.'),
+      ],
+      response: file(['application/pdf'], 'The songbook.'),
+      errors: [404],
+    }),
+  },
+  '/songs/book.webp': {
+    get: op({
+      tag: T.songs,
+      summary: 'The songbook’s cover as a small picture',
+      description:
+        'The PDF’s first page, 360 px wide - the picture on the Daloskönyv’s card on Klub → Dokumentumok. Made once and kept until a song is added, changed or deleted. 404 while the book is empty.',
+      params: [
+        query('diagrams', 'As for the PDF - the cover says whose diagrams the book has.', {
+          type: 'string',
+          enum: ['guitar', 'ukulele'],
+        }),
+      ],
+      response: file(['image/webp'], 'The cover.'),
+      errors: [404],
+    }),
+  },
+  '/songs/{slug}': {
+    get: op({
+      tag: T.songs,
+      summary: 'One song',
+      description: 'With its lyrics and chords (`chordpro`).',
+      params: [path('slug', 'The song’s slug, from the table of contents.')],
+      data: obj({ song: ref('Song') }),
+      errors: [404],
+    }),
+  },
+  '/songs/{id}': {
+    patch: op({
+      tag: T.songs,
+      summary: 'Change a song',
+      description:
+        'Only the role manager (`INITIAL_ADMIN_USER`) - 403 for everyone else, admins included. Only the fields sent change. A new title gives the song a new slug (its address).',
+      params: [path('id', 'The song’s id.')],
+      body: ref('SongInput'),
+      data: obj({ song: ref('Song') }),
+      errors: [400, 403, 404],
+    }),
+    delete: op({
+      tag: T.songs,
+      summary: 'Delete a song',
+      description:
+        'Only the role manager (`INITIAL_ADMIN_USER`) - 403 for everyone else, admins included.',
+      params: [path('id', 'The song’s id.')],
+      ok: 204,
+      errors: [403, 404],
     }),
   },
 

@@ -23,6 +23,11 @@
       <a routerLink="profilom" routerLinkActive="active" class="nav-item">
         <mat-icon class="nav-icon nav-icon--profile">person</mat-icon><span>Profilom</span>
       </a>
+      <!-- The songbook, for guests too: members find it in Média → Zene, a
+           guest on its own page (services/song.ts's base). -->
+      <a [routerLink]="songbook()" class="nav-item">
+        <mat-icon class="nav-icon nav-icon--songs">library_music</mat-icon><span>Daloskönyv</span>
+      </a>
     </nav>
     <!-- At the sidebar's bottom: Beállítások (admins), set apart from the
          everyday pages, then the Átlátható klubélet box. -->
@@ -51,6 +56,7 @@
         <a routerLink="dokumentumok" routerLinkActive="active">Dokumentumok</a>
       }
       <a routerLink="profilom" routerLinkActive="active">Profil</a>
+      <a [routerLink]="songbook()">Daloskönyv</a>
       @if (isAdmin()) {
         <a routerLink="beallitasok" routerLinkActive="active">Beállítások</a>
       }
