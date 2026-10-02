@@ -110,7 +110,16 @@
           <span class="user-avatar-text">{{ initials(auth.user()?.name) }}</span>
         }
       </a>
-      <button class="login-btn logout" (click)="logout()">Kijelentkezés</button>
+      <!-- Kijelentkezés: a red power icon, the word is its tooltip. -->
+      <button
+        type="button"
+        class="logout-btn"
+        title="Kijelentkezés"
+        aria-label="Kijelentkezés"
+        (click)="logout()"
+      >
+        <mat-icon>power_settings_new</mat-icon>
+      </button>
     }
   </div>
 
