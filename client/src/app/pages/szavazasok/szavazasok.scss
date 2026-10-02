@@ -1,3 +1,5 @@
+@use '../../shared/fab';
+
 // Same grey-backdrop + white-panel treatment as tours.scss/tour-details.scss
 // /homepage.scss/chat.scss, for visual consistency across the site's
 // top-level (non-Klub) pages.
@@ -325,5 +327,27 @@
     display: flex;
     align-items: center;
     gap: 6px;
+  }
+}
+
+// The + icon is the phone's (the floating button); a wide screen has the
+// label "＋ Új szavazás".
+.new-poll-btn .add-icon {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  // "＋ Új szavazás" out of the heading: the floating + of a phone
+  // (shared/_fab.scss).
+  .heading .new-poll-btn {
+    @include fab.button;
+  }
+
+  .new-poll-btn .add-icon {
+    display: block;
+  }
+
+  .new-poll-btn .add-text {
+    display: none;
   }
 }

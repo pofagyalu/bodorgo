@@ -5,7 +5,16 @@
       <p class="page-subtitle">Szavazz a táborokkal kapcsolatos kérdésekben.</p>
     </div>
     @if (isAdmin()) {
-      <button type="button" class="btn btn--green" (click)="openCreate()">＋ Új szavazás</button>
+      <!-- On a phone: the floating + in the bottom right corner. -->
+      <button
+        type="button"
+        class="btn btn--green new-poll-btn"
+        title="Új szavazás"
+        aria-label="Új szavazás"
+        (click)="openCreate()"
+      >
+        <mat-icon class="add-icon">add</mat-icon><span class="add-text">＋ Új szavazás</span>
+      </button>
     }
   </div>
 
