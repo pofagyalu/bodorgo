@@ -2144,7 +2144,7 @@ const paths = {
       role: 'member',
       summary: 'All video categories and videos',
       description:
-        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read).",
+        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name.",
       data: obj({ categories: arrayOf({ type: 'object' }) }),
     }),
   },
@@ -2156,6 +2156,25 @@ const paths = {
       params: [path('category', 'e.g. `szilveszter`.')],
       response: file(['image/jpeg', 'image/png'], 'The picture.'),
       errors: [404],
+    }),
+  },
+  '/media/videos/{category}/{id}': {
+    patch: op({
+      tag: T.media,
+      role: 'admin',
+      summary: 'Give a video its own title',
+      description:
+        "Shown instead of the title read from the file name; the file itself is not renamed. An empty title (or one equal to the file name's) removes the correction, so the discovered title shows again. At most 200 characters.",
+      params: [path('category', 'The category.'), path('id', 'The video.')],
+      body: obj({ title: str('The new title; empty to go back to the discovered one.') }),
+      data: obj({
+        video: obj({
+          id: str('The video.'),
+          title: str('The title now shown.'),
+          discoveredTitle: str('The title from the file name.'),
+        }),
+      }),
+      errors: [400, 404],
     }),
   },
   '/media/videos/{category}/{id}/video': {

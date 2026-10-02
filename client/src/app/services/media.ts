@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -8,7 +9,10 @@ import { NotificationsService } from '../notifications/notifications.service';
 // uploaded here.
 export interface MediaVideo {
   id: string;
+  // An admin's own title when one was given, otherwise the discovered one.
   title: string;
+  // The title read from the file name.
+  discoveredTitle: string;
   year: number | null;
   season: number | null;
   episode: number | null;
@@ -84,6 +88,31 @@ export class MediaService {
   readonly loading = signal(false);
   readonly error = signal(false);
   private loaded = false;
+
+  // Admin: a video's own title, instead of the one from its file name -
+  // an empty one goes back to that. The list here follows.
+  setVideoTitle(categoryKey: string, id: string, title: string) {
+    return this.http
+      .patch<{
+        data: { video: { id: string; title: string; discoveredTitle: string } };
+      }>(`${this.apiUrl}/${categoryKey}/${id}`, { title })
+      .pipe(
+        tap((res) =>
+          this.categories.update((categories) =>
+            categories.map((c) =>
+              c.key !== categoryKey
+                ? c
+                : {
+                    ...c,
+                    videos: c.videos.map((v) =>
+                      v.id === id ? { ...v, title: res.data.video.title } : v,
+                    ),
+                  },
+            ),
+          ),
+        ),
+      );
+  }
 
   loadVideos() {
     if (this.loaded || this.loading()) return;

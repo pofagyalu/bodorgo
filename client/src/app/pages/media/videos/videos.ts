@@ -1,10 +1,20 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  HostListener,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
 import { MediaService, MediaVideo, MediaVideoCategory } from '../../../services/media';
+import { AuthService } from '../../../auth/auth.service';
+import { NotificationsService } from '../../../notifications/notifications.service';
 import { VideoCard } from '../../../shared/video-card/video-card';
 import { VideoPlayer } from '../../../shared/video-player/video-player';
 
@@ -116,6 +126,51 @@ export class Videos {
 
   subtitlesUrl(p: Playing): string {
     return this.media.subtitlesUrl(p.category.key, p.video.id);
+  }
+
+  // --- Admin: a video's own title (the pencil on its card) ---
+
+  private auth = inject(AuthService);
+  private notifications = inject(NotificationsService);
+  isAdmin = computed(() => this.auth.user()?.role === 'admin');
+
+  editing = signal<Playing | null>(null);
+  editTitle = signal('');
+  savingEdit = signal(false);
+  editError = signal<string | null>(null);
+  private titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
+
+  startEdit(category: MediaVideoCategory, video: MediaVideo) {
+    this.editTitle.set(video.title);
+    this.editError.set(null);
+    this.editing.set({ category, video });
+    // Once the dialog is there: the cursor in the field, the title selected.
+    setTimeout(() => this.titleInput()?.nativeElement.select());
+  }
+
+  @HostListener('document:keydown.escape')
+  cancelEdit() {
+    if (!this.savingEdit()) this.editing.set(null);
+  }
+
+  // An emptied title goes back to the one from the file name.
+  saveEdit(event: Event) {
+    event.preventDefault();
+    const e = this.editing();
+    if (!e || this.savingEdit()) return;
+    this.savingEdit.set(true);
+    this.editError.set(null);
+    this.media.setVideoTitle(e.category.key, e.video.id, this.editTitle().trim()).subscribe({
+      next: () => {
+        this.savingEdit.set(false);
+        this.editing.set(null);
+        this.notifications.addSuccess('Cím mentve');
+      },
+      error: (err) => {
+        this.savingEdit.set(false);
+        this.editError.set(err?.error?.message ?? 'Hiba történt a mentés során.');
+      },
+    });
   }
 
   play(category: MediaVideoCategory, video: MediaVideo) {

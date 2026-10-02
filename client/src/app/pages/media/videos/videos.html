@@ -50,14 +50,29 @@
 
         <div class="video-grid">
           @for (v of c.videos; track v.id) {
-            <app-video-card
-              [title]="v.title"
-              [coverUrl]="v.hasCover ? coverUrl(c, v) : null"
-              [badge]="v.year"
-              [badgeRight]="length(v.durationSeconds)"
-              [tooltip]="v.title + (v.year ? ' (' + v.year + ')' : '')"
-              (playClicked)="play(c, v)"
-            />
+            <div class="video-item">
+              <app-video-card
+                [title]="v.title"
+                [coverUrl]="v.hasCover ? coverUrl(c, v) : null"
+                [badge]="v.year"
+                [badgeRight]="length(v.durationSeconds)"
+                [tooltip]="v.title + (v.year ? ' (' + v.year + ')' : '')"
+                (playClicked)="play(c, v)"
+              />
+              <!-- Admin: the title, when the one from the file name isn't
+                   the best. -->
+              @if (isAdmin()) {
+                <button
+                  type="button"
+                  class="title-edit-btn"
+                  title="Cím szerkesztése"
+                  aria-label="Cím szerkesztése"
+                  (click)="startEdit(c, v)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+            </div>
           }
         </div>
       </section>
@@ -73,4 +88,40 @@
     [subtitlesSrc]="p.video.hasSubtitles ? subtitlesUrl(p) : null"
     (closed)="close()"
   />
+}
+
+<!-- Admin: a video's title. -->
+@if (editing(); as e) {
+  <div class="title-modal-backdrop" (click)="cancelEdit()">
+    <form class="title-modal" (click)="$event.stopPropagation()" (submit)="saveEdit($event)">
+      <h2>Videó címe</h2>
+      <input
+        #titleInput
+        type="text"
+        maxlength="200"
+        aria-label="Videó címe"
+        [value]="editTitle()"
+        (input)="editTitle.set($any($event.target).value)"
+      />
+      <p class="title-modal-note">
+        A fájl neve szerint: <strong>{{ e.video.discoveredTitle }}</strong>
+        @if (editTitle().trim() !== e.video.discoveredTitle) {
+          <button type="button" class="link-btn" (click)="editTitle.set(e.video.discoveredTitle)">
+            visszaállítás
+          </button>
+        }
+      </p>
+      @if (editError()) {
+        <p class="title-modal-error">{{ editError() }}</p>
+      }
+      <div class="title-modal-actions">
+        <button type="button" class="outline-btn" [disabled]="savingEdit()" (click)="cancelEdit()">
+          Mégse
+        </button>
+        <button type="submit" class="primary-btn" [disabled]="savingEdit()">
+          {{ savingEdit() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    </form>
+  </div>
 }
