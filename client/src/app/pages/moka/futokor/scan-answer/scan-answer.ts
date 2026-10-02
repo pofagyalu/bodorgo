@@ -131,7 +131,7 @@ export class ScanAnswerView implements OnInit, OnDestroy {
       case 'closed':
         return 'A pálya most nincs nyitva.';
       case 'noCourse':
-        return 'Nincs pálya a telefonon – nyisd meg a Móka → Futókörök oldalt, amíg van net.';
+        return 'Nincs pálya a telefonon – nyisd meg a Móka → Futókörök → Futás oldalt, amíg van net.';
       case 'gaveUp':
         return 'Ez a futás nem számít. Jöhet egy új!';
       default:

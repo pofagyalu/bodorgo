@@ -1,0 +1,147 @@
+<section class="landing">
+  <div class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">Bódorgó Móka</p>
+      <h1>Futókörök</h1>
+      <p class="lead">
+        Egy kör a tábor körül – vagy a saját erdődben. Olvasd be a RAJT kártyát, keresd meg sorban a
+        pontokat, és érj vissza minél gyorsabban. Annyiszor futhatsz, ahányszor csak akarsz: a
+        legjobb időd számít.
+      </p>
+
+      <div class="actions">
+        <a routerLink="futas" class="action go">
+          <mat-icon>directions_run</mat-icon>
+          <span>Futni indulok</span>
+        </a>
+      </div>
+
+      <!-- What's open to run right now. -->
+      @if (open().length) {
+        <p class="open-now">
+          <span class="dot"></span>
+          Most nyitva:
+          @for (c of open(); track c._id; let last = $last) {
+            <strong>{{ c.name }}</strong
+            >{{ last ? '' : ', ' }}
+          }
+        </p>
+      }
+    </div>
+
+    <!-- A loop with its cards, and a runner going round. -->
+    <svg class="picture" viewBox="0 0 400 290" role="img" aria-label="Futókör">
+      <path
+        id="futokor-loop"
+        class="loop-edge"
+        d="M70 196 C40 120 60 80 96 78 S190 30 232 52 S350 90 330 150 S270 250 214 232 S100 260 70 196 Z"
+      />
+      <path
+        class="loop"
+        d="M70 196 C40 120 60 80 96 78 S190 30 232 52 S350 90 330 150 S270 250 214 232 S100 260 70 196 Z"
+      />
+      <!-- What the loop goes round: the camp among the trees. -->
+      <g class="scenery" aria-hidden="true">
+        <text x="190" y="150" class="camp">🏕️</text>
+        <text x="120" y="135">🌲</text>
+        <text x="262" y="118">🌳</text>
+        <text x="150" y="205">🌲</text>
+        <text x="270" y="190">🌲</text>
+      </g>
+      @for (p of pins; track p.label) {
+        <g
+          class="pin"
+          [class.pin--start]="p.start"
+          [attr.transform]="'translate(' + p.x + ' ' + p.y + ')'"
+        >
+          <circle r="15" />
+          <text>{{ p.label }}</text>
+        </g>
+      }
+      <!-- The runner: a dot going round the loop. -->
+      <circle class="runner" r="9">
+        <animateMotion dur="9s" repeatCount="indefinite" rotate="auto">
+          <mpath href="#futokor-loop" />
+        </animateMotion>
+      </circle>
+    </svg>
+  </div>
+
+  <!-- Every futókör there has been - each stands on its own. -->
+  @if (results().length) {
+    <h2><mat-icon>emoji_events</mat-icon> Eredmények</h2>
+    <ul class="rows">
+      @for (c of results(); track c._id) {
+        <li>
+          <a [routerLink]="['eredmenyek', c._id]" class="row" [class.live]="c.runningNow">
+            <span class="badge">{{ c.distanceM ? c.distanceM + ' m' : '–' }}</span>
+            <span class="row-main">
+              <span class="row-title">
+                {{ c.name }}
+                @if (c.winner; as w) {
+                  · 🥇 {{ w.name }} {{ time(w.totalMs) }}
+                }
+              </span>
+              <small>
+                {{ c.kind === 'tour' ? 'Tábori pálya' : 'Saját pálya · ' + c.owner.name }} ·
+                {{ c.runners }} futó, {{ c.finishedRuns }} célba érés
+              </small>
+            </span>
+            @if (c.runningNow) {
+              <span class="status on">{{ c.runningNow }} fut most</span>
+            }
+            <mat-icon class="chevron">chevron_right</mat-icon>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+
+  <!-- My own runs on the courses open now. -->
+  @if (myRuns().length) {
+    <h2><mat-icon>directions_run</mat-icon> Futásaim</h2>
+    <ul class="rows">
+      @for (r of myRuns(); track r.course._id + r.run.startedAt) {
+        <li>
+          <a
+            [routerLink]="['eredmenyek', r.course._id]"
+            class="row"
+            [class.live]="r.run.status === 'running'"
+          >
+            <span class="badge">{{ r.run.status === 'finished' ? time(r.run.totalMs) : '–' }}</span>
+            <span class="row-main">
+              <span class="row-title">{{ r.course.name }}</span>
+              <small>
+                {{ statusText[r.run.status] }}
+                @if (r.run.paceSecPerKm) {
+                  · {{ pace(r.run.paceSecPerKm) }}
+                }
+                · {{ r.run.startedAt | date: 'yyyy. MM. dd. HH:mm' }}
+              </small>
+            </span>
+            @if (r.run.status === 'running') {
+              <span class="status on">folyamatban</span>
+            }
+            <mat-icon class="chevron">chevron_right</mat-icon>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+
+  <!-- The rest of Futókörök, a tap away. -->
+  <nav class="more">
+    <a routerLink="eredmenyek">
+      <mat-icon>emoji_events</mat-icon>
+      <span><strong>Eredmények</strong><small>Ki mennyit futott, szakaszonként is</small></span>
+    </a>
+    <a routerLink="utmutato">
+      <mat-icon>help</mat-icon>
+      <span><strong>Útmutató</strong><small>Hogyan kell futni – lépésről lépésre</small></span>
+    </a>
+    <a routerLink="palyaszerkeszto">
+      <mat-icon>route</mat-icon>
+      <span><strong>Pályaszerkesztő</strong><small>Készíts saját pályát GPX-ből</small></span>
+    </a>
+  </nav>
+</section>

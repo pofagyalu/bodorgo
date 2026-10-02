@@ -5,7 +5,7 @@ import { ScanFlow } from '../scan-flow/scan-flow';
 
 // fk/<token>: where a card's QR code (or NFC sticker) leads -
 // opened by the phone's own camera. It counts the scan (scan-flow) and then
-// goes on to the Futókörök page. A phone that has never had the course gets
+// goes on to Futókörök's Futás page. A phone that has never had the course gets
 // it first, if it has a connection.
 @Component({
   selector: 'app-futokor-tag',
@@ -30,6 +30,6 @@ export class FutokorTagPage {
 
   // The card's own address is left behind: "back" must not scan it again.
   leave() {
-    void this.router.navigate(['/moka/futokor'], { replaceUrl: true });
+    void this.router.navigate(['/moka/futokor/futas'], { replaceUrl: true });
   }
 }

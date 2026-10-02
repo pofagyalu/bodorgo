@@ -15,15 +15,14 @@ import {
 import { CourseMap } from './course-map/course-map';
 import { QrScanner, canScanInApp } from './qr-scanner/qr-scanner';
 import { ScanAnswerView, cardName } from './scan-answer/scan-answer';
-import { RunList } from './run-list/run-list';
 import { ScanFlow } from './scan-flow/scan-flow';
 
-// Móka → Futókörök: the running race's own page on a runner's phone.
+// Móka → Futókörök → Futás: the running race's own page on a runner's phone.
 // The course (kept on the phone - it works without a signal too), the run
 // that's on with its clock and the card to find next, the camera to read
-// the cards, my runs (with their splits), and everyone's best times. The
-// results of every futókör, the guide and the admins' pages are beside it
-// in Móka's menu (pages/moka/moka.html).
+// the cards, and everyone's best times. My own runs are on Futókörök's
+// opening page (futokor-landing); the results of every futókör, the guide
+// and the Pályaszerkesztő are beside this page in Móka's menu.
 @Component({
   selector: 'app-futokor-home',
   imports: [
@@ -32,7 +31,6 @@ import { ScanFlow } from './scan-flow/scan-flow';
     Avatar,
     Podium,
     CourseMap,
-    RunList,
     QrScanner,
     ScanFlow,
     ScanAnswerView,
@@ -88,9 +86,6 @@ export class FutokorHome implements OnDestroy {
     const c = this.course();
     return !!c && ((c.track?.length ?? 0) > 1 || c.checkpoints.some((p) => p.lat != null));
   });
-
-  // My runs, the latest first.
-  myRuns = computed(() => [...this.futokor.serverRuns()].reverse());
 
   winners = computed<PodiumWinner[]>(() =>
     this.runners()
