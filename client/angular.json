@@ -23,7 +23,12 @@
               "src/robots.txt",
               "src/manifest.webmanifest",
               "src/sw.js",
-              "src/assets"
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "output": "assets",
+                "ignore": ["**/*.log", "**/*.psd"]
+              }
             ],
             "styles": [
               "node_modules/material-icons/iconfont/material-icons.css",
