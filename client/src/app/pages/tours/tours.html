@@ -2,45 +2,87 @@
   <!-- One line: the filter bar and, for an admin, "+Tábor" after it. -->
   <div class="top-row">
     <!-- One bar: search, year, and the order by date (a button that turns
-       it around). -->
-    <div class="filters">
-      <!-- Looks in the tours' titles and their short descriptions (the
+       it around). The wrap is the year panel's anchor (the bar itself clips
+       its corners). -->
+    <div class="filters-wrap">
+      <div class="filters">
+        <!-- Looks in the tours' titles and their short descriptions (the
          summary on the card). -->
-      <label class="filter-search">
-        <mat-icon aria-hidden="true">search</mat-icon>
-        <input
-          type="text"
-          placeholder="Keresés címben, leírásban…"
-          aria-label="Táborok keresése címben és rövid leírásban"
-          (input)="onSearch($event.target.value)"
-        />
-      </label>
+        <label class="filter-search">
+          <mat-icon aria-hidden="true">search</mat-icon>
+          <input
+            type="text"
+            placeholder="Keresés címben, leírásban…"
+            aria-label="Táborok keresése címben és rövid leírásban"
+            (input)="onSearch($event.target.value)"
+          />
+        </label>
 
-      <!-- What to show: one year's tours (the page opens with the latest
-         year that has any), or every tour - on a wheel, rolled up and down. -->
-      <app-period-band
-        class="filter-year"
-        label="Mely táborok (év)"
-        [vertical]="true"
-        [loop]="true"
-        [options]="periodOptions()"
-        [value]="period()"
-        (valueChange)="choosePeriod($event)"
-      />
+        <!-- What to show: one year's tours (the page opens with the latest
+         year that has any), or every tour - the button says which, and
+         opens the panel below with all the choices at once. -->
+        <button
+          type="button"
+          class="filter-year"
+          [class.filter-year--open]="yearsOpen()"
+          title="Mely táborok (év)"
+          aria-label="Mely táborok (év)"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="yearsOpen()"
+          (click)="toggleYears($event)"
+        >
+          <span>{{ period() === 'all' ? 'Összes' : period() || '…' }}</span>
+          <mat-icon aria-hidden="true">expand_more</mat-icon>
+        </button>
 
-      <!-- The arrow is the order now (down: newest first); the tooltip says
+        <!-- The arrow is the order now (down: newest first); the tooltip says
          what a click changes it to. -->
-      <button
-        type="button"
-        class="filter-order"
-        [title]="ascending() ? 'Dátum szerint csökkenő sorrend' : 'Dátum szerint növekvő sorrend'"
-        [attr.aria-label]="
-          ascending() ? 'Dátum szerint csökkenő sorrend' : 'Dátum szerint növekvő sorrend'
-        "
-        (click)="ascending.set(!ascending())"
-      >
-        <mat-icon>{{ ascending() ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-      </button>
+        <button
+          type="button"
+          class="filter-order"
+          [title]="ascending() ? 'Dátum szerint csökkenő sorrend' : 'Dátum szerint növekvő sorrend'"
+          [attr.aria-label]="
+            ascending() ? 'Dátum szerint csökkenő sorrend' : 'Dátum szerint növekvő sorrend'
+          "
+          (click)="ascending.set(!ascending())"
+        >
+          <mat-icon>{{ ascending() ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+        </button>
+      </div>
+
+      <!-- Every choice at once: "Összes" on top, the years below it, newest
+         first - one tap picks and closes. -->
+      @if (yearsOpen()) {
+        <div
+          class="year-panel"
+          role="listbox"
+          aria-label="Mely táborok (év)"
+          (click)="$event.stopPropagation()"
+        >
+          <button
+            type="button"
+            role="option"
+            class="year-option year-option--all"
+            [class.year-option--current]="period() === 'all'"
+            [attr.aria-selected]="period() === 'all'"
+            (click)="pickPeriod('all')"
+          >
+            Összes tábor
+          </button>
+          @for (y of years(); track y) {
+            <button
+              type="button"
+              role="option"
+              class="year-option"
+              [class.year-option--current]="period() === '' + y"
+              [attr.aria-selected]="period() === '' + y"
+              (click)="pickPeriod('' + y)"
+            >
+              {{ y }}
+            </button>
+          }
+        </div>
+      }
     </div>
 
     @if (auth.user()?.role === 'admin') {
