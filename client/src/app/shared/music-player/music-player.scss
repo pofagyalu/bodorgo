@@ -52,6 +52,8 @@ button {
 // --- PC: the pill ---
 
 .pill {
+  // The title card's anchor (.now).
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -62,60 +64,68 @@ button {
   background: #fff;
 }
 
+// Nothing played yet: only the round ♫ button, no pill around it.
+.pill--idle {
+  padding: 0;
+  border-color: transparent;
+  background: none;
+}
+
 .hint {
   padding-right: 0.5rem;
   font-size: 0.8125rem;
   color: #6b7f86;
 }
 
-// The title's box: folded to nothing, or opened to the marquee's width -
-// sliding either way.
+// The title and the artist: a small card that drops down under the pill
+// (like the volume's) - over the page, so the pill keeps its width and
+// never pushes the menu beside it. Clicks go through it.
 .now {
-  max-width: 0;
-  overflow: hidden;
-  transition: max-width 0.45s ease;
+  position: absolute;
+  top: calc(100% + 0.625rem);
+  right: 0;
+  z-index: 20000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-width: 18rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid #dfe8e4;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.15);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-0.4rem);
+  visibility: hidden;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    visibility 0.25s;
 }
 
 .now--open {
-  max-width: 11rem;
+  opacity: 1;
+  transform: none;
+  visibility: visible;
 }
 
-// A long title slides slowly inside a fixed width - the header never jumps.
-.marquee {
-  display: block;
-  width: 11rem;
+.now-title,
+.now-artist {
   overflow: hidden;
-  white-space: nowrap;
-  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+}
+
+.now-title {
+  font-weight: 700;
   color: #1c2d38;
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0,
-    #000 0.5rem,
-    #000 calc(100% - 0.75rem),
-    transparent
-  );
 }
 
-.marquee-text {
-  display: inline-block;
-  padding-left: 0.5rem;
-  animation: marquee 14s linear infinite;
-}
-
-.artist {
+.now-artist {
   color: #6b7f86;
-}
-
-@keyframes marquee {
-  0%,
-  15% {
-    transform: translateX(0);
-  }
-  85%,
-  100% {
-    transform: translateX(min(0px, calc(11rem - 100% - 1rem)));
-  }
 }
 
 // Three bouncing bars while playing.

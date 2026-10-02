@@ -1,8 +1,10 @@
 @if (mode() === 'pill') {
-  <!-- PC: ▶/⏸, what's playing, ⏭ -->
+  <!-- PC: before anything plays just a ♫ button; once it does, ▶/⏸,
+       what's playing, ⏭ and the volume. -->
   <div
     class="pill"
     [class.pill--on]="music.currentTrack()"
+    [class.pill--idle]="!music.currentTrack() && !music.error()"
     (mouseenter)="peekTitle(true)"
     (mouseleave)="peekTitle(false)"
   >
@@ -15,7 +17,13 @@
       (click)="music.toggle()"
     >
       <mat-icon>{{
-        music.loading() ? 'hourglass_top' : music.isPlaying() ? 'pause' : 'play_arrow'
+        music.loading()
+          ? 'hourglass_top'
+          : music.isPlaying()
+            ? 'pause'
+            : music.currentTrack()
+              ? 'play_arrow'
+              : 'music_note'
       }}</mat-icon>
     </button>
 
@@ -23,14 +31,12 @@
       @if (music.isPlaying()) {
         <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
       }
-      <!-- The title: out for a few seconds when a song starts (and on hover),
-           then folded away. -->
-      <span class="now" [class.now--open]="titleShown()" [title]="t.title + ' – ' + t.artist">
-        <span class="marquee"
-          ><span class="marquee-text"
-            >{{ t.title }} <span class="artist">– {{ t.artist }}</span></span
-          ></span
-        >
+      <!-- The title and the artist: a card dropping down under the pill for a
+           few seconds when a song starts (and on hover) - not while the
+           volume's slider is there. -->
+      <span class="now" [class.now--open]="titleShown() && !volumeOpen()">
+        <strong class="now-title">{{ t.title }}</strong>
+        <span class="now-artist">{{ t.artist }}</span>
       </span>
       <button
         type="button"
@@ -42,8 +48,8 @@
         <mat-icon>skip_next</mat-icon>
       </button>
       <ng-container *ngTemplateOutlet="volumeButton" />
-    } @else {
-      <span class="hint">{{ music.error() ?? 'Zene' }}</span>
+    } @else if (music.error(); as error) {
+      <span class="hint">{{ error }}</span>
     }
   </div>
 } @else {
