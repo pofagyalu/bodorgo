@@ -15,6 +15,13 @@ export const CLUB_DOCUMENTS_DIR = process.env.CLUB_DOCUMENTS_DIR || path.join(ro
 // Payment receipt PDFs (never synced between machines).
 export const RECEIPTS_DIR = process.env.RECEIPTS_DIR || path.join(CLUB_DOCUMENTS_DIR, 'payments');
 
+// GPX tracks - every one the app is given, whatever it's for (a Futókör
+// course's loop now; a tour's hike later): the files as they were
+// uploaded, named by their record's id (see gpxTrackModel.js). Under
+// documents/, so - like everything there - never synced between machines
+// and not watched by pm2.
+export const GPX_DIR = process.env.GPX_DIR || path.join(CLUB_DOCUMENTS_DIR, 'gpx');
+
 // Photos sent in the tour chats (see chat/chatImages.js) - kept under a
 // size quota, the oldest going first. Not in git, never synced; pm2 must
 // not watch it (/volume2/server/ecosystem.config.js's ignore_watch).

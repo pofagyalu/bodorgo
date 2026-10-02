@@ -16,6 +16,7 @@ import {
 } from './utils/membershipReminders.js';
 import { syncRoleManager } from './utils/roleManager.js';
 import { ensureFutokodok } from './utils/futokod.js';
+import { FutokorCourse } from './models/futokorModels.js';
 
 // This handler must run before anything else
 process.on('uncaughtException', (err) => {
@@ -59,6 +60,12 @@ mongoose
     // (each makes its own).
     // The role manager (INITIAL_ADMIN_USER) - see utils/roleManager.js.
     syncRoleManager().catch((err) => logger.error(`Role manager sync failed: ${err.message}`));
+
+    // Futókör: the courses' index changed (a user's own track has no tour)
+    // - an index made before that is replaced.
+    FutokorCourse.syncIndexes().catch((err) =>
+      logger.error(`Futókör index sync failed: ${err.message}`),
+    );
 
     // Futókód: whoever has none yet gets one (utils/futokod.js).
     ensureFutokodok().catch((err) => logger.error(`Futókód failed: ${err.message}`));

@@ -18,23 +18,47 @@ const CLIMB_STEP_M = 3;
 // one wins (a checkpoint belongs to the first time the loop gets there).
 const SAME_PLACE_M = 10;
 
+// A stored track keeps a point only this far from the last one kept: a
+// watch records one every second, far more than drawing the loop needs.
+const KEEP_EVERY_M = 3;
+
 // Every track point of a GPX text, in order (all its segments one after
-// the other): { lat, lng, ele (null if it has none) }.
+// the other): { lat, lng, ele, time (ms) } - ele and time null if the
+// point has none (a planned route has no times).
 export function parseGpx(gpx) {
   return [...String(gpx).matchAll(/<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>|<trkpt\b([^>]*)\/>/g)]
     .map((m) => {
       const attrs = m[1] ?? m[3] ?? '';
       const ele = /<ele>([^<]+)<\/ele>/.exec(m[2] ?? '');
+      const time = Date.parse(/<time>([^<]+)<\/time>/.exec(m[2] ?? '')?.[1] ?? '');
       return {
         lat: Number(/\blat="([^"]+)"/.exec(attrs)?.[1]),
         lng: Number(/\blon="([^"]+)"/.exec(attrs)?.[1]),
         ele: ele ? Number(ele[1]) : null,
+        time: Number.isNaN(time) ? null : time,
       };
     })
     .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 }
 
-// The track measured: its length, and what it climbs and descends.
+// The track's name, as the file gives it - '' if it has none.
+export const gpxName = (gpx) => /<name>([^<]*)<\/name>/.exec(String(gpx))?.[1]?.trim() ?? '';
+
+// A lighter track of the same shape: the first and the last point, and of
+// the ones between only those at least KEEP_EVERY_M from the last kept.
+export function thinTrack(points) {
+  const kept = [];
+  for (const [i, p] of points.entries()) {
+    if (i === 0 || i === points.length - 1 || metresBetween(kept.at(-1), p) >= KEEP_EVERY_M) {
+      kept.push(p);
+    }
+  }
+  return kept;
+}
+
+// The track measured: its length, what it climbs and descends - and, if it
+// was recorded (its points have times), when it started and how long it
+// took from the first point to the last.
 export function measureTrack(points) {
   let distanceM = 0;
   for (let i = 1; i < points.length; i += 1) distanceM += metresBetween(points[i - 1], points[i]);
@@ -50,10 +74,13 @@ export function measureTrack(points) {
       ref = p.ele;
     }
   }
+  const times = points.map((p) => p.time).filter((t) => t != null);
   return {
     distanceM: Math.round(distanceM),
     elevationGainM: Math.round(gain),
     elevationLossM: Math.round(loss),
+    startedAt: times.length ? new Date(times[0]) : null,
+    durationSec: times.length > 1 ? Math.round((times.at(-1) - times[0]) / 1000) : null,
   };
 }
 

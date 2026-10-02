@@ -308,7 +308,20 @@ const schemas = {
 
   FutokorCourse: obj({
     _id: id(),
-    tour: obj({ _id: id(), title: str() }),
+    kind: str('A tour’s course, or a user’s own track.', { enum: ['tour', 'own'] }),
+    tour: {
+      type: ['object', 'null'],
+      description: 'A tour’s course: its tour (id, title) - null for a user’s own track.',
+    },
+    owner: obj({ _id: id(), name: str() }),
+    canManage: bool('I may change it.'),
+    hasGpx: bool('Its loop’s GPX file is there to download.'),
+    cards: {
+      type: 'array',
+      description:
+        'Only where the course is given to change (Pályaszerkesztő): a user’s own track’s cards, each with its link.',
+      items: { type: 'object' },
+    },
     name: str(),
     opensAt: date(),
     closesAt: date(),
@@ -316,7 +329,7 @@ const schemas = {
     track: {
       type: 'array',
       description:
-        'The loop itself, to draw on the map: [lat, lng] pairs from a GPX file - empty until one is attached (scripts/attachFutokorTrack.mjs).',
+        'The loop itself, to draw on the map: [lat, lng] pairs from a GPX file - empty until one is given (PUT /futokor/courses/{id}/track).',
       items: { type: 'array', items: { type: 'number' } },
     },
     elevationGainM: { type: ['number', 'null'], description: 'What the loop climbs.' },
@@ -2761,9 +2774,9 @@ const paths = {
     get: op({
       tag: T.race,
       role: 'admin',
-      summary: 'The cards',
+      summary: 'The club’s cards',
       description:
-        'Every card: printed once and used again on every tour - which checkpoint it is depends on the course.',
+        'The club’s own set (S1, T01, T02...): printed once and used again on every tour - which checkpoint a card is depends on the tour’s course. A user’s own track has its own cards, listed with the track (`/futokor/courses`).',
       data: obj({
         tags: arrayOf(
           obj({
@@ -2832,37 +2845,37 @@ const paths = {
     get: op({
       tag: T.race,
       role: 'admin',
-      summary: 'Every course',
-      description: 'The newest first.',
+      summary: 'The courses I can change',
+      description:
+        'Pályaszerkesztő: my own tracks, the newest first - for an admin every course, the tours’ too. Each with its own cards (`cards` - a tour’s course has none of its own: it uses the club’s).',
       data: obj({ courses: arrayOf(ref('FutokorCourse')) }),
+      errors: [403],
     }),
     post: op({
       tag: T.race,
-      role: 'admin',
-      summary: 'Make a tour’s course',
+      summary: 'Make a course',
       description:
-        'One per tour. Runs count while it is open; no two courses may be open at the same time.',
-      body: obj(
-        {
-          tourId: id(),
-          name: str('Default: the tour’s title and "futókör".'),
-          opensAt: date(),
-          closesAt: date(),
-        },
-        ['tourId', 'opensAt', 'closesAt'],
-      ),
+        'Two kinds. **A tour’s course** (admins only; with `tourId`, `opensAt`, `closesAt`): one per tour, its cards chosen afterwards from the club’s; no two tours’ courses may be open at the same time. **My own track** (anyone; `name` and `points`, 1-20): mine to change, open from now for a year unless `opensAt` / `closesAt` say otherwise, and it can be open alongside any other course; its cards - a START/FINISH and one per point, P<n>-S, P<n>-01... - are made with it.',
+      body: obj({
+        tourId: id('A tour’s course.'),
+        name: str(
+          'My own track’s name (1-60 characters). For a tour: default its title and "futókör".',
+        ),
+        points: int('My own track: how many checkpoints (1-20).'),
+        opensAt: date(),
+        closesAt: date(),
+      }),
       ok: 201,
       data: obj({ course: ref('FutokorCourse') }),
-      errors: [400],
+      errors: [400, 403],
     }),
   },
   '/futokor/courses/{id}': {
     patch: op({
       tag: T.race,
-      role: 'admin',
       summary: 'Change a course',
       description:
-        'Its name, when it is open, the longest a run may take, the loop’s length, and its cards: `startTagId` (a START/FINISH card) and `stops` - the checkpoint cards in the order they are passed, each with how far along the loop it is (growing; optional - without distances there are times but no pace and no speed check). Every runner’s runs are worked out again afterwards.',
+        'Whoever may change it (a tour’s course: admins; a user’s own track: its maker and admins - 403 otherwise). Its name, when it is open, the longest a run may take, the loop’s length, and its points. A tour’s course: `startTagId` (a START/FINISH card of the club’s) and `stops` - the checkpoint cards in the order they are passed. My own track: `points` (how many - the cards follow) and/or `stops` for the points in order, without `tagId`. A stop can carry how far along the loop it is (`distanceAlongM`, growing; optional - without distances there are times but no pace and no speed check) or where it is on the map (`lat`, `lng`): with a track on the course, a point that has a place gets its distance measured along the loop. Every runner’s runs are worked out again afterwards.',
       params: [path('id', 'The course.')],
       body: obj({
         name: str(),
@@ -2871,20 +2884,68 @@ const paths = {
         maxRunDurationMin: num(),
         distanceM: { type: ['number', 'null'], description: 'The whole loop, in metres.' },
         startTagId: str(),
-        stops: arrayOf(obj({ tagId: str(), distanceAlongM: { type: ['number', 'null'] } })),
+        points: int('My own track: how many checkpoints.'),
+        stops: arrayOf(
+          obj({
+            tagId: str('A tour’s course only.'),
+            distanceAlongM: { type: ['number', 'null'] },
+            lat: { type: ['number', 'null'] },
+            lng: { type: ['number', 'null'] },
+          }),
+        ),
       }),
       data: obj({ course: ref('FutokorCourse') }),
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
     delete: op({
       tag: T.race,
-      role: 'admin',
       summary: 'Delete a course',
       description:
-        'With everything run on it: its scans and its runs go too (a trial course, say). The cards stay.',
+        'Whoever may change it. With everything run on it: its scans, its runs and its GPX file go too. A user’s own track takes its cards with it; the club’s cards stay.',
       params: [path('id', 'The course.')],
       ok: 204,
-      errors: [404],
+      errors: [403, 404],
+    }),
+  },
+  '/futokor/courses/{id}/track': {
+    put: op({
+      tag: T.race,
+      summary: 'Give a course its loop from a GPX file',
+      description:
+        'Whoever may change the course. A watch’s recording or a planned route, at most 10 MB. The file is kept in the app’s GPX store with what it measures (length, climb, and - if recorded - when and how long); the course gets the track to draw (a lighter copy), the loop’s length and climb, its START the loop’s first point - and the points that have a place get their distance along it.',
+      params: [path('id', 'The course.')],
+      multipart: obj({ gpx: { type: 'string', format: 'binary' } }, ['gpx']),
+      data: obj({ course: ref('FutokorCourse') }),
+      errors: [400, 403, 404],
+    }),
+    delete: op({
+      tag: T.race,
+      summary: 'Take the loop off a course',
+      description: 'The file goes too; the points keep their places and distances.',
+      params: [path('id', 'The course.')],
+      data: obj({ course: ref('FutokorCourse') }),
+      errors: [403, 404],
+    }),
+  },
+  '/futokor/courses/{id}/track.gpx': {
+    get: op({
+      tag: T.race,
+      summary: 'A course’s GPX file',
+      description: 'As it was uploaded, to download.',
+      params: [path('id', 'The course.')],
+      response: file(['application/gpx+xml'], 'The file.'),
+      errors: [403, 404],
+    }),
+  },
+  '/futokor/courses/{id}/sheet': {
+    get: op({
+      tag: T.race,
+      summary: 'A user’s own track’s cards to print',
+      description:
+        'Whoever may change the track. A PDF like the club’s sheet, of this track’s own cards. (A tour’s course uses the club’s cards: `/futokor/tags/sheet`.)',
+      params: [path('id', 'The course.')],
+      response: file(['application/pdf'], 'The sheet.'),
+      errors: [400, 403, 404],
     }),
   },
   '/futokor/courses/{id}/leaderboard': {
@@ -2915,13 +2976,16 @@ const paths = {
     get: op({
       tag: T.race,
       summary: 'Every futókör there has been',
-      description: 'The newest first, each with how many ran it and who was the fastest.',
+      description:
+        'The tours’ and the users’ own tracks, the newest first, each with how many ran it and who was the fastest. Each stands alone - they are never compared.',
       data: obj({
         courses: arrayOf(
           obj({
             _id: id(),
+            kind: str('', { enum: ['tour', 'own'] }),
             name: str(),
-            tour: obj({ _id: id(), title: str() }),
+            tour: { type: ['object', 'null'], description: 'A tour’s course: its tour.' },
+            owner: obj({ _id: id(), name: str() }),
             opensAt: date(),
             closesAt: date(),
             distanceM: { type: ['number', 'null'] },
@@ -2965,12 +3029,14 @@ const paths = {
   '/futokor/active': {
     get: op({
       tag: T.race,
-      summary: 'The course to run now',
+      summary: 'The courses to run now',
       description:
-        'The course that is open - or else the next one to open, so a phone can get ready for it while it has a connection - with everything the phone needs to run it offline, and my runs on it. `course` is null if there is neither.',
+        'Every course that is open now (`courses` - the tour’s first, then the users’ own tracks), each with everything the phone needs to run it offline, and my runs on each (`allRuns`, by course id). Which course a run is on is decided by the START card scanned. `course` is the tour’s course - the open one, or else the next to open, so a phone can get ready for it; null if there is neither - with my runs on it (`runs`).',
       data: obj({
         course: { oneOf: [ref('FutokorCourse'), { type: 'null' }] },
         runs: arrayOf(ref('FutokorRun')),
+        courses: arrayOf(ref('FutokorCourse')),
+        allRuns: { type: 'object', description: 'My runs on each open course, by its id.' },
         runner: obj({ id: id(), name: str() }),
         serverTime: date(),
       }),
@@ -2981,11 +3047,12 @@ const paths = {
     get: op({
       tag: T.race,
       role: 'public',
-      summary: 'The course to run now, for a phone nobody is logged in on',
+      summary: 'The courses to run now, for a phone nobody is logged in on',
       description:
-        'The same course as `/futokor/active` (the open one, or the next to open), without any runs - for someone running with their futókód.',
+        'The same courses as `/futokor/active`, without any runs - for someone running with their futókód.',
       data: obj({
         course: { oneOf: [ref('FutokorCourse'), { type: 'null' }] },
+        courses: arrayOf(ref('FutokorCourse')),
         serverTime: date(),
       }),
     }),
@@ -3008,7 +3075,7 @@ const paths = {
       role: 'public',
       summary: 'Send the phone’s scans',
       description:
-        'Whose scans they are: with `runnerCode` (a futókód) whoever that belongs to - a phone nobody is logged in on, or one lent to someone else; a wrong one is 404, and counts like on `/futokor/runner`. Without it, whoever is logged in (401 / 403 otherwise). What the phone has collected - in any order, any time later (at most 40 at once); sending a scan again changes nothing. `token` is the end of the card’s link; `deviceTime` is the phone’s clock, which the run is timed by. A scan belongs to the course that was open at its own time. `action: restart` on the START/FINISH card gives the open run up for a new one; `action: giveUp` (no token) gives the open run up. All of my scans on the course are then replayed by the rules, and the answer says what came of each: `started`, `passed`, `finished`, `gaveUp`, `duplicate`, `incomplete` (START/FINISH with checkpoints missing), `rejectedOrder`, `rejectedSpeed` (faster than 10.4 m/s), `noRun`, `unknownTag`, `noCourse` (none was open then) or `invalid`.',
+        'Whose scans they are: with `runnerCode` (a futókód) whoever that belongs to - a phone nobody is logged in on, or one lent to someone else; a wrong one is 404, and counts like on `/futokor/runner`. Without it, whoever is logged in (401 / 403 otherwise). What the phone has collected - in any order, any time later (at most 40 at once); sending a scan again changes nothing. `token` is the end of the card’s link; `deviceTime` is the phone’s clock, which the run is timed by. A scan belongs to the course the phone names (`courseId`), if that was open at the scan’s own time; without it (an older phone) to the open course that has the card. `action: restart` on the START/FINISH card gives the open run up for a new one; `action: giveUp` (no token) gives the open run up. All of my scans on the course are then replayed by the rules, and the answer says what came of each: `started`, `passed`, `finished`, `gaveUp`, `duplicate`, `incomplete` (START/FINISH with checkpoints missing), `rejectedOrder`, `rejectedSpeed` (faster than 10.4 m/s), `noRun`, `unknownTag`, `noCourse` (none was open then) or `invalid`.',
       body: obj(
         {
           runnerCode: str('A futókód - whose scans these are.'),
@@ -3016,6 +3083,7 @@ const paths = {
             obj(
               {
                 clientScanId: str('Made up by the phone (a UUID).'),
+                courseId: id('The course the run is on.'),
                 token: str(),
                 deviceTime: date(),
                 action: str('', { enum: ['restart', 'giveUp'] }),

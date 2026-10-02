@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { measureTrack, parseGpx, placeCheckpoints } from '../../src/futokor/gpx.js';
+import {
+  gpxName,
+  measureTrack,
+  parseGpx,
+  placeCheckpoints,
+  thinTrack,
+} from '../../src/futokor/gpx.js';
 
 // Futókör: a course's track from a GPX file (see futokor/gpx.js).
 
@@ -22,9 +28,11 @@ describe('futókör: a GPX track', () => {
   it('reads every point of every segment, with or without a height', () => {
     const points = parseGpx(GPX);
     expect(points).toHaveLength(5);
-    expect(points[0]).toEqual({ lat: 47, lng: 19, ele: 100 });
-    expect(points[4]).toEqual({ lat: 47, lng: 19, ele: null });
+    expect(points[0]).toEqual({ lat: 47, lng: 19, ele: 100, time: null });
+    expect(points[4]).toEqual({ lat: 47, lng: 19, ele: null, time: null });
     expect(parseGpx('not a gpx')).toEqual([]);
+    expect(gpxName(GPX)).toBe('teszt');
+    expect(gpxName('<gpx></gpx>')).toBe('');
   });
 
   it('measures the length and the climb, small bumps left out', () => {
@@ -34,7 +42,30 @@ describe('futókör: a GPX track', () => {
     expect(measured.distanceM).toBeLessThan(378);
     // 100 → 101 is noise; 100 → 110 a climb of 10; 110 → 104 a descent of 6.
     expect(measured).toMatchObject({ elevationGainM: 10, elevationLossM: 6 });
-    expect(measureTrack([])).toEqual({ distanceM: 0, elevationGainM: 0, elevationLossM: 0 });
+    expect(measured).toMatchObject({ startedAt: null, durationSec: null });
+    expect(measureTrack([])).toMatchObject({ distanceM: 0, elevationGainM: 0, elevationLossM: 0 });
+  });
+
+  it('a recorded track knows when it started and how long it took', () => {
+    const recorded = parseGpx(`<gpx><trk><trkseg>
+      <trkpt lat="47.0" lon="19.0"><ele>100</ele><time>2026-10-02T08:00:00Z</time></trkpt>
+      <trkpt lat="47.001" lon="19.0"><ele>100</ele><time>2026-10-02T08:01:30Z</time></trkpt>
+    </trkseg></trk></gpx>`);
+    expect(measureTrack(recorded)).toMatchObject({
+      startedAt: new Date('2026-10-02T08:00:00Z'),
+      durationSec: 90,
+    });
+  });
+
+  it('keeps a lighter track of the same shape', () => {
+    // A point every ~1.1 m along 111 m: only every third or so is kept.
+    const dense = Array.from({ length: 101 }, (_, i) => ({ lat: 47 + i * 0.00001, lng: 19 }));
+    const thin = thinTrack(dense);
+    expect(thin.length).toBeGreaterThan(30);
+    expect(thin.length).toBeLessThan(40);
+    expect(thin[0]).toBe(dense[0]);
+    expect(thin.at(-1)).toBe(dense.at(-1));
+    expect(measureTrack(thin).distanceM).toBe(measureTrack(dense).distanceM);
   });
 
   it('puts the checkpoints on the track, in the order they are passed', () => {

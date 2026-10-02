@@ -1,28 +1,40 @@
+import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
+import multer from 'multer';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import Tour from '../models/tourModel.js';
 import { FutokorCourse, FutokorRun, FutokorScan, FutokorTag } from '../models/futokorModels.js';
+import GpxTrack from '../models/gpxTrackModel.js';
 import AppError from '../utils/appError.js';
 import requireAuth from '../auth/requireAuth.js';
 import { requireFutokor } from '../futokor/access.js';
 import { isExpired, replayScans } from '../futokor/runRules.js';
 import { tagUrl, verifyTagToken } from '../futokor/tags.js';
+import { gpxName, measureTrack, parseGpx, placeCheckpoints, thinTrack } from '../futokor/gpx.js';
+import { GPX_DIR } from '../utils/dataDirs.js';
 import { userOfFutokod } from '../utils/futokod.js';
 import { computeAge } from './userController.js';
 
-// Futókör: the checkpoint running race of a tour (Móka → Futókörök).
-// Cards (tags) are scanned by the runners' phones; the phones send their
-// scans here whenever they have a connection, and a runner's runs are
-// worked out from all of their scans by the rules in futokor/runRules.js -
-// the same rules the phone applies on its own in the meantime.
+// Futókör: the checkpoint running race (Móka → Futókörök). A course is a
+// loop with cards to scan: a tour's (the admins', with the club's cards),
+// or a user's own track (anyone's, with its own cards). The runners' phones
+// scan the cards and send their scans here whenever they have a
+// connection; a runner's runs are worked out from all of their scans by
+// the rules in futokor/runRules.js - the same rules the phone applies on
+// its own in the meantime.
 
 const MAX_NEW_TAGS = 30;
+// A user's own track: how many checkpoints it may have.
+const MAX_OWN_POINTS = 20;
+// How long a user's own track is open if they don't say: a year.
+const OWN_OPEN_MS = 365 * 24 * 3600 * 1000;
 // (The request body is small - see app.js: the phone sends more in turns.)
 const MAX_SCANS_AT_ONCE = 40;
 // A phone's clock may be a little ahead of the server's - not more.
 const CLOCK_AHEAD_MS = 5 * 60 * 1000;
+const MAX_GPX_BYTES = 10 * 1024 * 1024;
 
 const rootDir = path.resolve();
 const FONT_REGULAR = path.join(rootDir, 'assets', 'fonts', 'Mulish-Regular.ttf');
@@ -30,8 +42,17 @@ const FONT_BOLD = path.join(rootDir, 'assets', 'fonts', 'Mulish-Bold.ttf');
 
 const shownName = (user) => user?.username || user?.name || 'Ismeretlen';
 const validId = (id) => typeof id === 'string' && mongoose.isValidObjectId(id);
+const refId = (ref) => String(ref?._id ?? ref);
+const isAdmin = (user) => user?.role === 'admin';
 
 // --- A course, the way the rules and the phones need it ---
+
+const isOwnTrack = (course) => !course.tour;
+
+// A tour's course is the admins'; a user's own track is its maker's (and
+// the admins' too).
+const canManage = (course, user) =>
+  !!user && (isAdmin(user) || (isOwnTrack(course) && refId(course.createdBy) === refId(user)));
 
 // For runRules.js: a checkpoint is known by its card.
 const courseRules = (course) => ({
@@ -53,19 +74,29 @@ const courseRules = (course) => ({
 
 // Everything a phone keeps to run the course without a connection - and
 // what the course's own pages show.
-const courseView = (course) => ({
+const courseView = (course, user) => ({
   _id: course._id,
-  tour: course.tour?._id
-    ? { _id: course.tour._id, title: course.tour.title }
-    : { _id: course.tour },
+  // 'tour': a tour's course; 'own': a user's own track.
+  kind: isOwnTrack(course) ? 'own' : 'tour',
+  tour: course.tour ? { _id: refId(course.tour), title: course.tour.title } : null,
+  // Whoever made it - a user's own track is theirs.
+  owner: { _id: refId(course.createdBy), name: shownName(course.createdBy) },
+  canManage: canManage(course, user),
   name: course.name,
   opensAt: course.opensAt,
   closesAt: course.closesAt,
   // The loop to draw on the map ([lat, lng] pairs) - empty if none yet.
   track: course.track ?? [],
   elevationGainM: course.elevationGainM ?? null,
+  hasGpx: !!course.gpx,
   ...courseRules(course),
 });
+
+const withPeople = (query) =>
+  query.populate({ path: 'tour', select: 'title' }).populate({
+    path: 'createdBy',
+    select: 'name username',
+  });
 
 const runView = (course, run) => ({
   // A run nobody finished or gave up is over once its time is up, even if
@@ -124,11 +155,16 @@ async function replayRunner(course, userId) {
   return results;
 }
 
-// The course open at that moment - at most one (see overlapping below).
-const courseOpenAt = (time) =>
-  FutokorCourse.findOne({ opensAt: { $lte: time }, closesAt: { $gte: time } });
+// Everyone's runs on a course worked out again - after the course changed.
+async function replayCourse(course) {
+  for (const userId of await FutokorScan.distinct('user', { course: course._id })) {
+    await replayRunner(course, userId);
+  }
+}
 
-// --- Cards ---
+const openAt = (time) => ({ opensAt: { $lte: time }, closesAt: { $gte: time } });
+
+// --- The club's cards (the tours') ---
 
 const tagView = (tag) => ({
   tagId: tag.tagId,
@@ -139,9 +175,10 @@ const tagView = (tag) => ({
   createdAt: tag.createdAt,
 });
 
-// GET /futokor/tags - every card, admins.
+// GET /futokor/tags - the club's cards (the ones the tours' courses use);
+// admins. A user's own track's cards are with the track.
 export const getTags = async (req, res) => {
-  const tags = await FutokorTag.find().sort('kind tagId');
+  const tags = await FutokorTag.find({ course: null }).sort('kind tagId');
   res.status(200).json({ status: 'success', data: { tags: tags.map(tagView) } });
 };
 
@@ -171,7 +208,7 @@ export const createTags = async (req, res) => {
 export const updateTag = async (req, res) => {
   if (typeof req.body?.retired !== 'boolean') throw new AppError('Hiányzó adat.', 400);
   const tag = await FutokorTag.findOneAndUpdate(
-    { tagId: String(req.params.tagId) },
+    { tagId: String(req.params.tagId), course: null },
     { retired: req.body.retired },
     { returnDocument: 'after' },
   );
@@ -179,49 +216,43 @@ export const updateTag = async (req, res) => {
   res.status(200).json({ status: 'success', data: { tag: tagView(tag) } });
 };
 
-// GET /futokor/tags/sheet - the cards to print, cut and laminate: six to
-// an A4 page, each with its QR code and its name in big letters.
-export const getTagSheet = async (req, res) => {
-  const tags = await FutokorTag.find({ retired: false }).sort('kind tagId');
-  if (!tags.length) throw new AppError('Még nincs egy kártya sem.', 404);
-
+// The cards to print, cut and laminate, as a PDF: six to an A4 page, each
+// with its QR code as big as a card allows (the bigger, the further a
+// phone reads it from), its number in big letters and a small caption.
+async function sendSheet(res, cards, fileName) {
   const doc = new PDFDocument({ size: 'A4', margin: 0 });
   doc.registerFont('Body', FONT_REGULAR);
   doc.registerFont('Heading', FONT_BOLD);
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'inline; filename="futokor-kartyak.pdf"');
+  res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
   doc.pipe(res);
 
-  // Six cards fill the page: the QR code as big as a card allows (the
-  // bigger, the further a phone reads it from), its number and a small
-  // caption right under it.
   const [cols, rows, margin] = [2, 3, 12];
   const cellW = (doc.page.width - margin * 2) / cols;
   const cellH = (doc.page.height - margin * 2) / rows;
   const [numberSize, captionSize] = [32, 8];
   const qrSize = Math.min(cellW - 16, cellH - numberSize * 1.3 - captionSize * 1.6 - 10);
 
-  for (const [i, tag] of tags.entries()) {
+  for (const [i, card] of cards.entries()) {
     const slot = i % (cols * rows);
     if (i > 0 && slot === 0) doc.addPage();
     const x = margin + (slot % cols) * cellW;
     const y = margin + Math.floor(slot / cols) * cellH;
-    const startFinish = tag.kind === 'startFinish';
 
     // Where to cut.
     doc
       .rect(x + 2, y + 2, cellW - 4, cellH - 4)
       .dash(4, { space: 4 })
       .lineWidth(0.7)
-      .stroke(startFinish ? '#f07827' : '#9aa5ab')
+      .stroke(card.startFinish ? '#f07827' : '#9aa5ab')
       .undash();
-    const qr = await QRCode.toBuffer(tagUrl(tag.tagId), { width: 800, margin: 1 });
+    const qr = await QRCode.toBuffer(tagUrl(card.tagId), { width: 800, margin: 1 });
     doc.image(qr, x + (cellW - qrSize) / 2, y + 6, { width: qrSize });
     doc
       .font('Heading')
-      .fontSize(startFinish ? 26 : numberSize)
-      .fillColor(startFinish ? '#f07827' : '#1b6548')
-      .text(startFinish ? 'RAJT / CÉL' : tag.tagId.slice(1), x, y + 6 + qrSize, {
+      .fontSize(card.startFinish ? 26 : numberSize)
+      .fillColor(card.startFinish ? '#f07827' : '#1b6548')
+      .text(card.startFinish ? 'RAJT / CÉL' : card.number, x, y + 6 + qrSize, {
         width: cellW,
         align: 'center',
         lineBreak: false,
@@ -230,24 +261,42 @@ export const getTagSheet = async (req, res) => {
       .font('Body')
       .fontSize(captionSize)
       .fillColor('#56666e')
-      .text(`Bódorgó Futókör · ${tag.tagId}`, x, y + cellH - captionSize * 1.6 - 4, {
+      .text(card.caption, x, y + cellH - captionSize * 1.6 - 4, {
         width: cellW,
         align: 'center',
         lineBreak: false,
       });
   }
   doc.end();
+}
+
+// A card's number as printed on it: "T05" → "05", "P3-02" → "02".
+const cardNumber = (tagId) => tagId.split('-').at(-1).replace(/^\D+/, '');
+
+// GET /futokor/tags/sheet - the club's cards to print.
+export const getTagSheet = async (req, res) => {
+  const tags = await FutokorTag.find({ course: null, retired: false }).sort('kind tagId');
+  if (!tags.length) throw new AppError('Még nincs egy kártya sem.', 404);
+  await sendSheet(
+    res,
+    tags.map((t) => ({
+      tagId: t.tagId,
+      startFinish: t.kind === 'startFinish',
+      number: cardNumber(t.tagId),
+      caption: `Bódorgó Futókör · ${t.tagId}`,
+    })),
+    'futokor-kartyak.pdf',
+  );
 };
 
 // --- Courses ---
 
-const withTour = (query) => query.populate({ path: 'tour', select: 'title' });
-
-// No two courses are open at the same time: a card scanned at any moment
-// must belong to one course only.
-async function overlapping(opensAt, closesAt, exceptId) {
+// No two tours' courses are open at the same time. (A user's own track can
+// be open whenever: its cards are only its own.)
+async function overlappingTourCourse(opensAt, closesAt, exceptId) {
   return FutokorCourse.exists({
     _id: { $ne: exceptId },
+    tour: { $exists: true },
     opensAt: { $lte: closesAt },
     closesAt: { $gte: opensAt },
   });
@@ -263,58 +312,227 @@ function parseWindow(body, current = {}) {
   return { opensAt, closesAt };
 }
 
-// GET /futokor/courses - every course, the newest first; admins.
-export const getCourses = async (req, res) => {
-  const courses = await withTour(FutokorCourse.find().sort('-opensAt'));
-  res.status(200).json({ status: 'success', data: { courses: courses.map(courseView) } });
-};
-
-// POST /futokor/courses - a tour's course: { tourId, name?, opensAt, closesAt }.
-export const createCourse = async (req, res) => {
-  const { tourId, name } = req.body ?? {};
-  const tour = validId(tourId) ? await Tour.findById(tourId).select('title') : null;
-  if (!tour) throw new AppError('Nincs ilyen tábor.', 400);
-  if (await FutokorCourse.exists({ tour: tour._id })) {
-    throw new AppError('Ennek a tábornak már van pályája.', 400);
-  }
-  const window = parseWindow(req.body);
-  if (await overlapping(window.opensAt, window.closesAt, null)) {
-    throw new AppError('Ebben az időszakban már nyitva van egy másik pálya.', 400);
-  }
-  const course = await FutokorCourse.create({
-    tour: tour._id,
-    name: (typeof name === 'string' && name.trim()) || `${tour.title} futókör`,
-    createdBy: req.user._id,
-    ...window,
-  });
-  res.status(201).json({
-    status: 'success',
-    data: { course: courseView(await withTour(FutokorCourse.findById(course._id))) },
-  });
-};
-
 const positiveOrNull = (value, what) => {
-  if (value === null || value === '') return null;
+  if (value === null || value === '' || value === undefined) return null;
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) throw new AppError(`${what}: pozitív szám kell.`, 400);
   return n;
 };
 
-// PATCH /futokor/courses/:id - its name, when it's open, its limits, how
-// long the loop is, and its cards: { startTagId, stops: [{ tagId,
-// distanceAlongM? }] } - the checkpoints in the order they're passed.
-// Every runner's runs are worked out again afterwards (their splits and
-// paces follow the distances).
-export const updateCourse = async (req, res) => {
+// A place on the map, if both of its numbers are real ones.
+const placeOrNull = (p) =>
+  [p?.lat, p?.lng].every((v) => typeof v === 'number' && Number.isFinite(v)) &&
+  Math.abs(p.lat) <= 90 &&
+  Math.abs(p.lng) <= 180
+    ? { lat: p.lat, lng: p.lng }
+    : { lat: null, lng: null };
+
+// The course, if it's this user's to change - the error why not otherwise.
+async function courseToManage(req) {
   const course = validId(req.params.id) ? await FutokorCourse.findById(req.params.id) : null;
   if (!course) throw new AppError('Nincs ilyen pálya.', 404);
+  if (!canManage(course, req.user)) {
+    throw new AppError('Ezt a pályát csak a készítője szerkesztheti.', 403);
+  }
+  return course;
+}
+
+// A course with its cards (a user's own track has its own; a tour's
+// course uses the club's - none here).
+async function manageView(course, user) {
+  const cards = await FutokorTag.find({ course: course._id }).sort('tagId');
+  return { ...courseView(course, user), cards: cards.map(tagView) };
+}
+
+const sendCourse = async (res, course, user, code = 200) => {
+  const fresh = await withPeople(FutokorCourse.findById(course._id));
+  res.status(code).json({ status: 'success', data: { course: await manageView(fresh, user) } });
+};
+
+// A user's own track's cards: P<n>-S (START/FINISH) and P<n>-01, -02...
+// The track's number <n> is in every one of its cards' names.
+const ownCode = (course) => course.checkpoints[0]?.tagId.split('-')[0];
+
+async function nextOwnCode() {
+  const starts = await FutokorTag.find({ tagId: /^P\d+-S$/ }).select('tagId');
+  return `P${Math.max(0, ...starts.map((t) => Number(t.tagId.slice(1, -2)))) + 1}`;
+}
+
+// A user's own track's checkpoints set to `points` of them (the cards made
+// or removed to match): what each point already was - where it is, how far
+// along - stays, unless `stops` says otherwise.
+async function setOwnPoints(course, points, stops) {
+  const code = ownCode(course) ?? (await nextOwnCode());
+  const was = (order) => course.checkpoints.find((c) => c.order === order);
+  const given = (i) => (Array.isArray(stops) ? stops[i] : undefined);
+  const ids = [
+    `${code}-S`,
+    ...Array.from({ length: points }, (_, i) => `${code}-${String(i + 1).padStart(2, '0')}`),
+  ];
+
+  course.checkpoints = ids.map((tagId, order) => {
+    const stop = order > 0 ? given(order - 1) : undefined;
+    const old = was(order);
+    const place = stop && ('lat' in stop || 'lng' in stop) ? placeOrNull(stop) : placeOrNull(old);
+    const distanceAlongM =
+      order === 0
+        ? 0
+        : stop && 'distanceAlongM' in stop
+          ? positiveOrNull(stop.distanceAlongM, `${order}. pont távolsága`)
+          : (old?.distanceAlongM ?? null);
+    return {
+      tagId,
+      kind: order === 0 ? 'startFinish' : 'checkpoint',
+      label: order === 0 ? 'RAJT / CÉL' : `${order}. pont`,
+      order,
+      distanceAlongM,
+      ...place,
+    };
+  });
+
+  const have = new Set(
+    (await FutokorTag.find({ course: course._id }).select('tagId')).map((t) => t.tagId),
+  );
+  const missing = ids.filter((id) => !have.has(id));
+  if (missing.length) {
+    await FutokorTag.insertMany(
+      missing.map((tagId) => ({
+        tagId,
+        kind: tagId.endsWith('-S') ? 'startFinish' : 'checkpoint',
+        course: course._id,
+      })),
+    );
+  }
+  await FutokorTag.deleteMany({ course: course._id, tagId: { $nin: ids } });
+}
+
+// With a track on the course, the points that have a place get their
+// distance along the loop from it (futokor/gpx.js) - and the START its
+// place: the track's first point. A point that isn't on the track after
+// the one before it is an error.
+function placeOnTrack(course) {
+  if ((course.track?.length ?? 0) < 2) return;
+  const points = course.track.map(([lat, lng]) => ({ lat, lng }));
+  const stops = course.checkpoints.filter((c) => c.kind === 'checkpoint');
+  const start = course.checkpoints.find((c) => c.kind === 'startFinish');
+  if (start && start.lat === null) Object.assign(start, points[0]);
+
+  // Only once every point has a place: the distances must follow one
+  // another along the loop.
+  const placed = stops.filter((c) => c.lat !== null && c.lng !== null);
+  if (!placed.length || placed.length !== stops.length) return;
+  const found = placeCheckpoints(points, placed);
+  for (const [i, c] of placed.entries()) {
+    if (found[i].distanceAlongM === null) {
+      throw new AppError(`A(z) ${c.label} nincs a nyomvonalon az előző pont után.`, 400);
+    }
+    c.distanceAlongM = found[i].distanceAlongM;
+  }
+}
+
+function checkDistances(course) {
+  let previous = 0;
+  for (const c of course.checkpoints.filter((cp) => cp.kind === 'checkpoint')) {
+    if (c.distanceAlongM === null) continue;
+    if (c.distanceAlongM <= previous) {
+      throw new AppError('A pontok távolsága a rajttól sorban nőjön.', 400);
+    }
+    previous = c.distanceAlongM;
+  }
+  if (course.distanceM !== null && course.distanceM <= previous) {
+    throw new AppError('A kör hossza legyen nagyobb az utolsó pont távolságánál.', 400);
+  }
+}
+
+// GET /futokor/courses - the courses I can change, the newest first: my
+// own tracks - for an admin every course, the tours' too. Each own track
+// with its cards.
+export const getCourses = async (req, res) => {
+  const filter = isAdmin(req.user) ? {} : { tour: { $exists: false }, createdBy: req.user._id };
+  const courses = await withPeople(FutokorCourse.find(filter).sort('-createdAt'));
+  const cards = await FutokorTag.find({ course: { $in: courses.map((c) => c._id) } }).sort('tagId');
+  res.status(200).json({
+    status: 'success',
+    data: {
+      courses: courses.map((c) => ({
+        ...courseView(c, req.user),
+        cards: cards.filter((t) => refId(t.course) === refId(c)).map(tagView),
+      })),
+    },
+  });
+};
+
+// POST /futokor/courses - a new course.
+// - A tour's (admins): { tourId, name?, opensAt, closesAt } - its cards
+//   are chosen afterwards, from the club's.
+// - My own track (anyone): { name, points, opensAt?, closesAt? } - open
+//   from now for a year unless said otherwise; its cards (a START/FINISH
+//   and one per point) are made with it.
+export const createCourse = async (req, res) => {
+  const { tourId, name } = req.body ?? {};
+
+  if (tourId !== undefined) {
+    if (!isAdmin(req.user)) throw new AppError('Tábori pályát csak admin készíthet.', 403);
+    const tour = validId(tourId) ? await Tour.findById(tourId).select('title') : null;
+    if (!tour) throw new AppError('Nincs ilyen tábor.', 400);
+    if (await FutokorCourse.exists({ tour: tour._id })) {
+      throw new AppError('Ennek a tábornak már van pályája.', 400);
+    }
+    const window = parseWindow(req.body);
+    if (await overlappingTourCourse(window.opensAt, window.closesAt, null)) {
+      throw new AppError('Ebben az időszakban már nyitva van egy másik tábori pálya.', 400);
+    }
+    const course = await FutokorCourse.create({
+      tour: tour._id,
+      name: (typeof name === 'string' && name.trim()) || `${tour.title} futókör`,
+      createdBy: req.user._id,
+      ...window,
+    });
+    return sendCourse(res, course, req.user, 201);
+  }
+
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  if (!cleanName || cleanName.length > 60) {
+    throw new AppError('A pályának 1-60 karakteres név kell.', 400);
+  }
+  const points = Number(req.body?.points);
+  if (!Number.isInteger(points) || points < 1 || points > MAX_OWN_POINTS) {
+    throw new AppError(`Egy pályán 1-${MAX_OWN_POINTS} ellenőrzőpont lehet.`, 400);
+  }
+  const now = new Date();
+  const window = parseWindow({
+    opensAt: req.body.opensAt ?? now,
+    closesAt: req.body.closesAt ?? new Date(+now + OWN_OPEN_MS),
+  });
+  const course = new FutokorCourse({ name: cleanName, createdBy: req.user._id, ...window });
+  await setOwnPoints(course, points);
+  await course.save();
+  return sendCourse(res, course, req.user, 201);
+};
+
+// PATCH /futokor/courses/:id - whoever may change it: its name, when it's
+// open, the longest a run may take, how long the loop is, and its points.
+// - A tour's course: { startTagId, stops: [{ tagId, distanceAlongM?, lat?,
+//   lng? }] } - the club's cards, in the order they're passed.
+// - A user's own track: { points } (how many - the cards follow) and/or
+//   { stops: [{ distanceAlongM?, lat?, lng? }] } for the points in order.
+// A point's place on the map (lat, lng) puts it on the course's track: its
+// distance is then measured along the loop. Every runner's runs are worked
+// out again afterwards.
+export const updateCourse = async (req, res) => {
+  const course = await courseToManage(req);
   const body = req.body ?? {};
 
-  if (typeof body.name === 'string' && body.name.trim()) course.name = body.name.trim();
+  if (typeof body.name === 'string' && body.name.trim()) {
+    course.name = body.name.trim().slice(0, 60);
+  }
   if (body.opensAt !== undefined || body.closesAt !== undefined) {
     const window = parseWindow(body, course);
-    if (await overlapping(window.opensAt, window.closesAt, course._id)) {
-      throw new AppError('Ebben az időszakban már nyitva van egy másik pálya.', 400);
+    if (
+      !isOwnTrack(course) &&
+      (await overlappingTourCourse(window.opensAt, window.closesAt, course._id))
+    ) {
+      throw new AppError('Ebben az időszakban már nyitva van egy másik tábori pálya.', 400);
     }
     Object.assign(course, window);
   }
@@ -322,16 +540,26 @@ export const updateCourse = async (req, res) => {
     course.maxRunDurationMin =
       positiveOrNull(body.maxRunDurationMin, 'Leghosszabb futás') ?? course.maxRunDurationMin;
   }
-  if (body.distanceM !== undefined)
+  if (body.distanceM !== undefined) {
     course.distanceM = positiveOrNull(body.distanceM, 'A kör hossza');
+  }
 
-  if (body.startTagId !== undefined || body.stops !== undefined) {
+  if (isOwnTrack(course)) {
+    if (body.points !== undefined || body.stops !== undefined) {
+      const points =
+        body.points !== undefined ? Number(body.points) : course.checkpoints.length - 1;
+      if (!Number.isInteger(points) || points < 1 || points > MAX_OWN_POINTS) {
+        throw new AppError(`Egy pályán 1-${MAX_OWN_POINTS} ellenőrzőpont lehet.`, 400);
+      }
+      await setOwnPoints(course, points, body.stops);
+    }
+  } else if (body.startTagId !== undefined || body.stops !== undefined) {
     const stops = Array.isArray(body.stops) ? body.stops : [];
     const ids = [body.startTagId, ...stops.map((s) => s?.tagId)].map(String);
     if (new Set(ids).size !== ids.length) {
       throw new AppError('Egy kártya csak egyszer szerepelhet a pályán.', 400);
     }
-    const tags = await FutokorTag.find({ tagId: { $in: ids }, retired: false });
+    const tags = await FutokorTag.find({ tagId: { $in: ids }, course: null, retired: false });
     const kindOf = Object.fromEntries(tags.map((t) => [t.tagId, t.kind]));
     if (kindOf[ids[0]] !== 'startFinish') {
       throw new AppError('A pályához egy RAJT / CÉL kártya kell.', 400);
@@ -339,13 +567,11 @@ export const updateCourse = async (req, res) => {
     if (ids.slice(1).some((id) => kindOf[id] !== 'checkpoint')) {
       throw new AppError('Ismeretlen vagy letiltott kártya van a pontok között.', 400);
     }
-    let previous = 0;
-    // Where each point is on the map (from the course's track, see
-    // scripts/attachFutokorTrack.mjs) stays with the point - the 2nd point
-    // is where it was, whichever card hangs there now.
-    const placeOf = (order) => {
-      const was = course.checkpoints.find((c) => c.order === order);
-      return { lat: was?.lat ?? null, lng: was?.lng ?? null };
+    // Where each point is on the map stays with the point - the 2nd point
+    // is where it was, whichever card hangs there now - unless said.
+    const placeOf = (order, stop) => {
+      if (stop && ('lat' in stop || 'lng' in stop)) return placeOrNull(stop);
+      return placeOrNull(course.checkpoints.find((c) => c.order === order));
     };
     course.checkpoints = [
       {
@@ -356,69 +582,170 @@ export const updateCourse = async (req, res) => {
         distanceAlongM: 0,
         ...placeOf(0),
       },
-      ...stops.map((s, i) => {
-        const distanceAlongM = positiveOrNull(s.distanceAlongM ?? null, `${i + 1}. pont távolsága`);
-        if (distanceAlongM !== null) {
-          if (distanceAlongM <= previous) {
-            throw new AppError('A pontok távolsága a rajttól sorban nőjön.', 400);
-          }
-          previous = distanceAlongM;
-        }
-        return {
-          tagId: ids[i + 1],
-          kind: 'checkpoint',
-          label: `${i + 1}. pont`,
-          order: i + 1,
-          distanceAlongM,
-          ...placeOf(i + 1),
-        };
-      }),
+      ...stops.map((s, i) => ({
+        tagId: ids[i + 1],
+        kind: 'checkpoint',
+        label: `${i + 1}. pont`,
+        order: i + 1,
+        distanceAlongM: positiveOrNull(s.distanceAlongM, `${i + 1}. pont távolsága`),
+        ...placeOf(i + 1, s),
+      })),
     ];
   }
-  const lastStop = course.checkpoints.at(-1)?.distanceAlongM ?? 0;
-  if (course.distanceM !== null && course.distanceM <= lastStop) {
-    throw new AppError('A kör hossza legyen nagyobb az utolsó pont távolságánál.', 400);
-  }
-  await course.save();
 
-  for (const userId of await FutokorScan.distinct('user', { course: course._id })) {
-    await replayRunner(course, userId);
-  }
-  res.status(200).json({
-    status: 'success',
-    data: { course: courseView(await withTour(FutokorCourse.findById(course._id))) },
+  placeOnTrack(course);
+  checkDistances(course);
+  await course.save();
+  await replayCourse(course);
+  return sendCourse(res, course, req.user);
+};
+
+// The GPX file of the upload ("gpx"), in memory.
+const gpxUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_GPX_BYTES },
+}).single('gpx');
+
+export function receiveGpx(req, res, next) {
+  gpxUpload(req, res, (err) => {
+    if (err) return next(new AppError('A GPX fájl legfeljebb 10 MB lehet.', 400));
+    return next();
   });
+}
+
+const gpxPath = (id) => path.join(GPX_DIR, `${id}.gpx`);
+
+// The file and the record of a course's GPX gone.
+async function removeGpx(course) {
+  if (!course.gpx) return;
+  await fs.promises.rm(gpxPath(course.gpx), { force: true });
+  await GpxTrack.deleteOne({ _id: course.gpx });
+  course.gpx = null;
+}
+
+// PUT /futokor/courses/:id/track - the course's loop from a GPX file (a
+// watch's recording, or a planned route): multipart, the file as "gpx".
+// The file is kept (in the app's GPX store - gpxTrackModel.js), the course
+// gets the track to draw (a lighter copy), the loop's length and climb -
+// and the points that have a place get their distance along it.
+export const putTrack = async (req, res) => {
+  const course = await courseToManage(req);
+  if (!req.file) throw new AppError('Válassz egy GPX fájlt.', 400);
+  const text = req.file.buffer.toString('utf8');
+  const points = parseGpx(text);
+  if (points.length < 2) throw new AppError('Ebben a fájlban nincs nyomvonal.', 400);
+  const measured = measureTrack(points);
+  if (measured.distanceM < 20) throw new AppError('Ez a nyomvonal túl rövid.', 400);
+
+  await removeGpx(course);
+  const record = await GpxTrack.create({
+    fileName: path.basename(req.file.originalname || 'track.gpx').slice(0, 120),
+    name: gpxName(text).slice(0, 120),
+    uploadedBy: req.user._id,
+    sizeBytes: req.file.size,
+    points: points.length,
+    ...measured,
+    course: course._id,
+  });
+  await fs.promises.mkdir(GPX_DIR, { recursive: true });
+  await fs.promises.writeFile(gpxPath(record._id), req.file.buffer);
+
+  course.gpx = record._id;
+  course.track = thinTrack(points).map((p) => [p.lat, p.lng]);
+  course.distanceM = measured.distanceM;
+  course.elevationGainM = measured.elevationGainM;
+  // The START is where the new loop begins.
+  const start = course.checkpoints.find((c) => c.kind === 'startFinish');
+  if (start) Object.assign(start, { lat: points[0].lat, lng: points[0].lng });
+  placeOnTrack(course);
+  checkDistances(course);
+  await course.save();
+  await replayCourse(course);
+  return sendCourse(res, course, req.user);
+};
+
+// DELETE /futokor/courses/:id/track - the loop taken off the course (the
+// file too): the points keep their places and distances.
+export const deleteTrack = async (req, res) => {
+  const course = await courseToManage(req);
+  await removeGpx(course);
+  course.track = [];
+  course.elevationGainM = null;
+  await course.save();
+  return sendCourse(res, course, req.user);
+};
+
+// GET /futokor/courses/:id/track.gpx - the course's GPX file, as it was
+// uploaded, to download.
+export const getTrackFile = async (req, res) => {
+  const course = validId(req.params.id) ? await FutokorCourse.findById(req.params.id) : null;
+  const record = course?.gpx ? await GpxTrack.findById(course.gpx) : null;
+  if (!record || !fs.existsSync(gpxPath(record._id))) {
+    throw new AppError('Ehhez a pályához nincs GPX fájl.', 404);
+  }
+  res.download(gpxPath(record._id), record.fileName);
+};
+
+// GET /futokor/courses/:id/sheet - a user's own track's cards to print.
+export const getCourseSheet = async (req, res) => {
+  const course = await courseToManage(req);
+  if (!isOwnTrack(course)) {
+    throw new AppError('A tábori pályák kártyái a Kártyák oldalon nyomtathatók.', 400);
+  }
+  await sendSheet(
+    res,
+    course.checkpoints.map((c) => ({
+      tagId: c.tagId,
+      startFinish: c.kind === 'startFinish',
+      number: cardNumber(c.tagId),
+      caption: `${course.name} · ${c.tagId}`,
+    })),
+    'futokor-kartyak.pdf',
+  );
 };
 
 // DELETE /futokor/courses/:id - the course with everything run on it: its
-// scans and its runs go too (a trial course, say). The cards stay.
+// scans and its runs go too, and its GPX file. A user's own track takes
+// its cards with it; the club's cards stay.
 export const deleteCourse = async (req, res) => {
-  const course = validId(req.params.id) ? await FutokorCourse.findById(req.params.id) : null;
-  if (!course) throw new AppError('Nincs ilyen pálya.', 404);
+  const course = await courseToManage(req);
   await FutokorRun.deleteMany({ course: course._id });
   await FutokorScan.deleteMany({ course: course._id });
+  await FutokorTag.deleteMany({ course: course._id });
+  await removeGpx(course);
   await course.deleteOne();
   res.status(204).json({ status: 'success', data: null });
 };
 
 // --- Running ---
 
-// The course to run now: the one that's open, or else the next to open.
-async function currentCourse(now) {
-  return (
-    (await withTour(courseOpenAt(now))) ??
-    (await withTour(FutokorCourse.findOne({ opensAt: { $gt: now } }).sort('opensAt')))
-  );
+// The courses to run now: every one that's open - a tour's (at most one)
+// first, then the users' own tracks, the newest first.
+async function openCourses(now) {
+  const courses = await withPeople(FutokorCourse.find(openAt(now)).sort('-createdAt'));
+  return [...courses.filter((c) => c.tour), ...courses.filter((c) => !c.tour)];
 }
 
-// GET /futokor/course - the same course for a phone nobody is logged in
-// on (someone running with their futókód): public, and without any runs.
+// The tour's course to show when none is open: the next one to open (so a
+// phone can get ready for it on Wi-Fi).
+const nextTourCourse = (now) =>
+  withPeople(
+    FutokorCourse.findOne({ tour: { $exists: true }, opensAt: { $gt: now } }).sort('opensAt'),
+  );
+
+// GET /futokor/course - the courses for a phone nobody is logged in on
+// (someone running with their futókód): public, and without any runs.
 export const getCourse = async (req, res) => {
   const now = new Date();
-  const course = await currentCourse(now);
+  const courses = await openCourses(now);
+  const course = courses.find((c) => c.tour) ?? (await nextTourCourse(now));
   res.status(200).json({
     status: 'success',
-    data: { course: course ? courseView(course) : null, serverTime: now },
+    data: {
+      course: course ? courseView(course, null) : null,
+      courses: courses.map((c) => courseView(c, null)),
+      serverTime: now,
+    },
   });
 };
 
@@ -431,17 +758,24 @@ export const getRunner = async (req, res) => {
   res.status(200).json({ status: 'success', data: { name: shownName(user) } });
 };
 
-// GET /futokor/active - the course to run now: the one that's open, or
-// else the next one to open (so a phone can get ready for it on Wi-Fi) -
-// with my runs on it. `course` is null if there's neither.
+// GET /futokor/active - what a phone needs to run: every course that's
+// open now (`courses` - the tour's first), each with all it takes to run
+// it offline, and my runs on each (`allRuns`, by course id). `course` is
+// the tour's course - the open one, or else the next to open; null if
+// there's neither - with my runs on it (`runs`).
 export const getActive = async (req, res) => {
   const now = new Date();
-  const course = await currentCourse(now);
+  const courses = await openCourses(now);
+  const course = courses.find((c) => c.tour) ?? (await nextTourCourse(now));
+  const allRuns = {};
+  for (const c of courses) allRuns[refId(c)] = await myRuns(c, req.user);
   res.status(200).json({
     status: 'success',
     data: {
-      course: course ? courseView(course) : null,
-      runs: course ? await myRuns(course, req.user) : [],
+      course: course ? courseView(course, req.user) : null,
+      runs: course ? (allRuns[refId(course)] ?? (await myRuns(course, req.user))) : [],
+      courses: courses.map((c) => courseView(c, req.user)),
+      allRuns,
       // Who this phone runs as: kept on it, for where there's no signal.
       runner: { id: req.user._id, name: shownName(req.user) },
       // For the phone to notice a clock that's off.
@@ -464,11 +798,27 @@ export async function scanRunner(req, res, next) {
   return requireAuth(req, res, (err) => (err ? next(err) : requireFutokor(req, res, next)));
 }
 
-// POST /futokor/scans - { runnerCode?, scans: [{ clientScanId, token,
-// deviceTime, action?, lat?, lng?, accuracyM? }] }: what the phone has collected, in
-// any order, any time later; sending one again changes nothing. A scan
-// belongs to the course that was open at its own time. Answers what came
-// of each, and my runs on the courses they touched.
+// The course a scan belongs to: the one the phone names (`courseId`), if
+// it was open at the scan's time. A phone that doesn't say (an older
+// version of the app) gets the course open then that has the card - and,
+// giving up, the tour's course open then.
+async function courseOfScan(s, tagId, deviceTime) {
+  if (s.courseId !== undefined && s.courseId !== null) {
+    if (!validId(s.courseId)) return null;
+    return FutokorCourse.findOne({ _id: s.courseId, ...openAt(deviceTime) });
+  }
+  return FutokorCourse.findOne({
+    ...openAt(deviceTime),
+    ...(tagId ? { 'checkpoints.tagId': tagId } : { tour: { $exists: true } }),
+  });
+}
+
+// POST /futokor/scans - { runnerCode?, scans: [{ clientScanId, courseId,
+// token, deviceTime, action?, lat?, lng?, accuracyM? }] }: what the phone
+// has collected, in any order, any time later; sending one again changes
+// nothing. A scan belongs to the course the phone names, if that was open
+// at the scan's own time. Answers what came of each, and my runs on the
+// courses they touched.
 export const postScans = async (req, res) => {
   const incoming = req.body?.scans;
   if (!Array.isArray(incoming) || incoming.length > MAX_SCANS_AT_ONCE) {
@@ -505,7 +855,7 @@ export const postScans = async (req, res) => {
         continue;
       }
     }
-    const course = await courseOpenAt(deviceTime);
+    const course = await courseOfScan(s, tagId, deviceTime);
     if (!course) {
       refuse('noCourse');
       continue;
@@ -547,6 +897,8 @@ export const postScans = async (req, res) => {
     },
   });
 };
+
+// --- Results ---
 
 // A runner's age group at the time of the course: ten years wide ("30-39")
 // - null without a birthday. The results can be narrowed by it; the age
@@ -600,18 +952,22 @@ async function courseRunners(course) {
   });
 }
 
-// GET /futokor/results - every futókör there has been, the newest first:
-// each with how many ran it and who was the fastest.
+// GET /futokor/results - every futókör there has been - the tours' and the
+// users' own tracks - the newest first: each with how many ran it and who
+// was the fastest. (Each stands alone: they're never compared.)
 export const getResults = async (req, res) => {
-  const courses = await withTour(FutokorCourse.find().sort('-opensAt'));
+  const courses = await withPeople(FutokorCourse.find().sort('-opensAt'));
   const results = [];
   for (const course of courses) {
     const runners = await courseRunners(course);
     const winner = runners[0]?.best ? runners[0] : null;
+    const view = courseView(course, req.user);
     results.push({
       _id: course._id,
+      kind: view.kind,
       name: course.name,
-      tour: { _id: course.tour?._id ?? course.tour, title: course.tour?.title },
+      tour: view.tour,
+      owner: view.owner,
       opensAt: course.opensAt,
       closesAt: course.closesAt,
       distanceM: course.distanceM,
@@ -628,12 +984,12 @@ export const getResults = async (req, res) => {
 // order of their best time, each with all their runs and the runs' splits.
 export const getCourseResults = async (req, res) => {
   const course = validId(req.params.id)
-    ? await withTour(FutokorCourse.findById(req.params.id))
+    ? await withPeople(FutokorCourse.findById(req.params.id))
     : null;
   if (!course) throw new AppError('Nincs ilyen pálya.', 404);
   res.status(200).json({
     status: 'success',
-    data: { course: courseView(course), runners: await courseRunners(course) },
+    data: { course: courseView(course, req.user), runners: await courseRunners(course) },
   });
 };
 
