@@ -87,19 +87,8 @@
         </button>
       </div>
 
-      <div class="tool">
-        <button
-          type="button"
-          [class.off]="!showChords()"
-          (click)="toggleChords()"
-          [attr.aria-pressed]="showChords()"
-          title="Akkordok mutatása"
-          aria-label="Akkordok mutatása"
-        >
-          <mat-icon>{{ showChords() ? 'piano' : 'piano_off' }}</mat-icon>
-        </button>
-      </div>
-
+      <!-- The chords are always over the lyrics; this only shows or hides
+           how they are held, in a strip above the song. -->
       <div class="tool">
         <button
           type="button"
@@ -166,7 +155,6 @@
       <app-song-sheet
         [chordpro]="song()!.chordpro"
         [transpose]="transpose()"
-        [showChords]="showChords()"
         [instrument]="instrument()"
         [showDiagrams]="showDiagrams()"
       />
