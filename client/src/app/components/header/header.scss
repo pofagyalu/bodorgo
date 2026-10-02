@@ -374,24 +374,26 @@
   background-color: #0062d1;
 }
 
-// Kijelentkezés: a white power icon on a disc of the logo's red
-// (transparent_color_logo.svg), a little bigger than the avatar beside it.
+// Kijelentkezés: a quiet grey power icon, a little apart from the avatar -
+// it's the rarest thing done here. Only under the mouse does it turn the
+// logo's red (transparent_color_logo.svg).
 .logout-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin-left: 1.1rem;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background-color: #f40e0d;
-  color: #fff;
+  background-color: transparent;
+  color: #9aa4aa;
   cursor: pointer;
   transition:
     background-color 0.15s,
-    transform 0.15s;
+    color 0.15s;
 
   mat-icon {
     font-size: 1.7rem;
@@ -400,8 +402,8 @@
   }
 
   &:hover {
-    background-color: #c40b0a;
-    transform: scale(1.08);
+    background-color: #f40e0d;
+    color: #fff;
   }
 
   &:focus-visible {
