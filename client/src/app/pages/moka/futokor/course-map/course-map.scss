@@ -31,3 +31,14 @@
 :host ::ng-deep .futokor-pin--start {
   background: var(--logo-orange);
 }
+
+// The point being placed (Pályaszerkesztő).
+:host ::ng-deep .futokor-pin--lit {
+  background: var(--logo-red);
+  outline: 0.1875rem solid var(--logo-yellow);
+}
+
+// Where a tap places a point.
+.map.editable {
+  cursor: crosshair;
+}

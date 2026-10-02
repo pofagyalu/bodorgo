@@ -1,0 +1,350 @@
+<section class="admin-page editor-page">
+  <p class="eyebrow">Bódorgó Móka · Futókörök</p>
+  <h1>Pályaszerkesztő</h1>
+  <p class="lead">
+    Itt készülnek a pályák – futni a Futás oldalon lehet. Bárki csinálhat saját pályát: adj neki
+    nevet, töltsd fel a nyomvonalát (GPX), tedd a térképen a helyükre a pontokat, és nyomtasd ki a
+    kártyáit.
+  </p>
+
+  <div class="new-row">
+    <!-- A new track of my own. -->
+    <form class="card" (submit)="createOwn(); $event.preventDefault()">
+      <h2><mat-icon>add_road</mat-icon> Új saját pálya</h2>
+      <div class="fields">
+        <label>
+          Név
+          <input
+            type="text"
+            maxlength="60"
+            placeholder="pl. Erdei kör"
+            [value]="newName()"
+            (input)="newName.set($any($event.target).value)"
+          />
+        </label>
+        <label>
+          Ellenőrzőpontok száma
+          <input
+            type="number"
+            min="1"
+            [max]="maxPoints"
+            [value]="newPoints()"
+            (input)="newPoints.set(+$any($event.target).value)"
+          />
+        </label>
+      </div>
+      <button type="submit" class="primary" [disabled]="!newName().trim()">
+        <mat-icon>add</mat-icon> Pálya létrehozása
+      </button>
+      <p class="hint">A pálya saját kártyákat kap: egy RAJT / CÉL-t és pontonként egyet.</p>
+    </form>
+
+    <!-- A tour's course - the admins'. -->
+    @if (isAdmin) {
+      <div class="card">
+        <h2><mat-icon>cabin</mat-icon> Új tábori pálya</h2>
+        <div class="fields">
+          <label>
+            Tábor
+            <select [value]="newTourId()" (change)="newTourId.set($any($event.target).value)">
+              <option value="">– válassz –</option>
+              @for (t of freeTours(); track t._id) {
+                <option [value]="t._id">{{ t.order }}. {{ t.title }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Nyitás
+            <input
+              type="datetime-local"
+              [value]="newOpensAt()"
+              (input)="newOpensAt.set($any($event.target).value)"
+            />
+          </label>
+          <label>
+            Zárás
+            <input
+              type="datetime-local"
+              [value]="newClosesAt()"
+              (input)="newClosesAt.set($any($event.target).value)"
+            />
+          </label>
+        </div>
+        <button type="button" class="primary" [disabled]="!newTourId()" (click)="createForTour()">
+          <mat-icon>add</mat-icon> Tábori pálya létrehozása
+        </button>
+        <p class="hint">Táboronként egy; a klub közös kártyáit használja (Kártyák).</p>
+      </div>
+    }
+  </div>
+
+  @for (c of courses(); track c._id) {
+    <div class="card" [class.card--open]="openId() === c._id">
+      <button type="button" class="course-head" (click)="toggle(c)">
+        <span>
+          <strong>{{ c.name }}</strong>
+          <span class="kind" [class.kind--tour]="c.kind === 'tour'">{{
+            c.kind === 'tour' ? 'tábori' : 'saját'
+          }}</span>
+          <small
+            >{{ c.opensAt | date: 'yyyy. MM. dd. HH:mm' }} –
+            {{ c.closesAt | date: 'yyyy. MM. dd.' }} ·
+            {{ c.checkpoints.length ? c.checkpoints.length - 1 : 0 }} pont
+            @if (c.distanceM) {
+              · {{ c.distanceM }} m
+            }
+            @if (isAdmin && c.kind === 'own') {
+              · {{ c.owner.name }}
+            }
+          </small>
+        </span>
+        <mat-icon>{{ openId() === c._id ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+
+      @if (openId() === c._id && draft(); as d) {
+        <!-- On a desktop: the form on the left, the map on the right. -->
+        <div class="editor">
+          <div class="editor-form">
+            <div class="fields">
+              <label>
+                Név
+                <input
+                  type="text"
+                  maxlength="60"
+                  [value]="d.name"
+                  (input)="set('name', $any($event.target).value)"
+                />
+              </label>
+              <label>
+                Nyitás
+                <input
+                  type="datetime-local"
+                  [value]="d.opensAt"
+                  (input)="set('opensAt', $any($event.target).value)"
+                />
+              </label>
+              <label>
+                Zárás
+                <input
+                  type="datetime-local"
+                  [value]="d.closesAt"
+                  (input)="set('closesAt', $any($event.target).value)"
+                />
+              </label>
+              <label>
+                Leghosszabb futás (perc)
+                <input
+                  type="number"
+                  min="1"
+                  [value]="d.maxRunDurationMin"
+                  (input)="set('maxRunDurationMin', $any($event.target).value)"
+                />
+              </label>
+              <label>
+                A kör hossza (m)
+                <input
+                  type="number"
+                  min="1"
+                  [value]="d.distanceM"
+                  [disabled]="hasTrack()"
+                  (input)="set('distanceM', $any($event.target).value)"
+                />
+              </label>
+              @if (c.kind === 'tour') {
+                <label>
+                  RAJT / CÉL kártya
+                  <select
+                    [value]="d.startTagId"
+                    (change)="set('startTagId', $any($event.target).value)"
+                  >
+                    @for (t of startTags(); track t.tagId) {
+                      <option [value]="t.tagId" [selected]="t.tagId === d.startTagId">
+                        {{ t.tagId }}
+                      </option>
+                    } @empty {
+                      <option value="">nincs – készíts egyet a Kártyák oldalon</option>
+                    }
+                  </select>
+                </label>
+              }
+            </div>
+
+            <!-- The loop: a GPX file from a watch, or a planned route. -->
+            <h2><mat-icon>route</mat-icon> Nyomvonal</h2>
+            <div class="row">
+              <label class="secondary file">
+                <mat-icon>upload_file</mat-icon>
+                {{ hasTrack() ? 'Másik GPX feltöltése' : 'GPX feltöltése' }}
+                <input
+                  type="file"
+                  accept=".gpx,application/gpx+xml"
+                  #gpx
+                  (change)="onGpx(c, gpx)"
+                />
+              </label>
+              @if (c.hasGpx) {
+                <a class="text" [href]="gpxUrl(c)"><mat-icon>download</mat-icon> GPX letöltése</a>
+              }
+              @if (hasTrack()) {
+                <button type="button" class="text" (click)="removeTrack(c)">Levétel</button>
+              }
+            </div>
+            <p class="hint">
+              @if (hasTrack()) {
+                {{ c.distanceM }} m
+                @if (c.elevationGainM) {
+                  , +{{ c.elevationGainM }} m szint
+                }
+                – a kör hossza és a pontok távolsága a nyomvonalból jön.
+              } @else {
+                Az órádról vagy egy útvonaltervezőből. Nélküle is van idő, csak tempó és térkép
+                nincs – a távolságokat ilyenkor kézzel írhatod be.
+              }
+            </p>
+
+            <!-- The points, in the order they're passed. -->
+            <div class="card-head">
+              <h2><mat-icon>flag</mat-icon> Pontok, a futás sorrendjében</h2>
+              @if (c.kind === 'own') {
+                <span class="stepper">
+                  <button
+                    type="button"
+                    class="icon"
+                    [disabled]="d.stops.length <= 1"
+                    (click)="changePoints(c, -1)"
+                    aria-label="Eggyel kevesebb pont"
+                  >
+                    <mat-icon>remove</mat-icon>
+                  </button>
+                  <strong>{{ d.stops.length }}</strong>
+                  <button
+                    type="button"
+                    class="icon"
+                    [disabled]="d.stops.length >= maxPoints"
+                    (click)="changePoints(c, 1)"
+                    aria-label="Eggyel több pont"
+                  >
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </span>
+              }
+            </div>
+            <ol class="stops">
+              @for (s of d.stops; track $index; let i = $index) {
+                <li [class.placing]="hasTrack() && placing() === i">
+                  <button
+                    type="button"
+                    class="order"
+                    [disabled]="!hasTrack()"
+                    (click)="placing.set(i)"
+                    title="Ezt a pontot teszem a térképre"
+                  >
+                    {{ i + 1 }}. pont
+                  </button>
+                  @if (c.kind === 'tour') {
+                    <select
+                      [value]="s.tagId"
+                      (change)="setStopCard(i, $any($event.target).value)"
+                      aria-label="Kártya"
+                    >
+                      @for (t of stopTags(); track t.tagId) {
+                        <option [value]="t.tagId" [selected]="t.tagId === s.tagId">
+                          {{ t.tagId.slice(1) }}-es kártya
+                        </option>
+                      }
+                    </select>
+                  } @else {
+                    <span class="card-name">{{ s.tagId || 'új kártya' }}</span>
+                  }
+                  @if (s.lat !== null) {
+                    <span class="placed" title="A térképen a helyén van">
+                      <mat-icon>place</mat-icon>
+                      {{ s.distanceAlongM ? s.distanceAlongM + ' m' : 'mentéskor mérjük' }}
+                    </span>
+                    <button
+                      type="button"
+                      class="icon"
+                      (click)="clearPlace(i)"
+                      aria-label="Leveszem a térképről"
+                      title="Leveszem a térképről"
+                    >
+                      <mat-icon>location_off</mat-icon>
+                    </button>
+                  } @else {
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="m"
+                      title="Távolság a rajttól (m)"
+                      [value]="s.distanceAlongM"
+                      (input)="setStopDistance(i, $any($event.target).value)"
+                    />
+                  }
+                  @if (c.kind === 'tour') {
+                    <button
+                      type="button"
+                      class="icon"
+                      [disabled]="i === 0"
+                      (click)="moveStopUp(i)"
+                      aria-label="Előrébb"
+                    >
+                      <mat-icon>arrow_upward</mat-icon>
+                    </button>
+                    <button type="button" class="icon" (click)="removeStop(i)" aria-label="Kivétel">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  }
+                </li>
+              }
+            </ol>
+            @if (c.kind === 'tour') {
+              <button type="button" class="text" (click)="addStop()">+ pont hozzáadása</button>
+            }
+
+            <!-- A user's own track's cards. -->
+            @if (c.kind === 'own') {
+              <a class="secondary" [href]="sheetUrl(c)" target="_blank" rel="noopener">
+                <mat-icon>print</mat-icon> Kártyák nyomtatása (PDF)
+              </a>
+              <p class="hint">
+                Ha változtattál a pontok számán, előbb ments – a kártyák a mentett pályához
+                készülnek.
+              </p>
+            }
+
+            <div class="foot">
+              <button type="button" class="danger" (click)="remove(c)">
+                <mat-icon>delete</mat-icon> Pálya törlése
+              </button>
+              <button type="button" class="primary" [disabled]="busy()" (click)="save(c)">
+                <mat-icon>check</mat-icon> Mentés
+              </button>
+            </div>
+          </div>
+
+          <!-- The points put in place on the map. -->
+          @if (hasTrack() && preview(); as p) {
+            <div class="editor-map">
+              <p class="map-help">
+                <mat-icon>touch_app</mat-icon>
+                Koppints a térképen oda, ahol a(z) <strong>{{ placing() + 1 }}. pont</strong>
+                kártyája lesz – a pont a nyomvonalra kerül. Másik ponthoz koppints a nevére a
+                listában; a már letett pontok húzhatók.
+              </p>
+              <app-course-map
+                class="map"
+                [course]="p"
+                [editable]="true"
+                [lit]="placing() + 1"
+                (picked)="onPicked($event)"
+                (moved)="onMoved($event)"
+              />
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @empty {
+    <p class="empty">Még nincs pályád. Készíts egyet fent!</p>
+  }
+</section>

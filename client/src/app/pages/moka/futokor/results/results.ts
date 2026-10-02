@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +18,10 @@ import { RunList } from '../run-list/run-list';
 // Someone in the table whose gender or age group isn't known.
 const UNKNOWN = '–';
 
+// The page asks the server again this often, so it shows what's happening
+// as it happens: who has started, who has come in.
+const REFRESH_MS = 10 * 1000;
+
 // What the table is in the order of: everyone's best whole lap, or their
 // best time on one stretch (its place among the stretches, from 0).
 type SortBy = 'total' | number;
@@ -36,7 +40,7 @@ type SortBy = 'total' | number;
   templateUrl: './results.html',
   styleUrl: './results.scss',
 })
-export class FutokorResults {
+export class FutokorResults implements OnDestroy {
   private futokor = inject(FutokorService);
   readonly myId = inject(AuthService).user()?.id;
   // The opened futókör - none: the list of them all.
@@ -155,8 +159,49 @@ export class FutokorResults {
   });
   hasMap = computed(() => (this.results()?.course.track?.length ?? 0) > 1);
 
+  // --- Live ---
+
+  // Ticks every second, for the clocks of the runs that are on.
+  private now = signal(Date.now());
+  private ticker = setInterval(() => this.now.set(Date.now()), 1000);
+  private refresher = setInterval(() => {
+    if (document.visibilityState === 'visible') this.load();
+  }, REFRESH_MS);
+
+  // Who is on the course right now: started, not yet in.
+  live = computed(() => {
+    const stops = (this.results()?.course.checkpoints.length ?? 1) - 1;
+    return (this.results()?.runners ?? [])
+      .flatMap((r) =>
+        r.runs
+          .filter((run) => run.status === 'running')
+          .map((run) => ({
+            userId: r.userId,
+            name: r.name,
+            photoUpdatedAt: r.photoUpdatedAt,
+            startedAt: Date.parse(run.startedAt),
+            where:
+              run.passed >= stops
+                ? 'a cél felé'
+                : run.passed
+                  ? `${run.passed}. pont megvan`
+                  : 'elrajtolt',
+          })),
+      )
+      .sort((a, b) => a.startedAt - b.startedAt)
+      .map((r) => ({ ...r, elapsed: raceTime(Math.max(0, this.now() - r.startedAt)) }));
+  });
+
   constructor() {
-    const fail = () => this.failed.set(true);
+    this.load();
+  }
+
+  // (Again and again: a failed try while the page is already showing
+  // something is nothing to tell - the next one comes.)
+  private load() {
+    const fail = () => {
+      if (!this.results() && !this.courses()) this.failed.set(true);
+    };
     if (this.courseId) {
       this.futokor
         .getCourseResults(this.courseId)
@@ -166,6 +211,11 @@ export class FutokorResults {
         .getResults()
         .subscribe({ next: (courses) => this.courses.set(courses), error: fail });
     }
+  }
+
+  ngOnDestroy() {
+    clearInterval(this.ticker);
+    clearInterval(this.refresher);
   }
 
   toggle(userId: string) {

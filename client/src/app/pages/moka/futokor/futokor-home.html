@@ -14,6 +14,24 @@
     </p>
   }
 
+  <!-- Several courses are open: which one is on the screen (a START card
+       scanned picks its own). Not while a run is on. -->
+  @if (futokor.courses().length > 1 && !running()) {
+    <div class="pick" role="group" aria-label="Nyitott pályák">
+      @for (open of futokor.courses(); track open._id) {
+        <button
+          type="button"
+          [class.on]="open._id === course()?._id"
+          (click)="pick(open._id)"
+          [title]="open.kind === 'own' ? 'Saját pálya – ' + open.owner.name : 'Tábori pálya'"
+        >
+          <mat-icon>{{ open.kind === 'tour' ? 'cabin' : 'forest' }}</mat-icon>
+          {{ open.name }}
+        </button>
+      }
+    </div>
+  }
+
   @if (course(); as c) {
     <!-- Three blocks. On a phone one under the other, what the runner needs
          first: the run, the course, the results. On a desktop the course
@@ -64,7 +82,12 @@
         <!-- The course on this phone. -->
         <div class="card course">
           <div class="course-top">
-            <strong>{{ c.name }}</strong>
+            <strong
+              >{{ c.name }}
+              @if (c.kind === 'own') {
+                <small>saját pálya · {{ c.owner.name }}</small>
+              }
+            </strong>
             @switch (state()) {
               @case ('open') {
                 <span class="chip open">nyitva</span>
@@ -137,7 +160,12 @@
     </div>
   } @else if (loaded()) {
     <p class="card how">
-      <mat-icon>hotel</mat-icon> Most nincs futókör. Majd a következő táborban!
+      <mat-icon>hotel</mat-icon>
+      @if (futokor.courses().length) {
+        Válassz pályát fent – vagy olvasd be egy pálya RAJT kártyáját.
+      } @else {
+        Most nincs nyitva futókör. Készíts sajátot a Pályaszerkesztőben!
+      }
     </p>
   }
 </section>

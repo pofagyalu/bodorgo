@@ -351,6 +351,7 @@ describe('Futókör: running', () => {
         distanceM: 900,
         runners: 3,
         finishedRuns: 3,
+        runningNow: 0,
         winner: { name: 'anna', totalMs: 240000 },
       },
     ]);

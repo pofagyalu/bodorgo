@@ -22,16 +22,14 @@ export class Moka {
   private auth = inject(AuthService);
 
   // Futókörök's own pages, under it in the menu (on a phone: a second row
-  // of tabs) - the cards and the courses only for admins.
+  // of tabs) - the club's cards only for admins.
   futokorPages = computed(() => [
     { link: 'futokor', label: 'Futás', icon: 'directions_run', exact: true },
     { link: 'futokor/eredmenyek', label: 'Eredmények', icon: 'emoji_events', exact: false },
     { link: 'futokor/utmutato', label: 'Útmutató', icon: 'help', exact: false },
+    { link: 'futokor/palyaszerkeszto', label: 'Pályaszerkesztő', icon: 'route', exact: false },
     ...(this.auth.user()?.role === 'admin'
-      ? [
-          { link: 'futokor/kartyak', label: 'Kártyák', icon: 'qr_code_2', exact: false },
-          { link: 'futokor/palyak', label: 'Pályák', icon: 'route', exact: false },
-        ]
+      ? [{ link: 'futokor/kartyak', label: 'Kártyák', icon: 'qr_code_2', exact: false }]
       : []),
   ]);
 

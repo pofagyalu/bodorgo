@@ -65,6 +65,10 @@ export class FutokorHome implements OnDestroy {
     this.now.set(Date.now());
     this.futokor.expireIfDue();
   }, 1000);
+  // Everyone's best times keep themselves fresh while the page is open.
+  private refresher = setInterval(() => {
+    if (document.visibilityState === 'visible' && !this.scanning()) this.loadLeaderboard();
+  }, 15 * 1000);
 
   course = this.futokor.course;
   running = computed(() => this.futokor.run()?.status === 'running');
@@ -117,6 +121,13 @@ export class FutokorHome implements OnDestroy {
       .subscribe({ next: (runners) => this.runners.set(runners), error: () => {} });
   }
 
+  // Another of the open courses onto the screen.
+  pick(courseId: string) {
+    this.futokor.select(courseId);
+    this.runners.set([]);
+    this.loadLeaderboard();
+  }
+
   // The camera has read a card.
   onCard(token: string) {
     if (!this.scanned()) this.scanned.set(token);
@@ -126,6 +137,8 @@ export class FutokorHome implements OnDestroy {
   // while there's a run to scan for).
   onScanDone() {
     this.scanned.set(null);
+    // (The card may have been another course's: its list, then.)
+    this.loadLeaderboard();
     if (!this.running()) {
       this.scanning.set(false);
       // A finish may have changed the list (once it's uploaded).
@@ -144,5 +157,6 @@ export class FutokorHome implements OnDestroy {
 
   ngOnDestroy() {
     clearInterval(this.ticker);
+    clearInterval(this.refresher);
   }
 }

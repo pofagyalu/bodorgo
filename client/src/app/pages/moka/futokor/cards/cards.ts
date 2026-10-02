@@ -5,9 +5,11 @@ import { NotificationsService } from '../../../../notifications/notifications.se
 import { errorMessage } from '../../../../shared/errors';
 import { FutokorService, FutokorTag } from '../../../../services/futokor';
 
-// Móka → Futókörök → Kártyák (admins): the cards the runners scan. Made once,
-// printed (the PDF sheet), cut and laminated, then used on every tour -
-// which checkpoint a card is depends on the course (Pályák).
+// Móka → Futókörök → Kártyák (admins): the club's own cards, the ones the
+// tours' courses use. Made once, printed (the PDF sheet), cut and
+// laminated, then used on every tour - which checkpoint a card is depends
+// on the tour's course (Pályaszerkesztő). A user's own track has its own
+// cards, with the track.
 @Component({
   selector: 'app-futokor-cards',
   imports: [RouterLink, MatIconModule],

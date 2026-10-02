@@ -2,10 +2,12 @@ import { Component, OnDestroy, OnInit, computed, inject, input, output } from '@
 import { FutokorService, ScanAnswer, racePace, raceTime } from '../../../../services/futokor';
 import { playCelebration } from '../../../../shared/celebration-effects';
 
-// "T02" → "02-es kártya" (the number printed big on the card).
+// "T02" → "02-es kártya" (the number printed big on the card) - a user's
+// own track's "P3-02" too; "S1" and "P3-S" are START/FINISH cards.
 export function cardName(tagId: string | undefined): string {
   if (!tagId) return '';
-  return tagId.startsWith('S') ? 'RAJT / CÉL kártya' : `${tagId.slice(1)}-es kártya`;
+  const own = tagId.split('-').at(-1)!;
+  return own.startsWith('S') ? 'RAJT / CÉL kártya' : `${own.replace(/^\D+/, '')}-es kártya`;
 }
 
 type Mood = 'good' | 'bad' | 'neutral' | 'ask' | 'finish';

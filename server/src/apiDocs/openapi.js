@@ -2991,6 +2991,7 @@ const paths = {
             distanceM: { type: ['number', 'null'] },
             runners: int('How many people ran it.'),
             finishedRuns: int(),
+            runningNow: int('On the course right now: started, not yet finished or given up.'),
             winner: {
               type: ['object', 'null'],
               description: 'The fastest: their name and time (`totalMs`).',
@@ -3006,7 +3007,7 @@ const paths = {
       tag: T.race,
       summary: 'One futókör’s results',
       description:
-        'The course (with its checkpoints, to name the splits by) and every runner in the order of their best finished time - those who never finished after them - each with all their runs (the latest first) and the runs’ splits. Each runner also has their `gender` and `ageGroup` (ten years wide, at the time of the course - e.g. `30-39`; null without a birthday) to narrow the list by: the age group is everyone’s to see here, the age itself is not sent.',
+        'The app asks it again every few seconds while the page is open, so it is live: a run with `status: running` is someone on the course right now (`startedAt`, and `passed` checkpoints so far). The course (with its checkpoints, to name the splits by) and every runner in the order of their best finished time - those who never finished after them - each with all their runs (the latest first) and the runs’ splits. Each runner also has their `gender` and `ageGroup` (ten years wide, at the time of the course - e.g. `30-39`; null without a birthday) to narrow the list by: the age group is everyone’s to see here, the age itself is not sent.',
       params: [path('id', 'The course.')],
       data: obj({
         course: ref('FutokorCourse'),

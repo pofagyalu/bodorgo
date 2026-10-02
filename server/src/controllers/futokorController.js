@@ -973,6 +973,8 @@ export const getResults = async (req, res) => {
       distanceM: course.distanceM,
       runners: runners.length,
       finishedRuns: runners.reduce((sum, r) => sum + r.finishedRuns, 0),
+      // On the course right now: started, not yet finished or given up.
+      runningNow: runners.filter((r) => r.runs.some((run) => run.status === 'running')).length,
       winner: winner && { name: winner.name, totalMs: winner.best.totalMs },
     });
   }

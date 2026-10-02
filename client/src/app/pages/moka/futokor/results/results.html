@@ -30,6 +30,29 @@
         }
       </div>
 
+      <!-- On the course right now - the page keeps itself fresh. -->
+      @if (live().length) {
+        <div class="live">
+          <strong class="live-title"><span class="dot"></span> Most futnak</strong>
+          @for (l of live(); track l.userId + l.startedAt) {
+            <span class="live-runner">
+              <app-avatar
+                class="face"
+                [name]="l.name"
+                [userId]="l.userId"
+                [photoVersion]="l.photoUpdatedAt"
+                [preview]="false"
+              />
+              <span>
+                {{ l.name }}
+                <small>{{ l.where }}</small>
+              </span>
+              <span class="live-clock">{{ l.elapsed }}</span>
+            </span>
+          }
+        </div>
+      }
+
       @if (r.runners.length) {
         <!-- Narrowing the table: by gender, by age group. -->
         <div class="filters">
@@ -149,7 +172,7 @@
         <p class="note">
           A szakaszoknál mindenkinek a saját legjobb ideje áll az adott szakaszon (bármelyik
           futásából), ezért nem feltétlenül adják ki a legjobb kör idejét. Az oszlop legjobb ideje
-          kiemelve; a fejlécre koppintva aszerint rendezhetsz.
+          kiemelve; a fejlécre koppintva aszerint rendezhetsz. Az oldal magától frissül.
         </p>
       } @else {
         <p class="empty">Ezen a pályán még senki sem futott.</p>
@@ -168,6 +191,9 @@
             <a [routerLink]="c._id" class="course">
               <span class="course-main">
                 <strong>{{ c.name }}</strong>
+                <small class="whose">{{
+                  c.kind === 'tour' ? 'Tábori pálya' : 'Saját pálya · ' + c.owner.name
+                }}</small>
                 <small>
                   {{ c.opensAt | date: 'yyyy. MM. dd.' }}
                   @if (c.distanceM) {
@@ -175,6 +201,11 @@
                   }
                   · {{ c.runners }} futó, {{ c.finishedRuns }} célba érés
                 </small>
+                @if (c.runningNow) {
+                  <span class="now"
+                    ><span class="dot"></span> {{ c.runningNow }} futó a pályán</span
+                  >
+                }
                 @if (c.winner; as w) {
                   <span class="winner">🥇 {{ w.name }} · {{ time(w.totalMs) }}</span>
                 }
