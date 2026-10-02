@@ -1,0 +1,174 @@
+// A tour's Programterv (tour-schedule) - moved here from tour-details.scss.
+:host {
+  display: block;
+}
+
+.schedule-section {
+  margin-bottom: 3rem;
+}
+
+// The same section heading as the tour page's other sections
+// (tour-details.scss's .section-heading) - each component styles its own.
+.section-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #eee;
+}
+
+.empty-note {
+  color: #999;
+  font-style: italic;
+}
+
+.day-block {
+  background: #f7f7f7;
+  border-radius: 10px;
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+// Flex (not float) - a float always top-aligns the text beside it, which
+// left the date sitting noticeably higher than the taller weather pill;
+// align-items:center here vertically centers the pill and the day-number/
+// date text against each other properly.
+.day-heading {
+  position: relative;
+  margin: 0 0 0.7rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2e7d32;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+}
+
+// Reserves a gutter on the right for the absolutely-positioned add-event
+// button below, on every line - only added when that button renders.
+.day-heading--admin {
+  padding-right: 2.4rem;
+}
+
+.day-heading-daynum,
+.day-heading-date {
+  text-transform: capitalize;
+}
+
+.day-heading-daynum {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  // Forces the date label onto its own full-width line while the weather
+  // pill + "N. nap –" stay together on the first line - the exact split
+  // the user asked for, rather than letting the browser wrap wherever it
+  // likes.
+  .day-heading-date {
+    flex: 1 0 100%;
+  }
+}
+
+// Icon-only "add event" trigger - no text, a tooltip carries the meaning
+// (same convention as tour-event.scss's edit/save/cancel buttons).
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  color: #666;
+
+  &:hover {
+    background: #eee;
+  }
+}
+
+.icon-btn--add {
+  // Pinned to the row's top-right corner, in the gutter .day-heading--admin
+  // reserves above - stays at the rightmost edge regardless of how many
+  // lines the date text wraps to (same technique as tour-event.scss's
+  // .icon-btn--edit).
+  position: absolute;
+  top: 0;
+  right: 0;
+  // "Filled" look (a solid dark rounded-rectangle container, not just a
+  // bare glyph) - same dark tone as the day-weather pill, so the icon
+  // reads clearly rather than blending into .day-block's light grey.
+  background: #445a67;
+  border-radius: 8px;
+  color: #fff;
+
+  // The "+" glyph reads as thin/spindly at this size otherwise - a text
+  // stroke thickens it without needing a different icon font. No effect
+  // outside Chromium/WebKit, but degrades harmlessly to the original glyph.
+  mat-icon {
+    -webkit-text-stroke: 0.5px currentColor;
+  }
+
+  &:hover {
+    background: #37474f;
+  }
+}
+
+// One compact pill holding both the icon and the temps, up front before the
+// date text. A solid dark backdrop is used deliberately (rather than white)
+// since several icons (cloudy, fog, rain's cloud) are a near-white pastel
+// gradient that all but disappears on any light background.
+.day-weather {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem 0.25rem 0.35rem;
+  border-radius: 999px;
+  background: #445a67;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.day-weather-icon {
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+}
+
+.day-weather-icon--placeholder {
+  color: #cfd8dc;
+  font-size: 1.9rem;
+  line-height: 1.9rem;
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+.day-weather--empty {
+  background: #b0bec5;
+  color: #fff;
+  padding: 0.3rem 0.5rem;
+}
+
+.day-weather-temp {
+  white-space: nowrap;
+}
+
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.event-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

@@ -239,6 +239,17 @@ const tourSchema = new Schema(
       type: String,
       trim: true,
     },
+    // Optional link to the place's 360° virtual panorama (on another site) -
+    // the round 360° badge on the tour page's cover, and a QR code in the
+    // beszámoló. Empty: neither shows.
+    panoramaUrl: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: (v) => !v || /^https?:\/\/\S+$/i.test(v),
+        message: 'A panoráma linkje http:// vagy https:// kezdetű cím legyen',
+      },
+    },
     description: {
       type: String,
       required: [true, 'A tábornak kell legyen leírása'],

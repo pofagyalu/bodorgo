@@ -76,6 +76,17 @@
           /></label>
         </div>
 
+        <!-- Optional: the 360° badge on the tour page's cover, and a QR code
+         in the beszámoló. -->
+        <label
+          >360° panoráma linkje
+          <input
+            type="url"
+            [(ngModel)]="form.panoramaUrl"
+            name="panoramaUrl"
+            placeholder="https://..."
+        /></label>
+
         <!-- The accommodation payment breakdown shown per-attendee on the
          tour-details page (Teljes ár/Előleg/Fizetendő) - all optional, see
          reservationController.js's computeAttendeePayments. The tour's

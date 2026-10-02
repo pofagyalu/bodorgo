@@ -1,0 +1,61 @@
+<!-- Programterv: the day-by-day schedule -->
+<section class="schedule-section">
+  <h2 class="section-heading">Programterv</h2>
+
+  @for (day of dayGroups(); track day.day) {
+    <div class="day-block">
+      <h3 class="day-heading" [class.day-heading--admin]="isAdmin()">
+        @if (day.weather; as w) {
+          <span class="day-weather" [title]="weatherConditionLabel(w.condition)">
+            <img [src]="weatherIconPath(w.condition)" alt="" class="day-weather-icon" />
+            <span class="day-weather-temp">{{ w.tempDayC }}°/{{ w.tempNightC }}°</span>
+          </span>
+        } @else {
+          <span class="day-weather day-weather--empty" title="Még nincs előrejelzés">
+            <mat-icon class="day-weather-icon day-weather-icon--placeholder">help_outline</mat-icon>
+          </span>
+        }
+        <span class="day-heading-daynum">{{ day.day }}. nap –</span>
+        <span class="day-heading-date">{{ day.label }}</span>
+        @if (isAdmin()) {
+          <button
+            type="button"
+            class="icon-btn icon-btn--add"
+            title="Esemény hozzáadása"
+            (click)="startAddEvent(day.day)"
+          >
+            <mat-icon>add</mat-icon>
+          </button>
+        }
+      </h3>
+
+      @if (addingEventForDay() === day.day) {
+        <app-event-form
+          [model]="addEventForm"
+          [saving]="addingEvent()"
+          [error]="addEventError()"
+          (save)="saveNewEvent(day.day)"
+          (cancelled)="cancelAddEvent()"
+        />
+      }
+      @if (day.events.length) {
+        <ul class="event-list">
+          @for (ev of day.events; track ev._id) {
+            <li class="event-row">
+              <app-tour-event
+                [event]="ev"
+                [tourId]="tour()._id"
+                [candidates]="candidates()"
+                [userPhotos]="userPhotos()"
+                [usernames]="usernames()"
+                (updated)="eventUpdated.emit($event)"
+              />
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty-note">Erre a napra még nincs program megadva.</p>
+      }
+    </div>
+  }
+</section>

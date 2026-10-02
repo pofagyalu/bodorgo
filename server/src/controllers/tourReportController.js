@@ -3,6 +3,7 @@ import path from 'path';
 import mongoose from 'mongoose';
 import PDFDocument from 'pdfkit';
 import sharp from 'sharp';
+import QRCode from 'qrcode';
 import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import TourReport from '../models/tourReportModel.js';
@@ -456,6 +457,42 @@ function drawPhoto(doc, photo) {
   }
 }
 
+// The place's 360° panorama (the tour's panoramaUrl): its QR code in a
+// light card like the facts', to scan with a phone - the text beside it is
+// the link too, for whoever reads the PDF on one.
+const QR_SIZE = 74;
+
+function drawPanorama(doc, qr, url) {
+  if (!qr) return;
+  const pad = 12;
+  const width = doc.page.width - MARGIN * 2;
+  const height = QR_SIZE + pad * 2;
+  doc.moveDown(1.5);
+  ensureRoom(doc, height);
+  const top = doc.y;
+  doc.roundedRect(MARGIN, top, width, height, 8).fill(CARD);
+  doc.rect(MARGIN, top + 8, 3, height - 16).fill(GREEN);
+  doc.roundedRect(MARGIN + pad, top + pad, QR_SIZE, QR_SIZE, 4).fill('#fff');
+  doc.image(qr, MARGIN + pad + 3, top + pad + 3, { width: QR_SIZE - 6, height: QR_SIZE - 6 });
+
+  const x = MARGIN + pad + QR_SIZE + 16;
+  const textWidth = width - (x - MARGIN) - pad;
+  doc
+    .font('Heading')
+    .fontSize(13)
+    .fillColor(GREEN)
+    .text('360° panoráma', x, top + pad + 12, { width: textWidth, link: url });
+  doc
+    .font('Body')
+    .fontSize(BODY_SIZE)
+    .fillColor(INK)
+    .text('Olvasd be a kódot a telefonoddal, és nézz körül a helyszínen!', x, doc.y + 4, {
+      width: textWidth,
+    });
+  doc.x = MARGIN;
+  doc.y = top + height;
+}
+
 // The end: the seal pressed on slightly askew, and beside it the club,
 // the elnök, and the day it was signed off (Kész).
 async function drawSignature(doc, presidentName, signedAt) {
@@ -576,7 +613,7 @@ function drawPageFrames(doc, tour, draft) {
 // and ends it. Exported for trying the layout from a script.
 export async function renderReport(
   doc,
-  { tour, facts, days, dayLabels = [], photo, mapUrl, presidentName, signedAt, draft },
+  { tour, facts, days, dayLabels = [], photo, mapUrl, panoramaQr, presidentName, signedAt, draft },
 ) {
   doc.registerFont('Body', FONT_REGULAR);
   doc.registerFont('Heading', FONT_BOLD);
@@ -609,6 +646,7 @@ export async function renderReport(
     if (hasText(delta)) drawDay(doc, i, dayLabels[i], delta);
   });
 
+  drawPanorama(doc, panoramaQr, tour.panoramaUrl);
   await drawSignature(doc, presidentName, signedAt ?? new Date());
   drawPageFrames(doc, tour, draft);
   doc.end();
@@ -670,6 +708,9 @@ export const downloadReportPdf = async (req, res) => {
   const [lng, lat] = tour.location?.coordinates ?? [];
   const { presidentName } = await getClubSettings();
   const photo = await reportPhoto(tour, photoName);
+  const panoramaQr = tour.panoramaUrl
+    ? await QRCode.toBuffer(tour.panoramaUrl, { width: 400, margin: 0 })
+    : null;
   const doc = new PDFDocument({ size: 'A4', margins: MARGINS, bufferPages: true });
   const filename = `${tour.order ? tour.order + '-' : ''}beszamolo-${tour.slug || 'tabor'}.pdf`;
   res.setHeader('Content-Type', 'application/pdf');
@@ -685,6 +726,7 @@ export const downloadReportPdf = async (req, res) => {
       Number.isFinite(lat) && Number.isFinite(lng)
         ? `https://www.google.com/maps?q=${lat},${lng}`
         : null,
+    panoramaQr,
     presidentName,
     signedAt,
     draft,

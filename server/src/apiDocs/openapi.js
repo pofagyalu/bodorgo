@@ -162,6 +162,9 @@ const schemas = {
       address: str('Address of the accommodation.'),
       description: str('Place name.'),
     }),
+    panoramaUrl: str(
+      "Optional http(s) link to the place's 360° virtual panorama - the 360° badge on the tour page, and a QR code in the beszámoló PDF.",
+    ),
     distanceFromBudapestKm: num('Driving distance.'),
     drivingDurationFromBudapestMinutes: num('Driving time.'),
     pricingMode: str('How the accommodation is priced.', { enum: ['perHouse', 'perPerson'] }),
