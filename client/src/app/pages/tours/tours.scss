@@ -49,6 +49,15 @@
   margin: 0 0 2rem;
 }
 
+// The bar's place in the row, and what the year panel hangs from (the bar
+// itself has overflow: hidden for its round corners).
+.filters-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 40rem;
+}
+
 // Search, year and order as one piece: one white bar (the same card
 // language as tour-card.scss's .card - white, a soft shadow), the three
 // parts side by side with a hairline between them.
@@ -58,9 +67,6 @@
   // width, the search field gives up its own (down to nothing).
   flex-wrap: nowrap;
   align-items: stretch;
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 40rem;
   border-radius: 0.5rem;
   background: #fff;
   box-shadow: 0 0.3rem 1rem rgba(0, 0, 0, 0.1);
@@ -113,10 +119,114 @@
   }
 }
 
-// The year wheel (components/period-band, vertical).
+// The chosen year (or "Összes") and a small arrow: opens the year panel.
+// A fixed least width, so the bar doesn't jump between "2026" and "Összes".
 .filter-year {
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 6rem;
+  padding: 0 0.5rem 0 0.9rem;
+  border: none;
   border-left: 1px solid #e6e6e6;
+  background: none;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1b6548;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  mat-icon {
+    font-size: 1.3rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    color: #999;
+    transition: transform 0.2s;
+  }
+
+  &:hover,
+  &.filter-year--open {
+    background: #f1f6f3;
+  }
+
+  &.filter-year--open mat-icon {
+    transform: rotate(180deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #1b6548;
+    outline-offset: -2px;
+  }
+}
+
+// Every choice at once, under the bar's right end: "Összes" across the
+// top, then the years four to a row. Over the cards.
+.year-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  width: min(20rem, 100%);
+  padding: 0.6rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.22);
+  animation: year-panel-in 0.15s ease-out;
+}
+
+@keyframes year-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .year-panel {
+    animation: none;
+  }
+}
+
+.year-option {
+  padding: 0.65rem 0;
+  border: none;
+  border-radius: 0.5rem;
+  background: #f1f6f3;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #333;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+
+  &:hover {
+    background: #d9eee1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #1b6548;
+    outline-offset: 1px;
+  }
+}
+
+.year-option--all {
+  grid-column: 1 / -1;
+}
+
+// The one showing now: the bar's own green.
+.year-option--current,
+.year-option--current:hover {
+  background: #55c57a;
+  color: #fff;
 }
 
 // The order by date: a solid button at the bar's end, its arrow the
@@ -169,6 +279,16 @@
 
   .filter-order {
     width: 2.8rem;
+  }
+
+  .filter-year {
+    min-width: 5.4rem;
+    padding: 0 0.3rem 0 0.6rem;
+  }
+
+  // As wide as the bar: finger-sized years.
+  .year-panel {
+    width: 100%;
   }
 }
 

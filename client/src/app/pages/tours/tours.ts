@@ -1,15 +1,14 @@
-import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal, computed, effect } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService, Tour } from '../../services/tour';
 import { TourCard } from './tour-card/tour-card';
 import { AuthService } from '../../auth/auth.service';
-import { PeriodBand, PeriodOption } from '../../components/period-band/period-band';
 
 @Component({
   selector: 'app-tours',
   standalone: true,
-  imports: [TourCard, RouterLink, MatIconModule, PeriodBand],
+  imports: [TourCard, RouterLink, MatIconModule],
   templateUrl: './tours.html',
   styleUrl: './tours.scss',
 })
@@ -32,11 +31,26 @@ export class Tours implements OnInit {
   // have arrived.
   period = signal('');
 
-  // The wheel's items: the years, newest first, then "Összes".
-  periodOptions = computed<PeriodOption[]>(() => [
-    ...this.years().map((y) => ({ value: String(y), label: String(y) })),
-    { value: 'all', label: 'Összes' },
-  ]);
+  // The year panel under the bar ("Összes" and every year) - open or not.
+  yearsOpen = signal(false);
+
+  toggleYears(event: Event) {
+    // Not the document's click below, which would close it right away.
+    event.stopPropagation();
+    this.yearsOpen.update((open) => !open);
+  }
+
+  pickPeriod(period: string) {
+    this.yearsOpen.set(false);
+    this.choosePeriod(period);
+  }
+
+  // A click anywhere else, or Esc, closes the panel without choosing.
+  @HostListener('document:click')
+  @HostListener('document:keydown.escape')
+  closeYears() {
+    this.yearsOpen.set(false);
+  }
 
   searchInput = signal(''); // instant changes
   searchTerm = signal(''); // debounced version
