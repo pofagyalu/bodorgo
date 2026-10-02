@@ -123,7 +123,7 @@ function parseChord(name, notation = NOTATION) {
 function noteName(pc, flats, notation) {
   if (notation === 'hungarian') {
     if (pc === 11) return 'H';
-    if (pc === 10) return 'B';
+    if (pc === 10 && flats) return 'B';
   }
   return (flats ? FLATS : SHARPS)[pc];
 }
@@ -327,7 +327,7 @@ var DEGREES = [
   { roman: 'vi', semitones: 9, kind: 'minor' },
   { roman: 'vii\xB0', semitones: 11, kind: 'dim' },
 ];
-var SHARP_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'B', 'H'];
+var SHARP_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'H'];
 var FLAT_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'B', 'H'];
 var TABLE_KEYS = [
   { root: 0, flats: false },

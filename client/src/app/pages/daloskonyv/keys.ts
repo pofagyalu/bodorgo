@@ -41,8 +41,9 @@ export const DEGREES = [
 ] as const;
 
 // The note names a key is written with: its own row of the table, from
-// its own note up (the Hungarian way - H, and B for B♭).
-const SHARP_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'B', 'H'];
+// its own note up (the Hungarian way: H; and the note under it is A# in
+// a sharp key, B - the Hungarian B♭ - in a flat one).
+const SHARP_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'H'];
 const FLAT_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'B', 'H'];
 
 // The keys of the table, in the circle's order, each with its place among

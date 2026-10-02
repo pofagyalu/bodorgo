@@ -55,7 +55,9 @@ export function parseChord(name: string, notation: Notation = NOTATION): Chord |
 function noteName(pc: number, flats: boolean, notation: Notation): string {
   if (notation === 'hungarian') {
     if (pc === 11) return 'H';
-    if (pc === 10) return 'B';
+    // The note between A and H: "B" where the key is written with flats
+    // (the Hungarian name of B♭), "A#" where it is written with sharps.
+    if (pc === 10 && flats) return 'B';
   }
   return (flats ? FLATS : SHARPS)[pc];
 }

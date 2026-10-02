@@ -80,7 +80,7 @@ describe('transposer', () => {
 
   it('keeps a lower-case minor in lower case', () => {
     expect(move('am', 2, 'hungarian')('am', 'dm', 'E7', 'am7')).toBe('hm em F#7 hm7');
-    expect(move('em', -1, 'hungarian')('em', 'am', 'H7', 'f#m')).toBe('d#m g#m B7 fm');
+    expect(move('em', -1, 'hungarian')('em', 'am', 'H7', 'f#m')).toBe('d#m g#m A#7 fm');
     expect(move('dm', -2, 'hungarian')('dm', 'gm', 'A7')).toBe('cm fm G7');
   });
 
@@ -141,5 +141,21 @@ describe('firstChord and stepsBetween', () => {
     expect(stepsBetween('C', 'F#', 'hungarian')).toBe(6);
     expect(stepsBetween('C', 'C', 'hungarian')).toBe(0);
     expect(stepsBetween('C', '2x', 'hungarian')).toBeNull();
+  });
+});
+
+describe('the note between A and H, the Hungarian way', () => {
+  it('is A# in a key written with sharps', () => {
+    // E two up is F#: its third chord is A# minor, not "bm".
+    expect(move('E', 2, 'hungarian')('E', 'g#m', 'A', 'H')).toBe('F# a#m H C#');
+    expect(transposeChordPro('[F#]la [A#]la [H]la', -2, 'hungarian')).toBe('[E]la [G#]la [A]la');
+    // There and back: the A# is an A# again.
+    const song = '[F#]la [A#m]la [H]la [C#]la';
+    expect(transposeChordPro(transposeChordPro(song, 2, 'hungarian'), -2, 'hungarian')).toBe(song);
+  });
+
+  it('is B in a key written with flats', () => {
+    expect(move('E', 1, 'hungarian')('E', 'A', 'H7')).toBe('F B C7');
+    expect(move('am', -2, 'hungarian')('am', 'C', 'dm')).toBe('gm B cm');
   });
 });

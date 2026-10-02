@@ -38,3 +38,14 @@ describe('keyChords', () => {
     expect(CIRCLE.map((k) => k.major[0])).toEqual(keyChords().map((k) => k.key));
   });
 });
+
+describe('keyChords: the sharp keys', () => {
+  it('write the note between A and H as A#', () => {
+    const row = (key: string) =>
+      keyChords()
+        .find((k) => k.key === key)
+        ?.chords.join(' ');
+    expect(row('H')).toBe('H c#m d#m E F# g#m a#°');
+    expect(row('F#')).toBe('F# g#m a#m H C# d#m f°');
+  });
+});
