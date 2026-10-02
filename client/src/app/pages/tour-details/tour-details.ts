@@ -136,6 +136,28 @@ export class TourDetails {
 
   currentUserId = computed(() => this.auth.user()?.id);
 
+  // An admin may edit the tour - until it's closed (Lezárás, see
+  // Tour.closed): then nobody, and every edit control on the page goes.
+  canEdit = computed(() => this.auth.user()?.role === 'admin' && !this.tour()?.closed);
+
+  // The padlock's tooltip on a closed tour.
+  closedLabel = computed(() => {
+    const at = this.tour()?.closedAt;
+    const day = at
+      ? new Intl.DateTimeFormat('hu-HU', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        }).format(new Date(at))
+      : '';
+    return `Lezárt tábor${day ? ` (${day})` : ''} – már nem módosítható`;
+  });
+
+  // Extrák (tour-extras) closed the tour.
+  onTourClosed(closedAt: string) {
+    this.tour.update((t) => (t ? { ...t, closed: true, closedAt } : t));
+  }
+
   // Hungarian format with the short month ("2026. szept. 12." - so the
   // line fits on a phone) rather than Angular's
   // DatePipe, which needs hu locale data registered to avoid falling back
@@ -278,7 +300,8 @@ export class TourDetails {
   // updateScheduleEventParticipants' own server-side check.
   myScheduleEventCandidates = computed<PickerOption[]>(() => {
     const me = this.auth.user();
-    if (!me) return [];
+    // A closed tour: nobody opts in or out any more.
+    if (!me || this.tour()?.closed) return [];
     const attendees = this.allAttendees().filter((a) => a.userId);
     const pool =
       me.role === 'admin'
@@ -528,10 +551,9 @@ export class TourDetails {
     void this.gallery.open(photos, 0, {
       zipUrl: this.tourService.tourImagesZipUrl(t._id),
       zipBytes: images.reduce((sum, img) => sum + img.size, 0),
-      onRestrict:
-        this.auth.user()?.role === 'admin'
-          ? (photo, restricted) => this.setImageRestricted(photo.name, restricted)
-          : undefined,
+      onRestrict: this.canEdit()
+        ? (photo, restricted) => this.setImageRestricted(photo.name, restricted)
+        : undefined,
     });
   }
 

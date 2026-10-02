@@ -28,7 +28,7 @@ export interface ChatRoomSummary {
 
 export interface ChatOverview {
   general: ChatRoomSummary;
-  // past: the tour is over (by more than two weeks) - its chat is listed
+  // past: the tour is over (midnight after its last day) - its chat is listed
   // among the archives; closed: it's read-only too (every past one but the
   // test tour's).
   tours: (ChatRoomSummary & { tourId: string; past: boolean; closed: boolean })[];

@@ -38,20 +38,22 @@ export async function loadChatRoom(chatRoomId) {
   return room;
 }
 
-// A tour's Kotyogó closes this many days after the tour's last day: from
-// then on it's an archive - it can be read, but not written in.
-export const CHAT_OPEN_DAYS_AFTER_TOUR = 14;
+// A tour's Kotyogó closes when the tour is over - at midnight after its
+// last day: from then on it's an archive - it can be read, but not written
+// in.
 // One past tour's chat stays writable: the one the chat is tested in. It's
 // still a past tour - listed among the archives (the client has the same
 // exception - pages/chat/chat.ts).
 const ALWAYS_WRITABLE_TOUR_ORDER = 11;
 
-// Past: more than 14 days after the tour's last day - its chat is listed
-// among the archives.
+// Past: from midnight after the tour's last day (startDate + duration
+// days, in local time - the same moment as reviewController.js's
+// tourHasEnded) - its chat is listed among the archives.
 export function tourChatPast(tour, now = new Date()) {
   const pastFrom = new Date(tour.startDate);
-  pastFrom.setDate(pastFrom.getDate() + Math.max(tour.duration - 1, 0) + CHAT_OPEN_DAYS_AFTER_TOUR);
-  return now > pastFrom;
+  pastFrom.setHours(0, 0, 0, 0);
+  pastFrom.setDate(pastFrom.getDate() + tour.duration);
+  return now >= pastFrom;
 }
 
 // Closed: a past tour's chat can't be written in any more.

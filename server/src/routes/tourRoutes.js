@@ -44,6 +44,7 @@ import {
 import { updateAccommodation } from '../controllers/accommodationController.js';
 import { getRoomBoard, assignRoom, setFinalized } from '../controllers/roomAllocationController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
+import { tourOpen, tourReportOpen } from '../utils/tourClosed.js';
 
 const router = express.Router();
 
@@ -66,8 +67,14 @@ router
 router
   .route('/:id')
   .get(requireAuth, tourController.getTour)
-  .patch(requireAuth, restrictTo('admin'), tourController.updateTour)
-  .delete(requireAuth, restrictTo('admin'), tourController.deleteTour);
+  .patch(requireAuth, restrictTo('admin'), tourOpen, tourController.updateTour)
+  .delete(requireAuth, restrictTo('admin'), tourOpen, tourController.deleteTour);
+
+// Lezárás: the tour is finished for good. From then on every route below
+// that changes the tour answers 403 (tourOpen - utils/tourClosed.js); what
+// only reads it, and the members' own reviews, stay - and the beszámoló
+// can still be written until it's Kész (tourReportOpen).
+router.route('/:id/close').post(requireAuth, restrictTo('admin'), tourController.closeTour);
 
 // requireAuth (not restrictTo - any logged-in role) - each copy is
 // stamped with the downloader's own name in the footer, so there has to
@@ -79,15 +86,19 @@ router.route('/:id/pdf/email').post(requireAuth, emailTourPdf);
 router
   .route('/:id/report')
   .get(requireAuth, getReport)
-  .put(requireAuth, restrictTo('admin'), saveReport);
-router.route('/:id/report/finish').post(requireAuth, restrictTo('admin'), finishReport);
-router.route('/:id/report/reopen').post(requireAuth, restrictTo('admin'), reopenReport);
+  .put(requireAuth, restrictTo('admin'), tourReportOpen, saveReport);
+router
+  .route('/:id/report/finish')
+  .post(requireAuth, restrictTo('admin'), tourReportOpen, finishReport);
+router.route('/:id/report/reopen').post(requireAuth, restrictTo('admin'), tourOpen, reopenReport);
 router.route('/:id/report/pdf').get(requireAuth, downloadReportPdf);
 // Letters to the tour's attendees (admin) - see mailingController.js.
 router.route('/:id/mailings').get(requireAuth, restrictTo('admin'), getMailings);
-router.route('/:id/mailings/draft').put(requireAuth, restrictTo('admin'), saveDraft);
-router.route('/:id/mailings/test').post(requireAuth, restrictTo('admin'), sendTest);
-router.route('/:id/mailings/send').post(requireAuth, restrictTo('admin'), sendToAttendees);
+router.route('/:id/mailings/draft').put(requireAuth, restrictTo('admin'), tourOpen, saveDraft);
+router.route('/:id/mailings/test').post(requireAuth, restrictTo('admin'), tourOpen, sendTest);
+router
+  .route('/:id/mailings/send')
+  .post(requireAuth, restrictTo('admin'), tourOpen, sendToAttendees);
 router
   .route('/:id/attendees/export.xlsx')
   .get(requireAuth, restrictTo('admin'), downloadAttendeesExcel);
@@ -97,33 +108,35 @@ router
 router
   .route('/:id/cover')
   .get(requireAuth, getTourCover)
-  .post(requireAuth, restrictTo('admin'), uploadCoverMiddleware, uploadTourCover);
+  .post(requireAuth, restrictTo('admin'), tourOpen, uploadCoverMiddleware, uploadTourCover);
 
 // Szállás (houses -> rooms -> places) - saved on its own, separately from
 // the rest of the tour (see accommodationController.js). Read as part of
 // GET /tours/:id.
-router.route('/:id/accommodation').put(requireAuth, restrictTo('admin'), updateAccommodation);
+router
+  .route('/:id/accommodation')
+  .put(requireAuth, restrictTo('admin'), tourOpen, updateAccommodation);
 
 // Szobabeosztás (who sleeps where) - see roomAllocationController.js.
 router.route('/:id/rooms').get(requireAuth, getRoomBoard);
-router.route('/:id/rooms/assignment').put(requireAuth, restrictTo('admin'), assignRoom);
-router.route('/:id/rooms/finalized').put(requireAuth, restrictTo('admin'), setFinalized);
+router.route('/:id/rooms/assignment').put(requireAuth, restrictTo('admin'), tourOpen, assignRoom);
+router.route('/:id/rooms/finalized').put(requireAuth, restrictTo('admin'), tourOpen, setFinalized);
 
 // Extrák documents are uploaded, served and deleted with the club's own
 // documents - see documentRoutes.js (POST /documents with a tour).
 
-router.route('/:tourId/signup').post(requireAuth, signUpForTour);
+router.route('/:tourId/signup').post(requireAuth, tourOpen, signUpForTour);
 router
   .route('/:tourId/reservations/:reservationId/attendees/:attendeeId/nights')
-  .patch(requireAuth, restrictTo('admin'), updateAttendeeNights);
+  .patch(requireAuth, restrictTo('admin'), tourOpen, updateAttendeeNights);
 router
   .route('/:tourId/reservations/:reservationId/attendees/:attendeeId/fee-exempt')
-  .patch(requireAuth, restrictTo('admin'), updateAttendeeFeeExempt);
+  .patch(requireAuth, restrictTo('admin'), tourOpen, updateAttendeeFeeExempt);
 // "Lemondás" - taking one person off the tour (see withdrawAttendee for
 // who may withdraw whom), and the admins' list of them.
 router
   .route('/:tourId/reservations/:reservationId/attendees/:attendeeId')
-  .delete(requireAuth, withdrawAttendee);
+  .delete(requireAuth, tourOpen, withdrawAttendee);
 router.route('/:tourId/cancellations').get(requireAuth, restrictTo('admin'), getCancellations);
 // A poll started from the tour's chat - by any attendee (see pollController.js).
 router.route('/:tourId/polls').post(requireAuth, createTourPoll);
@@ -139,15 +152,15 @@ router
 
 router
   .route('/:tourId/schedule/:eventId/participants')
-  .patch(requireAuth, tourController.updateScheduleEventParticipants);
+  .patch(requireAuth, tourOpen, tourController.updateScheduleEventParticipants);
 
 router
   .route('/:tourId/schedule')
-  .post(requireAuth, restrictTo('admin'), tourController.createScheduleEvent);
+  .post(requireAuth, restrictTo('admin'), tourOpen, tourController.createScheduleEvent);
 
 router
   .route('/:tourId/schedule/:eventId')
-  .patch(requireAuth, restrictTo('admin'), tourController.updateScheduleEvent);
+  .patch(requireAuth, restrictTo('admin'), tourOpen, tourController.updateScheduleEvent);
 
 // Gallery routes - all requireAuth (see
 // tour-photos-implementation-plan.md), same "logged in, that's it, no
@@ -167,7 +180,7 @@ router
 router
   .route('/:tourId/images/:filename')
   .get(requireAuth, tourImageController.getTourImage)
-  .patch(requireAuth, restrictTo('admin'), tourImageController.setImageRestricted);
+  .patch(requireAuth, restrictTo('admin'), tourOpen, tourImageController.setImageRestricted);
 
 // Post-tour recap video(s), matched by tour number (see
 // utils/tourVideos.js) - same "logged in, that's it, no role restriction"

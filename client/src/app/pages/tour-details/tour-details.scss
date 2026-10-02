@@ -624,6 +624,17 @@
   background: #f0f0f0;
 }
 
+// Lezárva: the padlock in the edit button's place - not a button.
+.icon-btn--closed {
+  cursor: default;
+  opacity: 0.85;
+
+  &:hover {
+    background: #445a67;
+    opacity: 0.85;
+  }
+}
+
 // Résztvevők (36/40): never broken in two - the heading stays one row.
 .participants-title {
   white-space: nowrap;

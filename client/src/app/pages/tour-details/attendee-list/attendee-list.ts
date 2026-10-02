@@ -117,6 +117,10 @@ export class AttendeeList implements OnInit {
   // pay-methods).
   @Input() paymentMethods: OnSitePayment | null | undefined = null;
 
+  // The tour is closed (Lezárás): the list is only read - no nights, cash,
+  // exemption or withdrawal, for an admin either.
+  @Input() locked = false;
+
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   readonly formatForint = formatForint;
 
@@ -369,7 +373,7 @@ export class AttendeeList implements OnInit {
   // anyone, anyone else themselves, and a member their own family too.
   canWithdraw(row: AttendeeListRow): boolean {
     const me = this.auth.user();
-    if (!me) return false;
+    if (!me || this.locked) return false;
     if (me.role === 'admin') return true;
     if (row.userId && row.userId === me.id) return true;
     return me.role === 'member' && !!row.familyId && row.familyId === me.familyId;
@@ -377,6 +381,7 @@ export class AttendeeList implements OnInit {
 
   // The action column shows when there's anything to do in it.
   get showActions(): boolean {
+    if (this.locked) return false;
     return this.isAdmin() || this.attendees.some((a) => this.canWithdraw(a));
   }
 

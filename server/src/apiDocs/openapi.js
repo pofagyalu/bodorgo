@@ -86,8 +86,22 @@ function op({
   data,
   response,
   errors = [],
+  // Changes a tour: refused (403) once the tour is closed (Lezárás).
+  // 'report': the beszámoló - only once that is finished too.
+  closedTour = false,
 }) {
   const r = ROLE[role];
+  if (closedTour) {
+    errors = [...errors, 403];
+    description = [
+      description,
+      closedTour === 'report'
+        ? 'On a closed tour (Lezárás - POST /tours/{id}/close) this still works until the beszámoló is finished; 403 after that.'
+        : 'Refused (403) on a closed tour (Lezárás - see POST /tours/{id}/close).',
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
   const responses = {};
   if (response) responses[ok] = response;
   else if (ok === 204) responses[204] = { description: 'Kész - nincs tartalom.' };
@@ -168,6 +182,10 @@ const schemas = {
     panoramaTitle: str(
       'Optional short name of where the panorama was taken (max 80 characters) - the badge tooltip and the QR card in the beszámoló PDF.',
     ),
+    closed: bool(
+      'Lezárás - the tour is finished for good: every request that would change it (the tour itself, its programme, attendees, payments, documents, letters, rooms, cover, photo restrictions - and its beszámoló once that is finished) answers 403. Set only by POST /tours/{id}/close; cannot be set or cleared through this API.',
+    ),
+    closedAt: date('When it was closed.'),
     distanceFromBudapestKm: num('Driving distance.'),
     drivingDurationFromBudapestMinutes: num('Driving time.'),
     pricingMode: str('How the accommodation is priced.', { enum: ['perHouse', 'perPerson'] }),
@@ -866,6 +884,7 @@ const paths = {
       errors: [404],
     }),
     patch: op({
+      closedTour: true,
       tag: T.tours,
       role: 'admin',
       summary: 'Update a tour',
@@ -877,18 +896,32 @@ const paths = {
       errors: [400, 404],
     }),
     delete: op({
+      closedTour: true,
       tag: T.tours,
       role: 'admin',
       summary: 'Delete a tour',
       params: [tourId],
       ok: 204,
-      errors: [404],
+      errors: [403, 404],
+    }),
+  },
+  '/tours/{id}/close': {
+    post: op({
+      tag: T.tours,
+      role: 'admin',
+      summary: 'Lezárás - close a tour for good',
+      description:
+        "One way only: from then on nothing about the tour can be changed by anyone, admins included - updating or deleting it, its programme (events and opt-ins), sign-ups and withdrawals, attendees' nights and fee exemptions, new payments and taking back cash ones, Extrák documents, letters to the attendees, the accommodation and room assignment, the cover and the photos' restrictions all answer 403. The beszámoló is the exception: it can still be saved and finished (Kész) on a closed tour, and is frozen from then on (no reopening). Reading, downloads and the attendees' own reviews still work. Only once the tour is over (400 before that, and 400 if it is already closed). There is no endpoint that opens it again.",
+      params: [tourId],
+      data: obj({ closed: bool('true'), closedAt: date('When.') }),
+      errors: [400, 404],
     }),
   },
 
   // --- Jelentkezés és résztvevők ---
   '/tours/{tourId}/signup': {
     post: op({
+      closedTour: true,
       tag: T.signup,
       summary: 'Sign up for a tour',
       description:
@@ -902,6 +935,7 @@ const paths = {
   },
   '/tours/{tourId}/reservations/{reservationId}/attendees/{attendeeId}': {
     delete: op({
+      closedTour: true,
       tag: T.signup,
       summary: 'Lemondás - take someone off the tour',
       description:
@@ -922,6 +956,7 @@ const paths = {
   },
   '/tours/{tourId}/reservations/{reservationId}/attendees/{attendeeId}/nights': {
     patch: op({
+      closedTour: true,
       tag: T.signup,
       role: 'admin',
       summary: "Correct an attendee's nights",
@@ -938,6 +973,7 @@ const paths = {
   },
   '/tours/{tourId}/reservations/{reservationId}/attendees/{attendeeId}/fee-exempt': {
     patch: op({
+      closedTour: true,
       tag: T.signup,
       role: 'admin',
       summary: 'Mark an attendee as owing nothing',
@@ -986,6 +1022,7 @@ const paths = {
   // --- Program ---
   '/tours/{tourId}/schedule': {
     post: op({
+      closedTour: true,
       tag: T.schedule,
       role: 'admin',
       summary: 'Add a program item',
@@ -1007,6 +1044,7 @@ const paths = {
   },
   '/tours/{tourId}/schedule/{eventId}': {
     patch: op({
+      closedTour: true,
       tag: T.schedule,
       role: 'admin',
       summary: 'Edit a program item',
@@ -1019,6 +1057,7 @@ const paths = {
   },
   '/tours/{tourId}/schedule/{eventId}/participants': {
     patch: op({
+      closedTour: true,
       tag: T.schedule,
       summary: 'Who joins an optional program item',
       description:
@@ -1033,6 +1072,7 @@ const paths = {
   // --- Szállás és szobabeosztás ---
   '/tours/{id}/accommodation': {
     put: op({
+      closedTour: true,
       tag: T.rooms,
       role: 'admin',
       summary: 'Set the houses and rooms',
@@ -1055,6 +1095,7 @@ const paths = {
   },
   '/tours/{id}/rooms/assignment': {
     put: op({
+      closedTour: true,
       tag: T.rooms,
       role: 'admin',
       summary: 'Put someone in a room (or take them out)',
@@ -1073,6 +1114,7 @@ const paths = {
   },
   '/tours/{id}/rooms/finalized': {
     put: op({
+      closedTour: true,
       tag: T.rooms,
       role: 'admin',
       summary: 'Finalize (or reopen) the room board',
@@ -1093,6 +1135,7 @@ const paths = {
       errors: [404],
     }),
     post: op({
+      closedTour: true,
       tag: T.tourFiles,
       role: 'admin',
       summary: 'Upload the cover',
@@ -1141,6 +1184,7 @@ const paths = {
       errors: [404],
     }),
     put: op({
+      closedTour: 'report',
       tag: T.tourFiles,
       role: 'admin',
       summary: 'Save the beszámoló',
@@ -1158,6 +1202,7 @@ const paths = {
   },
   '/tours/{id}/report/finish': {
     post: op({
+      closedTour: 'report',
       tag: T.tourFiles,
       role: 'admin',
       summary: 'Kész - publish the beszámoló',
@@ -1170,6 +1215,7 @@ const paths = {
   },
   '/tours/{id}/report/reopen': {
     post: op({
+      closedTour: true,
       tag: T.tourFiles,
       role: 'admin',
       summary: 'Visszanyitás - edit it again',
@@ -1244,6 +1290,7 @@ const paths = {
       errors: [400, 404],
     }),
     patch: op({
+      closedTour: true,
       tag: T.gallery,
       role: 'admin',
       summary: 'Restrict a photo to the attendees',
@@ -1312,6 +1359,7 @@ const paths = {
   },
   '/tours/{id}/mailings/draft': {
     put: op({
+      closedTour: true,
       tag: T.mailing,
       role: 'admin',
       summary: 'Save the draft',
@@ -1327,6 +1375,7 @@ const paths = {
   },
   '/tours/{id}/mailings/test': {
     post: op({
+      closedTour: true,
       tag: T.mailing,
       role: 'admin',
       summary: 'Send the draft to myself',
@@ -1337,6 +1386,7 @@ const paths = {
   },
   '/tours/{id}/mailings/send': {
     post: op({
+      closedTour: true,
       tag: T.mailing,
       role: 'admin',
       summary: 'Send the letter to all attendees',
@@ -1353,7 +1403,7 @@ const paths = {
       tag: T.chat,
       summary: 'The list of chat rooms, with last message and unread count',
       description:
-        "The general room and every tour's, for the list of Kotyogós. Each has `lastPost` (author - username, or name without one -, the text shortened to 80 characters, whether it is a photo or a poll, when; null if empty), `unread` (messages by others since the asker last had it open) and `memberCount` (a tour's attendees; everyone active for the general room). A tour's entry also has `past` (the tour ended more than 14 days ago - its chat is listed among the archives) and `closed` (it is read-only: new messages, photos and polls are refused; `unread` is 0). Every past chat is closed, except the test tour's (number 11), which stays writable. `chatRoomId` is null for a tour whose room nobody has opened yet.",
+        "The general room and every tour's, for the list of Kotyogós. Each has `lastPost` (author - username, or name without one -, the text shortened to 80 characters, whether it is a photo or a poll, when; null if empty), `unread` (messages by others since the asker last had it open) and `memberCount` (a tour's attendees; everyone active for the general room). A tour's entry also has `past` (the tour is over - from midnight after its last day; its chat is listed among the archives) and `closed` (it is read-only: new messages, photos and polls are refused; `unread` is 0). Every past chat is closed, except the test tour's (number 11), which stays writable. `chatRoomId` is null for a tour whose room nobody has opened yet.",
       data: obj({
         general: obj({
           chatRoomId: id(),
@@ -1612,7 +1662,7 @@ const paths = {
       tag: T.polls,
       summary: "Start a poll in a tour's Kotyogó",
       description:
-        "Anyone signed up for the tour (or an admin). Shows on Voks too, and as a live card in the chat; the attendees get a notification. Refused (403) once the tour's chat has closed - 14 days after its last day (see GET /chat-rooms/overview).",
+        "Anyone signed up for the tour (or an admin). Shows on Voks too, and as a live card in the chat; the attendees get a notification. Refused (403) once the tour's chat has closed - at midnight after its last day (see GET /chat-rooms/overview).",
       params: [tourIdT],
       body: obj(
         {
@@ -1636,6 +1686,7 @@ const paths = {
   // --- Fizetés ---
   '/payments/start': {
     post: op({
+      closedTour: true,
       tag: T.payments,
       summary: 'Pay tour advances',
       description:
@@ -1691,6 +1742,7 @@ const paths = {
   },
   '/payments/{id}': {
     delete: op({
+      closedTour: true,
       tag: T.payments,
       role: 'admin',
       summary: 'Undo a cash payment',
@@ -1724,6 +1776,7 @@ const paths = {
   },
   '/payments/cash': {
     post: op({
+      closedTour: true,
       tag: T.payments,
       role: 'admin',
       summary: 'Record a cash tour advance',
@@ -2086,6 +2139,7 @@ const paths = {
       errors: [404],
     }),
     post: op({
+      closedTour: true,
       tag: T.documents,
       role: 'admin',
       summary: 'Upload a document',
@@ -2108,6 +2162,7 @@ const paths = {
   },
   '/documents/{id}': {
     delete: op({
+      closedTour: true,
       tag: T.documents,
       role: 'admin',
       summary: 'Delete a document',

@@ -7,13 +7,13 @@
     (cancelled)="cancelEdit()"
   />
 } @else {
-  <div class="event-main" [class.event-main--admin]="auth.user()?.role === 'admin'">
+  <div class="event-main" [class.event-main--admin]="auth.user()?.role === 'admin' && !locked">
     <span class="event-time">{{ event.time }}</span>
     <span class="event-desc">{{ event.description }}</span>
     @if (event.isOptional) {
       <span class="event-extra-badge">+{{ event.extraCost }} Ft</span>
     }
-    @if (auth.user()?.role === 'admin') {
+    @if (auth.user()?.role === 'admin' && !locked) {
       <button
         type="button"
         class="icon-btn icon-btn--edit"

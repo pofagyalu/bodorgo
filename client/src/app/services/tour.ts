@@ -199,6 +199,11 @@ export interface Tour {
   description: string;
   // Who to call on arrival (name, phone) - optional free text.
   contact?: string;
+  // Lezárás: the tour is finished for good - nothing about it can be
+  // changed any more, by anyone (the server refuses it; the pages hide
+  // their edit controls). Set only by closeTour, never undone.
+  closed?: boolean;
+  closedAt?: string;
   // Link to the place's 360° panorama on another site - optional, and a
   // short name of where it was taken.
   panoramaUrl?: string;
@@ -753,6 +758,14 @@ export class TourService {
 
   getTour(id: string): Observable<TourResponse> {
     return this.http.get<TourResponse>(`${this.apiUrl}/${id}`);
+  }
+
+  // Admin: Lezárás - one way only (see Tour.closed).
+  closeTour(id: string): Observable<{ data: { closed: boolean; closedAt: string } }> {
+    return this.http.post<{ data: { closed: boolean; closedAt: string } }>(
+      `${this.apiUrl}/${id}/close`,
+      {},
+    );
   }
 
   createTour(payload: TourPayload): Observable<TourResponse> {

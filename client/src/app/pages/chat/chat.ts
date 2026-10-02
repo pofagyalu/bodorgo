@@ -63,22 +63,18 @@ function storeRoomsWidth(width: number) {
   }
 }
 
-function finishDate(t: Tour): Date {
-  const finish = new Date(t.startDate);
-  finish.setDate(finish.getDate() + Math.max(t.duration - 1, 0));
-  return finish;
-}
-
 // The one past tour whose chat stays writable: the one the chat is tested
 // in. It's still listed among the archives.
 const ALWAYS_WRITABLE_TOUR_ORDER = 11;
 
-// A tour's chat is open until 14 days after its last day; from then on
-// it's an archive, read-only (the server's rule - chat/chatRooms.js).
+// A tour's chat is open until the tour is over - midnight after its last
+// day; from then on it's an archive, read-only (the server's rule -
+// chat/chatRooms.js).
 function isChatOpen(t: Tour): boolean {
-  const closesAt = finishDate(t);
-  closesAt.setDate(closesAt.getDate() + 14);
-  return new Date() <= closesAt;
+  const closesAt = new Date(t.startDate);
+  closesAt.setHours(0, 0, 0, 0);
+  closesAt.setDate(closesAt.getDate() + t.duration);
+  return new Date() < closesAt;
 }
 
 // Laid out like the Klub area: a dark tour list on the left (full names

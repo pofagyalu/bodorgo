@@ -173,7 +173,7 @@ const OVERVIEW_SNIPPET_LENGTH = 80;
 // screen): the general room and every tour's, each with its last message
 // (who and what, shortened), how many messages the asker hasn't seen yet,
 // and how many people it has - a tour's attendees, or everyone active for
-// the general one. `past`: the tour is over (by more than two weeks) -
+// the general one. `past`: the tour is over (midnight after its last day) -
 // its chat belongs with the archives; `closed`: it's read-only too (it has
 // no unread count) - every past one but the test tour's. A tour nobody has opened yet has no room: chatRoomId null.
 export const getChatOverview = async (req, res) => {

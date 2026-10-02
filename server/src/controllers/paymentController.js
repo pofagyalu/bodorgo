@@ -21,6 +21,7 @@ import { generateReceiptPdf, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import { notifyAdminsIfAllMembersPaid } from '../utils/membershipReminders.js';
 import AppError from '../utils/appError.js';
+import { assertTourOpen, assertTourOpenById } from '../utils/tourClosed.js';
 import config from '../config.js';
 import logger from '../logger.js';
 import {
@@ -54,6 +55,8 @@ async function loadAttendeePayments(tourId) {
 // Mongoose data, not the client's AttendeePayment shape.
 export async function resolvePayableAttendees(tourId, attendeeIds, user) {
   const { tour, attendeePayments } = await loadAttendeePayments(tourId);
+  // No new payment for a closed tour (one already under way still finishes).
+  assertTourOpen(tour);
 
   const requested = new Set(attendeeIds.map(String));
   const myFamilyId = user.familyId ? String(user.familyId) : null;
@@ -79,6 +82,7 @@ export async function resolvePayableAttendees(tourId, attendeeIds, user) {
 // cash for any attendee on the tour, not just their own relatives.
 export async function resolvePayableAttendeesForAdmin(tourId, attendeeIds) {
   const { tour, attendeePayments } = await loadAttendeePayments(tourId);
+  assertTourOpen(tour);
 
   const requested = new Set(attendeeIds.map(String));
   const payable = attendeePayments.filter(
@@ -444,6 +448,8 @@ export const deleteCashPayment = async (req, res) => {
     return res.status(204).json({ status: 'success', data: null });
   }
 
+  // A closed tour's cash payments stay as they are.
+  await assertTourOpenById(payment.tour);
   for (const a of payment.attendees) {
     await Reservation.updateOne(
       { _id: a.reservationId, 'attendees._id': a.attendeeId },

@@ -30,8 +30,50 @@ export class TourExtras {
   // The tour's album - the beszámoló can take one of its photos.
   images = input<TourImage[]>([]);
   documentsChanged = output<ExtraDocument[]>();
+  // Lezárás happened here - with when (the tour page owns the tour).
+  tourClosed = output<string>();
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  // An admin - and the tour not closed yet (Lezárás, see Tour.closed).
+  canEdit = computed(() => this.isAdmin() && !this.tour().closed);
+
+  // --- Lezárás ---
+
+  // Offered once the tour is over (from midnight after its last day - the
+  // server's own rule, reviewController.js's tourHasEnded).
+  canClose = computed(() => {
+    const t = this.tour();
+    const end = new Date(t.startDate);
+    end.setHours(0, 0, 0, 0);
+    end.setDate(end.getDate() + t.duration);
+    return this.canEdit() && new Date() >= end;
+  });
+  closing = signal(false);
+
+  // One way only - so it asks, and says so.
+  async closeTour() {
+    if (this.closing()) return;
+    const ok = await this.confirm.ask({
+      title: 'Tábor lezárása',
+      message: `Biztosan lezárod a(z) „${this.tour().title}” tábort?`,
+      detail:
+        'A lezárás végleges, nem vonható vissza. Utána a tábor adatai, programja, résztvevői, befizetései, dokumentumai, levelei és beszámolója már nem módosíthatók – admin által sem.',
+      confirmText: 'Lezárás',
+    });
+    if (!ok) return;
+    this.closing.set(true);
+    this.tourService.closeTour(this.tour()._id).subscribe({
+      next: (res) => {
+        this.closing.set(false);
+        this.tourClosed.emit(res.data.closedAt);
+        this.notifications.addSuccess('A tábor le van zárva');
+      },
+      error: (err) => {
+        this.closing.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a lezárás során.');
+      },
+    });
+  }
 
   constructor() {
     // Once the tour and the login are both known - the beszámoló is only
@@ -77,14 +119,23 @@ export class TourExtras {
   // Admin-only: the writing dialog.
   showReportPanel = signal(false);
 
+  // Admin: whether the beszámoló is Kész - a closed tour's can still be
+  // written until it is (see canWriteReport).
+  private reportFinal = signal(false);
+  canWriteReport = computed(
+    () => this.canEdit() || (this.isAdmin() && !!this.tour().closed && !this.reportFinal()),
+  );
+
   loadReportInfo() {
     this.tourService.getReport(this.tour()._id).subscribe({
-      next: (res) =>
+      next: (res) => {
         this.reportDownload.set(
           res.data.canDownload && res.data.publishedAt
             ? { publishedAt: res.data.publishedAt }
             : null,
-        ),
+        );
+        this.reportFinal.set(res.data.report?.status === 'final');
+      },
       error: () => this.reportDownload.set(null),
     });
   }

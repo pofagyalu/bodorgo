@@ -45,7 +45,8 @@ export class TourSchedule {
   eventUpdated = output<ScheduleEntry>();
   eventAdded = output<ScheduleEntry>();
 
-  isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  // An admin - and the tour not closed yet (Lezárás, see Tour.closed).
+  canEdit = computed(() => this.auth.user()?.role === 'admin' && !this.tour().closed);
 
   // Which day (its 1-indexed number, or null for none) currently has the
   // "add new event" form open - only one at a time, same pattern as

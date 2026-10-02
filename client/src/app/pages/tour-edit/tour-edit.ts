@@ -171,6 +171,12 @@ export class TourEdit implements OnDestroy {
     this.tourService.getTour(id).subscribe({
       next: (res) => {
         const t = res.data.tour;
+        // A closed tour (Lezárás) isn't edited any more: back to its page.
+        if (t.closed) {
+          this.notifications.addError('Ez a tábor le van zárva, már nem módosítható.');
+          void this.router.navigate(['/taborok', t.slug || t._id]);
+          return;
+        }
         this.accommodationHouses.set(t.accommodation?.houses ?? []);
         this.form = {
           order: t.order,

@@ -29,7 +29,7 @@
       <div class="hero-info">
         <h1 class="hero-title" [class.hero-title--admin]="auth.user()?.role === 'admin'">
           <span class="hero-title-span">{{ t.title }}</span>
-          @if (auth.user()?.role === 'admin') {
+          @if (canEdit()) {
             <a
               [routerLink]="['/taborok', t.slug, 'szerkesztes']"
               class="icon-btn icon-btn--edit-tour"
@@ -37,6 +37,17 @@
             >
               <mat-icon>edit</mat-icon>
             </a>
+          } @else if (t.closed && auth.user()?.role === 'admin') {
+            <!-- Lezárva: where the edit button was, a padlock - nothing
+                 about this tour can be changed any more. -->
+            <span
+              class="icon-btn icon-btn--edit-tour icon-btn--closed"
+              [title]="closedLabel()"
+              role="img"
+              [attr.aria-label]="closedLabel()"
+            >
+              <mat-icon>lock</mat-icon>
+            </span>
           }
         </h1>
 
@@ -177,6 +188,7 @@
       [tour]="t"
       [images]="tourImages()"
       (documentsChanged)="onDocumentsChanged($event)"
+      (tourClosed)="onTourClosed($event)"
     />
 
     <!-- Post-tour recap video(s) - found on the NAS by the tour number (see
@@ -258,6 +270,7 @@
             [currency]="t.accommodationCurrency ?? 'HUF'"
             [userPhotos]="userPhotos()"
             [paymentMethods]="t.onSitePayment"
+            [locked]="!!t.closed"
             (nightsUpdated)="onAttendeeNightsUpdated()"
           />
         } @else {
@@ -266,16 +279,19 @@
       }
     </section>
 
-    <!-- Sign up: the bar and the "who" picker (tour-signup). -->
-    <app-tour-signup
-      [tourId]="t._id"
-      [options]="pickerOptions()"
-      [alreadySignedUp]="alreadySignedUp()"
-      [isFull]="isFull()"
-      [signUpOpen]="signUpOpen()"
-      [showAdvancePayment]="!!paymentTotals() && hasUnpaidAdvanceInMyGroup()"
-      (signedUp)="onSignedUp()"
-    />
+    <!-- Sign up: the bar and the "who" picker (tour-signup) - not on a
+         closed tour. -->
+    @if (!t.closed) {
+      <app-tour-signup
+        [tourId]="t._id"
+        [options]="pickerOptions()"
+        [alreadySignedUp]="alreadySignedUp()"
+        [isFull]="isFull()"
+        [signUpOpen]="signUpOpen()"
+        [showAdvancePayment]="!!paymentTotals() && hasUnpaidAdvanceInMyGroup()"
+        (signedUp)="onSignedUp()"
+      />
+    }
 
     <!-- Map popup - an embedded iframe instead of a new tab, so clicking the
        location never navigates the user away from this page. -->

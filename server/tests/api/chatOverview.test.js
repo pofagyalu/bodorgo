@@ -19,13 +19,23 @@ import { markChatRead } from '../../src/chat/chatNotifications.js';
 const day = 24 * 3600 * 1000;
 const daysAgo = (n) => new Date(Date.now() - n * day);
 
-describe("a tour's chat closes 14 days after its last day", () => {
-  it('open before and during the tour and for 14 days after; closed from then on', () => {
+describe("a tour's chat closes at midnight after its last day", () => {
+  it('open before and during the tour, to the end of its last day; closed from then on', () => {
     const tour = (startDate) => ({ startDate, duration: 3 }); // last day: start + 2
     expect(tourChatClosed(tour(new Date(Date.now() + 30 * day)))).toBe(false);
     expect(tourChatClosed(tour(daysAgo(1)))).toBe(false);
-    expect(tourChatClosed(tour(daysAgo(2 + 13)))).toBe(false);
-    expect(tourChatClosed(tour(daysAgo(2 + 15)))).toBe(true);
+    // Its last day is today: open whatever the time is.
+    expect(tourChatClosed(tour(daysAgo(2)))).toBe(false);
+    // Its last day was yesterday: closed since midnight.
+    expect(tourChatClosed(tour(daysAgo(3)))).toBe(true);
+    // The moment itself, with a start in the afternoon.
+    const start = new Date(2026, 9, 22, 16, 0); // Thu 22 Oct 16:00, 3 days: 22-24
+    expect(tourChatClosed({ startDate: start, duration: 3 }, new Date(2026, 9, 24, 23, 59))).toBe(
+      false,
+    );
+    expect(tourChatClosed({ startDate: start, duration: 3 }, new Date(2026, 9, 25, 0, 0))).toBe(
+      true,
+    );
   });
 
   it('the test tour (11) is past like any other, but stays writable', () => {

@@ -3,7 +3,7 @@
 <section class="extra-info-section">
   <div class="section-header-row">
     <h2 class="section-heading">Extrák</h2>
-    @if (isAdmin() && (tour().extraDocuments ?? []).length < 5) {
+    @if (canEdit() && (tour().extraDocuments ?? []).length < 5) {
       <button
         type="button"
         class="icon-btn icon-btn--add icon-btn--upload"
@@ -86,19 +86,23 @@
         }
       </div>
     </div>
-    @if (isAdmin()) {
+    <!-- A closed tour keeps only "Beszámoló írása" here, and only until
+         the beszámoló is Kész. -->
+    @if (canWriteReport()) {
       <div class="extra-group">
         <span class="extra-group-label">Szervezőknek</span>
         <div class="extra-group-cards">
-          <button
-            type="button"
-            class="extra-doc-card extra-doc-card--admin"
-            title="Levél írása a tábor minden résztvevőjének - a Programfüzet is csatolható"
-            (click)="showMailPanel.set(true)"
-          >
-            <mat-icon>forward_to_inbox</mat-icon>
-            <span>Levél a résztvevőknek</span>
-          </button>
+          @if (canEdit()) {
+            <button
+              type="button"
+              class="extra-doc-card extra-doc-card--admin"
+              title="Levél írása a tábor minden résztvevőjének - a Programfüzet is csatolható"
+              (click)="showMailPanel.set(true)"
+            >
+              <mat-icon>forward_to_inbox</mat-icon>
+              <span>Levél a résztvevőknek</span>
+            </button>
+          }
           <button
             type="button"
             class="extra-doc-card extra-doc-card--admin"
@@ -108,6 +112,20 @@
             <mat-icon>edit_note</mat-icon>
             <span>Beszámoló írása</span>
           </button>
+          <!-- Lezárás: once the tour is over and everything is in - closes
+               it for good (no more changes, by anyone). -->
+          @if (canClose()) {
+            <button
+              type="button"
+              class="extra-doc-card extra-doc-card--close"
+              title="A tábor végleges lezárása - utána már semmi nem módosítható rajta"
+              [disabled]="closing()"
+              (click)="closeTour()"
+            >
+              <mat-icon>{{ closing() ? 'hourglass_top' : 'lock' }}</mat-icon>
+              <span>Tábor lezárása</span>
+            </button>
+          }
         </div>
       </div>
     }
@@ -126,7 +144,7 @@
                 doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image'
               }}</mat-icon>
               <span>{{ doc.title }}</span>
-              @if (isAdmin()) {
+              @if (canEdit()) {
                 <button
                   type="button"
                   class="extra-doc-delete"
