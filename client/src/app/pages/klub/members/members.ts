@@ -12,6 +12,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { InvitationsPanel } from './invitations-panel/invitations-panel';
 import { ExtraColumn, PeopleTable } from './people-table/people-table';
+import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
 import { SettingsService, MembershipFee, feeForYear } from '../../../services/settings';
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
@@ -46,7 +47,7 @@ const TAB_BY_KEY: Record<string, MembersTab> = Object.fromEntries(
 
 @Component({
   selector: 'app-members',
-  imports: [DatePipe, RouterLink, MatIconModule, PeopleTable, InvitationsPanel],
+  imports: [DatePipe, RouterLink, MatIconModule, PeopleTable, InvitationsPanel, PeriodPicker],
   templateUrl: './members.html',
   styleUrl: './members.scss',
 })
@@ -336,6 +337,15 @@ export class Members implements OnInit {
       },
     });
   }
+
+  // The tabs as a phone's picker beside the title (see members.html) -
+  // Meghívók only for an admin, like its tab.
+  tabOptions = computed<PeriodOption[]>(() => [
+    { value: 'club', label: 'Klubtagok', count: this.clubMembers().length },
+    { value: 'casual', label: 'A többiek', count: this.casualUsers().length },
+    { value: 'everyone', label: 'Mindenki', count: this.users().length },
+    ...(this.isAdmin() ? [{ value: 'invites', label: 'Meghívók' }] : []),
+  ]);
 
   selectTab(tab: MembersTab) {
     this.activeTab.set(tab);

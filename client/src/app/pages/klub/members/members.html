@@ -3,8 +3,18 @@
     <div>
       <div class="kicker">Közösség</div>
       <h1>Felhasználók</h1>
-      <p>A klubtagok, a többiek, és mindenki egy listában.</p>
+      <p class="heading-text">A klubtagok, a többiek, és mindenki egy listában.</p>
     </div>
+    <!-- A phone's tabs: one pill beside the title (the tab buttons below
+         are a wide screen's). -->
+    <app-period-picker
+      class="tab-picker"
+      label="Felhasználók típusa"
+      [list]="true"
+      [options]="tabOptions()"
+      [value]="activeTab()"
+      (valueChange)="selectTab($any($event))"
+    />
   </div>
 
   <div class="people-tabs" role="tablist" aria-label="Felhasználók típusa">
