@@ -212,3 +212,139 @@ button {
     gap: 12px;
   }
 }
+
+// --- Admin: a video's title ---
+
+// The card and, over its picture's top right corner, the pencil.
+.video-item {
+  position: relative;
+  min-width: 0;
+}
+
+.title-edit-btn {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #445a67e6;
+  color: #fff;
+  opacity: 0.75;
+  transition:
+    opacity 0.15s,
+    background-color 0.15s;
+
+  mat-icon {
+    font-size: 1.15rem;
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+    background: #37474f;
+  }
+}
+
+.title-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.title-modal {
+  width: min(30rem, 100%);
+  padding: 1.4rem;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.3);
+
+  h2 {
+    margin: 0 0 0.9rem;
+    font-size: 1.15rem;
+    color: #193346;
+  }
+
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid #dce6e3;
+    border-radius: 0.7rem;
+    font: inherit;
+    font-size: 1rem;
+    color: #23354a;
+
+    &:focus {
+      outline: 2px solid #1a796c;
+      outline-offset: 1px;
+    }
+  }
+}
+
+.title-modal-note {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: #56666e;
+}
+
+.link-btn {
+  margin-left: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+  color: #1a796c;
+  text-decoration: underline;
+}
+
+.title-modal-error {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: #b00020;
+}
+
+.title-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+
+.outline-btn,
+.primary-btn {
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border-radius: 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+.outline-btn {
+  border: 1px solid #dce6e3;
+  background: #fff;
+  color: #254257;
+}
+
+.primary-btn {
+  border: 1px solid #1a796c;
+  background: #1a796c;
+  color: #fff;
+}

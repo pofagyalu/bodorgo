@@ -3,6 +3,7 @@ import path from 'path';
 import AppError from '../utils/appError.js';
 import { mp4DurationSeconds } from '../utils/mp4Duration.js';
 import config from '../config.js';
+import MediaVideoTitle from '../models/mediaVideoTitleModel.js';
 import {
   VIDEO_EXTENSIONS,
   findSubtitlePath,
@@ -11,10 +12,12 @@ import {
 } from '../utils/videoFiles.js';
 
 // The club's own videos that don't belong to any one tour - Média → Videók.
-// Nothing is stored in the database: each category is a Jellyfin-organized
-// folder under MEDIA_ROOT (next to the tour videos' a-bodorgo-klan),
-// and whatever is in it is what the page shows, covers included - add or
-// replace a file there and the page follows.
+// The videos aren't stored in the database: each category is a
+// Jellyfin-organized folder under MEDIA_ROOT (next to the tour videos'
+// a-bodorgo-klan), and whatever is in it is what the page shows, covers
+// included - add or replace a file there and the page follows. The one
+// thing that is stored: an admin's own title for a video
+// (mediaVideoTitleModel.js), shown instead of the one from its file name.
 //
 // Folder -> the name shown on the page, in display order (also the order
 // of the Média sidebar's sub-menu). The folder name is only used to find
@@ -140,6 +143,10 @@ function sendCover(res, filePath) {
 // GET /media/videos - every category with its videos, newest first. Empty
 // categories are left out.
 export const listMediaVideos = async (req, res) => {
+  // The admins' own titles, by "category/path".
+  const ownTitles = new Map(
+    (await MediaVideoTitle.find().lean()).map((t) => [`${t.category}/${t.path}`, t.title]),
+  );
   const categories = MEDIA_VIDEO_CATEGORIES.map((category) => {
     const root = categoryRoot(category);
     const videos = findVideoFiles(root)
@@ -147,7 +154,9 @@ export const listMediaVideos = async (req, res) => {
         const parsed = parseVideoName(relPath);
         return {
           id: encodeId(relPath),
-          title: parsed.title,
+          title: ownTitles.get(`${category.key}/${relPath}`) ?? parsed.title,
+          // What the file name says - what an emptied title goes back to.
+          discoveredTitle: parsed.title,
           year: parsed.year,
           season: parsed.season,
           episode: parsed.episode,
@@ -193,6 +202,34 @@ function videoPath(req) {
   if (!fs.existsSync(fullPath)) throw new AppError('Nincs ilyen videó.', 404);
   return { root, relPath, fullPath };
 }
+
+// PATCH /media/videos/:category/:id - admin: the video's own title, shown
+// instead of the one from its file name. An empty title (or the file
+// name's own) takes the correction away.
+export const updateMediaVideoTitle = async (req, res) => {
+  const { relPath } = videoPath(req);
+  const category = req.params.category;
+  const discoveredTitle = parseVideoName(relPath).title;
+  if (req.body?.title != null && typeof req.body.title !== 'string') {
+    throw new AppError('A cím szöveg legyen.', 400);
+  }
+  const title = (req.body?.title ?? '').trim();
+  if (title.length > 200) throw new AppError('A cím legfeljebb 200 karakter lehet.', 400);
+
+  if (!title || title === discoveredTitle) {
+    await MediaVideoTitle.deleteOne({ category, path: relPath });
+  } else {
+    await MediaVideoTitle.findOneAndUpdate(
+      { category, path: relPath },
+      { title },
+      { upsert: true, runValidators: true },
+    );
+  }
+  res.status(200).json({
+    status: 'success',
+    data: { video: { id: req.params.id, title: title || discoveredTitle, discoveredTitle } },
+  });
+};
 
 // GET /media/videos/:category/:id/video - res.sendFile handles Range
 // requests itself, so seeking just works (same as the tour videos).
