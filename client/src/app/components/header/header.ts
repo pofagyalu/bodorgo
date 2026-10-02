@@ -10,6 +10,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { MusicPlayer } from '../../shared/music-player/music-player';
 import { filter } from 'rxjs';
 import { PollService } from '../../services/poll';
@@ -33,12 +35,13 @@ const AVATAR_COLOR_VARS = [
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, RouterLinkActive, MusicPlayer],
+  imports: [RouterLink, RouterLinkActive, MatIconModule, MusicPlayer],
   templateUrl: './header.html',
   styleUrl: './header.scss',
 })
 export class Header implements OnDestroy {
   auth = inject(AuthService);
+  private confirm = inject(ConfirmService);
 
   isMobileMenuOpen = false;
 
@@ -158,8 +161,15 @@ export class Header implements OnDestroy {
     this.auth.login();
   }
 
-  logout() {
-    this.auth.logout();
+  // Asks first - the desktop's power icon and the phone menu's
+  // Kijelentkezés are both one easy tap.
+  async logout() {
+    const ok = await this.confirm.ask({
+      message: 'Máris itt hagysz minket?',
+      detail: 'A többiek nélküled bódorognak tovább…',
+      confirmText: 'Igen',
+    });
+    if (ok) this.auth.logout();
   }
 
   closeMobileMenu() {

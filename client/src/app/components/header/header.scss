@@ -374,14 +374,40 @@
   background-color: #0062d1;
 }
 
-// Kijelentkezés keeps .login-btn's white text but gets the logo's red
-// (transparent_color_logo.svg) as its background instead of the default blue.
-.login-btn.logout {
+// Kijelentkezés: a white power icon on a disc of the logo's red
+// (transparent_color_logo.svg), a little bigger than the avatar beside it.
+.logout-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
   background-color: #f40e0d;
-}
+  color: #fff;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    transform 0.15s;
 
-.login-btn.logout:hover {
-  background-color: #c40b0a;
+  mat-icon {
+    font-size: 1.7rem;
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+
+  &:hover {
+    background-color: #c40b0a;
+    transform: scale(1.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #f40e0d;
+    outline-offset: 2px;
+  }
 }
 
 // Initials-in-a-circle, colored deterministically per person (see
