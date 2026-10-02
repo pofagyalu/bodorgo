@@ -210,17 +210,26 @@
 
     <!-- Row 3: participants -->
     <section class="participants-section">
-      <h2 class="section-heading participants-heading">
+      <!-- The whole heading row opens and closes the list - the arrow alone
+           is a small target. (The arrow button has no click of its own: its
+           click, and Enter on it, arrive here.) -->
+      <h2
+        class="section-heading participants-heading"
+        [title]="showParticipants() ? 'Lista elrejtése' : 'Lista megjelenítése'"
+        (click)="toggleParticipants()"
+      >
         <button
           type="button"
           class="toggle-btn"
           [attr.aria-expanded]="showParticipants()"
           aria-label="Résztvevők listájának megjelenítése/elrejtése"
-          (click)="toggleParticipants()"
         >
           <mat-icon>{{ showParticipants() ? 'expand_less' : 'expand_more' }}</mat-icon>
         </button>
-        Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }})
+        <!-- Always one line (see .participants-title). -->
+        <span class="participants-title"
+          >Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }})</span
+        >
         @if (isFull()) {
           <span class="full-badge">Megtelt</span>
         }
@@ -229,10 +238,11 @@
             <a
               [href]="attendeesExcelUrl(t._id)"
               class="excel-export-btn"
+              (click)="$event.stopPropagation()"
               title="A teljes résztvevő lista Excel fájlba mentése - ki mennyit fizetett, ki mennyivel tartozik még"
             >
               <mat-icon>download</mat-icon>
-              Excel
+              <span class="excel-text">Excel</span>
             </a>
           }
         </span>
