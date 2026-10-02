@@ -28,8 +28,19 @@ const TINTS = [
   '#72b45d',
 ];
 
-// A page's heading: its title, and what it is under it.
-function heading(doc, title, about, margin) {
+// "1. sz. melléklet": how the book numbers its annexes.
+const annexLabel = (number) => `${number}. sz. melléklet`;
+
+// A page's heading: its title, and what it is under it - and which annex
+// it is, in the corner across.
+function heading(doc, number, title, about, margin) {
+  const label = annexLabel(number).toUpperCase();
+  doc.font('Heading').fontSize(8.5).fillColor(RUST);
+  const labelWidth = doc.widthOfString(label, { characterSpacing: 0.8 });
+  doc.text(label, doc.page.width - margin - labelWidth, margin + 7, {
+    lineBreak: false,
+    characterSpacing: 0.8,
+  });
   doc.font('Heading').fontSize(18).fillColor(GREEN).text(title, margin, margin, {
     lineBreak: false,
   });
@@ -90,7 +101,7 @@ function label(doc, lines, x, y, { font, size, color }) {
 // margin: the page's side and top margin; bottom: where its text ends.
 function drawCircleOfFifths(doc, { margin, bottom }) {
   const { width } = doc.page;
-  heading(doc, 'Kvintkör', CIRCLE_ABOUT, margin);
+  heading(doc, 1, 'Kvintkör', CIRCLE_ABOUT, margin);
 
   const notesHeight = 118;
   const top = margin + 52;
@@ -157,7 +168,7 @@ const TABLE_ABOUT = 'Melyik hangnemben milyen akkordok – hallás utáni keres�
 // ones (I, IV, V) in tinted columns.
 function drawChordTable(doc, { margin }) {
   const { width } = doc.page;
-  heading(doc, 'Akkordtáblázat', TABLE_ABOUT, margin);
+  heading(doc, 2, 'Akkordtáblázat', TABLE_ABOUT, margin);
 
   const left = margin;
   const right = width - margin;
@@ -248,6 +259,6 @@ function drawChordTable(doc, { margin }) {
 // and how it is drawn ({ margin, bottom }: the page's margin, and where
 // its text ends).
 export const ANNEXES = [
-  { title: 'Kvintkör', draw: drawCircleOfFifths },
-  { title: 'Akkordtáblázat', draw: drawChordTable },
+  { title: `${annexLabel(1)} – Kvintkör`, draw: drawCircleOfFifths },
+  { title: `${annexLabel(2)} – Akkordtáblázat`, draw: drawChordTable },
 ];

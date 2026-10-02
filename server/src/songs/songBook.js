@@ -72,9 +72,14 @@ export function renderSongBook(
 
     drawCover(doc, { count: songs.length, diagrams, lastAdded });
 
-    // What the contents list: the songs, and the annexes that close the
-    // book (the circle of fifths, the keys' chords).
-    const entries = [...songs, ...ANNEXES.map((annex) => ({ title: annex.title, artist: '' }))];
+    // What the contents list: the songs, and - under their own heading -
+    // the annexes that close the book (the circle of fifths, the keys'
+    // chords).
+    const entries = [
+      ...songs,
+      { heading: 'Mellékletek' },
+      ...ANNEXES.map((annex) => ({ title: annex.title, artist: '', draw: annex.draw })),
+    ];
 
     // The contents come before the songs but need their page numbers:
     // its pages are added empty now, and filled in at the end.
@@ -88,12 +93,14 @@ export function renderSongBook(
     for (let i = 1; i < tocPages; i += 1) doc.addPage();
 
     const pages = entries.map((entry, i) => {
+      // A heading of the contents has no page of its own.
+      if (entry.heading) return null;
       doc.addPage();
       doc.addNamedDestination(`song-${i}`);
       doc.outline.addItem(entry.artist ? `${entry.title} – ${entry.artist}` : entry.title);
       const page = pageIndex(doc);
-      if (i < songs.length) drawSong(doc, entry, diagrams);
-      else ANNEXES[i - songs.length].draw(doc, { margin: MARGIN, bottom: contentBottom(doc) });
+      if (entry.draw) entry.draw(doc, { margin: MARGIN, bottom: contentBottom(doc) });
+      else drawSong(doc, entry, diagrams);
       return page;
     });
 
@@ -356,6 +363,11 @@ function drawContents(doc, songs, pages, { firstTocPage, perFirstPage, perPage }
     }
     const right = contentRight(doc);
     const y = MARGIN + row * TOC_ROW;
+    // "Mellékletek": a heading among the rows, leading nowhere.
+    if (song.heading) {
+      put(doc, song.heading, left, y + 1.5, { font: 'Heading', size: 10.5, color: GREEN });
+      return;
+    }
     const number = String(pages[i] + 1);
     const numberWidth = widthOf(doc, number, 'Body', 10);
     const room = right - left - numberWidth - 14;
