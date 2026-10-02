@@ -5,7 +5,13 @@ import multer from 'multer';
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 import Tour from '../models/tourModel.js';
-import { FutokorCourse, FutokorRun, FutokorScan, FutokorTag } from '../models/futokorModels.js';
+import {
+  FutokorCourse,
+  FutokorPosition,
+  FutokorRun,
+  FutokorScan,
+  FutokorTag,
+} from '../models/futokorModels.js';
 import GpxTrack from '../models/gpxTrackModel.js';
 import AppError from '../utils/appError.js';
 import requireAuth from '../auth/requireAuth.js';
@@ -35,6 +41,9 @@ const MAX_SCANS_AT_ONCE = 40;
 // A phone's clock may be a little ahead of the server's - not more.
 const CLOCK_AHEAD_MS = 5 * 60 * 1000;
 const MAX_GPX_BYTES = 10 * 1024 * 1024;
+// A runner's live position is shown while it's fresh - the phones send one
+// every ten seconds or so.
+const POSITION_FRESH_MS = 60 * 1000;
 
 const rootDir = path.resolve();
 const FONT_REGULAR = path.join(rootDir, 'assets', 'fonts', 'Mulish-Regular.ttf');
@@ -711,6 +720,7 @@ export const deleteCourse = async (req, res) => {
   const course = await courseToManage(req);
   await FutokorRun.deleteMany({ course: course._id });
   await FutokorScan.deleteMany({ course: course._id });
+  await FutokorPosition.deleteMany({ course: course._id });
   await FutokorTag.deleteMany({ course: course._id });
   await removeGpx(course);
   await course.deleteOne();
@@ -881,6 +891,10 @@ export const postScans = async (req, res) => {
     for (const r of await replayRunner(course, req.user._id)) {
       if (!results.has(r.clientScanId)) results.set(r.clientScanId, r.result);
     }
+    // In, or given up: where they were is nobody's business any more.
+    if (!(await isRunningNow(course, req.user._id))) {
+      await FutokorPosition.deleteOne({ course: course._id, user: req.user._id });
+    }
     runs.push({ courseId: course._id, runs: await myRuns(course, req.user) });
   }
 
@@ -897,6 +911,83 @@ export const postScans = async (req, res) => {
     },
   });
 };
+
+// --- Live: where the runners are ---
+
+// Has this runner a run on the course right now?
+async function isRunningNow(course, userId) {
+  const runs = await FutokorRun.find({
+    course: course._id,
+    user: userId,
+    status: 'running',
+  }).lean();
+  const rules = courseRules(course);
+  return runs.some((run) => !isExpired(rules, asRulesRun(run), Date.now()));
+}
+
+// PUT /futokor/courses/:id/position - { lat, lng, accuracyM? }: where I am,
+// for the others to watch ("Élő követés" - the runner's own choice, the
+// phone sends it every ten seconds or so). Only while I have a run on the
+// course (409 otherwise). It takes the place of my last one: no trail is
+// kept.
+export const putPosition = async (req, res) => {
+  const course = validId(req.params.id) ? await FutokorCourse.findById(req.params.id) : null;
+  if (!course) throw new AppError('Nincs ilyen pálya.', 404);
+  const { lat, lng, accuracyM } = req.body ?? {};
+  const within = (v, max) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= max;
+  if (!within(lat, 90) || !within(lng, 180)) throw new AppError('Hibás helyzet.', 400);
+
+  const mine = { course: course._id, user: req.user._id };
+  if (!(await isRunningNow(course, req.user._id))) {
+    await FutokorPosition.deleteOne(mine);
+    throw new AppError('Nincs folyamatban lévő futásod ezen a pályán.', 409);
+  }
+  await FutokorPosition.findOneAndUpdate(
+    mine,
+    {
+      lat,
+      lng,
+      accuracyM: typeof accuracyM === 'number' && accuracyM >= 0 ? Math.round(accuracyM) : null,
+      at: new Date(),
+    },
+    { upsert: true },
+  );
+  res.status(204).json({ status: 'success', data: null });
+};
+
+// DELETE /futokor/courses/:id/position - I'm not to be seen any more (the
+// run is over, or "Élő követés" was switched off).
+export const deletePosition = async (req, res) => {
+  if (validId(req.params.id)) {
+    await FutokorPosition.deleteOne({ course: req.params.id, user: req.user._id });
+  }
+  res.status(204).json({ status: 'success', data: null });
+};
+
+// Where the runners of a course are right now: those with a run on, who
+// let themselves be seen, and whose phone has just said where it is.
+async function livePositions(course, runners) {
+  const running = new Map(
+    runners
+      .filter((r) => r.runs.some((run) => run.status === 'running'))
+      .map((r) => [String(r.userId), r]),
+  );
+  if (!running.size) return [];
+  const fresh = await FutokorPosition.find({
+    course: course._id,
+    at: { $gte: new Date(Date.now() - POSITION_FRESH_MS) },
+  }).lean();
+  return fresh
+    .filter((p) => running.has(String(p.user)))
+    .map((p) => ({
+      userId: p.user,
+      name: running.get(String(p.user)).name,
+      lat: p.lat,
+      lng: p.lng,
+      accuracyM: p.accuracyM,
+      at: p.at,
+    }));
+}
 
 // --- Results ---
 
@@ -984,14 +1075,21 @@ export const getResults = async (req, res) => {
 // GET /futokor/courses/:id/results - one futókör's results: the course
 // (with its checkpoints, to name the splits by) and every runner in the
 // order of their best time, each with all their runs and the runs' splits.
+// And `positions`: where those running right now are - the ones who let
+// themselves be watched.
 export const getCourseResults = async (req, res) => {
   const course = validId(req.params.id)
     ? await withPeople(FutokorCourse.findById(req.params.id))
     : null;
   if (!course) throw new AppError('Nincs ilyen pálya.', 404);
+  const runners = await courseRunners(course);
   res.status(200).json({
     status: 'success',
-    data: { course: courseView(course, req.user), runners: await courseRunners(course) },
+    data: {
+      course: courseView(course, req.user),
+      runners,
+      positions: await livePositions(course, runners),
+    },
   });
 };
 

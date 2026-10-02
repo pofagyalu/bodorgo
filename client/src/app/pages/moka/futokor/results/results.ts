@@ -12,7 +12,7 @@ import {
   racePace,
   raceTime,
 } from '../../../../services/futokor';
-import { CourseMap } from '../course-map/course-map';
+import { CourseMap, MapRunner } from '../course-map/course-map';
 import { RunList } from '../run-list/run-list';
 
 // Someone in the table whose gender or age group isn't known.
@@ -33,7 +33,8 @@ type SortBy = 'total' | number;
 // cards. The table can be narrowed by gender and age group (ten years
 // wide) and put in the order of any of its times - who was the fastest on
 // the 1st stretch? A tap on a runner shows all their runs, a tap on a run
-// its splits.
+// its splits. Whoever is running right now is listed above the table - and
+// those of them who let it be seen are dots on the map, moving as they go.
 @Component({
   selector: 'app-futokor-results',
   imports: [RouterLink, DatePipe, MatIconModule, Avatar, Podium, CourseMap, RunList],
@@ -168,9 +169,20 @@ export class FutokorResults implements OnDestroy {
     if (document.visibilityState === 'visible') this.load();
   }, REFRESH_MS);
 
+  // Where they are, of those who let it be seen.
+  onMap = computed<MapRunner[]>(() =>
+    (this.results()?.positions ?? []).map((p) => ({
+      name: p.name,
+      lat: p.lat,
+      lng: p.lng,
+      me: p.userId === this.myId,
+    })),
+  );
+
   // Who is on the course right now: started, not yet in.
   live = computed(() => {
     const stops = (this.results()?.course.checkpoints.length ?? 1) - 1;
+    const seen = new Set((this.results()?.positions ?? []).map((p) => p.userId));
     return (this.results()?.runners ?? [])
       .flatMap((r) =>
         r.runs
@@ -179,6 +191,7 @@ export class FutokorResults implements OnDestroy {
             userId: r.userId,
             name: r.name,
             photoUpdatedAt: r.photoUpdatedAt,
+            onMap: seen.has(r.userId),
             startedAt: Date.parse(run.startedAt),
             where:
               run.passed >= stops

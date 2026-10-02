@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { FutokorService, ScanAnswer, raceTime } from '../../../services/futokor';
-import { CourseMap } from './course-map/course-map';
+import { CourseMap, MapRunner } from './course-map/course-map';
 import { QrScanner, canScanInApp } from './qr-scanner/qr-scanner';
 import { ScanAnswerView, cardName } from './scan-answer/scan-answer';
 import { ScanFlow } from './scan-flow/scan-flow';
@@ -59,6 +59,20 @@ export class FutokorHome implements OnDestroy {
   hasMap = computed(() => {
     const c = this.course();
     return !!c && ((c.track?.length ?? 0) > 1 || c.checkpoints.some((p) => p.lat != null));
+  });
+
+  // Élő követés, in a line: what the others see of me.
+  liveText = computed(() => {
+    if (!this.futokor.live()) return 'Élő követés kikapcsolva – koppints, ha látszanál a térképen';
+    if (this.futokor.liveProblem()) return 'Élő követés: nincs engedély a helymeghatározáshoz';
+    return this.futokor.myPosition()
+      ? 'Élő követés: a többiek látnak a térképen'
+      : 'Élő követés: keresem, hol vagy…';
+  });
+  // Me on the map, while I'm followed.
+  me = computed<MapRunner[]>(() => {
+    const at = this.futokor.myPosition();
+    return at ? [{ name: 'Te', lat: at.lat, lng: at.lng, me: true }] : [];
   });
 
   constructor() {

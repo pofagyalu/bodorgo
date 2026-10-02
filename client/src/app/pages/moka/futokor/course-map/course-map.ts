@@ -23,10 +23,60 @@ function pin(text: string, start: boolean, lit: boolean): L.DivIcon {
   });
 }
 
+// Someone on the course right now.
+export interface MapRunner {
+  name: string;
+  lat: number;
+  lng: number;
+  me?: boolean;
+}
+
+// A runner's dot: their initial - mine stands out.
+function runnerDot(runner: MapRunner): L.DivIcon {
+  const initial = (runner.name.trim()[0] ?? '?').toUpperCase();
+  return L.divIcon({
+    className: '',
+    html: `<span class="futokor-runner${runner.me ? ' futokor-runner--me' : ''}">${initial}</span>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+}
+
+// A phone among trees is off by a few metres: a runner within this much of
+// the loop is shown on it.
+const SNAP_M = 30;
+
+// The point of the track nearest to a place - the place itself if the
+// track is further than SNAP_M (or there's none).
+function onTrack(track: L.LatLngTuple[], lat: number, lng: number): L.LatLngTuple {
+  // Metres on a flat sheet around the place: fine at this size.
+  const kx = 111320 * Math.cos((lat * Math.PI) / 180);
+  const ky = 110540;
+  let best: L.LatLngTuple = [lat, lng];
+  let bestD = SNAP_M;
+  for (let i = 1; i < track.length; i += 1) {
+    const [ax, ay] = [(track[i - 1][1] - lng) * kx, (track[i - 1][0] - lat) * ky];
+    const [bx, by] = [(track[i][1] - lng) * kx, (track[i][0] - lat) * ky];
+    const [dx, dy] = [bx - ax, by - ay];
+    const len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    const [px, py] = [ax + t * dx, ay + t * dy];
+    const d = Math.hypot(px, py);
+    if (d < bestD) {
+      bestD = d;
+      best = [lat + py / ky, lng + px / kx];
+    }
+  }
+  return best;
+}
+
 // A course on the map: the loop (from its GPX track) and its cards - the
 // START/FINISH and the numbered checkpoints, each where it hangs. Without
 // a connection the map's own pictures don't load: the loop and the points
 // are drawn all the same, on a plain background.
+//
+// `runners`: who is on the course right now and lets it be seen - a dot
+// each, with their name.
 //
 // When `editable` (the Pályaszerkesztő), the points can be put in place: a
 // tap on the map says where (`picked`), and a point can be dragged
@@ -41,12 +91,14 @@ export class CourseMap implements OnDestroy {
   editable = input(false);
   // The order of the point being placed - none: null.
   lit = input<number | null>(null);
+  runners = input<MapRunner[]>([]);
   picked = output<{ lat: number; lng: number }>();
   moved = output<{ order: number; lat: number; lng: number }>();
 
   private container = viewChild.required<ElementRef<HTMLDivElement>>('map');
   private map: L.Map | null = null;
   private drawn: L.FeatureGroup | null = null;
+  private runnerDots: L.LayerGroup | null = null;
   // What the map was last fitted to: it only moves when the loop changes,
   // not every time a point does.
   private fittedTo = '';
@@ -55,6 +107,29 @@ export class CourseMap implements OnDestroy {
     // (After the render: the container must be on the page before Leaflet
     // touches it - see components/tours-map.)
     afterRenderEffect(() => this.draw(this.course(), this.editable(), this.lit()));
+    // (On their own layer: they move every few seconds, the rest stays.)
+    afterRenderEffect(() => this.drawRunners(this.course(), this.runners()));
+  }
+
+  private drawRunners(course: FutokorCourse, runners: MapRunner[]) {
+    this.runnerDots?.remove();
+    this.runnerDots = null;
+    if (!this.map || !runners.length) return;
+    const track = (course.track ?? []) as L.LatLngTuple[];
+    this.runnerDots = L.layerGroup(
+      runners.map((r) =>
+        L.marker(onTrack(track, r.lat, r.lng), {
+          icon: runnerDot(r),
+          zIndexOffset: r.me ? 3000 : 2000,
+          interactive: false,
+        }).bindTooltip(r.name, {
+          permanent: true,
+          direction: 'top',
+          offset: [0, -14],
+          className: 'futokor-runner-name',
+        }),
+      ),
+    ).addTo(this.map);
   }
 
   private draw(course: FutokorCourse, editable: boolean, lit: number | null) {

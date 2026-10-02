@@ -2937,6 +2937,34 @@ const paths = {
       errors: [403, 404],
     }),
   },
+  '/futokor/courses/{id}/position': {
+    put: op({
+      tag: T.race,
+      summary: 'Say where I am on the course',
+      description:
+        '"Élő követés": the runner’s own choice (off unless they switch it on). While a run is on, the phone sends where it is every ten seconds or so, when it has a connection - so the others can watch the runner on the map of the course’s results. Only with a run in progress on this course (409 otherwise - e.g. the START scan has not reached the server yet). Each position takes the place of the last one: no trail is ever kept. It is deleted when the run ends (finished, given up, expired), and by itself two minutes after the phone stops sending; it is only shown while it is less than a minute old. Not for someone running with a futókód on another’s phone.',
+      params: [path('id', 'The course.')],
+      body: obj(
+        {
+          lat: { type: 'number', minimum: -90, maximum: 90 },
+          lng: { type: 'number', minimum: -180, maximum: 180 },
+          accuracyM: { type: ['number', 'null'], description: 'How exact the phone thinks it is.' },
+        },
+        ['lat', 'lng'],
+      ),
+      ok: 204,
+      errors: [400, 403, 404, 409],
+    }),
+    delete: op({
+      tag: T.race,
+      summary: 'Stop being watched',
+      description:
+        'My position on the course is deleted: the run is over, or "Élő követés" was switched off. Nothing to delete is fine too.',
+      params: [path('id', 'The course.')],
+      ok: 204,
+      errors: [403],
+    }),
+  },
   '/futokor/courses/{id}/sheet': {
     get: op({
       tag: T.race,
@@ -3007,7 +3035,7 @@ const paths = {
       tag: T.race,
       summary: 'One futókör’s results',
       description:
-        'The app asks it again every few seconds while the page is open, so it is live: a run with `status: running` is someone on the course right now (`startedAt`, and `passed` checkpoints so far). The course (with its checkpoints, to name the splits by) and every runner in the order of their best finished time - those who never finished after them - each with all their runs (the latest first) and the runs’ splits. Each runner also has their `gender` and `ageGroup` (ten years wide, at the time of the course - e.g. `30-39`; null without a birthday) to narrow the list by: the age group is everyone’s to see here, the age itself is not sent.',
+        'The app asks it again every few seconds while the page is open, so it is live: a run with `status: running` is someone on the course right now (`startedAt`, and `passed` checkpoints so far). The course (with its checkpoints, to name the splits by) and every runner in the order of their best finished time - those who never finished after them - each with all their runs (the latest first) and the runs’ splits. Each runner also has their `gender` and `ageGroup` (ten years wide, at the time of the course - e.g. `30-39`; null without a birthday) to narrow the list by: the age group is everyone’s to see here, the age itself is not sent. `positions`: where those running right now are - only the ones who switched "Élő követés" on, and whose phone said where it is within the last minute (see PUT `/futokor/courses/{id}/position`); only the latest position of each, never a trail.',
       params: [path('id', 'The course.')],
       data: obj({
         course: ref('FutokorCourse'),
@@ -3021,6 +3049,16 @@ const paths = {
             best: { oneOf: [ref('FutokorRun'), { type: 'null' }] },
             finishedRuns: int(),
             runs: arrayOf(ref('FutokorRun')),
+          }),
+        ),
+        positions: arrayOf(
+          obj({
+            userId: id(),
+            name: str(),
+            lat: { type: 'number' },
+            lng: { type: 'number' },
+            accuracyM: { type: ['number', 'null'] },
+            at: date(),
           }),
         ),
       }),
