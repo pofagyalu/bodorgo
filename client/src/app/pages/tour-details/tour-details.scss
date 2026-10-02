@@ -612,3 +612,48 @@
     height: 100%;
   }
 }
+
+// The whole row is the open/close control.
+.participants-heading {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.participants-heading:hover .toggle-btn {
+  background: #f0f0f0;
+}
+
+// Résztvevők (36/40): never broken in two - the heading stays one row.
+.participants-title {
+  white-space: nowrap;
+}
+
+.participants-heading .full-badge,
+.participants-heading .toggle-btn {
+  flex: none;
+}
+
+// On a phone the row gets tight (the toggle, the text, "Megtelt", and an
+// admin's Excel button): smaller text and badge, and the Excel button is
+// just its icon.
+@media (max-width: 600px) {
+  .participants-heading {
+    font-size: 1.15rem;
+    gap: 0.25rem;
+  }
+
+  .participants-heading .full-badge {
+    margin-left: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .excel-export-btn {
+    padding: 0.4rem;
+  }
+
+  .excel-text {
+    display: none;
+  }
+}

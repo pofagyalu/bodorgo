@@ -46,75 +46,100 @@
     </div>
   }
 
+  <!-- Three groups, each with its small caption: the tour's own booklets
+       (green), the organizers' actions (blue, admin), and the uploaded
+       documents (orange). Side by side on a wide screen, one under the
+       other on a phone. -->
   <div class="extra-docs-grid">
-    <a [href]="pdfUrl()" target="_blank" class="extra-doc-card extra-doc-card--featured">
-      <mat-icon>picture_as_pdf</mat-icon>
-      <span class="extra-doc-title">Programfüzet</span>
-      <span class="extra-doc-action"><mat-icon>download</mat-icon> Letöltés</span>
-    </a>
-    <button
-      type="button"
-      class="extra-doc-card extra-doc-card--featured"
-      [disabled]="emailingPdf()"
-      (click)="sendPdfByEmail()"
-    >
-      <mat-icon>email</mat-icon>
-      <span class="extra-doc-title">Programfüzet</span>
-      <span class="extra-doc-action"
-        ><mat-icon>{{ emailingPdf() ? 'hourglass_top' : 'send' }}</mat-icon>
-        {{ emailingPdf() ? 'Küldés...' : 'email' }}</span
-      >
-    </button>
-    <!-- The finished beszámoló - for the tour's attendees (and admins). -->
-    @if (reportDownload()) {
-      <a
-        [href]="reportPdfUrl()"
-        class="extra-doc-card extra-doc-card--featured"
-        title="A tábor beszámolója PDF-ben"
-      >
-        <mat-icon>history_edu</mat-icon>
-        <span class="extra-doc-title">Beszámoló</span>
-        <span class="extra-doc-action"><mat-icon>download</mat-icon> Letöltés</span>
-      </a>
-    }
+    <div class="extra-group">
+      <span class="extra-group-label">Programfüzet</span>
+      <div class="extra-group-cards">
+        <a [href]="pdfUrl()" target="_blank" class="extra-doc-card extra-doc-card--featured">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span class="extra-doc-title">Programfüzet</span>
+          <span class="extra-doc-action"><mat-icon>download</mat-icon> Letöltés</span>
+        </a>
+        <button
+          type="button"
+          class="extra-doc-card extra-doc-card--featured"
+          [disabled]="emailingPdf()"
+          (click)="sendPdfByEmail()"
+        >
+          <mat-icon>email</mat-icon>
+          <span class="extra-doc-title">Programfüzet</span>
+          <span class="extra-doc-action"
+            ><mat-icon>{{ emailingPdf() ? 'hourglass_top' : 'send' }}</mat-icon>
+            {{ emailingPdf() ? 'Küldés...' : 'email' }}</span
+          >
+        </button>
+        <!-- The finished beszámoló - for the tour's attendees (and admins). -->
+        @if (reportDownload()) {
+          <a
+            [href]="reportPdfUrl()"
+            class="extra-doc-card extra-doc-card--featured"
+            title="A tábor beszámolója PDF-ben"
+          >
+            <mat-icon>history_edu</mat-icon>
+            <span class="extra-doc-title">Beszámoló</span>
+            <span class="extra-doc-action"><mat-icon>download</mat-icon> Letöltés</span>
+          </a>
+        }
+      </div>
+    </div>
     @if (isAdmin()) {
-      <button
-        type="button"
-        class="extra-doc-card extra-doc-card--admin"
-        title="Levél írása a tábor minden résztvevőjének - a Programfüzet is csatolható"
-        (click)="showMailPanel.set(true)"
-      >
-        <mat-icon>forward_to_inbox</mat-icon>
-        <span>Levél a résztvevőknek</span>
-      </button>
-      <button
-        type="button"
-        class="extra-doc-card extra-doc-card--admin"
-        title="A tábor beszámolójának írása, naponta - Kész után a résztvevők letölthetik"
-        (click)="showReportPanel.set(true)"
-      >
-        <mat-icon>edit_note</mat-icon>
-        <span>Beszámoló írása</span>
-      </button>
-    }
-    @if ((tour().extraDocuments ?? []).length > 0) {
-      <span class="extra-docs-divider"></span>
-    }
-    @for (doc of tour().extraDocuments ?? []; track doc._id) {
-      <a [href]="documentUrl(doc._id)" target="_blank" class="extra-doc-card" [title]="doc.title">
-        <mat-icon>{{ doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>
-        <span>{{ doc.title }}</span>
-        @if (isAdmin()) {
+      <div class="extra-group">
+        <span class="extra-group-label">Szervezőknek</span>
+        <div class="extra-group-cards">
           <button
             type="button"
-            class="extra-doc-delete"
-            title="Törlés"
-            (click)="askDeleteDocument(doc, $event)"
+            class="extra-doc-card extra-doc-card--admin"
+            title="Levél írása a tábor minden résztvevőjének - a Programfüzet is csatolható"
+            (click)="showMailPanel.set(true)"
           >
-            <mat-icon>close</mat-icon>
+            <mat-icon>forward_to_inbox</mat-icon>
+            <span>Levél a résztvevőknek</span>
           </button>
-        }
-      </a>
+          <button
+            type="button"
+            class="extra-doc-card extra-doc-card--admin"
+            title="A tábor beszámolójának írása, naponta - Kész után a résztvevők letölthetik"
+            (click)="showReportPanel.set(true)"
+          >
+            <mat-icon>edit_note</mat-icon>
+            <span>Beszámoló írása</span>
+          </button>
+        </div>
+      </div>
+    }
+    @if ((tour().extraDocuments ?? []).length > 0) {
+      <div class="extra-group">
+        <span class="extra-group-label">Dokumentumok</span>
+        <div class="extra-group-cards">
+          @for (doc of tour().extraDocuments ?? []; track doc._id) {
+            <a
+              [href]="documentUrl(doc._id)"
+              target="_blank"
+              class="extra-doc-card"
+              [title]="doc.title"
+            >
+              <mat-icon>{{
+                doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image'
+              }}</mat-icon>
+              <span>{{ doc.title }}</span>
+              @if (isAdmin()) {
+                <button
+                  type="button"
+                  class="extra-doc-delete"
+                  title="Törlés"
+                  (click)="askDeleteDocument(doc, $event)"
+                >
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </a>
+          }
+        </div>
+      </div>
     }
   </div>
 </section>

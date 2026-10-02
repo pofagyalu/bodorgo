@@ -74,10 +74,16 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 0.8rem;
+  // The heading's line runs under the whole row (as under Programterv),
+  // not just under the word.
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #eee;
 
   .section-heading {
     margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
   }
 
   // Extrák's upload button: at the end of the heading's line - in the
@@ -115,10 +121,41 @@
   gap: 0.3rem;
 }
 
+// The groups side by side, well apart - the space (and each group's
+// caption) is what separates them.
 .extra-docs-grid {
   display: flex;
   flex-wrap: wrap;
+  gap: 1.5rem 3rem;
+}
+
+.extra-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.extra-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.extra-group-cards {
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
+}
+
+// A phone: each group on a line of its own.
+@media (max-width: 600px) {
+  .extra-docs-grid {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
 }
 
 .extra-doc-card {
@@ -235,16 +272,6 @@
     height: 0.9rem;
     color: inherit;
   }
-}
-
-// A thin vertical rule between the featured card and the plain uploaded-
-// file cards - only shown when there's actually something on the other
-// side of it to separate from.
-.extra-docs-divider {
-  align-self: stretch;
-  width: 1px;
-  margin: 0.5rem 0;
-  background: #ddd;
 }
 
 // On the card's own top-right corner, half outside it - like the
