@@ -50,6 +50,19 @@
                 Minden pont megvan – <strong>irány a CÉL!</strong>
               }
             </p>
+            <!-- Élő követés: on or off, any time. -->
+            @if (futokor.canLive && !futokor.runner()?.code) {
+              <button
+                type="button"
+                class="live-toggle"
+                [class.on]="futokor.live()"
+                [attr.aria-pressed]="futokor.live()"
+                (click)="futokor.setLive(!futokor.live())"
+              >
+                <mat-icon>{{ futokor.live() ? 'share_location' : 'location_off' }}</mat-icon>
+                {{ liveText() }}
+              </button>
+            }
             <button type="button" class="give-up" (click)="giveUp()">Feladom</button>
           </div>
         }
@@ -120,7 +133,7 @@
 
         <!-- The loop and its cards on the map. -->
         @if (hasMap()) {
-          <app-course-map class="map" [course]="c" />
+          <app-course-map class="map" [course]="c" [runners]="me()" />
         }
       </div>
 

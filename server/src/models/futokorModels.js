@@ -148,3 +148,23 @@ const runSchema = new Schema({
 runSchema.index({ course: 1, user: 1 });
 
 export const FutokorRun = mongoose.model('FutokorRun', runSchema);
+
+// Where a runner is right now - only while they run, and only if they
+// chose to be seen ("Élő követés"). One per runner and course: each new
+// position takes the place of the last, so no trail is ever kept; it goes
+// when the run is over, and by itself soon after the phone stops sending.
+const positionSchema = new Schema({
+  course: { type: Schema.Types.ObjectId, ref: 'FutokorCourse', required: true },
+  user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  lat: { type: Number, required: true },
+  lng: { type: Number, required: true },
+  accuracyM: { type: Number, default: null },
+  // When the server got it.
+  at: { type: Date, default: Date.now },
+});
+
+positionSchema.index({ course: 1, user: 1 }, { unique: true });
+// Mongo removes it two minutes after the last one arrived.
+positionSchema.index({ at: 1 }, { expireAfterSeconds: 120 });
+
+export const FutokorPosition = mongoose.model('FutokorPosition', positionSchema);

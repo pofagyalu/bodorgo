@@ -4,6 +4,7 @@ import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember, createTour } from '../helpers/factories.js';
 import {
   FutokorCourse,
+  FutokorPosition,
   FutokorRun,
   FutokorScan,
   FutokorTag,
@@ -396,6 +397,75 @@ describe('Futókör: running', () => {
     });
     const { runs } = (await get(owner, '/active')).body.data;
     expect(runs).toMatchObject([{ status: 'finished', paceSecPerKm: 167, flagged: true }]);
+  });
+});
+
+describe('Futókör: live positions', () => {
+  const put = (user, courseId, body) =>
+    request(app).put(`/futokor/courses/${courseId}/position`).set(asUser(user)).send(body);
+  // "Now" on the course's clock (T0 is two hours ago).
+  const NOW = 2 * 3600;
+  const here = { lat: 47.6546, lng: 18.9999, accuracyM: 7.4 };
+
+  it('shows where a runner is - only while they run, and only the latest place', async () => {
+    const owner = await createOwner();
+    const anna = await createRunner({ name: 'Kiss Anna', username: 'anna' });
+    const course = await openCourse(owner);
+    const positions = async () =>
+      (await get(owner, `/courses/${course._id}/results`)).body.data.positions;
+
+    // No run on: nothing to show.
+    expect((await put(anna, course._id, here)).status).toBe(409);
+    expect((await put(anna, 'nonsense', here)).status).toBe(404);
+
+    await send(anna, [scan('S1', NOW - 300)]);
+    expect((await put(anna, course._id, { lat: 'x', lng: 19 })).status).toBe(400);
+    expect((await put(anna, course._id, { lat: 91, lng: 19 })).status).toBe(400);
+    expect((await put(anna, course._id, here)).status).toBe(204);
+    expect((await put(anna, course._id, { lat: 47.655, lng: 19.0003 })).status).toBe(204);
+
+    // One place per runner: the last one.
+    expect(await FutokorPosition.countDocuments()).toBe(1);
+    expect(await positions()).toMatchObject([
+      { userId: String(anna._id), name: 'anna', lat: 47.655, lng: 19.0003, accuracyM: null },
+    ]);
+
+    // A place the phone gave over a minute ago isn't shown.
+    await FutokorPosition.updateMany({}, { at: new Date(Date.now() - 2 * 60 * 1000) });
+    expect(await positions()).toEqual([]);
+    expect((await put(anna, course._id, here)).status).toBe(204);
+    expect(await positions()).toMatchObject([{ lat: 47.6546, accuracyM: 7 }]);
+
+    // In: it goes with the run's end.
+    await send(anna, [scan('T02', NOW - 200), scan('T01', NOW - 100), scan('S1', NOW - 1)]);
+    expect(await FutokorPosition.countDocuments()).toBe(0);
+    expect(await positions()).toEqual([]);
+    expect((await put(anna, course._id, here)).status).toBe(409);
+  });
+
+  it('can be switched off, goes when the runner gives up - and with the course', async () => {
+    const owner = await createOwner();
+    const course = await openCourse(owner);
+    const del = (user) =>
+      request(app).delete(`/futokor/courses/${course._id}/position`).set(asUser(user));
+
+    await send(owner, [scan('S1', NOW - 60)]);
+    expect((await put(owner, course._id, here)).status).toBe(204);
+    expect((await del(owner)).status).toBe(204);
+    expect(await FutokorPosition.countDocuments()).toBe(0);
+    expect((await del(owner)).status).toBe(204);
+
+    expect((await put(owner, course._id, here)).status).toBe(204);
+    await send(owner, [scan(null, NOW - 30, { action: 'giveUp', courseId: course._id })]);
+    expect(await FutokorPosition.countDocuments()).toBe(0);
+
+    await send(owner, [scan('S1', NOW - 20)]);
+    expect((await put(owner, course._id, here)).status).toBe(204);
+    await request(app).delete(`/futokor/courses/${course._id}`).set(asUser(owner));
+    expect(await FutokorPosition.countDocuments()).toBe(0);
+
+    // Not for anyone who isn't in.
+    expect((await put(await createMember(), course._id, here)).status).toBe(403);
   });
 });
 

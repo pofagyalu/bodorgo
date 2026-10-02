@@ -38,6 +38,27 @@
       <p class="who">{{ futokor.runner()?.name }}, indulhat a futás?</p>
       <button type="button" class="go" (click)="start()">RAJT!</button>
       <p class="note">Az óra a gomb megnyomásakor indul.</p>
+      <!-- Élő követés: the runner's own choice (not with a futókód). -->
+      @if (futokor.canLive && !futokor.runner()?.code) {
+        <label class="live">
+          <input
+            type="checkbox"
+            [checked]="futokor.live()"
+            (change)="futokor.setLive($any($event.target).checked)"
+          />
+          <span>
+            <strong>Élő követés</strong>
+            A többiek a térképen látják, merre jársz. Helymeghatározás és mobilnet kell hozzá, a
+            képernyő pedig bekapcsolva marad.
+          </span>
+        </label>
+        @if (futokor.live() && futokor.liveProblem() === 'denied') {
+          <p class="error">
+            A böngésző nem kapott engedélyt a helymeghatározásra – a címsor melletti lakatnál tudod
+            megadni. A futás enélkül is megy.
+          </p>
+        }
+      }
       <button type="button" class="link" (click)="step.set('who')">
         Nem te vagy? Indulás futókóddal
       </button>

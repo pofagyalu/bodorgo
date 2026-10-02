@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -93,6 +93,26 @@ export interface CourseResults {
     finishedRuns: number;
     runs: FutokorRun[];
   }[];
+  // Where those running right now are - the ones who let themselves be
+  // watched ("Élő követés").
+  positions?: LivePosition[];
+}
+
+// Where a runner is: the last place their phone said, never a trail.
+export interface LivePosition {
+  userId: string;
+  name: string;
+  lat: number;
+  lng: number;
+  accuracyM: number | null;
+  at: string;
+}
+
+// Where this phone is.
+export interface Place {
+  lat: number;
+  lng: number;
+  accuracyM: number | null;
 }
 
 // A point of a course as it's changed: how far along the loop it is, or
@@ -156,6 +176,9 @@ const RUN_KEY = 'futokor-run';
 const QUEUE_KEY = 'futokor-queue';
 const ME_KEY = 'futokor-me';
 const CODE_RUNNER_KEY = 'futokor-runner';
+const LIVE_KEY = 'futokor-live';
+// How often the phone says where it is, while it's followed.
+const POSITION_MS = 10 * 1000;
 // As many as the server takes in one request.
 const BATCH = 40;
 
@@ -276,12 +299,107 @@ export class FutokorService {
     return course ? nextCheckpoint(course, this.run()) : null;
   });
 
+  // --- Élő követés: the others watch where I am, if I let them ---
+
+  readonly canLive = 'geolocation' in navigator;
+  // My own choice, remembered on the phone - off until I switch it on.
+  live = signal(load<boolean>(LIVE_KEY) ?? false);
+  // Why it isn't working: the browser wasn't allowed to know where it is.
+  liveProblem = signal<'' | 'denied'>('');
+  // Where this phone is, while it's followed.
+  myPosition = signal<Place | null>(null);
+  // The course I'm followed on: only with a run on, as whoever is logged in
+  // on this phone (not for someone running with their futókód).
+  private liveCourseId = computed(() => {
+    const state = this.runState();
+    return this.canLive && this.live() && !this.codeRunner() && state?.run.status === 'running'
+      ? state.courseId
+      : null;
+  });
+  private followed: string | null = null;
+  private watchId: number | null = null;
+  private wakeLock: WakeLockSentinel | null = null;
+
   constructor() {
     // Whatever waited for a connection goes up as soon as there is one.
     window.addEventListener('online', () => void this.sync());
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') void this.sync();
+      if (document.visibilityState !== 'visible') return;
+      void this.sync();
+      // (The browser lets the screen sleep again whenever the page is left.)
+      if (this.followed) void this.keepAwake();
     });
+    effect(() => {
+      const courseId = this.liveCourseId();
+      untracked(() => this.follow(courseId));
+    });
+  }
+
+  // Switched on, the browser asks right away whether it may know where the
+  // phone is - not in the middle of the start.
+  setLive(on: boolean) {
+    this.live.set(on);
+    save(LIVE_KEY, on || null);
+    this.liveProblem.set('');
+    if (!on || !this.canLive) return;
+    navigator.geolocation.getCurrentPosition(
+      () => {},
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) this.liveProblem.set('denied');
+      },
+      { enableHighAccuracy: true },
+    );
+  }
+
+  // The phone says where it is every ten seconds or so while the run is on
+  // (when it has a connection - a place that couldn't be sent is never sent
+  // later), and stops the moment it's over. A page only knows where the
+  // phone is while it's on a lit screen: the screen is kept awake.
+  private follow(courseId: string | null) {
+    if (courseId === this.followed) return;
+    if (this.followed) this.unfollow(this.followed);
+    this.followed = courseId;
+    if (!courseId) return;
+
+    let sentAt = 0;
+    this.watchId = navigator.geolocation.watchPosition(
+      (p) => {
+        this.liveProblem.set('');
+        const place: Place = {
+          lat: p.coords.latitude,
+          lng: p.coords.longitude,
+          accuracyM: p.coords.accuracy ?? null,
+        };
+        this.myPosition.set(place);
+        if (!navigator.onLine || Date.now() - sentAt < POSITION_MS) return;
+        sentAt = Date.now();
+        this.http
+          .put(`${this.apiUrl}/courses/${courseId}/position`, place)
+          .subscribe({ error: () => {} });
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) this.liveProblem.set('denied');
+      },
+      { enableHighAccuracy: true, maximumAge: 5000 },
+    );
+    void this.keepAwake();
+  }
+
+  private unfollow(courseId: string) {
+    if (this.watchId !== null) navigator.geolocation.clearWatch(this.watchId);
+    this.watchId = null;
+    this.myPosition.set(null);
+    void this.wakeLock?.release().catch(() => {});
+    this.wakeLock = null;
+    this.http.delete(`${this.apiUrl}/courses/${courseId}/position`).subscribe({ error: () => {} });
+  }
+
+  private async keepAwake() {
+    try {
+      this.wakeLock = (await navigator.wakeLock?.request('screen')) ?? null;
+    } catch {
+      // Not allowed (a battery saver, say): the phone's own timeout stays.
+    }
   }
 
   // --- The runner ---

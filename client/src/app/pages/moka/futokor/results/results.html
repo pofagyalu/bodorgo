@@ -23,7 +23,7 @@
       <!-- The map and the podium (side by side on a desktop). -->
       <div class="top">
         @if (hasMap()) {
-          <app-course-map class="map" [course]="r.course" />
+          <app-course-map class="map" [course]="r.course" [runners]="onMap()" />
         }
         @if (winners().length) {
           <app-podium class="podium" [winners]="winners()" [title]="podiumTitle()" />
@@ -45,7 +45,12 @@
               />
               <span>
                 {{ l.name }}
-                <small>{{ l.where }}</small>
+                <small>
+                  {{ l.where }}
+                  @if (l.onMap) {
+                    · 📍 a térképen
+                  }
+                </small>
               </span>
               <span class="live-clock">{{ l.elapsed }}</span>
             </span>

@@ -28,6 +28,11 @@ router
   .put(runner, futokor.receiveGpx, futokor.putTrack)
   .delete(runner, futokor.deleteTrack);
 router.get('/courses/:id/track.gpx', runner, futokor.getTrackFile);
+// Where I am on the course, for the others to watch (my own choice).
+router
+  .route('/courses/:id/position')
+  .put(runner, futokor.putPosition)
+  .delete(runner, futokor.deletePosition);
 router.get('/courses/:id/sheet', runner, futokor.getCourseSheet);
 router.get('/courses/:id/leaderboard', runner, futokor.getLeaderboard);
 router.get('/courses/:id/results', runner, futokor.getCourseResults);
