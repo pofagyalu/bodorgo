@@ -1,0 +1,78 @@
+// The circle of fifths: the picture as wide as its place lets it (never
+// wider than a comfortable look at it), its notes under it.
+:host {
+  display: block;
+}
+
+.circle {
+  display: block;
+  width: 100%;
+  max-width: 36rem;
+  margin: 0 auto;
+}
+
+.wedge {
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.rim {
+  fill: none;
+  stroke: #c9d6d1;
+  stroke-width: 1.5;
+}
+
+text {
+  text-anchor: middle;
+}
+
+.major {
+  fill: #1f2d3a;
+  font-size: 26px;
+  font-weight: 800;
+
+  &.two {
+    font-size: 18px;
+  }
+}
+
+.minor {
+  fill: #b5533a;
+  font-size: 16px;
+  font-weight: 700;
+
+  &.two {
+    font-size: 12px;
+  }
+}
+
+.signs {
+  fill: #56666e;
+  font-size: 10.5px;
+
+  &.two {
+    font-size: 8.5px;
+  }
+}
+
+.middle {
+  fill: #56666e;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.notes {
+  max-width: 44rem;
+  margin: 1.5rem auto 0;
+  padding-left: 1.2rem;
+  color: #1f2d3a;
+  line-height: 1.55;
+
+  li {
+    margin-bottom: 0.5rem;
+  }
+
+  li::marker {
+    color: #b5533a;
+  }
+}

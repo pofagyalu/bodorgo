@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
 import { SongService } from '../../services/song';
 import { Instrument } from './chord-shapes';
+import { ANNEXES } from './annexes';
 
 // "Eső után" → "eso utan": the search doesn't mind accents or capitals.
 const fold = (s: string) =>
@@ -48,20 +49,36 @@ export class Daloskonyv implements OnInit {
     this.songService.setInstrument(instrument);
   }
 
-  // The open song's slug - null on the table of contents itself.
-  openSlug = toSignal(
+  // What is open beside the list: a song (its slug) or an annex (its id) -
+  // both null on the table of contents itself.
+  private open = toSignal(
     this.router.events.pipe(
       filter((e) => e instanceof NavigationEnd),
       startWith(null),
-      map(() => this.route.firstChild?.snapshot.paramMap.get('slug') ?? null),
+      map(() => {
+        const params = this.route.firstChild?.snapshot.paramMap;
+        return { slug: params?.get('slug') ?? null, annex: params?.get('annex') ?? null };
+      }),
     ),
-    { initialValue: null },
+    { initialValue: { slug: null, annex: null } },
   );
+  openSlug = computed(() => this.open().slug);
+  openAnnex = computed(() => this.open().annex);
+  isOpen = computed(() => !!(this.openSlug() || this.openAnnex()));
 
   filtered = computed(() => {
     const songs = this.songs() ?? [];
     const q = fold(this.search().trim());
     return q ? songs.filter((s) => fold(`${s.title} ${s.artist}`).includes(q)) : songs;
+  });
+
+  // The pages that aren't songs (the tuner, the two annexes) - in the list
+  // before the songs, found by the same search.
+  annexes = computed(() => {
+    const q = fold(this.search().trim());
+    return q
+      ? ANNEXES.filter((a) => fold(`${a.title} ${a.about} ${a.keywords}`).includes(q))
+      : ANNEXES;
   });
 
   ngOnInit() {

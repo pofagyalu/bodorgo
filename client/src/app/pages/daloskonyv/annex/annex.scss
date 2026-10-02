@@ -1,0 +1,174 @@
+// An annex in a song's place: the same bar and white sheet as a song's
+// page (song/song.scss), and on a phone the same whole-screen layer.
+$ink: #193346;
+$muted: #56666e;
+$teal: #1a796c;
+$line: #e4eae7;
+
+:host {
+  display: block;
+}
+
+.annex-page {
+  padding: 1rem clamp(1rem, 3vw, 2.5rem) 4rem;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.annex-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.back {
+  display: none;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.6rem;
+  border-radius: 10rem;
+  background: #fff;
+  border: 1px solid $line;
+  color: $ink;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.search {
+  flex: 1 1 14rem;
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 24rem;
+  padding: 0 0.9rem;
+  border: 1px solid #cfd9d5;
+  border-radius: 10rem;
+  background: #fff;
+
+  &:focus-within {
+    border-color: $teal;
+    box-shadow: 0 0 0 0.2rem #1a796c26;
+  }
+
+  mat-icon {
+    flex: none;
+    color: #7a8a90;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.65rem 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    font: inherit;
+    font-size: 1rem;
+    color: inherit;
+  }
+}
+
+@media (min-width: 901px) {
+  .search {
+    display: flex;
+  }
+}
+
+// Gitár | Ukulele: words in one pill, the chosen one filled.
+.choice {
+  display: flex;
+  gap: 0.1rem;
+  margin-left: auto;
+  padding: 0.2rem;
+  border: 1px solid $line;
+  border-radius: 10rem;
+  background: #fff;
+
+  button {
+    height: 2.35rem;
+    padding: 0 0.9rem;
+    border: 0;
+    border-radius: 10rem;
+    background: none;
+    color: $muted;
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    &.on {
+      background: $teal;
+      color: #fff;
+    }
+  }
+}
+
+.sheet {
+  padding: clamp(1.1rem, 3vw, 2.25rem);
+  border-radius: 1.0625rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 1.2rem #213b411a;
+  color: #1f2d3a;
+}
+
+.annex-head {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: $ink;
+  }
+
+  p {
+    margin: 0.3rem 0 0;
+    color: $muted;
+    font-size: 0.95rem;
+  }
+}
+
+.note {
+  margin: 3rem 0;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+// No list beside it: the whole screen, over the site's header.
+@media (max-width: 900px) {
+  .annex-page {
+    position: fixed;
+    inset: 0;
+    z-index: 20010;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 0 3rem;
+    background: #fff;
+  }
+
+  .annex-bar {
+    margin: 0 0.5rem 0.25rem;
+  }
+
+  .back {
+    display: inline-flex;
+    padding: 0.4rem 0.8rem 0.4rem 0.5rem;
+  }
+
+  .sheet {
+    padding: 0.5rem 0.75rem 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .annex-head {
+    margin-bottom: 1rem;
+  }
+}

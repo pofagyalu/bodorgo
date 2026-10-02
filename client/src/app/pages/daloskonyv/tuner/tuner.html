@@ -1,0 +1,43 @@
+<div class="tuner" [class.tuner--true]="inTune()" [class.tuner--faded]="faded()">
+  @if (!listening()) {
+    <p class="lead">
+      A hangoló a mikrofonon át hallgatja a húrt, és megmutatja, melyik hang szól, és mennyire
+      tiszta. A hang nem megy sehova: csak a telefon méri meg.
+    </p>
+    <button type="button" class="start" (click)="start()">
+      <mat-icon>mic</mat-icon>Hangolás indítása
+    </button>
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+  } @else {
+    <!-- The note heard, big; under it how far it is from true. -->
+    <div class="heard" aria-live="polite">
+      <span class="note-name">{{ note()?.name ?? '–' }}</span>
+      @if (note(); as n) {
+        <span class="note-octave">{{ n.octave }}</span>
+      }
+    </div>
+
+    <div class="scale" role="img" [attr.aria-label]="advice()">
+      <span class="tick tick--low">mély</span>
+      <span class="tick tick--mid"></span>
+      <span class="tick tick--high">magas</span>
+      @if (note()) {
+        <span class="needle" [style.left.%]="needle()"></span>
+      }
+    </div>
+    <p class="advice">{{ advice() }}</p>
+
+    <!-- The open strings to aim for; the one being tuned is lit. -->
+    <div class="strings" aria-label="A húrok">
+      @for (s of strings(); track $index) {
+        <span class="string" [class.string--active]="$index === activeString()">{{ s.name }}</span>
+      }
+    </div>
+
+    <button type="button" class="stop" (click)="stop()">
+      <mat-icon>mic_off</mat-icon>Leállítás
+    </button>
+  }
+</div>

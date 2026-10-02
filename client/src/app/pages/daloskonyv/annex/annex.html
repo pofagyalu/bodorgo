@@ -1,0 +1,63 @@
+<div class="annex-page">
+  <!-- The same bar as a song's: back to the list (a phone has no list
+       beside), the search of the list, and the instrument for the tuner. -->
+  <div class="annex-bar">
+    <a class="back" [routerLink]="base()" aria-label="Vissza a dalokhoz">
+      <mat-icon>arrow_back</mat-icon><span>Dalok</span>
+    </a>
+
+    <label class="search">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        placeholder="Keresés a dalok között"
+        aria-label="Keresés a dalok között"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+      />
+    </label>
+
+    @if (annex()?.id === 'hangolo') {
+      <div class="choice" role="group" aria-label="Hangszer">
+        <button
+          type="button"
+          [class.on]="instrument() === 'guitar'"
+          [attr.aria-pressed]="instrument() === 'guitar'"
+          (click)="chooseInstrument('guitar')"
+        >
+          Gitár
+        </button>
+        <button
+          type="button"
+          [class.on]="instrument() === 'ukulele'"
+          [attr.aria-pressed]="instrument() === 'ukulele'"
+          (click)="chooseInstrument('ukulele')"
+        >
+          Ukulele
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (annex(); as a) {
+    <article class="sheet">
+      <header class="annex-head">
+        <h2>{{ a.title }}</h2>
+        <p>{{ a.about }}</p>
+      </header>
+      @switch (a.id) {
+        @case ('hangolo') {
+          <app-tuner [instrument]="instrument()" />
+        }
+        @case ('kvintkor') {
+          <app-circle-of-fifths />
+        }
+        @case ('akkordtablazat') {
+          <app-chord-table />
+        }
+      }
+    </article>
+  } @else {
+    <p class="note">Nincs ilyen oldal a daloskönyvben.</p>
+  }
+</div>

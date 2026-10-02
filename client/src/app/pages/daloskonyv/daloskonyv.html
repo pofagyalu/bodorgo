@@ -1,4 +1,4 @@
-<div class="book" [class.book--open]="openSlug()">
+<div class="book" [class.book--open]="isOpen()">
   <!-- The table of contents: the whole page until a song is chosen, then
        the left column (hidden on a phone, where the song takes its place). -->
   <aside class="toc" aria-label="Tartalomjegyzék">
@@ -64,12 +64,34 @@
       </button>
     }
 
+    <!-- Not songs, but found like one: the tuner and the two annexes. -->
+    @if (annexes().length) {
+      <ul class="song-list annex-list">
+        @for (annex of annexes(); track annex.id) {
+          <li>
+            <a
+              [routerLink]="[base(), 'melleklet', annex.id]"
+              [class.active]="annex.id === openAnnex()"
+            >
+              <mat-icon class="annex-icon">{{ annex.icon }}</mat-icon>
+              <span class="song-name">
+                <strong>{{ annex.title }}</strong>
+                <small>{{ annex.about }}</small>
+              </span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+
     @if (songs() === null) {
       <p class="list-note">Betöltés…</p>
     } @else if (!songs()!.length) {
       <p class="list-note">Még nincs dal a daloskönyvben.</p>
     } @else if (!filtered().length) {
-      <p class="list-note">Nincs ilyen dal.</p>
+      @if (!annexes().length) {
+        <p class="list-note">Nincs ilyen dal.</p>
+      }
     } @else {
       <ol class="song-list">
         @for (song of filtered(); track song._id) {

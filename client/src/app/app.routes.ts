@@ -154,6 +154,13 @@ export const routes: Routes = [
         title: 'Média – Daloskönyv',
         loadComponent: () => import('./pages/daloskonyv/daloskonyv').then((m) => m.Daloskonyv),
         children: [
+          // The pages that aren't songs: the tuner, the circle of fifths,
+          // the keys' chords (pages/daloskonyv/annexes.ts).
+          {
+            path: 'melleklet/:annex',
+            title: 'Média – Daloskönyv',
+            loadComponent: () => import('./pages/daloskonyv/annex/annex').then((m) => m.AnnexPage),
+          },
           {
             path: ':slug',
             title: 'Média – Daloskönyv',
@@ -174,6 +181,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./pages/daloskonyv/daloskonyv').then((m) => m.Daloskonyv),
     children: [
+      {
+        path: 'melleklet/:annex',
+        title: 'Bódorgó daloskönyv',
+        loadComponent: () => import('./pages/daloskonyv/annex/annex').then((m) => m.AnnexPage),
+      },
       {
         path: ':slug',
         title: 'Bódorgó daloskönyv',
