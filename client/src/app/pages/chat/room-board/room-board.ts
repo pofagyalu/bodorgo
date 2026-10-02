@@ -47,7 +47,8 @@ export class RoomBoard implements OnDestroy {
   // A tap right after a drag isn't a "pick" tap.
   private justDragged = false;
 
-  isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  // An admin's controls - none on a closed tour (Lezárás, see Tour.closed).
+  isAdmin = computed(() => this.auth.user()?.role === 'admin' && !this.tour().closed);
   canEdit = computed(() => this.isAdmin() && !this.finalized());
   myId = computed(() => this.auth.user()?.id ?? null);
 

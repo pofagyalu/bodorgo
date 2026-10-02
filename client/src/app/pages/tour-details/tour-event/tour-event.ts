@@ -45,6 +45,9 @@ export class TourEvent {
   // { userId: username } - a chip shows this instead of the full name
   // when the person has one (the full name stays as its tooltip).
   @Input() usernames: Record<string, string> = {};
+  // The tour is closed (Lezárás): no edit button, even for an admin. (The
+  // opt-in goes by itself - the tour page hands over no candidates then.)
+  @Input() locked = false;
   @Output() updated = new EventEmitter<ScheduleEntry>();
 
   readonly stackSize = STACK_SIZE;

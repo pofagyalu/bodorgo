@@ -261,6 +261,13 @@ const tourSchema = new Schema(
       type: String,
       required: [true, 'A tábornak kell legyen leírása'],
     },
+    // Lezárás: the tour is finished for good - nothing about it can be
+    // changed any more, by anyone (see utils/tourClosed.js). Set only by
+    // POST /tours/:id/close; there is no way back in the app, only by
+    // setting this to false in the database by hand.
+    closed: { type: Boolean, default: false },
+    closedAt: Date,
+    closedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     // Day-by-day agenda. day is 1-indexed (1 = startDate itself); time is a
     // plain "HH:mm" string rather than a Date, since it's the same every
     // year the tour repeats and doesn't need its own date component.

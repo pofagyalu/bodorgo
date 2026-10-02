@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import multer from 'multer';
 import Document, { DOCUMENT_CATEGORIES, documentFilePath } from '../models/documentModel.js';
 import Tour from '../models/tourModel.js';
+import { assertTourOpen, assertTourOpenById } from '../utils/tourClosed.js';
 import AppError from '../utils/appError.js';
 import {
   deleteDocumentPreview,
@@ -74,9 +75,10 @@ export const uploadDocument = async (req, res) => {
   let tour = null;
   if (req.body.tour) {
     tour = mongoose.isValidObjectId(req.body.tour)
-      ? await Tour.findById(req.body.tour).select('order slug')
+      ? await Tour.findById(req.body.tour).select('order slug closed')
       : null;
     if (!tour) throw new AppError('Nincs ilyen tábor.', 404);
+    assertTourOpen(tour);
     if ((await Document.countDocuments({ tour: tour._id })) >= MAX_PER_TOUR) {
       throw new AppError(
         `Legfeljebb ${MAX_PER_TOUR} extra dokumentum tölthető fel egy táborhoz.`,
@@ -159,6 +161,7 @@ export const getDocumentPreview = async (req, res) => {
 // DELETE /documents/:id - admin; the file and its preview go too.
 export const deleteDocument = async (req, res) => {
   const document = await findDocument(req.params.id);
+  await assertTourOpenById(document.tour);
   fs.rm(documentFilePath(document), { force: true }, () => {}); // a missing file mustn't block it
   deleteDocumentPreview(document.filename);
   await Document.deleteOne({ _id: document._id });

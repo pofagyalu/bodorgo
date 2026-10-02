@@ -4,7 +4,7 @@
 
   @for (day of dayGroups(); track day.day) {
     <div class="day-block">
-      <h3 class="day-heading" [class.day-heading--admin]="isAdmin()">
+      <h3 class="day-heading" [class.day-heading--admin]="canEdit()">
         @if (day.weather; as w) {
           <span class="day-weather" [title]="weatherConditionLabel(w.condition)">
             <img [src]="weatherIconPath(w.condition)" alt="" class="day-weather-icon" />
@@ -17,7 +17,7 @@
         }
         <span class="day-heading-daynum">{{ day.day }}. nap –</span>
         <span class="day-heading-date">{{ day.label }}</span>
-        @if (isAdmin()) {
+        @if (canEdit()) {
           <button
             type="button"
             class="icon-btn icon-btn--add"
@@ -48,6 +48,7 @@
                 [candidates]="candidates()"
                 [userPhotos]="userPhotos()"
                 [usernames]="usernames()"
+                [locked]="!!tour().closed"
                 (updated)="eventUpdated.emit($event)"
               />
             </li>

@@ -248,6 +248,20 @@
   }
 }
 
+// Lezárás - one way only, so it stands apart from the blue actions: red.
+.extra-doc-card--close {
+  background: #fdecea;
+  border: 1px solid #f1a9a0;
+
+  mat-icon {
+    color: #c62828;
+  }
+
+  &:hover {
+    background: #f9d6d2;
+  }
+}
+
 // Two-line label for the featured card: the feature name, then a smaller
 // muted "action" caption (icon + verb) instead of a hover-only tooltip -
 // discoverable without hovering, per the admin's request.

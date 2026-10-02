@@ -9,6 +9,7 @@ import { computeAge } from './userController.js';
 import { tourVideoList } from '../utils/tourVideos.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
+import logger from '../logger.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
 import { resolveDistanceInfo } from '../utils/distance.js';
 import { tourDocuments } from './documentController.js';
@@ -330,10 +331,35 @@ export const getTour = async (req, res, next) => {
 // already does.
 // The tour form's Fizetési módok (onSitePayment) - only what it offers,
 // cleaned (see utils/onSitePayment.js); the rest of the body as it is.
+// ...and never the Lezárás fields: a tour is closed only through closeTour
+// below, and opened again by nobody.
 function withCleanOnSitePayment(body) {
-  if (body?.onSitePayment === undefined) return body;
-  return { ...body, onSitePayment: cleanOnSitePayment(body.onSitePayment) };
+  const { closed: _closed, closedAt: _closedAt, closedBy: _closedBy, ...rest } = body ?? {};
+  if (rest.onSitePayment === undefined) return rest;
+  return { ...rest, onSitePayment: cleanOnSitePayment(rest.onSitePayment) };
 }
+
+// POST /tours/:id/close - admin: Lezárás. One way only - from here on
+// nothing about the tour can be changed (utils/tourClosed.js), and there is
+// no endpoint that opens it again. Only once the tour is over.
+export const closeTour = async (req, res) => {
+  const query = mongoose.isValidObjectId(req.params.id)
+    ? { _id: req.params.id }
+    : { slug: req.params.id };
+  const tour = await Tour.findOne(query).select('startDate duration closed');
+  if (!tour) throw new AppError('No tour found with that ID!', 404);
+  if (tour.closed) throw new AppError('Ez a tábor már le van zárva.', 400);
+  if (!tourHasEnded(tour)) {
+    throw new AppError('A tábor csak a vége után zárható le.', 400);
+  }
+
+  // Not .save(): only these three fields, whatever else the tour has.
+  const closedAt = new Date();
+  await Tour.updateOne({ _id: tour._id }, { closed: true, closedAt, closedBy: req.user._id });
+  logger.info(`Tour ${tour._id} closed by ${req.user._id}`);
+
+  res.status(200).json({ status: 'success', data: { closed: true, closedAt } });
+};
 
 export const createTour = async (req, res) => {
   if (req.body.order === undefined) {
@@ -405,7 +431,8 @@ export const deleteTour = async (req, res) => {
     ? { _id: req.params.id }
     : { slug: req.params.id };
 
-  const tour = await Tour.findOneAndDelete(query);
+  // A closed tour isn't deleted either (the route's tourOpen says so too).
+  const tour = await Tour.findOneAndDelete({ ...query, closed: { $ne: true } });
 
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
