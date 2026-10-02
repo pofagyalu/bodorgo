@@ -322,8 +322,14 @@ describe('Futókör: running', () => {
 
   it('shows every futókör, and one’s results with each runner’s runs and splits', async () => {
     const owner = await createOwner();
-    const anna = await createRunner({ name: 'Kiss Anna', username: 'anna' });
-    const bela = await createRunner({ name: 'Nagy Béla' });
+    // Anna is 34 on the day; Béla has no birthday set.
+    const anna = await createRunner({
+      name: 'Kiss Anna',
+      username: 'anna',
+      gender: 'nő',
+      birthday: new Date(Date.now() - 34.5 * 365.25 * 24 * HOUR),
+    });
+    const bela = await createRunner({ name: 'Nagy Béla', gender: 'férfi' });
     const course = await openCourse(owner);
     await send(owner, [...lap(0, 300), ...lap(1000, 270)]);
     await send(anna, lap(100, 240));
@@ -348,6 +354,13 @@ describe('Futókör: running', () => {
       ['Nagy Zoli', 270000, 2],
       ['Nagy Béla', null, 0],
     ]);
+    // Who they are, to narrow the list by: the age group - never the age.
+    expect(one.runners.map((r) => [r.gender, r.ageGroup])).toEqual([
+      ['nő', '30-39'],
+      [null, null],
+      ['férfi', null],
+    ]);
+    expect(JSON.stringify(one)).not.toContain('birthday');
     // The latest run first; each with its splits.
     expect(one.runners[1].runs.map((r) => r.totalMs)).toEqual([270000, 300000]);
     expect(one.runners[0].runs[0].splits).toMatchObject([

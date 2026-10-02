@@ -10,6 +10,7 @@ import { requireFutokor } from '../futokor/access.js';
 import { isExpired, replayScans } from '../futokor/runRules.js';
 import { tagUrl, verifyTagToken } from '../futokor/tags.js';
 import { userOfFutokod } from '../utils/futokod.js';
+import { computeAge } from './userController.js';
 
 // Futókör: the checkpoint running race of a tour (Móka → Futókörök).
 // Cards (tags) are scanned by the runners' phones; the phones send their
@@ -547,13 +548,24 @@ export const postScans = async (req, res) => {
   });
 };
 
+// A runner's age group at the time of the course: ten years wide ("30-39")
+// - null without a birthday. The results can be narrowed by it; the age
+// itself stays the admins' to see (it never leaves the server here).
+function ageGroup(birthday, at) {
+  const age = computeAge(birthday, at);
+  if (age === null || age < 0) return null;
+  const from = Math.floor(age / 10) * 10;
+  return `${from}-${from + 9}`;
+}
+
 // Every runner of a course by their best finished time (the earlier one
 // first if two are the same); those who never finished come after, by
-// name. Each with all their runs, the latest first.
+// name. Each with all their runs, the latest first - and their gender and
+// age group, to narrow the list by.
 async function courseRunners(course) {
   const runs = await FutokorRun.find({ course: course._id })
     .sort('-startedAt')
-    .populate({ path: 'user', select: 'name username photoUpdatedAt' })
+    .populate({ path: 'user', select: 'name username photoUpdatedAt gender birthday' })
     .lean();
   const runners = new Map();
   for (const run of runs) {
@@ -564,6 +576,8 @@ async function courseRunners(course) {
         userId: run.user._id,
         name: shownName(run.user),
         photoUpdatedAt: run.user.photoUpdatedAt ?? null,
+        gender: run.user.gender ?? null,
+        ageGroup: ageGroup(run.user.birthday, course.opensAt),
         best: null,
         finishedRuns: 0,
         runs: [],

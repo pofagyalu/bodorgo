@@ -20,61 +20,140 @@
         >
       </p>
 
-      <!-- On a desktop: the map and the podium beside the list. -->
-      <div class="one">
-        <div class="one-side">
-          @if (hasMap()) {
-            <app-course-map class="map" [course]="r.course" />
-          }
+      <!-- The map and the podium (side by side on a desktop). -->
+      <div class="top">
+        @if (hasMap()) {
+          <app-course-map class="map" [course]="r.course" />
+        }
+        @if (winners().length) {
+          <app-podium class="podium" [winners]="winners()" [title]="podiumTitle()" />
+        }
+      </div>
 
-          @if (winners().length) {
-            <app-podium [winners]="winners()" title="A leggyorsabbak" />
+      @if (r.runners.length) {
+        <!-- Narrowing the table: by gender, by age group. -->
+        <div class="filters">
+          <div class="chips" role="group" aria-label="Nem">
+            @for (g of genders; track g.value) {
+              <button type="button" [class.on]="gender() === g.value" (click)="gender.set(g.value)">
+                {{ g.label }}
+              </button>
+            }
+          </div>
+          @if (ageGroups().length) {
+            <div class="chips" role="group" aria-label="Korcsoport">
+              <button type="button" [class.on]="ageGroup() === ''" (click)="ageGroup.set('')">
+                Minden korcsoport
+              </button>
+              @for (g of ageGroups(); track g) {
+                <button type="button" [class.on]="ageGroup() === g" (click)="ageGroup.set(g)">
+                  {{ g }} év
+                </button>
+              }
+            </div>
           }
         </div>
 
-        <!-- Everyone, by their best time - a tap opens their runs. -->
-        <ol class="board">
-          @for (runner of r.runners; track runner.userId; let i = $index) {
-            <li [class.me]="runner.userId === myId">
-              <button
-                type="button"
-                class="runner"
-                (click)="toggle(runner.userId)"
-                [attr.aria-expanded]="openRunner() === runner.userId"
-              >
-                <span class="rank">{{ runner.best ? i + 1 + '.' : '–' }}</span>
-                <app-avatar
-                  class="face"
-                  [name]="runner.name"
-                  [userId]="runner.userId"
-                  [photoVersion]="runner.photoUpdatedAt"
-                  [preview]="false"
-                />
-                <span class="who">
-                  {{ runner.name }}
-                  <small
-                    >{{ runner.runs.length }} futás, {{ runner.finishedRuns }} célba érés</small
+        <!-- Everyone: their best lap, and their best time on each stretch.
+             A tap on a column's head puts the table in its order; a tap on
+             a runner opens their runs. The table scrolls sideways on a
+             phone - the runner's name stays in place. -->
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="col-place">Hely</th>
+                <th class="col-who left">Futó</th>
+                <th>Nem</th>
+                <th>Korcsoport</th>
+                <th class="sortable" [class.sorted]="sortBy() === 'total'">
+                  <button type="button" (click)="sortBy.set('total')" title="A legjobb teljes kör">
+                    Legjobb kör
+                    <mat-icon>{{
+                      sortBy() === 'total' ? 'arrow_downward' : 'unfold_more'
+                    }}</mat-icon>
+                  </button>
+                </th>
+                <th>Tempó</th>
+                @for (leg of legs(); track $index; let i = $index) {
+                  <th class="sortable" [class.sorted]="sortBy() === i">
+                    <button type="button" (click)="sortBy.set(i)" [title]="leg.route">
+                      {{ leg.label }}
+                      <mat-icon>{{ sortBy() === i ? 'arrow_downward' : 'unfold_more' }}</mat-icon>
+                    </button>
+                    <small>{{ leg.route }}</small>
+                  </th>
+                }
+                <th title="Futások, ebből célba érés">Futás</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.userId) {
+                <tr
+                  class="runner"
+                  [class.me]="row.userId === myId"
+                  [class.open]="openRunner() === row.userId"
+                  (click)="toggle(row.userId)"
+                >
+                  <td class="col-place">{{ row.place ? row.place + '.' : '–' }}</td>
+                  <td class="col-who left">
+                    <span class="who">
+                      <app-avatar
+                        class="face"
+                        [name]="row.name"
+                        [userId]="row.userId"
+                        [photoVersion]="row.photoUpdatedAt"
+                        [preview]="false"
+                      />
+                      {{ row.name }}
+                    </span>
+                  </td>
+                  <td>{{ row.genderText }}</td>
+                  <td>{{ row.ageText }}</td>
+                  <td
+                    class="time"
+                    [class.sorted]="sortBy() === 'total'"
+                    [class.record]="row.best && row.best.totalMs === records().total"
                   >
-                </span>
-                <span class="best">
-                  {{ runner.best ? time(runner.best.totalMs) : '–' }}
-                  @if (runner.best?.paceSecPerKm; as p) {
-                    <small>{{ pace(p) }}</small>
+                    {{ row.best ? time(row.best.totalMs) : '–' }}
+                  </td>
+                  <td>{{ row.best?.paceSecPerKm ? pace(row.best!.paceSecPerKm) : '–' }}</td>
+                  @for (ms of row.legMs; track $index; let i = $index) {
+                    <td
+                      class="time"
+                      [class.sorted]="sortBy() === i"
+                      [class.record]="ms !== null && ms === records().legs[i]"
+                    >
+                      {{ ms !== null ? time(ms) : '–' }}
+                    </td>
                   }
-                </span>
-                <mat-icon>{{
-                  openRunner() === runner.userId ? 'expand_less' : 'expand_more'
-                }}</mat-icon>
-              </button>
-              @if (openRunner() === runner.userId) {
-                <app-run-list class="their-runs" [runs]="runner.runs" [course]="r.course" />
+                  <td>{{ row.runs.length }} / {{ row.finishedRuns }}</td>
+                </tr>
+                @if (openRunner() === row.userId) {
+                  <tr class="their-runs">
+                    <td [attr.colspan]="7 + legs().length">
+                      <app-run-list [runs]="row.runs" [course]="r.course" />
+                    </td>
+                  </tr>
+                }
+              } @empty {
+                <tr>
+                  <td class="none" [attr.colspan]="7 + legs().length">
+                    Ebben a szűrésben nincs futó.
+                  </td>
+                </tr>
               }
-            </li>
-          } @empty {
-            <li class="empty">Ezen a pályán még senki sem futott.</li>
-          }
-        </ol>
-      </div>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">
+          A szakaszoknál mindenkinek a saját legjobb ideje áll az adott szakaszon (bármelyik
+          futásából), ezért nem feltétlenül adják ki a legjobb kör idejét. Az oszlop legjobb ideje
+          kiemelve; a fejlécre koppintva aszerint rendezhetsz.
+        </p>
+      } @else {
+        <p class="empty">Ezen a pályán még senki sem futott.</p>
+      }
     } @else if (failed()) {
       <p class="empty">Nincs ilyen futókör.</p>
     }

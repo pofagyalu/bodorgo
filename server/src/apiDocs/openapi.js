@@ -2942,7 +2942,7 @@ const paths = {
       tag: T.race,
       summary: 'One futókör’s results',
       description:
-        'The course (with its checkpoints, to name the splits by) and every runner in the order of their best finished time - those who never finished after them - each with all their runs (the latest first) and the runs’ splits.',
+        'The course (with its checkpoints, to name the splits by) and every runner in the order of their best finished time - those who never finished after them - each with all their runs (the latest first) and the runs’ splits. Each runner also has their `gender` and `ageGroup` (ten years wide, at the time of the course - e.g. `30-39`; null without a birthday) to narrow the list by: the age group is everyone’s to see here, the age itself is not sent.',
       params: [path('id', 'The course.')],
       data: obj({
         course: ref('FutokorCourse'),
@@ -2951,6 +2951,8 @@ const paths = {
             userId: id(),
             name: str(),
             photoUpdatedAt: { type: ['string', 'null'] },
+            gender: { type: ['string', 'null'], enum: ['férfi', 'nő', null] },
+            ageGroup: { type: ['string', 'null'] },
             best: { oneOf: [ref('FutokorRun'), { type: 'null' }] },
             finishedRuns: int(),
             runs: arrayOf(ref('FutokorRun')),

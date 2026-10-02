@@ -81,6 +81,10 @@ export interface CourseResults {
     userId: string;
     name: string;
     photoUpdatedAt: string | null;
+    // To narrow the table by: the age group is ten years wide ("30-39") -
+    // null if it isn't known.
+    gender: 'férfi' | 'nő' | null;
+    ageGroup: string | null;
     best: FutokorRun | null;
     finishedRuns: number;
     runs: FutokorRun[];
