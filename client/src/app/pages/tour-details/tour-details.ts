@@ -8,7 +8,6 @@ import {
   ViewChild,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { GalleryPhoto, PhotoGalleryService } from '../../shared/photo-gallery';
@@ -16,8 +15,6 @@ import {
   TourService,
   Tour,
   ScheduleEntry,
-  DailyWeather,
-  WeatherCondition,
   TourImage,
   AttendeePayment,
   PaymentTotals,
@@ -33,8 +30,7 @@ import { environment } from '../../../environments/environment';
 import { shuffledLogoColors } from '../../shared/logo-colors';
 import { formatDrivingDuration } from '../../shared/format';
 import { CalendarEvent, downloadIcs, googleCalendarUrl } from '../../shared/calendar-event';
-import { TourEvent } from './tour-event/tour-event';
-import { EventForm, EventFormModel } from './event-form/event-form';
+import { TourSchedule } from './tour-schedule/tour-schedule';
 import { ReviewStars } from './review-stars/review-stars';
 import { VideoCard } from '../../shared/video-card/video-card';
 import { VideoPlayer } from '../../shared/video-player/video-player';
@@ -46,22 +42,13 @@ import {
 } from './attendee-list/attendee-list';
 import { NotificationsService } from '../../notifications/notifications.service';
 
-interface DayGroup {
-  day: number;
-  label: string;
-  events: ScheduleEntry[];
-  weather?: DailyWeather;
-}
-
 @Component({
   selector: 'app-tour-details',
   standalone: true,
   imports: [
     MatIconModule,
     RouterLink,
-    FormsModule,
-    TourEvent,
-    EventForm,
+    TourSchedule,
     ReviewStars,
     AttendeeList,
     VideoCard,
@@ -127,19 +114,6 @@ export class TourDetails {
   // tour.ts's showParticipantsPreference), instead of always resetting to
   // collapsed when navigating back to a tour.
   showParticipants = signal(this.tourService.showParticipantsPreference);
-  // Which day (its 1-indexed number, or null for none) currently has the
-  // "add new event" form open - only one at a time, same pattern as
-  // tour-event.ts's own single-event edit mode.
-  addingEventForDay = signal<number | null>(null);
-  addingEvent = signal(false);
-  addEventError = signal<string | null>(null);
-  addEventForm: EventFormModel = {
-    time: '08:00',
-    description: '',
-    isOptional: false,
-    extraCost: null,
-  };
-
   // Sign-up (tour-signup): who a 'member' or 'admin' can additionally choose to
   // register besides themselves - loaded once the role is known (see the
   // effect in the constructor, same pattern as profile.ts since
@@ -162,7 +136,8 @@ export class TourDetails {
 
   currentUserId = computed(() => this.auth.user()?.id);
 
-  // Long Hungarian format ("2026. szeptember 12.") rather than Angular's
+  // Hungarian format with the short month ("2026. szept. 12." - so the
+  // line fits on a phone) rather than Angular's
   // DatePipe, which needs hu locale data registered to avoid falling back
   // to English month names - this app doesn't register it (see the chat
   // feature's Post component for the same reasoning/pattern).
@@ -171,70 +146,10 @@ export class TourDetails {
     if (!t) return '';
     return new Intl.DateTimeFormat('hu-HU', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
     }).format(new Date(t.startDate));
   });
-
-  dayGroups = computed<DayGroup[]>(() => {
-    const t = this.tour();
-    if (!t) return [];
-
-    const start = new Date(t.startDate);
-    const dateFmt = new Intl.DateTimeFormat('hu-HU', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-
-    const groups: DayGroup[] = [];
-    for (let day = 1; day <= t.duration; day++) {
-      const date = new Date(start);
-      date.setDate(date.getDate() + (day - 1));
-
-      const events = (t.schedule ?? [])
-        .filter((e) => e.day === day)
-        .slice()
-        .sort((a, b) => a.time.localeCompare(b.time));
-
-      const weather = t.dailyWeather?.find((w) => w.day === day);
-
-      groups.push({ day, label: dateFmt.format(date), events, weather });
-    }
-    return groups;
-  });
-
-  private static readonly WEATHER_ICONS: Record<WeatherCondition, string> = {
-    clear: 'clear.svg',
-    'partly-cloudy': 'partly-cloudy.svg',
-    cloudy: 'cloudy.svg',
-    fog: 'fog.svg',
-    rain: 'rain.svg',
-    snow: 'snow.svg',
-    thunderstorm: 'thunderstorm.svg',
-  };
-
-  weatherIconPath(condition: WeatherCondition): string {
-    return `assets/images/weather/${TourDetails.WEATHER_ICONS[condition]}`;
-  }
-
-  // The weather pill's own tooltip (see tour-details.html) - used to just
-  // say "Tényleges időjárás"/"Előrejelzés" (forecast vs. actual), which
-  // never actually said what the weather itself was.
-  private static readonly WEATHER_LABELS: Record<WeatherCondition, string> = {
-    clear: 'Napos',
-    'partly-cloudy': 'Változóan felhős',
-    cloudy: 'Felhős',
-    fog: 'Ködös',
-    rain: 'Esős',
-    snow: 'Havazás',
-    thunderstorm: 'Zivataros',
-  };
-
-  weatherConditionLabel(condition: WeatherCondition): string {
-    return TourDetails.WEATHER_LABELS[condition];
-  }
 
   // How much each attendee owes across every optional, extra-cost
   // schedule event they joined (e.g. picking "Reggeli felnőtt" on both
@@ -395,6 +310,16 @@ export class TourDetails {
     if (!t) return null;
     const [lng, lat] = t.location.coordinates;
     const url = `https://www.google.com/maps?q=${lat},${lng}&output=embed`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  // The place's 360° panorama (the tour's panoramaUrl, on another site) in
+  // a popup like the map's - null without a usable http(s) link, and then
+  // the cover's 360° badge isn't shown either.
+  showPanorama = signal(false);
+  panoramaEmbedUrl = computed<SafeResourceUrl | null>(() => {
+    const url = this.tour()?.panoramaUrl?.trim();
+    if (!url || !/^https?:\/\//i.test(url)) return null;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
@@ -652,7 +577,7 @@ export class TourDetails {
     this.showMap.set(false);
   }
 
-  // Called when a <app-tour-event> emits a fresh event after an opt-in
+  // Called when <app-tour-schedule> hands back a fresh event after an opt-in
   // toggle or an admin edit - patches this one entry into the tour's own
   // schedule array immutably, which then flows back down to the same child
   // instance (matched by track ev._id) as its updated @Input().
@@ -675,46 +600,8 @@ export class TourDetails {
     );
   }
 
-  startAddEvent(day: number) {
-    this.addEventError.set(null);
-    this.addEventForm = { time: '08:00', description: '', isOptional: false, extraCost: null };
-    this.addingEventForDay.set(day);
-  }
-
-  cancelAddEvent() {
-    this.addingEventForDay.set(null);
-    this.addEventError.set(null);
-  }
-
-  saveNewEvent(day: number) {
-    const t = this.tour();
-    if (!t) return;
-
-    this.addingEvent.set(true);
-    this.addEventError.set(null);
-
-    const form = this.addEventForm;
-    this.tourService
-      .createScheduleEvent(t._id, {
-        day,
-        time: form.time,
-        description: form.description,
-        isOptional: form.isOptional,
-        extraCost: form.isOptional ? (form.extraCost ?? undefined) : undefined,
-      })
-      .subscribe({
-        next: (res) => {
-          this.tour.update((cur) =>
-            cur ? { ...cur, schedule: [...(cur.schedule ?? []), res.data.event] } : cur,
-          );
-          this.addingEvent.set(false);
-          this.addingEventForDay.set(null);
-          this.notifications.addSuccess('Esemény mentése sikeres');
-        },
-        error: (err) => {
-          this.addEventError.set(err?.error?.message ?? 'Hiba történt a hozzáadás során.');
-          this.addingEvent.set(false);
-        },
-      });
+  // The admin added an event in <app-tour-schedule>.
+  onEventAdded(added: ScheduleEntry) {
+    this.tour.update((cur) => (cur ? { ...cur, schedule: [...(cur.schedule ?? []), added] } : cur));
   }
 }
