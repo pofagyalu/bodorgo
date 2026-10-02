@@ -45,6 +45,10 @@ function songFields(body, { partial = false } = {}) {
     if (!Array.isArray(body.tags)) throw new AppError('A címkék listája hibás.', 400);
     fields.tags = body.tags.map((t) => String(t).trim()).filter(Boolean);
   }
+  if (body.originalKey !== undefined) {
+    fields.originalKey = String(body.originalKey ?? '').trim();
+    if (fields.originalKey.length > 12) throw new AppError('Az eredeti hangnem túl hosszú.', 400);
+  }
   return fields;
 }
 

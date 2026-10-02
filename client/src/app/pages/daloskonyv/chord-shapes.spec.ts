@@ -42,8 +42,33 @@ describe('chordShape: guitar', () => {
     expect(frets('Bb', 'guitar')).toBe('x13331');
   });
 
-  it('shows a slash chord’s chord, and falls back to the plainer chord', () => {
-    expect(frets('G/H', 'guitar')).toBe('320003');
+  it('puts a slash chord’s bass note lowest', () => {
+    // A minor with C, with G, with F in the bass.
+    expect(frets('am/C', 'guitar')).toBe('x32210');
+    expect(frets('am/G', 'guitar')).toBe('302210');
+    expect(frets('am/F', 'guitar')).toBe('102210');
+    expect(frets('G/H', 'guitar')).toBe('x20003');
+    expect(frets('C/G', 'guitar')).toBe('332010');
+    expect(frets('D/F#', 'guitar')).toBe('2x0232');
+    expect(frets('dm/H', 'guitar')).toBe('x20231');
+    expect(frets('G/E', 'guitar')).toBe('020003');
+    // The bass is the chord's own lowest note already: nothing changes.
+    expect(frets('am/A', 'guitar')).toBe('x02210');
+    expect(frets('C/C', 'guitar')).toBe('x32010');
+  });
+
+  it('keeps the barre on the strings it still reaches', () => {
+    // F over C: the low E isn't played, the bar starts at the D string.
+    expect(frets('F/C', 'guitar')).toBe('x33211');
+    expect(chordShape('F/C', 'guitar', 'hungarian')?.barre).toEqual({ fret: 1, from: 4, to: 5 });
+  });
+
+  it('shows just the chord on the ukulele', () => {
+    expect(frets('am/C', 'ukulele')).toBe('2000');
+    expect(frets('G/H', 'ukulele')).toBe('0232');
+  });
+
+  it('falls back to the plainer chord', () => {
     expect(frets('Am9', 'guitar')).toBe('x02010');
     expect(frets('C-', 'guitar')).toBe('x35543');
     expect(frets('D4', 'guitar')).toBe('xx0233');

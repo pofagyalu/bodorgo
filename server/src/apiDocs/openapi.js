@@ -508,6 +508,9 @@ const schemas = {
       'Lyrics and chords as ChordPro text: chords in [brackets] right before their syllable, `{start_of_chorus}` / `{end_of_chorus}` around the chorus, `{comment: 2x}` for notes, an empty line between verses.',
     ),
     tags: arrayOf(str()),
+    originalKey: str(
+      'The song’s first chord as it was first written ("am") - set when the song is saved in another key, so its old key can be shown and gone back to. Empty: the song was never moved.',
+    ),
     createdAt: date(),
     updatedAt: date(),
   }),
@@ -516,6 +519,9 @@ const schemas = {
     artist: str(),
     chordpro: str('ChordPro text - see Song. At most 20 000 characters.'),
     tags: arrayOf(str()),
+    originalKey: str(
+      'See Song - sent by the song page with the transposed `chordpro` when a song is saved in a new key. At most 12 characters.',
+    ),
   }),
 
   ChatRoom: obj({

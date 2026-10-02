@@ -2,7 +2,14 @@ import path from 'path';
 import PDFDocument from 'pdfkit';
 import { drawCover } from './songBookCover.js';
 import { ANNEXES } from './songBookAnnexes.js';
-import { chordShape, parseChordPro, toBlocks, toWords, uniqueChords } from './songText.js';
+import {
+  chordShape,
+  parseChord,
+  parseChordPro,
+  toBlocks,
+  toWords,
+  uniqueChords,
+} from './songText.js';
 
 // The whole Daloskönyv as one PDF: a cover, the table of contents (every
 // line a link to its song, with its page number), then the songs - each
@@ -243,7 +250,13 @@ function drawRow(doc, row, y) {
   const textY = row.hasChords ? y + CHORD_ROW : y;
   for (const piece of row.pieces) {
     if (piece.chord) {
-      put(doc, piece.chord, piece.x, y + 1, { font: 'Heading', size: CHORD_SIZE, color: CHORD });
+      // In brackets but not a chord ("Intro", "2x"): a quiet label.
+      const label = !parseChord(piece.chord);
+      put(doc, piece.chord, piece.x, y + 1, {
+        font: label ? 'Italic' : 'Heading',
+        size: CHORD_SIZE,
+        color: label ? GREY : CHORD,
+      });
     }
     if (piece.text.trim()) put(doc, piece.text, piece.x, textY);
   }

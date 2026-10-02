@@ -21,6 +21,10 @@ const songSchema = new Schema(
     slug: { type: String, unique: true },
     chordpro: { type: String, default: '', maxlength: 20000 },
     tags: { type: [String], default: [] },
+    // The song's first chord as it was first written here ("am") - kept
+    // when the song is saved in another key, so its old key can be told
+    // (and gone back to). Empty: never moved.
+    originalKey: { type: String, trim: true, maxlength: 12, default: '' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true },

@@ -111,6 +111,24 @@ describe('Daloskönyv: the songs', () => {
     ).toBe(404);
   });
 
+  it('keeps the key a song was first written in, once it is saved in another', async () => {
+    const owner = await createOwner();
+    const { song } = (await add(owner, { title: 'Dal', chordpro: '[am]la [D]la' })).body.data;
+    expect(song.originalKey).toBe('');
+    const patch = (body) => request(app).patch(`/songs/${song._id}`).set(asUser(owner)).send(body);
+
+    const moved = await patch({ chordpro: '[hm]la [E]la', originalKey: ' am ' });
+    expect(moved.body.data.song).toMatchObject({ chordpro: '[hm]la [E]la', originalKey: 'am' });
+    // Everyone reading the song gets it.
+    const read = await request(app)
+      .get('/songs/dal')
+      .set(asUser(await createGuest()));
+    expect(read.body.data.song.originalKey).toBe('am');
+    // Changing the text later leaves it alone.
+    expect((await patch({ chordpro: '[hm]la la' })).body.data.song.originalKey).toBe('am');
+    expect((await patch({ originalKey: 'x'.repeat(13) })).status).toBe(400);
+  });
+
   it('deletes a song', async () => {
     const owner = await createOwner();
     const { song } = (await add(owner, { title: 'Törlendő' })).body.data;

@@ -31,12 +31,12 @@
     }
     <!-- Not a playlist: the songbook (pages/daloskonyv). -->
     <a class="playlist-card playlist-card--book" routerLink="daloskonyv">
-      <span class="cover cover--icon"><mat-icon>menu_book</mat-icon></span>
+      <span class="cover"><img src="assets/images/daloskonyv-cover.svg" alt="" /></span>
       <div class="card-text">
         <span class="card-kind"><mat-icon>library_music</mat-icon>Dalszövegek</span>
         <strong class="card-name">Daloskönyv</strong>
         <span class="card-tagline">A klub dalai szöveggel és akkordokkal</span>
-        <span class="card-summary">Gitárra, ukulelére, tábortűzhöz</span>
+        <span class="card-summary">{{ bookSummary() ?? '…' }}</span>
       </div>
     </a>
   </div>

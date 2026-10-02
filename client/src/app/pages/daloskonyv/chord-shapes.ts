@@ -170,8 +170,45 @@ function quality(rest: string, minor: boolean): Quality {
 
 const fretsOf = (t: Template) => [...t.frets].map((f) => (f === 'x' ? -1 : Number(f)));
 
+// The guitar's three low strings (E, A, D), as places among the twelve
+// notes - where a slash chord's bass note goes.
+const BASS_STRINGS = [4, 9, 2];
+
+// A slash chord on the guitar ("am/C", "G/H"): the same chord with the
+// note after the slash as its lowest - on the lowest of the three bass
+// strings where that note is within the hand's reach of the shape; the
+// strings under it aren't played. The shape as it was when the note is
+// its lowest already, or is nowhere in reach.
+function withBass(shape: ChordShape, bass: number): ChordShape {
+  const lowest = shape.frets.findIndex((f) => f >= 0);
+  if (lowest < 0 || lowest > 2) return shape;
+  if ((BASS_STRINGS[lowest] + shape.frets[lowest]) % 12 === bass) return shape;
+
+  for (let string = 0; string < BASS_STRINGS.length; string += 1) {
+    const fret = (bass - BASS_STRINGS[string] + 12) % 12;
+    const frets = shape.frets.map((f, i) => (i < string ? -1 : i === string ? fret : f));
+    const held = frets.filter((f) => f > 0);
+    // Four frets is what a hand spans.
+    if (held.length && Math.max(...held) - Math.min(...held) > 3) continue;
+    // The finger laid across reaches only the strings still at its fret.
+    let barre = shape.barre;
+    if (barre) {
+      const fretOf = barre.fret;
+      const at = frets.flatMap((f, i) => (i > string && f === fretOf ? [i] : []));
+      barre =
+        at.length > 1 && frets.slice(at[0]).every((f) => f >= fretOf)
+          ? { fret: fretOf, from: at[0], to: at[at.length - 1] }
+          : null;
+    }
+    return { frets, barre };
+  }
+  return shape;
+}
+
 // The lowest way of holding a chord on the instrument - null for what
-// isn't a chord name. A slash chord ("G/H") shows its chord, not the bass.
+// isn't a chord name. A slash chord ("G/H") is the chord with that note
+// as its lowest on the guitar; on the ukulele (four strings, the lowest
+// in the middle) just the chord.
 export function chordShape(
   name: string,
   instrument: Instrument,
@@ -201,6 +238,7 @@ export function chordShape(
       barre: up && held.length > 1 ? { fret: up, from: held[0], to: held[held.length - 1] } : null,
     };
   }
+  if (best && chord.bass !== null && instrument === 'guitar') return withBass(best, chord.bass);
   return best;
 }
 

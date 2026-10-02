@@ -20,7 +20,7 @@
 
     <div class="tools">
       <!-- Whose chord diagrams: the guitar's or the ukulele's. -->
-      <div class="tool tool--choice" role="group" aria-label="Hangszer az akkordábrákhoz">
+      <div class="tool tool--choice" role="group" aria-label="Hangszer az akkordokhoz">
         <button
           type="button"
           [class.on]="instrument() === 'guitar'"
@@ -85,6 +85,19 @@
         >
           <mat-icon>add</mat-icon>
         </button>
+        <!-- The songbook's owner, once the song is moved: keep it so. -->
+        @if (canEdit() && transpose() !== 0) {
+          <button
+            type="button"
+            class="keep-key"
+            (click)="saveTransposed()"
+            [disabled]="savingKey()"
+            title="Mentés ebben a hangnemben"
+            aria-label="A dal mentése ebben a hangnemben"
+          >
+            <mat-icon>save</mat-icon>
+          </button>
+        }
       </div>
 
       <!-- The chords are always over the lyrics; this only shows or hides
@@ -95,8 +108,8 @@
           [class.off]="!showDiagrams()"
           (click)="toggleDiagrams()"
           [attr.aria-pressed]="showDiagrams()"
-          title="Akkordábrák a dal fölött"
-          aria-label="Akkordábrák a dal fölött"
+          title="Akkordok a dal fölött"
+          aria-label="Akkordok a dal fölött"
         >
           <mat-icon>grid_on</mat-icon>
         </button>
@@ -149,6 +162,18 @@
         <h2>{{ song()!.title }}</h2>
         @if (song()!.artist) {
           <p class="artist">{{ song()!.artist }}</p>
+        }
+        <!-- Saved in another key than it was first written in: what that
+             was - a tap shows the song in it again (on the screen only). -->
+        @if (originalKey(); as original) {
+          <button
+            type="button"
+            class="original-key"
+            (click)="showOriginalKey()"
+            title="A dal megmutatása az eredeti hangnemben"
+          >
+            <mat-icon>history</mat-icon>Eredeti hangnem: <strong>{{ original.chord }}</strong>
+          </button>
         }
       </header>
 

@@ -55,7 +55,9 @@ export function parseChord(name: string, notation: Notation = NOTATION): Chord |
 function noteName(pc: number, flats: boolean, notation: Notation): string {
   if (notation === 'hungarian') {
     if (pc === 11) return 'H';
-    if (pc === 10) return 'B';
+    // The note between A and H: "B" where the key is written with flats
+    // (the Hungarian name of B♭), "A#" where it is written with sharps.
+    if (pc === 10 && flats) return 'B';
   }
   return (flats ? FLATS : SHARPS)[pc];
 }
@@ -89,4 +91,34 @@ export function transposer(
     const root = chord.lower ? note(chord.root).toLowerCase() : note(chord.root);
     return root + chord.rest + (chord.bass === null ? '' : `/${note(chord.bass)}`);
   };
+}
+
+// A whole song's ChordPro text with every chord moved - for keeping a song
+// in the key it was tried in on the screen. The very same chords the song
+// page shows at that transposition (the key from the first chord, as
+// there); the words and everything else stay as they are.
+export function transposeChordPro(
+  source: string,
+  steps: number,
+  notation: Notation = NOTATION,
+): string {
+  const move = transposer(firstChord(source), steps, notation);
+  return source.replace(BRACKETS, (_, name: string) => `[${move(name.trim())}]`);
+}
+
+const BRACKETS = /\[([^\]\n]*)\]/g;
+
+// The first chord of a song's ChordPro text - what its key is taken from.
+export function firstChord(source: string): string | undefined {
+  return [...source.matchAll(BRACKETS)].map((m) => m[1].trim()).find(Boolean);
+}
+
+// How many semitones from one chord's root to another's, the short way
+// round (-5…+6) - null if either isn't a chord. From a song's first chord
+// to the one it was first written with: how to see it in its old key.
+export function stepsBetween(from: string, to: string, notation: Notation = NOTATION) {
+  const [a, b] = [parseChord(from, notation), parseChord(to, notation)];
+  if (!a || !b) return null;
+  const up = (b.root - a.root + 12) % 12;
+  return up > 6 ? up - 12 : up;
 }
