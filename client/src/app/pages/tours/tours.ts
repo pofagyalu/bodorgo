@@ -56,7 +56,13 @@ export class Tours implements OnInit {
   searchTerm = signal(''); // debounced version
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   // The one order there is: by date - newest first, or (true) oldest first.
-  ascending = signal(false);
+  // Back on the page: as it was left (see TourService.toursAscending).
+  ascending = signal(this.tourService.toursAscending);
+
+  toggleOrder() {
+    this.ascending.update((ascending) => !ascending);
+    this.tourService.toursAscending = this.ascending();
+  }
 
   ngOnInit() {
     this.tourService.getTourYears().subscribe({

@@ -44,7 +44,7 @@
           [attr.aria-label]="
             ascending() ? 'Dátum szerint csökkenő sorrend' : 'Dátum szerint növekvő sorrend'
           "
-          (click)="ascending.set(!ascending())"
+          (click)="toggleOrder()"
         >
           <mat-icon>{{ ascending() ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
         </button>
