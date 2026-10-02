@@ -21,7 +21,8 @@ export class FutokorTagPage {
   private router = inject(Router);
   readonly token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
 
-  ready = signal(!!this.futokor.course());
+  // (A card of a course this phone doesn't have yet: the courses first.)
+  ready = signal(!!this.futokor.courseOfCard(this.token));
 
   constructor() {
     if (!this.ready()) void this.futokor.refresh().then(() => this.ready.set(true));

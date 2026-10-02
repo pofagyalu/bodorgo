@@ -110,6 +110,40 @@
   }
 }
 
+// Futókörök's own pages, indented under it with a thin guide line (the
+// same as the video categories under Média → Videók).
+.sub-nav {
+  display: grid;
+  gap: 0.125rem;
+  margin: -0.125rem 0 0.375rem 1.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid #2c4659;
+}
+
+.sub-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5625rem;
+  color: #a9bdc5;
+  font-size: 0.8125rem;
+  text-decoration: none;
+  @include nav.nav-item-glow;
+
+  &.active {
+    font-weight: 650;
+  }
+
+  mat-icon {
+    width: 1.3125rem;
+    height: 1.3125rem;
+    font-size: 1.3125rem;
+    flex: none;
+    color: #f6b528;
+  }
+}
+
 .soon {
   margin-left: auto;
   font-size: 0.625rem;
@@ -165,8 +199,21 @@
 
   .brand-text,
   .side-bottom,
-  .soon {
+  .soon,
+  .sub-title {
     display: none;
+  }
+
+  .sub-nav {
+    margin: 0 0 0.375rem;
+    padding: 0;
+    border-left: 0;
+    justify-items: center;
+  }
+
+  .sub-item {
+    justify-content: center;
+    padding: 0.5625rem;
   }
 
   .moka-nav .nav-item {
@@ -218,5 +265,21 @@
 
   .moka-mobile-nav .coming {
     opacity: 0.5;
+  }
+
+  // Futókörök's own pages: a second, lighter row under the games' tabs.
+  .moka-mobile-sub {
+    background: #fffaf0;
+    padding-block: 0.375rem;
+
+    a {
+      font-size: 0.75rem;
+      padding: 0.4375rem 0.625rem;
+
+      &.active {
+        background: #fff0c9;
+        color: #9a5a05;
+      }
+    }
   }
 }

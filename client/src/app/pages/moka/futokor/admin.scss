@@ -306,3 +306,204 @@ button,
   padding-top: 0.875rem;
   border-top: 1px solid #f0ece0;
 }
+
+// A desktop has the room: a wider page, the cards (Kártyák) side by side.
+@media (min-width: 1000px) {
+  .admin-page {
+    max-width: 64rem;
+    padding-inline: 2rem;
+  }
+
+  .list {
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 0.5rem;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+  }
+}
+
+// --- Pályaszerkesztő ---
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--logo-orange);
+}
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  mat-icon {
+    color: var(--logo-orange);
+  }
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.editor h2 {
+  margin-top: 1rem;
+}
+
+// Whose course it is: a tour's, or someone's own.
+.kind {
+  margin-left: 0.375rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 0.625rem;
+  background: #e3f3dc;
+  color: var(--logo-dark-green);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  vertical-align: middle;
+
+  &.kind--tour {
+    background: #ffe7d1;
+    color: #b5530f;
+  }
+}
+
+// A file to choose, looking like a button.
+.file {
+  cursor: pointer;
+
+  input {
+    display: none;
+  }
+}
+
+a.text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  strong {
+    min-width: 1.5rem;
+    text-align: center;
+    font-family: Marhey, sans-serif;
+    font-size: 1.125rem;
+  }
+}
+
+.stops {
+  margin-top: 0.5rem;
+
+  // The point a tap on the map places.
+  li.placing {
+    outline: 2px solid var(--logo-red);
+    background: #fff3d1;
+  }
+
+  button.order {
+    width: auto;
+    min-height: 2.25rem;
+    padding: 0 0.5rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+    }
+  }
+
+  .card-name {
+    flex: 1;
+    font-size: 0.8125rem;
+    color: #6a7a83;
+  }
+
+  .placed {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--logo-dark-green);
+
+    mat-icon {
+      font-size: 1.125rem;
+      width: 1.125rem;
+      height: 1.125rem;
+    }
+  }
+}
+
+.map-help {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  background: #e5f1fa;
+  color: #1d3c50;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+
+  mat-icon {
+    flex: none;
+    color: var(--logo-blue);
+  }
+}
+
+// A desktop has the room: the whole width - two new-course cards side by
+// side, and an open course's form beside its map.
+@media (min-width: 1000px) {
+  .editor-page {
+    max-width: 90rem;
+  }
+
+  .new-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .editor {
+    display: grid;
+    grid-template-columns: minmax(24rem, 34rem) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .editor-map {
+    position: sticky;
+    top: 1rem;
+
+    .map {
+      --map-height: min(38rem, calc(100dvh - var(--header-height) - 9rem));
+    }
+
+    .map-help {
+      margin-top: 0;
+    }
+  }
+}

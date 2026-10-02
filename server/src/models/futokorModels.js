@@ -7,9 +7,13 @@ const { Schema } = mongoose;
 // run are in futokor/runRules.js; how these fit together, in
 // controllers/futokorController.js.
 
-// A card: printed once (a QR code, later an NFC sticker on its back),
-// laminated, and used again on every tour. It says nothing about any
-// course - which checkpoint it is today is the course's business.
+// A card: printed once (a QR code, later an NFC sticker on its back) and
+// laminated. Two kinds:
+// - the club's own set (S1, T01, T02...), made by the admins and used
+//   again on every tour - which checkpoint a card is today is the tour's
+//   course's business;
+// - a user's own track's cards (P3-S, P3-01...), made with the track and
+//   belonging only to it (`course`).
 const tagSchema = new Schema(
   {
     // What the card is called and what its link carries: "T01", "T02"...
@@ -18,20 +22,31 @@ const tagSchema = new Schema(
     kind: { type: String, enum: ['startFinish', 'checkpoint'], default: 'checkpoint' },
     // Lost or damaged: its link no longer counts.
     retired: { type: Boolean, default: false },
+    // The user's own track it was made for - null: one of the club's set.
+    course: { type: Schema.Types.ObjectId, ref: 'FutokorCourse', default: null },
   },
   { timestamps: true },
 );
 
 export const FutokorTag = mongoose.model('FutokorTag', tagSchema);
 
-// A course: a tour's loop - one per tour. Runs count while it's open
-// (opensAt-closesAt); no two courses are open at the same time, so a card
-// scanned at any moment belongs to at most one.
+// A course: a loop to run. Runs count while it's open (opensAt-closesAt).
+// Two kinds:
+// - a tour's course (`tour`): one per tour, the admins', with the club's
+//   cards; no two of them are open at the same time;
+// - a user's own track (no `tour`): anyone can make one and is its owner
+//   (`createdBy`), it has its own cards, and it can be open whenever -
+//   alongside a tour's course or other tracks. Which course a run is on is
+//   decided by the START card that was scanned.
 const courseSchema = new Schema(
   {
-    tour: { type: Schema.Types.ObjectId, ref: 'Tour', required: true, unique: true },
+    // (Not set at all on a user's own track - the index only holds tours.)
+    tour: { type: Schema.Types.ObjectId, ref: 'Tour' },
     name: { type: String, required: true, trim: true },
+    // Whoever made it: a user's own track is theirs to change.
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    // The GPX file its loop is from (gpxTrackModel.js) - null if none.
+    gpx: { type: Schema.Types.ObjectId, ref: 'GpxTrack', default: null },
     opensAt: { type: Date, required: true },
     closesAt: { type: Date, required: true },
     maxRunDurationMin: { type: Number, default: DEFAULTS.maxRunDurationMin },
@@ -66,6 +81,9 @@ const courseSchema = new Schema(
   },
   { timestamps: true },
 );
+
+// One course per tour - a user's own tracks (no tour) aren't in the index.
+courseSchema.index({ tour: 1 }, { unique: true, sparse: true });
 
 export const FutokorCourse = mongoose.model('FutokorCourse', courseSchema);
 

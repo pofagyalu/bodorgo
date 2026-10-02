@@ -165,11 +165,23 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/moka/futokor/futokor-home').then((m) => m.FutokorHome),
       },
       {
+        path: 'futokor/eredmenyek',
+        title: 'Futókörök – Eredmények',
+        loadComponent: () =>
+          import('./pages/moka/futokor/results/results').then((m) => m.FutokorResults),
+      },
+      {
+        path: 'futokor/eredmenyek/:id',
+        title: 'Futókörök – Eredmények',
+        loadComponent: () =>
+          import('./pages/moka/futokor/results/results').then((m) => m.FutokorResults),
+      },
+      {
         path: 'futokor/utmutato',
         title: 'Futókörök – Útmutató',
         loadComponent: () => import('./pages/moka/futokor/guide/guide').then((m) => m.FutokorGuide),
       },
-      // The cards and the courses are the admins'.
+      // The club's cards are the admins'.
       {
         path: 'futokor/kartyak',
         title: 'Futókörök – Kártyák',
@@ -177,12 +189,14 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/moka/futokor/cards/cards').then((m) => m.FutokorCards),
       },
       {
-        path: 'futokor/palyak',
-        title: 'Futókörök – Pályák',
-        canActivate: [futokorAdminGuard],
+        // Everyone's: their own tracks (and, for admins, the tours' courses).
+        path: 'futokor/palyaszerkeszto',
+        title: 'Futókörök – Pályaszerkesztő',
         loadComponent: () =>
-          import('./pages/moka/futokor/courses/courses').then((m) => m.FutokorCourses),
+          import('./pages/moka/futokor/editor/editor').then((m) => m.FutokorEditor),
       },
+      // Its first address.
+      { path: 'futokor/palyak', pathMatch: 'full', redirectTo: 'futokor/palyaszerkeszto' },
     ],
   },
   {

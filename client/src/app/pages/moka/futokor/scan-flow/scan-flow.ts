@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
-import { FutokorService, ScanAnswer } from '../../../../services/futokor';
+import { FutokorService, ScanAnswer, tagOfToken } from '../../../../services/futokor';
 import { ScanAnswerView, unlockSound } from '../scan-answer/scan-answer';
 
 // How long after a finish the same card again is still "the same scan"
@@ -38,6 +38,8 @@ export class ScanFlow implements OnInit {
   codeError = signal('');
 
   ngOnInit() {
+    // With no run on, the card says which course this is about.
+    this.futokor.prepare(this.token());
     if (!this.isFreshStart()) this.answer.set(this.futokor.scan(this.token()));
     else this.step.set(this.futokor.runner() ? 'go' : 'who');
   }
@@ -50,7 +52,7 @@ export class ScanFlow implements OnInit {
     if (!course || now < Date.parse(course.opensAt) || now > Date.parse(course.closesAt)) {
       return false;
     }
-    const tagId = this.token().slice(0, this.token().lastIndexOf('.'));
+    const tagId = tagOfToken(this.token());
     const start = course.checkpoints.find((c) => c.kind === 'startFinish');
     if (start?.tagId !== tagId || run?.status === 'running') return false;
     return !(run?.status === 'finished' && now - (run.finishedAt ?? 0) <= JUST_FINISHED_MS);

@@ -34,6 +34,7 @@
   <!-- "Indulhat?" - the clock starts at the tap. -->
   @case ('go') {
     <div class="start">
+      <p class="where">{{ futokor.course()?.name }}</p>
       <p class="who">{{ futokor.runner()?.name }}, indulhat a futás?</p>
       <button type="button" class="go" (click)="start()">RAJT!</button>
       <p class="note">Az óra a gomb megnyomásakor indul.</p>

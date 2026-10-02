@@ -1,6 +1,5 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Avatar } from '../../../components/avatar/avatar';
 import { AuthService } from '../../../auth/auth.service';
@@ -16,29 +15,24 @@ import {
 import { CourseMap } from './course-map/course-map';
 import { QrScanner, canScanInApp } from './qr-scanner/qr-scanner';
 import { ScanAnswerView, cardName } from './scan-answer/scan-answer';
+import { RunList } from './run-list/run-list';
 import { ScanFlow } from './scan-flow/scan-flow';
-
-const STATUS_TEXT: Record<string, string> = {
-  running: 'fut',
-  finished: 'célba ért',
-  gave_up: 'feladta',
-  abandoned: 'újrakezdte',
-  expired: 'lejárt',
-};
 
 // Móka → Futókörök: the running race's own page on a runner's phone.
 // The course (kept on the phone - it works without a signal too), the run
 // that's on with its clock and the card to find next, the camera to read
-// the cards, my runs, and everyone's best times.
+// the cards, my runs (with their splits), and everyone's best times. The
+// results of every futókör, the guide and the admins' pages are beside it
+// in Móka's menu (pages/moka/moka.html).
 @Component({
   selector: 'app-futokor-home',
   imports: [
-    RouterLink,
     DatePipe,
     MatIconModule,
     Avatar,
     Podium,
     CourseMap,
+    RunList,
     QrScanner,
     ScanFlow,
     ScanAnswerView,
@@ -51,7 +45,6 @@ export class FutokorHome implements OnDestroy {
   private auth = inject(AuthService);
   private confirm = inject(ConfirmService);
 
-  readonly isAdmin = this.auth.user()?.role === 'admin';
   readonly myId = this.auth.user()?.id;
   readonly canScan = canScanInApp();
   readonly time = raceTime;
@@ -72,6 +65,10 @@ export class FutokorHome implements OnDestroy {
     this.now.set(Date.now());
     this.futokor.expireIfDue();
   }, 1000);
+  // Everyone's best times keep themselves fresh while the page is open.
+  private refresher = setInterval(() => {
+    if (document.visibilityState === 'visible' && !this.scanning()) this.loadLeaderboard();
+  }, 15 * 1000);
 
   course = this.futokor.course;
   running = computed(() => this.futokor.run()?.status === 'running');
@@ -93,11 +90,7 @@ export class FutokorHome implements OnDestroy {
   });
 
   // My runs, the latest first.
-  myRuns = computed(() =>
-    [...this.futokor.serverRuns()]
-      .reverse()
-      .map((r) => ({ ...r, statusText: STATUS_TEXT[r.status] ?? r.status })),
-  );
+  myRuns = computed(() => [...this.futokor.serverRuns()].reverse());
 
   winners = computed<PodiumWinner[]>(() =>
     this.runners()
@@ -128,6 +121,13 @@ export class FutokorHome implements OnDestroy {
       .subscribe({ next: (runners) => this.runners.set(runners), error: () => {} });
   }
 
+  // Another of the open courses onto the screen.
+  pick(courseId: string) {
+    this.futokor.select(courseId);
+    this.runners.set([]);
+    this.loadLeaderboard();
+  }
+
   // The camera has read a card.
   onCard(token: string) {
     if (!this.scanned()) this.scanned.set(token);
@@ -137,6 +137,8 @@ export class FutokorHome implements OnDestroy {
   // while there's a run to scan for).
   onScanDone() {
     this.scanned.set(null);
+    // (The card may have been another course's: its list, then.)
+    this.loadLeaderboard();
     if (!this.running()) {
       this.scanning.set(false);
       // A finish may have changed the list (once it's uploaded).
@@ -155,5 +157,6 @@ export class FutokorHome implements OnDestroy {
 
   ngOnDestroy() {
     clearInterval(this.ticker);
+    clearInterval(this.refresher);
   }
 }

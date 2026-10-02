@@ -2,7 +2,13 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember, createTour } from '../helpers/factories.js';
-import { FutokorCourse, FutokorRun, FutokorScan } from '../../src/models/futokorModels.js';
+import {
+  FutokorCourse,
+  FutokorRun,
+  FutokorScan,
+  FutokorTag,
+} from '../../src/models/futokorModels.js';
+import GpxTrack from '../../src/models/gpxTrackModel.js';
 import { tagToken, verifyTagToken } from '../../src/futokor/tags.js';
 import User from '../../src/models/userModel.js';
 import { ensureFutokodok } from '../../src/utils/futokod.js';
@@ -65,7 +71,7 @@ const lap = (from, lapSec) => [
 const send = (user, scans) => post(user, '/scans', { scans });
 
 describe('Futókör: who gets in', () => {
-  it('only the role manager, for now - and the cards and courses are the admins’', async () => {
+  it('only the role manager, for now - and the cards and the tours’ courses are the admins’', async () => {
     expect((await request(app).get('/futokor/active')).status).toBe(401);
     for (const user of [await createAdmin(), await createMember(), await createGuest()]) {
       expect((await get(user, '/active')).status).toBe(403);
@@ -75,7 +81,9 @@ describe('Futókör: who gets in', () => {
     const runner = await createRunner();
     expect((await get(runner, '/active')).status).toBe(200);
     expect((await get(runner, '/tags')).status).toBe(403);
-    expect((await post(runner, '/courses', {})).status).toBe(403);
+    // A tour's course is the admins' to make.
+    const tour = await createTour();
+    expect((await post(runner, '/courses', { tourId: String(tour._id) })).status).toBe(403);
   });
 });
 
@@ -320,6 +328,59 @@ describe('Futókör: running', () => {
     expect(again.status).toBe(404);
   });
 
+  it('shows every futókör, and one’s results with each runner’s runs and splits', async () => {
+    const owner = await createOwner();
+    // Anna is 34 on the day; Béla has no birthday set.
+    const anna = await createRunner({
+      name: 'Kiss Anna',
+      username: 'anna',
+      gender: 'nő',
+      birthday: new Date(Date.now() - 34.5 * 365.25 * 24 * HOUR),
+    });
+    const bela = await createRunner({ name: 'Nagy Béla', gender: 'férfi' });
+    const course = await openCourse(owner);
+    await send(owner, [...lap(0, 300), ...lap(1000, 270)]);
+    await send(anna, lap(100, 240));
+    // Béla starts, and never finishes - by now his time is up.
+    await send(bela, [scan('S1', 50), scan('T02', 200)]);
+
+    const list = (await get(anna, '/results')).body.data.courses;
+    expect(list).toMatchObject([
+      {
+        _id: course._id,
+        distanceM: 900,
+        runners: 3,
+        finishedRuns: 3,
+        runningNow: 0,
+        winner: { name: 'anna', totalMs: 240000 },
+      },
+    ]);
+
+    const one = (await get(anna, `/courses/${course._id}/results`)).body.data;
+    expect(one.course.checkpoints).toHaveLength(3);
+    expect(one.runners.map((r) => [r.name, r.best?.totalMs ?? null, r.finishedRuns])).toEqual([
+      ['anna', 240000, 1],
+      ['Nagy Zoli', 270000, 2],
+      ['Nagy Béla', null, 0],
+    ]);
+    // Who they are, to narrow the list by: the age group - never the age.
+    expect(one.runners.map((r) => [r.gender, r.ageGroup])).toEqual([
+      ['nő', '30-39'],
+      [null, null],
+      ['férfi', null],
+    ]);
+    expect(JSON.stringify(one)).not.toContain('birthday');
+    // The latest run first; each with its splits.
+    expect(one.runners[1].runs.map((r) => r.totalMs)).toEqual([270000, 300000]);
+    expect(one.runners[0].runs[0].splits).toMatchObject([
+      { toCheckpointId: 'T02', ms: 80000, distanceM: 300 },
+      { toCheckpointId: 'T01', ms: 80000 },
+      { toCheckpointId: 'S1', ms: 80000 },
+    ]);
+    expect(one.runners[2].runs[0]).toMatchObject({ status: 'expired', passed: 1 });
+    expect((await get(anna, '/courses/nonsense/results')).status).toBe(404);
+  });
+
   it('works the runs out again when the course changes', async () => {
     const owner = await createOwner();
     const course = await openCourse(owner);
@@ -335,6 +396,222 @@ describe('Futókör: running', () => {
     });
     const { runs } = (await get(owner, '/active')).body.data;
     expect(runs).toMatchObject([{ status: 'finished', paceSecPerKm: 167, flagged: true }]);
+  });
+});
+
+describe('Futókör: a user’s own track', () => {
+  // A square of about 76 x 111 m around (47, 19): ~374 m.
+  const SQUARE = `<?xml version="1.0"?><gpx><trk><name>Erdei kör</name><trkseg>
+    <trkpt lat="47.0" lon="19.0"><ele>100</ele><time>2026-10-02T08:00:00Z</time></trkpt>
+    <trkpt lat="47.0" lon="19.001"><ele>101</ele><time>2026-10-02T08:01:00Z</time></trkpt>
+    <trkpt lat="47.001" lon="19.001"><ele>110</ele><time>2026-10-02T08:02:00Z</time></trkpt>
+    <trkpt lat="47.001" lon="19.0"><ele>104</ele><time>2026-10-02T08:03:00Z</time></trkpt>
+    <trkpt lat="47.0" lon="19.0"><ele>100</ele><time>2026-10-02T08:04:00Z</time></trkpt>
+  </trkseg></trk></gpx>`;
+  const upload = (user, id, gpx = SQUARE) =>
+    request(app)
+      .put(`/futokor/courses/${id}/track`)
+      .set(asUser(user))
+      .attach('gpx', Buffer.from(gpx), 'erdei-kor.gpx');
+  const makeTrack = async (user, body = { name: 'Erdei kör', points: 2 }) =>
+    (await post(user, '/courses', body)).body.data.course;
+
+  it('is anyone’s to make - with its own cards, open from now', async () => {
+    const anna = await createRunner({ name: 'Kiss Anna', username: 'anna' });
+    const made = await post(anna, '/courses', { name: '  Erdei kör ', points: 2 });
+    expect(made.status, made.body.message).toBe(201);
+    const course = made.body.data.course;
+    expect(course).toMatchObject({
+      kind: 'own',
+      tour: null,
+      name: 'Erdei kör',
+      owner: { name: 'anna' },
+      canManage: true,
+    });
+    expect(course.checkpoints.map((c) => [c.tagId, c.label])).toEqual([
+      ['P1-S', 'RAJT / CÉL'],
+      ['P1-01', '1. pont'],
+      ['P1-02', '2. pont'],
+    ]);
+    expect(course.cards.map((c) => c.tagId)).toEqual(['P1-01', 'P1-02', 'P1-S']);
+    expect(course.cards[0].url).toContain('/fk/P1-01.');
+    expect(Date.parse(course.closesAt) - Date.parse(course.opensAt)).toBeGreaterThan(
+      300 * 24 * HOUR,
+    );
+
+    // The next one has its own cards; neither is among the club's.
+    const second = await makeTrack(anna, { name: 'Tóparti kör', points: 1 });
+    expect(second.checkpoints.map((c) => c.tagId)).toEqual(['P2-S', 'P2-01']);
+    const owner = await createOwner();
+    expect((await get(owner, '/tags')).body.data.tags).toEqual([]);
+
+    for (const body of [{ points: 2 }, { name: 'x', points: 0 }, { name: 'x', points: 21 }]) {
+      expect((await post(anna, '/courses', body)).status, JSON.stringify(body)).toBe(400);
+    }
+  });
+
+  it('is its maker’s (and the admins’) to change - nobody else’s', async () => {
+    const owner = await createOwner();
+    const anna = await createRunner({ name: 'Kiss Anna' });
+    const bela = await createRunner({ name: 'Nagy Béla' });
+    const course = await makeTrack(anna);
+
+    expect((await patch(bela, `/courses/${course._id}`, { name: 'Az enyém' })).status).toBe(403);
+    expect((await upload(bela, course._id)).status).toBe(403);
+    const sheet = await get(bela, `/courses/${course._id}/sheet`);
+    expect(sheet.status).toBe(403);
+    const gone = await request(app).delete(`/futokor/courses/${course._id}`).set(asUser(bela));
+    expect(gone.status).toBe(403);
+
+    expect((await patch(anna, `/courses/${course._id}`, { name: 'Új név' })).status).toBe(200);
+    expect((await patch(owner, `/courses/${course._id}`, { name: 'Admin név' })).status).toBe(200);
+    // Each sees what they can change.
+    expect((await get(anna, '/courses')).body.data.courses.map((c) => c.name)).toEqual([
+      'Admin név',
+    ]);
+    expect((await get(bela, '/courses')).body.data.courses).toEqual([]);
+    expect((await get(owner, '/courses')).body.data.courses).toHaveLength(1);
+
+    const pdf = await get(anna, `/courses/${course._id}/sheet`);
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-type']).toContain('application/pdf');
+  });
+
+  it('gets more or fewer points - its cards follow', async () => {
+    const anna = await createRunner();
+    const course = await makeTrack(anna);
+    const more = await patch(anna, `/courses/${course._id}`, { points: 3 });
+    expect(more.body.data.course.checkpoints.map((c) => c.tagId)).toEqual([
+      'P1-S',
+      'P1-01',
+      'P1-02',
+      'P1-03',
+    ]);
+    const fewer = await patch(anna, `/courses/${course._id}`, { points: 1 });
+    expect(fewer.body.data.course.cards.map((c) => c.tagId)).toEqual(['P1-01', 'P1-S']);
+    expect(await FutokorTag.countDocuments({ course: course._id })).toBe(2);
+  });
+
+  it('takes its loop from a GPX file, and its points’ distances from where they are', async () => {
+    const anna = await createRunner();
+    const course = await makeTrack(anna);
+
+    const up = await upload(anna, course._id);
+    expect(up.status, up.body.message).toBe(200);
+    expect(up.body.data.course).toMatchObject({ hasGpx: true, elevationGainM: 10 });
+    expect(up.body.data.course.distanceM).toBeGreaterThan(370);
+    expect(up.body.data.course.distanceM).toBeLessThan(378);
+    expect(up.body.data.course.track).toHaveLength(5);
+    // The START is where the loop begins.
+    expect(up.body.data.course.checkpoints[0]).toMatchObject({ lat: 47, lng: 19 });
+
+    // The file is kept, with what it measures.
+    const record = await GpxTrack.findOne({ course: course._id });
+    expect(record).toMatchObject({
+      fileName: 'erdei-kor.gpx',
+      name: 'Erdei kör',
+      points: 5,
+      durationSec: 240,
+    });
+    const file = await get(anna, `/courses/${course._id}/track.gpx`);
+    expect(file.status).toBe(200);
+    expect(file.headers['content-disposition']).toContain('erdei-kor.gpx');
+
+    // The two points put on the map: the far corner, and the middle of the
+    // way back.
+    const placed = await patch(anna, `/courses/${course._id}`, {
+      stops: [
+        { lat: 47.001, lng: 19.001 },
+        { lat: 47.0005, lng: 19.0 },
+      ],
+    });
+    expect(placed.status, placed.body.message).toBe(200);
+    const [, first, second] = placed.body.data.course.checkpoints;
+    expect(first.distanceAlongM).toBeGreaterThan(183);
+    expect(first.distanceAlongM).toBeLessThan(191);
+    expect(second.distanceAlongM).toBeGreaterThan(313);
+    expect(second.distanceAlongM).toBeLessThan(323);
+
+    // In the wrong order they aren't on the loop one after the other.
+    const wrong = await patch(anna, `/courses/${course._id}`, {
+      stops: [
+        { lat: 47.0005, lng: 19.0 },
+        { lat: 47.001, lng: 19.001 },
+      ],
+    });
+    expect(wrong.status).toBe(400);
+
+    expect((await upload(anna, course._id, 'not a gpx')).status).toBe(400);
+    // Taken off again: the points stay where they were.
+    const off = await request(app).delete(`/futokor/courses/${course._id}/track`).set(asUser(anna));
+    expect(off.body.data.course).toMatchObject({ hasGpx: false, track: [] });
+    expect(off.body.data.course.checkpoints[1].lat).toBe(47.001);
+    expect(await GpxTrack.countDocuments()).toBe(0);
+    expect((await get(anna, `/courses/${course._id}/track.gpx`)).status).toBe(404);
+  });
+
+  it('is run beside a tour’s course - the phone says which course a scan is for', async () => {
+    const owner = await createOwner();
+    const anna = await createRunner({ name: 'Kiss Anna', username: 'anna' });
+    const tourCourse = await openCourse(owner);
+    // (Open since before the test's clock started.)
+    const own = await makeTrack(anna, {
+      name: 'Erdei kör',
+      points: 1,
+      opensAt: new Date(T0 - HOUR),
+    });
+
+    // Both are open: the tour's first.
+    const active = (await get(anna, '/active')).body.data;
+    expect(active.courses.map((c) => [c.kind, c.name])).toEqual([
+      ['tour', tourCourse.name],
+      ['own', 'Erdei kör'],
+    ]);
+    expect(active.course._id).toBe(tourCourse._id);
+    expect(Object.keys(active.allRuns).sort()).toEqual([own._id, tourCourse._id].sort());
+
+    // A lap on Anna's own track, by the owner of the site.
+    const on = (courseId, list) => list.map((s) => ({ ...s, courseId }));
+    const lapOwn = on(own._id, [scan('P1-S', 0), scan('P1-01', 60), scan('P1-S', 120)]);
+    const sent = await send(owner, lapOwn);
+    expect(sent.body.data.results.map((r) => r.result)).toEqual(['started', 'passed', 'finished']);
+    // ...and one on the tour's course at the same time.
+    await send(owner, on(tourCourse._id, lap(0, 300)));
+
+    // A card of the other course isn't on this one.
+    const stray = await send(owner, on(tourCourse._id, [scan('P1-01', 400)]));
+    expect(stray.body.data.results[0].result).toBe('unknownTag');
+
+    // Each course has its own results.
+    const results = (await get(anna, '/results')).body.data.courses;
+    expect(results.map((c) => [c.kind, c.finishedRuns, c.owner.name])).toEqual(
+      expect.arrayContaining([
+        ['own', 1, 'anna'],
+        ['tour', 1, 'Nagy Zoli'],
+      ]),
+    );
+    // An older phone, not naming the course: the card finds it.
+    const old = await send(anna, [scan('P1-S', 500)]);
+    expect(old.body.data.results[0].result).toBe('started');
+    expect(String(old.body.data.runs[0].courseId)).toBe(own._id);
+  });
+
+  it('takes its cards, its runs and its file with it when deleted', async () => {
+    const anna = await createRunner();
+    const course = await makeTrack(anna, {
+      name: 'Erdei kör',
+      points: 2,
+      opensAt: new Date(T0 - HOUR),
+    });
+    await upload(anna, course._id);
+    await send(anna, [{ ...scan('P1-S', 0), courseId: course._id }]);
+    expect(await FutokorScan.countDocuments()).toBe(1);
+
+    const gone = await request(app).delete(`/futokor/courses/${course._id}`).set(asUser(anna));
+    expect(gone.status).toBe(204);
+    expect(await FutokorTag.countDocuments()).toBe(0);
+    expect(await FutokorScan.countDocuments()).toBe(0);
+    expect(await GpxTrack.countDocuments()).toBe(0);
   });
 });
 
