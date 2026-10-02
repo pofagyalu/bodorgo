@@ -11,7 +11,7 @@ import {
   EXPENSE_CATEGORIES,
 } from '../../../services/finance';
 import { WaterfallChart, WaterfallStep } from '../../../components/waterfall-chart/waterfall-chart';
-import { PeriodBand, PeriodOption } from '../../../components/period-band/period-band';
+import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
   const formatted = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount);
@@ -24,7 +24,7 @@ function today(): string {
 
 @Component({
   selector: 'app-finance',
-  imports: [DatePipe, MatIconModule, WaterfallChart, PeriodBand],
+  imports: [DatePipe, MatIconModule, WaterfallChart, PeriodPicker],
   templateUrl: './finance.html',
   styleUrl: './finance.scss',
 })
@@ -66,11 +66,10 @@ export class Finance implements OnInit {
     return [...years].sort((a, b) => b.localeCompare(a));
   });
 
-  // The period band: the years from the oldest on the left to the newest,
-  // then the whole history.
+  // The period picker: the whole history, and the years, newest first.
   periodOptions = computed<PeriodOption[]>(() => [
-    ...[...this.availablePeriods()].reverse().map((year) => ({ value: year, label: year })),
     { value: 'all', label: 'Összes' },
+    ...this.availablePeriods().map((year) => ({ value: year, label: year })),
   ]);
 
   filteredTransactions = computed(() => {
