@@ -2911,6 +2911,55 @@ const paths = {
       errors: [403, 404],
     }),
   },
+  '/futokor/results': {
+    get: op({
+      tag: T.race,
+      summary: 'Every futókör there has been',
+      description: 'The newest first, each with how many ran it and who was the fastest.',
+      data: obj({
+        courses: arrayOf(
+          obj({
+            _id: id(),
+            name: str(),
+            tour: obj({ _id: id(), title: str() }),
+            opensAt: date(),
+            closesAt: date(),
+            distanceM: { type: ['number', 'null'] },
+            runners: int('How many people ran it.'),
+            finishedRuns: int(),
+            winner: {
+              type: ['object', 'null'],
+              description: 'The fastest: their name and time (`totalMs`).',
+            },
+          }),
+        ),
+      }),
+      errors: [403],
+    }),
+  },
+  '/futokor/courses/{id}/results': {
+    get: op({
+      tag: T.race,
+      summary: 'One futókör’s results',
+      description:
+        'The course (with its checkpoints, to name the splits by) and every runner in the order of their best finished time - those who never finished after them - each with all their runs (the latest first) and the runs’ splits.',
+      params: [path('id', 'The course.')],
+      data: obj({
+        course: ref('FutokorCourse'),
+        runners: arrayOf(
+          obj({
+            userId: id(),
+            name: str(),
+            photoUpdatedAt: { type: ['string', 'null'] },
+            best: { oneOf: [ref('FutokorRun'), { type: 'null' }] },
+            finishedRuns: int(),
+            runs: arrayOf(ref('FutokorRun')),
+          }),
+        ),
+      }),
+      errors: [403, 404],
+    }),
+  },
   '/futokor/active': {
     get: op({
       tag: T.race,

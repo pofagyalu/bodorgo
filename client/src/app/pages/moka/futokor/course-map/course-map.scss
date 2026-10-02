@@ -3,7 +3,8 @@
 }
 
 .map {
-  height: min(22rem, 60vh);
+  // (A page with more room sets --map-height.)
+  height: var(--map-height, min(22rem, 60vh));
   border-radius: 1.25rem;
   // Without a connection: a calm green instead of the missing map.
   background: #e3efdc;

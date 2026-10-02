@@ -12,6 +12,21 @@
       <a routerLink="futokor" routerLinkActive="active" class="nav-item" title="Futókörök">
         <mat-icon>directions_run</mat-icon><span>Futókörök</span>
       </a>
+      <!-- Futókörök's own pages - the cards and the courses are the admins'. -->
+      <div class="sub-nav">
+        @for (item of futokorPages(); track item.link) {
+          <a
+            [routerLink]="item.link"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: item.exact }"
+            class="sub-item"
+            [title]="item.label"
+          >
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span class="sub-title">{{ item.label }}</span>
+          </a>
+        }
+      </div>
       <!-- Not built yet - shown so it's clear what's coming. -->
       <div class="nav-item coming" title="Kvíz – hamarosan">
         <mat-icon>quiz</mat-icon><span>Kvíz</span><em class="soon">hamarosan</em>
@@ -33,6 +48,19 @@
         <a routerLink="futokor" routerLinkActive="active">Futókörök</a>
         <span class="coming">Kvíz</span>
       </nav>
+      <!-- On a phone: Futókörök's own pages as a second row of tabs. -->
+      @if (inFutokor()) {
+        <nav class="moka-mobile-nav moka-mobile-sub" aria-label="Futókörök menü mobilon">
+          @for (item of futokorPages(); track item.link) {
+            <a
+              [routerLink]="item.link"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: item.exact }"
+              >{{ item.label }}</a
+            >
+          }
+        </nav>
+      }
     }
 
     <router-outlet />

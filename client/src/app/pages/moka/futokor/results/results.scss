@@ -1,0 +1,259 @@
+:host {
+  display: block;
+  min-height: calc(100dvh - var(--header-height));
+  background:
+    radial-gradient(circle at 100% 0%, #f6b52840, transparent 45%),
+    radial-gradient(circle at 0% 40%, #f0782722, transparent 45%), #fffaf0;
+}
+
+.results {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: clamp(0.875rem, 4vw, 2rem) clamp(0.75rem, 4vw, 1.5rem) 3rem;
+  color: #23354a;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--logo-orange);
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+
+  mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--logo-orange);
+}
+
+h1 {
+  margin: 0.125rem 0 0.75rem;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(1.875rem, 8vw, 2.75rem);
+  line-height: 1.1;
+  background: linear-gradient(90deg, var(--logo-orange), var(--logo-yellow));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #4a5b63;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--logo-orange);
+  }
+}
+
+.map {
+  margin-bottom: 1rem;
+}
+
+// --- Every futókör ---
+
+.courses,
+.board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.course {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1.125rem;
+  background: #fff;
+  border-left: 0.3125rem solid var(--logo-orange);
+  box-shadow: 0 0.25rem 0.875rem #213b4110;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateX(0.1875rem);
+  }
+
+  mat-icon {
+    flex: none;
+    color: #b3c0c6;
+  }
+}
+
+.course-main {
+  flex: 1;
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+
+  small {
+    color: #6a7a83;
+    font-size: 0.8125rem;
+  }
+}
+
+.winner {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--logo-dark-green);
+}
+
+// --- One futókör: everyone by their best time ---
+
+.board {
+  margin-top: 1rem;
+
+  > li {
+    border-radius: 0.875rem;
+    background: #fff;
+    overflow: hidden;
+
+    &.me .runner {
+      background: #fff3d1;
+    }
+  }
+}
+
+.runner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.875rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  mat-icon {
+    flex: none;
+    color: #8a989f;
+  }
+}
+
+.rank {
+  width: 1.75rem;
+  font-family: Marhey, sans-serif;
+  color: var(--logo-orange);
+}
+
+.face {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--logo-dark-green);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.who {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+  font-weight: 650;
+
+  small {
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: #8a989f;
+  }
+}
+
+.best {
+  display: grid;
+  justify-items: end;
+  font-family: Marhey, sans-serif;
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+
+  small {
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 0.6875rem;
+    color: #8a989f;
+  }
+}
+
+.their-runs {
+  padding: 0 0.5rem 0.5rem;
+  background: #faf6ea;
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 0.875rem;
+  background: #fff;
+  color: #6a7a83;
+  font-size: 0.875rem;
+}
+
+// --- A desktop has the room ---
+
+@media (min-width: 1000px) {
+  .results {
+    max-width: 78rem;
+    padding-inline: 2rem;
+  }
+
+  // Every futókör: cards side by side.
+  .courses {
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    gap: 0.875rem;
+  }
+
+  // One futókör: the map and the podium on the left (staying in sight),
+  // everyone's times on the right.
+  .one {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(24rem, 1fr);
+    column-gap: 2rem;
+    align-items: start;
+  }
+
+  .one-side {
+    position: sticky;
+    top: 1rem;
+  }
+
+  .one .board {
+    margin-top: 0;
+  }
+
+  .map {
+    --map-height: min(30rem, calc(100dvh - var(--header-height) - 22rem));
+  }
+}

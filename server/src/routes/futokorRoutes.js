@@ -19,6 +19,8 @@ router.patch('/tags/:tagId', admin, futokor.updateTag);
 router.route('/courses').get(admin, futokor.getCourses).post(admin, futokor.createCourse);
 router.route('/courses/:id').patch(admin, futokor.updateCourse).delete(admin, futokor.deleteCourse);
 router.get('/courses/:id/leaderboard', runner, futokor.getLeaderboard);
+router.get('/courses/:id/results', runner, futokor.getCourseResults);
+router.get('/results', runner, futokor.getResults);
 
 router.get('/active', runner, futokor.getActive);
 

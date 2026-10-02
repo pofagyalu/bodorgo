@@ -1,0 +1,54 @@
+<ul class="runs">
+  @for (r of rows(); track r.startedAt) {
+    <li class="run" [class.done]="r.status === 'finished'">
+      <button
+        type="button"
+        class="head"
+        [disabled]="!r.legs.length"
+        (click)="toggle(r.startedAt)"
+        [attr.aria-expanded]="open() === r.startedAt"
+      >
+        <span class="run-time">{{ r.time }}</span>
+        <span class="run-main">
+          <span
+            >{{ r.statusText }}
+            @if (r.pace) {
+              · {{ r.pace }}
+            }
+            @if (r.flagged) {
+              <span title="Ellenőrzésre vár">⚠️</span>
+            }
+          </span>
+          <small>{{ r.startedAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+        </span>
+        @if (r.legs.length) {
+          <mat-icon>{{ open() === r.startedAt ? 'expand_less' : 'expand_more' }}</mat-icon>
+        }
+      </button>
+
+      <!-- The run from card to card. -->
+      @if (open() === r.startedAt) {
+        <table class="legs">
+          <thead>
+            <tr>
+              <th class="left">Szakasz</th>
+              <th>Idő</th>
+              <th>Táv</th>
+              <th>Tempó</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (leg of r.legs; track $index) {
+              <tr>
+                <td class="left">{{ leg.from }} → {{ leg.to }}</td>
+                <td>{{ leg.time }}</td>
+                <td>{{ leg.distance }}</td>
+                <td>{{ leg.pace }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </li>
+  }
+</ul>

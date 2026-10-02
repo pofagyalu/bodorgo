@@ -1,0 +1,114 @@
+<section class="results">
+  @if (courseId) {
+    <!-- One futókör's results. -->
+    <a routerLink="/moka/futokor/eredmenyek" class="back"
+      ><mat-icon>arrow_back</mat-icon> Eredmények</a
+    >
+    @if (results(); as r) {
+      <h1>{{ r.course.name }}</h1>
+      <p class="facts">
+        @if (r.course.distanceM) {
+          <span><mat-icon>straighten</mat-icon> {{ r.course.distanceM }} m</span>
+        }
+        @if (r.course.elevationGainM) {
+          <span><mat-icon>terrain</mat-icon> +{{ r.course.elevationGainM }} m</span>
+        }
+        <span><mat-icon>flag</mat-icon> {{ r.course.checkpoints.length - 1 }} ellenőrzőpont</span>
+        <span
+          ><mat-icon>schedule</mat-icon> {{ r.course.opensAt | date: 'yyyy. MM. dd.' }} –
+          {{ r.course.closesAt | date: 'MM. dd.' }}</span
+        >
+      </p>
+
+      <!-- On a desktop: the map and the podium beside the list. -->
+      <div class="one">
+        <div class="one-side">
+          @if (hasMap()) {
+            <app-course-map class="map" [course]="r.course" />
+          }
+
+          @if (winners().length) {
+            <app-podium [winners]="winners()" title="A leggyorsabbak" />
+          }
+        </div>
+
+        <!-- Everyone, by their best time - a tap opens their runs. -->
+        <ol class="board">
+          @for (runner of r.runners; track runner.userId; let i = $index) {
+            <li [class.me]="runner.userId === myId">
+              <button
+                type="button"
+                class="runner"
+                (click)="toggle(runner.userId)"
+                [attr.aria-expanded]="openRunner() === runner.userId"
+              >
+                <span class="rank">{{ runner.best ? i + 1 + '.' : '–' }}</span>
+                <app-avatar
+                  class="face"
+                  [name]="runner.name"
+                  [userId]="runner.userId"
+                  [photoVersion]="runner.photoUpdatedAt"
+                  [preview]="false"
+                />
+                <span class="who">
+                  {{ runner.name }}
+                  <small
+                    >{{ runner.runs.length }} futás, {{ runner.finishedRuns }} célba érés</small
+                  >
+                </span>
+                <span class="best">
+                  {{ runner.best ? time(runner.best.totalMs) : '–' }}
+                  @if (runner.best?.paceSecPerKm; as p) {
+                    <small>{{ pace(p) }}</small>
+                  }
+                </span>
+                <mat-icon>{{
+                  openRunner() === runner.userId ? 'expand_less' : 'expand_more'
+                }}</mat-icon>
+              </button>
+              @if (openRunner() === runner.userId) {
+                <app-run-list class="their-runs" [runs]="runner.runs" [course]="r.course" />
+              }
+            </li>
+          } @empty {
+            <li class="empty">Ezen a pályán még senki sem futott.</li>
+          }
+        </ol>
+      </div>
+    } @else if (failed()) {
+      <p class="empty">Nincs ilyen futókör.</p>
+    }
+  } @else {
+    <!-- Every futókör there has been. -->
+    <p class="eyebrow">Bódorgó Móka · Futókörök</p>
+    <h1>Eredmények</h1>
+    @if (courses(); as list) {
+      <ul class="courses">
+        @for (c of list; track c._id) {
+          <li>
+            <a [routerLink]="c._id" class="course">
+              <span class="course-main">
+                <strong>{{ c.name }}</strong>
+                <small>
+                  {{ c.opensAt | date: 'yyyy. MM. dd.' }}
+                  @if (c.distanceM) {
+                    · {{ c.distanceM }} m
+                  }
+                  · {{ c.runners }} futó, {{ c.finishedRuns }} célba érés
+                </small>
+                @if (c.winner; as w) {
+                  <span class="winner">🥇 {{ w.name }} · {{ time(w.totalMs) }}</span>
+                }
+              </span>
+              <mat-icon>chevron_right</mat-icon>
+            </a>
+          </li>
+        } @empty {
+          <li class="empty">Még nem volt futókör.</li>
+        }
+      </ul>
+    } @else if (failed()) {
+      <p class="empty">Az eredmények most nem érhetők el – kell hozzá internet és belépés.</p>
+    }
+  }
+</section>

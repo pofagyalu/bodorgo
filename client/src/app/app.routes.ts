@@ -165,6 +165,18 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/moka/futokor/futokor-home').then((m) => m.FutokorHome),
       },
       {
+        path: 'futokor/eredmenyek',
+        title: 'Futókörök – Eredmények',
+        loadComponent: () =>
+          import('./pages/moka/futokor/results/results').then((m) => m.FutokorResults),
+      },
+      {
+        path: 'futokor/eredmenyek/:id',
+        title: 'Futókörök – Eredmények',
+        loadComponent: () =>
+          import('./pages/moka/futokor/results/results').then((m) => m.FutokorResults),
+      },
+      {
         path: 'futokor/utmutato',
         title: 'Futókörök – Útmutató',
         loadComponent: () => import('./pages/moka/futokor/guide/guide').then((m) => m.FutokorGuide),

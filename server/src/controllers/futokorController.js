@@ -547,6 +547,82 @@ export const postScans = async (req, res) => {
   });
 };
 
+// Every runner of a course by their best finished time (the earlier one
+// first if two are the same); those who never finished come after, by
+// name. Each with all their runs, the latest first.
+async function courseRunners(course) {
+  const runs = await FutokorRun.find({ course: course._id })
+    .sort('-startedAt')
+    .populate({ path: 'user', select: 'name username photoUpdatedAt' })
+    .lean();
+  const runners = new Map();
+  for (const run of runs) {
+    if (!run.user) continue;
+    const key = String(run.user._id);
+    if (!runners.has(key)) {
+      runners.set(key, {
+        userId: run.user._id,
+        name: shownName(run.user),
+        photoUpdatedAt: run.user.photoUpdatedAt ?? null,
+        best: null,
+        finishedRuns: 0,
+        runs: [],
+      });
+    }
+    const runner = runners.get(key);
+    const view = runView(course, asRulesRun(run));
+    runner.runs.push(view);
+    if (view.status !== 'finished') continue;
+    runner.finishedRuns += 1;
+    const better =
+      !runner.best ||
+      view.totalMs < runner.best.totalMs ||
+      (view.totalMs === runner.best.totalMs && view.finishedAt < runner.best.finishedAt);
+    if (better) runner.best = view;
+  }
+  return [...runners.values()].sort((a, b) => {
+    if (!a.best || !b.best) return a.best ? -1 : b.best ? 1 : a.name.localeCompare(b.name, 'hu');
+    return a.best.totalMs - b.best.totalMs || a.best.finishedAt - b.best.finishedAt;
+  });
+}
+
+// GET /futokor/results - every futókör there has been, the newest first:
+// each with how many ran it and who was the fastest.
+export const getResults = async (req, res) => {
+  const courses = await withTour(FutokorCourse.find().sort('-opensAt'));
+  const results = [];
+  for (const course of courses) {
+    const runners = await courseRunners(course);
+    const winner = runners[0]?.best ? runners[0] : null;
+    results.push({
+      _id: course._id,
+      name: course.name,
+      tour: { _id: course.tour?._id ?? course.tour, title: course.tour?.title },
+      opensAt: course.opensAt,
+      closesAt: course.closesAt,
+      distanceM: course.distanceM,
+      runners: runners.length,
+      finishedRuns: runners.reduce((sum, r) => sum + r.finishedRuns, 0),
+      winner: winner && { name: winner.name, totalMs: winner.best.totalMs },
+    });
+  }
+  res.status(200).json({ status: 'success', data: { courses: results } });
+};
+
+// GET /futokor/courses/:id/results - one futókör's results: the course
+// (with its checkpoints, to name the splits by) and every runner in the
+// order of their best time, each with all their runs and the runs' splits.
+export const getCourseResults = async (req, res) => {
+  const course = validId(req.params.id)
+    ? await withTour(FutokorCourse.findById(req.params.id))
+    : null;
+  if (!course) throw new AppError('Nincs ilyen pálya.', 404);
+  res.status(200).json({
+    status: 'success',
+    data: { course: courseView(course), runners: await courseRunners(course) },
+  });
+};
+
 // GET /futokor/courses/:id/leaderboard - every runner by their best
 // finished time (the earlier one first if two are the same), with how many
 // times they finished.

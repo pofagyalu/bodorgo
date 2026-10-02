@@ -147,3 +147,24 @@ li + li {
     animation: none;
   }
 }
+
+// A desktop has the room: the steps side by side.
+@media (min-width: 1000px) {
+  .guide {
+    max-width: 72rem;
+    padding-inline: 2rem;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.875rem;
+    align-items: start;
+
+    .card {
+      margin-bottom: 0;
+      height: 100%;
+      box-sizing: border-box;
+    }
+  }
+}

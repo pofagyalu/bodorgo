@@ -1,0 +1,107 @@
+:host {
+  display: block;
+}
+
+.runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.run {
+  border-radius: 0.875rem;
+  background: #fff;
+  border-left: 0.3125rem solid #dce6e3;
+  color: #6a7a83;
+  overflow: hidden;
+
+  &.done {
+    border-left-color: var(--logo-green);
+    color: #23354a;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.875rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  mat-icon {
+    margin-left: auto;
+    color: #8a989f;
+  }
+}
+
+.run-time {
+  min-width: 4rem;
+  font-family: Marhey, sans-serif;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.run-main {
+  display: grid;
+  font-size: 0.875rem;
+
+  small {
+    color: #8a989f;
+    font-size: 0.75rem;
+  }
+}
+
+// The splits, opened under the run.
+.legs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  animation: open 0.2s ease-out;
+
+  th,
+  td {
+    padding: 0.375rem 0.5rem;
+    text-align: right;
+  }
+
+  th {
+    background: #fff3d1;
+    color: var(--logo-brown);
+    font-size: 0.6875rem;
+  }
+
+  .left {
+    padding-left: 0.875rem;
+    text-align: left;
+  }
+
+  td {
+    border-top: 1px solid #f0ece0;
+  }
+}
+
+@keyframes open {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legs {
+    animation: none;
+  }
+}

@@ -320,6 +320,45 @@ describe('Futókör: running', () => {
     expect(again.status).toBe(404);
   });
 
+  it('shows every futókör, and one’s results with each runner’s runs and splits', async () => {
+    const owner = await createOwner();
+    const anna = await createRunner({ name: 'Kiss Anna', username: 'anna' });
+    const bela = await createRunner({ name: 'Nagy Béla' });
+    const course = await openCourse(owner);
+    await send(owner, [...lap(0, 300), ...lap(1000, 270)]);
+    await send(anna, lap(100, 240));
+    // Béla starts, and never finishes - by now his time is up.
+    await send(bela, [scan('S1', 50), scan('T02', 200)]);
+
+    const list = (await get(anna, '/results')).body.data.courses;
+    expect(list).toMatchObject([
+      {
+        _id: course._id,
+        distanceM: 900,
+        runners: 3,
+        finishedRuns: 3,
+        winner: { name: 'anna', totalMs: 240000 },
+      },
+    ]);
+
+    const one = (await get(anna, `/courses/${course._id}/results`)).body.data;
+    expect(one.course.checkpoints).toHaveLength(3);
+    expect(one.runners.map((r) => [r.name, r.best?.totalMs ?? null, r.finishedRuns])).toEqual([
+      ['anna', 240000, 1],
+      ['Nagy Zoli', 270000, 2],
+      ['Nagy Béla', null, 0],
+    ]);
+    // The latest run first; each with its splits.
+    expect(one.runners[1].runs.map((r) => r.totalMs)).toEqual([270000, 300000]);
+    expect(one.runners[0].runs[0].splits).toMatchObject([
+      { toCheckpointId: 'T02', ms: 80000, distanceM: 300 },
+      { toCheckpointId: 'T01', ms: 80000 },
+      { toCheckpointId: 'S1', ms: 80000 },
+    ]);
+    expect(one.runners[2].runs[0]).toMatchObject({ status: 'expired', passed: 1 });
+    expect((await get(anna, '/courses/nonsense/results')).status).toBe(404);
+  });
+
   it('works the runs out again when the course changes', async () => {
     const owner = await createOwner();
     const course = await openCourse(owner);

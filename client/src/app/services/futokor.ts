@@ -60,6 +60,33 @@ export interface FutokorRunner {
   finishedRuns: number;
 }
 
+// A futókör in the list of them all.
+export interface CourseSummary {
+  _id: string;
+  name: string;
+  tour: { _id: string; title?: string };
+  opensAt: string;
+  closesAt: string;
+  distanceM: number | null;
+  runners: number;
+  finishedRuns: number;
+  winner: { name: string; totalMs: number } | null;
+}
+
+// One futókör's results: every runner in the order of their best time
+// (those who never finished after them), each with all their runs.
+export interface CourseResults {
+  course: FutokorCourse;
+  runners: {
+    userId: string;
+    name: string;
+    photoUpdatedAt: string | null;
+    best: FutokorRun | null;
+    finishedRuns: number;
+    runs: FutokorRun[];
+  }[];
+}
+
 // What changing a course takes (see the server's updateCourse).
 export interface CourseChanges {
   name?: string;
@@ -381,6 +408,18 @@ export class FutokorService {
     return this.http
       .get<{ data: { runners: FutokorRunner[] } }>(`${this.apiUrl}/courses/${courseId}/leaderboard`)
       .pipe(map((res) => res.data.runners));
+  }
+
+  getResults(): Observable<CourseSummary[]> {
+    return this.http
+      .get<{ data: { courses: CourseSummary[] } }>(`${this.apiUrl}/results`)
+      .pipe(map((res) => res.data.courses));
+  }
+
+  getCourseResults(courseId: string): Observable<CourseResults> {
+    return this.http
+      .get<{ data: CourseResults }>(`${this.apiUrl}/courses/${courseId}/results`)
+      .pipe(map((res) => res.data));
   }
 
   // --- The admin: cards and courses ---
