@@ -270,6 +270,29 @@ function quality(rest, minor) {
   return 'maj';
 }
 var fretsOf = (t) => [...t.frets].map((f) => (f === 'x' ? -1 : Number(f)));
+var BASS_STRINGS = [4, 9, 2];
+function withBass(shape, bass) {
+  const lowest = shape.frets.findIndex((f) => f >= 0);
+  if (lowest < 0 || lowest > 2) return shape;
+  if ((BASS_STRINGS[lowest] + shape.frets[lowest]) % 12 === bass) return shape;
+  for (let string = 0; string < BASS_STRINGS.length; string += 1) {
+    const fret = (bass - BASS_STRINGS[string] + 12) % 12;
+    const frets = shape.frets.map((f, i) => (i < string ? -1 : i === string ? fret : f));
+    const held = frets.filter((f) => f > 0);
+    if (held.length && Math.max(...held) - Math.min(...held) > 3) continue;
+    let barre = shape.barre;
+    if (barre) {
+      const fretOf = barre.fret;
+      const at = frets.flatMap((f, i) => (i > string && f === fretOf ? [i] : []));
+      barre =
+        at.length > 1 && frets.slice(at[0]).every((f) => f >= fretOf)
+          ? { fret: fretOf, from: at[0], to: at[at.length - 1] }
+          : null;
+    }
+    return { frets, barre };
+  }
+  return shape;
+}
 function chordShape(name, instrument, notation = NOTATION) {
   const chord = parseChord(name, notation);
   if (!chord) return null;
@@ -292,6 +315,7 @@ function chordShape(name, instrument, notation = NOTATION) {
       barre: up && held.length > 1 ? { fret: up, from: held[0], to: held[held.length - 1] } : null,
     };
   }
+  if (best && chord.bass !== null && instrument === 'guitar') return withBass(best, chord.bass);
   return best;
 }
 function uniqueChords(chords, notation = NOTATION) {
