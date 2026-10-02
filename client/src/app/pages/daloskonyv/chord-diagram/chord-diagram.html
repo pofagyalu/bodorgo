@@ -1,0 +1,59 @@
+<figure class="diagram">
+  <figcaption>{{ name() }}</figcaption>
+  @if (view(); as v) {
+    <svg
+      [attr.viewBox]="v.viewBox"
+      [style.aspect-ratio]="v.width + ' / ' + v.height"
+      role="img"
+      [attr.aria-label]="name() + ' akkord fogása'"
+    >
+      @for (y of v.fretLines; track $index) {
+        <line class="fret" [attr.x1]="v.left" [attr.x2]="v.right" [attr.y1]="y" [attr.y2]="y" />
+      }
+      @for (x of v.stringLines; track $index) {
+        <line class="string" [attr.x1]="x" [attr.x2]="x" [attr.y1]="v.top" [attr.y2]="v.bottom" />
+      }
+      @if (v.nut) {
+        <line
+          class="nut"
+          [attr.x1]="v.left - 0.5"
+          [attr.x2]="v.right + 0.5"
+          [attr.y1]="v.top"
+          [attr.y2]="v.top"
+        />
+      }
+      @if (v.baseLabel; as b) {
+        <text class="base" [attr.x]="v.left - 5" [attr.y]="b.y" text-anchor="end">
+          {{ b.text }}
+        </text>
+      }
+      @if (v.barre; as b) {
+        <rect class="dot" [attr.x]="b.x" [attr.y]="b.y" [attr.width]="b.width" height="8" rx="4" />
+      }
+      @for (d of v.dots; track $index) {
+        <circle class="dot" [attr.cx]="d.x" [attr.cy]="d.y" r="4.2" />
+      }
+      @for (x of v.open; track $index) {
+        <circle class="open" [attr.cx]="x" [attr.cy]="v.top - 6.5" r="2.8" />
+      }
+      @for (x of v.muted; track $index) {
+        <path
+          class="muted"
+          [attr.d]="
+            'M' +
+            (x - 2.6) +
+            ' ' +
+            (v.top - 9.1) +
+            ' l5.2 5.2 M' +
+            (x + 2.6) +
+            ' ' +
+            (v.top - 9.1) +
+            ' l-5.2 5.2'
+          "
+        />
+      }
+    </svg>
+  } @else {
+    <span class="none">Nincs ábra</span>
+  }
+</figure>

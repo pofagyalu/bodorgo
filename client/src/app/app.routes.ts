@@ -5,6 +5,7 @@ import { adminGuard } from './auth/admin.guard';
 import { authGuard } from './auth/auth.guard';
 import { mokaGuard } from './auth/moka.guard';
 import { futokorAdminGuard } from './auth/futokor.guard';
+import { songEditGuard } from './auth/song-edit.guard';
 
 // Home stays eager since it's the near-universal first page hit; every
 // other route is lazy so its own code (and whatever heavy libraries it
@@ -130,6 +131,53 @@ export const routes: Routes = [
         path: 'zene/buli',
         title: 'Média – Buli rádió',
         loadComponent: () => import('./pages/media/music/party').then((m) => m.Party),
+      },
+      // Daloskönyv: the songbook (pages/daloskonyv). Its editor - only the
+      // role manager's - comes first, so "uj" isn't taken for a song's slug.
+      {
+        path: 'zene/daloskonyv/uj',
+        title: 'Daloskönyv – Új dal',
+        canActivate: [songEditGuard],
+        loadComponent: () =>
+          import('./pages/daloskonyv/song-edit/song-edit').then((m) => m.SongEdit),
+      },
+      {
+        path: 'zene/daloskonyv/:slug/szerkesztes',
+        title: 'Daloskönyv – Szerkesztés',
+        canActivate: [songEditGuard],
+        loadComponent: () =>
+          import('./pages/daloskonyv/song-edit/song-edit').then((m) => m.SongEdit),
+      },
+      {
+        // The open song is the child, beside the list on a wide screen.
+        path: 'zene/daloskonyv',
+        title: 'Média – Daloskönyv',
+        loadComponent: () => import('./pages/daloskonyv/daloskonyv').then((m) => m.Daloskonyv),
+        children: [
+          {
+            path: ':slug',
+            title: 'Média – Daloskönyv',
+            loadComponent: () => import('./pages/daloskonyv/song/song').then((m) => m.SongPage),
+          },
+        ],
+      },
+    ],
+  },
+  {
+    // Daloskönyv: the club's songbook on a page of its own - the guests'
+    // way in (Klub's menu), since they have no Média. Members have the same
+    // pages inside Média → Zene (media/zene/daloskonyv, with the editor);
+    // services/song.ts's base says which one the links use.
+    // The open song is the child, beside the list on a wide screen.
+    path: 'daloskonyv',
+    title: 'Bódorgó daloskönyv',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/daloskonyv/daloskonyv').then((m) => m.Daloskonyv),
+    children: [
+      {
+        path: ':slug',
+        title: 'Bódorgó daloskönyv',
+        loadComponent: () => import('./pages/daloskonyv/song/song').then((m) => m.SongPage),
       },
     ],
   },

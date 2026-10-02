@@ -22,7 +22,8 @@ export const previewPath = (filename) =>
 
 // pdf.js draws the page (on @napi-rs/canvas, which it picks up itself in
 // Node); both are external to the bundle and shipped by sync.js, like
-// sharp. Loaded only here, on demand.
+// sharp. Loaded only here, on demand. file: a path, or the PDF itself (a
+// Buffer).
 async function renderPdfFirstPage(file) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   // Fonts a PDF names but doesn't embed (Helvetica, Times...) come from
@@ -33,7 +34,7 @@ async function renderPdfFirstPage(file) {
   // (Folders as pdf.js wants them: "/" separators, ending in "/".)
   const folder = (name) => `${path.join(pdfjsDir, name).split(path.sep).join('/')}/`;
   const task = pdfjs.getDocument({
-    data: new Uint8Array(fs.readFileSync(file)),
+    data: new Uint8Array(Buffer.isBuffer(file) ? file : fs.readFileSync(file)),
     standardFontDataUrl: folder('standard_fonts'),
     wasmUrl: folder('wasm'),
     verbosity: 0,
@@ -56,6 +57,16 @@ async function renderPdfFirstPage(file) {
   } finally {
     await task.destroy();
   }
+}
+
+// The same small picture of a PDF that isn't a file here (the Daloskönyv,
+// drawn on the spot - songController.js): its first page, as a WebP.
+export async function pdfFirstPagePreview(pdf) {
+  const sharp = await loadSharp();
+  return sharp(await renderPdfFirstPage(pdf))
+    .resize({ width: PREVIEW_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 78 })
+    .toBuffer();
 }
 
 // Makes (or remakes) one document's preview; true when it worked.

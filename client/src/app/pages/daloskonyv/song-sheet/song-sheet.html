@@ -1,0 +1,48 @@
+<!-- How the song's chords are held, each once. -->
+@if (diagrams().length) {
+  <div class="diagrams" aria-label="A dal akkordjai">
+    @for (d of diagrams(); track d.name) {
+      <app-chord-diagram [name]="d.name" [shape]="d.shape" />
+    }
+  </div>
+}
+
+<div class="lyrics" [class.lyrics--diagrams]="instrument()">
+  @for (block of blocks(); track $index) {
+    <div class="verse" [class.verse--chorus]="block.chorus">
+      @for (line of block.lines; track $index) {
+        @if (line.type === 'comment') {
+          <p class="comment">{{ line.text }}</p>
+        } @else if (showChords() || line.type === 'lyrics') {
+          <p class="line" [class.line--chords]="line.hasChords && showChords()">
+            @for (word of line.words; track $index) {
+              <span class="word">
+                @for (piece of word; track $index) {
+                  <span class="piece">
+                    @if (showChords() && piece.chord; as chord) {
+                      <span
+                        class="chord"
+                        (pointerenter)="onEnter($event, chord)"
+                        (pointerleave)="onLeave($event)"
+                        (click)="onTap($event, chord)"
+                        >{{ chord }}</span
+                      >
+                    }
+                    <span class="text">{{ piece.text }}</span>
+                  </span>
+                }
+              </span>
+            }
+          </p>
+        }
+      }
+    </div>
+  }
+</div>
+
+<!-- The chord under the pointer (or the finger): how it's held. -->
+@if (popup(); as p) {
+  <div class="chord-popup" [style.left.px]="p.left" [style.top.px]="p.top" role="tooltip">
+    <app-chord-diagram [name]="p.name" [shape]="p.shape" />
+  </div>
+}

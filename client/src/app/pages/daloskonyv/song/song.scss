@@ -1,0 +1,394 @@
+@use '../../../shared/fab';
+
+// One song: a white sheet with the lyrics, each chord over its syllable.
+// Everything on the sheet is sized from --scale (the A-/A+ buttons).
+$ink: #193346;
+$muted: #56666e;
+$teal: #1a796c;
+$chord: #b5533a;
+$line: #e4eae7;
+
+:host {
+  display: block;
+}
+
+.song-page {
+  padding: 1rem clamp(1rem, 3vw, 2.5rem) 7rem;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+// --- The bar ---
+
+.song-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.back {
+  display: none;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.6rem;
+  border-radius: 10rem;
+  background: #fff;
+  border: 1px solid $line;
+  color: $ink;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+// The same search as the main page's (daloskonyv.scss) - only where the
+// list is beside the song.
+.search {
+  flex: 1 1 14rem;
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 24rem;
+  padding: 0 0.9rem;
+  border: 1px solid #cfd9d5;
+  border-radius: 10rem;
+  background: #fff;
+
+  &:focus-within {
+    border-color: $teal;
+    box-shadow: 0 0 0 0.2rem #1a796c26;
+  }
+
+  mat-icon {
+    flex: none;
+    color: #7a8a90;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.65rem 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    font: inherit;
+    font-size: 1rem;
+    color: inherit;
+  }
+}
+
+@media (min-width: 901px) {
+  .search {
+    display: flex;
+  }
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+// A group of buttons in one pill.
+.tool {
+  display: flex;
+  align-items: center;
+  border: 1px solid $line;
+  border-radius: 10rem;
+  background: #fff;
+  overflow: hidden;
+
+  button,
+  a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    padding: 0 0.5rem;
+    border: 0;
+    background: none;
+    color: $ink;
+
+    &:hover {
+      background: #e8f3ee;
+    }
+
+    &.off {
+      color: #9aa7ab;
+    }
+  }
+
+  mat-icon {
+    font-size: 1.35rem;
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+}
+
+// Gitár | Ukulele: words, the chosen one filled.
+.tool--choice {
+  padding: 0.2rem;
+  gap: 0.1rem;
+
+  button {
+    height: 2.35rem;
+    padding: 0 0.8rem;
+    border-radius: 10rem;
+    color: $muted;
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    &.on,
+    &.on:hover {
+      background: $teal;
+      color: #fff;
+    }
+  }
+}
+
+// "Már játszottuk": grey until set, then the list's orange tick.
+.tool button.played-toggle {
+  color: #9aa7ab;
+
+  &.on {
+    background: #fff6ec;
+    color: #f07827;
+  }
+}
+
+.tool button.transpose-value {
+  gap: 0.1rem;
+  min-width: 3.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: $muted;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &.transpose-value--on {
+    color: $chord;
+  }
+}
+
+.note {
+  margin: 3rem 0;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+// --- The sheet ---
+
+.sheet {
+  padding: clamp(1.1rem, 3vw, 2.25rem);
+  border-radius: 1.0625rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 1.2rem #213b411a;
+  color: #1f2d3a;
+}
+
+.song-head {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: calc(1.6rem * var(--scale));
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: $ink;
+  }
+}
+
+.artist {
+  margin: 0.3rem 0 0;
+  color: $muted;
+  font-size: calc(0.95rem * var(--scale));
+}
+
+// --- Previous / next ---
+
+.neighbours {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid $line;
+}
+
+.neighbour {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  max-width: 48%;
+  padding: 0.5rem 0.75rem 0.5rem 0.4rem;
+  border-radius: 0.75rem;
+  color: $ink;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+
+  &:hover {
+    background: #e8f3ee;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    display: block;
+    color: $muted;
+    font-weight: 500;
+    font-size: 0.75rem;
+  }
+
+  mat-icon {
+    flex: none;
+    color: #7a8a90;
+  }
+}
+
+.neighbour--next {
+  margin-left: auto;
+  padding: 0.5rem 0.4rem 0.5rem 0.75rem;
+  text-align: right;
+}
+
+// --- Play ---
+
+.play-bar {
+  position: fixed;
+  right: 1.1rem;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.play {
+  @include fab.button;
+  position: static;
+}
+
+.arrows {
+  display: flex;
+
+  // ▶▶ and ▶▶▶: the arrows close together, like a fast-forward sign.
+  mat-icon + mat-icon {
+    margin-left: -1.15rem;
+  }
+}
+
+.play-bar--on .arrows mat-icon {
+  font-size: 1.75rem;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.play-bar--on .play {
+  background: $chord;
+}
+
+.countdown {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pause {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #445a67;
+  color: #fff;
+  box-shadow:
+    0 0.3rem 0.8rem rgba(0, 0, 0, 0.3),
+    0 0 0 0.15rem rgba(255, 255, 255, 0.85);
+}
+
+// No list beside the song (a phone, a narrow window): the song takes the
+// whole screen - over the site's header and Média's own menu - and scrolls
+// by itself (song.ts's scrollerElement). Its bar, with the way back, goes
+// up with the song, so while it plays there is nothing but the lyrics.
+@media (max-width: 900px) {
+  .song-page {
+    position: fixed;
+    inset: 0;
+    // Over the header (20000), under the confirm dialog and the toasts.
+    z-index: 20010;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 0 7rem;
+    background: #fff;
+  }
+
+  .song-bar {
+    margin: 0 0.5rem 0.25rem;
+    gap: 0.35rem;
+  }
+
+  .back {
+    display: inline-flex;
+    padding: 0.4rem 0.8rem 0.4rem 0.5rem;
+  }
+
+  .tools {
+    gap: 0.3rem;
+  }
+
+  // Smaller buttons, so the bar is two short rows on a phone.
+  .tool button,
+  .tool a {
+    min-width: 2.4rem;
+    height: 2.4rem;
+  }
+
+  .tool--choice button {
+    height: 2rem;
+    padding: 0 0.6rem;
+  }
+
+  // The sheet is the screen: no card around it.
+  .sheet {
+    padding: 0.5rem 0.75rem 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .song-head {
+    margin-bottom: 1rem;
+  }
+
+  // Above the song's own layer.
+  .play-bar {
+    z-index: 20020;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .play,
+  .pause {
+    transition: background 0.2s ease;
+  }
+}

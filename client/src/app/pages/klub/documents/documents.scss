@@ -209,6 +209,18 @@ button {
   color: #e02424;
 }
 
+// The Daloskönyv's card: like an uploaded PDF's, with a small choice of
+// whose chord diagrams the book has.
+.book-diagrams {
+  max-width: 100%;
+  padding: 3px 4px;
+  border: 1px solid #dce6e3;
+  border-radius: 7px;
+  background: #fff;
+  color: #56666e;
+  font-size: 11px;
+}
+
 // With a picture: it fills the card's top, like a sheet peeking out
 // (its top part, when the page is taller than the room); the icon moves
 // to the top-left corner as a small badge (the ✕ has the right one).

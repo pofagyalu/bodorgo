@@ -2,7 +2,7 @@
   <div class="heading">
     <div class="kicker">Média</div>
     <h1>Zene</h1>
-    <p>A klub két lejátszási listája – csak a klub tagjainak.</p>
+    <p>A klub két lejátszási listája és a daloskönyv.</p>
   </div>
 
   <div class="playlist-grid">
@@ -29,5 +29,15 @@
         </div>
       </a>
     }
+    <!-- Not a playlist: the songbook (pages/daloskonyv). -->
+    <a class="playlist-card playlist-card--book" routerLink="daloskonyv">
+      <span class="cover cover--icon"><mat-icon>menu_book</mat-icon></span>
+      <div class="card-text">
+        <span class="card-kind"><mat-icon>library_music</mat-icon>Dalszövegek</span>
+        <strong class="card-name">Daloskönyv</strong>
+        <span class="card-tagline">A klub dalai szöveggel és akkordokkal</span>
+        <span class="card-summary">Gitárra, ukulelére, tábortűzhöz</span>
+      </div>
+    </a>
   </div>
 </div>

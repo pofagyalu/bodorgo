@@ -28,9 +28,66 @@
       <section class="panel document-group">
         <div class="panel-title">
           <h2>{{ group.category }}</h2>
-          <span>{{ group.documents.length }} dokumentum</span>
+          <span>{{ group.documents.length + (group.songbook ? 1 : 0) }} dokumentum</span>
         </div>
         <div class="document-grid">
+          <!-- The Daloskönyv as a PDF: not an uploaded file - the server
+               draws it from the songs as they are now. -->
+          @if (group.songbook) {
+            <div
+              class="document-card document-card--book"
+              [class.document-card--preview]="bookPreviewUrl()"
+            >
+              <!-- Its cover, like an uploaded document's first page. -->
+              @if (bookPreviewUrl(); as preview) {
+                <a
+                  class="document-preview"
+                  [href]="bookUrl()"
+                  target="_blank"
+                  rel="noopener"
+                  tabindex="-1"
+                >
+                  <img [src]="preview" alt="" loading="lazy" />
+                </a>
+              }
+              <mat-icon class="document-icon document-icon--pdf">picture_as_pdf</mat-icon>
+              <span class="document-name">Daloskönyv</span>
+              @if (bookYear(); as year) {
+                <span class="document-year">{{ year }}</span>
+              }
+              <select
+                class="book-diagrams"
+                aria-label="Akkordábrák a daloskönyvben"
+                (change)="chooseBookDiagrams($any($event.target).value)"
+              >
+                <option value="guitar" [selected]="bookDiagrams() === 'guitar'">
+                  gitár ábrákkal
+                </option>
+                <option value="ukulele" [selected]="bookDiagrams() === 'ukulele'">
+                  ukulele ábrákkal
+                </option>
+                <option value="none" [selected]="bookDiagrams() === 'none'">ábrák nélkül</option>
+              </select>
+              <a
+                [href]="bookUrl()"
+                target="_blank"
+                rel="noopener"
+                class="document-action document-action--view"
+                title="Megnyitás"
+                aria-label="A daloskönyv megnyitása"
+              >
+                <mat-icon>search</mat-icon>
+              </a>
+              <a
+                [href]="bookDownloadUrl()"
+                class="document-action document-action--download"
+                title="Letöltés"
+                aria-label="A daloskönyv letöltése"
+              >
+                <mat-icon>download</mat-icon>
+              </a>
+            </div>
+          }
           @for (doc of group.documents; track doc._id) {
             <div class="document-card" [class.document-card--preview]="doc.preview">
               @if (isAdmin()) {

@@ -1,0 +1,220 @@
+<div class="song-page" [style.--scale]="fontScale()">
+  <!-- The song's own bar: back to the list (a phone has no list beside
+       the song), and how it's shown. -->
+  <div class="song-bar">
+    <a class="back" [routerLink]="base()" aria-label="Vissza a dalokhoz">
+      <mat-icon>arrow_back</mat-icon><span>Dalok</span>
+    </a>
+
+    <!-- Narrows the list beside the song (a phone has no list here). -->
+    <label class="search">
+      <mat-icon>search</mat-icon>
+      <input
+        type="search"
+        placeholder="Keresés a dalok között"
+        aria-label="Keresés a dalok között"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+      />
+    </label>
+
+    <div class="tools">
+      <!-- Whose chord diagrams: the guitar's or the ukulele's. -->
+      <div class="tool tool--choice" role="group" aria-label="Hangszer az akkordábrákhoz">
+        <button
+          type="button"
+          [class.on]="instrument() === 'guitar'"
+          [attr.aria-pressed]="instrument() === 'guitar'"
+          (click)="chooseInstrument('guitar')"
+        >
+          Gitár
+        </button>
+        <button
+          type="button"
+          [class.on]="instrument() === 'ukulele'"
+          [attr.aria-pressed]="instrument() === 'ukulele'"
+          (click)="chooseInstrument('ukulele')"
+        >
+          Ukulele
+        </button>
+      </div>
+
+      <div class="tool" role="group" aria-label="Betűméret">
+        <button
+          type="button"
+          (click)="changeFont(-1)"
+          title="Kisebb betűk"
+          aria-label="Kisebb betűk"
+        >
+          <mat-icon>text_decrease</mat-icon>
+        </button>
+        <button
+          type="button"
+          (click)="changeFont(1)"
+          title="Nagyobb betűk"
+          aria-label="Nagyobb betűk"
+        >
+          <mat-icon>text_increase</mat-icon>
+        </button>
+      </div>
+
+      <div class="tool" role="group" aria-label="Transzponálás">
+        <button
+          type="button"
+          (click)="changeTranspose(-1)"
+          title="Fél hanggal lejjebb"
+          aria-label="Fél hanggal lejjebb"
+        >
+          <mat-icon>remove</mat-icon>
+        </button>
+        <button
+          type="button"
+          class="transpose-value"
+          [class.transpose-value--on]="transpose() !== 0"
+          (click)="transpose.set(0)"
+          title="Vissza az eredeti hangnemre"
+          aria-label="Transzponálás: {{ transposeLabel() }} félhang – vissza az eredetire"
+        >
+          <mat-icon>music_note</mat-icon>{{ transposeLabel() }}
+        </button>
+        <button
+          type="button"
+          (click)="changeTranspose(1)"
+          title="Fél hanggal feljebb"
+          aria-label="Fél hanggal feljebb"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      <div class="tool">
+        <button
+          type="button"
+          [class.off]="!showChords()"
+          (click)="toggleChords()"
+          [attr.aria-pressed]="showChords()"
+          title="Akkordok mutatása"
+          aria-label="Akkordok mutatása"
+        >
+          <mat-icon>{{ showChords() ? 'piano' : 'piano_off' }}</mat-icon>
+        </button>
+      </div>
+
+      <div class="tool">
+        <button
+          type="button"
+          [class.off]="!showDiagrams()"
+          (click)="toggleDiagrams()"
+          [attr.aria-pressed]="showDiagrams()"
+          title="Akkordábrák a dal fölött"
+          aria-label="Akkordábrák a dal fölött"
+        >
+          <mat-icon>grid_on</mat-icon>
+        </button>
+      </div>
+
+      <!-- Played tonight: a tick on this song in the list. -->
+      @if (song(); as s) {
+        <div class="tool">
+          <button
+            type="button"
+            class="played-toggle"
+            [class.on]="isPlayed()"
+            (click)="togglePlayed()"
+            [attr.aria-pressed]="isPlayed()"
+            [title]="isPlayed() ? 'Már játszottuk – jelölés törlése' : 'Megjelölés: már játszottuk'"
+            [attr.aria-label]="
+              isPlayed() ? 'Már játszottuk – jelölés törlése' : 'Megjelölés: már játszottuk'
+            "
+          >
+            <mat-icon>task_alt</mat-icon>
+          </button>
+        </div>
+      }
+
+      <!-- Only the songbook's owner (the role manager). -->
+      @if (canEdit() && song(); as s) {
+        <div class="tool">
+          <a
+            [routerLink]="[base(), s.slug, 'szerkesztes']"
+            title="Szerkesztés"
+            aria-label="A dal szerkesztése"
+          >
+            <mat-icon>edit</mat-icon>
+          </a>
+          <a [routerLink]="[base(), 'uj']" title="Új dal" aria-label="Új dal">
+            <mat-icon>add</mat-icon>
+          </a>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (notFound()) {
+    <p class="note">Nincs ilyen dal a daloskönyvben.</p>
+  } @else if (!song()) {
+    <p class="note">Betöltés…</p>
+  } @else {
+    <article class="sheet" #sheet>
+      <header class="song-head">
+        <h2>{{ song()!.title }}</h2>
+        @if (song()!.artist) {
+          <p class="artist">{{ song()!.artist }}</p>
+        }
+      </header>
+
+      <app-song-sheet
+        [chordpro]="song()!.chordpro"
+        [transpose]="transpose()"
+        [showChords]="showChords()"
+        [instrument]="instrument()"
+        [showDiagrams]="showDiagrams()"
+      />
+
+      <nav class="neighbours" aria-label="Előző és következő dal">
+        @if (previous(); as p) {
+          <a class="neighbour" [routerLink]="[base(), p.slug]">
+            <mat-icon>chevron_left</mat-icon>
+            <span><small>Előző</small>{{ p.title }}</span>
+          </a>
+        }
+        @if (next(); as n) {
+          <a class="neighbour neighbour--next" [routerLink]="[base(), n.slug]">
+            <span><small>Következő</small>{{ n.title }}</span>
+            <mat-icon>chevron_right</mat-icon>
+          </a>
+        }
+      </nav>
+    </article>
+
+    <!-- Play: the page scrolls by itself. One tap starts it; while it runs,
+         a tap is a pace faster (▶ ▶▶ ▶▶▶, then ▶ again) and the small
+         button beside it stops. Only when there is something to scroll. -->
+    @if (scrollable() || pace()) {
+      <div class="play-bar" [class.play-bar--on]="pace()">
+        @if (pace()) {
+          <button type="button" class="pause" (click)="stop()" aria-label="Megállítás">
+            <mat-icon>pause</mat-icon>
+          </button>
+        }
+        <button
+          type="button"
+          class="play"
+          (click)="play()"
+          [title]="playLabel()"
+          [attr.aria-label]="playLabel()"
+        >
+          @if (countdown()) {
+            <span class="countdown">{{ countdown() }}</span>
+          } @else {
+            <span class="arrows">
+              @for (a of arrows(); track $index) {
+                <mat-icon>play_arrow</mat-icon>
+              }
+            </span>
+          }
+        </button>
+      </div>
+    }
+  }
+</div>

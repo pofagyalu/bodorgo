@@ -14,20 +14,34 @@
         title="Videók"
       >
         <mat-icon>movie</mat-icon><span>Videók</span>
+        <mat-icon class="chevron" [class.chevron--open]="section() === 'videok'"
+          >expand_more</mat-icon
+        >
       </a>
-      <div class="sub-nav">
-        @for (c of media.categories(); track c.key) {
-          <a
-            [routerLink]="['videok', c.key]"
-            routerLinkActive="active"
-            class="sub-item"
-            [title]="c.title"
-          >
-            <mat-icon [style.color]="categoryColor(c.key)">{{ categoryIcon(c.key) }}</mat-icon>
-            <span class="sub-title">{{ c.title }}</span>
-            <span class="sub-count">{{ c.videos.length }}</span>
-          </a>
-        }
+      <!-- Only the section one is in is open: its sub-menu slides open,
+           the other two's fold away (media.scss's .sub-fold). A folded
+           one is inert - not reachable by Tab either. -->
+      <div
+        class="sub-fold"
+        [class.sub-fold--open]="section() === 'videok'"
+        [attr.inert]="section() === 'videok' ? null : ''"
+      >
+        <div class="sub-clip">
+          <div class="sub-nav">
+            @for (c of media.categories(); track c.key) {
+              <a
+                [routerLink]="['videok', c.key]"
+                routerLinkActive="active"
+                class="sub-item"
+                [title]="c.title"
+              >
+                <mat-icon [style.color]="categoryColor(c.key)">{{ categoryIcon(c.key) }}</mat-icon>
+                <span class="sub-title">{{ c.title }}</span>
+                <span class="sub-count">{{ c.videos.length }}</span>
+              </a>
+            }
+          </div>
+        </div>
       </div>
 
       <a
@@ -38,21 +52,32 @@
         title="Fotók"
       >
         <mat-icon>photo_library</mat-icon><span>Fotók</span>
+        <mat-icon class="chevron" [class.chevron--open]="section() === 'fotok'"
+          >expand_more</mat-icon
+        >
       </a>
       <!-- The photo categories: one per subfolder of bódorgó_egyéb. -->
-      <div class="sub-nav">
-        @for (c of media.photoCategories(); track c.key) {
-          <a
-            [routerLink]="['fotok', c.key]"
-            routerLinkActive="active"
-            class="sub-item"
-            [title]="c.title"
-          >
-            <mat-icon [style.color]="'#8fd3b8'">photo_camera</mat-icon>
-            <span class="sub-title">{{ c.title }}</span>
-            <span class="sub-count">{{ c.photos.length }}</span>
-          </a>
-        }
+      <div
+        class="sub-fold"
+        [class.sub-fold--open]="section() === 'fotok'"
+        [attr.inert]="section() === 'fotok' ? null : ''"
+      >
+        <div class="sub-clip">
+          <div class="sub-nav">
+            @for (c of media.photoCategories(); track c.key) {
+              <a
+                [routerLink]="['fotok', c.key]"
+                routerLinkActive="active"
+                class="sub-item"
+                [title]="c.title"
+              >
+                <mat-icon [style.color]="'#8fd3b8'">photo_camera</mat-icon>
+                <span class="sub-title">{{ c.title }}</span>
+                <span class="sub-count">{{ c.photos.length }}</span>
+              </a>
+            }
+          </div>
+        </div>
       </div>
 
       <a
@@ -63,22 +88,43 @@
         title="Zene"
       >
         <mat-icon>library_music</mat-icon><span>Zene</span>
+        <mat-icon class="chevron" [class.chevron--open]="section() === 'zene'"
+          >expand_more</mat-icon
+        >
       </a>
       <!-- The playlists (Jellyfin): the club radio and the party list. -->
-      <div class="sub-nav">
-        <a
-          routerLink="zene/bodorgo-fm"
-          routerLinkActive="active"
-          class="sub-item"
-          title="Bódorgó FM"
-        >
-          <mat-icon [style.color]="'#f6b528'">radio</mat-icon>
-          <span class="sub-title">Bódorgó FM</span>
-        </a>
-        <a routerLink="zene/buli" routerLinkActive="active" class="sub-item" title="Buli rádió">
-          <mat-icon [style.color]="'#ff2e93'">celebration</mat-icon>
-          <span class="sub-title">Buli rádió</span>
-        </a>
+      <div
+        class="sub-fold"
+        [class.sub-fold--open]="section() === 'zene'"
+        [attr.inert]="section() === 'zene' ? null : ''"
+      >
+        <div class="sub-clip">
+          <div class="sub-nav">
+            <a
+              routerLink="zene/bodorgo-fm"
+              routerLinkActive="active"
+              class="sub-item"
+              title="Bódorgó FM"
+            >
+              <mat-icon [style.color]="'#f6b528'">radio</mat-icon>
+              <span class="sub-title">Bódorgó FM</span>
+            </a>
+            <a routerLink="zene/buli" routerLinkActive="active" class="sub-item" title="Buli rádió">
+              <mat-icon [style.color]="'#ff2e93'">celebration</mat-icon>
+              <span class="sub-title">Buli rádió</span>
+            </a>
+            <!-- The songbook: lyrics and chords (pages/daloskonyv). -->
+            <a
+              routerLink="zene/daloskonyv"
+              routerLinkActive="active"
+              class="sub-item"
+              title="Daloskönyv"
+            >
+              <mat-icon [style.color]="'#8fd3b8'">menu_book</mat-icon>
+              <span class="sub-title">Daloskönyv</span>
+            </a>
+          </div>
+        </div>
       </div>
     </nav>
 
