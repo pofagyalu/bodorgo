@@ -160,8 +160,15 @@ export const routes: Routes = [
           import('./pages/moka/darts/darts-game/darts-game').then((m) => m.DartsGamePage),
       },
       {
+        // Futókörök's opening page; the running itself is Futás.
         path: 'futokor',
         title: 'Móka – Futókörök',
+        loadComponent: () =>
+          import('./pages/moka/futokor/futokor-landing').then((m) => m.FutokorLanding),
+      },
+      {
+        path: 'futokor/futas',
+        title: 'Futókörök – Futás',
         loadComponent: () => import('./pages/moka/futokor/futokor-home').then((m) => m.FutokorHome),
       },
       {

@@ -1,7 +1,7 @@
 <section class="futokor">
   <header class="head">
-    <p class="eyebrow">Bódorgó Móka</p>
-    <h1>Futókörök</h1>
+    <p class="eyebrow">Bódorgó Móka · Futókörök</p>
+    <h1>Futás</h1>
   </header>
 
   <!-- A futókód the server didn't know: that run is lost. -->
@@ -125,12 +125,6 @@
       </div>
 
       <div class="block-results">
-        @if (myRuns().length) {
-          <h2><mat-icon>directions_run</mat-icon> Futásaim</h2>
-          <!-- A tap on a run opens its splits. -->
-          <app-run-list [runs]="myRuns()" [course]="c" />
-        }
-
         @if (runners().length) {
           <h2><mat-icon>emoji_events</mat-icon> Legjobb idők</h2>
           <app-podium [winners]="winners()" />

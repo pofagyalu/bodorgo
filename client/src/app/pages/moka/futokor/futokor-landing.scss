@@ -1,0 +1,352 @@
+.landing {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+// A warm card in the logo's colors (the same as Darts' own), the picture
+// beside the text - under it on a phone.
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(circle at 12% 0%, #f6b52855, transparent 55%),
+    radial-gradient(circle at 100% 100%, #72b45d44, transparent 50%), #fffaf0;
+  box-shadow: 0 0.625rem 2rem #213b4118;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--logo-orange);
+}
+
+h1 {
+  margin: 0.25rem 0 0.75rem;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(2.5rem, 8vw, 4.25rem);
+  line-height: 1;
+  background: linear-gradient(90deg, var(--logo-orange), var(--logo-yellow));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.lead {
+  margin: 0;
+  max-width: 30rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: #3c4d57;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  margin-top: 1.75rem;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 3.75rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: 1.125rem;
+  font-family: Marhey, sans-serif;
+  font-size: 1.25rem;
+  color: #fff;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-0.125rem);
+  }
+}
+
+.go {
+  background: linear-gradient(135deg, #37c26a, #12843f);
+  box-shadow: 0 0.5rem 1.25rem #12843f55;
+  animation: breathe 2.2s ease-in-out infinite;
+
+  mat-icon {
+    font-size: 1.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+
+@keyframes breathe {
+  50% {
+    box-shadow: 0 0.5rem 2.25rem #12843f99;
+  }
+}
+
+.open-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 1.25rem 0 0;
+  font-size: 0.9375rem;
+  color: #3c4d57;
+}
+
+// A blinking dot: it's open now.
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: #12843f;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+// --- The picture: a loop, its cards, a runner going round ---
+
+.picture {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.loop-edge {
+  fill: #e3efdc;
+  stroke: #fff;
+  stroke-width: 16;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0.5rem 1rem #213b4122);
+}
+
+.loop {
+  fill: none;
+  stroke: var(--logo-orange);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 1100;
+  stroke-dashoffset: 1100;
+  animation: draw 2.2s ease-out 0.2s forwards;
+}
+
+// The loop is drawn when the page appears.
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.scenery text {
+  font-size: 26px; // in the drawing's own units
+  text-anchor: middle;
+  dominant-baseline: central;
+
+  &.camp {
+    font-size: 44px;
+  }
+}
+
+.pin {
+  circle {
+    fill: var(--logo-dark-green);
+    stroke: #fff;
+    stroke-width: 3;
+  }
+
+  text {
+    fill: #fff;
+    font-family: Marhey, sans-serif;
+    font-size: 15px; // in the drawing's own units
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  &.pin--start circle {
+    fill: var(--logo-red);
+  }
+}
+
+.runner {
+  fill: var(--logo-yellow);
+  stroke: #23354a;
+  stroke-width: 3;
+}
+
+// --- The rest of Futókörök ---
+
+.more {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: 1.125rem;
+    background: #fff;
+    box-shadow: 0 0.25rem 0.875rem #213b4110;
+    color: #23354a;
+    text-decoration: none;
+    transition: transform 0.15s ease;
+
+    &:hover {
+      transform: translateY(-0.125rem);
+    }
+  }
+
+  mat-icon {
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 0.875rem;
+    background: #fff3d1;
+    color: var(--logo-orange);
+  }
+
+  span {
+    display: grid;
+  }
+
+  small {
+    color: #6a7a83;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .picture {
+    max-width: 22rem;
+    margin: 0 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .go,
+  .dot {
+    animation: none;
+  }
+
+  .loop {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+// --- Under the hero, as on Darts' page: the results and my runs ---
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 2rem 0 0.75rem;
+  font-size: 1.125rem;
+  color: #23354a;
+
+  mat-icon {
+    color: var(--logo-orange);
+  }
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 1rem;
+  background: #fff;
+  border-left: 0.3125rem solid #dce6e3;
+  box-shadow: 0 0.25rem 0.875rem #213b4110;
+  color: #23354a;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateX(0.1875rem);
+  }
+
+  // Someone is on it right now.
+  &.live {
+    border-left-color: var(--logo-orange);
+  }
+}
+
+.badge {
+  flex: none;
+  min-width: 4rem;
+  font-family: Marhey, sans-serif;
+  font-size: 1.125rem;
+  color: var(--logo-red);
+  font-variant-numeric: tabular-nums;
+}
+
+.row-main {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+
+  small {
+    color: #8a989f;
+    font-size: 0.75rem;
+  }
+}
+
+.row-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  flex: none;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+
+  &.on {
+    background: #f0782722;
+    color: #b5530f;
+  }
+}
+
+.chevron {
+  flex: none;
+  color: #b3c0c6;
+}
+
+.more {
+  margin-top: 2rem;
+}

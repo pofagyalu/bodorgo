@@ -24,7 +24,7 @@ export class Moka {
   // Futókörök's own pages, under it in the menu (on a phone: a second row
   // of tabs) - the club's cards only for admins.
   futokorPages = computed(() => [
-    { link: 'futokor', label: 'Futás', icon: 'directions_run', exact: true },
+    { link: 'futokor/futas', label: 'Futás', icon: 'directions_run', exact: false },
     { link: 'futokor/eredmenyek', label: 'Eredmények', icon: 'emoji_events', exact: false },
     { link: 'futokor/utmutato', label: 'Útmutató', icon: 'help', exact: false },
     { link: 'futokor/palyaszerkeszto', label: 'Pályaszerkesztő', icon: 'route', exact: false },

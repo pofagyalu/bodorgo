@@ -260,6 +260,13 @@ export class FutokorService {
   // My runs as the server has them, by course - once it has answered.
   private allRuns = signal<Record<string, FutokorRun[]>>({});
   serverRuns = computed(() => this.allRuns()[this.course()?._id ?? ''] ?? []);
+  // All of them, on every open course, the latest first - each with the
+  // course it was on.
+  myRuns = computed(() =>
+    this.courses()
+      .flatMap((course) => (this.allRuns()[course._id] ?? []).map((run) => ({ course, run })))
+      .sort((a, b) => b.run.startedAt.localeCompare(a.run.startedAt)),
+  );
   syncing = signal(false);
 
   // Whoever is logged in on this phone - remembered, so the phone knows it
