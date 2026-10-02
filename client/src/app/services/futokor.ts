@@ -32,6 +32,9 @@ export interface FutokorCourse extends RuleCourse {
   name: string;
   opensAt: string;
   closesAt: string;
+  // The loop to draw on the map: [lat, lng] pairs - empty if it has none.
+  track?: [number, number][];
+  elevationGainM?: number | null;
 }
 
 // A run as the server worked it out from the scans it has.

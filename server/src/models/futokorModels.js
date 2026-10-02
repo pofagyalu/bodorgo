@@ -40,6 +40,11 @@ const courseSchema = new Schema(
     // The whole loop in metres - null until it's measured (then there are
     // times, but no pace and no speed check).
     distanceM: { type: Number, default: null },
+    // The loop itself, to draw on the map: [lat, lng] pairs, from a GPX
+    // file (see futokor/gpx.js) - empty until one is attached.
+    track: { type: [[Number]], default: [] },
+    // What the loop climbs, from the same file.
+    elevationGainM: { type: Number, default: null },
     // The START/FINISH card first (order 0), then the checkpoints in the
     // order they're passed (1, 2, 3...).
     checkpoints: {

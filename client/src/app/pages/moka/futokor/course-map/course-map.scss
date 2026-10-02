@@ -1,0 +1,32 @@
+:host {
+  display: block;
+}
+
+.map {
+  height: min(22rem, 60vh);
+  border-radius: 1.25rem;
+  // Without a connection: a calm green instead of the missing map.
+  background: #e3efdc;
+  box-shadow: 0 0.375rem 1.25rem #213b4112;
+  // Under the page's own overlays (the scan's answer, the camera).
+  z-index: 0;
+}
+
+// The pins are made by Leaflet, outside this component's own elements.
+:host ::ng-deep .futokor-pin {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0.125rem solid #fff;
+  border-radius: 50%;
+  background: var(--logo-dark-green);
+  color: #fff;
+  font-family: Marhey, sans-serif;
+  font-size: 0.875rem;
+  box-shadow: 0 0.125rem 0.375rem #0006;
+}
+
+:host ::ng-deep .futokor-pin--start {
+  background: var(--logo-orange);
+}

@@ -307,6 +307,13 @@ const schemas = {
     opensAt: date(),
     closesAt: date(),
     distanceM: { type: ['number', 'null'], description: 'The whole loop, in metres.' },
+    track: {
+      type: 'array',
+      description:
+        'The loop itself, to draw on the map: [lat, lng] pairs from a GPX file - empty until one is attached (scripts/attachFutokorTrack.mjs).',
+      items: { type: 'array', items: { type: 'number' } },
+    },
+    elevationGainM: { type: ['number', 'null'], description: 'What the loop climbs.' },
     flagSpeedMps: num('Faster than this between two cards flags the run.'),
     duplicateScanWindowSec: num('The same card again this soon is the same scan.'),
     maxRunDurationMin: num('A run left open longer than this has expired.'),

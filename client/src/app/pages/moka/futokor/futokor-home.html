@@ -39,6 +39,9 @@
         @if (c.distanceM) {
           <span><mat-icon>straighten</mat-icon> {{ c.distanceM }} m</span>
         }
+        @if (c.elevationGainM) {
+          <span><mat-icon>terrain</mat-icon> +{{ c.elevationGainM }} m</span>
+        }
         <span><mat-icon>flag</mat-icon> {{ stops() }} ellenőrzőpont</span>
         <span
           ><mat-icon>schedule</mat-icon> {{ c.opensAt | date: 'MM. dd. HH:mm' }} –
@@ -49,6 +52,11 @@
         <mat-icon>offline_pin</mat-icon> A pálya a telefonon van – net nélkül is megy.
       </p>
     </div>
+
+    <!-- The loop and its cards on the map. -->
+    @if (hasMap()) {
+      <app-course-map class="map" [course]="c" />
+    }
 
     <!-- The run that's on. -->
     @if (running()) {
