@@ -416,6 +416,33 @@ describe('SongEdit', () => {
     expect(page.chordpro()).toBe('{start_of_chorus}\nelső sor\n{end_of_chorus}\nmásodik sor');
   });
 
+  it('turns a pasted song with chords over its words into ChordPro', () => {
+    open(null);
+    const paste = (text: string) =>
+      ({
+        clipboardData: { getData: () => text },
+        preventDefault: vi.fn(),
+      }) as unknown as ClipboardEvent;
+
+    // Made-up words; the chords come the international way.
+    select('Cím\n\nvége', 4); // on the empty line
+    const song = paste('Am   Bm\r\nKint a réten');
+    page.onPaste(song);
+    expect(song.preventDefault).toHaveBeenCalled();
+    expect(page.chordpro()).toBe('Cím\n[am]Kint [hm]a réten\nvége');
+    expect(success).toHaveBeenCalledWith(
+      'Az akkordok a szövegbe kerültek. Ctrl+Z: vissza a másolt szöveghez.',
+    );
+
+    // Plain words, and ChordPro, are the browser's to paste.
+    const plain = paste('Kint a réten');
+    page.onPaste(plain);
+    expect(plain.preventDefault).not.toHaveBeenCalled();
+    const ready = paste('[am]Kint a [F]réten');
+    page.onPaste(ready);
+    expect(ready.preventDefault).not.toHaveBeenCalled();
+  });
+
   it('nudges the chord under the caret with Alt+arrows', () => {
     open(null);
     const key = (k: string, altKey = true) =>
