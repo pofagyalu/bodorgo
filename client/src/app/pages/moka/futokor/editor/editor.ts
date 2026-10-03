@@ -8,6 +8,8 @@ import { errorMessage } from '../../../../shared/errors';
 import { FutokorCourse, FutokorService, FutokorTag } from '../../../../services/futokor';
 import { Tour, TourService } from '../../../../services/tour';
 import { CourseMap } from '../course-map/course-map';
+import { canNfc } from '../nfc/nfc';
+import { NfcWrite } from '../nfc/nfc-write';
 
 // A point of the course being changed: what the form holds.
 interface DraftStop {
@@ -48,13 +50,14 @@ const numberOrNull = (value: string) => (value.trim() === '' ? null : Number(val
 // uses the club's cards (Kártyák) instead of its own.
 @Component({
   selector: 'app-futokor-editor',
-  imports: [DatePipe, MatIconModule, CourseMap],
+  imports: [DatePipe, MatIconModule, CourseMap, NfcWrite],
   templateUrl: './editor.html',
   styleUrl: '../admin.scss',
 })
 export class FutokorEditor {
   private futokor = inject(FutokorService);
   private notifications = inject(NotificationsService);
+  readonly canNfc = canNfc();
   private confirm = inject(ConfirmService);
 
   readonly isAdmin = inject(AuthService).user()?.role === 'admin';

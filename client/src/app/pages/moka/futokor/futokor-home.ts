@@ -8,11 +8,14 @@ import { CourseMap, MapRunner } from './course-map/course-map';
 import { QrScanner, canScanInApp } from './qr-scanner/qr-scanner';
 import { ScanAnswerView, cardName } from './scan-answer/scan-answer';
 import { ScanFlow } from './scan-flow/scan-flow';
+import { canNfc, nfcAllowed, readCards } from './nfc/nfc';
 
 // Móka → Futókörök → Futás: the running race's own page on a runner's phone.
 // The course (kept on the phone - it works without a signal too), the run
 // that's on with its clock and the card to find next, and the camera to
-// read the cards. Nothing else: my own runs are on Futókörök's opening page
+// read the cards - or, on a phone that can, a touch on a card's NFC sticker
+// (the page listens while it's open; QR or NFC, card by card, as the runner
+// likes). Nothing else: my own runs are on Futókörök's opening page
 // (futokor-landing), everyone's times under Eredmények - a link leads to
 // this course's.
 @Component({
@@ -27,6 +30,11 @@ export class FutokorHome implements OnDestroy {
 
   readonly canScan = canScanInApp();
   readonly cardName = cardName;
+  // NFC: can this phone's browser read it - and is the page listening?
+  readonly canNfc = canNfc();
+  nfcOn = signal(false);
+  nfcProblem = signal(false);
+  private nfcStop = new AbortController();
 
   loaded = signal(false);
   scanning = signal(false);
@@ -77,6 +85,23 @@ export class FutokorHome implements OnDestroy {
 
   constructor() {
     void this.refresh();
+    // Allowed before: the page listens for the stickers right away.
+    void nfcAllowed().then((allowed) => {
+      if (allowed) void this.listenNfc();
+    });
+  }
+
+  // The page listens for cards touched to the phone, as long as it's open.
+  // (The first time the browser asks whether it may - that takes a tap.)
+  async listenNfc() {
+    if (!this.canNfc || this.nfcOn()) return;
+    try {
+      await readCards((token) => this.onCard(token), this.nfcStop.signal);
+      this.nfcOn.set(true);
+      this.nfcProblem.set(false);
+    } catch {
+      this.nfcProblem.set(true);
+    }
   }
 
   async refresh() {
@@ -89,7 +114,7 @@ export class FutokorHome implements OnDestroy {
     this.futokor.select(courseId);
   }
 
-  // The camera has read a card.
+  // The camera has read a card - or the phone was touched to one.
   onCard(token: string) {
     if (!this.scanned()) this.scanned.set(token);
   }
@@ -114,6 +139,7 @@ export class FutokorHome implements OnDestroy {
   }
 
   ngOnDestroy() {
+    this.nfcStop.abort();
     clearInterval(this.ticker);
   }
 }

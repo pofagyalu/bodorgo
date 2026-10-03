@@ -4,15 +4,17 @@ import { MatIconModule } from '@angular/material/icon';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import { errorMessage } from '../../../../shared/errors';
 import { FutokorService, FutokorTag } from '../../../../services/futokor';
+import { NfcWrite } from '../nfc/nfc-write';
 
 // Móka → Futókörök → Kártyák (admins): the club's own cards, the ones the
 // tours' courses use. Made once, printed (the PDF sheet), cut and
 // laminated, then used on every tour - which checkpoint a card is depends
 // on the tour's course (Pályaszerkesztő). A user's own track has its own
-// cards, with the track.
+// cards, with the track. A card's NFC sticker (on its back) is written
+// right here, on a phone that can: it says what the QR code does.
 @Component({
   selector: 'app-futokor-cards',
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, NfcWrite],
   templateUrl: './cards.html',
   styleUrl: '../admin.scss',
 })

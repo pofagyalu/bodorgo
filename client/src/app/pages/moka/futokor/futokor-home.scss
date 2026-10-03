@@ -259,6 +259,39 @@ h1 {
   }
 }
 
+// NFC: switched on with a tap, then it just listens.
+.nfc-btn,
+.nfc-on {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  min-height: 2.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.875rem;
+  font: inherit;
+  font-size: 0.875rem;
+
+  mat-icon {
+    flex: none;
+  }
+}
+
+.nfc-btn {
+  border: 0.125rem solid #142a3c33;
+  background: #fff;
+  color: #142a3c;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nfc-on {
+  background: #e3efdc;
+  color: #1b6548;
+}
+
 .how {
   display: flex;
   align-items: center;

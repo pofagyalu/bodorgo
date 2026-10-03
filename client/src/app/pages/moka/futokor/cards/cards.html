@@ -4,7 +4,8 @@
   <p class="lead">
     A klub közös kártyái: a táborok pályái ezeket használják. Egyszer kell kinyomtatni és laminálni
     őket – hogy melyik kártya hányadik pont, azt a tábori pálya dönti el. A saját pályák kártyái a
-    Pályaszerkesztőben vannak.
+    Pályaszerkesztőben vannak. NFC-s Android telefonon a kártya melletti NFC gombbal a hátára
+    ragasztott címkét is megírhatod: ugyanazt tudja, mint a QR-kód.
   </p>
 
   <div class="card actions">
@@ -45,7 +46,8 @@
             t.retired ? 'letiltva – nem számít' : t.kind === 'startFinish' ? 'rajt és cél' : 'pont'
           }}</small>
         </span>
-        <button type="button" class="icon" (click)="copy(t)" title="Link másolása (NFC-hez)">
+        <app-nfc-write [url]="t.url" [name]="'Bódorgó futókör · ' + t.tagId" />
+        <button type="button" class="icon" (click)="copy(t)" title="Link másolása">
           <mat-icon>link</mat-icon>
         </button>
         <button type="button" class="text" (click)="retire(t)">
