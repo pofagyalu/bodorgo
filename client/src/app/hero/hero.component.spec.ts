@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 
 import { HeroComponent } from './hero.component';
 
@@ -15,7 +16,7 @@ describe('HeroComponent', () => {
       // TourService.getTours() call from its constructor - needs a
       // testing HttpClient so that request is captured rather than
       // actually attempted against a real (unreachable, in a test run) server.
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(HeroComponent);

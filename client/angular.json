@@ -87,7 +87,13 @@
           "options": {
             "runner": "vitest",
             "buildTarget": "::development",
-            "setupFiles": ["src/test-setup.ts"]
+            "setupFiles": ["src/test-setup.ts"],
+            "coverageInclude": ["src/app/**/*.ts"],
+            "coverageReporters": ["text-summary", "html", "lcov"],
+            "coverageThresholds": {
+              "lines": 70,
+              "statements": 70
+            }
           }
         }
       }

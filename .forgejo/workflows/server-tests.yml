@@ -1,16 +1,23 @@
 # Checks every pull request (and what lands on main) on Forgejo Actions:
 #
-#   lint - formatting (Prettier) and lint rules (ESLint) for the server
-#          and the client; must pass before the tests even start.
-#   test - the server's automated tests (server/tests), with the coverage
-#          minimum from server/vitest.config.js.
+#   lint - formatting (Prettier) and lint rules (ESLint); must pass before
+#          the tests even start.
+#   test - the automated tests with their coverage minimum: the server's
+#          (server/tests, minimum in server/vitest.config.js) and the
+#          client's (client/src/**/*.spec.ts, minimum in client/angular.json).
+#
+# Each job only checks the side that changed: a client-only change is linted
+# and tested on the client alone, a server-only change on the server alone
+# (ci/changed-sides.sh decides, and says in the log what it chose). The jobs
+# themselves always run and just skip the other side's steps - branch
+# protection on main requires both jobs by name, so a job that didn't run at
+# all would leave the pull request waiting forever.
 #
 # Only when a pull request is opened/updated and when something lands on
 # main - not on every push to a work branch - to keep the load on the NAS
-# small (see ci/forgejo-runner/README.md). Branch protection on main
-# requires both jobs, so a PR with a lint error or a failing test can't be
-# merged. (The workflow keeps its old name, server-tests, because the
-# required checks are named after it.)
+# small (see ci/forgejo-runner/README.md). A PR with a lint error or a
+# failing test can't be merged. (The workflow keeps its old name,
+# server-tests, because the required checks are named after it.)
 name: server-tests
 
 on:
@@ -26,6 +33,14 @@ jobs:
       image: node:22-bookworm
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the whole history, so the change can be compared with where it
+          # started from (the repository is small)
+          fetch-depth: 0
+
+      - name: Which side changed
+        id: changed
+        run: sh ci/changed-sides.sh "${{ github.event.pull_request.base.sha || github.event.before }}"
 
       - name: Cache npm packages
         uses: actions/cache@v4
@@ -35,26 +50,32 @@ jobs:
           restore-keys: lint-
 
       - name: Install (server)
+        if: steps.changed.outputs.server == 'true'
         working-directory: server
-        run: npm ci --no-audit --no-fund
-
-      - name: Install (client)
-        working-directory: client
         run: npm ci --no-audit --no-fund
 
       - name: Formatting (server)
+        if: steps.changed.outputs.server == 'true'
         working-directory: server
-        run: npm run format:check
-
-      - name: Formatting (client)
-        working-directory: client
         run: npm run format:check
 
       - name: Lint (server)
+        if: steps.changed.outputs.server == 'true'
         working-directory: server
         run: npm run lint
 
+      - name: Install (client)
+        if: steps.changed.outputs.client == 'true'
+        working-directory: client
+        run: npm ci --no-audit --no-fund
+
+      - name: Formatting (client)
+        if: steps.changed.outputs.client == 'true'
+        working-directory: client
+        run: npm run format:check
+
       - name: Lint (client)
+        if: steps.changed.outputs.client == 'true'
         working-directory: client
         run: npm run lint
 
@@ -63,15 +84,18 @@ jobs:
     runs-on: docker
     container:
       image: node:22-bookworm
-    defaults:
-      run:
-        working-directory: server
     env:
       # Keep mongodb-memory-server's downloaded MongoDB binary (~100MB) in a
       # cached folder instead of fetching it on every run.
       MONGOMS_DOWNLOAD_DIR: /root/.cache/mongodb-binaries
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Which side changed
+        id: changed
+        run: sh ci/changed-sides.sh "${{ github.event.pull_request.base.sha || github.event.before }}"
 
       - name: Cache npm packages and the MongoDB binary
         uses: actions/cache@v4
@@ -79,11 +103,27 @@ jobs:
           path: |
             /root/.npm
             /root/.cache/mongodb-binaries
-          key: server-${{ hashFiles('server/package-lock.json') }}
-          restore-keys: server-
+          key: test-${{ hashFiles('server/package-lock.json', 'client/package-lock.json') }}
+          restore-keys: |
+            test-
+            server-
 
-      - name: Install
+      - name: Install (server)
+        if: steps.changed.outputs.server == 'true'
+        working-directory: server
         run: npm ci --no-audit --no-fund
 
-      - name: Test (with coverage minimum)
+      - name: Test the server (with coverage minimum)
+        if: steps.changed.outputs.server == 'true'
+        working-directory: server
+        run: npm run test:coverage
+
+      - name: Install (client)
+        if: steps.changed.outputs.client == 'true'
+        working-directory: client
+        run: npm ci --no-audit --no-fund
+
+      - name: Test the client (with coverage minimum)
+        if: steps.changed.outputs.client == 'true'
+        working-directory: client
         run: npm run test:coverage
