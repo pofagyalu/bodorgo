@@ -14,7 +14,12 @@ import { TourService, TickerResponse } from '../../services/tour';
 export class TourTicker {
   private tourService = inject(TourService);
 
-  private featured = signal<TickerResponse['data']>(null);
+  // undefined: not answered yet; null: there is no tour to tell about.
+  private featured = signal<TickerResponse['data'] | undefined>(undefined);
+
+  // The bar keeps its place from the start (see tour-ticker.html) - it
+  // goes only once it is known to have nothing to say.
+  shown = computed(() => this.featured() !== null);
 
   tickerText = computed(() => {
     const featured = this.featured();
@@ -30,6 +35,7 @@ export class TourTicker {
   constructor() {
     this.tourService.getTicker().subscribe({
       next: (res) => this.featured.set(res.data),
+      error: () => this.featured.set(null),
     });
   }
 }
