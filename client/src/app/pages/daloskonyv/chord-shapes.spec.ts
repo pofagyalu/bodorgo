@@ -6,6 +6,16 @@ const frets = (name: string, instrument: 'guitar' | 'ukulele') =>
     .join('');
 
 describe('chordShape: guitar', () => {
+  it('holds the sus2 chords down by the nut, not high up the neck', () => {
+    expect(frets('Gsus2', 'guitar')).toBe('300033');
+    expect(frets('Dsus2', 'guitar')).toBe('xx0230');
+    expect(frets('Asus2', 'guitar')).toBe('x02200');
+    expect(frets('Csus2', 'guitar')).toBe('x30033');
+    expect(frets('Esus2', 'guitar')).toBe('024400');
+    // The others: the A shape slid up.
+    expect(frets('Hsus2', 'guitar')).toBe('x24422');
+  });
+
   it('knows the open chords', () => {
     expect(frets('C', 'guitar')).toBe('x32010');
     expect(frets('G', 'guitar')).toBe('320003');

@@ -26,8 +26,8 @@
                         (pointerenter)="onEnter($event, chord)"
                         (pointerleave)="onLeave($event)"
                         (click)="onTap($event, chord)"
-                        >{{ chord }}</span
-                      >
+                        ><app-chord-name [name]="chord"
+                      /></span>
                     }
                     <span class="text">{{ piece.text }}</span>
                   </span>

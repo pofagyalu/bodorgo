@@ -1,5 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import { ChordShape } from '../chord-shapes';
+import { ChordName } from '../chord-name/chord-name';
 
 // The picture's measures, in the SVG's own units.
 const STRING_GAP = 12;
@@ -15,6 +16,7 @@ const MIN_FRETS = 4;
 // shape has: six for the guitar, four for the ukulele.
 @Component({
   selector: 'app-chord-diagram',
+  imports: [ChordName],
   templateUrl: './chord-diagram.html',
   styleUrl: './chord-diagram.scss',
 })

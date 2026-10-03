@@ -507,6 +507,22 @@ describe('SongSheet', () => {
     expect(chords).toEqual(['D', 'A', 'D', 'Hm']); // Hungarian notation: H, not B
   });
 
+  it('writes a chord’s numbers as indexes - over the lyrics and over its diagram', () => {
+    fixture.componentRef.setInput('chordpro', '[F7]Tavaszi [Gsus2]szél [am]vizet [2x]áraszt');
+    fixture.componentRef.setInput('showDiagrams', true);
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    const raised = (selector: string) =>
+      [...root.querySelectorAll(`${selector} sup`)].map((s) => s.textContent?.trim());
+    expect(raised('.lyrics .chord')).toEqual(['7', '2']);
+    // The whole name is still there to read: F7, Gsus2 - and "2x" is no chord.
+    const names = [...root.querySelectorAll('.lyrics .chord')].map((c) =>
+      c.textContent?.replace(/\s+/g, ''),
+    );
+    expect(names).toEqual(['F7', 'Gsus2', 'am', '2x']);
+    expect(raised('.diagrams figcaption')).toEqual(['7', '2']);
+  });
+
   it('shows a diagram for each different chord when asked', () => {
     expect(sheet.diagrams()).toEqual([]);
     fixture.componentRef.setInput('showDiagrams', true);

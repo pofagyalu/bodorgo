@@ -3,6 +3,7 @@ import { BlockLine, Segment, parseChordPro, toBlocks, toWords } from '../chordpr
 import { parseChord, transposer } from '../chords';
 import { ChordShape, Instrument, chordShape, uniqueChords } from '../chord-shapes';
 import { ChordDiagram } from '../chord-diagram/chord-diagram';
+import { ChordName } from '../chord-name/chord-name';
 
 interface ViewLine {
   type: BlockLine['type'];
@@ -34,7 +35,7 @@ const POPUP_HEIGHT = 150;
 // stands in (1 without one).
 @Component({
   selector: 'app-song-sheet',
-  imports: [ChordDiagram],
+  imports: [ChordDiagram, ChordName],
   templateUrl: './song-sheet.html',
   styleUrl: './song-sheet.scss',
 })

@@ -1,0 +1,7 @@
+@for (piece of pieces(); track $index) {
+  @if (piece.index) {
+    <sup>{{ piece.text }}</sup>
+  } @else {
+    <span>{{ piece.text }}</span>
+  }
+}
