@@ -9,7 +9,9 @@
     akarsz: a <strong>legjobb időd</strong> számít.
   </p>
 
-  <div class="cards">
+  <!-- On a desktop: columns, each card under the one that ends highest
+       (shared/masonry). -->
+  <div class="cards" appMasonry>
     <div class="card">
       <h2><span class="num">1</span> Mielőtt elindulsz</h2>
       <ul>
@@ -103,6 +105,12 @@
           célba érés után az is törlődik. Csak a belépett tagok látják. Futókóddal, más telefonján
           futva is működik: ott minden rajtnál külön kell bekapcsolni.
         </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><mat-icon>tips_and_updates</mat-icon> Jó tudni a telefonról</h2>
+      <ul>
         <li>
           <strong>Internet – csak előtte és utána.</strong> Indulás előtt egyszer nyisd meg a Futás
           oldalt wifin vagy mobilneten; futás közben nem kell térerő, a leolvasások a telefonon

@@ -39,6 +39,10 @@ h1 {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  // The gradient is only painted inside the title's own box: room on top
+  // for the accents of capital letters (Ő, Á...), most of it taken back from the margin.
+  padding-top: 0.3em;
+  margin-top: calc(0.25rem - 0.1em);
 }
 
 .lead {
@@ -155,16 +159,29 @@ li + li {
     padding-inline: 2rem;
   }
 
+  // Masonry (shared/masonry): 1px rows and no row gap - the directive
+  // gives each card a row span as tall as the card, with the column gap
+  // under it, so no card has an empty space below.
   .cards {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.875rem;
-    align-items: start;
+    grid-auto-rows: 1px;
+    column-gap: 0.875rem;
 
     .card {
+      align-self: start;
       margin-bottom: 0;
-      height: 100%;
-      box-sizing: border-box;
     }
+  }
+}
+
+// A wide monitor: three columns.
+@media (min-width: 1500px) {
+  .guide {
+    max-width: 104rem;
+  }
+
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

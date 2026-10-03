@@ -1,5 +1,5 @@
 .landing {
-  max-width: 68rem;
+  max-width: 90rem;
   margin: 0 auto;
   padding: clamp(1.25rem, 4vw, 3.5rem);
 }
@@ -37,6 +37,10 @@ h1 {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  // The gradient is only painted inside the title's own box: room on top
+  // for the accents of capital letters (Ő, Á...), most of it taken back from the margin.
+  padding-top: 0.3em;
+  margin-top: calc(0.25rem - 0.1em);
 }
 
 .lead {
@@ -425,5 +429,15 @@ h2 {
 @media (prefers-reduced-motion: reduce) {
   .live-now {
     animation: none;
+  }
+}
+
+// A desktop has the room: the results and my runs side by side.
+@media (min-width: 1000px) {
+  .lists {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+    column-gap: 2rem;
+    align-items: start;
   }
 }

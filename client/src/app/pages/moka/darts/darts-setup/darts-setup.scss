@@ -30,6 +30,10 @@ h1 {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  // The gradient is only painted inside the title's own box: room on top
+  // for the accents of capital letters (Ő, Á...), most of it taken back from the margin.
+  padding-top: 0.3em;
+  margin-top: calc(0.25rem - 0.1em);
 }
 
 .card {

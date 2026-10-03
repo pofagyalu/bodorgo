@@ -32,6 +32,10 @@ h1 {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  // The gradient is only painted inside the title's own box: room on top
+  // for the accents of capital letters (Ő, Á...), most of it taken back from the margin.
+  padding-top: 0.3em;
+  margin-top: calc(0.125rem - 0.1em);
 }
 
 .card {
@@ -373,48 +377,64 @@ h1 {
   }
 }
 
-// --- A desktop has the room: the course and its map on the left (staying
-// in sight), the run and the results on the right ---
+// --- A desktop has the room ---
 
 .block-results {
   margin-top: 1.25rem;
 }
 
 @media (min-width: 1000px) {
+  // The whole window: on top a strip of three - the course, what to do,
+  // the way to the results - and under it the map, as big as it can be.
   .futokor {
-    max-width: 78rem;
+    max-width: 110rem;
     padding-inline: 2rem;
   }
 
   .layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(22rem, 1fr);
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
-      'course run'
-      'course results';
-    grid-template-rows: auto 1fr;
-    column-gap: 2rem;
-    align-items: start;
+      'course run results'
+      'map map map';
+    gap: 1.25rem;
+    align-items: stretch;
+  }
+
+  // (The course's card and its map are placed one by one.)
+  .block-course {
+    display: contents;
+  }
+
+  .course {
+    grid-area: course;
+    margin: 0;
   }
 
   .block-run {
     grid-area: run;
-  }
+    display: flex;
+    flex-direction: column;
 
-  .block-course {
-    grid-area: course;
-    position: sticky;
-    top: 1rem;
+    > :last-child {
+      flex: 1;
+      margin-bottom: 0;
+    }
   }
 
   .block-results {
     grid-area: results;
+    display: flex;
     margin-top: 0;
   }
 
-  // The map takes what the window gives it.
+  .to-results {
+    flex: 1;
+  }
+
   .map {
-    --map-height: min(34rem, calc(100dvh - var(--header-height) - 13rem));
+    grid-area: map;
+    --map-height: max(26rem, calc(100dvh - var(--header-height) - 21rem));
   }
 }
 

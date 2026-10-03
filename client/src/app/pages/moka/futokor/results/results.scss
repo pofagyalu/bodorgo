@@ -47,6 +47,10 @@ h1 {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  // The gradient is only painted inside the title's own box: room on top
+  // for the accents of capital letters (Ő, Á...), most of it taken back from the margin.
+  padding-top: 0.3em;
+  margin-top: calc(0.125rem - 0.1em);
 }
 
 .facts {
@@ -360,9 +364,18 @@ th.col-who {
     padding-inline: 2rem;
   }
 
-  // Every futókör: cards side by side.
+  // Every futókör: cards side by side, in the middle of the window - one
+  // or two of them aren't left alone in a corner, nor stretched across.
+  .results:has(.courses) {
+    .eyebrow,
+    h1 {
+      text-align: center;
+    }
+  }
+
   .courses {
-    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(22rem, 30rem));
+    justify-content: center;
     gap: 0.875rem;
   }
 
