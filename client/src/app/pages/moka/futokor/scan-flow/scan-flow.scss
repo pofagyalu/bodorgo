@@ -174,3 +174,18 @@
     font-size: 1rem;
   }
 }
+
+// NFC: asked for like the location is - a button, as it takes a tap.
+.nfc-ask {
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.nfc-ready {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1b6548;
+}

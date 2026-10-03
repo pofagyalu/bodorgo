@@ -21,13 +21,17 @@ export class HomePage {
   stats = signal<TourStatsResponse['data'] | null>(null);
 
   // Picked once per page view, one per icon off a shuffled copy of the 7
-  // logo colors - a permutation, so none of these 4 can repeat (there are
-  // 3 colors that won't be used on any given page view).
+  // logo colors - a permutation, so none of these 5 can repeat (there are
+  // 2 colors that won't be used on any given page view).
   private readonly iconColors = shuffledLogoColors();
   totalToursIconColor = this.iconColors[0];
   totalParticipantsIconColor = this.iconColors[1];
   mostAttendedIconColor = this.iconColors[2];
   bestRatedIconColor = this.iconColors[3];
+  runningIconColor = this.iconColors[4];
+
+  // "12,6" - the Hungarian way, with a comma.
+  km = (value: number) => value.toLocaleString('hu-HU', { maximumFractionDigits: 1 });
 
   // Fixed rather than drawn from the shuffled logo-color pool - this is a
   // two-slice comparison chart with a conventional color meaning (blue for

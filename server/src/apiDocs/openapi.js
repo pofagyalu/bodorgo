@@ -882,12 +882,17 @@ const paths = {
       tag: T.tours,
       summary: 'Tour statistics',
       description:
-        "Counts and averages for the homepage. `attendeeAges` feeds the age chart: `tours` is each tour's average attendee age (their age on the tour's first day; only attendees with a birthday on file - `count` is how many of the `total`; `minAge`-`maxAge` the range of those ages), `years` the yearly average over every such attendance of that year, so a tour weighs in by its `count`. Tours and years with no known age are left out; both lists are in time order.",
+        "Counts and averages for the homepage. `running`: what the club has run on the futókörök (Móka → Futókörök), all time - every finished lap with its course's length; null until someone has finished one. `attendeeAges` feeds the age chart: `tours` is each tour's average attendee age (their age on the tour's first day; only attendees with a birthday on file - `count` is how many of the `total`; `minAge`-`maxAge` the range of those ages), `years` the yearly average over every such attendance of that year, so a tour weighs in by its `count`. Tours and years with no known age are left out; both lists are in time order.",
       data: obj({
         totalTours: int('Tours that have already ended.'),
         upcomingTours: int('Tours still ahead.'),
         totalParticipants: int('Attendances over every tour.'),
         genderRatio: obj({ malePercentage: int('0-100'), femalePercentage: int('0-100') }),
+        running: obj({
+          totalKm: num('Kilometres over every finished lap, one decimal'),
+          laps: int('Finished laps'),
+          runners: int('How many people finished at least one'),
+        }),
         attendeeAges: obj({
           tours: arrayOf(
             obj({
@@ -3360,12 +3365,16 @@ const paths = {
       tag: T.race,
       summary: 'The courses to run now',
       description:
-        'Every course that is open now (`courses` - the tour’s first, then the users’ own tracks), each with everything the phone needs to run it offline, and my runs on each (`allRuns`, by course id). Which course a run is on is decided by the START card scanned. `course` is the tour’s course - the open one, or else the next to open, so a phone can get ready for it; null if there is neither - with my runs on it (`runs`).',
+        'Every course that is open now (`courses` - the tour’s first, then the users’ own tracks), each with everything the phone needs to run it offline, and my runs on each (`allRuns`, by course id). Which course a run is on is decided by the START card scanned. `course` is the tour’s course - the open one, or else the next to open, so a phone can get ready for it; null if there is neither - with my runs on it (`runs`). `records`: the three best times (ms) of each open course, the fastest first, each runner’s best counted once - the phone keeps them to tell a runner at the FINISH that theirs is a record, also where there is no connection.',
       data: obj({
         course: { oneOf: [ref('FutokorCourse'), { type: 'null' }] },
         runs: arrayOf(ref('FutokorRun')),
         courses: arrayOf(ref('FutokorCourse')),
         allRuns: { type: 'object', description: 'My runs on each open course, by its id.' },
+        records: {
+          type: 'object',
+          description: 'The three best times (ms) of each open course, by its id.',
+        },
         runner: obj({ id: id(), name: str() }),
         serverTime: date(),
       }),
@@ -3378,10 +3387,14 @@ const paths = {
       role: 'public',
       summary: 'The courses to run now, for a phone nobody is logged in on',
       description:
-        'The same courses as `/futokor/active`, without any runs - for someone running with their futókód.',
+        'The same courses as `/futokor/active`, without any runs - for someone running with their futókód. With the courses’ best times (`records`) too: times only, no names.',
       data: obj({
         course: { oneOf: [ref('FutokorCourse'), { type: 'null' }] },
         courses: arrayOf(ref('FutokorCourse')),
+        records: {
+          type: 'object',
+          description: 'The three best times (ms) of each open course, by its id.',
+        },
         serverTime: date(),
       }),
     }),

@@ -743,6 +743,25 @@ const nextTourCourse = (now) =>
     FutokorCourse.findOne({ tour: { $exists: true }, opensAt: { $gt: now } }).sort('opensAt'),
   );
 
+// The three best times of a course, the fastest first - each runner's best
+// counts once. The phone keeps them, to tell a runner at the FINISH (where
+// there may be no connection) that theirs is a record.
+async function courseRecords(course) {
+  const best = await FutokorRun.aggregate([
+    { $match: { course: course._id, status: 'finished', totalMs: { $ne: null } } },
+    { $group: { _id: '$user', totalMs: { $min: '$totalMs' } } },
+    { $sort: { totalMs: 1 } },
+    { $limit: 3 },
+  ]);
+  return best.map((b) => b.totalMs);
+}
+
+async function recordsOf(courses) {
+  const records = {};
+  for (const c of courses) records[refId(c)] = await courseRecords(c);
+  return records;
+}
+
 // GET /futokor/course - the courses for a phone nobody is logged in on
 // (someone running with their futókód): public, and without any runs.
 export const getCourse = async (req, res) => {
@@ -754,6 +773,7 @@ export const getCourse = async (req, res) => {
     data: {
       course: course ? courseView(course, null) : null,
       courses: courses.map((c) => courseView(c, null)),
+      records: await recordsOf(courses),
       serverTime: now,
     },
   });
@@ -786,6 +806,8 @@ export const getActive = async (req, res) => {
       runs: course ? (allRuns[refId(course)] ?? (await myRuns(course, req.user))) : [],
       courses: courses.map((c) => courseView(c, req.user)),
       allRuns,
+      // The best times on each (by course id), the fastest first.
+      records: await recordsOf(courses),
       // Who this phone runs as: kept on it, for where there's no signal.
       runner: { id: req.user._id, name: shownName(req.user) },
       // For the phone to notice a clock that's off.

@@ -313,6 +313,17 @@ describe('Futókör: running', () => {
       ['Nagy Zoli', 270000, 2, false],
     ]);
     expect((await get(anna, '/courses/nonsense/leaderboard')).status).toBe(404);
+
+    // The home page's figure: every finished lap with the course's 900 m.
+    const stats = await request(app).get('/tours/tour-stats').set(asUser(anna));
+    expect(stats.body.data.running).toEqual({ totalKm: 3.6, laps: 4, runners: 3 });
+
+    // The phone gets the three best times - each runner's best, once.
+    const dani = await createRunner({ name: 'Tóth Dani' });
+    await send(dani, lap(300, 600));
+    const records = { [course._id]: [150000, 240000, 270000] };
+    expect((await get(anna, '/active')).body.data.records).toEqual(records);
+    expect((await request(app).get('/futokor/course')).body.data.records).toEqual(records);
   });
 
   it('a deleted course takes its scans and runs with it - the cards stay', async () => {

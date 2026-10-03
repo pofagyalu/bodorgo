@@ -1,6 +1,16 @@
-import { Component, OnDestroy, OnInit, computed, inject, input, output } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FutokorService, ScanAnswer, racePace, raceTime } from '../../../../services/futokor';
 import { playCelebration } from '../../../../shared/celebration-effects';
+import { FinishMessage, finishMessage, giveUpMessage } from '../finish-messages';
 
 // "T02" → "02-es kártya" (the number printed big on the card) - a user's
 // own track's "P3-02" too; "S1" and "P3-S" are START/FINISH cards.
@@ -42,7 +52,8 @@ function beep(frequency: number, startSec: number, lengthSec: number) {
 // What a scan came to, over the whole screen, to be understood at a glance
 // while running: green with a big ✓ (and a high beep), red with the one
 // reason (a low double beep), grey for "already have it" - and the finish,
-// with the time and the splits.
+// with the time, a line about it (a record, a personal best, or something
+// to smile at - finish-messages.ts) and the splits.
 @Component({
   selector: 'app-scan-answer',
   templateUrl: './scan-answer.html',
@@ -59,6 +70,9 @@ export class ScanAnswerView implements OnInit, OnDestroy {
   readonly time = raceTime;
   readonly pace = racePace;
   private timer?: ReturnType<typeof setTimeout>;
+  // The line under a finished run's time - said once, as the screen opens.
+  message = signal<FinishMessage | null>(null);
+  private readonly gaveUpText = giveUpMessage();
 
   mood = computed<Mood>(() => {
     switch (this.answer().result) {
@@ -133,7 +147,7 @@ export class ScanAnswerView implements OnInit, OnDestroy {
       case 'noCourse':
         return 'Nincs pálya a telefonon – nyisd meg a Móka → Futókörök → Futás oldalt, amíg van net.';
       case 'gaveUp':
-        return 'Ez a futás nem számít. Jöhet egy új!';
+        return this.gaveUpText;
       default:
         return '';
     }
@@ -162,6 +176,10 @@ export class ScanAnswerView implements OnInit, OnDestroy {
 
   ngOnInit() {
     const mood = this.mood();
+    if (mood === 'finish') {
+      const facts = this.futokor.finishFacts(this.answer().run);
+      this.message.set(facts && finishMessage(facts));
+    }
     if (mood === 'good' || mood === 'finish') {
       navigator.vibrate?.(mood === 'finish' ? [120, 80, 120, 80, 300] : 150);
       beep(880, 0, 0.15);

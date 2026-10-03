@@ -8,7 +8,7 @@ import { CourseMap, MapRunner } from './course-map/course-map';
 import { QrScanner, canScanInApp } from './qr-scanner/qr-scanner';
 import { ScanAnswerView, cardName } from './scan-answer/scan-answer';
 import { ScanFlow } from './scan-flow/scan-flow';
-import { canNfc, nfcAllowed, readCards } from './nfc/nfc';
+import { NfcCards } from './nfc/nfc-cards';
 
 // Móka → Futókörök → Futás: the running race's own page on a runner's phone.
 // The course (kept on the phone - it works without a signal too), the run
@@ -30,12 +30,9 @@ export class FutokorHome implements OnDestroy {
 
   readonly canScan = canScanInApp();
   readonly cardName = cardName;
-  // NFC: can this phone's browser read it - and is the page listening?
-  readonly canNfc = canNfc();
-  nfcOn = signal(false);
-  // Why it didn't start, in words - '' if nothing is wrong.
-  nfcProblem = signal('');
-  private nfcStop = new AbortController();
+  // The cards' NFC stickers: the app listens for them (nfc/nfc-cards.ts),
+  // and while this page is open they come here.
+  nfc = inject(NfcCards);
 
   loaded = signal(false);
   scanning = signal(false);
@@ -86,34 +83,7 @@ export class FutokorHome implements OnDestroy {
 
   constructor() {
     void this.refresh();
-    // Allowed before: the page listens for the stickers right away.
-    void nfcAllowed().then((allowed) => {
-      if (allowed) void this.listenNfc();
-    });
-  }
-
-  // The page listens for cards touched to the phone, as long as it's open.
-  // (The first time the browser asks whether it may - that takes a tap.)
-  async listenNfc() {
-    if (!this.canNfc || this.nfcOn()) return;
-    try {
-      await readCards((token) => this.onCard(token), this.nfcStop.signal);
-      this.nfcOn.set(true);
-      this.nfcProblem.set('');
-    } catch (err) {
-      // What the browser said, by its name - and the name itself too, so
-      // it can be told to whoever looks after the app.
-      const name = (err as DOMException)?.name ?? '';
-      const why: Record<string, string> = {
-        NotAllowedError:
-          'Az NFC ennél az oldalnál le van tiltva a böngészőben – a címsor melletti ikonnál (Engedélyek → NFC) engedélyezd, majd koppints újra',
-        NotReadableError: 'Az NFC ki van kapcsolva a telefonon – kapcsold be, majd koppints újra',
-        NotSupportedError: 'Ez a telefon vagy böngésző nem tud NFC-t olvasni',
-      };
-      this.nfcProblem.set(
-        `${why[name] ?? 'Az NFC nem indult el – koppints újra'} (${name || 'hiba'})`,
-      );
-    }
+    this.nfc.onCard = (token) => this.onCard(token);
   }
 
   async refresh() {
@@ -151,7 +121,7 @@ export class FutokorHome implements OnDestroy {
   }
 
   ngOnDestroy() {
-    this.nfcStop.abort();
+    this.nfc.onCard = null;
     clearInterval(this.ticker);
   }
 }
