@@ -29,6 +29,9 @@ export interface Song extends SongListItem {
   // The first chord it was first written with ("am") - there once the
   // song has been saved in another key; '' while it never was.
   originalKey: string;
+  // Beats a minute, given by hand in the editor (pages/daloskonyv/tempo.ts)
+  // - null: none.
+  tempo: number | null;
   updatedAt: string;
 }
 
@@ -40,6 +43,8 @@ export interface SongInput {
   originalKey?: string;
   // The key set by hand ("C", "am"); '' leaves it to the chords.
   key?: string;
+  // Beats a minute; null takes the tempo away.
+  tempo?: number | null;
 }
 
 // Whose chord diagrams the PDF has - or none.

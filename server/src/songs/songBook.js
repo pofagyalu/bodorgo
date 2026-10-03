@@ -233,7 +233,9 @@ function drawSong(doc, song, diagrams) {
   // Under the title: the artist, and after it the song's key (the one set
   // by hand, or what its chords say) in a quiet tag - "a-moll".
   const key = keyName(songKey(song));
-  if (song.artist || key) {
+  // And after the key the tempo, where one was given: a drawn quarter note
+  // and "= 96".
+  if (song.artist || key || song.tempo) {
     let x = left;
     if (song.artist) {
       put(doc, song.artist, x, y, { font: 'Italic', size: 10.5, color: GREY });
@@ -243,6 +245,20 @@ function drawSong(doc, song, diagrams) {
       const width = widthOf(doc, key, 'Heading', 8.5) + 10;
       doc.roundedRect(x, y + 0.5, width, 12.5, 6.25).fill('#e8f3ee');
       put(doc, key, x + 5, y + 2.2, { font: 'Heading', size: 8.5, color: GREEN });
+      x += width + 8;
+    }
+    if (song.tempo) {
+      // The note: a slanted head and its stem (the fonts have no ♩).
+      doc.save();
+      doc.rotate(-20, { origin: [x + 2.6, y + 10] });
+      doc.ellipse(x + 2.6, y + 10, 2.6, 1.9).fill(GREY);
+      doc.restore();
+      doc
+        .moveTo(x + 5, y + 9.4)
+        .lineTo(x + 5, y + 1.5)
+        .lineWidth(0.8)
+        .stroke(GREY);
+      put(doc, `= ${song.tempo}`, x + 8.5, y + 2.2, { font: 'Heading', size: 8.5, color: GREY });
     }
     y += 15;
   }

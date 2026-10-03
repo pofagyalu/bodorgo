@@ -517,6 +517,11 @@ const schemas = {
     detectedKey: str(
       'The key the song’s chords say, in the same form ("C", "am"; empty for a song without chords): the key whose own chords the song’s fit best, the chord the song starts on counting most. An estimate - `key` overrules it. Shown as "C-dúr" / "a-moll" after the artist, in the song list and in the PDF.',
     ),
+    tempo: {
+      type: ['integer', 'null'],
+      description:
+        'The song’s tempo in beats a minute (30–300), given by hand in the editor - typed, or tapped there. null: none given. A marker only ("♩ = 96" after the key on the song’s page and in the PDF; the song page’s metronome blinks it, without sound) - it doesn’t drive the page’s scrolling, and changing the chords or the key leaves it alone.',
+    },
     createdAt: date(),
     updatedAt: date(),
   }),
@@ -529,6 +534,11 @@ const schemas = {
     key: str(
       'The key set by hand - see Song; a chord name ("C", "am"), 400 for anything else. Empty string: back to the detected key.',
     ),
+    tempo: {
+      type: ['integer', 'null'],
+      description:
+        'The tempo in beats a minute - see Song; a whole number from 30 to 300, 400 for anything else. null (or an empty string): no tempo.',
+    },
     tags: arrayOf(str()),
     originalKey: str(
       'See Song - sent by the song page with the transposed `chordpro` when a song is saved in a new key. At most 12 characters.',

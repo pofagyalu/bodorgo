@@ -8,6 +8,7 @@ import { SongSheet } from '../song-sheet/song-sheet';
 import { TextEdit, insertChord, nudgeChord, wrapChorus } from '../chord-text';
 import { chordsOverLyrics } from '../paste-chords';
 import { allKeys, chordSignature, detectKey, keyName } from '../song-key';
+import { TEMPO_MAX, TEMPO_MIN, TapTempo, readTempo } from '../tempo';
 
 // The Daloskönyv's editor - a new song, or an existing one: its title
 // and artist, and the ChordPro text with the song drawn live beside
@@ -67,6 +68,19 @@ export class SongEdit implements OnInit {
     this.chosenFor.set(chordSignature(this.chordpro()));
   }
 
+  // --- The song's tempo (tempo.ts) ---
+
+  // As it stands in its field - '' for none.
+  tempoText = signal('');
+  private taps = new TapTempo();
+
+  // A tap on "Koppints": from the second one on the field shows the tempo
+  // of the tapping.
+  tapTempo() {
+    const tempo = this.taps.tap(performance.now());
+    if (tempo !== null) this.tempoText.set(String(tempo));
+  }
+
   // Where "Mégse" leads: back to the song, or to the list.
   backLink = computed(() => {
     const song = this.song();
@@ -84,6 +98,7 @@ export class SongEdit implements OnInit {
         this.artist.set(song.artist);
         this.chordpro.set(song.chordpro);
         this.chooseKey(song.key);
+        this.tempoText.set(song.tempo ? String(song.tempo) : '');
         this.loading.set(false);
       },
       error: () => {
@@ -175,12 +190,18 @@ export class SongEdit implements OnInit {
       this.notifications.addError('A dalnak kell legyen címe.');
       return;
     }
+    const tempo = readTempo(this.tempoText());
+    if (this.tempoText().trim() && tempo === null) {
+      this.notifications.addError(`A tempó ${TEMPO_MIN} és ${TEMPO_MAX} közötti egész szám lehet.`);
+      return;
+    }
     const input = {
       title,
       artist: this.artist().trim(),
       chordpro: this.chordpro(),
       // The key set by hand, if it still holds - '' leaves it to the chords.
       key: this.key(),
+      tempo,
     };
     const song = this.song();
     this.saving.set(true);

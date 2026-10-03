@@ -166,6 +166,15 @@ button {
     opacity: 0.6;
     cursor: default;
   }
+
+  // The song isn't moved: nothing to save - pale, in its place all the
+  // same, so the bar doesn't grow when it comes alive.
+  &.keep-key--idle,
+  &.keep-key--idle:hover {
+    background: none;
+    color: #c3ccd0;
+    opacity: 1;
+  }
 }
 
 // "A dal letöltése PDF-ben": the PDF's own red, as on the list's button.
@@ -250,6 +259,49 @@ button {
   font-size: 0.86em;
   font-weight: 700;
   white-space: nowrap;
+}
+
+// The song's tempo after its key ("♩ = 96"): as quiet as the key - and a
+// button: tapped, it blinks the tempo for a few bars.
+.song-tempo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.1em 0.6em;
+  border: 0;
+  border-radius: 10rem;
+  background: #eef1f2;
+  color: $muted;
+  font: inherit;
+  font-size: 0.86em;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease-out,
+    color 0.12s ease-out;
+
+  // No taller than the key's tag beside it.
+  line-height: inherit;
+
+  // (Not ".note": that is the page's "no such song" line.)
+  .tempo-note {
+    width: 0.5em;
+    height: 0.9em;
+    fill: currentColor;
+  }
+}
+
+// Beating: its own color, and a flash at each beat.
+.song-tempo--on {
+  background: #e8f3ee;
+  color: $teal;
+}
+
+.song-tempo--beat {
+  background: $teal;
+  color: #fff;
+  transition: none;
 }
 
 // "Eredeti hangnem: am" - a quiet note under the artist, and a button.

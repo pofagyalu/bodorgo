@@ -56,6 +56,10 @@ function songView(song) {
 // The book's order: by title, the Hungarian way (á with a, ö after o...).
 const inBookOrder = (query) => query.collation({ locale: 'hu' }).sort('title');
 
+// A tempo's bounds, in beats a minute (the model's too).
+const TEMPO_MIN = 30;
+const TEMPO_MAX = 300;
+
 // What a song's form may set.
 function songFields(body, { partial = false } = {}) {
   const fields = {};
@@ -81,6 +85,17 @@ function songFields(body, { partial = false } = {}) {
     fields.key = String(body.key ?? '').trim();
     if (fields.key && (fields.key.length > 12 || !parseChord(fields.key))) {
       throw new AppError('Ilyen hangnem nincs.', 400);
+    }
+  }
+  // The tempo in beats a minute, a whole number - null (or '') for none.
+  if (body.tempo !== undefined) {
+    if (body.tempo === null || body.tempo === '') {
+      fields.tempo = null;
+    } else {
+      fields.tempo = Number(body.tempo);
+      if (!Number.isInteger(fields.tempo) || fields.tempo < TEMPO_MIN || fields.tempo > TEMPO_MAX) {
+        throw new AppError(`A tempó ${TEMPO_MIN} és ${TEMPO_MAX} közötti egész szám lehet.`, 400);
+      }
     }
   }
   return fields;
@@ -172,7 +187,7 @@ async function currentBook(query) {
   const version = `${count}|${newest._id}|${lastChanged.updatedAt.getTime()}`;
   let book = bookCache.get(key);
   if (book?.version !== version) {
-    const songs = await inBookOrder(Song.find().select('title artist chordpro key')).lean();
+    const songs = await inBookOrder(Song.find().select('title artist chordpro key tempo')).lean();
     // The cover's "edition": the day the newest song came in.
     const pdf = await renderSongBook(songs, { diagrams, size, lastAdded: newest.createdAt });
     book = { version, pdf };
