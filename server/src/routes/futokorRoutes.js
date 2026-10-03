@@ -28,11 +28,6 @@ router
   .put(runner, futokor.receiveGpx, futokor.putTrack)
   .delete(runner, futokor.deleteTrack);
 router.get('/courses/:id/track.gpx', runner, futokor.getTrackFile);
-// Where I am on the course, for the others to watch (my own choice).
-router
-  .route('/courses/:id/position')
-  .put(runner, futokor.putPosition)
-  .delete(runner, futokor.deletePosition);
 router.get('/courses/:id/sheet', runner, futokor.getCourseSheet);
 router.get('/courses/:id/leaderboard', runner, futokor.getLeaderboard);
 router.get('/courses/:id/results', runner, futokor.getCourseResults);
@@ -40,8 +35,8 @@ router.get('/results', runner, futokor.getResults);
 
 router.get('/active', runner, futokor.getActive);
 
-// Running with a futókód, on a phone nobody is logged in on: these three
-// are public. A wrong code counts against the phone's address - after
+// Running with a futókód, on a phone nobody is logged in on: these are
+// public. A wrong code counts against the phone's address - after
 // thirty in ten minutes it has to wait (nobody guesses others' codes).
 const codeLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -54,5 +49,22 @@ router.get('/course', futokor.getCourse);
 router.post('/runner', codeLimiter, futokor.getRunner);
 // (With a code in it; otherwise it's the logged-in user's - see scanRunner.)
 router.post('/scans', codeLimiter, futokor.scanRunner, futokor.postScans);
+
+// Where I am on the course, for the others to watch (the runner's own
+// choice) - as whoever the futókód in it belongs to, or whoever is logged
+// in, like the scans. Only a code (or a course) that doesn't exist counts
+// against the address here: "no run on yet" is an everyday answer.
+const positionLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (req, res) => res.statusCode !== 404,
+  handler: (req, res) =>
+    res.status(429).json({ status: 'fail', message: 'Túl sok próbálkozás – várj pár percet.' }),
+});
+router
+  .route('/courses/:id/position')
+  .put(positionLimiter, futokor.scanRunner, futokor.putPosition)
+  .delete(positionLimiter, futokor.scanRunner, futokor.deletePosition);
 
 export default router;

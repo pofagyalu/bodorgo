@@ -38,8 +38,8 @@
       <p class="who">{{ futokor.runner()?.name }}, indulhat a futás?</p>
       <button type="button" class="go" (click)="start()">RAJT!</button>
       <p class="note">Az óra a gomb megnyomásakor indul.</p>
-      <!-- Élő követés: the runner's own choice (not with a futókód). -->
-      @if (futokor.canLive && !futokor.runner()?.code) {
+      <!-- Élő követés: the runner's own choice. -->
+      @if (futokor.canLive) {
         <label class="live">
           <input
             type="checkbox"

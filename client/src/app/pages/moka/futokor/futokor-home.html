@@ -51,7 +51,7 @@
               }
             </p>
             <!-- Élő követés: on or off, any time. -->
-            @if (futokor.canLive && !futokor.runner()?.code) {
+            @if (futokor.canLive) {
               <button
                 type="button"
                 class="live-toggle"

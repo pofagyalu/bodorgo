@@ -177,6 +177,7 @@ const QUEUE_KEY = 'futokor-queue';
 const ME_KEY = 'futokor-me';
 const CODE_RUNNER_KEY = 'futokor-runner';
 const LIVE_KEY = 'futokor-live';
+const CODE_LIVE_KEY = 'futokor-runner-live';
 // How often the phone says where it is, while it's followed.
 const POSITION_MS = 10 * 1000;
 // As many as the server takes in one request.
@@ -302,21 +303,22 @@ export class FutokorService {
   // --- Élő követés: the others watch where I am, if I let them ---
 
   readonly canLive = 'geolocation' in navigator;
-  // My own choice, remembered on the phone - off until I switch it on.
-  live = signal(load<boolean>(LIVE_KEY) ?? false);
+  // The runner's own choice - off until they switch it on. The phone's own
+  // (logged-in) runner's is remembered; someone running with their futókód
+  // is asked at every start (theirs is only kept for the run).
+  live = signal(load<boolean>(this.codeRunner() ? CODE_LIVE_KEY : LIVE_KEY) ?? false);
   // Why it isn't working: the browser wasn't allowed to know where it is.
   liveProblem = signal<'' | 'denied'>('');
   // Where this phone is, while it's followed.
   myPosition = signal<Place | null>(null);
-  // The course I'm followed on: only with a run on, as whoever is logged in
-  // on this phone (not for someone running with their futókód).
+  // The course the runner is followed on: only with a run on.
   private liveCourseId = computed(() => {
     const state = this.runState();
-    return this.canLive && this.live() && !this.codeRunner() && state?.run.status === 'running'
-      ? state.courseId
-      : null;
+    return this.canLive && this.live() && state?.run.status === 'running' ? state.courseId : null;
   });
   private followed: string | null = null;
+  // Whose place is sent: their futókód - none: whoever is logged in.
+  private followedCode: string | undefined;
   private watchId: number | null = null;
   private wakeLock: WakeLockSentinel | null = null;
 
@@ -339,7 +341,7 @@ export class FutokorService {
   // phone is - not in the middle of the start.
   setLive(on: boolean) {
     this.live.set(on);
-    save(LIVE_KEY, on || null);
+    save(this.codeRunner() ? CODE_LIVE_KEY : LIVE_KEY, on || null);
     this.liveProblem.set('');
     if (!on || !this.canLive) return;
     navigator.geolocation.getCurrentPosition(
@@ -360,6 +362,8 @@ export class FutokorService {
     if (this.followed) this.unfollow(this.followed);
     this.followed = courseId;
     if (!courseId) return;
+    const runnerCode = this.codeRunner()?.code;
+    this.followedCode = runnerCode;
 
     let sentAt = 0;
     this.watchId = navigator.geolocation.watchPosition(
@@ -374,7 +378,7 @@ export class FutokorService {
         if (!navigator.onLine || Date.now() - sentAt < POSITION_MS) return;
         sentAt = Date.now();
         this.http
-          .put(`${this.apiUrl}/courses/${courseId}/position`, place)
+          .put(`${this.apiUrl}/courses/${courseId}/position`, { ...place, runnerCode })
           .subscribe({ error: () => {} });
       },
       (err) => {
@@ -391,7 +395,11 @@ export class FutokorService {
     this.myPosition.set(null);
     void this.wakeLock?.release().catch(() => {});
     this.wakeLock = null;
-    this.http.delete(`${this.apiUrl}/courses/${courseId}/position`).subscribe({ error: () => {} });
+    this.http
+      .delete(`${this.apiUrl}/courses/${courseId}/position`, {
+        body: { runnerCode: this.followedCode },
+      })
+      .subscribe({ error: () => {} });
   }
 
   private async keepAwake() {
@@ -508,6 +516,9 @@ export class FutokorService {
     }
     this.codeRunner.set({ code, name: name ?? `${code}-es futókód` });
     save(CODE_RUNNER_KEY, this.codeRunner());
+    // Whether they're to be followed is theirs to say, at every start.
+    this.live.set(false);
+    save(CODE_LIVE_KEY, null);
     return name;
   }
 
@@ -516,6 +527,8 @@ export class FutokorService {
     if (!this.codeRunner()) return;
     this.codeRunner.set(null);
     save(CODE_RUNNER_KEY, null);
+    save(CODE_LIVE_KEY, null);
+    this.live.set(load<boolean>(LIVE_KEY) ?? false);
     this.setRun(null);
     this.allRuns.set({});
     void this.refresh();

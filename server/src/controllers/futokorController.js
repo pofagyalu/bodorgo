@@ -794,7 +794,7 @@ export const getActive = async (req, res) => {
   });
 };
 
-// Who a request to /futokor/scans runs as: whoever the futókód in it
+// Who a request to /futokor/scans (or .../position) runs as: whoever the futókód in it
 // belongs to (`runnerCode` - a phone nobody is logged in on, or one lent
 // to someone else), otherwise whoever is logged in.
 export async function scanRunner(req, res, next) {
@@ -925,7 +925,8 @@ async function isRunningNow(course, userId) {
   return runs.some((run) => !isExpired(rules, asRulesRun(run), Date.now()));
 }
 
-// PUT /futokor/courses/:id/position - { lat, lng, accuracyM? }: where I am,
+// PUT /futokor/courses/:id/position - { runnerCode?, lat, lng, accuracyM? }
+// (whose it is: see scanRunner): where I am,
 // for the others to watch ("Élő követés" - the runner's own choice, the
 // phone sends it every ten seconds or so). Only while I have a run on the
 // course (409 otherwise). It takes the place of my last one: no trail is
