@@ -1,4 +1,31 @@
 <section class="landing">
+  <!-- Someone is running right now: first of all. A tap leads to that
+       futókör's map and table. -->
+  @if (live().length) {
+    <div class="live-now" aria-live="polite">
+      <strong class="live-title"><span class="dot live-dot"></span> ÉLŐ · Most futnak</strong>
+      <div class="live-runners">
+        @for (l of live(); track l.userId + l.startedAt) {
+          <a [routerLink]="['eredmenyek', l.courseId]" class="live-runner">
+            <app-avatar
+              class="face"
+              [name]="l.name"
+              [userId]="l.userId"
+              [photoVersion]="l.photoUpdatedAt"
+              [preview]="false"
+            />
+            <span class="live-who">
+              <strong>{{ l.name }}</strong>
+              <small>{{ l.course }} · {{ l.where }}</small>
+            </span>
+            <span class="live-clock">{{ l.elapsed }}</span>
+            <mat-icon>chevron_right</mat-icon>
+          </a>
+        }
+      </div>
+    </div>
+  }
+
   <div class="hero">
     <div class="hero-text">
       <p class="eyebrow">Bódorgó Móka</p>
@@ -73,7 +100,7 @@
     <ul class="rows">
       @for (c of results(); track c._id) {
         <li>
-          <a [routerLink]="['eredmenyek', c._id]" class="row" [class.live]="c.runningNow">
+          <a [routerLink]="['eredmenyek', c._id]" class="row">
             <span class="badge">{{ c.distanceM ? c.distanceM + ' m' : '–' }}</span>
             <span class="row-main">
               <span class="row-title">
@@ -87,9 +114,6 @@
                 {{ c.runners }} futó, {{ c.finishedRuns }} célba érés
               </small>
             </span>
-            @if (c.runningNow) {
-              <span class="status on">{{ c.runningNow }} fut most</span>
-            }
             <mat-icon class="chevron">chevron_right</mat-icon>
           </a>
         </li>
