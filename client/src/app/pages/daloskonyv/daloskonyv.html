@@ -48,7 +48,8 @@
       >
         <mat-icon>picture_as_pdf</mat-icon><span class="book-text">PDF</span>
       </a>
-      <!-- Only the songbook's owner (the role manager). -->
+      <!-- Only the songbook's owner (the role manager). On a phone: the
+           floating + in the bottom right corner. -->
       @if (canEdit()) {
         <a [routerLink]="[base(), 'uj']" class="new-song-btn" title="Új dal" aria-label="Új dal">
           <mat-icon>add</mat-icon><span class="new-song-text">Dal</span>
