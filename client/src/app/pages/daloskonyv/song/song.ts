@@ -9,7 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { map } from 'rxjs';
 import { Song, SongService } from '../../../services/song';
@@ -34,6 +34,9 @@ const FONT_KEY = 'daloskonyv-font';
 const DIAGRAMS_KEY = 'daloskonyv-diagrams';
 // The pace each song was last played at, by its slug.
 const PACE_KEY = 'daloskonyv-pace';
+// The screens where an open song takes the song list's place
+// (daloskonyv.scss hides the list at this width).
+const LIST_HIDDEN = '(max-width: 900px)';
 
 function stored<T>(key: string, fallback: T): T {
   try {
@@ -65,6 +68,7 @@ export class SongPage implements OnDestroy {
   private songService = inject(SongService);
   private notifications = inject(NotificationsService);
   private confirm = inject(ConfirmService);
+  private router = inject(Router);
   private host: ElementRef<HTMLElement> = inject(ElementRef);
   private slug = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('slug') ?? '')), {
     initialValue: '',
@@ -260,6 +264,18 @@ export class SongPage implements OnDestroy {
   });
   // Set by hand in the editor, not worked out.
   keySetByHand = computed(() => !!this.song()?.key);
+
+  // A tap on the artist's name: the song list narrowed to that artist's
+  // songs (an earlier search would only hide some of them). Where the list
+  // stands beside the song it narrows there; where the song has taken its
+  // place (a phone), back to the list.
+  showArtist(artist: string) {
+    this.songService.search.set('');
+    this.songService.artist.set(artist.trim());
+    if (window.matchMedia?.(LIST_HIDDEN).matches) {
+      void this.router.navigate([this.songService.base()]);
+    }
+  }
 
   // --- The metronome: tapped, the tempo's tag blinks the song's tempo for
   // a few bars - or until it is tapped again (tempo.ts) ---

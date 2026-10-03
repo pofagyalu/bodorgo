@@ -184,8 +184,17 @@
              transposing on the screen. -->
         @if (song()!.artist || keyLabel() || song()!.tempo) {
           <p class="artist">
-            @if (song()!.artist) {
-              <span>{{ song()!.artist }}</span>
+            <!-- A tap on the artist: the song list with this artist's songs
+                 alone. -->
+            @if (song()!.artist; as artist) {
+              <button
+                type="button"
+                class="artist-name"
+                (click)="showArtist(artist)"
+                title="Az előadó dalai a daloskönyvben"
+              >
+                {{ artist }}
+              </button>
             }
             @if (keyLabel(); as key) {
               <span

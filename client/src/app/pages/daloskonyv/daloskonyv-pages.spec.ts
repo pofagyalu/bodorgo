@@ -138,6 +138,30 @@ describe('SongPage', () => {
     }
   });
 
+  it('narrows the song list to the artist on a tap on the name', () => {
+    open();
+    const service = TestBed.inject(SongService);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const media = vi.spyOn(window, 'matchMedia');
+    const name: HTMLButtonElement = fixture.nativeElement.querySelector('.artist-name');
+    expect(name.textContent?.trim()).toBe('Népdal');
+
+    // The list is beside the song: it narrows there, the song stays.
+    media.mockReturnValue({ matches: false } as MediaQueryList);
+    service.search.set('valami');
+    name.click();
+    expect(service.artist()).toBe('Népdal');
+    expect(service.search()).toBe('');
+    expect(navigate).not.toHaveBeenCalled();
+
+    // A phone, where the song has the list's place: back to the list.
+    media.mockReturnValue({ matches: true } as MediaQueryList);
+    name.click();
+    expect(navigate).toHaveBeenCalledWith(['/daloskonyv']);
+    media.mockRestore();
+    service.artist.set('');
+  });
+
   it('shows no tempo where none was given', () => {
     open();
     expect(fixture.nativeElement.querySelector('.song-tempo')).toBeNull();
@@ -673,6 +697,38 @@ describe('Daloskonyv', () => {
     expect(page.canEdit()).toBe(true);
     expect(page.isOpen()).toBe(false);
     expect(page.bookUrl()).toBe(`${songs}/book.pdf?diagrams=guitar&download=1`);
+  });
+
+  it('narrows the list to one artist, with the way back to everyone', () => {
+    open();
+    const service = TestBed.inject(SongService);
+    const tag = () => fixture.nativeElement.querySelector('.artist-filter') as HTMLElement | null;
+    expect(tag()).toBeNull();
+
+    service.artist.set('Népdal');
+    fixture.detectChanges();
+    expect(page.filtered().map((s) => s.slug)).toEqual(['tavaszi-szel', 'zold-erdoben']);
+    // The pages that aren't songs are no artist's.
+    expect(page.annexes()).toEqual([]);
+    expect(tag()?.textContent).toContain('Előadó: Népdal');
+
+    // The search works within the artist's songs.
+    page.search.set('zöld');
+    expect(page.filtered().map((s) => s.slug)).toEqual(['zold-erdoben']);
+    page.search.set('');
+
+    // A name that is only part of an artist's isn't that artist.
+    service.artist.set('Nép');
+    expect(page.filtered()).toEqual([]);
+
+    service.artist.set('Zorán');
+    fixture.detectChanges();
+    tag()!.click();
+    fixture.detectChanges();
+    expect(service.artist()).toBe('');
+    expect(page.filtered()).toHaveLength(3);
+    expect(page.annexes()).toHaveLength(3);
+    expect(tag()).toBeNull();
   });
 
   it('searches the songs’ words too, and shows the line that was found', () => {
