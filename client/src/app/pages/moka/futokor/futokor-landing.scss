@@ -186,13 +186,43 @@ h1 {
   stroke-width: 3;
 }
 
+// A phone: the whole card - the picture too - fits the screen without
+// scrolling, so the text is smaller and everything sits closer.
 @media (max-width: 760px) {
+  .landing {
+    padding: 0.75rem;
+  }
+
   .hero {
     grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 1.125rem 1rem 0.75rem;
+  }
+
+  h1 {
+    margin-bottom: 0.5rem;
+  }
+
+  .lead {
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  .actions {
+    margin-top: 1rem;
+  }
+
+  .action {
+    min-height: 3.25rem;
+  }
+
+  .open-now {
+    margin-top: 0.75rem;
+    font-size: 0.8125rem;
   }
 
   .picture {
-    max-width: 22rem;
+    max-width: 17rem;
     margin: 0 auto;
   }
 }
@@ -299,4 +329,101 @@ h2 {
 .chevron {
   flex: none;
   color: #b3c0c6;
+}
+
+// --- Someone is running right now: above everything ---
+
+.live-now {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, #1b6548, #12843f);
+  color: #fff;
+  box-shadow: 0 0.5rem 1.5rem #12843f55;
+  animation: live-glow 2s ease-in-out infinite;
+}
+
+@keyframes live-glow {
+  50% {
+    box-shadow: 0 0.5rem 2.5rem #12843f99;
+  }
+}
+
+.live-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-family: Marhey, sans-serif;
+  font-size: 1.125rem;
+  letter-spacing: 0.04em;
+}
+
+.live-dot {
+  background: #ff5a4f;
+  box-shadow: 0 0 0 0.1875rem #ffffff55;
+}
+
+.live-runners {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0.5rem;
+}
+
+.live-runner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 3.5rem;
+  padding: 0.375rem 0.5rem 0.375rem 0.375rem;
+  border-radius: 1.75rem;
+  background: #ffffff24;
+  color: #fff;
+  text-decoration: none;
+
+  &:hover {
+    background: #ffffff38;
+  }
+
+  .face {
+    flex: none;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  mat-icon {
+    flex: none;
+    opacity: 0.7;
+  }
+}
+
+.live-who {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+
+  strong,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    font-size: 0.75rem;
+    opacity: 0.85;
+  }
+}
+
+.live-clock {
+  flex: none;
+  font-family: Marhey, sans-serif;
+  font-size: 1.375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-now {
+    animation: none;
+  }
 }

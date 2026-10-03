@@ -3285,7 +3285,7 @@ const paths = {
       tag: T.race,
       summary: 'Every futókör there has been',
       description:
-        'The tours’ and the users’ own tracks, the newest first, each with how many ran it and who was the fastest. Each stands alone - they are never compared.',
+        'The tours’ and the users’ own tracks, the newest first, each with how many ran it, who was the fastest, and who is on it right now (`running` - the app asks again every few seconds while the Futókörök opening page is open, to show them live). Each stands alone - they are never compared.',
       data: obj({
         courses: arrayOf(
           obj({
@@ -3300,6 +3300,16 @@ const paths = {
             runners: int('How many people ran it.'),
             finishedRuns: int(),
             runningNow: int('On the course right now: started, not yet finished or given up.'),
+            stops: int('How many checkpoints the loop has.'),
+            running: arrayOf(
+              obj({
+                userId: id(),
+                name: str(),
+                photoUpdatedAt: { type: ['string', 'null'] },
+                startedAt: date(),
+                passed: int('Checkpoints passed so far.'),
+              }),
+            ),
             winner: {
               type: ['object', 'null'],
               description: 'The fastest: their name and time (`totalMs`).',

@@ -353,6 +353,7 @@ describe('Futókör: running', () => {
         runners: 3,
         finishedRuns: 3,
         runningNow: 0,
+        running: [],
         winner: { name: 'anna', totalMs: 240000 },
       },
     ]);
@@ -419,6 +420,10 @@ describe('Futókör: live positions', () => {
     expect((await put(anna, 'nonsense', here)).status).toBe(404);
 
     await send(anna, [scan('S1', NOW - 300)]);
+    // She's on the course: the list of every futókör says so, by name.
+    expect((await get(owner, '/results')).body.data.courses).toMatchObject([
+      { runningNow: 1, running: [{ userId: String(anna._id), name: 'anna', passed: 0 }] },
+    ]);
     expect((await put(anna, course._id, { lat: 'x', lng: 19 })).status).toBe(400);
     expect((await put(anna, course._id, { lat: 91, lng: 19 })).status).toBe(400);
     expect((await put(anna, course._id, here)).status).toBe(204);

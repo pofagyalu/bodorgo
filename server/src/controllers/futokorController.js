@@ -1045,8 +1045,9 @@ async function courseRunners(course) {
 }
 
 // GET /futokor/results - every futókör there has been - the tours' and the
-// users' own tracks - the newest first: each with how many ran it and who
-// was the fastest. (Each stands alone: they're never compared.)
+// users' own tracks - the newest first: each with how many ran it, who was
+// the fastest, and who is on it right now (`running`). (Each stands alone:
+// they're never compared.)
 export const getResults = async (req, res) => {
   const courses = await withPeople(FutokorCourse.find().sort('-opensAt'));
   const results = [];
@@ -1054,6 +1055,18 @@ export const getResults = async (req, res) => {
     const runners = await courseRunners(course);
     const winner = runners[0]?.best ? runners[0] : null;
     const view = courseView(course, req.user);
+    // On the course right now: started, not yet finished or given up.
+    const running = runners.flatMap((r) =>
+      r.runs
+        .filter((run) => run.status === 'running')
+        .map((run) => ({
+          userId: r.userId,
+          name: r.name,
+          photoUpdatedAt: r.photoUpdatedAt,
+          startedAt: run.startedAt,
+          passed: run.passed,
+        })),
+    );
     results.push({
       _id: course._id,
       kind: view.kind,
@@ -1065,8 +1078,10 @@ export const getResults = async (req, res) => {
       distanceM: course.distanceM,
       runners: runners.length,
       finishedRuns: runners.reduce((sum, r) => sum + r.finishedRuns, 0),
-      // On the course right now: started, not yet finished or given up.
-      runningNow: runners.filter((r) => r.runs.some((run) => run.status === 'running')).length,
+      runningNow: running.length,
+      // How many checkpoints the loop has.
+      stops: Math.max(0, course.checkpoints.length - 1),
+      running,
       winner: winner && { name: winner.name, totalMs: winner.best.totalMs },
     });
   }

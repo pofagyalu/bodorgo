@@ -74,6 +74,16 @@ export interface CourseSummary {
   finishedRuns: number;
   // On the course right now.
   runningNow: number;
+  // How many checkpoints the loop has.
+  stops?: number;
+  running?: {
+    userId: string;
+    name: string;
+    photoUpdatedAt: string | null;
+    startedAt: string;
+    // Checkpoints passed so far.
+    passed: number;
+  }[];
   winner: { name: string; totalMs: number } | null;
 }
 
