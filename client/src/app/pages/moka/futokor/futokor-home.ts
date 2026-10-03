@@ -33,7 +33,8 @@ export class FutokorHome implements OnDestroy {
   // NFC: can this phone's browser read it - and is the page listening?
   readonly canNfc = canNfc();
   nfcOn = signal(false);
-  nfcProblem = signal(false);
+  // Why it didn't start, in words - '' if nothing is wrong.
+  nfcProblem = signal('');
   private nfcStop = new AbortController();
 
   loaded = signal(false);
@@ -98,9 +99,20 @@ export class FutokorHome implements OnDestroy {
     try {
       await readCards((token) => this.onCard(token), this.nfcStop.signal);
       this.nfcOn.set(true);
-      this.nfcProblem.set(false);
-    } catch {
-      this.nfcProblem.set(true);
+      this.nfcProblem.set('');
+    } catch (err) {
+      // What the browser said, by its name - and the name itself too, so
+      // it can be told to whoever looks after the app.
+      const name = (err as DOMException)?.name ?? '';
+      const why: Record<string, string> = {
+        NotAllowedError:
+          'Az NFC ennél az oldalnál le van tiltva a böngészőben – a címsor melletti ikonnál (Engedélyek → NFC) engedélyezd, majd koppints újra',
+        NotReadableError: 'Az NFC ki van kapcsolva a telefonon – kapcsold be, majd koppints újra',
+        NotSupportedError: 'Ez a telefon vagy böngésző nem tud NFC-t olvasni',
+      };
+      this.nfcProblem.set(
+        `${why[name] ?? 'Az NFC nem indult el – koppints újra'} (${name || 'hiba'})`,
+      );
     }
   }
 

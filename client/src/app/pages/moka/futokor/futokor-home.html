@@ -84,11 +84,7 @@
             } @else {
               <button type="button" class="nfc-btn" (click)="listenNfc()">
                 <mat-icon>nfc</mat-icon>
-                {{
-                  nfcProblem()
-                    ? 'Az NFC nem indult el – kapcsold be a telefonon, és koppints újra'
-                    : 'NFC bekapcsolása – érintéssel is olvashatsz'
-                }}
+                {{ nfcProblem() || 'NFC bekapcsolása – érintéssel is olvashatsz' }}
               </button>
             }
           }

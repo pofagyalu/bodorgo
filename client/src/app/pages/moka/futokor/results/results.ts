@@ -20,7 +20,7 @@ const UNKNOWN = '–';
 
 // The page asks the server again this often, so it shows what's happening
 // as it happens: who has started, who has come in.
-const REFRESH_MS = 10 * 1000;
+const REFRESH_MS = 5 * 1000;
 
 // What the table is in the order of: everyone's best whole lap, or their
 // best time on one stretch (its place among the stretches, from 0).
