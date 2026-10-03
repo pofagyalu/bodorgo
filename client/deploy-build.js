@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { execSync, spawnSync } = require('child_process');
 
 // The build that gets deployed (npm run deploy): `ng build` with this
@@ -37,6 +38,37 @@ const ng = spawnSync(
 );
 if (ng.status !== 0) process.exit(ng.status ?? 1);
 
+// A Brotli copy (.br) beside every script, stylesheet and SVG: the live
+// server has no Brotli module, so its .htaccess (live.htaccess here) hands
+// these out to the browsers that take Brotli - a good tenth smaller than
+// the gzip the others get. A copy that wouldn't be smaller isn't made.
+const brotli = { files: 0, from: 0, to: 0 };
+(function compress(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      compress(file);
+    } else if (/\.(js|css|svg)$/.test(entry.name)) {
+      const plain = fs.readFileSync(file);
+      const packed = zlib.brotliCompressSync(plain, {
+        params: {
+          [zlib.constants.BROTLI_PARAM_QUALITY]: zlib.constants.BROTLI_MAX_QUALITY,
+          [zlib.constants.BROTLI_PARAM_SIZE_HINT]: plain.length,
+        },
+      });
+      if (packed.length >= plain.length) continue;
+      fs.writeFileSync(`${file}.br`, packed);
+      brotli.files += 1;
+      brotli.from += plain.length;
+      brotli.to += packed.length;
+    }
+  }
+})(path.resolve('dist/client/browser'));
+console.log(
+  `✓ Brotli copies: ${brotli.files} files, ${Math.round(brotli.from / 1024)} kB → ${Math.round(brotli.to / 1024)} kB`,
+);
+
+// Last, as the sign that the build ran to its end (sync.js looks for it).
 fs.writeFileSync(
   path.resolve('dist/client/browser/version.json'),
   `${JSON.stringify(build, null, 2)}\n`,
