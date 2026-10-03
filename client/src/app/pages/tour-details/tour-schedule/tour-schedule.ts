@@ -1,6 +1,14 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragHandle,
+  CdkDragPlaceholder,
+  CdkDropList,
+  CdkDropListGroup,
+} from '@angular/cdk/drag-drop';
+import {
   DailyWeather,
   ScheduleEntry,
   Tour,
@@ -21,11 +29,21 @@ interface DayGroup {
 
 // A tour's Programterv (tour-details): the day-by-day schedule, each day
 // with its weather pill and its events (tour-event), plus the admin's "add
-// event" form. Never changes the tour itself - an edited or a new event is
-// handed back to the tour page (eventUpdated, eventAdded), which owns it.
+// event" form - and an admin drags an event to another day by its grip.
+// Never changes the tour itself - an edited, moved or new event is handed
+// back to the tour page (eventUpdated, eventAdded), which owns it.
 @Component({
   selector: 'app-tour-schedule',
-  imports: [MatIconModule, EventForm, TourEvent],
+  imports: [
+    MatIconModule,
+    EventForm,
+    TourEvent,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
+    CdkDragPlaceholder,
+  ],
   templateUrl: './tour-schedule.html',
   styleUrl: './tour-schedule.scss',
 })
@@ -118,6 +136,29 @@ export class TourSchedule {
 
   weatherConditionLabel(condition: WeatherCondition): string {
     return TourSchedule.WEATHER_LABELS[condition];
+  }
+
+  // An event dropped on a day's block (an admin dragged it by its grip):
+  // it moves to that day, keeping its time - so it lands among that day's
+  // events by its time, wherever in the block it was let go. Dropped back
+  // on its own day: nothing. The page shows it moved at once; if the server
+  // refuses, it goes back.
+  moveEvent(drop: CdkDragDrop<number, number, ScheduleEntry>) {
+    const event = drop.item.data;
+    const day = drop.container.data;
+    if (!this.canEdit() || day === event.day) return;
+
+    this.eventUpdated.emit({ ...event, day });
+    this.tourService.updateScheduleEvent(this.tour()._id, event._id, { day }).subscribe({
+      next: (res) => {
+        this.eventUpdated.emit(res.data.event);
+        this.notifications.addSuccess('Esemény áthelyezve');
+      },
+      error: (err) => {
+        this.eventUpdated.emit(event);
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt az áthelyezés során.');
+      },
+    });
   }
 
   startAddEvent(day: number) {

@@ -172,3 +172,84 @@
   flex-direction: column;
   gap: 0.5rem;
 }
+
+// --- An admin drags an event to another day (tour-schedule.ts's moveEvent) ---
+
+// The grip, then the event beside it.
+.event-row--draggable {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+
+.event-body {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// The grip: the only place a drag starts from, so a phone still scrolls
+// the page everywhere else.
+.drag-handle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 2rem;
+  margin-left: -0.6rem;
+  border-radius: 0.4rem;
+  color: #b0b8bc;
+  cursor: grab;
+  touch-action: none;
+
+  mat-icon {
+    font-size: 1.35rem;
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  &:hover {
+    background: #e9eeee;
+    color: #445a67;
+  }
+}
+
+// While one is being dragged: every other day shows it can take it, the
+// one under it more so.
+.day-block {
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.day-block.cdk-drop-list-receiving {
+  box-shadow: inset 0 0 0 2px #cfe3d6;
+}
+
+.day-block.cdk-drop-list-dragging {
+  background: #eaf5ee;
+  box-shadow: inset 0 0 0 2px #55c57a;
+}
+
+// Its place in the day it's over: a dashed slot.
+.event-placeholder {
+  height: 2.4rem;
+  margin-top: 0.5rem;
+  border: 2px dashed #55c57a;
+  border-radius: 0.5rem;
+  background: #ffffffaa;
+}
+
+// What follows the finger: the event as a lifted card.
+.event-row.cdk-drag-preview {
+  padding: 0.5rem 0.6rem 0.5rem 0.9rem;
+  border-radius: 0.6rem;
+  background: #fff;
+  box-shadow: 0 0.6rem 1.6rem rgba(0, 0, 0, 0.25);
+  list-style: none;
+  cursor: grabbing;
+}
+
+.cdk-drag-animating {
+  transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
+}

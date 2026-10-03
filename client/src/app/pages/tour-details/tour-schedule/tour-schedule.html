@@ -1,9 +1,17 @@
 <!-- Programterv: the day-by-day schedule -->
-<section class="schedule-section">
+<!-- An admin drags an event by its grip onto another day's block (the
+     blocks are one group of drop targets - see moveEvent). -->
+<section class="schedule-section" cdkDropListGroup>
   <h2 class="section-heading">Programterv</h2>
 
   @for (day of dayGroups(); track day.day) {
-    <div class="day-block">
+    <div
+      class="day-block"
+      cdkDropList
+      cdkDropListSortingDisabled
+      [cdkDropListData]="day.day"
+      (cdkDropListDropped)="moveEvent($event)"
+    >
       <h3 class="day-heading" [class.day-heading--admin]="canEdit()">
         @if (day.weather; as w) {
           <span class="day-weather" [title]="weatherConditionLabel(w.condition)">
@@ -41,8 +49,27 @@
       @if (day.events.length) {
         <ul class="event-list">
           @for (ev of day.events; track ev._id) {
-            <li class="event-row">
+            <li
+              class="event-row"
+              [class.event-row--draggable]="canEdit()"
+              cdkDrag
+              [cdkDragData]="ev"
+              [cdkDragDisabled]="!canEdit()"
+            >
+              <!-- Where it would land, while it's over another day. -->
+              <div class="event-placeholder" *cdkDragPlaceholder></div>
+              @if (canEdit()) {
+                <span
+                  class="drag-handle"
+                  cdkDragHandle
+                  title="Húzd át egy másik napra"
+                  aria-label="Esemény áthúzása egy másik napra"
+                >
+                  <mat-icon>drag_indicator</mat-icon>
+                </span>
+              }
               <app-tour-event
+                class="event-body"
                 [event]="ev"
                 [tourId]="tour()._id"
                 [candidates]="candidates()"

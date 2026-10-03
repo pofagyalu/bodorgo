@@ -579,14 +579,25 @@ export const updateScheduleEvent = async (req, res) => {
     throw new AppError('No such schedule event!', 404);
   }
 
-  const { time, description, isOptional, extraCost } = req.body;
+  const { day, time, description, isOptional, extraCost } = req.body;
+  // Moving it to another day (dragged there on the tour page): one of the
+  // tour's days. Its time, price and the people who opted in come along.
+  if (day !== undefined) {
+    if (!Number.isInteger(day) || day < 1 || day > tour.duration) {
+      throw new AppError(`A nap 1 és ${tour.duration} között legyen.`, 400);
+    }
+    event.day = day;
+  }
   if (time !== undefined) event.time = time;
   if (description !== undefined) event.description = description;
-  if (isOptional !== undefined) event.isOptional = isOptional;
   // extraCost only means anything for an optional event - clearing it when
   // isOptional turns off avoids a stale price lingering on a now-required
-  // event (see tourModel.js's schedule.extraCost comment).
-  event.extraCost = isOptional ? extraCost : undefined;
+  // event (see tourModel.js's schedule.extraCost comment). A request that
+  // says nothing about isOptional (a move to another day) leaves both.
+  if (isOptional !== undefined) {
+    event.isOptional = isOptional;
+    event.extraCost = isOptional ? extraCost : undefined;
+  }
 
   await tour.save();
 
