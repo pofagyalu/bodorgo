@@ -94,62 +94,70 @@
     </svg>
   </div>
 
-  <!-- Every futókör there has been - each stands on its own. -->
-  @if (results().length) {
-    <h2><mat-icon>emoji_events</mat-icon> Eredmények</h2>
-    <ul class="rows">
-      @for (c of results(); track c._id) {
-        <li>
-          <a [routerLink]="['eredmenyek', c._id]" class="row">
-            <span class="badge">{{ c.distanceM ? c.distanceM + ' m' : '–' }}</span>
-            <span class="row-main">
-              <span class="row-title">
-                {{ c.name }}
-                @if (c.winner; as w) {
-                  · 🥇 {{ w.name }} {{ time(w.totalMs) }}
-                }
-              </span>
-              <small>
-                {{ c.kind === 'tour' ? 'Tábori pálya' : 'Saját pálya · ' + c.owner.name }} ·
-                {{ c.runners }} futó, {{ c.finishedRuns }} célba érés
-              </small>
-            </span>
-            <mat-icon class="chevron">chevron_right</mat-icon>
-          </a>
-        </li>
-      }
-    </ul>
-  }
+  <div class="lists">
+    <!-- Every futókör there has been - each stands on its own. -->
+    @if (results().length) {
+      <div class="list">
+        <h2><mat-icon>emoji_events</mat-icon> Eredmények</h2>
+        <ul class="rows">
+          @for (c of results(); track c._id) {
+            <li>
+              <a [routerLink]="['eredmenyek', c._id]" class="row">
+                <span class="badge">{{ c.distanceM ? c.distanceM + ' m' : '–' }}</span>
+                <span class="row-main">
+                  <span class="row-title">
+                    {{ c.name }}
+                    @if (c.winner; as w) {
+                      · 🥇 {{ w.name }} {{ time(w.totalMs) }}
+                    }
+                  </span>
+                  <small>
+                    {{ c.kind === 'tour' ? 'Tábori pálya' : 'Saját pálya · ' + c.owner.name }} ·
+                    {{ c.runners }} futó, {{ c.finishedRuns }} célba érés
+                  </small>
+                </span>
+                <mat-icon class="chevron">chevron_right</mat-icon>
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
 
-  <!-- My own runs on the courses open now. -->
-  @if (myRuns().length) {
-    <h2><mat-icon>directions_run</mat-icon> Futásaim</h2>
-    <ul class="rows">
-      @for (r of myRuns(); track r.course._id + r.run.startedAt) {
-        <li>
-          <a
-            [routerLink]="['eredmenyek', r.course._id]"
-            class="row"
-            [class.live]="r.run.status === 'running'"
-          >
-            <span class="badge">{{ r.run.status === 'finished' ? time(r.run.totalMs) : '–' }}</span>
-            <span class="row-main">
-              <span class="row-title">{{ r.course.name }}</span>
-              <small>
-                {{ statusText[r.run.status] }}
-                @if (r.run.paceSecPerKm) {
-                  · {{ pace(r.run.paceSecPerKm) }}
+    <!-- My own runs on the courses open now. -->
+    @if (myRuns().length) {
+      <div class="list">
+        <h2><mat-icon>directions_run</mat-icon> Futásaim</h2>
+        <ul class="rows">
+          @for (r of myRuns(); track r.course._id + r.run.startedAt) {
+            <li>
+              <a
+                [routerLink]="['eredmenyek', r.course._id]"
+                class="row"
+                [class.live]="r.run.status === 'running'"
+              >
+                <span class="badge">{{
+                  r.run.status === 'finished' ? time(r.run.totalMs) : '–'
+                }}</span>
+                <span class="row-main">
+                  <span class="row-title">{{ r.course.name }}</span>
+                  <small>
+                    {{ statusText[r.run.status] }}
+                    @if (r.run.paceSecPerKm) {
+                      · {{ pace(r.run.paceSecPerKm) }}
+                    }
+                    · {{ r.run.startedAt | date: 'yyyy. MM. dd. HH:mm' }}
+                  </small>
+                </span>
+                @if (r.run.status === 'running') {
+                  <span class="status on">folyamatban</span>
                 }
-                · {{ r.run.startedAt | date: 'yyyy. MM. dd. HH:mm' }}
-              </small>
-            </span>
-            @if (r.run.status === 'running') {
-              <span class="status on">folyamatban</span>
-            }
-            <mat-icon class="chevron">chevron_right</mat-icon>
-          </a>
-        </li>
-      }
-    </ul>
-  }
+                <mat-icon class="chevron">chevron_right</mat-icon>
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
 </section>
