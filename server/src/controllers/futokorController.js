@@ -42,7 +42,7 @@ const MAX_SCANS_AT_ONCE = 40;
 const CLOCK_AHEAD_MS = 5 * 60 * 1000;
 const MAX_GPX_BYTES = 10 * 1024 * 1024;
 // A runner's live position is shown while it's fresh - the phones send one
-// every ten seconds or so.
+// every five seconds or so.
 const POSITION_FRESH_MS = 60 * 1000;
 
 const rootDir = path.resolve();
@@ -928,7 +928,7 @@ async function isRunningNow(course, userId) {
 // PUT /futokor/courses/:id/position - { runnerCode?, lat, lng, accuracyM? }
 // (whose it is: see scanRunner): where I am,
 // for the others to watch ("Élő követés" - the runner's own choice, the
-// phone sends it every ten seconds or so). Only while I have a run on the
+// phone sends it every five seconds or so). Only while I have a run on the
 // course (409 otherwise). It takes the place of my last one: no trail is
 // kept.
 export const putPosition = async (req, res) => {

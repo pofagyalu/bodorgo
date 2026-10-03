@@ -189,7 +189,7 @@ const CODE_RUNNER_KEY = 'futokor-runner';
 const LIVE_KEY = 'futokor-live';
 const CODE_LIVE_KEY = 'futokor-runner-live';
 // How often the phone says where it is, while it's followed.
-const POSITION_MS = 10 * 1000;
+const POSITION_MS = 5 * 1000;
 // As many as the server takes in one request.
 const BATCH = 40;
 
@@ -363,7 +363,7 @@ export class FutokorService {
     );
   }
 
-  // The phone says where it is every ten seconds or so while the run is on
+  // The phone says where it is every five seconds or so while the run is on
   // (when it has a connection - a place that couldn't be sent is never sent
   // later), and stops the moment it's over. A page only knows where the
   // phone is while it's on a lit screen: the screen is kept awake.
@@ -394,7 +394,7 @@ export class FutokorService {
       (err) => {
         if (err.code === err.PERMISSION_DENIED) this.liveProblem.set('denied');
       },
-      { enableHighAccuracy: true, maximumAge: 5000 },
+      { enableHighAccuracy: true, maximumAge: 2000 },
     );
     void this.keepAwake();
   }
