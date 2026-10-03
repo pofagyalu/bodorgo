@@ -107,7 +107,7 @@ function merge(chordLine: string, words: string, name: (chord: string) => string
 
 // A tab is as wide as the way to the next eighth column.
 const untab = (line: string) =>
-  line.replace(/\t/g, (_tab, at: number) => ' '.repeat(8 - (at % 8))).replace(/ /g, ' ');
+  line.replace(/\t/g, (_tab, at: number) => ' '.repeat(8 - (at % 8))).replace(/\u00a0/g, ' ');
 
 const tidy = (line: string) => line.replace(/ {2,}/g, ' ').trim();
 
