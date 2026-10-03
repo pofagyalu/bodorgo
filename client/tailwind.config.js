@@ -30,8 +30,8 @@ module.exports = {
         180: '32rem',
       },
       backgroundImage: {
-        'hero-pattern-desktop': "url('/assets/images/bg-header-desktop.png')",
-        'hero-pattern-mobile': "url('/assets/images/bg-header-mobile.png')",
+        'hero-pattern-desktop': "url('/assets/images/bg-header-desktop.webp')",
+        'hero-pattern-mobile': "url('/assets/images/bg-header-mobile.webp')",
       },
     },
   },

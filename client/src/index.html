@@ -25,6 +25,25 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Bódorgó" />
+    <!-- The landing page's big background picture (the hero's, set by the
+         app's stylesheet - tailwind.config.js) is asked for right here, at
+         the page's own start, so it downloads beside the app's script
+         instead of after it has run. Only on the landing page, and only
+         the one this screen uses: the phone's below 1024px, the desktop's
+         from there - the same border as Tailwind's "lg". -->
+    <script>
+      if (location.pathname === '/') {
+        var hero = document.createElement('link');
+        hero.rel = 'preload';
+        hero.as = 'image';
+        hero.type = 'image/webp';
+        hero.fetchPriority = 'high';
+        hero.href = matchMedia('(min-width: 1024px)').matches
+          ? '/assets/images/bg-header-desktop.webp'
+          : '/assets/images/bg-header-mobile.webp';
+        document.head.appendChild(hero);
+      }
+    </script>
   </head>
   <body>
     <app-root></app-root>
