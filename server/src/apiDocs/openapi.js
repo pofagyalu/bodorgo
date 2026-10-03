@@ -1105,11 +1105,18 @@ const paths = {
       tag: T.schedule,
       role: 'admin',
       summary: 'Edit a program item',
-      description: 'Time, description, optional, extra cost - not the day.',
+      description:
+        "Time, description, optional, extra cost - and `day`, to move it to another of the tour's days (1 … the tour length; 400 otherwise): its time, price and the people who opted in come along. Only what is sent changes; `extraCost` is only looked at together with `isOptional`.",
       params: [tourIdT, path('eventId', 'The program item.')],
-      body: obj({ time: str(), description: str(), isOptional: bool(), extraCost: num() }),
+      body: obj({
+        day: int('The day to move it to (1 = the first day).'),
+        time: str(),
+        description: str(),
+        isOptional: bool(),
+        extraCost: num(),
+      }),
       data: obj({ event: ref('ScheduleEvent') }),
-      errors: [404],
+      errors: [400, 404],
     }),
   },
   '/tours/{tourId}/schedule/{eventId}/participants': {

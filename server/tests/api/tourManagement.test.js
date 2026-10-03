@@ -287,6 +287,34 @@ describe('program schedule', () => {
     ).toBe(404);
   });
 
+  it('admin moves an event to another day; its time, price and opt-ins come along', async () => {
+    const { admin, tour, event } = await tourWithOptionalEvent();
+    const url = `/tours/${tour._id}/schedule/${event._id}`;
+    const optedIn = await request(app)
+      .patch(`${url}/participants`)
+      .set(asUser(admin))
+      .send({ userIds: [] });
+    expect(optedIn.status).toBe(200);
+
+    const moved = await request(app).patch(url).set(asUser(admin)).send({ day: 3 });
+    expect(moved.status).toBe(200);
+    expect(moved.body.data.event).toMatchObject({
+      day: 3,
+      time: '17:00',
+      description: 'Borkóstoló',
+      isOptional: true,
+      extraCost: 3000,
+    });
+
+    // Only one of the tour's own days (the test tour has 3).
+    for (const day of [0, 4, 1.5, '2']) {
+      const bad = await request(app).patch(url).set(asUser(admin)).send({ day });
+      expect(bad.status, String(day)).toBe(400);
+    }
+    const member = await createMember();
+    expect((await request(app).patch(url).set(asUser(member)).send({ day: 1 })).status).toBe(403);
+  });
+
   it('a member signs up themselves and family, not strangers', async () => {
     const { tour, event } = await tourWithOptionalEvent();
     const member = await createMember();

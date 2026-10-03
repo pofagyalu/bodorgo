@@ -89,6 +89,8 @@ export interface UpdateScheduleEventParticipantsResponse {
 }
 
 export interface UpdateScheduleEventPayload {
+  // Moves it to another of the tour's days (1 = the first).
+  day?: number;
   time?: string;
   description?: string;
   isOptional?: boolean;

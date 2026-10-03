@@ -540,6 +540,53 @@ describe('TourSchedule', () => {
     expect(schedule.addEventError()).toBeNull();
   });
 
+  // What cdk hands moveEvent: the dragged event, and the day it was let go on.
+  const dropOn = (event: ScheduleEntry, day: number) =>
+    ({ item: { data: event }, container: { data: day } }) as never;
+
+  it('moves a dragged programme item to the day it is dropped on', () => {
+    const event = { _id: 'e1', day: 1, time: '18:00', description: 'Vacsora' };
+    open(makeTour({ schedule: [event] }));
+    const updates: ScheduleEntry[] = [];
+    schedule.eventUpdated.subscribe((e) => updates.push(e));
+    expect(fixture.nativeElement.querySelectorAll('.drag-handle')).toHaveLength(1);
+
+    // Back on its own day: nothing.
+    schedule.moveEvent(dropOn(event, 1));
+    expect(updates).toEqual([]);
+
+    schedule.moveEvent(dropOn(event, 3));
+    // Shown moved at once...
+    expect(updates).toEqual([{ ...event, day: 3 }]);
+    const req = http.expectOne(`${API}/tours/t1/schedule/e1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ day: 3 });
+    // ...then as the server saved it.
+    req.flush({ data: { event: { ...event, day: 3 } } });
+    expect(updates).toHaveLength(2);
+    expect(success).toHaveBeenCalledWith('Esemény áthelyezve');
+  });
+
+  it('puts a moved item back when the server refuses, and has no grip for a member', () => {
+    const event = { _id: 'e1', day: 1, time: '18:00', description: 'Vacsora' };
+    open(makeTour({ schedule: [event] }));
+    const updates: ScheduleEntry[] = [];
+    schedule.eventUpdated.subscribe((e) => updates.push(e));
+    schedule.moveEvent(dropOn(event, 2));
+    http
+      .expectOne(`${API}/tours/t1/schedule/e1`)
+      .flush({ message: 'Ez a tábor le van zárva.' }, { status: 403, statusText: 'Forbidden' });
+    expect(updates.map((e) => e.day)).toEqual([2, 1]);
+    expect(error).toHaveBeenCalledWith('Ez a tábor le van zárva.');
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [pageTesting()] });
+    open(makeTour({ schedule: [event] }), 'member');
+    expect(fixture.nativeElement.querySelectorAll('.drag-handle')).toHaveLength(0);
+    schedule.moveEvent(dropOn(event, 2));
+    expect(TestBed.inject(HttpTestingController).match(() => true)).toEqual([]);
+  });
+
   it('offers half-hour steps for the time', () => {
     expect(EVENT_FORM_TIME_OPTIONS).toHaveLength(48);
     expect(EVENT_FORM_TIME_OPTIONS.slice(0, 3)).toEqual(['00:00', '00:30', '01:00']);
