@@ -65,22 +65,39 @@
           }
         </ul>
 
-        <div class="total-row">
-          <span>Részösszeg</span>
-          <span>{{ formatForint(totalToPay()) }} Ft</span>
-        </div>
-        <div class="total-row total-row--fee">
-          <span>Barion díj (1,6%)</span>
-          <span>{{ formatForint(barionFee()) }} Ft</span>
-        </div>
-        <div class="total-row total-row--grand">
-          <span>Fizetendő végösszeg</span>
-          <span class="total-amount">{{ formatForint(grandTotalToPay()) }} Ft</span>
+        <h2 class="section-title">Fizetési mód</h2>
+        <app-pay-provider-picker
+          [subtotal]="totalToPay()"
+          wallet="tour"
+          [disabled]="starting()"
+          [(selected)]="method"
+          [(fee)]="fee"
+        />
+
+        <div class="totals">
+          <div class="total-row">
+            <span>Részösszeg</span>
+            <span>{{ formatForint(totalToPay()) }} Ft</span>
+          </div>
+          @if (method()) {
+            <div class="total-row total-row--fee">
+              <span>{{ methodName() }} díj</span>
+              <span>{{ formatForint(fee()) }} Ft</span>
+            </div>
+          }
+          <div class="total-row total-row--grand">
+            <span>Fizetendő végösszeg</span>
+            <span class="total-amount">{{ formatForint(grandTotalToPay()) }} Ft</span>
+          </div>
         </div>
 
-        <p class="field-note">
-          A Fizetés gombra kattintva a Barion biztonságos fizetési oldalára kerülsz.
-        </p>
+        @if (method()) {
+          <p class="field-note">
+            A kártyás fizetés díját a szolgáltató ({{ methodName() }}) számítja fel, ezért a
+            végösszeg ennyivel több. A Fizetés gombra kattintva a {{ methodName() }} biztonságos
+            fizetési oldalára kerülsz.
+          </p>
+        }
 
         <button
           type="button"

@@ -4,6 +4,7 @@ import PDFDocument from 'pdfkit';
 import slugify from 'slugify';
 import { RECEIPTS_DIR as RECEIPTS_DIR_CONFIG } from './dataDirs.js';
 import { huDate, huDateTime } from './huDate.js';
+import { PAYMENT_METHOD_NAMES } from './clubSettings.js';
 
 // Same code-adjacent asset paths tourPdfController.js already established
 // (server/assets, git-tracked, auto-deployed - see sync.js) - duplicated
@@ -23,6 +24,10 @@ const DARK_GREEN = '#1b6548';
 // Hungarian even on the live server (see utils/huDate.js).
 const formatHu = (date) => huDateTime(date);
 const formatHuDate = (date) => huDate(date);
+
+// The fee line's name on the receipt and in its e-mail: "Stripe díj".
+export const paymentFeeLabel = (payment) =>
+  `${PAYMENT_METHOD_NAMES[payment.method] ?? 'Fizetési'} díj`;
 
 function formatForint(amount) {
   const digits = Math.round(amount).toString();
@@ -135,14 +140,14 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
     doc.moveDown(0.4);
   }
 
-  // The gap between what each row lists and payment.amount is Barion's own
-  // ~1.6% fee, passed on to the payer (see paymentController.js's
+  // The gap between what each row lists and payment.amount is the gateway's
+  // own fee, passed on to the payer (see paymentController.js's
   // chargeableAmount) - shown as its own line so the total above reconciles
   // with what the rows list, rather than silently looking off by a few Ft.
   const feeAmount = payment.amount - rows.reduce((sum, r) => sum + r.amount, 0);
   if (feeAmount > 0) {
     const rowY = doc.y;
-    doc.text('Barion díj (1,6%)', colNameX, rowY, { width: colAmountX - colNameX });
+    doc.text(paymentFeeLabel(payment), colNameX, rowY, { width: colAmountX - colNameX });
     doc.text(`${formatForint(feeAmount)} Ft`, colAmountX, rowY, { width: 120, align: 'right' });
     doc.moveDown(0.4);
   }

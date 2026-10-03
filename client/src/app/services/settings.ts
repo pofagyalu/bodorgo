@@ -75,6 +75,47 @@ export interface BarionWallet {
 
 export type BarionWalletKey = 'membership' | 'tour';
 
+// Fizetési módok (Beállítások): one online gateway - offered or not, and
+// the fee the payer pays on top.
+export type PaymentMethodKey = 'stripe' | 'barion';
+
+export interface PaymentMethodSettings {
+  enabled: boolean;
+  feePercent: number; // of the charge
+  feeFixed: number; // Ft per payment
+  feeMin: number; // Ft, the least the fee can be
+  // Which purposes it can take now (read-only, from the server) - Stripe
+  // only where that purpose's own account has its key.
+  wallets?: Record<PaymentWallet, boolean>;
+}
+
+// Where a payment's money goes: dues to the club, advances to the tours'.
+export type PaymentWallet = 'membership' | 'tour';
+
+export type PaymentMethods = Record<PaymentMethodKey, PaymentMethodSettings>;
+
+export const PAYMENT_METHOD_NAMES: Record<PaymentMethodKey, string> = {
+  stripe: 'Stripe',
+  barion: 'Barion',
+};
+
+// Their official logos (assets/images/providers, from Stripe's and Barion's
+// brand kits): Stripe's wordmark, Barion's whole "Smart Payment Banner" -
+// Barion approves a live shop only with it shown unchanged at payment.
+export const PAYMENT_METHOD_LOGOS: Record<PaymentMethodKey, string> = {
+  stripe: 'assets/images/providers/stripe-wordmark-blurple.svg',
+  barion: 'assets/images/providers/barion-smart-banner-light.svg',
+};
+
+// The fee on top of a sum - the same sum the server charges (its
+// utils/clubSettings.js's paymentFee): worked out backwards, so what's left
+// after the gateway's cut is the sum itself.
+export function paymentFee(subtotal: number, m: PaymentMethodSettings): number {
+  if (!(subtotal > 0)) return 0;
+  const charge = Math.round((subtotal + m.feeFixed) / (1 - m.feePercent / 100));
+  return Math.max(charge - subtotal, m.feeMin);
+}
+
 // Születésnap: the birthday greeting (see shared/birthday).
 export interface BirthdaySettings {
   enabled: boolean;
@@ -160,6 +201,19 @@ export class SettingsService {
 
   updateBarionWallet(key: BarionWalletKey, wallet: BarionWallet) {
     return this.http.put<{ data: BarionWallet }>(`${this.apiUrl}/barion/${key}`, wallet);
+  }
+
+  // --- Fizetési módok: anyone logged in reads them, admins set them ---
+
+  getPaymentMethods() {
+    return this.http.get<{ data: PaymentMethods }>(`${this.apiUrl}/payment-methods`);
+  }
+
+  updatePaymentMethod(key: PaymentMethodKey, settings: PaymentMethodSettings) {
+    return this.http.put<{ data: PaymentMethodSettings }>(
+      `${this.apiUrl}/payment-methods/${key}`,
+      settings,
+    );
   }
 
   // --- Születésnap (admin-only) ---

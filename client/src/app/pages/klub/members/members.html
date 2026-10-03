@@ -340,20 +340,35 @@
           </li>
         }
       </ul>
+      <app-pay-provider-picker
+        [subtotal]="selectedPayTotal()"
+        wallet="membership"
+        [disabled]="paying()"
+        [(selected)]="payMethod"
+        [(fee)]="selectedPayFee"
+      />
       <div class="pay-confirm-summary">
         <div class="pay-confirm-summary-row">
           <span>Részösszeg</span>
           <span>{{ selectedPayTotal() }} Ft</span>
         </div>
-        <div class="pay-confirm-summary-row pay-confirm-fee-row">
-          <span>Barion díj (1,6%)</span>
-          <span>{{ selectedPayFee() }} Ft</span>
-        </div>
+        @if (payMethod()) {
+          <div class="pay-confirm-summary-row pay-confirm-fee-row">
+            <span>{{ payMethodName() }} díj</span>
+            <span>{{ selectedPayFee() }} Ft</span>
+          </div>
+        }
         <div class="pay-confirm-summary-row pay-confirm-grand-row">
           <span>Végösszeg</span>
           <strong>{{ selectedPayGrandTotal() }} Ft</strong>
         </div>
       </div>
+      @if (payMethod()) {
+        <p class="subtext pay-confirm-fee-note">
+          A kártyás fizetés díját a szolgáltató ({{ payMethodName() }}) számítja fel, ezért a
+          végösszeg ennyivel több.
+        </p>
+      }
 
       @if (paymentNotice(); as notice) {
         <p class="payment-notice" [class.error]="notice.kind === 'error'">
@@ -368,14 +383,10 @@
         <button
           class="primary-btn"
           type="button"
-          [disabled]="paying() || selectedPayIds().size === 0"
+          [disabled]="paying() || selectedPayIds().size === 0 || !payMethod()"
           (click)="confirmPay()"
         >
-          {{
-            paying()
-              ? 'Fizetés indítása…'
-              : 'Fizetés a Barionnal (' + selectedPayGrandTotal() + ' Ft) →'
-          }}
+          {{ paying() ? 'Fizetés indítása…' : 'Fizetés (' + selectedPayGrandTotal() + ' Ft) →' }}
         </button>
       </div>
     </div>

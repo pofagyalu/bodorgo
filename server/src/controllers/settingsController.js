@@ -2,9 +2,11 @@ import Transaction from '../models/transactionModel.js';
 import AppError from '../utils/appError.js';
 import {
   CLUB_FOUNDING_YEAR,
+  PAYMENT_METHOD_NAMES,
   feeForYear,
   getClubSettings,
   membershipFeeForYear,
+  paymentMethodView,
 } from '../utils/clubSettings.js';
 import {
   budapestDate,
@@ -20,6 +22,7 @@ import { clearImageCache, enforceImageCacheQuota, imageCacheUsage } from '../pho
 import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js';
 import { DEFAULT_RANK_MESSAGE } from '../utils/ranks.js';
 import { waxSealPng } from '../utils/waxSeal.js';
+import { stripeAccountReady } from '../utils/stripe.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
 // fee, by the year each amount takes effect (see utils/clubSettings.js).
@@ -405,6 +408,70 @@ export const updateBarionWallet = async (req, res) => {
   }
 
   res.status(200).json({ status: 'success', data: walletView(after) });
+};
+
+// --- Fizetési módok: the online gateways and the fee on top ---
+
+const describeMethod = (m) =>
+  `${m.enabled ? 'bekapcsolva' : 'kikapcsolva'}, díj: ${m.feePercent}% + ${m.feeFixed} Ft, legalább ${m.feeMin} Ft`;
+
+// GET /settings/payment-methods - anyone logged in: the pay dialogs offer
+// the ones switched on, and show each one's fee before paying. wallets:
+// which purposes each can take now - Stripe only where that purpose's own
+// account has its key (.env), so advances can wait for theirs.
+export const getPaymentMethods = async (req, res) => {
+  const { paymentMethods } = await getClubSettings();
+  res.status(200).json({
+    status: 'success',
+    data: {
+      stripe: {
+        ...paymentMethodView(paymentMethods?.stripe),
+        wallets: {
+          membership: stripeAccountReady('membership'),
+          tour: stripeAccountReady('tour'),
+        },
+      },
+      barion: {
+        ...paymentMethodView(paymentMethods?.barion),
+        wallets: { membership: true, tour: true },
+      },
+    },
+  });
+};
+
+// PUT /settings/payment-methods/:method (admin) - { enabled, feePercent,
+// feeFixed, feeMin }: the fee the payer pays on top is feePercent % of the
+// charge plus feeFixed Ft, at least feeMin Ft.
+export const updatePaymentMethod = async (req, res) => {
+  const key = req.params.method;
+  if (!PAYMENT_METHOD_NAMES[key]) throw new AppError('Nincs ilyen fizetési mód.', 404);
+
+  const enabled = req.body?.enabled === true;
+  const feePercent = Number(req.body?.feePercent);
+  const feeFixed = Number(req.body?.feeFixed);
+  const feeMin = Number(req.body?.feeMin);
+  if (!Number.isFinite(feePercent) || feePercent < 0 || feePercent > 20) {
+    throw new AppError('A százalék 0 és 20 között lehet.', 400);
+  }
+  for (const amount of [feeFixed, feeMin]) {
+    if (!Number.isInteger(amount) || amount < 0 || amount > 10000) {
+      throw new AppError('A díj 0 és 10 000 Ft közötti egész szám lehet.', 400);
+    }
+  }
+
+  const settings = await getClubSettings();
+  const before = describeMethod(paymentMethodView(settings.paymentMethods?.[key]));
+  const after = { enabled, feePercent, feeFixed, feeMin };
+  if (before !== describeMethod(after)) {
+    settings.set(`paymentMethods.${key}`, after);
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `Fizetési mód (${PAYMENT_METHOD_NAMES[key]}): ${before} → ${describeMethod(after)}`,
+    });
+    await settings.save();
+  }
+  res.status(200).json({ status: 'success', data: after });
 };
 
 // --- Születésnap (see utils/birthday.js) ---

@@ -592,6 +592,17 @@ const schemas = {
     withdrawName: str('Account holder.'),
     withdrawIban: str('Hungarian IBAN, in groups of four.'),
   }),
+  PaymentMethodSettings: obj({
+    enabled: { type: 'boolean', description: 'Offered to payers; off = greyed out, refused.' },
+    feePercent: num('The gateway’s percent of the charge (0-20).'),
+    feeFixed: int('Its fixed part per payment, Ft.'),
+    feeMin: int('The least the fee can be, Ft.'),
+    wallets: {
+      type: 'object',
+      description:
+        'Read-only (GET): which purposes it can take now - `membership`, `tour`. Stripe only where that purpose’s own account has its key in .env, so advances wait for theirs.',
+    },
+  }),
 };
 
 // --- Descriptions shown on the start page ---
@@ -1720,7 +1731,7 @@ const paths = {
       tag: T.payments,
       summary: 'Pay tour advances',
       description:
-        'For myself and my family - the server works out who is still unpaid and how much, never trusting the amount. Answers with the gateway page to send the browser to.',
+        'For myself and my family - the server works out who is still unpaid and how much, never trusting the amount, and adds the chosen method’s fee (see `/settings/payment-methods`); a switched-off method is refused. Advances go to the tour Stripe account / Barion wallet. Answers with the gateway page to send the browser to.',
       body: obj(
         {
           tourId: id(),
@@ -1737,7 +1748,8 @@ const paths = {
     post: op({
       tag: T.payments,
       summary: 'Pay membership dues',
-      description: 'One payment for several person + year pairs (family members, unpaid years).',
+      description:
+        'One payment for several person + year pairs (family members, unpaid years), plus the chosen method’s fee (see `/settings/payment-methods`); a switched-off method is refused. Dues go to the club’s Stripe account / Barion wallet.',
       body: obj(
         {
           items: arrayOf(obj({ userId: id(), year: int() })),
@@ -1799,7 +1811,8 @@ const paths = {
       tag: T.payments,
       role: 'public',
       summary: 'Stripe webhook',
-      description: 'Stripe calls it server-to-server; signature-checked.',
+      description:
+        'Stripe calls it server-to-server; signature-checked. Both Stripe accounts (dues, advances) call this one address, each with its own signing secret.',
       response: { description: 'OK.' },
       errors: [400],
     }),
@@ -2502,6 +2515,28 @@ const paths = {
       params: [path('wallet', '`membership` (Tagdíjak) or `tour` (Előlegek).')],
       body: ref('BarionWallet'),
       data: ref('BarionWallet'),
+      errors: [400, 404],
+    }),
+  },
+  '/settings/payment-methods': {
+    get: op({
+      tag: T.settings,
+      summary: 'The online payment methods and their fees',
+      description:
+        'Stripe and Barion: whether each is switched on, and the fee the payer pays on top - `feePercent` % of the charge plus `feeFixed` Ft, at least `feeMin` Ft. The pay dialogs show it before paying.',
+      data: obj({ stripe: ref('PaymentMethodSettings'), barion: ref('PaymentMethodSettings') }),
+    }),
+  },
+  '/settings/payment-methods/{method}': {
+    put: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Switch a payment method on or off, set its fee',
+      description:
+        'A switched-off method is shown greyed out and its payments are refused. The fee is worked out backwards, so what is left after the gateway’s cut is the sum itself: charge = (sum + `feeFixed`) / (1 − `feePercent`/100). Recorded in the history.',
+      params: [path('method', '`stripe` or `barion`.')],
+      body: ref('PaymentMethodSettings'),
+      data: ref('PaymentMethodSettings'),
       errors: [400, 404],
     }),
   },

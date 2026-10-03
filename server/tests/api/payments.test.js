@@ -17,6 +17,7 @@ import Transaction from '../../src/models/transactionModel.js';
 import User from '../../src/models/userModel.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
 import { getClubSettings } from '../../src/utils/clubSettings.js';
+import config from '../../src/config.js';
 import { createCheckoutSession, retrieveCheckoutSession } from '../../src/utils/stripe.js';
 import {
   createBarionPayment,
@@ -40,20 +41,89 @@ async function pricedTour() {
 
 const start = (user, body) => request(app).post('/payments/start').set(asUser(user)).send(body);
 
+// Barion is off until switched on on Beállítások (Fizetési módok) - on
+// here, except where a test switches a method off itself.
+async function setMethod(key, values) {
+  const settings = await getClubSettings();
+  settings.set(`paymentMethods.${key}`, {
+    ...settings.paymentMethods[key].toObject?.(),
+    ...values,
+  });
+  await settings.save();
+}
+beforeEach(() => setMethod('barion', { enabled: true, feePercent: 1.6, feeFixed: 0, feeMin: 0 }));
+
 describe('paying a tour advance', () => {
-  it('starts a Stripe payment for my own unpaid advance', async () => {
+  it('starts a Stripe payment for my own unpaid advance, with the Stripe fee on top', async () => {
     const { tour, member, attendeeId } = await pricedTour();
     const res = await start(member, { tourId: tour._id, attendeeIds: [attendeeId] });
     expect(res.status).toBe(200);
     expect(res.body.data.gatewayUrl).toBe('https://stripe.test/checkout');
     const payment = await Payment.findById(res.body.data.paymentId);
+    // 1.5% + 85 Ft, worked out backwards: (6000 + 85) / 0.985.
     expect(payment).toMatchObject({
       status: 'Started',
       method: 'stripe',
-      amount: 6000,
+      amount: 6178,
       providerPaymentId: 'cs_test',
     });
     expect(createCheckoutSession).toHaveBeenCalledOnce();
+    // Advances go to the tour Stripe account.
+    expect(vi.mocked(createCheckoutSession).mock.calls[0][0]).toMatchObject({
+      account: 'tour',
+      amount: 6178,
+    });
+  });
+
+  it('charges the fee set on Beállítások - none at 0, at least the minimum', async () => {
+    const { tour, member, attendeeId } = await pricedTour();
+    const amountWith = async (values) => {
+      await setMethod('stripe', {
+        enabled: true,
+        feePercent: 0,
+        feeFixed: 0,
+        feeMin: 0,
+        ...values,
+      });
+      const res = await start(member, { tourId: tour._id, attendeeIds: [attendeeId] });
+      return (await Payment.findById(res.body.data.paymentId)).amount;
+    };
+    expect(await amountWith({})).toBe(6000);
+    expect(await amountWith({ feePercent: 1, feeMin: 200 })).toBe(6200);
+  });
+
+  it('takes no Stripe advances while the tour account has no key - dues still go', async () => {
+    const { tour, member, attendeeId } = await pricedTour();
+    const key = config.stripe.accounts.tour.secretKey;
+    config.stripe.accounts.tour.secretKey = undefined;
+    try {
+      expect((await start(member, { tourId: tour._id, attendeeIds: [attendeeId] })).status).toBe(
+        400,
+      );
+      expect(createCheckoutSession).not.toHaveBeenCalled();
+      const methods = await request(app).get('/settings/payment-methods').set(asUser(member));
+      expect(methods.body.data.stripe.wallets).toEqual({ membership: true, tour: false });
+      const dues = await request(app)
+        .post('/payments/membership/start')
+        .set(asUser(member))
+        .send({ items: [{ userId: member._id, year: new Date().getFullYear() }] });
+      expect(dues.status).toBe(200);
+    } finally {
+      config.stripe.accounts.tour.secretKey = key;
+    }
+  });
+
+  it('refuses a payment method that is switched off', async () => {
+    const { tour, member, attendeeId } = await pricedTour();
+    await setMethod('barion', { enabled: false });
+    const res = await start(member, {
+      tourId: tour._id,
+      attendeeIds: [attendeeId],
+      method: 'barion',
+    });
+    expect(res.status).toBe(400);
+    expect(createBarionPayment).not.toHaveBeenCalled();
+    expect(await Payment.countDocuments()).toBe(0);
   });
 
   it('adds the Barion fee when paying with Barion', async () => {
@@ -272,6 +342,11 @@ describe('membership dues', () => {
     expect(res.status).toBe(200);
     const payment = await Payment.findById(res.body.data.paymentId);
     expect(payment.members.map((m) => m.membershipYear)).toEqual([thisYear]);
+    // Dues go to the club's Stripe account, with the fee: (1000 + 85) / 0.985.
+    expect(payment.amount).toBe(1102);
+    expect(vi.mocked(createCheckoutSession).mock.calls[0][0]).toMatchObject({
+      account: 'membership',
+    });
 
     vi.mocked(retrieveCheckoutSession).mockResolvedValueOnce({ payment_status: 'paid' });
     await request(app).get(`/payments/${payment._id}/status`).set(asUser(member));

@@ -19,6 +19,9 @@ process.env.CLIENT_ORIGIN ??= 'http://localhost:4200';
 // ever sent to Stripe (the calls themselves are mocked below).
 process.env.STRIPE_SECRET_KEY ??= 'sk_test_dummy';
 process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_test_dummy';
+// The second account (advances) - its own keys.
+process.env.STRIPE_TOUR_SECRET_KEY ??= 'sk_test_tour_dummy';
+process.env.STRIPE_TOUR_WEBHOOK_SECRET ??= 'whsec_test_tour_dummy';
 // Dummy Authentik settings - the login library itself is faked in
 // tests/api/auth.test.js; nothing ever reaches a real Authentik.
 process.env.AUTHENTIK_SERVER_URL ??= 'https://auth.test';

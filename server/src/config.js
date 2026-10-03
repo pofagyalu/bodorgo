@@ -35,10 +35,23 @@ const config = {
   // Stripe (see app.js's raw-body handling for that one route, and
   // utils/stripe.js's constructWebhookEvent) - found on the webhook
   // endpoint's own page in the Stripe dashboard once one is registered.
+  //
+  // Two accounts, since a Stripe account pays out to one bank account:
+  // membership (the club's - dues) and tour (advances). An account whose
+  // key isn't set takes no Stripe payments (its button is greyed out) - so
+  // advances never land in the club's account by mistake.
   stripe: {
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-    secretKey: process.env.STRIPE_SECRET_KEY,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    accounts: {
+      membership: {
+        secretKey: process.env.STRIPE_SECRET_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+      },
+      tour: {
+        secretKey: process.env.STRIPE_TOUR_SECRET_KEY,
+        webhookSecret: process.env.STRIPE_TOUR_WEBHOOK_SECRET,
+      },
+    },
   },
   // Second payment gateway alongside Stripe (see utils/barion.js) - a
   // Hungarian one, offered as an alternative at checkout, not a

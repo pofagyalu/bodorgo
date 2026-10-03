@@ -372,6 +372,30 @@ button {
   }
 }
 
+// Fizetési módok: one block per gateway.
+.pay-method {
+  padding-top: 1rem;
+
+  & + & {
+    margin-top: 1rem;
+    border-top: 1px solid #edf1ee;
+  }
+}
+
+.pay-method-fields {
+  margin-top: 0.75rem;
+
+  input {
+    width: 6.5rem;
+  }
+}
+
+.pay-method-example {
+  margin: 0.75rem 0 0;
+  color: #56666e;
+  font-size: 0.8rem;
+}
+
 // Elnök: the seal beside the name.
 .president-row {
   flex-wrap: nowrap;

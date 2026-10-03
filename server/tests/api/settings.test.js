@@ -239,3 +239,55 @@ describe('Klub → Beállítások: Barion wallets', () => {
     ).toBe(403);
   });
 });
+
+describe('Klub → Beállítások: Fizetési módok', () => {
+  const put = (user, key, body) =>
+    request(app).put(`/settings/payment-methods/${key}`).set(asUser(user)).send(body);
+
+  it('Stripe is on and Barion off by default; anyone logged in sees them', async () => {
+    const res = await request(app)
+      .get('/settings/payment-methods')
+      .set(asUser(await createGuest()));
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      stripe: {
+        enabled: true,
+        feePercent: 1.5,
+        feeFixed: 85,
+        feeMin: 0,
+        wallets: { membership: true, tour: true },
+      },
+      barion: {
+        enabled: false,
+        feePercent: 1.6,
+        feeFixed: 0,
+        feeMin: 0,
+        wallets: { membership: true, tour: true },
+      },
+    });
+  });
+
+  it('an admin switches a method on and sets its fee - recorded in the history', async () => {
+    const admin = await createAdmin();
+    const body = { enabled: true, feePercent: 1.2, feeFixed: 0, feeMin: 50 };
+    const res = await put(admin, 'barion', body);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual(body);
+    const settings = await getClubSettings();
+    expect(settings.paymentMethods.barion.enabled).toBe(true);
+    expect(settings.history.at(-1).change).toContain('Fizetési mód (Barion)');
+    // Nothing changed - nothing recorded.
+    await put(admin, 'barion', body);
+    expect((await getClubSettings()).history).toHaveLength(1);
+  });
+
+  it('checks the numbers and the method; admins only', async () => {
+    const admin = await createAdmin();
+    const ok = { enabled: true, feePercent: 1.5, feeFixed: 85, feeMin: 0 };
+    expect((await put(admin, 'stripe', { ...ok, feePercent: 25 })).status).toBe(400);
+    expect((await put(admin, 'stripe', { ...ok, feeFixed: -1 })).status).toBe(400);
+    expect((await put(admin, 'stripe', { ...ok, feeMin: 1.5 })).status).toBe(400);
+    expect((await put(admin, 'paypal', ok)).status).toBe(404);
+    expect((await put(await createMember(), 'stripe', ok)).status).toBe(403);
+  });
+});
