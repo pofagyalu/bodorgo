@@ -112,7 +112,13 @@ describe('logo colours', () => {
   });
 
   it('asks the browser about reduced motion', () => {
+    const ask = vi.spyOn(window, 'matchMedia');
+    ask.mockReturnValue({ matches: false } as MediaQueryList);
     expect(prefersReducedMotion()).toBe(false);
+    ask.mockReturnValue({ matches: true } as MediaQueryList);
+    expect(prefersReducedMotion()).toBe(true);
+    expect(ask).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)');
+    ask.mockRestore();
   });
 });
 

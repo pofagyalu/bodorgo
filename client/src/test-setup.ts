@@ -16,11 +16,14 @@ window.HTMLMediaElement.prototype.pause = () => {};
 window.HTMLMediaElement.prototype.load = () => {};
 
 // jsdom has no matchMedia either (used for "prefers-reduced-motion" and the
-// installed-app check). Nothing matches by default.
+// installed-app check). Nothing matches - except "reduced motion", which
+// keeps the confetti off: it draws on a real canvas, which jsdom lacks, and
+// an effect started by one spec would still be running (and failing) during
+// the next ones.
 if (!window.matchMedia) {
   window.matchMedia = (query: string) =>
     ({
-      matches: false,
+      matches: query.includes('prefers-reduced-motion: reduce'),
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
