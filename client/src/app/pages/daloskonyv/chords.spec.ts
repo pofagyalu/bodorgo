@@ -1,4 +1,11 @@
-import { firstChord, parseChord, stepsBetween, transposeChordPro, transposer } from './chords';
+import {
+  chordNamePieces,
+  firstChord,
+  parseChord,
+  stepsBetween,
+  transposeChordPro,
+  transposer,
+} from './chords';
 
 // A song starting on `key`, moved by `steps`.
 const move = (key: string, steps: number, notation: 'international' | 'hungarian') => {
@@ -157,5 +164,65 @@ describe('the note between A and H, the Hungarian way', () => {
   it('is B in a key written with flats', () => {
     expect(move('E', 1, 'hungarian')('E', 'A', 'H7')).toBe('F B C7');
     expect(move('am', -2, 'hungarian')('am', 'C', 'dm')).toBe('gm B cm');
+  });
+});
+
+describe('chordNamePieces', () => {
+  // The index pieces in ‹ ›.
+  const written = (name: string) =>
+    chordNamePieces(name, 'hungarian')
+      .map((p) => (p.index ? `‹${p.text}›` : p.text))
+      .join('');
+
+  it('sets a chord’s numbers as indexes', () => {
+    expect(written('F7')).toBe('F‹7›');
+    expect(written('Gsus2')).toBe('Gsus‹2›');
+    expect(written('am7')).toBe('am‹7›');
+    expect(written('Cmaj7')).toBe('Cmaj‹7›');
+    expect(written('Cadd9')).toBe('Cadd‹9›');
+    expect(written('G7sus4')).toBe('G‹7›sus‹4›');
+    expect(written('F#m7')).toBe('F#m‹7›');
+  });
+
+  it('leaves the bass after the slash plain', () => {
+    expect(written('D7/F#')).toBe('D‹7›/F#');
+    expect(written('am/G')).toBe('am/G');
+  });
+
+  it('leaves a chord without numbers, and what isn’t a chord, as it is', () => {
+    expect(written('C')).toBe('C');
+    expect(written('hm')).toBe('hm');
+    expect(written('2x')).toBe('2x');
+    expect(written('Intro 2')).toBe('Intro 2');
+  });
+});
+
+describe('the names of a song’s parts in brackets', () => {
+  it('are never taken for chords', () => {
+    const labels = [
+      'Intro',
+      'Outro',
+      'Verse',
+      'Vers',
+      'Chorus',
+      'Refr.',
+      'Refrén',
+      'Bridge',
+      'Solo',
+      'Szóló',
+      'Közjáték',
+      'Átvezetés',
+      'Coda',
+      'Break',
+      'End',
+      'Vége',
+      'Intro 2x',
+      'Refr. 2x',
+    ];
+    for (const label of labels) expect(parseChord(label), label).toBeNull();
+    // So they are written as they are, and nothing moves them.
+    expect(transposeChordPro('[Intro] [am] [Refr.] [G7]', 2, 'hungarian')).toBe(
+      '[Intro] [hm] [Refr.] [A7]',
+    );
   });
 });

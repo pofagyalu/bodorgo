@@ -1,5 +1,5 @@
 <figure class="diagram">
-  <figcaption>{{ name() }}</figcaption>
+  <figcaption><app-chord-name [name]="name()" /></figcaption>
   @if (view(); as v) {
     <svg
       [attr.viewBox]="v.viewBox"

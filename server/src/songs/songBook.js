@@ -3,6 +3,7 @@ import PDFDocument from 'pdfkit';
 import { drawCover } from './songBookCover.js';
 import { ANNEXES } from './songBookAnnexes.js';
 import {
+  chordNamePieces,
   chordShape,
   parseChord,
   parseChordPro,
@@ -149,6 +150,33 @@ function put(doc, text, x, y, { font = 'Body', size = TEXT_SIZE, color = INK, ..
 
 const widthOf = (doc, text, font, size) => doc.font(font).fontSize(size).widthOfString(text);
 
+// A chord's name is written with its numbers as indexes - raised and
+// smaller: F⁷, Gsus², am⁷/G (the page's twin of the client's chord-name).
+const INDEX_SCALE = 0.68;
+
+const chordNameWidth = (doc, name, size) =>
+  chordNamePieces(name).reduce(
+    (sum, piece) =>
+      sum + widthOf(doc, piece.text, 'Heading', piece.index ? size * INDEX_SCALE : size),
+    0,
+  );
+
+// From x on, its top at y. The smaller numbers start a touch under that
+// top: raised to the capitals' height, no higher - they belong to their
+// chord, not to the line above.
+function putChordName(doc, name, x, y, { size, color }) {
+  let at = x;
+  for (const piece of chordNamePieces(name)) {
+    const pieceSize = piece.index ? size * INDEX_SCALE : size;
+    put(doc, piece.text, at, piece.index ? y + size * 0.04 : y, {
+      font: 'Heading',
+      size: pieceSize,
+      color,
+    });
+    at += widthOf(doc, piece.text, 'Heading', pieceSize);
+  }
+}
+
 // --- A song ---
 
 function drawSong(doc, song, diagrams) {
@@ -227,7 +255,7 @@ function layoutLine(doc, line, left) {
     const pieces = word.map((piece) => {
       const textWidth = widthOf(doc, piece.text, 'Body', TEXT_SIZE);
       // A chord never touches the next one, even over a short syllable.
-      const chordWidth = piece.chord ? widthOf(doc, piece.chord, 'Heading', CHORD_SIZE) + 4 : 0;
+      const chordWidth = piece.chord ? chordNameWidth(doc, piece.chord, CHORD_SIZE) + 4 : 0;
       return { ...piece, width: Math.max(textWidth, chordWidth) };
     });
     const width = pieces.reduce((sum, p) => sum + p.width, 0);
@@ -251,12 +279,11 @@ function drawRow(doc, row, y) {
   for (const piece of row.pieces) {
     if (piece.chord) {
       // In brackets but not a chord ("Intro", "2x"): a quiet label.
-      const label = !parseChord(piece.chord);
-      put(doc, piece.chord, piece.x, y + 1, {
-        font: label ? 'Italic' : 'Heading',
-        size: CHORD_SIZE,
-        color: label ? GREY : CHORD,
-      });
+      if (parseChord(piece.chord)) {
+        putChordName(doc, piece.chord, piece.x, y + 1, { size: CHORD_SIZE, color: CHORD });
+      } else {
+        put(doc, piece.chord, piece.x, y + 1, { font: 'Italic', size: CHORD_SIZE, color: GREY });
+      }
     }
     if (piece.text.trim()) put(doc, piece.text, piece.x, textY);
   }
@@ -307,13 +334,9 @@ function drawDiagram(doc, name, shape, left, top, neck) {
   const x = (i) => left + i * STRING_GAP;
   const y = (fret) => gridTop + (fret - base + 0.5) * FRET_GAP;
 
-  put(doc, name, left - 10, top, {
-    font: 'Heading',
-    size: 8.5,
-    color: CHORD,
-    width: neck + 20,
-    align: 'center',
-  });
+  // The name, centred over the neck.
+  const nameX = left + neck / 2 - chordNameWidth(doc, name, 8.5) / 2;
+  putChordName(doc, name, nameX, top, { size: 8.5, color: CHORD });
 
   doc.lineWidth(0.5).strokeColor(LIGHT);
   for (let r = 0; r <= rows; r += 1) {

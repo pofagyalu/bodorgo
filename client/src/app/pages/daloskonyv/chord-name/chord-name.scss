@@ -1,0 +1,14 @@
+// A chord's name in the line of whatever it stands in; its numbers raised
+// and smaller, without making the line any taller.
+:host {
+  display: inline;
+  white-space: nowrap;
+}
+
+// Raised only as far as the capitals' top - it belongs to its chord, not
+// to the line above.
+sup {
+  font-size: 0.7em;
+  line-height: 0;
+  vertical-align: 0.3em;
+}

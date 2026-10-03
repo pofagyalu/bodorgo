@@ -120,6 +120,17 @@ function parseChord(name, notation = NOTATION) {
     lower,
   };
 }
+function chordNamePieces(name, notation = NOTATION) {
+  if (!parseChord(name, notation)) return [{ text: name, index: false }];
+  const slash = name.indexOf('/');
+  const main = slash < 0 ? name : name.slice(0, slash);
+  const pieces = main
+    .split(/(\d+)/)
+    .filter(Boolean)
+    .map((text) => ({ text, index: /^\d+$/.test(text) }));
+  if (slash >= 0) pieces.push({ text: name.slice(slash), index: false });
+  return pieces;
+}
 function noteName(pc, flats, notation) {
   if (notation === 'hungarian') {
     if (pc === 11) return 'H';
@@ -187,7 +198,14 @@ var GUITAR = {
     movable(E, '022200'),
     movable(A, 'x02230'),
   ],
-  sus2: [open(D, 'xx0230'), movable(A, 'x02200')],
+  sus2: [
+    open(C, 'x30033'),
+    open(D, 'xx0230'),
+    open(E, '024400'),
+    open(F, 'xx3011'),
+    open(G, '300033'),
+    movable(A, 'x02200'),
+  ],
   6: [
     open(C, 'x32210'),
     open(D, 'xx0202'),
@@ -195,7 +213,13 @@ var GUITAR = {
     movable(E, '022120'),
     movable(A, 'x02222'),
   ],
-  9: [open(D, 'xx0210'), movable(E, '020102'), movable(A, 'x02423')],
+  9: [
+    open(D, 'xx0210'),
+    movable(E, '020102'),
+    // The C9 shape: no open strings, so it slides anywhere as it is.
+    movable(C, 'x3233x'),
+    movable(A, 'x02423'),
+  ],
   add9: [open(C, 'x32030'), open(G, '320203'), open(D, 'xx0230'), movable(A, 'x02420')],
   dim: [movable(A, 'x0121x'), movable(D, 'xx0101')],
   aug: [movable(E, '032110'), movable(A, 'x03221')],
@@ -382,6 +406,7 @@ export {
   CIRCLE,
   DEGREES,
   NOTATION,
+  chordNamePieces,
   chordShape,
   keyChords,
   parseChord,

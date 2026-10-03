@@ -52,6 +52,28 @@ export function parseChord(name: string, notation: Notation = NOTATION): Chord |
   };
 }
 
+// A piece of a chord's name as it is written out: plain letters, or a
+// number set as an index - raised and smaller ("F7" → F⁷, "Gsus2" → Gsus²).
+export interface ChordNamePiece {
+  text: string;
+  index: boolean;
+}
+
+// A chord's name cut up for writing: every number in it is an index
+// (G7sus4 → G⁷sus⁴, am7 → am⁷, Cadd9 → Cadd⁹), the bass after the slash is
+// plain (D7/F# → D⁷/F#). What isn't a chord ("2x", "Intro 2") stays whole.
+export function chordNamePieces(name: string, notation: Notation = NOTATION): ChordNamePiece[] {
+  if (!parseChord(name, notation)) return [{ text: name, index: false }];
+  const slash = name.indexOf('/');
+  const main = slash < 0 ? name : name.slice(0, slash);
+  const pieces = main
+    .split(/(\d+)/)
+    .filter(Boolean)
+    .map((text) => ({ text, index: /^\d+$/.test(text) }));
+  if (slash >= 0) pieces.push({ text: name.slice(slash), index: false });
+  return pieces;
+}
+
 function noteName(pc: number, flats: boolean, notation: Notation): string {
   if (notation === 'hungarian') {
     if (pc === 11) return 'H';

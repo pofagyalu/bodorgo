@@ -26,7 +26,8 @@ export class Klub {
     return role === 'admin' || role === 'member';
   });
 
-  // Where the Daloskönyv item leads.
+  // Where the Daloskönyv item leads - shown to guests only (members find
+  // the songbook in Média → Zene).
   songbook = inject(SongService).base;
 
   // Beállítások is admin-only.
