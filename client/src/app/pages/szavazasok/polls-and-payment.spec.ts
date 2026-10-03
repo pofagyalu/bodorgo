@@ -510,7 +510,12 @@ describe('Payment', () => {
     const req = http.expectOne(`${API}/payments/start`);
     expect(req.request.body).toEqual({ tourId: 't1', attendeeIds: ['a-me'], method: 'barion' });
     page.pay(); // already starting
-    req.flush({ data: { gatewayUrl: `${window.location.href}#eloleg`, paymentId: 'p9' } });
+    // The gateway's address: this very page with "#eloleg" (so the test's
+    // page doesn't go anywhere). From the address without a hash - a test
+    // before this one may have left an empty "#" at its end, and "##eloleg"
+    // is another hash.
+    const here = window.location.href.split('#')[0];
+    req.flush({ data: { gatewayUrl: `${here}#eloleg`, paymentId: 'p9' } });
     expect(window.location.hash).toBe('#eloleg');
     window.location.hash = '';
   });

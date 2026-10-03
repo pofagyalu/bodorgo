@@ -38,32 +38,39 @@ body {
 @tailwind components;
 @tailwind utilities;
 
+// The fonts: as WOFF2 (made from the .ttf files beside them - about a
+// third of their size), and with `swap`: the text shows at once in a
+// font the device has, and changes to its own when that has arrived.
 @font-face {
   font-family: 'Potland';
-  src: url('assets/fonts/Potland/PotLand.ttf') format('truetype');
+  src: url('assets/fonts/Potland/PotLand.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'Marhey';
-  src: url('assets/fonts/Marhey/Marhey-Regular.ttf') format('truetype');
+  src: url('assets/fonts/Marhey/Marhey-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'Rokkitt';
-  src: url('assets/fonts/Rokkitt/static/Rokkitt-Regular.ttf') format('truetype');
+  src: url('assets/fonts/Rokkitt/static/Rokkitt-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'Mulish';
-  src: url('assets/fonts/Mulish/static/Mulish-Regular.ttf') format('truetype');
+  src: url('assets/fonts/Mulish/static/Mulish-Regular.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
