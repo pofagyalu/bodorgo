@@ -225,6 +225,20 @@ export class SongPage implements OnDestroy {
     store(DIAGRAMS_KEY, this.showDiagrams());
   }
 
+  // This song alone as a PDF - the way it is on the screen now: in the key
+  // it is transposed to, with the chosen instrument's chords over it if
+  // they are shown.
+  pdfUrl = computed(() => {
+    const song = this.song();
+    return song
+      ? this.songService.songPdfUrl(
+          song.slug,
+          this.showDiagrams() ? this.instrument() : 'none',
+          this.transpose(),
+        )
+      : null;
+  });
+
   changeTranspose(by: number) {
     // Twelve semitones is the same chords again.
     this.transpose.update((t) => (t + by) % 12);

@@ -281,6 +281,56 @@ describe('Daloskönyv: the book as a PDF', () => {
     expect((await book(owner)).body.equals(before.body)).toBe(false);
   });
 
+  it('gives one song alone as a PDF - moved to another key if asked', async () => {
+    const owner = await createOwner();
+    await add(owner, {
+      title: 'Tavaszi szél',
+      artist: 'Népdal',
+      chordpro: '[am]Tavaszi szél [dm]vizet áraszt, [E7]virágom, vi[am]rágom',
+    });
+    const guest = await createGuest();
+    const pdf = (query = '') =>
+      request(app)
+        .get(`/songs/tavaszi-szel/pdf${query}`)
+        .set(asUser(guest))
+        .buffer()
+        .parse((res, done) => {
+          const chunks = [];
+          res.on('data', (c) => chunks.push(c));
+          res.on('end', () => done(null, Buffer.concat(chunks)));
+        });
+    // What the PDF says, as text.
+    const textOf = async (body) => {
+      const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      const doc = await getDocument({ data: new Uint8Array(body), verbosity: 0 }).promise;
+      const page = await (await doc.getPage(1)).getTextContent();
+      return { pages: doc.numPages, text: page.items.map((i) => i.str).join(' ') };
+    };
+
+    expect((await request(app).get('/songs/tavaszi-szel/pdf')).status).toBe(401);
+    expect((await request(app).get('/songs/nincs-ilyen/pdf').set(asUser(guest))).status).toBe(404);
+
+    const plain = await pdf();
+    expect(plain.status).toBe(200);
+    expect(plain.headers['content-type']).toBe('application/pdf');
+    expect(plain.headers['content-disposition']).toBe('inline; filename="tavaszi-szel.pdf"');
+    const said = await textOf(plain.body);
+    // The song alone: one page, its title, artist, key, chords and words.
+    expect(said.pages).toBe(1);
+    for (const part of ['Tavaszi szél', 'Népdal', 'a-moll', 'am', 'dm', 'vizet áraszt']) {
+      expect(said.text, part).toContain(part);
+    }
+
+    // Two semitones up: h-moll, its chords moved - and as a download.
+    const moved = await pdf('?transpose=2&diagrams=guitar&download=1');
+    expect(moved.headers['content-disposition']).toContain('attachment');
+    const movedText = (await textOf(moved.body)).text;
+    for (const part of ['h-moll', 'hm', 'em', 'F#']) expect(movedText, part).toContain(part);
+    expect(movedText).not.toContain('a-moll');
+    // Not a number of semitones: the song as it is saved.
+    expect((await textOf((await pdf('?transpose=sok')).body)).text).toContain('a-moll');
+  });
+
   it('gives its cover as a small picture, and says when the songs last changed', async () => {
     const owner = await createOwner();
     const guest = await createGuest();

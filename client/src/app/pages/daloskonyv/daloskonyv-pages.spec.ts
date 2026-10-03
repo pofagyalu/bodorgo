@@ -256,6 +256,24 @@ describe('SongPage', () => {
     expect(fixture.nativeElement.querySelector('.song-key')).toBeNull();
   });
 
+  it('offers the song alone as a PDF, the way it is on the screen', () => {
+    open();
+    const link = () =>
+      fixture.nativeElement.querySelector('a.song-pdf')?.getAttribute('href') as string;
+    // The chords over the song are shown: the chosen instrument's go along.
+    expect(link()).toBe(`${songs}/tavaszi-szel/pdf?diagrams=guitar&download=1`);
+
+    page.changeTranspose(-2);
+    page.chooseInstrument('ukulele');
+    fixture.detectChanges();
+    expect(link()).toBe(`${songs}/tavaszi-szel/pdf?diagrams=ukulele&transpose=-2&download=1`);
+
+    page.toggleDiagrams();
+    page.changeTranspose(2);
+    fixture.detectChanges();
+    expect(link()).toBe(`${songs}/tavaszi-szel/pdf?download=1`);
+  });
+
   describe('scrolling by itself', () => {
     let scroller: HTMLElement;
     const step = (now: number) => (page as unknown as { step(now: number): void }).step(now);

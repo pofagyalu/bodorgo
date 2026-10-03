@@ -168,6 +168,19 @@ export class SongService {
     return `${this.apiUrl}/book.pdf${query.length ? `?${query.join('&')}` : ''}`;
   }
 
+  // One song alone as a PDF, saved as a file - the server draws it like its
+  // page of the book. diagrams: whose chords to draw over the song, or
+  // none; transpose: the semitones the song is moved by on the screen, so
+  // the PDF is the song as it is shown.
+  songPdfUrl(slug: string, diagrams: BookDiagrams, transpose = 0): string {
+    const query = [
+      diagrams === 'none' ? '' : `diagrams=${diagrams}`,
+      transpose ? `transpose=${transpose}` : '',
+      'download=1',
+    ].filter(Boolean);
+    return `${this.apiUrl}/${encodeURIComponent(slug)}/pdf?${query.join('&')}`;
+  }
+
   // The book's cover as a small picture (its Dokumentumok card). version:
   // anything that changes when the book does, so the browser asks again.
   bookPreviewUrl(diagrams: BookDiagrams, version: string): string {

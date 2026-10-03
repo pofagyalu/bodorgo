@@ -8,6 +8,7 @@ import {
   BOOK_SIZES,
   renderSongBook,
   renderSongBookCover,
+  renderSongPdf,
 } from '../songs/songBook.js';
 import { chordSignature, detectKey, parseChord, plainLyrics } from '../songs/songText.js';
 import { DOCUMENT_PREVIEWS_DIR, pdfFirstPagePreview } from '../utils/documentPreviews.js';
@@ -192,6 +193,27 @@ export const getSongBook = async (req, res) => {
   // Asked again each time (the cookie decides who may), never stored.
   res.setHeader('Cache-Control', 'private, no-cache');
   res.send(book.pdf);
+};
+
+// GET /songs/:slug/pdf?diagrams=guitar|ukulele&size=A4|A5&transpose=2&download=1
+// - one song alone, as its page of the book. transpose: semitones (-11…11)
+// to move it by first - the song as the song page shows it then.
+export const getSongPdf = async (req, res) => {
+  const song = await Song.findOne({ slug: req.params.slug }).lean();
+  if (!song) throw new AppError('Nincs ilyen dal.', 404);
+  const diagrams = BOOK_DIAGRAMS.includes(req.query.diagrams) ? req.query.diagrams : null;
+  const size = BOOK_SIZES.includes(req.query.size) ? req.query.size : 'A4';
+  const steps = Number(req.query.transpose);
+  const transpose = Number.isInteger(steps) && Math.abs(steps) < 12 ? steps : 0;
+
+  const pdf = await renderSongPdf(song, { diagrams, size, transpose });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `${req.query.download ? 'attachment' : 'inline'}; filename="${song.slug}.pdf"`,
+  );
+  res.setHeader('Cache-Control', 'private, no-cache');
+  res.send(pdf);
 };
 
 // The cover's small pictures already read from the disk, by file name.

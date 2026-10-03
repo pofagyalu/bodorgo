@@ -16,10 +16,16 @@ await esbuild.build({
   stdin: {
     contents: `
       export { parseChordPro, plainLyrics, toBlocks, toWords } from './chordpro';
-      export { chordNamePieces, parseChord, transposer, NOTATION } from './chords';
+      export {
+        chordNamePieces,
+        parseChord,
+        transposeChordPro,
+        transposer,
+        NOTATION,
+      } from './chords';
       export { chordShape, uniqueChords } from './chord-shapes';
       export { CIRCLE, DEGREES, keyChords } from './keys';
-      export { chordSignature, detectKey, keyName, songKey } from './song-key';
+      export { chordSignature, detectKey, keyName, songKey, transposeKey } from './song-key';
     `,
     resolveDir: client,
     loader: 'ts',

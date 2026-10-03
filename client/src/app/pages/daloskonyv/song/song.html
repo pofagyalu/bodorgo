@@ -115,6 +115,21 @@
         </button>
       </div>
 
+      <!-- This song alone as a PDF, the way it is shown now (its key, the
+           chords over it). -->
+      @if (pdfUrl(); as url) {
+        <div class="tool">
+          <a
+            class="song-pdf"
+            [href]="url"
+            title="A dal letöltése PDF-ben"
+            aria-label="A dal letöltése PDF-ben"
+          >
+            <mat-icon>picture_as_pdf</mat-icon>
+          </a>
+        </div>
+      }
+
       <!-- Played tonight: a tick on this song in the list. -->
       @if (song(); as s) {
         <div class="tool">

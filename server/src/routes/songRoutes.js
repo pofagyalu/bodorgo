@@ -17,6 +17,8 @@ router.get('/book.webp', requireAuth, songController.getSongBookPreview);
 router.get('/lyrics', requireAuth, songController.getLyrics);
 
 router.get('/:slug', requireAuth, songController.getSong);
+// One song alone as a PDF - its page of the book.
+router.get('/:slug/pdf', requireAuth, songController.getSongPdf);
 
 router
   .route('/:id')

@@ -168,6 +168,11 @@ button {
   }
 }
 
+// "A dal letöltése PDF-ben": the PDF's own red, as on the list's button.
+.tool a.song-pdf {
+  color: #b3261e;
+}
+
 // "Már játszottuk": grey until set, then the list's orange tick.
 .tool button.played-toggle {
   color: #9aa7ab;

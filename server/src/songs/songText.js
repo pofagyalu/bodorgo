@@ -175,9 +175,16 @@ function transposer(homeChord, steps, notation = NOTATION) {
     return root + chord.rest + (chord.bass === null ? '' : `/${note(chord.bass)}`);
   };
 }
+function transposeChordPro(source, steps, notation = NOTATION, homeChord = firstChord(source)) {
+  const move = transposer(homeChord, steps, notation);
+  return source.replace(BRACKETS, (_, name) => `[${move(name.trim())}]`);
+}
 var BRACKETS = /\[([^\]\n]*)\]/g;
 function bracketed(source) {
   return [...source.matchAll(BRACKETS)].map((m) => m[1].trim()).filter(Boolean);
+}
+function firstChord(source) {
+  return bracketed(source)[0];
 }
 
 // ../client/src/app/pages/daloskonyv/chord-shapes.ts
@@ -499,6 +506,11 @@ function keyName(homeChord, notation = NOTATION) {
   const home = keyChord(chord.root, chord.minor, notation);
   return chord.minor ? `${home.slice(0, -1)}-moll` : `${home}-d\xFAr`;
 }
+function transposeKey(homeChord, steps, notation = NOTATION) {
+  const chord = parseChord(homeChord, notation);
+  if (!chord) return homeChord;
+  return keyChord((((chord.root + steps) % 12) + 12) % 12, chord.minor, notation);
+}
 function songKey(song, notation = NOTATION) {
   return song.key && parseChord(song.key, notation) ? song.key : detectKey(song.chordpro, notation);
 }
@@ -521,6 +533,8 @@ export {
   songKey,
   toBlocks,
   toWords,
+  transposeChordPro,
+  transposeKey,
   transposer,
   uniqueChords,
 };
