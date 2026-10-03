@@ -1,13 +1,5 @@
 import config from '../config.js';
 
-// Barion keeps ~1.6% of every card payment as its own processing fee -
-// unlike Stripe (whose fee just comes out of what the club receives,
-// absorbed silently), this is passed on to the payer here, surfaced
-// up-front before they ever reach Barion's page (see paymentController.js's
-// startMembershipPayment/startPayment, and members.ts/payment.ts's own
-// mirrored client-side constant for the confirmation screens).
-export const BARION_FEE_RATE = 0.016;
-
 function startUrl() {
   return `${config.barion.baseUrl}/v2/Payment/Start`;
 }

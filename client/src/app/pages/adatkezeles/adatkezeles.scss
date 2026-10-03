@@ -111,6 +111,39 @@
     margin-bottom: 4px;
   }
 
+  // The payment providers' official logos, above their names - unchanged
+  // (Barion's whole banner, as its rules ask).
+  .recipient-logo {
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .recipient-logo--barion {
+    width: 13rem;
+    max-width: 100%;
+  }
+
+  .recipient-logo--stripe {
+    height: 2.4rem;
+    margin-left: -0.5rem; // the wordmark file's own empty margin
+  }
+
+  .recipient-logo--resend,
+  .recipient-logo--ors {
+    height: 1.4rem;
+    margin: 0.3rem 0 0.6rem;
+  }
+
+  .recipient-logo--osm {
+    height: 2.4rem;
+  }
+
+  .recipient-trademark {
+    margin-top: 0.5rem;
+    color: #7a868d;
+    font-size: 0.75rem;
+  }
+
   // Azonosítani tudja a személyt? with an Igen/Nem pill right after it - inline,
   // so the pill always follows the question's last word on its line.
   .identify {

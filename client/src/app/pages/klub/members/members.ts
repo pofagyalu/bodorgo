@@ -13,7 +13,14 @@ import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { InvitationsPanel } from './invitations-panel/invitations-panel';
 import { ExtraColumn, PeopleTable } from './people-table/people-table';
 import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
-import { SettingsService, MembershipFee, feeForYear } from '../../../services/settings';
+import {
+  SettingsService,
+  MembershipFee,
+  PAYMENT_METHOD_NAMES,
+  PaymentMethodKey,
+  feeForYear,
+} from '../../../services/settings';
+import { PayProviderPicker } from '../../../shared/pay-provider-picker/pay-provider-picker';
 
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
   const formatted = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount);
@@ -24,13 +31,6 @@ function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): str
 // and the per-member table both span from here to the current year,
 // rather than an arbitrary fixed window.
 const CLUB_FOUNDING_YEAR = 2019;
-
-// Mirrors utils/barion.js's own BARION_FEE_RATE server-side - shown here
-// purely so the confirmation dialog can display what the payer will
-// actually be charged before they ever reach Barion's page; the server
-// never trusts this figure, it computes the real charge itself the same
-// way (see paymentController.js's chargeableAmount).
-const BARION_FEE_RATE = 0.016;
 
 type MembersTab = 'club' | 'casual' | 'everyone' | 'invites';
 
@@ -47,7 +47,15 @@ const TAB_BY_KEY: Record<string, MembersTab> = Object.fromEntries(
 
 @Component({
   selector: 'app-members',
-  imports: [DatePipe, RouterLink, MatIconModule, PeopleTable, InvitationsPanel, PeriodPicker],
+  imports: [
+    DatePipe,
+    RouterLink,
+    MatIconModule,
+    PeopleTable,
+    InvitationsPanel,
+    PeriodPicker,
+    PayProviderPicker,
+  ],
   templateUrl: './members.html',
   styleUrl: './members.scss',
 })
@@ -211,17 +219,18 @@ export class Members implements OnInit {
       .reduce((sum, row) => sum + row.amount, 0),
   );
 
-  // What Barion will actually charge, once its own ~1.6% fee is added on
-  // top (see BARION_FEE_RATE above) - rounded the same way the server
-  // rounds it, so this matches exactly rather than drifting a forint off.
-  selectedPayGrandTotal = computed(() =>
-    Math.round(this.selectedPayTotal() * (1 + BARION_FEE_RATE)),
-  );
+  // The gateway picked in the dialog (Stripe or Barion), and its fee on
+  // selectedPayTotal - both set by the picker (shared/pay-provider-picker).
+  // The server charges the same (paymentController.js's chargeableAmount),
+  // never trusting this figure.
+  payMethod = signal<PaymentMethodKey | null>(null);
+  selectedPayFee = signal(0);
+  payMethodName = computed(() => {
+    const method = this.payMethod();
+    return method ? PAYMENT_METHOD_NAMES[method] : '';
+  });
 
-  // Just the fee portion, derived from the two totals above rather than
-  // computed separately, so it always reconciles exactly with them
-  // (selectedPayTotal + selectedPayFee === selectedPayGrandTotal).
-  selectedPayFee = computed(() => this.selectedPayGrandTotal() - this.selectedPayTotal());
+  selectedPayGrandTotal = computed(() => this.selectedPayTotal() + this.selectedPayFee());
 
   ngOnInit() {
     this.settingsService.getMembershipFees().subscribe({
@@ -316,11 +325,12 @@ export class Members implements OnInit {
     const items = this.payBreakdown()
       .filter((row) => this.selectedPayIds().has(row.id))
       .map((row) => ({ userId: row.userId, year: row.year }));
-    if (this.paying() || items.length === 0) return;
+    const method = this.payMethod();
+    if (this.paying() || items.length === 0 || !method) return;
 
     this.paying.set(true);
     this.paymentNotice.set(null);
-    this.paymentService.startMembershipPayment(items).subscribe({
+    this.paymentService.startMembershipPayment(items, method).subscribe({
       next: (res) => {
         // A full navigation, not a client-side route change - same as
         // payment.ts's own tour-advance flow, leaving the site entirely

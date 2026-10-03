@@ -1,7 +1,20 @@
 import Stripe from 'stripe';
 import config from '../config.js';
 
-const stripe = new Stripe(config.stripe.secretKey);
+// Two Stripe accounts, since one pays out to one bank account: 'membership'
+// (the club's - dues) and 'tour' (advances) - see config.js's
+// stripe.accounts. Both can be the same account (the same key twice).
+const clients = new Map();
+
+// Whether this account's key is set - without it that purpose takes no
+// Stripe payments (paymentController.js) and its button is greyed out.
+export const stripeAccountReady = (account) => !!config.stripe.accounts[account]?.secretKey;
+
+function clientFor(account) {
+  const { secretKey } = config.stripe.accounts[account];
+  if (!clients.has(secretKey)) clients.set(secretKey, new Stripe(secretKey));
+  return clients.get(secretKey);
+}
 
 // Starts a Stripe Checkout session - Stripe's own hosted payment page,
 // same "redirect the browser there, redirect back once done" shape as
@@ -15,6 +28,7 @@ const stripe = new Stripe(config.stripe.secretKey);
 // zero-decimal currencies like JPY. Getting this wrong would silently
 // charge 100x too much or too little.
 export async function createCheckoutSession({
+  account,
   referenceId,
   amount,
   payerEmail,
@@ -22,7 +36,7 @@ export async function createCheckoutSession({
   cancelUrl,
   description,
 }) {
-  return stripe.checkout.sessions.create({
+  return clientFor(account).checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
     customer_email: payerEmail,
@@ -42,15 +56,29 @@ export async function createCheckoutSession({
   });
 }
 
-export async function retrieveCheckoutSession(sessionId) {
-  return stripe.checkout.sessions.retrieve(sessionId);
+export async function retrieveCheckoutSession(sessionId, account) {
+  return clientFor(account).checkout.sessions.retrieve(sessionId);
 }
 
 // Verifies a webhook request genuinely came from Stripe (not a forged
 // POST claiming a payment succeeded) - needs the RAW request body, not
 // the JSON-parsed one, so the route this is used from must be mounted
 // with express.raw() instead of the app-wide express.json() - see
-// app.js's own comment on that route.
+// app.js's own comment on that route. Both accounts call the same route,
+// each signing with its own secret - whichever fits.
 export function constructWebhookEvent(rawBody, signature) {
-  return stripe.webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret);
+  const secrets = new Set(
+    Object.values(config.stripe.accounts)
+      .map((a) => a.webhookSecret)
+      .filter(Boolean),
+  );
+  let lastError = new Error('No Stripe webhook secret is set.');
+  for (const secret of secrets) {
+    try {
+      return Stripe.webhooks.constructEvent(rawBody, signature, secret);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
 }

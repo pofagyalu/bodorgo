@@ -4,13 +4,8 @@ import { TourService, AttendeePayment, isInMyPaymentGroup } from '../../services
 import { PaymentService, PaymentStatus } from '../../services/payment';
 import { AuthService } from '../../auth/auth.service';
 import { formatForint } from '../../shared/format';
-
-// Mirrors utils/barion.js's own BARION_FEE_RATE server-side - shown here
-// purely so the payer sees what they'll actually be charged before ever
-// reaching Barion's page; the server never trusts this figure, it computes
-// the real charge itself the same way (see paymentController.js's
-// chargeableAmount).
-const BARION_FEE_RATE = 0.016;
+import { PayProviderPicker } from '../../shared/pay-provider-picker/pay-provider-picker';
+import { PAYMENT_METHOD_NAMES, PaymentMethodKey } from '../../services/settings';
 
 // Advance-payment page for one family (or a lone attendee with no family
 // on record) at a time - reached via the tour-details page's "Előleg
@@ -22,19 +17,16 @@ const BARION_FEE_RATE = 0.016;
 // this lists everyone in the current user's own payment group (self +
 // same familyId), not just the caller themselves.
 //
-// Pays via Barion (sandbox for now - see server/src/config.js's barion
-// block) - the gateway's own hosted page is where the payer actually
-// enters card details, so this page doesn't offer its own method choice.
-// The server also fully supports Stripe (see paymentController.js's
-// startGatewayPayment) - it's just not surfaced here for now; see
-// PaymentService's own comment on where the 'barion' literal lives if
-// that changes. An earlier mockup version of this page had a fake
-// "Revolut" option with no real gateway behind it - removed once this
-// became a real integration.
+// Pays via Stripe or Barion, whichever the payer picks (see
+// shared/pay-provider-picker - one switched off on Klub → Beállítások is
+// greyed out) - the gateway's own hosted page is where the payer actually
+// enters card details. The picked gateway's fee is shown on top of the
+// advances before paying; the server charges the same (see
+// paymentController.js's chargeableAmount), never trusting this page's sum.
 @Component({
   selector: 'app-payment',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, PayProviderPicker],
   templateUrl: './payment.html',
   styleUrl: './payment.scss',
 })
@@ -136,24 +128,28 @@ export class Payment {
       .reduce((sum, p) => sum + (p.advance ?? 0), 0);
   });
 
-  // What Barion will actually charge once its own ~1.6% fee is added on
-  // top - rounded the same way the server rounds it (chargeableAmount), so
-  // this matches exactly rather than drifting a forint off.
-  grandTotalToPay = computed(() => Math.round(this.totalToPay() * (1 + BARION_FEE_RATE)));
+  // The gateway picked in the picker, and its fee on totalToPay (both set
+  // by the picker).
+  method = signal<PaymentMethodKey | null>(null);
+  fee = signal(0);
+  methodName = computed(() => {
+    const method = this.method();
+    return method ? PAYMENT_METHOD_NAMES[method] : '';
+  });
 
-  // Just the fee portion, derived from the two totals above so it always
-  // reconciles exactly (totalToPay + barionFee === grandTotalToPay).
-  barionFee = computed(() => this.grandTotalToPay() - this.totalToPay());
+  // What the gateway will actually charge, its fee on top.
+  grandTotalToPay = computed(() => this.totalToPay() + this.fee());
 
-  canPay = computed(() => this.selectedAttendeeIds().size > 0);
+  canPay = computed(() => this.selectedAttendeeIds().size > 0 && !!this.method());
 
   pay() {
-    if (!this.canPay() || this.starting()) return;
+    const method = this.method();
+    if (!this.canPay() || this.starting() || !method) return;
 
     this.starting.set(true);
     this.error.set(null);
     this.paymentService
-      .startTourAdvancePayment(this.tourId, [...this.selectedAttendeeIds()])
+      .startTourAdvancePayment(this.tourId, [...this.selectedAttendeeIds()], method)
       .subscribe({
         next: (res) => {
           // A full navigation, not a client-side route change - the payer

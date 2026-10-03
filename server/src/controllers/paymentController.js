@@ -10,14 +10,14 @@ import {
   createCheckoutSession,
   retrieveCheckoutSession,
   constructWebhookEvent,
+  stripeAccountReady,
 } from '../utils/stripe.js';
 import {
   createBarionPayment,
   getBarionPaymentState,
   createBarionWithdrawal,
-  BARION_FEE_RATE,
 } from '../utils/barion.js';
-import { generateReceiptPdf, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
+import { generateReceiptPdf, paymentFeeLabel, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import { notifyAdminsIfAllMembersPaid } from '../utils/membershipReminders.js';
 import AppError from '../utils/appError.js';
@@ -26,9 +26,12 @@ import config from '../config.js';
 import logger from '../logger.js';
 import {
   CLUB_FOUNDING_YEAR,
+  PAYMENT_METHOD_NAMES,
   barionWallet,
   feeForYear,
   getClubSettings,
+  paymentFee,
+  paymentMethod,
 } from '../utils/clubSettings.js';
 
 async function loadAttendeePayments(tourId) {
@@ -171,9 +174,14 @@ async function resolvePayableMembers(items, user) {
 // don't each duplicate the branch. Both gateways return an object with
 // .id/.url either way (see utils/barion.js's own comment on why that
 // shape was chosen to mirror Stripe's Checkout Session exactly).
-function startGatewayPayment(
+//
+// Each purpose's money has its own destination: wallet is 'membership'
+// (the club's) or 'tour' - a Barion wallet's payee e-mail, or one of the
+// two Stripe accounts (see utils/stripe.js).
+async function startGatewayPayment(
   method,
-  { referenceId, amount, payerEmail, successUrl, description, payeeEmail },
+  wallet,
+  { referenceId, amount, payerEmail, successUrl, description },
 ) {
   if (method === 'barion') {
     return createBarionPayment({
@@ -182,10 +190,11 @@ function startGatewayPayment(
       payerEmail,
       successUrl,
       description,
-      payeeEmail,
+      payeeEmail: (await barionWallet(wallet)).payeeEmail,
     });
   }
   return createCheckoutSession({
+    account: wallet,
     referenceId,
     amount,
     payerEmail,
@@ -195,15 +204,28 @@ function startGatewayPayment(
   });
 }
 
-// Barion's own ~1.6% cut (see utils/barion.js's BARION_FEE_RATE) is passed
-// on to the payer rather than absorbed by the club - this is what actually
-// gets charged and stored as Payment.amount, while each covered
-// attendee/member still keeps their own real, un-surcharged amount (see
-// payable's .advance/.amount below) for the Reservation/Transaction records
-// created once the payment succeeds. Stripe's own fee isn't handled this
-// way (out of scope here), hence the method check.
-function chargeableAmount(subtotal, method) {
-  return method === 'barion' ? Math.round(subtotal * (1 + BARION_FEE_RATE)) : subtotal;
+const walletFor = (purpose) => (purpose === 'membershipFee' ? 'membership' : 'tour');
+
+// The gateway the payer chose (anything but 'barion' is Stripe) - refused
+// while it's switched off on Beállítások (Fizetési módok), or for Stripe
+// while this purpose's own account has no key yet (see config.js).
+async function chosenMethod(body, wallet) {
+  const method = body.method === 'barion' ? 'barion' : 'stripe';
+  const settings = await paymentMethod(method);
+  if (!settings.enabled || (method === 'stripe' && !stripeAccountReady(wallet))) {
+    throw new AppError(`A(z) ${PAYMENT_METHOD_NAMES[method]} fizetés most nem érhető el.`, 400);
+  }
+  return { method, settings };
+}
+
+// The gateway's own cut is passed on to the payer rather than absorbed by
+// the club (Beállítások' Fizetési módok - utils/clubSettings.js's
+// paymentFee) - this is what actually gets charged and stored as
+// Payment.amount, while each covered attendee/member still keeps their own
+// real, un-surcharged amount (see payable's .advance/.amount below) for the
+// Reservation/Transaction records created once the payment succeeds.
+function chargeableAmount(subtotal, settings) {
+  return subtotal + paymentFee(subtotal, settings);
 }
 
 // POST /payments/membership/start - requireAuth. Same gateway-agnostic
@@ -215,14 +237,14 @@ function chargeableAmount(subtotal, method) {
 // dialog client-side.
 export const startMembershipPayment = async (req, res) => {
   const { items } = req.body;
-  const method = req.body.method === 'barion' ? 'barion' : 'stripe';
   if (!Array.isArray(items) || items.length === 0) {
     throw new AppError('Nincs kiválasztott tagdíj tétel.', 400);
   }
+  const { method, settings } = await chosenMethod(req.body, 'membership');
 
   const payable = await resolvePayableMembers(items, req.user);
   const subtotal = payable.reduce((sum, p) => sum + p.amount, 0);
-  const amount = chargeableAmount(subtotal, method);
+  const amount = chargeableAmount(subtotal, settings);
 
   const payment = await Payment.create({
     purpose: 'membershipFee',
@@ -246,13 +268,12 @@ export const startMembershipPayment = async (req, res) => {
 
   let gatewayPayment;
   try {
-    gatewayPayment = await startGatewayPayment(method, {
+    gatewayPayment = await startGatewayPayment(method, 'membership', {
       referenceId: String(payment._id),
       amount,
       payerEmail: req.user.email,
       successUrl: returnUrl,
       description: `Tagdíj - ${payable.map((p) => `${p.name} (${p.year})`).join(', ')}`,
-      payeeEmail: (await barionWallet('membership')).payeeEmail,
     });
   } catch (err) {
     payment.status = 'Failed';
@@ -275,14 +296,14 @@ export const startMembershipPayment = async (req, res) => {
 // startGatewayPayment) to actually start the payment.
 export const startPayment = async (req, res) => {
   const { tourId, attendeeIds } = req.body;
-  const method = req.body.method === 'barion' ? 'barion' : 'stripe';
   if (!tourId || !Array.isArray(attendeeIds) || attendeeIds.length === 0) {
     throw new AppError('Hiányzó vagy hibás adatok.', 400);
   }
+  const { method, settings } = await chosenMethod(req.body, 'tour');
 
   const { tour, payable } = await resolvePayableAttendees(tourId, attendeeIds, req.user);
   const subtotal = payable.reduce((sum, p) => sum + p.advance, 0);
-  const amount = chargeableAmount(subtotal, method);
+  const amount = chargeableAmount(subtotal, settings);
 
   const payment = await Payment.create({
     purpose: 'tourAdvance',
@@ -316,13 +337,12 @@ export const startPayment = async (req, res) => {
 
   let gatewayPayment;
   try {
-    gatewayPayment = await startGatewayPayment(method, {
+    gatewayPayment = await startGatewayPayment(method, 'tour', {
       referenceId: String(payment._id),
       amount,
       payerEmail: req.user.email,
       successUrl: returnUrl,
       description: `${tour.title} - előleg (${payable.map((p) => p.name).join(', ')})`,
-      payeeEmail: (await barionWallet('tour')).payeeEmail,
     });
   } catch (err) {
     payment.status = 'Failed';
@@ -470,12 +490,12 @@ function formatForint(amount) {
 // A short, warm (not overly formal) confirmation - "Bódorgó" itself is
 // named after wandering/rambling around, hence the sign-off.
 // feeAmount is the gap between the attendees' own advances and what was
-// actually charged (Barion's ~1.6% cut, passed on to the payer - see
-// chargeableAmount above) - 0 for a Stripe payment, so the line is skipped
-// entirely and the total just matches the rows as before.
-function receiptEmailBody(payerName, tourTitle, attendees, total, feeAmount = 0) {
+// actually charged (the gateway's cut, passed on to the payer - see
+// chargeableAmount above), feeLabel its name ("Stripe díj") - with no fee
+// the line is skipped and the total just matches the rows.
+function receiptEmailBody(payerName, tourTitle, attendees, total, feeAmount = 0, feeLabel = '') {
   const lines = attendees.map((a) => `- ${a.name}: ${formatForint(a.amount)} Ft`).join('\n');
-  const feeLine = feeAmount > 0 ? `\nBarion díj (1,6%): ${formatForint(feeAmount)} Ft` : '';
+  const feeLine = feeAmount > 0 ? `\n${feeLabel}: ${formatForint(feeAmount)} Ft` : '';
   const text = `Kedves ${payerName}!
 
 Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${tourTitle}" táborhoz:
@@ -492,8 +512,7 @@ A Bódorgó csapata`;
   const linesHtml = attendees
     .map((a) => `<li>${a.name}: ${formatForint(a.amount)} Ft</li>`)
     .join('');
-  const feeLineHtml =
-    feeAmount > 0 ? `<li>Barion díj (1,6%): ${formatForint(feeAmount)} Ft</li>` : '';
+  const feeLineHtml = feeAmount > 0 ? `<li>${feeLabel}: ${formatForint(feeAmount)} Ft</li>` : '';
   const html = `<p>Kedves ${payerName}!</p>
 <p>Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${tourTitle}" táborhoz:</p>
 <ul>${linesHtml}${feeLineHtml}</ul>
@@ -508,11 +527,11 @@ A Bódorgó csapata`;
 // member gets their own line with the specific year it paid off, since
 // (unlike a tour advance) a family payment can cover different years for
 // different people.
-function membershipReceiptEmailBody(payerName, members, total, feeAmount = 0) {
+function membershipReceiptEmailBody(payerName, members, total, feeAmount = 0, feeLabel = '') {
   const lines = members
     .map((m) => `- ${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft`)
     .join('\n');
-  const feeLine = feeAmount > 0 ? `\nBarion díj (1,6%): ${formatForint(feeAmount)} Ft` : '';
+  const feeLine = feeAmount > 0 ? `\n${feeLabel}: ${formatForint(feeAmount)} Ft` : '';
   const text = `Kedves ${payerName}!
 
 Köszönjük a klubtagsági díj befizetését:
@@ -526,8 +545,7 @@ A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.
 Jó bódorgást! 🏕️
 A Bódorgó csapata`;
 
-  const feeLineHtml =
-    feeAmount > 0 ? `<li>Barion díj (1,6%): ${formatForint(feeAmount)} Ft</li>` : '';
+  const feeLineHtml = feeAmount > 0 ? `<li>${feeLabel}: ${formatForint(feeAmount)} Ft</li>` : '';
   const linesHtml = members
     .map((m) => `<li>${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft</li>`)
     .join('');
@@ -627,6 +645,7 @@ async function markMembershipPaid(payment) {
       payment.members,
       payment.amount,
       feeAmount,
+      paymentFeeLabel(payment),
     );
     await sendResendEmail({
       to: payer.email,
@@ -697,6 +716,7 @@ async function markPaymentSucceeded(payment) {
       payment.attendees,
       payment.amount,
       feeAmount,
+      paymentFeeLabel(payment),
     );
     await sendResendEmail({
       to: payer.email,
@@ -810,7 +830,10 @@ export const getPaymentStatus = async (req, res) => {
         await payment.save();
       }
     } else {
-      const session = await retrieveCheckoutSession(payment.providerPaymentId);
+      const session = await retrieveCheckoutSession(
+        payment.providerPaymentId,
+        walletFor(payment.purpose),
+      );
       if (session.payment_status === 'paid' && payment.status !== 'Succeeded') {
         await markPaymentSucceeded(payment);
       } else if (session.status === 'expired' && payment.status !== 'Expired') {

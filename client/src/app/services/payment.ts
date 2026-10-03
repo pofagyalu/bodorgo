@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import type { PaymentMethodKey } from './settings';
 
 // Mirrors paymentModel.js's own status enum - derived server-side from
 // whichever gateway's own status (Stripe's Checkout Session, or Barion's
@@ -47,16 +48,17 @@ export class PaymentService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/payments`;
 
-  // method is hardcoded to 'barion' here rather than exposed as a client
-  // choice - the server fully supports Stripe too (see
-  // paymentController.js), it's just not offered on screen for now. Change
-  // these two literals (and payment.html's/members.html's own gateway
-  // copy) if that changes.
-  startTourAdvancePayment(tourId: string, attendeeIds: string[]): Observable<StartPaymentResponse> {
+  // method: the gateway the payer picked (shared/pay-provider-picker) - the
+  // server refuses one that's switched off, and adds its fee itself.
+  startTourAdvancePayment(
+    tourId: string,
+    attendeeIds: string[],
+    method: PaymentMethodKey,
+  ): Observable<StartPaymentResponse> {
     return this.http.post<StartPaymentResponse>(`${this.apiUrl}/start`, {
       tourId,
       attendeeIds,
-      method: 'barion',
+      method,
     });
   }
 
@@ -67,10 +69,11 @@ export class PaymentService {
   // still unpaid) rather than trusting amounts from here.
   startMembershipPayment(
     items: { userId: string; year: number }[],
+    method: PaymentMethodKey,
   ): Observable<StartPaymentResponse> {
     return this.http.post<StartPaymentResponse>(`${this.apiUrl}/membership/start`, {
       items,
-      method: 'barion',
+      method,
     });
   }
 

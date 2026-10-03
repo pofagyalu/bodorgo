@@ -57,6 +57,24 @@ const clubSettingsSchema = new Schema(
       },
       tour: { payeeEmail: String, withdrawName: String, withdrawIban: String },
     },
+    // Fizetési módok (Beállítások): each online gateway on or off, and the
+    // fee the payer pays on top - feePercent % of the charge plus feeFixed
+    // Ft, at least feeMin Ft (utils/clubSettings.js's paymentFee). Barion
+    // is off until its live shop is approved.
+    paymentMethods: {
+      stripe: {
+        enabled: { type: Boolean, default: true },
+        feePercent: { type: Number, default: 1.5, min: 0, max: 20 },
+        feeFixed: { type: Number, default: 85, min: 0, max: 10000 },
+        feeMin: { type: Number, default: 0, min: 0, max: 10000 },
+      },
+      barion: {
+        enabled: { type: Boolean, default: false },
+        feePercent: { type: Number, default: 1.6, min: 0, max: 20 },
+        feeFixed: { type: Number, default: 0, min: 0, max: 10000 },
+        feeMin: { type: Number, default: 0, min: 0, max: 10000 },
+      },
+    },
     // Születésnap: confetti and a greeting for whoever logs in on their
     // birthday (utils/birthday.js). {név} in the message is their name.
     birthday: {

@@ -8,8 +8,13 @@ import {
   ChatImageSettings,
   ImageCacheSettings,
   MembershipReminder,
+  PAYMENT_METHOD_NAMES,
+  PaymentMethodKey,
+  PaymentMethodSettings,
+  PaymentMethods,
   SettingsService,
   feeForYear,
+  paymentFee,
 } from '../../../services/settings';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
@@ -177,6 +182,7 @@ export class KlubSettings implements OnInit {
 
   ngOnInit() {
     this.loadReminder();
+    this.loadPayMethods();
     this.loadChatImages();
     this.loadImageCache();
     this.loadBirthday();
@@ -521,6 +527,72 @@ export class KlubSettings implements OnInit {
       error: (err) => {
         this.savingImageCache.set(false);
         this.notifications.addError(err?.error?.message ?? 'Az ürítés nem sikerült.');
+      },
+    });
+  }
+
+  // --- Fizetési módok: Stripe and Barion - on or off, and the fee on top ---
+
+  readonly payMethodKeys: PaymentMethodKey[] = ['stripe', 'barion'];
+  readonly payMethodNames = PAYMENT_METHOD_NAMES;
+  // What's saved, and the form (each method saved with its own Mentés).
+  private payMethods = signal<PaymentMethods | null>(null);
+  payForm = signal<PaymentMethods | null>(null);
+  savingPayMethod = signal<PaymentMethodKey | null>(null);
+
+  private loadPayMethods() {
+    this.settingsService.getPaymentMethods().subscribe({
+      next: (res) => {
+        this.payMethods.set(res.data);
+        this.payForm.set(res.data);
+      },
+      error: () => {},
+    });
+  }
+
+  payMethodDirty(key: PaymentMethodKey): boolean {
+    return JSON.stringify(this.payMethods()?.[key]) !== JSON.stringify(this.payForm()?.[key]);
+  }
+
+  setPayField(key: PaymentMethodKey, field: keyof PaymentMethodSettings, value: unknown) {
+    this.payForm.update(
+      (form) =>
+        form && {
+          ...form,
+          [key]: { ...form[key], [field]: field === 'enabled' ? !!value : Number(value) },
+        },
+    );
+  }
+
+  // What a sum becomes with the fee in the form right now.
+  payExample(key: PaymentMethodKey, sum: number): string {
+    const method = this.payForm()?.[key];
+    const total = method ? sum + paymentFee(sum, method) : sum;
+    return new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(total);
+  }
+
+  resetPayMethod(key: PaymentMethodKey) {
+    const saved = this.payMethods();
+    if (saved) this.payForm.update((form) => form && { ...form, [key]: saved[key] });
+  }
+
+  savePayMethod(key: PaymentMethodKey) {
+    const method = this.payForm()?.[key];
+    if (!method || this.savingPayMethod()) return;
+    this.savingPayMethod.set(key);
+    this.settingsService.updatePaymentMethod(key, method).subscribe({
+      next: (res) => {
+        this.payMethods.update((saved) => saved && { ...saved, [key]: res.data });
+        this.payForm.update((form) => form && { ...form, [key]: res.data });
+        this.savingPayMethod.set(null);
+        this.notifications.addSuccess(`${PAYMENT_METHOD_NAMES[key]} beállítás mentve.`);
+        this.settingsService
+          .getMembershipFees()
+          .subscribe((r) => this.history.set(r.data.history ?? []));
+      },
+      error: (err) => {
+        this.savingPayMethod.set(null);
+        this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
       },
     });
   }

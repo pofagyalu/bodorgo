@@ -1,6 +1,8 @@
 import express from 'express';
 import {
   getBarionSettings,
+  getPaymentMethods,
+  updatePaymentMethod,
   getBirthdaySettings,
   getRankSettings,
   getPresident,
@@ -55,6 +57,11 @@ router
 // Barion wallets: payees, API keys, bank accounts - admins only.
 router.get('/barion', requireAuth, restrictTo('admin'), getBarionSettings);
 router.put('/barion/:wallet', requireAuth, restrictTo('admin'), updateBarionWallet);
+
+// Fizetési módok: which gateways are on and their fees - anyone logged in
+// reads them (the pay dialogs), admins set them.
+router.get('/payment-methods', requireAuth, getPaymentMethods);
+router.put('/payment-methods/:method', requireAuth, restrictTo('admin'), updatePaymentMethod);
 
 // Születésnap: the birthday greeting - admins only.
 router

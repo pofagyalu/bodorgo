@@ -8,8 +8,9 @@
       kicsit abból is), hanem hogy ne kelljen minden alkalommal bemutatkoznod.
     </p>
     <p>
-      Bankkártyaadatot nem tárolunk – azt a Barion őrzi, mi csak a jókedvedet. A belépéssel
-      tudomásul veszed, hogy mindezt a kényelmed és a fokozott szórakozási szint érdekében tesszük.
+      Bankkártyaadatot nem tárolunk – azt a fizetési szolgáltató (Stripe vagy Barion) őrzi, mi csak
+      a jókedvedet. A belépéssel tudomásul veszed, hogy mindezt a kényelmed és a fokozott
+      szórakozási szint érdekében tesszük.
     </p>
   </section>
 
@@ -40,7 +41,8 @@
     </li>
     <li>
       <strong>Befizetések:</strong> a tagdíj és a táborok befizetései – összeg, időpont, fizetési
-      mód. Kártyás fizetésnél a kártyaadatokat kizárólag a Barion kezeli, mi soha nem látjuk őket.
+      mód. Kártyás fizetésnél a kártyaadatokat kizárólag a választott szolgáltató (Stripe vagy
+      Barion) kezeli, mi soha nem látjuk őket.
     </li>
     <li>
       <strong>Közösség:</strong> a Kotyogó-üzeneteid, a szavazataid, valamint a táborokon készült
@@ -66,6 +68,11 @@
   <div class="recipients">
     <section class="recipient">
       <header>
+        <img
+          class="recipient-logo recipient-logo--barion"
+          src="assets/images/providers/barion-smart-banner-light.svg"
+          alt="Barion"
+        />
         <strong>Barion Payment Zrt.</strong>
       </header>
       <p class="what">A kártyás fizetések lebonyolítása.</p>
@@ -82,6 +89,32 @@
 
     <section class="recipient">
       <header>
+        <img
+          class="recipient-logo recipient-logo--stripe"
+          src="assets/images/providers/stripe-wordmark-blurple.svg"
+          alt="Stripe"
+        />
+        <strong>Stripe</strong> (Stripe Payments Europe, Ltd.)
+      </header>
+      <p class="what">A kártyás fizetések lebonyolítása – ha a fizetésnél ezt választod.</p>
+      <p class="identify">
+        Azonosítani tudja a személyt?
+        <span class="who who--yes">Igen</span>
+      </p>
+      <p>
+        <em>Megkapja:</em> ugyanazt, mint a Barion: a fizető e-mail-címét, az összeget és a fizetés
+        megnevezését. A kártyád adatait közvetlenül a Stripe oldalán adod meg, azokat mi soha nem
+        látjuk.
+      </p>
+    </section>
+
+    <section class="recipient">
+      <header>
+        <img
+          class="recipient-logo recipient-logo--resend"
+          src="assets/images/providers/resend-wordmark-black.svg"
+          alt="Resend"
+        />
         <strong>Resend</strong>
       </header>
       <p class="what">Az e-mailek kiküldése (értesítők, táborlevelek).</p>
@@ -96,7 +129,14 @@
     </section>
 
     <section class="recipient">
-      <header><strong>OpenRouteService</strong> (HeiGIT gGmbH)</header>
+      <header>
+        <img
+          class="recipient-logo recipient-logo--ors"
+          src="assets/images/providers/openrouteservice-wordmark.png"
+          alt="openrouteservice"
+        />
+        <strong>OpenRouteService</strong> (HeiGIT gGmbH)
+      </header>
       <p class="what">A táborok távolságának kiszámítása – csak ha megadod a lakcímed.</p>
       <p class="identify">
         Azonosítani tudja a személyt?
@@ -110,6 +150,15 @@
 
     <section class="recipient">
       <header>
+        <!-- The OSM Foundation's rules: the logo as a link to OpenStreetMap,
+             unchanged, with the trademark note below. -->
+        <a href="https://www.openstreetmap.org" target="_blank" rel="nofollow noopener noreferrer">
+          <img
+            class="recipient-logo recipient-logo--osm"
+            src="assets/images/providers/openstreetmap-logo.svg"
+            alt="OpenStreetMap"
+          />
+        </a>
         <strong>OpenStreetMap</strong>
       </header>
       <p class="what">A táborok térképe.</p>
@@ -120,6 +169,11 @@
       <p>
         <em>Megkapja:</em> az IP-címedet és azt, hogy a térkép melyik részét nézed – a
         térképdarabokat a böngésződ tölti le közvetlenül tőlük.
+      </p>
+      <p class="recipient-trademark">
+        Az OpenStreetMap logó az OpenStreetMap Foundation védjegye; a védjegyszabályzatuk szerint,
+        változtatás nélkül használjuk. A Bódorgó Klubot az OpenStreetMap Foundation nem támogatja,
+        és nem áll vele kapcsolatban.
       </p>
     </section>
 
@@ -165,7 +219,7 @@
   <p>
     Ha úgy érzed, megsértettük a jogaidat, panaszt tehetsz a Nemzeti Adatvédelmi és
     Információszabadság Hatóságnál (NAIH, 1055 Budapest, Falk Miksa utca 9–11.,
-    <a href="https://naih.hu" target="_blank" rel="noopener">naih.hu</a>).
+    <a href="https://naih.hu" target="_blank" rel="nofollow noopener noreferrer">naih.hu</a>).
   </p>
 
   <p class="updated">Utoljára frissítve: 2026. szeptember 27.</p>
