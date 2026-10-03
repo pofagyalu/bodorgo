@@ -3218,10 +3218,12 @@ const paths = {
       tag: T.race,
       summary: 'Say where I am on the course',
       description:
-        '"Élő követés": the runner’s own choice (off unless they switch it on). While a run is on, the phone sends where it is every ten seconds or so, when it has a connection - so the others can watch the runner on the map of the course’s results. Only with a run in progress on this course (409 otherwise - e.g. the START scan has not reached the server yet). Each position takes the place of the last one: no trail is ever kept. It is deleted when the run ends (finished, given up, expired), and by itself two minutes after the phone stops sending; it is only shown while it is less than a minute old. Not for someone running with a futókód on another’s phone.',
+        '"Élő követés": the runner’s own choice (off unless they switch it on). While a run is on, the phone sends where it is every ten seconds or so, when it has a connection - so the others can watch the runner on the map of the course’s results. Only with a run in progress on this course (409 otherwise - e.g. the START scan has not reached the server yet). Each position takes the place of the last one: no trail is ever kept. It is deleted when the run ends (finished, given up, expired), and by itself two minutes after the phone stops sending; it is only shown while it is less than a minute old. Whose position it is: as with `/futokor/scans` - with `runnerCode` (a futókód) whoever that belongs to, on a phone nobody is logged in on or a lent one (a wrong code is 404; thirty 404s in ten minutes from an address and it has to wait - 429); without it, whoever is logged in (401 / 403 otherwise).',
+      role: 'public',
       params: [path('id', 'The course.')],
       body: obj(
         {
+          runnerCode: str('A futókód - instead of being logged in.'),
           lat: { type: 'number', minimum: -90, maximum: 90 },
           lng: { type: 'number', minimum: -180, maximum: 180 },
           accuracyM: { type: ['number', 'null'], description: 'How exact the phone thinks it is.' },
@@ -3229,16 +3231,18 @@ const paths = {
         ['lat', 'lng'],
       ),
       ok: 204,
-      errors: [400, 403, 404, 409],
+      errors: [400, 401, 403, 404, 409, 429],
     }),
     delete: op({
       tag: T.race,
       summary: 'Stop being watched',
       description:
-        'My position on the course is deleted: the run is over, or "Élő követés" was switched off. Nothing to delete is fine too.',
+        'My position on the course is deleted: the run is over, or "Élő követés" was switched off. Nothing to delete is fine too. Whose it is: `runnerCode` in the body (a futókód), or whoever is logged in.',
+      role: 'public',
       params: [path('id', 'The course.')],
+      body: obj({ runnerCode: str('A futókód - instead of being logged in.') }),
       ok: 204,
-      errors: [403],
+      errors: [401, 403, 404, 429],
     }),
   },
   '/futokor/courses/{id}/sheet': {

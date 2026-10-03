@@ -467,6 +467,35 @@ describe('Futókör: live positions', () => {
     // Not for anyone who isn't in.
     expect((await put(await createMember(), course._id, here)).status).toBe(403);
   });
+
+  it('follows someone running with their futókód too - on a phone nobody is logged in on', async () => {
+    const owner = await createOwner();
+    const course = await openCourse(owner);
+    // (Not someone who is in: with a code that doesn't matter.)
+    const peti = await createMember({ name: 'Kiss Peti' });
+    await ensureFutokodok();
+    const { futokod } = await User.findById(peti._id).select('+futokod');
+    const url = `/futokor/courses/${course._id}/position`;
+    const as = (runnerCode, body = {}) => ({ runnerCode, ...body });
+
+    // Nobody is logged in, and no code: no.
+    expect((await request(app).put(url).send(here)).status).toBe(401);
+    expect((await request(app).put(url).send(as('0000', here))).status).toBe(404);
+    // No run on yet.
+    expect((await request(app).put(url).send(as(futokod, here))).status).toBe(409);
+
+    await request(app)
+      .post('/futokor/scans')
+      .send({ runnerCode: futokod, scans: [scan('S1', NOW - 60)] });
+    expect((await request(app).put(url).send(as(futokod, here))).status).toBe(204);
+    // On a lent phone the code decides whose place it is, not who is logged in.
+    expect((await put(owner, course._id, as(futokod, { lat: 47.655, lng: 19 }))).status).toBe(204);
+    const { positions } = (await get(owner, `/courses/${course._id}/results`)).body.data;
+    expect(positions).toMatchObject([{ userId: String(peti._id), name: 'Kiss Peti', lat: 47.655 }]);
+
+    expect((await request(app).delete(url).send(as(futokod))).status).toBe(204);
+    expect(await FutokorPosition.countDocuments()).toBe(0);
+  });
 });
 
 describe('Futókör: a user’s own track', () => {
