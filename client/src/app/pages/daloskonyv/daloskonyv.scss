@@ -1,3 +1,5 @@
+@use '../../shared/fab';
+
 // Daloskönyv: the same frame and heading as the Média pages
 // (music-home.scss). Without a song the table of contents fills the page
 // (in columns on a wide screen); with one it is the left column and the
@@ -429,6 +431,17 @@ $line: #e4eae7;
 
   .search {
     max-width: none;
+  }
+
+  // "+Dal" out of the search's line: the floating + of a phone
+  // (shared/_fab.scss). Only over the list - with a song open the list is
+  // hidden, and that corner is the play button's.
+  .new-song-btn {
+    @include fab.button;
+  }
+
+  .new-song-text {
+    display: none;
   }
 
   .song-list a {
