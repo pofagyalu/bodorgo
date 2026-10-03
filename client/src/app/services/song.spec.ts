@@ -106,7 +106,9 @@ describe('SongService', () => {
     http.expectOne(songs).flush('', { status: 500, statusText: 'Error' });
     expect(service.songs()).toEqual([]);
 
-    service.songs.set([{ _id: 's1', title: 'A', artist: 'B', slug: 'a' }]);
+    service.songs.set([
+      { _id: 's1', title: 'A', artist: 'B', slug: 'a', key: '', detectedKey: 'C' },
+    ]);
     service.loadSongs();
     http.expectOne(songs).flush('', { status: 500, statusText: 'Error' });
     expect(service.songs()).toHaveLength(1);

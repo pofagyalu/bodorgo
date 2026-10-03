@@ -17,7 +17,8 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { SongSheet } from '../song-sheet/song-sheet';
 import { Instrument } from '../chord-shapes';
-import { firstChord, stepsBetween, transposeChordPro } from '../chords';
+import { NOTATION, firstChord, stepsBetween, transposeChordPro } from '../chords';
+import { keyName, songKey, transposeKey } from '../song-key';
 
 // The play button's paces, in rem per second at the normal letter size
 // (they grow with the letters): ▶, ▶▶, ▶▶▶.
@@ -229,6 +230,20 @@ export class SongPage implements OnDestroy {
     this.transpose.update((t) => (t + by) % 12);
   }
 
+  // The song's key - the one set by hand, or what its chords say -, moved
+  // with the transposing on the screen: "a-moll" ('' for a song without
+  // chords). Shown after the artist.
+  private homeChord = computed(() => {
+    const song = this.song();
+    return song ? songKey(song) : '';
+  });
+  keyLabel = computed(() => {
+    const home = this.homeChord();
+    return home ? keyName(transposeKey(home, this.transpose())) : '';
+  });
+  // Set by hand in the editor, not worked out.
+  keySetByHand = computed(() => !!this.song()?.key);
+
   // The key the song was first written in, while it is saved in another
   // one: its first chord then ("am"), and how many semitones from the
   // saved key lead back to it - null if it never moved (or is back).
@@ -266,9 +281,13 @@ export class SongPage implements OnDestroy {
     this.savingKey.set(true);
     this.songService
       .updateSong(song._id, {
-        chordpro: transposeChordPro(song.chordpro, steps),
+        // The very chords on the screen: spelled for the song's key.
+        chordpro: transposeChordPro(song.chordpro, steps, NOTATION, this.homeChord()),
         // What it started with is noted the first time it is moved.
         originalKey: song.originalKey || firstChord(song.chordpro) || '',
+        // A key set by hand moves with the song; otherwise the new chords
+        // say the new key.
+        key: song.key ? transposeKey(song.key, steps) : '',
       })
       .subscribe({
         next: (saved) => {

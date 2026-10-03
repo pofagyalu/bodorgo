@@ -91,20 +91,28 @@ function keyUsesFlats(root: number, minor: boolean): boolean {
   return FLAT_KEYS.has(minor ? (root + 3) % 12 : root);
 }
 
+// A key's home chord the way the songbook writes it: "C", "F#", "B" (the
+// Hungarian B♭) for a major key, "am", "f#m", "bm" for a minor one.
+export function keyChord(root: number, minor: boolean, notation: Notation = NOTATION): string {
+  const note = noteName(root, keyUsesFlats(root, minor), notation);
+  return minor ? `${note.toLowerCase()}m` : note;
+}
+
 // A song's transposer: every chord moved by the same number of semitones,
 // and all of them spelled the way the new key is written - a song in E
-// one down is in E♭ (E♭, A♭, B♭), not in D♯. The key is taken from the
-// song's first chord. A minor written in lower case stays in lower case
-// ("am" two up is "hm"). At 0 the chords stay exactly as they were
+// one down is in E♭ (E♭, A♭, B♭), not in D♯. The key is given by its home
+// chord ("C", "am" - song-key.ts finds it; a song's first chord will do
+// where it isn't known). A minor written in lower case stays in lower
+// case ("am" two up is "hm"). At 0 the chords stay exactly as they were
 // written; what isn't a chord name comes back untouched.
 export function transposer(
-  firstChord: string | undefined,
+  homeChord: string | undefined,
   steps: number,
   notation: Notation = NOTATION,
 ): (chord: string) => string {
   const by = ((steps % 12) + 12) % 12;
   if (!by) return (chord) => chord;
-  const key = firstChord ? parseChord(firstChord, notation) : null;
+  const key = homeChord ? parseChord(homeChord, notation) : null;
   const flats = key ? keyUsesFlats((key.root + by) % 12, key.minor) : false;
   return (name) => {
     const chord = parseChord(name, notation);
@@ -117,22 +125,30 @@ export function transposer(
 
 // A whole song's ChordPro text with every chord moved - for keeping a song
 // in the key it was tried in on the screen. The very same chords the song
-// page shows at that transposition (the key from the first chord, as
-// there); the words and everything else stay as they are.
+// page shows at that transposition: spelled for the song's key (homeChord
+// - its first chord where no key is given); the words and everything else
+// stay as they are.
 export function transposeChordPro(
   source: string,
   steps: number,
   notation: Notation = NOTATION,
+  homeChord: string | undefined = firstChord(source),
 ): string {
-  const move = transposer(firstChord(source), steps, notation);
+  const move = transposer(homeChord, steps, notation);
   return source.replace(BRACKETS, (_, name: string) => `[${move(name.trim())}]`);
 }
 
 const BRACKETS = /\[([^\]\n]*)\]/g;
 
-// The first chord of a song's ChordPro text - what its key is taken from.
+// Everything a song's ChordPro text has in [brackets], in its order -
+// chords, and the labels among them.
+export function bracketed(source: string): string[] {
+  return [...source.matchAll(BRACKETS)].map((m) => m[1].trim()).filter(Boolean);
+}
+
+// The first chord of a song's ChordPro text.
 export function firstChord(source: string): string | undefined {
-  return [...source.matchAll(BRACKETS)].map((m) => m[1].trim()).find(Boolean);
+  return bracketed(source)[0];
 }
 
 // How many semitones from one chord's root to another's, the short way

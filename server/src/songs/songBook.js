@@ -5,8 +5,10 @@ import { ANNEXES } from './songBookAnnexes.js';
 import {
   chordNamePieces,
   chordShape,
+  keyName,
   parseChord,
   parseChordPro,
+  songKey,
   toBlocks,
   toWords,
   uniqueChords,
@@ -188,8 +190,20 @@ function drawSong(doc, song, diagrams) {
   const titleHeight = doc.heightOfString(song.title, titleOptions);
   doc.text(song.title, left, y, titleOptions);
   y += titleHeight + 1;
-  if (song.artist) {
-    put(doc, song.artist, left, y, { font: 'Italic', size: 10.5, color: GREY });
+  // Under the title: the artist, and after it the song's key (the one set
+  // by hand, or what its chords say) in a quiet tag - "a-moll".
+  const key = keyName(songKey(song));
+  if (song.artist || key) {
+    let x = left;
+    if (song.artist) {
+      put(doc, song.artist, x, y, { font: 'Italic', size: 10.5, color: GREY });
+      x += widthOf(doc, song.artist, 'Italic', 10.5) + 8;
+    }
+    if (key) {
+      const width = widthOf(doc, key, 'Heading', 8.5) + 10;
+      doc.roundedRect(x, y + 0.5, width, 12.5, 6.25).fill('#e8f3ee');
+      put(doc, key, x + 5, y + 2.2, { font: 'Heading', size: 8.5, color: GREEN });
+    }
     y += 15;
   }
   y += 9;

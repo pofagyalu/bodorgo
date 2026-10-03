@@ -6,6 +6,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { SongSheet } from '../song-sheet/song-sheet';
 import { TextEdit, insertChord, nudgeChord, wrapChorus } from '../chord-text';
+import { allKeys, chordSignature, detectKey, keyName } from '../song-key';
 
 // The Daloskönyv's editor - a new song, or an existing one: its title
 // and artist, and the ChordPro text with the song drawn live beside
@@ -39,6 +40,32 @@ export class SongEdit implements OnInit {
   artist = signal('');
   chordpro = signal('');
 
+  // --- The song's key (hangnem) ---
+
+  // Every key there is to choose, with its name ("a-moll").
+  readonly keys = allKeys().map((home) => ({ home, name: keyName(home) }));
+  // What the chords in the text say, as they are typed.
+  detectedKey = computed(() => keyName(detectKey(this.chordpro())));
+  // The key chosen by hand, and the chords it was chosen for: it holds only
+  // while the chords stay as they were - change a chord, and the key is
+  // worked out again (and can be set by hand again).
+  private chosenKey = signal('');
+  private chosenFor = signal('');
+  key = computed(() =>
+    this.chosenKey() && chordSignature(this.chordpro()) === this.chosenFor()
+      ? this.chosenKey()
+      : '',
+  );
+
+  // The key as the song will show it: the one chosen, or the one the
+  // chords say.
+  previewKey = computed(() => (this.key() ? keyName(this.key()) : this.detectedKey()));
+
+  chooseKey(home: string) {
+    this.chosenKey.set(home);
+    this.chosenFor.set(chordSignature(this.chordpro()));
+  }
+
   // Where "Mégse" leads: back to the song, or to the list.
   backLink = computed(() => {
     const song = this.song();
@@ -55,6 +82,7 @@ export class SongEdit implements OnInit {
         this.title.set(song.title);
         this.artist.set(song.artist);
         this.chordpro.set(song.chordpro);
+        this.chooseKey(song.key);
         this.loading.set(false);
       },
       error: () => {
@@ -110,7 +138,13 @@ export class SongEdit implements OnInit {
       this.notifications.addError('A dalnak kell legyen címe.');
       return;
     }
-    const input = { title, artist: this.artist().trim(), chordpro: this.chordpro() };
+    const input = {
+      title,
+      artist: this.artist().trim(),
+      chordpro: this.chordpro(),
+      // The key set by hand, if it still holds - '' leaves it to the chords.
+      key: this.key(),
+    };
     const song = this.song();
     this.saving.set(true);
     (song

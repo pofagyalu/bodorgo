@@ -226,9 +226,25 @@ button {
 }
 
 .artist {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
   margin: 0.3rem 0 0;
   color: $muted;
   font-size: calc(0.95rem * var(--scale));
+}
+
+// The song's key after the artist ("a-moll"): a quiet tag - there to be
+// found, not to be looked at.
+.song-key {
+  padding: 0.1em 0.6em;
+  border-radius: 10rem;
+  background: #e8f3ee;
+  color: $teal;
+  font-size: 0.86em;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 // "Eredeti hangnem: am" - a quiet note under the artist, and a button.

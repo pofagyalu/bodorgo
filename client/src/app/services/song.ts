@@ -15,6 +15,11 @@ export interface SongListItem {
   title: string;
   artist: string;
   slug: string;
+  // The song's key (hangnem) as its home chord - "C", "am": the one set
+  // by hand ('' while none is), and the one its chords say ('' for a song
+  // without chords). pages/daloskonyv/song-key.ts names them ("a-moll").
+  key: string;
+  detectedKey: string;
 }
 
 export interface Song extends SongListItem {
@@ -33,6 +38,8 @@ export interface SongInput {
   artist: string;
   chordpro: string;
   originalKey?: string;
+  // The key set by hand ("C", "am"); '' leaves it to the chords.
+  key?: string;
 }
 
 // Whose chord diagrams the PDF has - or none.

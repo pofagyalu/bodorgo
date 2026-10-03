@@ -288,6 +288,29 @@ $line: #e4eae7;
   }
 }
 
+// The song's key at its row's end ("a-moll"): small and quiet.
+.song-key {
+  flex: none;
+  align-self: center;
+  margin-left: auto;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10rem;
+  background: #e8f3ee;
+  color: $teal;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.song-list a.active .song-key {
+  background: #ffffff2e;
+  color: #fff;
+}
+
+.song-list a.played:not(.active) .song-key {
+  opacity: 0.55;
+}
+
 .song-name {
   min-width: 0;
   // A long title wraps - the list never scrolls sideways.

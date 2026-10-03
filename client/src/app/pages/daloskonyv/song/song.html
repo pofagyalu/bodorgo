@@ -160,8 +160,26 @@
     <article class="sheet" #sheet>
       <header class="song-head">
         <h2>{{ song()!.title }}</h2>
-        @if (song()!.artist) {
-          <p class="artist">{{ song()!.artist }}</p>
+        <!-- The artist, and after it the song's key in a quiet tag: the one
+             set by hand, or what the chords say - moved with the
+             transposing on the screen. -->
+        @if (song()!.artist || keyLabel()) {
+          <p class="artist">
+            @if (song()!.artist) {
+              <span>{{ song()!.artist }}</span>
+            }
+            @if (keyLabel(); as key) {
+              <span
+                class="song-key"
+                [title]="
+                  keySetByHand()
+                    ? 'A dal hangneme (kézzel megadva)'
+                    : 'A dal hangneme (az akkordjaiból)'
+                "
+                >{{ key }}</span
+              >
+            }
+          </p>
         }
         <!-- Saved in another key than it was first written in: what that
              was - a tap shows the song in it again (on the screen only). -->
@@ -180,6 +198,7 @@
       <app-song-sheet
         [chordpro]="song()!.chordpro"
         [transpose]="transpose()"
+        [songKey]="song()!.key"
         [instrument]="instrument()"
         [showDiagrams]="showDiagrams()"
       />
