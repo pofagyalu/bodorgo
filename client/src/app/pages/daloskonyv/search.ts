@@ -12,6 +12,14 @@ export const fold = (text: string) =>
     })
     .join('');
 
+// One artist's songs: the ones that name exactly that artist (spaces
+// around it aside) - not the ones that only have the name in them
+// somewhere. '' for everyone's.
+export function songsOf<Song extends { artist: string }>(songs: Song[], artist: string): Song[] {
+  const name = artist.trim();
+  return name ? songs.filter((song) => song.artist.trim() === name) : songs;
+}
+
 // The words of a search have to be this long before the lyrics are looked
 // through: one or two letters are in every song.
 export const LYRICS_FROM = 3;

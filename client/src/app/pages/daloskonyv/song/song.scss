@@ -249,6 +249,24 @@ button {
   font-size: calc(0.95rem * var(--scale));
 }
 
+// The artist's name is a button (the list with this artist's songs) that
+// looks like the plain words it was: no underline, only a darker color
+// under the pointer.
+.artist-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    color: $ink;
+  }
+}
+
 // The song's key after the artist ("a-moll"): a quiet tag - there to be
 // found, not to be looked at.
 .song-key {

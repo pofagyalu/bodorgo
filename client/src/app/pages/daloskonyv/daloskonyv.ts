@@ -7,7 +7,7 @@ import { SongListItem, SongService } from '../../services/song';
 import { keyName } from './song-key';
 import { Instrument } from './chord-shapes';
 import { ANNEXES } from './annexes';
-import { fold, searchSongs } from './search';
+import { fold, searchSongs, songsOf } from './search';
 
 // Daloskönyv: the club's songbook - for everyone logged in. The table of
 // contents (searchable), and the chosen song beside it (song/song.ts, the
@@ -67,8 +67,23 @@ export class Daloskonyv implements OnInit {
   // What the search finds (search.ts): the songs with it in their title or
   // artist, then the ones with it only in their words - those with the
   // line it was found in. Without a search: every song.
-  found = computed(() => searchSongs(this.songs() ?? [], this.search(), this.songService.lyrics()));
+  // Narrowed first to the one artist chosen on a song's page, if any.
+  found = computed(() =>
+    searchSongs(
+      songsOf(this.songs() ?? [], this.artist()),
+      this.search(),
+      this.songService.lyrics(),
+    ),
+  );
   filtered = computed(() => this.found().map((f) => f.song));
+
+  // The artist the list is narrowed to ('' for none), and the way back to
+  // everyone's songs.
+  artist = this.songService.artist;
+
+  clearArtist() {
+    this.artist.set('');
+  }
 
   // A song's key as the list shows it ("a-moll"): the one set by hand, or
   // the one its chords say - '' for a song without chords.
@@ -79,6 +94,8 @@ export class Daloskonyv implements OnInit {
   // The pages that aren't songs (the tuner, the two annexes) - in the list
   // before the songs, found by the same search.
   annexes = computed(() => {
+    // One artist's songs: no place for the pages that aren't songs.
+    if (this.artist()) return [];
     const q = fold(this.search().trim());
     return q
       ? ANNEXES.filter((a) => fold(`${a.title} ${a.about} ${a.keywords}`).includes(q))

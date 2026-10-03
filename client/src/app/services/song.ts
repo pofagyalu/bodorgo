@@ -107,6 +107,11 @@ export class SongService {
   // or above an open song (the list is beside it then).
   readonly search = signal('');
 
+  // The one artist the song list is narrowed to (exactly as the songs name
+  // them) - chosen by a tap on the artist's name on a song's page, '' for
+  // everyone. The search works within it.
+  readonly artist = signal('');
+
   // The table of contents, in the book's order - null until it arrives.
   // Kept here so the song page's previous/next has it too.
   readonly songs = signal<SongListItem[] | null>(null);

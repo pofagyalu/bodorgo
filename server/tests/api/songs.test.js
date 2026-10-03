@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember } from '../helpers/factories.js';
 import Song from '../../src/models/songModel.js';
+import { songsByArtist } from '../../src/songs/songBook.js';
 
 // Daloskönyv: the songbook (songController.js).
 
@@ -289,6 +290,51 @@ describe('Daloskönyv: the book as a PDF', () => {
     expect(guitar.body.length).not.toBe(plain.body.length);
     // An unknown instrument or paper: the plain A4 book.
     expect((await book(owner, '?diagrams=harp&size=A0')).body.length).toBe(plain.body.length);
+  });
+
+  it('ends with the songs grouped by their artists', async () => {
+    // Made-up songs. The artists in the Hungarian alphabet's order, each
+    // one's songs by title, the songs without an artist last.
+    const songs = [
+      { title: 'Zúg az erdő', artist: 'Ökörszem' },
+      { title: 'Alma', artist: '' },
+      { title: 'Ősz', artist: 'Árnyék' },
+      { title: 'Este', artist: 'Ökörszem' },
+      { title: 'Dél', artist: ' Zenebona ' },
+    ];
+    expect(songsByArtist(songs)).toEqual([
+      { artist: 'Árnyék', songs: [{ title: 'Ősz', at: 2 }] },
+      {
+        artist: 'Ökörszem',
+        songs: [
+          { title: 'Este', at: 3 },
+          { title: 'Zúg az erdő', at: 0 },
+        ],
+      },
+      { artist: 'Zenebona', songs: [{ title: 'Dél', at: 4 }] },
+      { artist: 'Előadó nélkül', songs: [{ title: 'Alma', at: 1 }] },
+    ]);
+
+    // In the book: its last page, named in the contents.
+    const owner = await createOwner();
+    for (const song of songs) await add(owner, { ...song, chordpro: '[C]la' });
+    const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const pdf = await getDocument({
+      data: new Uint8Array((await book(owner)).body),
+      verbosity: 0,
+    }).promise;
+    const textOf = async (n) =>
+      (await (await pdf.getPage(n)).getTextContent()).items.map((i) => i.str).join(' ');
+    // The cover, the contents, five songs, two annexes, the index.
+    expect(pdf.numPages).toBe(10);
+    const contents = await textOf(2);
+    expect(contents).toContain('Mutató');
+    expect(contents).toContain('Dalok előadók szerint');
+    const index = await textOf(10);
+    expect(index).toContain('Dalok előadók szerint');
+    expect(index.indexOf('Árnyék')).toBeLessThan(index.indexOf('Ökörszem'));
+    expect(index.indexOf('Ökörszem')).toBeLessThan(index.indexOf('Zenebona'));
+    expect(index.indexOf('Zenebona')).toBeLessThan(index.indexOf('Előadó nélkül'));
   });
 
   it('is drawn again after a song changes', async () => {

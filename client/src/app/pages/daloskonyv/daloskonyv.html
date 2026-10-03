@@ -57,6 +57,22 @@
       }
     </div>
 
+    <!-- The list narrowed to one artist (a tap on the name on a song's
+         page): whose songs these are, and the way back to all of them. -->
+    @if (artist(); as name) {
+      <button
+        type="button"
+        class="artist-filter"
+        (click)="clearArtist()"
+        title="Vissza az összes dalhoz"
+      >
+        <span
+          >Előadó: <strong>{{ name }}</strong></span
+        >
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+
     <!-- The songs played tonight carry a tick; one tap wipes them all. -->
     @if (played().size) {
       <button type="button" class="clear-played" (click)="clearPlayed()">

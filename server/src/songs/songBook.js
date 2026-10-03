@@ -20,10 +20,11 @@ import {
 // The whole Daloskönyv as one PDF: a cover, the table of contents (every
 // line a link to its song, with its page number), then the songs - each
 // from a new page, the chords over their syllables, and (if asked) how the
-// song's chords are held on the guitar or the ukulele -, and two annexes:
-// the circle of fifths and the table of the keys' chords. Every page after
-// the contents has a link back to it in its foot; the songs are in the
-// PDF's bookmarks too.
+// song's chords are held on the guitar or the ukulele -, two annexes (the
+// circle of fifths and the table of the keys' chords), and last an index:
+// the songs once more, grouped by their artists, each a link to its song.
+// Every page after the contents has a link back to it in its foot; the
+// songs are in the PDF's bookmarks too.
 
 // Same fonts as the other PDFs (assets/ - see sync.js): Mulish has the
 // Hungarian ő and ű that pdfkit's built-in fonts lack.
@@ -141,10 +142,13 @@ export function renderSongBook(
     // What the contents list: the songs, and - under their own heading -
     // the annexes that close the book (the circle of fifths, the keys'
     // chords).
+    // And last the index: the songs once more, grouped by their artists.
     const entries = [
       ...songs,
       { heading: 'Mellékletek' },
       ...ANNEXES.map((annex) => ({ title: annex.title, artist: '', draw: annex.draw })),
+      { heading: 'Mutató' },
+      { title: ARTIST_INDEX_TITLE, artist: '', index: true },
     ];
 
     // The contents come before the songs but need their page numbers:
@@ -158,16 +162,22 @@ export function renderSongBook(
     const tocPages = 1 + Math.max(0, Math.ceil((entries.length - perFirstPage) / perPage));
     for (let i = 1; i < tocPages; i += 1) doc.addPage();
 
-    const pages = entries.map((entry, i) => {
+    // Each entry's page - filled as the pages come, so the index at the
+    // end already knows where the songs are.
+    const pages = [];
+    entries.forEach((entry, i) => {
       // A heading of the contents has no page of its own.
-      if (entry.heading) return null;
+      if (entry.heading) {
+        pages.push(null);
+        return;
+      }
       doc.addPage();
       doc.addNamedDestination(`song-${i}`);
       doc.outline.addItem(entry.artist ? `${entry.title} – ${entry.artist}` : entry.title);
-      const page = pageIndex(doc);
-      if (entry.draw) entry.draw(doc, { margin: MARGIN, bottom: contentBottom(doc) });
+      pages.push(pageIndex(doc));
+      if (entry.index) drawArtistIndex(doc, songs, pages);
+      else if (entry.draw) entry.draw(doc, { margin: MARGIN, bottom: contentBottom(doc) });
       else drawSong(doc, entry, diagrams);
-      return page;
     });
 
     drawContents(doc, entries, pages, { firstTocPage, perFirstPage, perPage });
@@ -527,6 +537,112 @@ function drawContents(doc, songs, pages, { firstTocPage, perFirstPage, perPage }
     // The whole row leads to the song.
     doc.goTo(left, y - 1, right - left, TOC_ROW, `song-${i}`);
   });
+}
+
+// --- The index: the songs by their artists ---
+
+const ARTIST_INDEX_TITLE = 'Dalok előadók szerint';
+// The songs that name no artist, in a group of their own at the end.
+const NO_ARTIST = 'Előadó nélkül';
+const INDEX_ROW = 14;
+// Before an artist's name, apart from the songs above it.
+const INDEX_GROUP_GAP = 6;
+const INDEX_COLUMN_GAP = 22;
+
+const byHungarian = new Intl.Collator('hu', { sensitivity: 'base' });
+
+// The songs grouped by artist: the artists in the Hungarian alphabet's
+// order, each one's songs by title; the songs without an artist last.
+// Each song keeps its place in the book (`at`), for its page and link.
+export function songsByArtist(songs) {
+  const groups = new Map();
+  songs.forEach((song, at) => {
+    const artist = (song.artist ?? '').trim();
+    if (!groups.has(artist)) groups.set(artist, []);
+    groups.get(artist).push({ title: song.title, at });
+  });
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : byHungarian.compare(a, b)))
+    .map(([artist, list]) => ({
+      artist: artist || NO_ARTIST,
+      songs: list.sort((a, b) => byHungarian.compare(a.title, b.title)),
+    }));
+}
+
+// From the page the doc stands on: the artists' names, under each its
+// songs with their page numbers - every row a link to its song. In two
+// columns where the paper is wide enough (A4), going on to new pages as
+// needed. songs and pages: the book's, in its order.
+function drawArtistIndex(doc, songs, pages) {
+  const width = contentRight(doc) - MARGIN;
+  const columns = width > 400 ? 2 : 1;
+  const columnWidth = (width - INDEX_COLUMN_GAP * (columns - 1)) / columns;
+  const bottom = contentBottom(doc);
+
+  put(doc, ARTIST_INDEX_TITLE, MARGIN, MARGIN, { font: 'Heading', size: 18, color: GREEN });
+  // Under the title on the first page, from the top on the others.
+  let top = MARGIN + 3 * TOC_ROW;
+  let column = 0;
+  let y = top;
+
+  const nextColumn = () => {
+    column += 1;
+    if (column >= columns) {
+      doc.addPage();
+      column = 0;
+      top = MARGIN;
+    }
+    y = top;
+  };
+
+  for (const group of songsByArtist(songs)) {
+    // The name never stands alone at a column's foot: it needs the room
+    // of its first song too.
+    const gap = y > top ? INDEX_GROUP_GAP : 0;
+    if (y + gap + INDEX_ROW * 2 > bottom) nextColumn();
+    else y += gap;
+    const left = MARGIN + column * (columnWidth + INDEX_COLUMN_GAP);
+    put(doc, fitted(doc, group.artist, 'Heading', 10, columnWidth), left, y, {
+      font: 'Heading',
+      size: 10,
+      color: GREEN,
+    });
+    y += INDEX_ROW;
+
+    for (const song of group.songs) {
+      if (y + INDEX_ROW > bottom) nextColumn();
+      const x = MARGIN + column * (columnWidth + INDEX_COLUMN_GAP);
+      const right = x + columnWidth;
+      const number = String(pages[song.at] + 1);
+      const numberWidth = widthOf(doc, number, 'Body', 9.5);
+      const title = fitted(doc, song.title, 'Body', 9.5, columnWidth - numberWidth - 20);
+      put(doc, title, x + 8, y, { size: 9.5 });
+      const end = x + 8 + widthOf(doc, title, 'Body', 9.5);
+      // Dots leading to the page number.
+      if (right - numberWidth - 6 > end + 6) {
+        doc
+          .moveTo(end + 5, y + 9)
+          .lineTo(right - numberWidth - 5, y + 9)
+          .lineWidth(0.6)
+          .dash(0.6, { space: 2.6 })
+          .strokeColor(LIGHT)
+          .stroke()
+          .undash();
+      }
+      put(doc, number, right - numberWidth, y, { size: 9.5 });
+      doc.goTo(x, y - 1, columnWidth, INDEX_ROW, `song-${song.at}`);
+      y += INDEX_ROW;
+    }
+  }
+}
+
+// A text cut to fit a width, with "…" where it was cut.
+function fitted(doc, text, font, size, room) {
+  let cut = text;
+  while (cut.length > 4 && widthOf(doc, cut, font, size) > room) {
+    cut = `${cut.slice(0, -2).trimEnd()}…`;
+  }
+  return cut;
 }
 
 // The foot of every page but the cover: its number - and, from the first
