@@ -73,7 +73,25 @@
               <mat-icon>qr_code_scanner</mat-icon>
               {{ running() ? 'Kártya beolvasása' : 'Rajthoz: olvasd be a RAJT kártyát' }}
             </button>
-          } @else {
+          }
+          <!-- NFC: a touch on the card's sticker does the same. -->
+          @if (canNfc) {
+            @if (nfcOn()) {
+              <p class="nfc-on">
+                <mat-icon>nfc</mat-icon> NFC figyel – a kártya címkéjéhez érintve is olvashatsz.
+              </p>
+            } @else {
+              <button type="button" class="nfc-btn" (click)="listenNfc()">
+                <mat-icon>nfc</mat-icon>
+                {{
+                  nfcProblem()
+                    ? 'Az NFC nem indult el – kapcsold be a telefonon, és koppints újra'
+                    : 'NFC bekapcsolása – érintéssel is olvashatsz'
+                }}
+              </button>
+            }
+          }
+          @if (!canScan && !canNfc) {
             <p class="card how">
               <mat-icon>photo_camera</mat-icon>
               A kártyák QR-kódját a telefon saját kamerájával olvasd be – az megnyitja ezt az

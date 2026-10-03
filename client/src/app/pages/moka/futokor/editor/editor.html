@@ -310,6 +310,19 @@
                 Ha változtattál a pontok számán, előbb ments – a kártyák a mentett pályához
                 készülnek.
               </p>
+              <!-- Their NFC stickers, written with a tap each. -->
+              @if (canNfc && c.cards?.length) {
+                <div class="nfc-cards">
+                  <span>NFC-címke írása:</span>
+                  @for (t of c.cards; track t.tagId) {
+                    <app-nfc-write
+                      [url]="t.url"
+                      [name]="'Bódorgó futókör · ' + c.name + ' · ' + t.tagId"
+                      [label]="t.tagId"
+                    />
+                  }
+                </div>
+              }
             }
 
             <div class="foot">

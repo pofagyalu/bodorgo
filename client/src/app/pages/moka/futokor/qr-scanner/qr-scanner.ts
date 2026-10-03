@@ -1,5 +1,6 @@
 import { Component, ElementRef, OnDestroy, OnInit, output, signal, viewChild } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { tokenOfLink } from '../nfc/nfc';
 
 // The browser's own QR reader (Chrome on Android has it; an iPhone doesn't
 // - there the phone's camera app opens the card's link instead).
@@ -15,9 +16,6 @@ export const canScanInApp = () => !!BarcodeDetectorClass && !!navigator.mediaDev
 const LOOK_EVERY_MS = 200;
 // The same card isn't read again while it's still in front of the camera.
 const SAME_CARD_MS = 3000;
-// A card's link ends in its token: .../fk/<token> (the first ones:
-// .../versenyek/t/<token>).
-const CARD_LINK = /\/(?:fk|versenyek\/t)\/([^/?#]+)/;
 
 // The camera, kept on, reading the cards' QR codes right in the app: no
 // new tab for every card, and nothing to load - so it also works where
@@ -66,7 +64,7 @@ export class QrScanner implements OnInit, OnDestroy {
   }
 
   private found(text: string) {
-    const token = CARD_LINK.exec(text)?.[1];
+    const token = tokenOfLink(text);
     if (!token) return;
     const now = Date.now();
     if (token === this.last.token && now - this.last.at < SAME_CARD_MS) {
@@ -74,7 +72,7 @@ export class QrScanner implements OnInit, OnDestroy {
       return;
     }
     this.last = { token, at: now };
-    this.card.emit(decodeURIComponent(token));
+    this.card.emit(token);
   }
 
   ngOnDestroy() {
