@@ -29,6 +29,10 @@ const songSchema = new Schema(
     // one worked out from the chords (songController.js's detectedKey) is
     // wrong. Empty: the chords say. Dropped when the chords are changed.
     key: { type: String, trim: true, maxlength: 12, default: '' },
+    // The song's tempo in beats a minute, set by hand (typed, or tapped in
+    // the editor) - a marker like a printed songbook's "♩ = 96". null:
+    // none given.
+    tempo: { type: Number, min: 30, max: 300, default: null },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true },

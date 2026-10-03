@@ -42,6 +42,32 @@
             }
           </select>
         </label>
+        <!-- The song's tempo, beats a minute: typed, or tapped on the
+             button beside it - the number follows the tapping. -->
+        <div class="field field--tempo">
+          <span id="tempo-label">Tempó (BPM)</span>
+          <div class="tempo-row">
+            <input
+              type="number"
+              inputmode="numeric"
+              min="30"
+              max="300"
+              step="1"
+              placeholder="nincs"
+              aria-labelledby="tempo-label"
+              [value]="tempoText()"
+              (input)="tempoText.set($any($event.target).value)"
+            />
+            <button
+              type="button"
+              class="tap-btn"
+              (click)="tapTempo()"
+              title="Koppints a dal ütemére: a tempó a koppintásokból adódik"
+            >
+              <mat-icon>touch_app</mat-icon>Koppints
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- The text on the left, the song as it will look on the right

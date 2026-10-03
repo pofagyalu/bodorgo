@@ -85,14 +85,21 @@
         >
           <mat-icon>add</mat-icon>
         </button>
-        <!-- The songbook's owner, once the song is moved: keep it so. -->
-        @if (canEdit() && transpose() !== 0) {
+        <!-- The songbook's owner, once the song is moved: keep it so. The
+             button is there all along (pale and idle while the song isn't
+             moved), so the − and + never shift under the finger. -->
+        @if (canEdit()) {
           <button
             type="button"
             class="keep-key"
+            [class.keep-key--idle]="transpose() === 0"
             (click)="saveTransposed()"
-            [disabled]="savingKey()"
-            title="Mentés ebben a hangnemben"
+            [disabled]="transpose() === 0 || savingKey()"
+            [title]="
+              transpose() === 0
+                ? 'Mentés ebben a hangnemben (előbb transzponáld a dalt)'
+                : 'Mentés ebben a hangnemben'
+            "
             aria-label="A dal mentése ebben a hangnemben"
           >
             <mat-icon>save</mat-icon>
@@ -178,7 +185,7 @@
         <!-- The artist, and after it the song's key in a quiet tag: the one
              set by hand, or what the chords say - moved with the
              transposing on the screen. -->
-        @if (song()!.artist || keyLabel()) {
+        @if (song()!.artist || keyLabel() || song()!.tempo) {
           <p class="artist">
             @if (song()!.artist) {
               <span>{{ song()!.artist }}</span>
@@ -193,6 +200,27 @@
                 "
                 >{{ key }}</span
               >
+            }
+            <!-- The tempo, where one was given: a tap makes the tag blink it
+                 for a few bars (no sound), another tap stops it. The note is drawn:
+                 as a letter it comes from another font, and makes the tag
+                 tall. -->
+            @if (song()!.tempo; as tempo) {
+              <button
+                type="button"
+                class="song-tempo"
+                [class.song-tempo--on]="beating()"
+                [class.song-tempo--beat]="beatOn()"
+                [attr.aria-pressed]="beating()"
+                (click)="toggleMetronome()"
+                [title]="beating() ? 'A metronóm leállítása' : 'Metronóm a dal tempójában'"
+              >
+                <svg class="tempo-note" viewBox="0 0 8 14" aria-hidden="true">
+                  <ellipse cx="3.2" cy="11" rx="3" ry="2.2" transform="rotate(-20 3.2 11)" />
+                  <rect x="5.4" y="0.5" width="1" height="10.4" />
+                </svg>
+                = {{ tempo }}
+              </button>
             }
           </p>
         }

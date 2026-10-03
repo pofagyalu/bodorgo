@@ -211,6 +211,29 @@ describe('Daloskönyv: the songs', () => {
     expect((await patch({ key: 'Intro' })).status).toBe(400);
   });
 
+  it('keeps a tempo given by hand - a whole number of beats a minute, or none', async () => {
+    const owner = await createOwner();
+    const { song } = (await add(owner, { title: 'Dal', chordpro: '[C]la [G]la', tempo: 96 })).body
+      .data;
+    expect(song.tempo).toBe(96);
+    const patch = (body) => request(app).patch(`/songs/${song._id}`).set(asUser(owner)).send(body);
+
+    // A song without one says null.
+    const bare = (await add(owner, { title: 'Másik' })).body.data.song;
+    expect(bare.tempo).toBeNull();
+
+    // Changing the chords leaves it alone.
+    expect((await patch({ chordpro: '[D]la [A]la' })).body.data.song.tempo).toBe(96);
+    expect((await patch({ tempo: '120' })).body.data.song.tempo).toBe(120);
+    // Taken away again.
+    expect((await patch({ tempo: null })).body.data.song.tempo).toBeNull();
+    expect((await patch({ tempo: '' })).body.data.song.tempo).toBeNull();
+    // Out of bounds, a fraction, a word.
+    for (const tempo of [29, 301, 96.5, 'gyors']) {
+      expect((await patch({ tempo })).status).toBe(400);
+    }
+  });
+
   it('deletes a song', async () => {
     const owner = await createOwner();
     const { song } = (await add(owner, { title: 'Törlendő' })).body.data;

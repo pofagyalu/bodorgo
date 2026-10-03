@@ -19,6 +19,7 @@ import { SongSheet } from '../song-sheet/song-sheet';
 import { Instrument } from '../chord-shapes';
 import { NOTATION, firstChord, stepsBetween, transposeChordPro } from '../chords';
 import { keyName, songKey, transposeKey } from '../song-key';
+import { Metronome } from '../tempo';
 
 // The play button's paces, in rem per second at the normal letter size
 // (they grow with the letters): ▶, ▶▶, ▶▶▶.
@@ -162,6 +163,7 @@ export class SongPage implements OnDestroy {
     effect(() => {
       const slug = this.slug();
       this.stop();
+      this.stopMetronome();
       this.transpose.set(0);
       this.song.set(null);
       this.notFound.set(false);
@@ -188,6 +190,7 @@ export class SongPage implements OnDestroy {
 
   ngOnDestroy() {
     this.stop();
+    this.stopMetronome();
     this.resizeObserver.disconnect();
     document.removeEventListener('visibilitychange', this.onVisible);
   }
@@ -257,6 +260,41 @@ export class SongPage implements OnDestroy {
   });
   // Set by hand in the editor, not worked out.
   keySetByHand = computed(() => !!this.song()?.key);
+
+  // --- The metronome: tapped, the tempo's tag blinks the song's tempo for
+  // a few bars - or until it is tapped again (tempo.ts) ---
+
+  private metronome = new Metronome();
+  beating = signal(false);
+  // On for a moment at every beat - the tempo's tag blinks with it.
+  beatOn = signal(false);
+  private beatOff: ReturnType<typeof setTimeout> | null = null;
+
+  toggleMetronome() {
+    const tempo = this.song()?.tempo;
+    if (this.beating() || !tempo) {
+      this.stopMetronome();
+      return;
+    }
+    this.beating.set(true);
+    this.metronome.start(
+      tempo,
+      () => {
+        this.beatOn.set(true);
+        if (this.beatOff) clearTimeout(this.beatOff);
+        this.beatOff = setTimeout(() => this.beatOn.set(false), 110);
+      },
+      () => this.stopMetronome(),
+    );
+  }
+
+  private stopMetronome() {
+    this.metronome.stop();
+    if (this.beatOff) clearTimeout(this.beatOff);
+    this.beatOff = null;
+    this.beating.set(false);
+    this.beatOn.set(false);
+  }
 
   // The key the song was first written in, while it is saved in another
   // one: its first chord then ("am"), and how many semitones from the

@@ -29,6 +29,7 @@ const song = (over: Partial<Song> = {}): Song => ({
   chordpro: CHORDPRO,
   tags: [],
   originalKey: '',
+  tempo: null,
   key: '',
   detectedKey: 'C',
   updatedAt: '2026-01-01',
@@ -108,6 +109,40 @@ describe('SongPage', () => {
     expect(fixture.nativeElement.textContent).toContain('vizet');
   });
 
+  it('shows the tempo of a song that has one, and beats it on a tap', () => {
+    vi.useFakeTimers();
+    try {
+      open({ data: { song: song({ tempo: 120 }) } });
+      const tag: HTMLButtonElement = fixture.nativeElement.querySelector('.song-tempo');
+      expect(tag.textContent).toContain('= 120');
+
+      tag.click();
+      expect(page.beating()).toBe(true);
+      expect(page.beatOn()).toBe(true); // the first beat at once
+      vi.advanceTimersByTime(200);
+      expect(page.beatOn()).toBe(false);
+      vi.advanceTimersByTime(300);
+      expect(page.beatOn()).toBe(true); // half a second on: the second beat
+
+      // A second tap stops it.
+      tag.click();
+      expect(page.beating()).toBe(false);
+      expect(page.beatOn()).toBe(false);
+
+      // Left alone it stops by itself after a few bars.
+      tag.click();
+      vi.advanceTimersByTime(20000);
+      expect(page.beating()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows no tempo where none was given', () => {
+    open();
+    expect(fixture.nativeElement.querySelector('.song-tempo')).toBeNull();
+  });
+
   it('says so when there is no such song', () => {
     open(fail(404));
     expect(page.notFound()).toBe(true);
@@ -180,6 +215,28 @@ describe('SongPage', () => {
     expect(page.originalKey()).toBeNull();
     page.showOriginalKey();
     expect(page.transpose()).toBe(0);
+  });
+
+  it('keeps the save button in its place for the owner - idle until the song is moved', () => {
+    open();
+    const keep = () => fixture.nativeElement.querySelector('.keep-key') as HTMLButtonElement | null;
+    // Not the owner: no such button at all.
+    expect(keep()).toBeNull();
+
+    TestBed.inject(SongService).canEdit.set(true);
+    fixture.detectChanges();
+    expect(keep()?.disabled).toBe(true);
+    expect(keep()?.classList).toContain('keep-key--idle');
+
+    page.changeTranspose(1);
+    fixture.detectChanges();
+    expect(keep()?.disabled).toBe(false);
+    expect(keep()?.classList).not.toContain('keep-key--idle');
+
+    // Back at 0 it is idle again, still there.
+    page.transpose.set(0);
+    fixture.detectChanges();
+    expect(keep()?.disabled).toBe(true);
   });
 
   it('saves the song in the transposed key after a yes', async () => {
@@ -479,11 +536,39 @@ describe('SongEdit', () => {
       artist: 'Valaki',
       chordpro: '[C]la',
       key: '',
+      tempo: null,
     });
     req.flush({ data: { song: song({ slug: 'uj-dal' }) } });
     expect(success).toHaveBeenCalledWith('A dal elmentve.');
     expect(navigate).toHaveBeenCalledWith(['/daloskonyv', 'uj-dal']);
     http.expectOne((r) => r.url === songs && r.method === 'GET'); // the list is reloaded
+  });
+
+  it('takes the tempo typed or tapped, and saves it with the song', () => {
+    open('tavaszi-szel', { data: { song: song({ tempo: 96 }) } });
+    expect(page.tempoText()).toBe('96');
+
+    // Not a tempo: nothing is sent.
+    page.tempoText.set('500');
+    page.save();
+    expect(error).toHaveBeenCalledWith('A tempó 30 és 300 közötti egész szám lehet.');
+    http.expectNone((r) => r.method === 'PATCH');
+
+    // Tapped half a second apart: 120.
+    const now = vi.spyOn(performance, 'now');
+    now.mockReturnValue(1000);
+    page.tapTempo();
+    expect(page.tempoText()).toBe('500'); // one tap says nothing yet
+    now.mockReturnValue(1500);
+    page.tapTempo();
+    expect(page.tempoText()).toBe('120');
+    now.mockRestore();
+
+    page.save();
+    const req = http.expectOne((r) => r.method === 'PATCH');
+    expect(req.request.body.tempo).toBe(120);
+    req.flush({ data: { song: song({ tempo: 120 }) } });
+    http.expectOne((r) => r.url === songs && r.method === 'GET');
   });
 
   it('saves an existing song, and reports a refused save', () => {
