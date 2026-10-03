@@ -2799,6 +2799,22 @@ const paths = {
       errors: [404],
     }),
   },
+  '/songs/lyrics': {
+    get: op({
+      tag: T.songs,
+      summary: 'Every song’s words, for the search',
+      description:
+        'The whole book’s lyrics in one answer: each song’s words line by line, without chords (a chord inside a word is taken out of it), labels and directives. The songbook asks for it once when it opens and searches it on the spot - titles and artists first, then the words. A few hundred kB of text, compressed on the wire (gzip, like every JSON answer here).',
+      data: obj({
+        lyrics: arrayOf(
+          obj({
+            _id: id('The song.'),
+            lines: arrayOf(str('One line of its words.')),
+          }),
+        ),
+      }),
+    }),
+  },
   '/songs/{slug}': {
     get: op({
       tag: T.songs,
@@ -2806,6 +2822,30 @@ const paths = {
       description: 'With its lyrics and chords (`chordpro`).',
       params: [path('slug', 'The song’s slug, from the table of contents.')],
       data: obj({ song: ref('Song') }),
+      errors: [404],
+    }),
+  },
+  '/songs/{slug}/pdf': {
+    get: op({
+      tag: T.songs,
+      summary: 'One song as a PDF',
+      description:
+        'The song alone, as its page of the songbook - no cover, no contents: its title, artist and key, the chords over the lyrics, and how its chords are held if `diagrams` asks. With `transpose` the song is moved by that many semitones first - the chords spelled for the new key, as the song page shows them at that transposition. A song longer than a page has its pages numbered ("1 / 2"). The file is named after the song’s slug.',
+      params: [
+        path('slug', 'The song’s slug, from the table of contents.'),
+        query('diagrams', 'Whose chord diagrams to draw under the title. Omit for none.', {
+          type: 'string',
+          enum: ['guitar', 'ukulele'],
+        }),
+        query('size', 'The paper. Default: A4.', { type: 'string', enum: ['A4', 'A5'] }),
+        query(
+          'transpose',
+          'Semitones to move the song by, -11…11. Anything else: as it is saved.',
+          { type: 'integer', minimum: -11, maximum: 11 },
+        ),
+        query('download', 'Any value: sent as a download rather than shown in the browser.'),
+      ],
+      response: file(['application/pdf'], 'The song.'),
       errors: [404],
     }),
   },

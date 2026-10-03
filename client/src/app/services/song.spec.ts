@@ -100,6 +100,33 @@ describe('SongService', () => {
     expect(service.lastChanged()).toBe('x');
   });
 
+  it('fetches the songs’ words once per state of the book', () => {
+    const { service, http } = setUp();
+    // Nothing is known of the book yet: nothing to ask for.
+    service.loadLyrics();
+    http.expectNone(`${songs}/lyrics`);
+    expect(service.lyrics()).toBeUndefined();
+
+    service.lastChanged.set('x');
+    service.loadLyrics();
+    service.loadLyrics(); // asked already
+    http.expectOne(`${songs}/lyrics`).flush({
+      data: { lyrics: [{ _id: 's1', lines: ['első sor', 'második'] }] },
+    });
+    expect(service.lyrics()?.get('s1')).toEqual(['első sor', 'második']);
+    service.loadLyrics();
+    http.expectNone(`${songs}/lyrics`);
+
+    // A song has changed: asked again - and after a failure, again.
+    service.lastChanged.set('y');
+    service.loadLyrics();
+    http.expectOne(`${songs}/lyrics`).flush('', { status: 500, statusText: 'Error' });
+    expect(service.lyrics()?.get('s1')).toHaveLength(2); // the old ones stay
+    service.loadLyrics();
+    http.expectOne(`${songs}/lyrics`).flush({ data: { lyrics: [] } });
+    expect(service.lyrics()?.size).toBe(0);
+  });
+
   it('shows an empty list on a failed first load, but keeps a loaded one', () => {
     const { service, http } = setUp();
     service.loadSongs();

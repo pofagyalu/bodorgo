@@ -3,6 +3,7 @@ import PDFDocument from 'pdfkit';
 import { drawCover } from './songBookCover.js';
 import { ANNEXES } from './songBookAnnexes.js';
 import {
+  NOTATION,
   chordNamePieces,
   chordShape,
   keyName,
@@ -11,6 +12,8 @@ import {
   songKey,
   toBlocks,
   toWords,
+  transposeChordPro,
+  transposeKey,
   uniqueChords,
 } from './songText.js';
 
@@ -83,6 +86,43 @@ export function renderSongBookCover({ count, diagrams = null, lastAdded = new Da
   return new Promise((resolve, reject) => {
     const doc = newBook('A4', resolve, reject);
     drawCover(doc, { count, diagrams, lastAdded });
+    doc.end();
+  });
+}
+
+// One song alone, as its page of the book - no cover, no contents: its
+// title, artist and key, how its chords are held (if asked), the lyrics
+// with the chords over them. transpose: semitones to move it by first (the
+// way the song page shows it at that transposition - its chords spelled
+// for the new key, a key set by hand moved along). A long song's pages are
+// numbered "1 / 2".
+export function renderSongPdf(song, { diagrams = null, size = 'A4', transpose = 0 } = {}) {
+  return new Promise((resolve, reject) => {
+    const doc = newBook(size, resolve, reject);
+    doc.info.Title = song.title;
+    const home = songKey(song);
+    const moved = transpose
+      ? {
+          ...song,
+          chordpro: transposeChordPro(song.chordpro, transpose, NOTATION, home || undefined),
+          key: song.key ? transposeKey(song.key, transpose) : '',
+        }
+      : song;
+    doc.addPage();
+    drawSong(doc, moved, diagrams);
+
+    const { count } = doc.bufferedPageRange();
+    for (let i = 0; count > 1 && i < count; i += 1) {
+      doc.switchToPage(i);
+      // Under the bottom margin - which would otherwise start a new page.
+      doc.page.margins.bottom = 0;
+      put(doc, `${i + 1} / ${count}`, MARGIN, doc.page.height - 11 * MM, {
+        size: 9,
+        color: GREY,
+        width: doc.page.width - MARGIN * 2,
+        align: 'center',
+      });
+    }
     doc.end();
   });
 }
@@ -280,7 +320,13 @@ function layoutLine(doc, line, left) {
       x += piece.width;
     }
   }
-  for (const r of rows) if (r.hasChords) r.height = TEXT_ROW + CHORD_ROW;
+  // A line of chords or labels with no words ("[Intro]", "[C] [G]") is
+  // that one row alone - no empty line of text under it, so it sits right
+  // on the verse it belongs to.
+  const chordsOnly = line.type === 'chords-only';
+  for (const r of rows) {
+    if (r.hasChords) r.height = chordsOnly ? CHORD_ROW + 3 : TEXT_ROW + CHORD_ROW;
+  }
   return rows;
 }
 

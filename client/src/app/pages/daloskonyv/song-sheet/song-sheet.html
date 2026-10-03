@@ -14,7 +14,11 @@
         @if (line.type === 'comment') {
           <p class="comment">{{ line.text }}</p>
         } @else {
-          <p class="line" [class.line--chords]="line.hasChords">
+          <p
+            class="line"
+            [class.line--chords]="line.hasChords"
+            [class.line--chords-only]="line.type === 'chords-only'"
+          >
             @for (word of line.words; track $index) {
               <span class="word">
                 @for (piece of word; track $index) {

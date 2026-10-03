@@ -33,7 +33,7 @@
         <mat-icon>search</mat-icon>
         <input
           type="search"
-          placeholder="Keresés cím vagy előadó szerint"
+          placeholder="Keresés cím, előadó vagy szöveg szerint"
           aria-label="Keresés a dalok között"
           [value]="search()"
           (input)="search.set($any($event.target).value)"
@@ -94,7 +94,8 @@
       }
     } @else {
       <ol class="song-list">
-        @for (song of filtered(); track song._id) {
+        @for (hit of found(); track hit.song._id) {
+          @let song = hit.song;
           <li>
             <a
               [routerLink]="[base(), song.slug]"
@@ -108,6 +109,14 @@
                 <strong>{{ song.title }}</strong>
                 @if (song.artist) {
                   <small>{{ song.artist }}</small>
+                }
+                <!-- Found by its words, not its name: the line that has
+                     what was searched for. -->
+                @if (hit.line; as line) {
+                  <small class="found-line"
+                    >{{ line.before }}<mark>{{ line.match }}</mark
+                    >{{ line.after }}</small
+                  >
                 }
               </span>
               <!-- The song's key, at the row's end. -->

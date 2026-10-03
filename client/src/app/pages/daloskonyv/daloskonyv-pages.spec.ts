@@ -256,6 +256,24 @@ describe('SongPage', () => {
     expect(fixture.nativeElement.querySelector('.song-key')).toBeNull();
   });
 
+  it('offers the song alone as a PDF, the way it is on the screen', () => {
+    open();
+    const link = () =>
+      fixture.nativeElement.querySelector('a.song-pdf')?.getAttribute('href') as string;
+    // The chords over the song are shown: the chosen instrument's go along.
+    expect(link()).toBe(`${songs}/tavaszi-szel/pdf?diagrams=guitar&download=1`);
+
+    page.changeTranspose(-2);
+    page.chooseInstrument('ukulele');
+    fixture.detectChanges();
+    expect(link()).toBe(`${songs}/tavaszi-szel/pdf?diagrams=ukulele&transpose=-2&download=1`);
+
+    page.toggleDiagrams();
+    page.changeTranspose(2);
+    fixture.detectChanges();
+    expect(link()).toBe(`${songs}/tavaszi-szel/pdf?download=1`);
+  });
+
   describe('scrolling by itself', () => {
     let scroller: HTMLElement;
     const step = (now: number) => (page as unknown as { step(now: number): void }).step(now);
@@ -545,6 +563,35 @@ describe('Daloskonyv', () => {
     expect(page.bookUrl()).toBe(`${songs}/book.pdf?diagrams=guitar&download=1`);
   });
 
+  it('searches the songs’ words too, and shows the line that was found', () => {
+    open();
+    // The words arrive once the list is there.
+    respond({
+      'GET /songs/lyrics': {
+        data: {
+          lyrics: [
+            { _id: 's1', lines: ['Álmodj, királylány', 'Kinn a téren csend van'] },
+            { _id: 's2', lines: ['Tavaszi szél vizet áraszt', 'Minden madár társat választ'] },
+          ],
+        },
+      },
+    });
+    page.search.set('MADAR');
+    expect(page.found().map((f) => [f.song.slug, f.line?.match])).toEqual([
+      ['tavaszi-szel', 'madár'],
+    ]);
+    fixture.detectChanges();
+    const line: HTMLElement = fixture.nativeElement.querySelector('.song-list .found-line');
+    expect(line.textContent?.replace(/\s+/g, ' ').trim()).toBe('Minden madár társat választ');
+    expect(line.querySelector('mark')?.textContent).toBe('madár');
+
+    // A title's match comes first and shows no line.
+    page.search.set('tavaszi');
+    expect(page.found().map((f) => [f.song.slug, f.line])).toEqual([['tavaszi-szel', null]]);
+    page.search.set('csend');
+    expect(page.filtered().map((s) => s.slug)).toEqual(['almodj']);
+  });
+
   it('shows each song’s key at its row’s end', () => {
     open();
     // Set by hand; what the chords say; none for a song without chords.
@@ -625,6 +672,20 @@ describe('SongSheet', () => {
       .map((s) => s.chord)
       .filter(Boolean);
     expect(chords).toEqual(['D', 'A', 'D', 'Hm']); // Hungarian notation: H, not B
+  });
+
+  it('marks a line of labels or chords without words, so no empty line stands under it', () => {
+    fixture.componentRef.setInput('chordpro', '[Chorus]\n[C]Tavaszi [G]szél\n[C] [G]');
+    fixture.detectChanges();
+    const lines = [...fixture.nativeElement.querySelectorAll('.lyrics .line')] as HTMLElement[];
+    expect(lines.map((l) => l.classList.contains('line--chords-only'))).toEqual([
+      true,
+      false,
+      true,
+    ]);
+    // The label is one of the song's lines, in the verse it stands over.
+    expect(sheet.blocks()).toHaveLength(1);
+    expect(lines[0].querySelector('.chord--label')?.textContent?.trim()).toBe('Chorus');
   });
 
   it('writes a chord’s numbers as indexes - over the lyrics and over its diagram', () => {

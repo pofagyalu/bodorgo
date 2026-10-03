@@ -8,8 +8,9 @@ import {
   BOOK_SIZES,
   renderSongBook,
   renderSongBookCover,
+  renderSongPdf,
 } from '../songs/songBook.js';
-import { chordSignature, detectKey, parseChord } from '../songs/songText.js';
+import { chordSignature, detectKey, parseChord, plainLyrics } from '../songs/songText.js';
 import { DOCUMENT_PREVIEWS_DIR, pdfFirstPagePreview } from '../utils/documentPreviews.js';
 import { budapestYmd } from '../utils/huDate.js';
 
@@ -116,6 +117,33 @@ export const getSongs = async (req, res) => {
   });
 };
 
+// Each song's words line by line (songs/songText.js's plainLyrics) -
+// remembered per song until the song changes.
+const songWords = new Map();
+
+function wordsOf(song) {
+  const id = String(song._id);
+  const at = song.updatedAt?.getTime() ?? 0;
+  let known = songWords.get(id);
+  if (known?.at !== at) {
+    known = { at, lines: plainLyrics(song.chordpro ?? '') };
+    songWords.set(id, known);
+  }
+  return known.lines;
+}
+
+// GET /songs/lyrics - every song's words alone (no chords, no labels), for
+// the songbook's search to look through on the spot. One answer for the
+// whole book, asked for once when the songbook opens - a few hundred kB of
+// text, a quarter of that on the wire (app.js compresses it).
+export const getLyrics = async (req, res) => {
+  const songs = await Song.find().select('chordpro updatedAt');
+  res.status(200).json({
+    status: 'success',
+    data: { lyrics: songs.map((song) => ({ _id: song._id, lines: wordsOf(song) })) },
+  });
+};
+
 // GET /songs/:slug - one song, whole.
 export const getSong = async (req, res) => {
   const song = await Song.findOne({ slug: req.params.slug });
@@ -165,6 +193,27 @@ export const getSongBook = async (req, res) => {
   // Asked again each time (the cookie decides who may), never stored.
   res.setHeader('Cache-Control', 'private, no-cache');
   res.send(book.pdf);
+};
+
+// GET /songs/:slug/pdf?diagrams=guitar|ukulele&size=A4|A5&transpose=2&download=1
+// - one song alone, as its page of the book. transpose: semitones (-11…11)
+// to move it by first - the song as the song page shows it then.
+export const getSongPdf = async (req, res) => {
+  const song = await Song.findOne({ slug: req.params.slug }).lean();
+  if (!song) throw new AppError('Nincs ilyen dal.', 404);
+  const diagrams = BOOK_DIAGRAMS.includes(req.query.diagrams) ? req.query.diagrams : null;
+  const size = BOOK_SIZES.includes(req.query.size) ? req.query.size : 'A4';
+  const steps = Number(req.query.transpose);
+  const transpose = Number.isInteger(steps) && Math.abs(steps) < 12 ? steps : 0;
+
+  const pdf = await renderSongPdf(song, { diagrams, size, transpose });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `${req.query.download ? 'attachment' : 'inline'}; filename="${song.slug}.pdf"`,
+  );
+  res.setHeader('Cache-Control', 'private, no-cache');
+  res.send(pdf);
 };
 
 // The cover's small pictures already read from the disk, by file name.
