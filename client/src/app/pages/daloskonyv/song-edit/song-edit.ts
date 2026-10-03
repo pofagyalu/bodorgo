@@ -6,6 +6,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { SongSheet } from '../song-sheet/song-sheet';
 import { TextEdit, insertChord, nudgeChord, wrapChorus } from '../chord-text';
+import { chordsOverLyrics } from '../paste-chords';
 import { allKeys, chordSignature, detectKey, keyName } from '../song-key';
 
 // The Daloskönyv's editor - a new song, or an existing one: its title
@@ -121,6 +122,42 @@ export class SongEdit implements OnInit {
     const edit = nudgeChord(el.value, el.selectionStart, by);
     if (edit) this.apply(edit);
     else el.focus();
+  }
+
+  // A song copied from a page of tabs - lines of chords over lines of
+  // words - goes in as ChordPro (paste-chords.ts). First as it was copied,
+  // then turned: so one Ctrl+Z gives back the copied text, should the turn
+  // be wrong for a song. Anything else is pasted as usual.
+  onPaste(event: ClipboardEvent) {
+    const el = this.textarea()?.nativeElement;
+    const pasted = event.clipboardData?.getData('text/plain') ?? '';
+    const turned = chordsOverLyrics(pasted);
+    if (!el || turned === null) return;
+    event.preventDefault();
+
+    const raw = pasted.replace(/\r\n?/g, '\n');
+    const start = el.selectionStart;
+    const before = el.value.slice(0, start);
+    const after = el.value.slice(el.selectionEnd);
+    el.focus();
+    // execCommand keeps the text box's own undo; without it (or where it
+    // does nothing) the text is set straight.
+    const typed =
+      typeof document.execCommand === 'function' &&
+      document.execCommand('insertText', false, raw) &&
+      el.value === before + raw + after;
+    if (typed) {
+      el.setSelectionRange(start, start + raw.length);
+      document.execCommand('insertText', false, turned);
+    }
+    if (el.value !== before + turned + after) {
+      el.value = before + turned + after;
+      el.setSelectionRange(start + turned.length, start + turned.length);
+    }
+    this.chordpro.set(el.value);
+    this.notifications.addSuccess(
+      'Az akkordok a szövegbe kerültek. Ctrl+Z: vissza a másolt szöveghez.',
+    );
   }
 
   // Alt + ← / →: the same from the keyboard.

@@ -87,12 +87,14 @@
             [value]="chordpro()"
             (input)="chordpro.set($any($event.target).value)"
             (keydown)="onKeydown($event)"
+            (paste)="onPaste($event)"
           ></textarea>
           <p class="hint">
             Az akkord szögletes zárójelben áll, közvetlenül a szótagja előtt:
             <code>[am]Adj helyet [D]magad mellett</code>. Állj a kurzorral egy akkordba, és a ‹ ›
             gombokkal (vagy Alt + ← →) betűnként arrébb teheted. Üres sor: új versszak. Megjegyzés:
-            <code>&#123;comment: 2x&#125;</code>.
+            <code>&#123;comment: 2x&#125;</code>. Weboldalról másolt dalt (akkordsor a szövegsor
+            fölött) csak illessz be: az akkordok maguktól a szövegbe kerülnek.
           </p>
         </div>
 
