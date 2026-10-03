@@ -3,7 +3,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
-import { SongService } from '../../services/song';
+import { SongListItem, SongService } from '../../services/song';
+import { keyName } from './song-key';
 import { Instrument } from './chord-shapes';
 import { ANNEXES } from './annexes';
 
@@ -74,6 +75,12 @@ export class Daloskonyv implements OnInit {
     const q = fold(this.search().trim());
     return q ? songs.filter((s) => fold(`${s.title} ${s.artist}`).includes(q)) : songs;
   });
+
+  // A song's key as the list shows it ("a-moll"): the one set by hand, or
+  // the one its chords say - '' for a song without chords.
+  keyOf(song: SongListItem): string {
+    return keyName(song.key || song.detectedKey);
+  }
 
   // The pages that aren't songs (the tuner, the two annexes) - in the list
   // before the songs, found by the same search.

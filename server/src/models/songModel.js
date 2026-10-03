@@ -25,6 +25,10 @@ const songSchema = new Schema(
     // when the song is saved in another key, so its old key can be told
     // (and gone back to). Empty: never moved.
     originalKey: { type: String, trim: true, maxlength: 12, default: '' },
+    // The song's key set by hand, as its home chord ("C", "am") - when the
+    // one worked out from the chords (songController.js's detectedKey) is
+    // wrong. Empty: the chords say. Dropped when the chords are changed.
+    key: { type: String, trim: true, maxlength: 12, default: '' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true },

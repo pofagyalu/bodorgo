@@ -9,6 +9,7 @@ import {
   renderSongBook,
   renderSongBookCover,
 } from '../songs/songBook.js';
+import { chordSignature, detectKey, parseChord } from '../songs/songText.js';
 import { DOCUMENT_PREVIEWS_DIR, pdfFirstPagePreview } from '../utils/documentPreviews.js';
 import { budapestYmd } from '../utils/huDate.js';
 
@@ -25,7 +26,31 @@ export function requireSongEditor(req, res, next) {
   next();
 }
 
-const LIST_FIELDS = 'title artist slug';
+// The table of contents needs no lyrics - but the songs' keys are worked
+// out from their chords (detectedKey below), so the text is read too.
+const LIST_FIELDS = 'title artist slug key chordpro updatedAt';
+
+// A song's key as its chords say (songs/songText.js's detectKey: "C",
+// "am"; '' without chords) - remembered per song until the song changes.
+const detectedKeys = new Map();
+
+function detectedKey(song) {
+  const id = String(song._id);
+  const at = song.updatedAt?.getTime() ?? 0;
+  let known = detectedKeys.get(id);
+  if (known?.at !== at) {
+    known = { at, key: detectKey(song.chordpro ?? '') };
+    detectedKeys.set(id, known);
+  }
+  return known.key;
+}
+
+// A whole song as it is sent: with the key its chords say beside the one
+// set by hand (`key`, '' while none is).
+function songView(song) {
+  const { updatedBy: _updatedBy, __v, ...fields } = song.toObject();
+  return { ...fields, detectedKey: detectedKey(song) };
+}
 
 // The book's order: by title, the Hungarian way (á with a, ö after o...).
 const inBookOrder = (query) => query.collation({ locale: 'hu' }).sort('title');
@@ -49,6 +74,14 @@ function songFields(body, { partial = false } = {}) {
     fields.originalKey = String(body.originalKey ?? '').trim();
     if (fields.originalKey.length > 12) throw new AppError('Az eredeti hangnem túl hosszú.', 400);
   }
+  // The key set by hand, as its home chord ("C", "am") - '' leaves it to
+  // the chords.
+  if (body.key !== undefined) {
+    fields.key = String(body.key ?? '').trim();
+    if (fields.key && (fields.key.length > 12 || !parseChord(fields.key))) {
+      throw new AppError('Ilyen hangnem nincs.', 400);
+    }
+  }
   return fields;
 }
 
@@ -68,15 +101,26 @@ export const getSongs = async (req, res) => {
   ]);
   res.status(200).json({
     status: 'success',
-    data: { songs, canEdit: canEditSongs(req.user), lastChanged: last?.updatedAt ?? null },
+    data: {
+      songs: songs.map((song) => ({
+        _id: song._id,
+        title: song.title,
+        artist: song.artist,
+        slug: song.slug,
+        key: song.key ?? '',
+        detectedKey: detectedKey(song),
+      })),
+      canEdit: canEditSongs(req.user),
+      lastChanged: last?.updatedAt ?? null,
+    },
   });
 };
 
 // GET /songs/:slug - one song, whole.
 export const getSong = async (req, res) => {
-  const song = await Song.findOne({ slug: req.params.slug }).select('-updatedBy -__v');
+  const song = await Song.findOne({ slug: req.params.slug });
   if (!song) throw new AppError('Nincs ilyen dal.', 404);
-  res.status(200).json({ status: 'success', data: { song } });
+  res.status(200).json({ status: 'success', data: { song: songView(song) } });
 };
 
 // The finished PDFs, by what was asked for ("guitar|A4") - kept until a
@@ -100,7 +144,7 @@ async function currentBook(query) {
   const version = `${count}|${newest._id}|${lastChanged.updatedAt.getTime()}`;
   let book = bookCache.get(key);
   if (book?.version !== version) {
-    const songs = await inBookOrder(Song.find().select('title artist chordpro')).lean();
+    const songs = await inBookOrder(Song.find().select('title artist chordpro key')).lean();
     // The cover's "edition": the day the newest song came in.
     const pdf = await renderSongBook(songs, { diagrams, size, lastAdded: newest.createdAt });
     book = { version, pdf };
@@ -175,19 +219,26 @@ export const createSong = async (req, res) => {
     slug: await Song.freeSlug(fields.title),
     updatedBy: req.user._id,
   });
-  res.status(201).json({ status: 'success', data: { song } });
+  res.status(201).json({ status: 'success', data: { song: songView(song) } });
 };
 
-// PATCH /songs/:id - a new title gets a new slug (the song's address).
+// PATCH /songs/:id - a new title gets a new slug (the song's address). A
+// key set by hand holds only until the song's chords are next changed:
+// new chords without a key sent with them drop it, and the key is the one
+// the chords say again.
 export const updateSong = async (req, res) => {
   const song = await findSong(req.params.id);
   const fields = songFields(req.body, { partial: true });
   if (fields.title && fields.title !== song.title) {
     song.slug = await Song.freeSlug(fields.title, song._id);
   }
+  const newChords =
+    fields.chordpro !== undefined &&
+    chordSignature(fields.chordpro) !== chordSignature(song.chordpro ?? '');
+  if (newChords && fields.key === undefined) fields.key = '';
   song.set({ ...fields, updatedBy: req.user._id });
   await song.save();
-  res.status(200).json({ status: 'success', data: { song } });
+  res.status(200).json({ status: 'success', data: { song: songView(song) } });
 };
 
 // DELETE /songs/:id

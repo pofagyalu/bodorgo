@@ -129,6 +129,52 @@ describe('Daloskönyv: the songs', () => {
     expect((await patch({ originalKey: 'x'.repeat(13) })).status).toBe(400);
   });
 
+  it('says the key the chords are in - in the list and with the song', async () => {
+    const owner = await createOwner();
+    await add(owner, { title: 'Dúr', chordpro: '[C]la [F]la [G]la [C]la' });
+    await add(owner, { title: 'Moll', chordpro: '[am]la [dm]la [E]la [am]la' });
+    await add(owner, { title: 'Szöveg', chordpro: 'csak szöveg' });
+
+    const guest = await createGuest();
+    const list = await request(app).get('/songs').set(asUser(guest));
+    expect(list.body.data.songs.map((s) => [s.title, s.key, s.detectedKey])).toEqual([
+      ['Dúr', '', 'C'],
+      ['Moll', '', 'am'],
+      ['Szöveg', '', ''],
+    ]);
+    // The list still has no lyrics.
+    expect(list.body.data.songs[0].chordpro).toBeUndefined();
+    const one = await request(app).get('/songs/moll').set(asUser(guest));
+    expect(one.body.data.song).toMatchObject({ key: '', detectedKey: 'am' });
+  });
+
+  it('keeps a key set by hand until the chords are changed', async () => {
+    const owner = await createOwner();
+    const { song } = (await add(owner, { title: 'Dal', chordpro: '[C]la [F]la [G]la' })).body.data;
+    expect(song).toMatchObject({ key: '', detectedKey: 'C' });
+    const patch = (body) => request(app).patch(`/songs/${song._id}`).set(asUser(owner)).send(body);
+
+    // Set by hand: it overrules what the chords say, which is still told.
+    expect((await patch({ key: ' am ' })).body.data.song).toMatchObject({
+      key: 'am',
+      detectedKey: 'C',
+    });
+    // The words change, the chords don't: it stays.
+    const words = await patch({ chordpro: '[C]lalala [F]la [G]la' });
+    expect(words.body.data.song.key).toBe('am');
+    // The chords change: it is dropped, the key is worked out again.
+    const chords = await patch({ chordpro: '[G]la [C]la [D]la [G]la' });
+    expect(chords.body.data.song).toMatchObject({ key: '', detectedKey: 'G' });
+    // New chords with a key sent along (the editor, a song saved in a new
+    // key): that key is kept.
+    const both = await patch({ chordpro: '[A]la [D]la [E]la', key: 'f#m' });
+    expect(both.body.data.song).toMatchObject({ key: 'f#m', detectedKey: 'A' });
+    // Back to what the chords say.
+    expect((await patch({ key: '' })).body.data.song.key).toBe('');
+    // Only a chord's name is a key.
+    expect((await patch({ key: 'Intro' })).status).toBe(400);
+  });
+
   it('deletes a song', async () => {
     const owner = await createOwner();
     const { song } = (await add(owner, { title: 'Törlendő' })).body.data;

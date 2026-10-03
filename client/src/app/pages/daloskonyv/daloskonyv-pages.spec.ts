@@ -29,13 +29,37 @@ const song = (over: Partial<Song> = {}): Song => ({
   chordpro: CHORDPRO,
   tags: [],
   originalKey: '',
+  key: '',
+  detectedKey: 'C',
   updatedAt: '2026-01-01',
   ...over,
 });
+// s1: its key set by hand; s2: the one its chords say; s3: no chords.
 const LIST = [
-  { _id: 's1', title: 'Álmodj, királylány', artist: 'Zorán', slug: 'almodj' },
-  { _id: 's2', title: 'Tavaszi szél', artist: 'Népdal', slug: 'tavaszi-szel' },
-  { _id: 's3', title: 'Zöld erdőben', artist: 'Népdal', slug: 'zold-erdoben' },
+  {
+    _id: 's1',
+    title: 'Álmodj, királylány',
+    artist: 'Zorán',
+    slug: 'almodj',
+    key: 'am',
+    detectedKey: 'C',
+  },
+  {
+    _id: 's2',
+    title: 'Tavaszi szél',
+    artist: 'Népdal',
+    slug: 'tavaszi-szel',
+    key: '',
+    detectedKey: 'C',
+  },
+  {
+    _id: 's3',
+    title: 'Zöld erdőben',
+    artist: 'Népdal',
+    slug: 'zold-erdoben',
+    key: '',
+    detectedKey: '',
+  },
 ];
 
 let http: HttpTestingController;
@@ -177,6 +201,8 @@ describe('SongPage', () => {
     const req = http.expectOne(`${songs}/s2`);
     expect(req.request.body.originalKey).toBe('C');
     expect(req.request.body.chordpro).toContain('[D]Tavaszi [A]szél');
+    // No key set by hand: the new chords will say the new key.
+    expect(req.request.body.key).toBe('');
     void page.saveTransposed(); // already saving
     req.flush({ data: { song: song({ chordpro: req.request.body.chordpro, originalKey: 'C' }) } });
     expect(page.transpose()).toBe(0);
@@ -190,6 +216,44 @@ describe('SongPage', () => {
     respond({ 'PATCH /songs/s2': fail(403, 'Nincs jogod.') });
     expect(error).toHaveBeenCalledWith('Nincs jogod.');
     expect(page.savingKey()).toBe(false);
+  });
+
+  it('shows the song’s key after the artist, moved with the transposing', () => {
+    open();
+    const tag = () => fixture.nativeElement.querySelector('.artist .song-key')?.textContent?.trim();
+    // What the chords say.
+    expect(page.keyLabel()).toBe('C-dúr');
+    expect(page.keySetByHand()).toBe(false);
+    expect(tag()).toBe('C-dúr');
+    page.changeTranspose(2);
+    fixture.detectChanges();
+    expect(tag()).toBe('D-dúr');
+    page.changeTranspose(-3);
+    fixture.detectChanges();
+    expect(tag()).toBe('H-dúr');
+  });
+
+  it('shows a key set by hand rather than the one the chords say - and moves it when saving', async () => {
+    open({ data: { song: song({ key: 'am' }) } });
+    expect(page.keyLabel()).toBe('a-moll');
+    expect(page.keySetByHand()).toBe(true);
+
+    page.changeTranspose(2);
+    expect(page.keyLabel()).toBe('h-moll');
+    const saving = page.saveTransposed();
+    TestBed.inject(ConfirmService).answer(true);
+    await saving;
+    const req = http.expectOne(`${songs}/s2`);
+    // The key set by hand goes with the song.
+    expect(req.request.body.key).toBe('hm');
+    req.flush({ data: { song: song({ chordpro: req.request.body.chordpro, key: 'hm' }) } });
+    expect(page.keyLabel()).toBe('h-moll');
+  });
+
+  it('shows no key for a song without chords', () => {
+    open({ data: { song: song({ chordpro: 'csak szöveg', detectedKey: '' }) } });
+    expect(page.keyLabel()).toBe('');
+    expect(fixture.nativeElement.querySelector('.song-key')).toBeNull();
   });
 
   describe('scrolling by itself', () => {
@@ -365,7 +429,12 @@ describe('SongEdit', () => {
     page.chordpro.set('[C]la');
     page.save();
     const req = http.expectOne((r) => r.url === songs && r.method === 'POST');
-    expect(req.request.body).toEqual({ title: 'Új dal', artist: 'Valaki', chordpro: '[C]la' });
+    expect(req.request.body).toEqual({
+      title: 'Új dal',
+      artist: 'Valaki',
+      chordpro: '[C]la',
+      key: '',
+    });
     req.flush({ data: { song: song({ slug: 'uj-dal' }) } });
     expect(success).toHaveBeenCalledWith('A dal elmentve.');
     expect(navigate).toHaveBeenCalledWith(['/daloskonyv', 'uj-dal']);
@@ -381,6 +450,47 @@ describe('SongEdit', () => {
     req.flush({ message: 'Van már ilyen című dal.' }, { status: 400, statusText: 'x' });
     expect(error).toHaveBeenCalledWith('Van már ilyen című dal.');
     expect(page.saving()).toBe(false);
+  });
+
+  it('works the key out from the chords as they are typed', () => {
+    open(null);
+    expect(page.detectedKey()).toBe('');
+    expect(page.previewKey()).toBe('');
+    page.chordpro.set('[am]la [dm]la [E]la [am]la');
+    expect(page.detectedKey()).toBe('a-moll');
+    expect(page.previewKey()).toBe('a-moll');
+    expect(page.key()).toBe('');
+    fixture.detectChanges();
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('.field--key select');
+    expect(select.options[0].textContent?.trim()).toBe('automatikus (a-moll)');
+    expect(select.options).toHaveLength(25);
+  });
+
+  it('keeps a key chosen by hand only until a chord is changed', () => {
+    open('tavaszi-szel', { data: { song: song({ key: 'am' }) } });
+    // The song's own: it holds for the chords it came with.
+    expect(page.key()).toBe('am');
+    expect(page.previewKey()).toBe('a-moll');
+
+    // The words change, the chords don't: it stays.
+    page.chordpro.set(CHORDPRO.replace('vizet', 'esőt'));
+    expect(page.key()).toBe('am');
+    // A chord changes: the key is worked out again.
+    page.chordpro.set(CHORDPRO.replace('[G]', '[G7]'));
+    expect(page.key()).toBe('');
+    expect(page.previewKey()).toBe('C-dúr');
+    // Chosen again, for these chords.
+    page.chooseKey('G');
+    expect(page.key()).toBe('G');
+    page.save();
+    const req = http.expectOne(`${songs}/s2`);
+    expect(req.request.body.key).toBe('G');
+    req.flush({ data: { song: song({ key: 'G' }) } });
+    http.expectOne((r) => r.url === songs && r.method === 'GET');
+
+    // Back to automatic.
+    page.chooseKey('');
+    expect(page.key()).toBe('');
   });
 
   it('deletes the song only after a yes', async () => {
@@ -433,6 +543,16 @@ describe('Daloskonyv', () => {
     expect(page.canEdit()).toBe(true);
     expect(page.isOpen()).toBe(false);
     expect(page.bookUrl()).toBe(`${songs}/book.pdf?diagrams=guitar&download=1`);
+  });
+
+  it('shows each song’s key at its row’s end', () => {
+    open();
+    // Set by hand; what the chords say; none for a song without chords.
+    expect(LIST.map((s) => page.keyOf(s))).toEqual(['a-moll', 'C-dúr', '']);
+    const tags = [...fixture.nativeElement.querySelectorAll('.song-list .song-key')].map((t) =>
+      t.textContent?.trim(),
+    );
+    expect(tags).toEqual(['a-moll', 'C-dúr']);
   });
 
   it('searches titles, artists and annexes, ignoring accents and case', () => {

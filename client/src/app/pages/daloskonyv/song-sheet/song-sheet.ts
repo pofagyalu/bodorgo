@@ -2,6 +2,7 @@ import { Component, DestroyRef, computed, inject, input, signal } from '@angular
 import { BlockLine, Segment, parseChordPro, toBlocks, toWords } from '../chordpro';
 import { parseChord, transposer } from '../chords';
 import { ChordShape, Instrument, chordShape, uniqueChords } from '../chord-shapes';
+import { songKey } from '../song-key';
 import { ChordDiagram } from '../chord-diagram/chord-diagram';
 import { ChordName } from '../chord-name/chord-name';
 
@@ -43,6 +44,9 @@ export class SongSheet {
   chordpro = input.required<string>();
   // Semitones up (+) or down (-) - on the screen only.
   transpose = input(0);
+  // The song's key as its home chord ("C", "am"), when it was set by hand -
+  // the moved chords are spelled for it. '': the key the chords say.
+  songKey = input('');
   // Whose diagrams - null: none.
   instrument = input<Instrument | null>(null);
   showDiagrams = input(false);
@@ -52,11 +56,8 @@ export class SongSheet {
   // The song's lines with the chords moved to the key on the screen.
   private lines = computed(() => {
     const lines = parseChordPro(this.chordpro()).lines;
-    // The key: the song's first chord.
-    const first = lines
-      .flatMap((l) => (l.type === 'lyrics' || l.type === 'chords-only' ? l.segments : []))
-      .find((s) => s.chord)?.chord;
-    const move = transposer(first, this.transpose());
+    const key = songKey({ key: this.songKey(), chordpro: this.chordpro() });
+    const move = transposer(key, this.transpose());
     return lines.map((line) =>
       line.type === 'lyrics' || line.type === 'chords-only'
         ? {

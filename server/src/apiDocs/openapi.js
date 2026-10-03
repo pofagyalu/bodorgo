@@ -511,13 +511,24 @@ const schemas = {
     originalKey: str(
       'The song’s first chord as it was first written ("am") - set when the song is saved in another key, so its old key can be shown and gone back to. Empty: the song was never moved.',
     ),
+    key: str(
+      'The song’s key (hangnem) set by hand, as its home chord in the songbook’s notation: "C", "F#", "B" (B flat) for a major key, "am", "f#m" for a minor one. Empty: not set - the key is `detectedKey`. A key set by hand holds until the song’s chords are next changed.',
+    ),
+    detectedKey: str(
+      'The key the song’s chords say, in the same form ("C", "am"; empty for a song without chords): the key whose own chords the song’s fit best, the chord the song starts on counting most. An estimate - `key` overrules it. Shown as "C-dúr" / "a-moll" after the artist, in the song list and in the PDF.',
+    ),
     createdAt: date(),
     updatedAt: date(),
   }),
   SongInput: obj({
     title: str('Required for a new song.'),
     artist: str(),
-    chordpro: str('ChordPro text - see Song. At most 20 000 characters.'),
+    chordpro: str(
+      'ChordPro text - see Song. At most 20 000 characters. On a change (PATCH): if the chords in it differ from the stored ones and no `key` is sent along, the key set by hand is dropped (the key is the detected one again).',
+    ),
+    key: str(
+      'The key set by hand - see Song; a chord name ("C", "am"), 400 for anything else. Empty string: back to the detected key.',
+    ),
     tags: arrayOf(str()),
     originalKey: str(
       'See Song - sent by the song page with the transposed `chordpro` when a song is saved in a new key. At most 12 characters.',
@@ -2729,6 +2740,8 @@ const paths = {
             title: str(),
             artist: str('May be empty.'),
             slug: str('The song’s address - see GET /songs/{slug}.'),
+            key: str('The key set by hand ("C", "am") - empty if none. See Song.'),
+            detectedKey: str('The key the song’s chords say - see Song.'),
           }),
         ),
         canEdit: bool('The caller may add, change and delete songs.'),
@@ -2756,7 +2769,7 @@ const paths = {
       tag: T.songs,
       summary: 'The whole songbook as a PDF',
       description:
-        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page, the chords over their syllables, and two annexes on the last pages: the circle of fifths (Kvintkör) and the table of every major key’s seven chords (Akkordtáblázat). Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
+        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page with its key after the artist ("a-moll" - the one set by hand, or the detected one) and the chords over their syllables, and two annexes on the last pages: the circle of fifths (Kvintkör) and the table of every major key’s seven chords (Akkordtáblázat). Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
       params: [
         query(
           'diagrams',

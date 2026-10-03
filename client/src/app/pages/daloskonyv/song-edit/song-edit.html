@@ -28,6 +28,20 @@
             (input)="artist.set($any($event.target).value)"
           />
         </label>
+        <!-- The song's key: worked out from the chords as they are typed,
+             unless one is chosen here - which holds until a chord is next
+             changed. -->
+        <label class="field field--key">
+          <span>Hangnem</span>
+          <select aria-label="A dal hangneme" (change)="chooseKey($any($event.target).value)">
+            <option value="" [selected]="!key()">
+              automatikus{{ detectedKey() ? ' (' + detectedKey() + ')' : '' }}
+            </option>
+            @for (k of keys; track k.home) {
+              <option [value]="k.home" [selected]="key() === k.home">{{ k.name }}</option>
+            }
+          </select>
+        </label>
       </div>
 
       <!-- The text on the left, the song as it will look on the right
@@ -86,10 +100,17 @@
           <div class="pane-head"><strong>Így fog kinézni</strong></div>
           <div class="preview">
             <h2>{{ title() || 'Cím' }}</h2>
-            @if (artist()) {
-              <p class="artist">{{ artist() }}</p>
+            @if (artist() || previewKey()) {
+              <p class="artist">
+                @if (artist()) {
+                  <span>{{ artist() }}</span>
+                }
+                @if (previewKey(); as k) {
+                  <span class="song-key">{{ k }}</span>
+                }
+              </p>
             }
-            <app-song-sheet [chordpro]="chordpro()" [instrument]="instrument()" />
+            <app-song-sheet [chordpro]="chordpro()" [songKey]="key()" [instrument]="instrument()" />
           </div>
         </div>
       </div>

@@ -110,6 +110,10 @@
                   <small>{{ song.artist }}</small>
                 }
               </span>
+              <!-- The song's key, at the row's end. -->
+              @if (keyOf(song); as key) {
+                <span class="song-key">{{ key }}</span>
+              }
             </a>
           </li>
         }
