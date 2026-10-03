@@ -185,3 +185,14 @@ li + li {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+// Whose drawing the cheetah badge is.
+.credit {
+  margin: 1.5rem 0 0;
+  font-size: 0.75rem;
+  color: #8a989f;
+
+  a {
+    color: inherit;
+  }
+}

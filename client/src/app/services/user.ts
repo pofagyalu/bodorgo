@@ -106,6 +106,8 @@ export interface FamilyMember {
   email?: string;
   role: string;
   photoUpdatedAt?: string | null;
+  // Their number for the Futókör - a family member can tell them theirs.
+  futokod?: string | null;
 }
 
 export interface MyFamilyResponse {
