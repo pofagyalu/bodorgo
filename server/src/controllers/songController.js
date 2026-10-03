@@ -9,7 +9,7 @@ import {
   renderSongBook,
   renderSongBookCover,
 } from '../songs/songBook.js';
-import { chordSignature, detectKey, parseChord } from '../songs/songText.js';
+import { chordSignature, detectKey, parseChord, plainLyrics } from '../songs/songText.js';
 import { DOCUMENT_PREVIEWS_DIR, pdfFirstPagePreview } from '../utils/documentPreviews.js';
 import { budapestYmd } from '../utils/huDate.js';
 
@@ -113,6 +113,33 @@ export const getSongs = async (req, res) => {
       canEdit: canEditSongs(req.user),
       lastChanged: last?.updatedAt ?? null,
     },
+  });
+};
+
+// Each song's words line by line (songs/songText.js's plainLyrics) -
+// remembered per song until the song changes.
+const songWords = new Map();
+
+function wordsOf(song) {
+  const id = String(song._id);
+  const at = song.updatedAt?.getTime() ?? 0;
+  let known = songWords.get(id);
+  if (known?.at !== at) {
+    known = { at, lines: plainLyrics(song.chordpro ?? '') };
+    songWords.set(id, known);
+  }
+  return known.lines;
+}
+
+// GET /songs/lyrics - every song's words alone (no chords, no labels), for
+// the songbook's search to look through on the spot. One answer for the
+// whole book, asked for once when the songbook opens - a few hundred kB of
+// text, a quarter of that on the wire (app.js compresses it).
+export const getLyrics = async (req, res) => {
+  const songs = await Song.find().select('chordpro updatedAt');
+  res.status(200).json({
+    status: 'success',
+    data: { lyrics: songs.map((song) => ({ _id: song._id, lines: wordsOf(song) })) },
   });
 };
 

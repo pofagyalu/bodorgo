@@ -15,7 +15,7 @@ const outfile = 'src/songs/songText.js';
 await esbuild.build({
   stdin: {
     contents: `
-      export { parseChordPro, toBlocks, toWords } from './chordpro';
+      export { parseChordPro, plainLyrics, toBlocks, toWords } from './chordpro';
       export { chordNamePieces, parseChord, transposer, NOTATION } from './chords';
       export { chordShape, uniqueChords } from './chord-shapes';
       export { CIRCLE, DEGREES, keyChords } from './keys';

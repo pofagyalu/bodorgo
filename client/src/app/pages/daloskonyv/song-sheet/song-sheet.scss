@@ -73,6 +73,14 @@ $chord: #b5533a;
   font-size: 0.92em;
 }
 
+// A line of chords or labels with no words ("[Intro]", "[C] [G]"): just
+// that one row - no empty line of text under it, so it sits right on the
+// verse it belongs to. (The gaps between its chords keep their width.)
+.line--chords-only .text {
+  min-height: 0;
+  line-height: 0;
+}
+
 // With diagrams to show, a chord can be pointed at or tapped.
 .lyrics--diagrams .chord {
   cursor: pointer;

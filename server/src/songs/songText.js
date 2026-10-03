@@ -94,6 +94,21 @@ function toWords(segments) {
   }
   return words;
 }
+function plainLyrics(source) {
+  return parseChordPro(source)
+    .lines.flatMap((line) =>
+      line.type === 'lyrics'
+        ? [
+            line.segments
+              .map((s) => s.text)
+              .join('')
+              .replace(/\s+/g, ' ')
+              .trim(),
+          ]
+        : [],
+    )
+    .filter(Boolean);
+}
 
 // ../client/src/app/pages/daloskonyv/chords.ts
 var NOTATION = 'hungarian';
@@ -502,6 +517,7 @@ export {
   keyName,
   parseChord,
   parseChordPro,
+  plainLyrics,
   songKey,
   toBlocks,
   toWords,

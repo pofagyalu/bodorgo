@@ -129,6 +129,42 @@ describe('Daloskönyv: the songs', () => {
     expect((await patch({ originalKey: 'x'.repeat(13) })).status).toBe(400);
   });
 
+  it('gives every song’s words for the search - compressed, without the chords', async () => {
+    const owner = await createOwner();
+    const verse = '[C]Tavaszi szél vi[G]zet áraszt, [am]virágom, vi[C]rágom\n';
+    const one = (
+      await add(owner, {
+        title: 'Tavaszi szél',
+        chordpro: `[Intro] [C] [G]\n${verse.repeat(40)}\n{comment: 2x}`,
+      })
+    ).body.data.song;
+    await add(owner, { title: 'Akkordok', chordpro: '[C] [G] [am]' });
+
+    expect((await request(app).get('/songs/lyrics')).status).toBe(401);
+    const res = await request(app)
+      .get('/songs/lyrics')
+      .set(asUser(await createGuest()))
+      .set('Accept-Encoding', 'gzip');
+    expect(res.status).toBe(200);
+    // Worth compressing, and compressed.
+    expect(res.headers['content-encoding']).toBe('gzip');
+    const { lyrics } = res.body.data;
+    expect(lyrics).toHaveLength(2);
+    const words = lyrics.find((l) => l._id === one._id).lines;
+    expect(words).toHaveLength(40);
+    // A chord inside a word is out of it; labels and comments aren't words.
+    expect(words[0]).toBe('Tavaszi szél vizet áraszt, virágom, virágom');
+    expect(lyrics.find((l) => l._id !== one._id).lines).toEqual([]);
+
+    // A changed song's words are the new ones.
+    await request(app)
+      .patch(`/songs/${one._id}`)
+      .set(asUser(owner))
+      .send({ chordpro: '[C]Új sor' });
+    const again = await request(app).get('/songs/lyrics').set(asUser(owner));
+    expect(again.body.data.lyrics.find((l) => l._id === one._id).lines).toEqual(['Új sor']);
+  });
+
   it('says the key the chords are in - in the list and with the song', async () => {
     const owner = await createOwner();
     await add(owner, { title: 'Dúr', chordpro: '[C]la [F]la [G]la [C]la' });

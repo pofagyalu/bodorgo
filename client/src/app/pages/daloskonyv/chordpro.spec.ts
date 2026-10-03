@@ -1,4 +1,4 @@
-import { parseChordPro, toBlocks, toWords } from './chordpro';
+import { parseChordPro, plainLyrics, toBlocks, toWords } from './chordpro';
 
 describe('parseChordPro', () => {
   it('puts each chord before the text sung from it', () => {
@@ -121,5 +121,29 @@ describe('toWords', () => {
       [{ text: ' ' }],
       [{ chord: 'G', text: '' }],
     ]);
+  });
+});
+
+describe('plainLyrics', () => {
+  it('gives the words alone, a chord taken out of the middle of a word', () => {
+    expect(
+      plainLyrics(
+        [
+          '{title: Dal}',
+          '[Intro] [C] [G]',
+          '[C]Első sor szö[F]vege  itt',
+          '',
+          '{soc}',
+          'Ref[G]rén [C]sor [2x]',
+          '{eoc}',
+          '{comment: megjegyzés}',
+        ].join('\n'),
+      ),
+    ).toEqual(['Első sor szövege itt', 'Refrén sor']);
+  });
+
+  it('has nothing for a song of chords only, or an empty one', () => {
+    expect(plainLyrics('[C] [G] [am]')).toEqual([]);
+    expect(plainLyrics('')).toEqual([]);
   });
 });

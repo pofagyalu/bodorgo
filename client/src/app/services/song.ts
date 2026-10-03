@@ -127,6 +127,30 @@ export class SongService {
       });
   }
 
+  // Every song's words line by line, by the song's id - what the search
+  // looks through beside the titles (pages/daloskonyv/search.ts).
+  // undefined until they have arrived.
+  readonly lyrics = signal<ReadonlyMap<string, string[]> | undefined>(undefined);
+  // The book's state (lastChanged) the words were asked for.
+  private lyricsOf: string | null = null;
+
+  // Fetches the words - once per state of the book: asked again, it does
+  // nothing until a song has been added or changed. One answer for all the
+  // songs, compressed on the wire.
+  loadLyrics() {
+    const state = this.lastChanged();
+    if (!state || state === this.lyricsOf) return;
+    this.lyricsOf = state;
+    this.http
+      .get<{ data: { lyrics: { _id: string; lines: string[] }[] } }>(`${this.apiUrl}/lyrics`)
+      .subscribe({
+        next: (res) => this.lyrics.set(new Map(res.data.lyrics.map((l) => [l._id, l.lines]))),
+        // The titles are still searched; the next change of the book (or
+        // the next visit) tries again.
+        error: () => (this.lyricsOf = null),
+      });
+  }
+
   getSong(slug: string): Observable<Song> {
     return this.http
       .get<{ data: { song: Song } }>(`${this.apiUrl}/${encodeURIComponent(slug)}`)

@@ -280,7 +280,13 @@ function layoutLine(doc, line, left) {
       x += piece.width;
     }
   }
-  for (const r of rows) if (r.hasChords) r.height = TEXT_ROW + CHORD_ROW;
+  // A line of chords or labels with no words ("[Intro]", "[C] [G]") is
+  // that one row alone - no empty line of text under it, so it sits right
+  // on the verse it belongs to.
+  const chordsOnly = line.type === 'chords-only';
+  for (const r of rows) {
+    if (r.hasChords) r.height = chordsOnly ? CHORD_ROW + 3 : TEXT_ROW + CHORD_ROW;
+  }
   return rows;
 }
 

@@ -341,6 +341,15 @@ button {
   gap: 0.75rem;
 }
 
+// On a wide screen the list of the songs stands on the right
+// (daloskonyv.scss, 21rem wide): the play button is in the song's corner,
+// clear of it.
+@media (min-width: 901px) {
+  .play-bar {
+    right: calc(21rem + 1.5rem);
+  }
+}
+
 .play {
   @include fab.button;
   position: static;

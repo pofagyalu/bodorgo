@@ -288,6 +288,30 @@ $line: #e4eae7;
   }
 }
 
+// A song found by its words: the line that has what was searched for,
+// under its name - in italics, the found part marked.
+.song-name small.found-line {
+  margin-top: 0.15rem;
+  color: #3d4f58;
+  font-style: italic;
+
+  mark {
+    padding: 0 0.1em;
+    border-radius: 0.2em;
+    background: #fde9b8;
+    color: inherit;
+    font-weight: 600;
+  }
+}
+
+.song-list a.active .found-line {
+  color: #e8f3ee;
+
+  mark {
+    background: #ffffff38;
+  }
+}
+
 // The song's key at its row's end ("a-moll"): small and quiet.
 .song-key {
   flex: none;
@@ -335,10 +359,12 @@ $line: #e4eae7;
 // Wide screen: two panes exactly as tall as the screen under the header,
 // each scrolling by itself - so the contents never move while the song
 // scrolls (by hand or by the play button, see song.ts's scrollerElement).
+// The song is on the left - in the middle of the screen, between Média's
+// menu and the list -, the list of the songs on the right.
 @media (min-width: 901px) {
   .book--open {
     display: grid;
-    grid-template-columns: 21rem minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 21rem;
     height: calc(100dvh - var(--header-height));
     overflow: hidden;
 
@@ -346,9 +372,16 @@ $line: #e4eae7;
     .song-pane {
       min-height: 0;
       overflow-y: auto;
+      // Both in the one row, whatever their order in the page.
+      grid-row: 1;
+    }
+
+    .song-pane {
+      grid-column: 1;
     }
 
     .toc {
+      grid-column: 2;
       overflow-x: hidden;
     }
 
@@ -362,9 +395,9 @@ $line: #e4eae7;
 
     .toc {
       margin: 0;
-      padding: 1.5rem 1rem 2rem 1.5rem;
+      padding: 1.5rem 1rem 2rem 1.25rem;
       background: #fff;
-      border-right: 1px solid $line;
+      border-left: 1px solid $line;
     }
 
     .heading p {

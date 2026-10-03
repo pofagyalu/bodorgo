@@ -13,6 +13,8 @@ router.route('/').get(requireAuth, songController.getSongs).post(editor, songCon
 // /:slug, so they aren't taken for a song.
 router.get('/book.pdf', requireAuth, songController.getSongBook);
 router.get('/book.webp', requireAuth, songController.getSongBookPreview);
+// Every song's words, for the search - before /:slug as well.
+router.get('/lyrics', requireAuth, songController.getLyrics);
 
 router.get('/:slug', requireAuth, songController.getSong);
 

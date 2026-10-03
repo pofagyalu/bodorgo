@@ -145,3 +145,22 @@ export function toWords(segments: Segment[]): Segment[][] {
   }
   return words;
 }
+
+// A song's words alone, line by line - no chords (a chord inside a word is
+// taken out of it: "szö[F]vege" is "szövege"), no labels, no directives.
+// What the search looks through (search.ts).
+export function plainLyrics(source: string): string[] {
+  return parseChordPro(source)
+    .lines.flatMap((line) =>
+      line.type === 'lyrics'
+        ? [
+            line.segments
+              .map((s) => s.text)
+              .join('')
+              .replace(/\s+/g, ' ')
+              .trim(),
+          ]
+        : [],
+    )
+    .filter(Boolean);
+}

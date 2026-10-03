@@ -2799,6 +2799,22 @@ const paths = {
       errors: [404],
     }),
   },
+  '/songs/lyrics': {
+    get: op({
+      tag: T.songs,
+      summary: 'Every song’s words, for the search',
+      description:
+        'The whole book’s lyrics in one answer: each song’s words line by line, without chords (a chord inside a word is taken out of it), labels and directives. The songbook asks for it once when it opens and searches it on the spot - titles and artists first, then the words. A few hundred kB of text, compressed on the wire (gzip, like every JSON answer here).',
+      data: obj({
+        lyrics: arrayOf(
+          obj({
+            _id: id('The song.'),
+            lines: arrayOf(str('One line of its words.')),
+          }),
+        ),
+      }),
+    }),
+  },
   '/songs/{slug}': {
     get: op({
       tag: T.songs,

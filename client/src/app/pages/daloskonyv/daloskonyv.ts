@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { Component, OnInit, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,13 +7,7 @@ import { SongListItem, SongService } from '../../services/song';
 import { keyName } from './song-key';
 import { Instrument } from './chord-shapes';
 import { ANNEXES } from './annexes';
-
-// "Eső után" → "eso utan": the search doesn't mind accents or capitals.
-const fold = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
+import { fold, searchSongs } from './search';
 
 // Daloskönyv: the club's songbook - for everyone logged in. The table of
 // contents (searchable), and the chosen song beside it (song/song.ts, the
@@ -70,11 +64,11 @@ export class Daloskonyv implements OnInit {
   openAnnex = computed(() => this.open().annex);
   isOpen = computed(() => !!(this.openSlug() || this.openAnnex()));
 
-  filtered = computed(() => {
-    const songs = this.songs() ?? [];
-    const q = fold(this.search().trim());
-    return q ? songs.filter((s) => fold(`${s.title} ${s.artist}`).includes(q)) : songs;
-  });
+  // What the search finds (search.ts): the songs with it in their title or
+  // artist, then the ones with it only in their words - those with the
+  // line it was found in. Without a search: every song.
+  found = computed(() => searchSongs(this.songs() ?? [], this.search(), this.songService.lyrics()));
+  filtered = computed(() => this.found().map((f) => f.song));
 
   // A song's key as the list shows it ("a-moll"): the one set by hand, or
   // the one its chords say - '' for a song without chords.
@@ -90,6 +84,14 @@ export class Daloskonyv implements OnInit {
       ? ANNEXES.filter((a) => fold(`${a.title} ${a.about} ${a.keywords}`).includes(q))
       : ANNEXES;
   });
+
+  constructor() {
+    // The songs' words, for the search: fetched once the list is here, and
+    // again when a song has changed since (the service knows which it has).
+    effect(() => {
+      if (this.songService.lastChanged()) this.songService.loadLyrics();
+    });
+  }
 
   ngOnInit() {
     this.songService.loadSongs();
