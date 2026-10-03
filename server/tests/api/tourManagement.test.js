@@ -83,7 +83,7 @@ describe('reading tours', () => {
     expect(last3.body.data.tours).toHaveLength(3);
     const stats = await request(app).get('/tours/tour-stats').set(asUser(member));
     expect(stats.status).toBe(200);
-    expect(stats.body.data).toMatchObject({ totalTours: 4, upcomingTours: 0 });
+    expect(stats.body.data).toMatchObject({ totalTours: 4, upcomingTours: 0, running: null });
     // Tours still ahead aren't counted yet - they're "coming soon".
     const nextYear = new Date().getFullYear() + 1;
     await createTour({ startDate: new Date(`${nextYear}-05-10`) });

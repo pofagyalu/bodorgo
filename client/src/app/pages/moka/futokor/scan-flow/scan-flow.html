@@ -59,6 +59,22 @@
           </p>
         }
       }
+      <!-- NFC: reading the cards by touch - allowed here, once. -->
+      @if (nfc.can) {
+        @if (nfc.on()) {
+          <p class="nfc-ready">NFC bekapcsolva – a kártyákhoz érintve is olvashatsz.</p>
+        } @else {
+          <button type="button" class="live nfc-ask" (click)="nfc.listen()">
+            <span>
+              <strong>NFC bekapcsolása</strong>
+              {{
+                nfc.problem() ||
+                  'Így a kártyák NFC-címkéjéhez érintve is olvashatsz – kamera és net nélkül.'
+              }}
+            </span>
+          </button>
+        }
+      }
       <button type="button" class="link" (click)="step.set('who')">
         Nem te vagy? Indulás futókóddal
       </button>

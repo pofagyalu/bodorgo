@@ -51,6 +51,17 @@
           </a>
         }
 
+        <!-- What we've run together on the futókörök, all time. -->
+        @if (s.running; as r) {
+          <div class="stat-card">
+            <mat-icon [style.color]="runningIconColor">directions_run</mat-icon>
+            <span class="stat-value">{{ km(r.totalKm) }} km</span>
+            <span class="stat-label"
+              >futottunk eddig a futókörökön:<br />{{ r.laps }} kör, {{ r.runners }} futó</span
+            >
+          </div>
+        }
+
         @if (s.genderRatio; as g) {
           <div class="stat-card stat-card--gender">
             <div

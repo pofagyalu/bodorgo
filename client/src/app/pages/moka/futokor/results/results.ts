@@ -12,6 +12,7 @@ import {
   racePace,
   raceTime,
 } from '../../../../services/futokor';
+import { BADGES, SLOWEST_FROM, badgesOf } from '../badges';
 import { CourseMap, MapRunner } from '../course-map/course-map';
 import { RunList } from '../run-list/run-list';
 
@@ -75,6 +76,22 @@ export class FutokorResults implements OnDestroy {
       ),
     ].sort((a, b) => parseInt(a, 10) - parseInt(b, 10)),
   );
+
+  // The futókör's badges (badges.ts): the three best laps' runners and the
+  // slowest finisher - of everyone, whatever the table is narrowed to.
+  badges = computed(() =>
+    badgesOf(
+      (this.results()?.runners ?? [])
+        .filter((r) => r.best?.totalMs != null)
+        .map((r) => ({ userId: r.userId, totalMs: r.best!.totalMs! })),
+    ),
+  );
+  // What they mean, under the table - the slowest's only once it's given.
+  legend = computed(() => {
+    const given = new Set(this.badges().values());
+    return Object.values(BADGES).filter((b) => given.has(b));
+  });
+  readonly slowestFrom = SLOWEST_FROM;
 
   // The stretches of the loop, from card to card: RAJT → 1. pont, ...,
   // the last point → CÉL.

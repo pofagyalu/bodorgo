@@ -273,6 +273,24 @@ th.col-who {
   text-overflow: ellipsis;
 }
 
+// A runner's badge (badges.ts), after their name.
+.badge {
+  flex: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: help;
+}
+
+// What the badges mean.
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: #56666e;
+}
+
 .face {
   width: 1.875rem;
   height: 1.875rem;

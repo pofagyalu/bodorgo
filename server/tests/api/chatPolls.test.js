@@ -77,6 +77,9 @@ describe('polls started from the chat', () => {
   it('open poll: names are shown; reaching the minimum tells the yes-voters, once', async () => {
     const { tour, anna, bela, cili } = await setup();
     const { _id: id, options } = (await startPoll(tour, anna)).body.data.poll;
+    // The start's own notices (to Béla and Cili) go out after the answer:
+    // they're let through first, so they aren't counted below.
+    await vi.waitFor(() => expect(pushedTo()).toHaveLength(2));
     vi.mocked(webpush.sendNotification).mockClear();
     const vote = (u, i) =>
       request(app).post(`/polls/${id}/vote`).set(asUser(u)).send({ optionId: options[i]._id });

@@ -3,6 +3,7 @@ import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import Payment from '../models/paymentModel.js';
+import { FutokorCourse, FutokorRun } from '../models/futokorModels.js';
 import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservationController.js';
 import { tourHasEnded } from './reviewController.js';
 import { computeAge } from './userController.js';
@@ -675,6 +676,38 @@ async function attendeeAgeStats() {
   };
 }
 
+// What the club has run on the futókörök, all time: every finished lap
+// counts with its course's length (a lap on a course not measured yet
+// counts as a lap, with no distance). Null until someone has finished one.
+async function runningStats() {
+  const [ran] = await FutokorRun.aggregate([
+    { $match: { status: 'finished' } },
+    {
+      $lookup: {
+        from: FutokorCourse.collection.name,
+        localField: 'course',
+        foreignField: '_id',
+        as: 'course',
+      },
+    },
+    { $unwind: '$course' },
+    {
+      $group: {
+        _id: null,
+        meters: { $sum: { $ifNull: ['$course.distanceM', 0] } },
+        laps: { $sum: 1 },
+        runners: { $addToSet: '$user' },
+      },
+    },
+  ]);
+  if (!ran) return null;
+  return {
+    totalKm: Math.round(ran.meters / 100) / 10,
+    laps: ran.laps,
+    runners: ran.runners.length,
+  };
+}
+
 export const getTourStats = async (req, res) => {
   // Was previously $match: { ratingsAverage: { $gte: 4.5 } } before counting
   // - a leftover from this codebase's Natours-tutorial origins where the
@@ -762,6 +795,7 @@ export const getTourStats = async (req, res) => {
       totalParticipants,
       genderRatio,
       attendeeAges,
+      running: await runningStats(),
       mostAttendedTour: mostAttendedTourDoc
         ? {
             _id: mostAttendedTourDoc._id,

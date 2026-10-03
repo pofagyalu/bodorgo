@@ -15,6 +15,7 @@ import {
   isExpired,
   nextCheckpoint,
 } from '../../../../server/src/futokor/runRules.js';
+import type { FinishFacts } from '../pages/moka/futokor/finish-messages';
 
 // A card, as whoever manages it sees it.
 export interface FutokorTag {
@@ -186,6 +187,7 @@ const RUN_KEY = 'futokor-run';
 const QUEUE_KEY = 'futokor-queue';
 const ME_KEY = 'futokor-me';
 const CODE_RUNNER_KEY = 'futokor-runner';
+const RECORDS_KEY = 'futokor-records';
 const LIVE_KEY = 'futokor-live';
 const CODE_LIVE_KEY = 'futokor-runner-live';
 // How often the phone says where it is, while it's followed.
@@ -291,6 +293,13 @@ export class FutokorService {
       .sort((a, b) => b.run.startedAt.localeCompare(a.run.startedAt)),
   );
   syncing = signal(false);
+  // The best times of the open courses (by course, the fastest first), as
+  // the phone last had them - kept, for a finish with no connection.
+  private records = signal<Record<string, number[]>>(
+    load<Record<string, number[]>>(RECORDS_KEY) ?? {},
+  );
+  // The run (by its start) that came to the FINISH with a point missing.
+  private cameBackRun: number | null = null;
 
   // Whoever is logged in on this phone - remembered, so the phone knows it
   // in the garden too, where it can't ask.
@@ -433,12 +442,14 @@ export class FutokorService {
             courses?: FutokorCourse[];
             runs: FutokorRun[];
             allRuns?: Record<string, FutokorRun[]>;
+            records?: Record<string, number[]>;
             runner: { name: string };
           };
         }>(`${this.apiUrl}/active`),
       );
       const { course, courses, runs, allRuns, runner } = res.data;
       this.setCourses(courses ?? (course ? [course] : []), course);
+      this.setRecords(res.data.records);
       this.me.set({ name: runner.name });
       save(ME_KEY, this.me());
       if (!this.codeRunner()) {
@@ -460,15 +471,52 @@ export class FutokorService {
   private async loadPublicCourses() {
     try {
       const res = await firstValueFrom(
-        this.http.get<{ data: { course: FutokorCourse | null; courses?: FutokorCourse[] } }>(
-          `${this.apiUrl}/course`,
-        ),
+        this.http.get<{
+          data: {
+            course: FutokorCourse | null;
+            courses?: FutokorCourse[];
+            records?: Record<string, number[]>;
+          };
+        }>(`${this.apiUrl}/course`),
       );
       const { course, courses } = res.data;
       this.setCourses(courses ?? (course ? [course] : []), course);
+      this.setRecords(res.data.records);
     } catch {
       // Offline.
     }
+  }
+
+  private setRecords(records: Record<string, number[]> | undefined) {
+    if (!records) return;
+    this.records.set(records);
+    save(RECORDS_KEY, records);
+  }
+
+  // What the phone knows about the run that has just finished - for the
+  // line under its time (pages/moka/futokor/finish-messages.ts).
+  finishFacts(run: RuleRun | null): FinishFacts | null {
+    const courseId = this.runState()?.courseId;
+    if (!run || !courseId || run.totalMs == null) return null;
+    // My other runs here, as the server has them - if it has said.
+    const others = this.allRuns()[courseId]?.filter(
+      (r) => Date.parse(r.startedAt) !== run.startedAt,
+    );
+    const day = new Date(run.startedAt).toDateString();
+    return {
+      totalMs: run.totalMs,
+      paceSecPerKm: run.paceSecPerKm ?? null,
+      startedAt: run.startedAt,
+      myEarlier: others
+        ? others.filter((r) => r.status === 'finished' && r.totalMs != null).map((r) => r.totalMs!)
+        : null,
+      runsToday: others
+        ? others.filter((r) => new Date(r.startedAt).toDateString() === day).length + 1
+        : null,
+      records: this.records()[courseId] ?? null,
+      online: navigator.onLine,
+      cameBack: this.cameBackRun === run.startedAt,
+    };
   }
 
   private setCourses(courses: FutokorCourse[], tourCourse: FutokorCourse | null) {
@@ -574,6 +622,7 @@ export class FutokorService {
       time: now,
       action: input.action ?? null,
     });
+    if (outcome.result === 'incomplete') this.cameBackRun = current?.startedAt ?? null;
     // Only what counted goes to the server - it would refuse the rest the
     // same way.
     if (['started', 'passed', 'finished', 'gaveUp'].includes(outcome.result)) {

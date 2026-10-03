@@ -76,19 +76,19 @@
             </button>
           }
           <!-- NFC: a touch on the card's sticker does the same. -->
-          @if (canNfc) {
-            @if (nfcOn()) {
+          @if (nfc.can) {
+            @if (nfc.on()) {
               <p class="nfc-on">
                 <mat-icon>nfc</mat-icon> NFC figyel – a kártya címkéjéhez érintve is olvashatsz.
               </p>
             } @else {
-              <button type="button" class="nfc-btn" (click)="listenNfc()">
+              <button type="button" class="nfc-btn" (click)="nfc.listen()">
                 <mat-icon>nfc</mat-icon>
-                {{ nfcProblem() || 'NFC bekapcsolása – érintéssel is olvashatsz' }}
+                {{ nfc.problem() || 'NFC bekapcsolása – érintéssel is olvashatsz' }}
               </button>
             }
           }
-          @if (!canScan && !canNfc) {
+          @if (!canScan && !nfc.can) {
             <p class="card how">
               <mat-icon>photo_camera</mat-icon>
               A kártyák QR-kódját a telefon saját kamerájával olvasd be – az megnyitja ezt az

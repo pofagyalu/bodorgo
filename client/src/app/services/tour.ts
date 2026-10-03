@@ -548,6 +548,9 @@ export interface TourStatsResponse {
     // until at least one attendee has a gender on file.
     genderRatio: { malePercentage: number; femalePercentage: number } | null;
     attendeeAges?: AttendeeAges;
+    // What the club has run on the futókörök, all time (finished laps) -
+    // null until someone has finished one.
+    running?: { totalKm: number; laps: number; runners: number } | null;
     mostAttendedTour: {
       _id: string;
       title: string;

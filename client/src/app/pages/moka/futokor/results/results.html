@@ -134,6 +134,9 @@
                         [preview]="false"
                       />
                       {{ row.name }}
+                      @if (badges().get(row.userId); as b) {
+                        <span class="badge" [title]="b.name + ' – ' + b.about">{{ b.icon }}</span>
+                      }
                     </span>
                   </td>
                   <td>{{ row.genderText }}</td>
@@ -173,6 +176,15 @@
               }
             </tbody>
           </table>
+          @if (legend().length) {
+            <p class="legend">
+              @for (b of legend(); track b.name) {
+                <span
+                  >{{ b.icon }} <strong>{{ b.name }}</strong> – {{ b.about }}</span
+                >
+              }
+            </p>
+          }
         </div>
         <p class="note">
           A szakaszoknál mindenkinek a saját legjobb ideje áll az adott szakaszon (bármelyik

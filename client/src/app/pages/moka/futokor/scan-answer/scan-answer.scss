@@ -137,3 +137,29 @@ h1 {
     animation: none;
   }
 }
+
+// The line about a finished run: a record and a personal best stand out.
+.message {
+  max-width: 22rem;
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  background: #ffffff26;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.message--record,
+.message--best {
+  background: #fff;
+  color: #12843f;
+  font-weight: 800;
+  box-shadow: 0 0.375rem 1.5rem #0004;
+}
+
+.message--record {
+  background: linear-gradient(135deg, #ffe27a, #f6b528);
+  color: #5a3d00;
+}

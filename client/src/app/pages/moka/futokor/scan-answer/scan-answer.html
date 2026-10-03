@@ -25,6 +25,9 @@
     @if (answer().run?.paceSecPerKm; as p) {
       <p class="detail">{{ pace(p) }}</p>
     }
+    @if (message(); as m) {
+      <p class="message message--{{ m.kind }}">{{ m.text }}</p>
+    }
     @if (splits().length > 1) {
       <table class="splits">
         @for (s of splits(); track $index) {

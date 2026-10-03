@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { FutokorService, ScanAnswer, tagOfToken } from '../../../../services/futokor';
 import { ScanAnswerView, unlockSound } from '../scan-answer/scan-answer';
+import { NfcCards } from '../nfc/nfc-cards';
 
 // How long after a finish the same card again is still "the same scan"
 // rather than a new start (the rules' own window is the course's; this is
@@ -13,7 +14,9 @@ const JUST_FINISHED_MS = 30 * 1000;
 //   on the phone is asked "Indulhat?" - one tap, and the clock starts at
 //   that tap (it also lets the phone make sound). On a phone nobody is
 //   logged in on (or a lent one: "Nem te vagy?") the runner types their
-//   futókód once; the cards after that need nothing but the scan.
+//   futókód once; the cards after that need nothing but the scan. What
+//   the phone has to allow is asked here, before the clock starts: the
+//   location (Élő követés) and NFC (reading the cards by touch).
 // - Anything else: straight to the answer (scan-answer).
 // - START with checkpoints missing: the answer asks - go on, or again.
 @Component({
@@ -24,6 +27,8 @@ const JUST_FINISHED_MS = 30 * 1000;
 })
 export class ScanFlow implements OnInit {
   futokor = inject(FutokorService);
+  // The cards' NFC stickers: switched on here, before the start.
+  nfc = inject(NfcCards);
 
   // The end of the card's link: "T05.k3J9xQ...".
   token = input.required<string>();
