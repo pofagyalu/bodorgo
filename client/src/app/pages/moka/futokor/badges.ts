@@ -2,17 +2,28 @@
 //
 // ─── SZERKESZTHETŐ RÉSZ ──────────────────────────────────────────────────
 // A dobogósok (a legjobb körük szerint) és a leglassabb célba érő jelvénye:
-// a jel, a neve, és amit az egér fölé húzva (vagy a jelmagyarázatban) ír.
+// a jel, a neve és a leírása (a táblázatban csak a jel látszik). A jel
+// lehet egy emoji (icon) - vagy egy kép (image): ha van kép, az látszik.
+// A képek helye: client/src/assets/images/badges/ (SVG vagy PNG).
+//
+// A gepárd rajza: OpenMoji (openmoji.org), CC BY-SA 4.0 licenc.
 // ──────────────────────────────────────────────────────────────────────────
 
 export interface Badge {
   icon: string;
+  // A picture instead of the emoji (an address under assets/).
+  image?: string;
   name: string;
   about: string;
 }
 
 export const BADGES: Record<'first' | 'second' | 'third' | 'slowest', Badge> = {
-  first: { icon: '🐆', name: 'Gepárd', about: 'a leggyorsabb kör' },
+  first: {
+    icon: '🐆',
+    image: 'assets/images/badges/gepard.svg',
+    name: 'Gepárd',
+    about: 'a leggyorsabb kör',
+  },
   second: { icon: '🦌', name: 'Szarvas', about: 'a második legjobb kör' },
   third: { icon: '🐇', name: 'Nyúl', about: 'a harmadik legjobb kör' },
   slowest: { icon: '🐢', name: 'Teknős', about: 'a legkényelmesebb célba érő' },

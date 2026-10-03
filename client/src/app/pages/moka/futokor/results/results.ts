@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,9 +12,13 @@ import {
   racePace,
   raceTime,
 } from '../../../../services/futokor';
-import { BADGES, SLOWEST_FROM, badgesOf } from '../badges';
+import { Badge, badgesOf } from '../badges';
 import { CourseMap, MapRunner } from '../course-map/course-map';
 import { RunList } from '../run-list/run-list';
+
+// A badge shown big: its box's side, and the gap from the small one (px).
+const BIG_BADGE = 112;
+const BIG_BADGE_GAP = 8;
 
 // Someone in the table whose gender or age group isn't known.
 const UNKNOWN = '–';
@@ -86,12 +90,41 @@ export class FutokorResults implements OnDestroy {
         .map((r) => ({ userId: r.userId, totalMs: r.best!.totalMs! })),
     ),
   );
-  // What they mean, under the table - the slowest's only once it's given.
-  legend = computed(() => {
-    const given = new Set(this.badges().values());
-    return Object.values(BADGES).filter((b) => given.has(b));
-  });
-  readonly slowestFrom = SLOWEST_FROM;
+  // A badge shown big, floating over the page (like an avatar's preview):
+  // above the small one where there's room, else below it.
+  bigBadge = signal<{ badge: Badge; top: number; left: number; above: boolean } | null>(null);
+
+  // The mouse is over a badge.
+  showBadge(e: PointerEvent, badge: Badge) {
+    if (e.pointerType === 'mouse') this.openBadge(e.currentTarget as HTMLElement, badge);
+  }
+
+  // A phone has no hover: a tap shows it (and isn't a tap on the row).
+  tapBadge(e: MouseEvent, badge: Badge) {
+    e.stopPropagation();
+    if (this.bigBadge()) this.bigBadge.set(null);
+    else this.openBadge(e.currentTarget as HTMLElement, badge);
+  }
+
+  private openBadge(small: HTMLElement, badge: Badge) {
+    const rect = small.getBoundingClientRect();
+    const above = rect.top - BIG_BADGE - BIG_BADGE_GAP >= 0;
+    const centered = rect.left + rect.width / 2 - BIG_BADGE / 2;
+    this.bigBadge.set({
+      badge,
+      above,
+      top: above ? rect.top - BIG_BADGE - BIG_BADGE_GAP : rect.bottom + BIG_BADGE_GAP,
+      left: Math.min(Math.max(centered, 8), window.innerWidth - BIG_BADGE - 8),
+    });
+  }
+
+  // A tap anywhere else, or the page moving under it, closes it.
+  @HostListener('document:click')
+  @HostListener('window:resize')
+  @HostListener('window:scroll')
+  closeBadge() {
+    this.bigBadge.set(null);
+  }
 
   // The stretches of the loop, from card to card: RAJT → 1. pont, ...,
   // the last point → CÉL.

@@ -438,6 +438,19 @@ button {
   font-size: 11px;
 }
 
+// A family member's futókód, at the end of their row.
+.family-code {
+  margin-left: auto;
+  flex: none;
+  text-align: right;
+
+  strong {
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 // Same shape as members.scss's own .person-avatar.
 .person-avatar {
   width: 35px;

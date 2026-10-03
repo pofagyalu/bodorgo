@@ -125,17 +125,34 @@
                 >
                   <td class="col-place">{{ row.place ? row.place + '.' : '–' }}</td>
                   <td class="col-who left">
-                    <span class="who">
-                      <app-avatar
-                        class="face"
-                        [name]="row.name"
-                        [userId]="row.userId"
-                        [photoVersion]="row.photoUpdatedAt"
-                        [preview]="false"
-                      />
-                      {{ row.name }}
+                    <!-- The name, and beside it (in line with it) the badge
+                         (badges.ts) - shown big under the pointer (see bigBadge). -->
+                    <span class="who-line">
+                      <span class="who">
+                        <app-avatar
+                          class="face"
+                          [name]="row.name"
+                          [userId]="row.userId"
+                          [photoVersion]="row.photoUpdatedAt"
+                          [preview]="false"
+                        />
+                        {{ row.name }}
+                      </span>
                       @if (badges().get(row.userId); as b) {
-                        <span class="badge" [title]="b.name + ' – ' + b.about">{{ b.icon }}</span>
+                        <span
+                          class="badge"
+                          role="img"
+                          [attr.aria-label]="b.name"
+                          (pointerenter)="showBadge($event, b)"
+                          (pointerleave)="bigBadge.set(null)"
+                          (click)="tapBadge($event, b)"
+                        >
+                          @if (b.image) {
+                            <img [src]="b.image" alt="" />
+                          } @else {
+                            {{ b.icon }}
+                          }
+                        </span>
                       }
                     </span>
                   </td>
@@ -176,15 +193,6 @@
               }
             </tbody>
           </table>
-          @if (legend().length) {
-            <p class="legend">
-              @for (b of legend(); track b.name) {
-                <span
-                  >{{ b.icon }} <strong>{{ b.name }}</strong> – {{ b.about }}</span
-                >
-              }
-            </p>
-          }
         </div>
         <p class="note">
           A szakaszoknál mindenkinek a saját legjobb ideje áll az adott szakaszon (bármelyik
@@ -239,3 +247,21 @@
     }
   }
 </section>
+
+<!-- A badge, big: floating over the page (like an avatar's preview), so
+     nothing in the table moves. -->
+@if (bigBadge(); as big) {
+  <span
+    class="big-badge"
+    [class.below]="!big.above"
+    [style.top.px]="big.top"
+    [style.left.px]="big.left"
+    aria-hidden="true"
+  >
+    @if (big.badge.image) {
+      <img [src]="big.badge.image" alt="" />
+    } @else {
+      {{ big.badge.icon }}
+    }
+  </span>
+}

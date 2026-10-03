@@ -1990,8 +1990,20 @@ const paths = {
     get: op({
       tag: T.users,
       summary: 'My family',
-      description: 'The others in my family - not the retired ones (they can’t be signed up).',
-      data: obj({ members: arrayOf(ref('User')) }),
+      description:
+        'The others in my family - not the retired ones (they can’t be signed up). Each with their `futokod` (the four-digit number they run the futókör with on any phone), so a family member can tell them theirs; outside the family only the person and the admins see it.',
+      data: obj({
+        members: arrayOf(
+          obj({
+            _id: id(),
+            name: str(),
+            email: str(),
+            role: str(),
+            photoUpdatedAt: { type: ['string', 'null'] },
+            futokod: str('Their futókód.'),
+          }),
+        ),
+      }),
     }),
   },
   '/users/me/photo': {

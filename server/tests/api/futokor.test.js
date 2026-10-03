@@ -744,6 +744,14 @@ describe('Futókód', () => {
     expect(me.body.data.futokod).toBe(code);
     const edit = await request(app).get(`/users/${anna._id}`).set(asUser(owner));
     expect(edit.body.data.user.futokod).toBe(code);
+    // Their family sees it too (a parent tells a child theirs) - not others.
+    const parent = await createMember({ familyId: anna.familyId });
+    const family = await request(app).get('/users/me/family').set(asUser(parent));
+    expect(family.body.data.members).toMatchObject([{ name: 'Kiss Anna', futokod: code }]);
+    const stranger = await request(app)
+      .get('/users/me/family')
+      .set(asUser(await createMember()));
+    expect(JSON.stringify(stranger.body)).not.toContain(code);
     // The members' list of everyone doesn't carry it.
     const all = await request(app)
       .get('/users')

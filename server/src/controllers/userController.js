@@ -119,6 +119,8 @@ export const getAllUsers = async (req, res) => {
 // Every logged-in user can see their own family's roster (their own
 // familyId, see userModel.js) - not just an admin. Excludes the caller
 // themselves, since a "your family members" list doesn't need to list you.
+// Each with their futókód (utils/futokod.js): a parent can tell a child
+// theirs at the START card, without asking an admin.
 export const getMyFamily = async (req, res) => {
   if (!req.user.familyId) {
     return res.status(200).json({ status: 'success', data: { members: [] } });
@@ -131,7 +133,7 @@ export const getMyFamily = async (req, res) => {
     _id: { $ne: req.user._id },
     retired: { $ne: true },
   })
-    .select('name email role photoUpdatedAt')
+    .select('name email role photoUpdatedAt +futokod')
     .sort('name');
 
   res.status(200).json({ status: 'success', data: { members } });

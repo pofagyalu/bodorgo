@@ -354,6 +354,13 @@
                     <small>{{ m.email }}</small>
                   }
                 </span>
+                <!-- Their futókód: to tell them at the START card. -->
+                @if (m.futokod) {
+                  <span class="family-code" title="Futókód – ezzel bármelyik telefonról futhat">
+                    <small>Futókód</small>
+                    <strong>{{ m.futokod }}</strong>
+                  </span>
+                }
               </li>
             }
           </ul>
