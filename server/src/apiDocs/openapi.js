@@ -508,7 +508,7 @@ const schemas = {
     artist: str('May be empty.'),
     slug: str('From the title, accents folded ("Eső után" → `eso-utan`) - the song’s address.'),
     chordpro: str(
-      'Lyrics and chords as ChordPro text: chords in [brackets] right before their syllable, `{start_of_chorus}` / `{end_of_chorus}` around the chorus, `{comment: 2x}` for notes, an empty line between verses.',
+      'Lyrics and chords as ChordPro text: chords in [brackets] right before their syllable, `{start_of_chorus}` / `{end_of_chorus}` around the chorus, `{comment: 2x}` for notes, an empty line between verses. The songbook’s own marks, each on a line of its own: from `{screen}` to the end of the song the chords are for the screen only - the song page shows them like any others, the PDFs print those lines with their words alone (a line of chords alone is left out) -, and `{print}` further down brings the chords back into the PDFs.',
     ),
     tags: arrayOf(str()),
     originalKey: str(
@@ -2807,7 +2807,7 @@ const paths = {
       tag: T.songs,
       summary: 'The whole songbook as a PDF',
       description:
-        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page with its key after the artist ("a-moll" - the one set by hand, or the detected one) and the chords over their syllables, two annexes: the circle of fifths (Kvintkör) and the table of every major key’s seven chords (Akkordmenet), and on the last pages an index ("Dalok előadók szerint"): the songs grouped by their artists - the artists in alphabetical order, the songs without one last under "Előadó nélkül" -, each with its page number and a link to its song. Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
+        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page with its key after the artist ("a-moll" - the one set by hand, or the detected one) and the chords over their syllables (the lines after a `{screen}` mark with their words alone - see Song.chordpro), two annexes: the circle of fifths (Kvintkör) and the table of every major key’s seven chords (Akkordmenet), and on the last pages an index ("Dalok előadók szerint"): the songs grouped by their artists - the artists in alphabetical order, the songs without one last under "Előadó nélkül" -, each with its page number and a link to its song. Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
       params: [
         query(
           'diagrams',
@@ -2868,7 +2868,7 @@ const paths = {
       tag: T.songs,
       summary: 'One song as a PDF',
       description:
-        'The song alone, as its page of the songbook - no cover, no contents: its title, artist and key, the chords over the lyrics, and how its chords are held if `diagrams` asks. With `transpose` the song is moved by that many semitones first - the chords spelled for the new key, as the song page shows them at that transposition. A song longer than a page has its pages numbered ("1 / 2"). The file is named after the song’s slug.',
+        'The song alone, as its page of the songbook - no cover, no contents: its title, artist and key, the chords over the lyrics, and how its chords are held if `diagrams` asks. With `transpose` the song is moved by that many semitones first - the chords spelled for the new key, as the song page shows them at that transposition. The lines after a `{screen}` mark (see Song.chordpro) are printed with their words alone, as in the book. A song longer than a page has its pages numbered ("1 / 2"). The file is named after the song’s slug.',
       params: [
         path('slug', 'The song’s slug, from the table of contents.'),
         query('diagrams', 'Whose chord diagrams to draw under the title. Omit for none.', {

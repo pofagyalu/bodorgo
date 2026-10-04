@@ -81,19 +81,19 @@
       </button>
     }
 
-    <!-- Not songs, but found like one: the tuner and the two annexes. -->
+    <!-- Not songs, but found like one: the tuner and the two annexes - one
+         row of icons, each saying what it is under the pointer. -->
     @if (annexes().length) {
-      <ul class="song-list annex-list">
+      <ul class="annex-row">
         @for (annex of annexes(); track annex.id) {
           <li>
             <a
               [routerLink]="[base(), 'melleklet', annex.id]"
               [class.active]="annex.id === openAnnex()"
+              [title]="annex.title + ' – ' + annex.about"
+              [attr.aria-label]="annex.title + ' – ' + annex.about"
             >
-              <mat-icon class="annex-icon">{{ annex.icon }}</mat-icon>
-              <span class="song-name">
-                <strong>{{ annex.title }}</strong>
-              </span>
+              <mat-icon>{{ annex.icon }}</mat-icon>
             </a>
           </li>
         }
@@ -109,40 +109,73 @@
         <p class="list-note">Nincs ilyen dal.</p>
       }
     } @else {
-      <ol class="song-list">
-        @for (hit of found(); track hit.song._id) {
-          @let song = hit.song;
-          <li>
-            <a
-              [routerLink]="[base(), song.slug]"
-              [class.active]="song.slug === openSlug()"
-              [class.played]="played().has(song._id)"
-            >
-              @if (played().has(song._id)) {
-                <mat-icon class="played-tick" aria-label="Már játszottuk">task_alt</mat-icon>
-              }
-              <span class="song-name">
-                <strong>{{ song.title }}</strong>
-                @if (song.artist) {
-                  <small>{{ song.artist }}</small>
+      <!-- The songs, and - beside an open song, where the list is a
+           narrow column - the alphabet down its side: a tap on a letter
+           brings its first song to the top. -->
+      <div class="songs">
+        <ol class="song-list" #list>
+          @for (hit of found(); track hit.song._id) {
+            @let song = hit.song;
+            <li [attr.data-letter]="firstOfLetter().get(song._id)">
+              <a
+                [routerLink]="[base(), song.slug]"
+                [class.active]="song.slug === openSlug()"
+                [class.played]="played().has(song._id)"
+              >
+                @if (played().has(song._id)) {
+                  <mat-icon class="played-tick" aria-label="Már játszottuk">task_alt</mat-icon>
                 }
-                <!-- Found by its words, not its name: the line that has
+                <span class="song-name">
+                  <!-- What was searched for is marked in the title and in
+                       the artist too, like in the found line below. -->
+                  <strong>
+                    @if (markIn(song.title); as m) {
+                      {{ m.before }}<mark>{{ m.match }}</mark
+                      >{{ m.after }}
+                    } @else {
+                      {{ song.title }}
+                    }
+                  </strong>
+                  @if (song.artist) {
+                    <small>
+                      @if (markIn(song.artist); as m) {
+                        {{ m.before }}<mark>{{ m.match }}</mark
+                        >{{ m.after }}
+                      } @else {
+                        {{ song.artist }}
+                      }
+                    </small>
+                  }
+                  <!-- Found by its words, not its name: the line that has
                      what was searched for. -->
-                @if (hit.line; as line) {
-                  <small class="found-line"
-                    >{{ line.before }}<mark>{{ line.match }}</mark
-                    >{{ line.after }}</small
-                  >
+                  @if (hit.line; as line) {
+                    <small class="found-line"
+                      >{{ line.before }}<mark>{{ line.match }}</mark
+                      >{{ line.after }}</small
+                    >
+                  }
+                </span>
+                <!-- The song's key, at the row's end. -->
+                @if (keyOf(song); as key) {
+                  <span class="song-key">{{ key }}</span>
                 }
-              </span>
-              <!-- The song's key, at the row's end. -->
-              @if (keyOf(song); as key) {
-                <span class="song-key">{{ key }}</span>
-              }
-            </a>
-          </li>
-        }
-      </ol>
+              </a>
+            </li>
+          }
+        </ol>
+        <nav class="letters" aria-label="Ugrás kezdőbetűre">
+          @for (letter of letters; track letter) {
+            <button
+              type="button"
+              [disabled]="!hasLetter().has(letter)"
+              (click)="jumpTo(letter)"
+              [attr.aria-label]="letter === '#' ? 'Számmal kezdődő dalok' : letter + ' betűs dalok'"
+            >
+              {{ letter }}
+            </button>
+          }
+        </nav>
+      </div>
     }
   </aside>
 

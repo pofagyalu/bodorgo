@@ -350,6 +350,51 @@ describe('Daloskönyv: the book as a PDF', () => {
     expect((await book(owner)).body.equals(before.body)).toBe(false);
   });
 
+  it('prints the lines after a {screen} mark with their words alone, until a {print}', async () => {
+    // Made-up words. From the mark on the chords are for the screen only -
+    // two verses here -, then {print} brings them back.
+    const owner = await createOwner();
+    await add(owner, {
+      title: 'Próbadal',
+      chordpro: [
+        '[C]Kint a [G]réten',
+        '',
+        '{screen}',
+        '[F#m]Bent a [Eb]házban',
+        '[F#m] [Eb]',
+        '',
+        '[Eb]Fent a hegyen',
+        '',
+        '{print}',
+        '[Dsus4]Lent a völgyben',
+      ].join('\n'),
+    });
+    const res = await request(app)
+      .get('/songs/probadal/pdf')
+      .set(asUser(owner))
+      .buffer()
+      .parse((r, done) => {
+        const chunks = [];
+        r.on('data', (c) => chunks.push(c));
+        r.on('end', () => done(null, Buffer.concat(chunks)));
+      });
+    expect(res.status).toBe(200);
+    const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const doc = await getDocument({ data: new Uint8Array(res.body), verbosity: 0 }).promise;
+    const text = (await (await doc.getPage(1)).getTextContent()).items.map((i) => i.str).join(' ');
+    // Both verses' words, the first one's chords - not the marked one's,
+    // nor the mark.
+    expect(text).toContain('Kint a');
+    expect(text).toContain('Bent a házban');
+    expect(text).toContain('Fent a hegyen');
+    expect(text).toContain('G');
+    // After {print}: with its chord again.
+    expect(text).toContain('Dsus');
+    expect(text).not.toContain('F#m');
+    expect(text).not.toContain('Eb');
+    expect(text).not.toContain('screen');
+  });
+
   it('gives one song alone as a PDF - moved to another key if asked', async () => {
     const owner = await createOwner();
     await add(owner, {

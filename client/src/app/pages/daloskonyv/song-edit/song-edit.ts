@@ -5,7 +5,14 @@ import { Song, SongService } from '../../../services/song';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { SongSheet } from '../song-sheet/song-sheet';
-import { TextEdit, insertChord, nudgeChord, wrapChorus } from '../chord-text';
+import {
+  TextEdit,
+  insertChord,
+  nudgeChord,
+  toggleRepeat,
+  toggleScreenOnly,
+  wrapChorus,
+} from '../chord-text';
 import { chordsOverLyrics } from '../paste-chords';
 import { allKeys, chordSignature, detectKey, keyName } from '../song-key';
 import { TEMPO_MAX, TEMPO_MIN, TapTempo, readTempo } from '../tempo';
@@ -113,11 +120,16 @@ export class SongEdit implements OnInit {
   private apply(edit: TextEdit | null) {
     const el = this.textarea()?.nativeElement;
     if (!el || !edit) return;
-    // Straight into the textarea, so the cursor can be set at once.
+    // Straight into the textarea, so the cursor can be set at once. The
+    // text stays where it was scrolled to: a new value (and the cursor set
+    // in it) would otherwise jump the box, and the line just worked on
+    // would be out of sight.
+    const top = el.scrollTop;
     el.value = edit.text;
     this.chordpro.set(edit.text);
-    el.focus();
+    el.focus({ preventScroll: true });
     el.setSelectionRange(edit.start, edit.end);
+    el.scrollTop = top;
   }
 
   addChord() {
@@ -128,6 +140,24 @@ export class SongEdit implements OnInit {
   markChorus() {
     const el = this.textarea()?.nativeElement;
     if (el) this.apply(wrapChorus(el.value, el.selectionStart, el.selectionEnd));
+  }
+
+  // The selected lines (or the cursor's) between repeat signs: ||: … :|| -
+  // or the signs taken off them.
+  markRepeat() {
+    const el = this.textarea()?.nativeElement;
+    if (!el) return;
+    const edit = toggleRepeat(el.value, el.selectionStart, el.selectionEnd);
+    if (edit) this.apply(edit);
+    else el.focus();
+  }
+
+  // The cursor's verse: its chords for the screen only ({screen}) - or
+  // printed again, if it was marked.
+  markScreenOnly() {
+    const el = this.textarea()?.nativeElement;
+    if (!el) return;
+    this.apply(toggleScreenOnly(el.value, el.selectionStart));
   }
 
   // The chord under the cursor, a letter left or right.

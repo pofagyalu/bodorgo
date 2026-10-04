@@ -72,3 +72,111 @@ export function wrapChorus(text: string, start: number, end: number): TextEdit {
     end: from + open.length + (to - from),
   };
 }
+
+const SCREEN_MARK = '{screen}';
+const isScreenMark = (line: string | undefined) =>
+  line !== undefined && /^\{\s*screen\s*\}$/i.test(line.trim());
+const isBlank = (line: string | undefined) => line !== undefined && !line.trim();
+
+// {screen} set where the cursor is, standing alone - an empty line above
+// it and one under it: over the line the cursor is in, or, on an empty
+// line, right there. From the mark to the end of the song the chords are
+// for the screen only, the PDF prints the words alone (chordpro.ts).
+// Pressed again - the cursor on the mark, on the empty line under it, or on
+// the first line after that -, it takes the mark off, and the empty line
+// it brought. The cursor stays in the words it stood in (on an empty line:
+// at the mark's end).
+export function toggleScreenOnly(text: string, cursor: number): TextEdit {
+  const lines = text.split('\n');
+  // The line the cursor is in, and how far along it.
+  let at = 0;
+  let row = 0;
+  while (row < lines.length - 1 && at + lines[row].length < cursor) {
+    at += lines[row].length + 1;
+    row += 1;
+  }
+  let column = cursor - at;
+
+  // The mark this press takes off, if there is one at the cursor.
+  const marked = isScreenMark(lines[row])
+    ? row
+    : isScreenMark(lines[row - 1])
+      ? row - 1
+      : isBlank(lines[row - 1]) && isScreenMark(lines[row - 2])
+        ? row - 2
+        : -1;
+
+  if (marked >= 0) {
+    // Taking a line away at `index`: the cursor moves up with what is
+    // under it - from the line itself, to the start of the next.
+    const remove = (index: number) => {
+      lines.splice(index, 1);
+      if (row > index) row -= 1;
+      else if (row === index) column = 0;
+    };
+    remove(marked);
+    // The empty line it had under it, where one above it parts the verses
+    // already (or the song starts there).
+    if (isBlank(lines[marked]) && (marked === 0 || isBlank(lines[marked - 1]))) remove(marked);
+    row = Math.min(row, lines.length - 1);
+  } else if (lines[row].trim()) {
+    const added = [SCREEN_MARK, ''];
+    if (row > 0 && !isBlank(lines[row - 1])) added.unshift('');
+    lines.splice(row, 0, ...added);
+    row += added.length;
+  } else {
+    // On an empty line: that line stays above the mark.
+    const added =
+      isBlank(lines[row + 1]) || lines[row + 1] === undefined ? [SCREEN_MARK] : [SCREEN_MARK, ''];
+    lines.splice(row + 1, 0, ...added);
+    row += 1;
+    column = SCREEN_MARK.length;
+  }
+
+  let start = 0;
+  for (let i = 0; i < row; i += 1) start += lines[i].length + 1;
+  const place = start + Math.min(column, lines[row]?.length ?? 0);
+  return { text: lines.join('\n'), start: place, end: place };
+}
+
+const REPEAT_OPEN = '||:';
+const REPEAT_CLOSE = ':||';
+
+// The selected lines (or the cursor's line) between repeat signs:
+// "||: … :||" - sung twice. On lines that are between them already, the
+// signs are taken off. The cursor (or the selection) stays on the very
+// words it was on. null: nothing but empty lines there.
+export function toggleRepeat(text: string, start: number, end: number): TextEdit | null {
+  const from = text.lastIndexOf('\n', start - 1) + 1;
+  const nextBreak = text.indexOf('\n', Math.max(end, start));
+  const to = nextBreak < 0 ? text.length : nextBreak;
+  const chosen = text.slice(from, to);
+  const inner = chosen.trim();
+  if (!inner) return null;
+  // Where the words begin and end among the chosen lines.
+  const lead = chosen.length - chosen.trimStart().length;
+  const wordsFrom = from + lead;
+  const wordsTo = wordsFrom + inner.length;
+
+  const has = inner.startsWith(REPEAT_OPEN) && inner.endsWith(REPEAT_CLOSE) && inner.length >= 6;
+  let wrapped: string;
+  // How far a place among the words moves.
+  let shift: (at: number) => number;
+  if (has) {
+    const body = inner.slice(REPEAT_OPEN.length, -REPEAT_CLOSE.length);
+    const cut = REPEAT_OPEN.length + (body.length - body.trimStart().length);
+    wrapped = body.trim();
+    const kept = wrapped.length;
+    // Onto the words left: never before them, never past them.
+    shift = (place) => from + Math.min(Math.max(place - wordsFrom - cut, 0), kept);
+  } else {
+    wrapped = `${REPEAT_OPEN} ${inner} ${REPEAT_CLOSE}`;
+    const added = REPEAT_OPEN.length + 1;
+    shift = (place) => from + added + Math.min(Math.max(place - wordsFrom, 0), wordsTo - wordsFrom);
+  }
+  return {
+    text: text.slice(0, from) + wrapped + text.slice(to),
+    start: shift(start),
+    end: shift(end),
+  };
+}

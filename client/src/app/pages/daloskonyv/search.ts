@@ -76,3 +76,28 @@ export function searchSongs<Song extends { _id: string; title: string; artist: s
   }
   return [...byName, ...byWords];
 }
+
+// The letters down the side of the song list: "#" for what starts with a
+// number or a sign, then the plain alphabet.
+export const LETTERS = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+
+// The letter a title is found under: its first letter without its accent
+// ("Álmodj" under A, "Ördög" under O) - "#" for anything else ("67-es").
+export function letterOf(title: string): string {
+  const first = fold(title.trim().charAt(0)).toUpperCase();
+  return first >= 'A' && first <= 'Z' && first.length === 1 ? first : '#';
+}
+
+// Where a search stands in a title or an artist's name - cut around it,
+// for showing the found part marked. null: it isn't there (or nothing is
+// searched for).
+export function foundIn(text: string, search: string): FoundLine | null {
+  const q = fold(search.trim());
+  const at = q ? fold(text).indexOf(q) : -1;
+  if (at < 0) return null;
+  return {
+    before: text.slice(0, at),
+    match: text.slice(at, at + q.length),
+    after: text.slice(at + q.length),
+  };
+}

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, effect, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,7 +7,7 @@ import { SongListItem, SongService } from '../../services/song';
 import { keyName } from './song-key';
 import { Instrument } from './chord-shapes';
 import { ANNEXES } from './annexes';
-import { fold, searchSongs, songsOf } from './search';
+import { LETTERS, fold, foundIn, letterOf, searchSongs, songsOf } from './search';
 
 // Daloskönyv: the club's songbook - for everyone logged in. The table of
 // contents (searchable), and the chosen song beside it (song/song.ts, the
@@ -76,6 +76,41 @@ export class Daloskonyv implements OnInit {
     ),
   );
   filtered = computed(() => this.found().map((f) => f.song));
+
+  // A title or an artist's name cut around what is searched for, to show
+  // it marked - null where it isn't in it.
+  markIn(text: string) {
+    return foundIn(text, this.search());
+  }
+
+  // --- The alphabet down the list's side ---
+
+  readonly letters = LETTERS;
+  private list = viewChild<ElementRef<HTMLElement>>('list');
+
+  // The first song under each letter, by the song's id - the row a tap on
+  // the letter brings to the top.
+  firstOfLetter = computed(() => {
+    const seen = new Set<string>();
+    const first = new Map<string, string>();
+    for (const { song } of this.found()) {
+      const letter = letterOf(song.title);
+      if (seen.has(letter)) continue;
+      seen.add(letter);
+      first.set(song._id, letter);
+    }
+    return first;
+  });
+  // The letters that have a song - the others are pale, and lead nowhere.
+  hasLetter = computed(() => new Set(this.firstOfLetter().values()));
+
+  jumpTo(letter: string) {
+    const list = this.list()?.nativeElement;
+    const row = list?.querySelector<HTMLElement>(`li[data-letter="${letter}"]`);
+    if (!list || !row) return;
+    const top = list.scrollTop + row.getBoundingClientRect().top - list.getBoundingClientRect().top;
+    list.scrollTo({ top, behavior: 'smooth' });
+  }
 
   // The artist the list is narrowed to ('' for none), and the way back to
   // everyone's songs.

@@ -12,6 +12,7 @@ import {
   songKey,
   toBlocks,
   toWords,
+  withoutScreenChords,
   transposeChordPro,
   transposeKey,
   uniqueChords,
@@ -282,7 +283,10 @@ function drawSong(doc, song, diagrams) {
     y = drawDiagrams(doc, uniqueChords(chords), diagrams, y);
   }
 
-  for (const block of toBlocks(lines)) {
+  // From a {screen} mark on (to the song's end, or to a {print}) the lines
+  // are printed with their words alone: those chords are for the song
+  // page, where the first verse scrolls out of sight.
+  for (const block of withoutScreenChords(toBlocks(lines))) {
     const indent = block.chorus ? CHORUS_INDENT : 0;
     const rows = block.lines.flatMap((line) => layoutLine(doc, line, left + indent));
     const height = rows.reduce((sum, row) => sum + row.height, 0);
