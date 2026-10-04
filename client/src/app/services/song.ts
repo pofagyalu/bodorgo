@@ -20,6 +20,15 @@ export interface SongListItem {
   // without chords). pages/daloskonyv/song-key.ts names them ("a-moll").
   key: string;
   detectedKey: string;
+  // The Daloskönyv's own song (its PDF, its count, its index) - or one
+  // another user added beside the book.
+  inBook: boolean;
+  // Whose it is, on a song that isn't the book's own: the owner's given
+  // name ("Melinda"), the tag it carries in the list. '' on the book's.
+  ownerName: string;
+  // The one looking may change and delete it: its owner, or the book's
+  // keeper.
+  canEdit: boolean;
 }
 
 export interface Song extends SongListItem {
@@ -115,8 +124,14 @@ export class SongService {
   // The table of contents, in the book's order - null until it arrives.
   // Kept here so the song page's previous/next has it too.
   readonly songs = signal<SongListItem[] | null>(null);
-  // Only the role manager may add and change songs.
+  // The one looking is the book's keeper (the role manager): every song
+  // is theirs to change. Anyone logged in may add a song - their own, to
+  // change and delete (a song's own canEdit says so).
   readonly canEdit = signal(false);
+
+  // The Daloskönyv's own songs - the book's count; the others stand beside
+  // it. null until the list arrives.
+  readonly bookSongs = computed(() => this.songs()?.filter((song) => song.inBook) ?? null);
 
   // When a song was last added or changed - the book's date on its
   // Dokumentumok card. null: not known yet, or no songs.
@@ -201,8 +216,8 @@ export class SongService {
     return `${this.apiUrl}/book.webp?${query.join('&')}`;
   }
 
-  // Adding, changing and deleting: only the role manager (the server says
-  // 403 to anyone else).
+  // Adding: anyone logged in. Changing and deleting: the song's owner and
+  // the book's keeper (the server says 403 to anyone else).
   createSong(input: SongInput): Observable<Song> {
     return this.http
       .post<{ data: { song: Song } }>(this.apiUrl, input)

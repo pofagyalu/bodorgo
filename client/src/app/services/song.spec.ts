@@ -134,7 +134,17 @@ describe('SongService', () => {
     expect(service.songs()).toEqual([]);
 
     service.songs.set([
-      { _id: 's1', title: 'A', artist: 'B', slug: 'a', key: '', detectedKey: 'C' },
+      {
+        _id: 's1',
+        title: 'A',
+        artist: 'B',
+        slug: 'a',
+        key: '',
+        detectedKey: 'C',
+        inBook: true,
+        ownerName: '',
+        canEdit: true,
+      },
     ]);
     service.loadSongs();
     http.expectOne(songs).flush('', { status: 500, statusText: 'Error' });

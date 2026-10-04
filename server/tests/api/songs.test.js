@@ -29,19 +29,137 @@ describe('Daloskönyv: who gets in', () => {
     expect((await request(app).get('/songs').set(asUser(owner))).body.data.canEdit).toBe(true);
   });
 
-  it('only the role manager writes it - not even the other admins', async () => {
+  it('anyone logged in adds a song - theirs to change, and beside the book, not in it', async () => {
     const owner = await createOwner();
-    const { song } = (await add(owner, { title: 'Próbadal' })).body.data;
+    const mine = (await add(owner, { title: 'Könyvbeli', chordpro: '[C]la' })).body.data.song;
+    // The keeper's song is the book's own, and carries no name.
+    expect(mine).toMatchObject({ inBook: true, ownerName: '', canEdit: true });
+    expect(mine.owner).toBeUndefined();
 
-    for (const user of [await createGuest(), await createMember(), await createAdmin()]) {
-      expect((await add(user, { title: 'Másik' })).status).toBe(403);
-      expect(
-        (await request(app).patch(`/songs/${song._id}`).set(asUser(user)).send({ title: 'X' }))
-          .status,
-      ).toBe(403);
-      expect((await request(app).delete(`/songs/${song._id}`).set(asUser(user))).status).toBe(403);
+    const melinda = await createMember({ name: 'Kis Melinda' });
+    const csaba = await createGuest({ name: 'Nagy Csaba' });
+    const added = await add(melinda, { title: 'Melinda dala', chordpro: '[G]la' });
+    expect(added.status).toBe(201);
+    const hers = added.body.data.song;
+    expect(hers).toMatchObject({ inBook: false, ownerName: 'Melinda', canEdit: true });
+    // A guest too.
+    expect((await add(csaba, { title: 'Csaba dala' })).status).toBe(201);
+
+    // Everyone sees all three, each saying whose it is and who may change it.
+    const seenBy = async (user) =>
+      Object.fromEntries(
+        (await request(app).get('/songs').set(asUser(user))).body.data.songs.map((song) => [
+          song.title,
+          [song.inBook, song.ownerName, song.canEdit],
+        ]),
+      );
+    expect(await seenBy(csaba)).toEqual({
+      Könyvbeli: [true, '', false],
+      'Melinda dala': [false, 'Melinda', false],
+      'Csaba dala': [false, 'Csaba', true],
+    });
+    expect(await seenBy(owner)).toEqual({
+      Könyvbeli: [true, '', true],
+      'Melinda dala': [false, 'Melinda', true],
+      'Csaba dala': [false, 'Csaba', true],
+    });
+    // The song itself says the same.
+    const one = await request(app).get('/songs/melinda-dala').set(asUser(csaba));
+    expect(one.body.data.song).toMatchObject({
+      inBook: false,
+      ownerName: 'Melinda',
+      canEdit: false,
+    });
+
+    const patch = (user, id, body) =>
+      request(app).patch(`/songs/${id}`).set(asUser(user)).send(body);
+    const remove = (user, id) => request(app).delete(`/songs/${id}`).set(asUser(user));
+    // Her own: hers to change. Someone else's, and the book's: not - not
+    // even for another admin.
+    expect((await patch(melinda, hers._id, { artist: 'Ő maga' })).status).toBe(200);
+    for (const user of [csaba, await createAdmin()]) {
+      expect((await patch(user, hers._id, { title: 'X' })).status).toBe(403);
+      expect((await remove(user, hers._id)).status).toBe(403);
+      expect((await patch(user, mine._id, { title: 'X' })).status).toBe(403);
+      expect((await remove(user, mine._id)).status).toBe(403);
     }
-    expect(await Song.countDocuments()).toBe(1);
+    // The keeper changes every song.
+    expect((await patch(owner, hers._id, { tempo: 100 })).body.data.song).toMatchObject({
+      tempo: 100,
+      ownerName: 'Melinda',
+      inBook: false,
+    });
+    // Her song stays hers after the keeper's change.
+    expect((await patch(melinda, hers._id, { tempo: 90 })).status).toBe(200);
+    expect((await remove(melinda, hers._id)).status).toBe(204);
+    expect(await Song.countDocuments()).toBe(2);
+  });
+
+  it('only the keeper takes a song into the book - the book is its own songs alone', async () => {
+    const owner = await createOwner();
+    const melinda = await createMember({ name: 'Kis Melinda' });
+    await add(owner, { title: 'Könyvbeli', chordpro: '[C]la' });
+    const hers = (await add(melinda, { title: 'Melinda dala', chordpro: '[G]la' })).body.data.song;
+    const patch = (user, body) =>
+      request(app).patch(`/songs/${hers._id}`).set(asUser(user)).send(body);
+    const pages = async () => {
+      const res = await request(app)
+        .get('/songs/book.pdf')
+        .set(asUser(melinda))
+        .buffer()
+        .parse((r, done) => {
+          const chunks = [];
+          r.on('data', (c) => chunks.push(c));
+          r.on('end', () => done(null, Buffer.concat(chunks)));
+        });
+      const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      return (await getDocument({ data: new Uint8Array(res.body), verbosity: 0 }).promise).numPages;
+    };
+
+    // The cover, the contents, one song, two annexes, the index.
+    expect(await pages()).toBe(6);
+    // Her own song as a PDF: hers to print all the same.
+    expect((await request(app).get('/songs/melinda-dala/pdf').set(asUser(melinda))).status).toBe(
+      200,
+    );
+
+    // Not hers to say.
+    expect((await patch(melinda, { inBook: true })).status).toBe(403);
+    expect((await patch(owner, { inBook: true })).body.data.song).toMatchObject({
+      inBook: true,
+      ownerName: '',
+    });
+    expect(await pages()).toBe(7);
+    // Still hers to change, in the book too.
+    expect((await patch(melinda, { artist: 'Ő maga' })).status).toBe(200);
+    // And out again.
+    expect((await patch(owner, { inBook: false })).body.data.song.inBook).toBe(false);
+    expect(await pages()).toBe(6);
+  });
+
+  it('takes a song from before owners for the keeper’s, and the book’s', async () => {
+    // As the songs stood before: no owner, no inBook.
+    await Song.collection.insertOne({
+      title: 'Régi dal',
+      artist: '',
+      slug: 'regi-dal',
+      chordpro: '[C]la',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const owner = await createOwner();
+    const member = await createMember();
+    const seen = (await request(app).get('/songs/regi-dal').set(asUser(member))).body.data.song;
+    expect(seen).toMatchObject({ inBook: true, ownerName: '', canEdit: false });
+    expect(
+      (await request(app).patch(`/songs/${seen._id}`).set(asUser(member)).send({ title: 'X' }))
+        .status,
+    ).toBe(403);
+    expect(
+      (await request(app).patch(`/songs/${seen._id}`).set(asUser(owner)).send({ tempo: 80 }))
+        .status,
+    ).toBe(200);
+    expect((await request(app).get('/songs/book.pdf').set(asUser(member))).status).toBe(200);
   });
 });
 

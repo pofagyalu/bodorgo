@@ -85,10 +85,10 @@
         >
           <mat-icon>add</mat-icon>
         </button>
-        <!-- The songbook's owner, once the song is moved: keep it so. The
+        <!-- Who may change the song, once it is moved: keep it so. The
              button is there all along (pale and idle while the song isn't
              moved), so the − and + never shift under the finger. -->
-        @if (canEdit()) {
+        @if (song()?.canEdit) {
           <button
             type="button"
             class="keep-key"
@@ -156,8 +156,9 @@
         </div>
       }
 
-      <!-- Only the songbook's owner (the role manager). -->
-      @if (canEdit() && song(); as s) {
+      <!-- Only for who may change this song: its owner, and the book's
+           keeper. -->
+      @if (song()?.canEdit && song(); as s) {
         <div class="tool">
           <a
             [routerLink]="[base(), s.slug, 'szerkesztes']"

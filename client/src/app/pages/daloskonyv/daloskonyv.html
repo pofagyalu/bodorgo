@@ -48,9 +48,9 @@
       >
         <mat-icon>picture_as_pdf</mat-icon><span class="book-text">PDF</span>
       </a>
-      <!-- Only the songbook's owner (the role manager). On a phone: the
-           floating + in the bottom right corner. -->
-      @if (canEdit()) {
+      <!-- Anyone may add a song of their own. On a phone: the floating +
+           in the bottom right corner. -->
+      @if (songs() !== null) {
         <a [routerLink]="[base(), 'uj']" class="new-song-btn" title="Új dal" aria-label="Új dal">
           <mat-icon>add</mat-icon><span class="new-song-text">Dal</span>
         </a>
@@ -155,10 +155,20 @@
                     >
                   }
                 </span>
-                <!-- The song's key, at the row's end. -->
-                @if (keyOf(song); as key) {
-                  <span class="song-key">{{ key }}</span>
-                }
+                <!-- At the row's end: whose song it is, where it isn't the
+                     book's own, and the song's key. -->
+                <span class="row-tags">
+                  @if (song.ownerName) {
+                    <span
+                      class="owner-tag"
+                      [title]="song.ownerName + ' dala – nem a daloskönyv része'"
+                      >{{ song.ownerName }}</span
+                    >
+                  }
+                  @if (keyOf(song); as key) {
+                    <span class="song-key">{{ key }}</span>
+                  }
+                </span>
               </a>
             </li>
           }

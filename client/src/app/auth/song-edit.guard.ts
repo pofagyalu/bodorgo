@@ -3,9 +3,11 @@ import { Router } from '@angular/router';
 import { map, catchError, of } from 'rxjs';
 import { AuthService, CurrentUser } from './auth.service';
 
-// Who may add and change the Daloskönyv's songs: only the one role manager
-// (the server's twin: songController.js's canEditSongs) - not the other
-// admins.
+// The Daloskönyv's keeper: the one role manager (the server's twin:
+// songController.js's canEditSongs) - every song is theirs to change.
+// Anyone logged in may add a song and change their own; the editor's
+// guard below only asks for a login, the song says the rest (its canEdit;
+// the server checks every save).
 export const canEditSongs = (user: CurrentUser | null) => !!user?.canManageRoles;
 
 // Asks the server first (like authGuard), so it also works on a fresh page
@@ -17,7 +19,7 @@ export const songEditGuard = () => {
 
   return auth.checkAuth().pipe(
     map(() => {
-      if (canEditSongs(auth.user())) return true;
+      if (auth.isLoggedIn()) return true;
       router.navigate(['/']);
       return false;
     }),

@@ -33,6 +33,16 @@ const songSchema = new Schema(
     // the editor) - a marker like a printed songbook's "♩ = 96". null:
     // none given.
     tempo: { type: Number, min: 30, max: 300, default: null },
+    // Whose song it is: who added it - only they (and the songbook's
+    // keeper, the role manager) may change or delete it. A song without
+    // one (from before owners) is the keeper's.
+    owner: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    // Part of the Daloskönyv itself - the book's PDF, its count, its
+    // index. The keeper's songs are; a song someone else adds is theirs
+    // alone (listed in the app, with its own PDF) until the keeper takes it
+    // into the book. A song without the field (from before it) is in - so
+    // no default here: it is set when a song is added (songController.js).
+    inBook: { type: Boolean },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true },

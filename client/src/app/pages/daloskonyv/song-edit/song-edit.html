@@ -70,6 +70,15 @@
         </div>
       </div>
 
+      <!-- Anyone but the book's keeper: where their song will stand. -->
+      @if (!isKeeper()) {
+        <p class="hint hint--rule own-song-note">
+          <strong>A saját dalod:</strong> a daloskönyv dalai mellett jelenik meg, a neveddel
+          megjelölve – mindenki láthatja és PDF-ben letöltheti, de szerkeszteni és törölni csak te
+          tudod. A nyomtatott Daloskönyvbe akkor kerül be, ha a könyv gazdája felveszi.
+        </p>
+      }
+
       <!-- The text on the left, the song as it will look on the right
            (under it on a phone). -->
       <div class="panes">

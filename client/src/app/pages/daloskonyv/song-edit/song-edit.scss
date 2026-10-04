@@ -252,6 +252,11 @@ textarea {
   }
 }
 
+// Over the text, for who isn't the book's keeper.
+.own-song-note {
+  margin: 0 0 1rem;
+}
+
 // The {screen} agreement: set apart from the hint above it.
 .hint--rule {
   padding: 0.6rem 0.8rem;
