@@ -210,6 +210,18 @@ describe('a quiz game', () => {
     expect(now.players[0].score).toBeLessThanOrEqual(1000);
     expect((await answer(bela, game, 1)).status).toBe(400);
 
+    // The standings, for everyone to read: no question on the screen, but
+    // what the last one brought each player still is.
+    now = await next(host, game);
+    expect(now).toMatchObject({ status: 'standings', question: null, questionIdx: 0 });
+    expect(now.pin).toBe(game.pin);
+    expect(now.players.map((p) => [p.name, p.points > 0])).toEqual([
+      ['Anna', true],
+      ['Cili', true],
+      ['Béla', false],
+    ]);
+    expect((await answer(bela, game, 1)).status).toBe(400);
+
     // The second, last one: the host closes it early; who didn't answer gets nothing.
     now = await next(host, game);
     expect(now).toMatchObject({ status: 'question', questionIdx: 1 });
@@ -303,10 +315,11 @@ describe('the games’ list and the leaderboard', () => {
       [2, 'Anna'],
     ]);
 
-    const { players } = (await as(anna).get('/jatekok/quiz/leaderboard')).body.data;
-    expect(players.map((p) => [p.name, p.games, p.firsts, p.seconds, p.correct])).toEqual([
-      ['Béla', 1, 1, 0, 1],
-      ['Anna', 1, 0, 1, 0],
+    // The best results of all time: who, in which game, how many points.
+    const { results } = (await as(anna).get('/jatekok/quiz/leaderboard')).body.data;
+    expect(results.map((r) => [r.name, r.title, r.gameId, r.place, r.points > 500])).toEqual([
+      ['Béla', 'Táborok', played._id, 1, true],
+      ['Anna', 'Táborok', played._id, 2, false],
     ]);
   });
 });

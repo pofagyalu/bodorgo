@@ -1,0 +1,29 @@
+<h2 class="title"><mat-icon>leaderboard</mat-icon> Állás</h2>
+
+<!-- Each row is put in its place by its number, so it can slide to a new one. -->
+<ol class="rows" [style.height.rem]="rows().length * rowHeight">
+  @for (r of rows(); track r.userId) {
+    <li
+      class="row c{{ r.place % 5 }}"
+      [class.me]="r.userId === myId()"
+      [style.transform]="'translateY(' + (moved() ? r.place : r.beforePlace) * rowHeight + 'rem)'"
+    >
+      <span class="rank">{{ moved() ? r.rank : r.beforePlace + 1 }}.</span>
+      <app-avatar
+        class="face"
+        [name]="r.name"
+        [userId]="r.userId"
+        [photoVersion]="r.photoUpdatedAt"
+        [preview]="false"
+      />
+      <span class="track">
+        <span class="bar" [style.width.%]="width(r)"></span>
+        <span class="name">{{ r.name }}</span>
+      </span>
+      @if (moved() && r.points) {
+        <span class="gain">+{{ r.points }}</span>
+      }
+      <strong class="score">{{ moved() ? r.score : r.before }}</strong>
+    </li>
+  }
+</ol>

@@ -218,6 +218,7 @@ export const routes: Routes = [
     // server's side: src/jatekok, src/futokor).
     path: 'moka',
     canActivate: [mokaGuard],
+    canActivateChild: [mokaGuard],
     loadComponent: () => import('./pages/moka/moka').then((m) => m.Moka),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'darts' },
@@ -290,7 +291,7 @@ export const routes: Routes = [
       { path: 'kviz', pathMatch: 'full', redirectTo: 'kviz/jatekok' },
       {
         path: 'kviz/jatekok',
-        title: 'Kvíz – Játékok',
+        title: 'Kvíz – Játékszoba',
         loadComponent: () => import('./pages/moka/quiz/quiz-home').then((m) => m.QuizHome),
       },
       {
@@ -302,7 +303,7 @@ export const routes: Routes = [
       },
       {
         path: 'kviz/szerkeszto',
-        title: 'Kvíz – Kvízek',
+        title: 'Kvíz – Alkotóműhely',
         loadComponent: () =>
           import('./pages/moka/quiz/quiz-list/quiz-list').then((m) => m.QuizList),
       },

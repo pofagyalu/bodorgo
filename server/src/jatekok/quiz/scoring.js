@@ -1,9 +1,17 @@
 // Móka → Kvíz: the rules - what a quiz may look like, what an answer is
 // worth, and who stands where. Nothing here touches the database.
 
-// The kinds of question (more to come): `choice` - a plain one; `picture` -
-// with a picture that is uncovered slowly while the clock runs.
-export const QUESTION_TYPES = ['choice', 'picture'];
+// The kinds of question:
+// - `choice`: a plain one;
+// - `picture`: with a picture uncovered tile by tile while the clock runs;
+// - `zoom`: with a picture that starts on a detail and zooms out;
+// - `truefalse`: a statement - true or false;
+// - `song`: a song plays (on the host's device), which one is it;
+// - `map`: where is it - everyone puts a pin on the map, the closest wins.
+// All but `map` are answered by picking one of the answers.
+export const QUESTION_TYPES = ['choice', 'picture', 'zoom', 'truefalse', 'song', 'map'];
+export const hasPicture = (type) => type === 'picture' || type === 'zoom';
+export const TRUE_FALSE = ['Igaz', 'Hamis'];
 
 // A question has 2-4 answers, exactly one of them right.
 export const MIN_ANSWERS = 2;
@@ -26,7 +34,78 @@ export function pointsFor(ms, limitMs) {
   return Math.round(BASE_POINTS * (1 - used / 2));
 }
 
-// The quiz as sent in, cleaned - or the reason (in Hungarian) why it won't do.
+// --- The map ---
+
+const EARTH_KM = 6371;
+const rad = (deg) => (deg * Math.PI) / 180;
+
+// As the crow flies, in km.
+export function distanceKm(a, b) {
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+// What a pin is worth: BASE_POINTS right on the place, less and less with
+// the distance - nothing from half the shown map's diagonal away. Not by
+// speed: a pin may be moved until the time is up.
+export function mapPoints(place, guess, bounds) {
+  const diagonal = distanceKm(
+    { lat: bounds.south, lng: bounds.west },
+    { lat: bounds.north, lng: bounds.east },
+  );
+  const off = distanceKm(place, guess) / (diagonal / 2);
+  return Math.round(BASE_POINTS * Math.max(0, 1 - off));
+}
+
+const isNumber = (n) => typeof n === 'number' && Number.isFinite(n);
+const isLat = (n) => isNumber(n) && n >= -90 && n <= 90;
+const isLng = (n) => isNumber(n) && n >= -180 && n <= 180;
+export const isPlace = (p) => isLat(p?.lat) && isLng(p?.lng);
+
+// A map question's own: the place, and the part of the map that's shown
+// (the place must be on it) - null if they won't do.
+function cleanMap(q) {
+  const { place, bounds: b } = q;
+  if (!isPlace(place)) return null;
+  if (!isLat(b?.south) || !isLat(b?.north) || !isLng(b?.west) || !isLng(b?.east)) return null;
+  if (b.south >= b.north || b.west >= b.east) return null;
+  if (place.lat < b.south || place.lat > b.north || place.lng < b.west || place.lng > b.east) {
+    return null;
+  }
+  return {
+    place: { lat: place.lat, lng: place.lng },
+    bounds: { south: b.south, west: b.west, north: b.north, east: b.east },
+  };
+}
+
+// --- A quiz ---
+
+// The answers to pick from and the right one's place - or the reason why
+// they won't do.
+function cleanAnswers(q, nr) {
+  if (
+    !Array.isArray(q.answers) ||
+    q.answers.length < MIN_ANSWERS ||
+    q.answers.length > MAX_ANSWERS
+  ) {
+    return { error: `${nr}: ${MIN_ANSWERS}-${MAX_ANSWERS} válasz kell hozzá.` };
+  }
+  const answers = q.answers.map((a) => (typeof a === 'string' ? a.trim() : ''));
+  if (answers.some((a) => !a || a.length > MAX_ANSWER_TEXT)) {
+    return { error: `${nr}: egy válasz 1-${MAX_ANSWER_TEXT} karakter lehet.` };
+  }
+  if (!Number.isInteger(q.correct) || q.correct < 0 || q.correct >= answers.length) {
+    return { error: `${nr}: jelöld meg a helyes választ.` };
+  }
+  return { answers, correct: q.correct };
+}
+
+// The quiz as sent in, cleaned - or the reason (in Hungarian) why it won't
+// do. Each question keeps only what its kind has. (That a picture or a song
+// it names is really there is the controller's to check.)
 export function cleanQuiz(body) {
   const title = typeof body?.title === 'string' ? body.title.trim() : '';
   if (!title || title.length > MAX_TITLE) {
@@ -46,31 +125,48 @@ export function cleanQuiz(body) {
     if (!text || text.length > MAX_QUESTION_TEXT) {
       return { error: `${nr}: a szövege 1-${MAX_QUESTION_TEXT} karakter lehet.` };
     }
-    if (
-      !Array.isArray(q.answers) ||
-      q.answers.length < MIN_ANSWERS ||
-      q.answers.length > MAX_ANSWERS
-    ) {
-      return { error: `${nr}: ${MIN_ANSWERS}-${MAX_ANSWERS} válasz kell hozzá.` };
-    }
-    const answers = q.answers.map((a) => (typeof a === 'string' ? a.trim() : ''));
-    if (answers.some((a) => !a || a.length > MAX_ANSWER_TEXT)) {
-      return { error: `${nr}: egy válasz 1-${MAX_ANSWER_TEXT} karakter lehet.` };
-    }
-    if (!Number.isInteger(q.correct) || q.correct < 0 || q.correct >= answers.length) {
-      return { error: `${nr}: jelöld meg a helyes választ.` };
-    }
     const timeLimitSec = q.timeLimitSec ?? DEFAULT_TIME_LIMIT;
     if (!TIME_LIMITS.includes(timeLimitSec)) {
       return { error: `${nr}: a gondolkodási idő ${TIME_LIMITS.join(', ')} másodperc lehet.` };
     }
-    // Only a picture question has a picture - and it must have one: its
-    // name (quizImages.js).
-    const image = type === 'picture' ? (q.image ?? null) : null;
-    if (type === 'picture' && (typeof image !== 'string' || !/^[0-9a-f]{24}$/.test(image))) {
-      return { error: `${nr}: a képfelfedő kérdéshez válassz képet.` };
+    const question = { type, text, timeLimitSec, answers: [], correct: 0, image: null };
+
+    if (type === 'map') {
+      const map = cleanMap(q);
+      if (!map) return { error: `${nr}: jelöld be a helyet a térképen.` };
+      Object.assign(question, map);
+    } else if (type === 'truefalse') {
+      if (q.correct !== 0 && q.correct !== 1) {
+        return { error: `${nr}: jelöld meg, hogy igaz vagy hamis.` };
+      }
+      Object.assign(question, { answers: TRUE_FALSE, correct: q.correct });
+    } else {
+      const { error, ...answers } = cleanAnswers(q, nr);
+      if (error) return { error };
+      Object.assign(question, answers);
     }
-    cleaned.push({ type, text, image, answers, correct: q.correct, timeLimitSec });
+
+    if (hasPicture(type)) {
+      if (typeof q.image !== 'string' || !/^[0-9a-f]{24}$/.test(q.image)) {
+        return { error: `${nr}: ehhez a kérdéshez válassz képet.` };
+      }
+      question.image = q.image;
+    }
+    if (type === 'zoom') {
+      // The detail it starts on: where in the picture's box, 0-1 each way.
+      const { x = 0.5, y = 0.5 } = q.focus ?? {};
+      const inBox = (n) => isNumber(n) && n >= 0 && n <= 1;
+      if (!inBox(x) || !inBox(y)) return { error: `${nr}: jelöld meg, honnan induljon a kép.` };
+      question.focus = { x, y };
+    }
+    if (type === 'song') {
+      const { playlist, id } = q.song ?? {};
+      if (typeof playlist !== 'string' || typeof id !== 'string' || !playlist || !id) {
+        return { error: `${nr}: válassz hozzá dalt.` };
+      }
+      question.song = { playlist, id };
+    }
+    cleaned.push(question);
   }
   return { quiz: { title, questions: cleaned } };
 }

@@ -1,8 +1,8 @@
 <section class="quiz-home">
   <div class="hero">
     <div class="hero-text">
-      <p class="eyebrow">Bódorgó Móka</p>
-      <h1>Kvíz</h1>
+      <p class="eyebrow">Bódorgó Móka · Kvíz</p>
+      <h1>Játékszoba</h1>
       <p class="lead">
         Mindenki a saját telefonján válaszol – aki gyorsabb, több pontot kap. A végén hárman
         állhatnak a dobogóra.
@@ -25,7 +25,8 @@
         </button>
       </form>
       <p class="hint">
-        Saját kvízt indítanál? A <a routerLink="/moka/kviz/szerkeszto">Kvízek</a> között találod.
+        Saját kvízt írnál vagy indítanál? Irány az
+        <a routerLink="/moka/kviz/szerkeszto">Alkotóműhely</a>!
       </p>
     </div>
 
@@ -63,8 +64,8 @@
     </ul>
   }
 
-  <!-- Everyone's places over every finished game. -->
-  <h2><mat-icon>leaderboard</mat-icon> Ranglista</h2>
+  <!-- The best results of all time: who, in which game, how many points. -->
+  <h2><mat-icon>leaderboard</mat-icon> Ranglista <small>minden idők legjobbjai</small></h2>
   @if (leaders(); as list) {
     @if (list.length) {
       <div class="board-scroll">
@@ -73,33 +74,28 @@
             <tr>
               <th></th>
               <th class="left">Játékos</th>
-              <th title="Első helyek">🥇</th>
-              <th title="Második helyek">🥈</th>
-              <th title="Harmadik helyek">🥉</th>
-              <th title="Befejezett játékok">Játék</th>
-              <th title="Helyes válaszok">Helyes</th>
-              <th title="Összes pont">Pont</th>
+              <th class="left">Kvíz</th>
+              <th>Pont</th>
             </tr>
           </thead>
           <tbody>
-            @for (p of list; track p.userId; let i = $index) {
-              <tr [class.me]="p.userId === myId">
+            @for (r of list; track r.gameId + r.userId; let i = $index) {
+              <tr [class.me]="r.userId === myId">
                 <td class="rank">{{ i + 1 }}.</td>
                 <td class="left who">
                   <app-avatar
                     class="face"
-                    [name]="p.name"
-                    [userId]="p.userId"
-                    [photoVersion]="p.photoUpdatedAt"
+                    [name]="r.name"
+                    [userId]="r.userId"
+                    [photoVersion]="r.photoUpdatedAt"
                   />
-                  {{ p.name }}
+                  {{ r.name }}
                 </td>
-                <td class="gold">{{ p.firsts }}</td>
-                <td>{{ p.seconds }}</td>
-                <td>{{ p.thirds }}</td>
-                <td>{{ p.games }}</td>
-                <td>{{ p.correct }}</td>
-                <td>{{ p.points }}</td>
+                <td class="left">
+                  <a [routerLink]="r.gameId" class="quiz-link">{{ r.title }}</a>
+                  <small>{{ r.finishedAt | date: 'yyyy. MM. dd.' }}</small>
+                </td>
+                <td class="gold">{{ r.points }}</td>
               </tr>
             }
           </tbody>

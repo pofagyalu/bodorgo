@@ -1,0 +1,101 @@
+:host {
+  display: block;
+}
+
+// The same shape everywhere - the editor, its preview, every screen in a
+// game: the part of the map its author chose is then exactly what
+// everyone sees. As wide as there's room for, but never taller than
+// --map-max-height (a page with more room sets that).
+.map {
+  aspect-ratio: 4 / 3;
+  width: min(100%, calc(var(--map-max-height, 52dvh) * 4 / 3));
+  margin: 0 auto;
+  border-radius: 1.25rem;
+  // Beyond the drawing: plain land (the sea is drawn - quiz-map.ts).
+  background: #f3ecd6;
+  box-shadow: 0 0.375rem 1.25rem #213b4126;
+  // Under the page's own overlays.
+  z-index: 0;
+
+  &.pickable {
+    cursor: crosshair;
+  }
+}
+
+// The marks are made by Leaflet, outside this component's own elements.
+
+// My pin (in the editor: the place): a drop standing on its point.
+:host ::ng-deep .quiz-mark--pin,
+:host ::ng-deep .quiz-mark--place {
+  display: grid;
+  place-items: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  border: 0.1875rem solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: var(--logo-orange);
+  box-shadow: 0 0.125rem 0.5rem #0007;
+  // The drop's point (its square corner) straight down, on the place.
+  transform: translateY(-20%) rotate(-45deg);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+
+  i {
+    font-style: normal;
+    transform: rotate(45deg);
+  }
+}
+
+:host ::ng-deep .quiz-mark--guess i {
+  font-style: normal;
+}
+
+// The right place: green, with a star.
+:host ::ng-deep .quiz-mark--place {
+  background: var(--logo-dark-green);
+  animation: quiz-place 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes quiz-place {
+  from {
+    opacity: 0;
+    transform: translateY(-140%) rotate(-45deg);
+  }
+}
+
+// Someone's pin, once the question is closed: a dot with their initial.
+:host ::ng-deep .quiz-mark--guess {
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border: 0.125rem solid #fff;
+  border-radius: 50%;
+  background: #23354a;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  box-shadow: 0 0.0625rem 0.25rem #0006;
+}
+
+:host ::ng-deep .quiz-mark-name {
+  padding: 0.0625rem 0.375rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #fffffff0;
+  color: #23354a;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  box-shadow: 0 0.0625rem 0.25rem #0003;
+
+  &::before {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host ::ng-deep .quiz-mark--place {
+    animation: none;
+  }
+}

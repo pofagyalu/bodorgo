@@ -8,7 +8,14 @@ import logger from '../logger.js';
 import { LIVE_STATUSES, Quiz, QuizGame } from '../models/quizModels.js';
 import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
-import { cleanQuiz, pointsFor, standings } from '../jatekok/quiz/scoring.js';
+import {
+  cleanQuiz,
+  distanceKm,
+  isPlace,
+  mapPoints,
+  pointsFor,
+  standings,
+} from '../jatekok/quiz/scoring.js';
 import { emitToQuiz } from '../jatekok/quiz/quizSocket.js';
 import {
   deleteUnusedQuizImages,
@@ -17,6 +24,8 @@ import {
   saveQuizImage,
 } from '../jatekok/quiz/quizImages.js';
 import { LONG_CACHE } from '../photos/imageSizes.js';
+import { PLAYLISTS, playlistByKey, playlistTracks } from '../music/jellyfin.js';
+import { pipeTrackAudio } from './musicController.js';
 
 // Móka → Kvíz. A quiz is written by one user, who alone may change, delete
 // or start it. A game is one playing of it: its starter leads (and doesn't
@@ -55,18 +64,39 @@ const quizView = (quiz, user, full = false) => ({
       answers: q.answers,
       correct: q.correct,
       timeLimitSec: q.timeLimitSec,
+      // Each kind's own.
+      ...(q.focus && { focus: q.focus }),
+      ...(q.song && { song: q.song }),
+      ...(q.place && { place: q.place, bounds: q.bounds }),
     })),
   }),
 });
 
+// A playlist this user may hear (the members' ones aren't a guest's), with
+// its tracks - null otherwise.
+async function tracksFor(user, key) {
+  if (!Object.hasOwn(PLAYLISTS, key)) return null;
+  if (playlistByKey(key).membersOnly && user.role === 'guest') return null;
+  return playlistTracks(key);
+}
+
 // The quiz as sent in, cleaned (jatekok/quiz/scoring.js) - the error if it
-// won't do, or if a picture it names isn't there.
-function quizFrom(body) {
-  const { quiz, error } = cleanQuiz(body);
+// won't do, or if a picture or a song it names isn't there. A song is
+// stored with its title and artist as the playlist has them.
+async function quizFrom(req) {
+  const { quiz, error } = cleanQuiz(req.body);
   if (error) throw new AppError(error, 400);
-  const lost = quiz.questions.findIndex((q) => q.image && !quizImageExists(q.image));
-  if (lost >= 0) {
-    throw new AppError(`${lost + 1}. kérdés: a képe nem található – válaszd ki újra.`, 400);
+  for (const [i, q] of quiz.questions.entries()) {
+    if (q.image && !quizImageExists(q.image)) {
+      throw new AppError(`${i + 1}. kérdés: a képe nem található – válaszd ki újra.`, 400);
+    }
+    if (q.song) {
+      const track = (await tracksFor(req.user, q.song.playlist))?.find((t) => t.id === q.song.id);
+      if (!track) {
+        throw new AppError(`${i + 1}. kérdés: a dala nem található – válaszd ki újra.`, 400);
+      }
+      q.song = { ...q.song, title: track.title, artist: track.artist };
+    }
   }
   return quiz;
 }
@@ -103,7 +133,7 @@ export const getQuizzes = async (req, res) => {
 
 // POST /jatekok/quiz/quizzes
 export const createQuiz = async (req, res) => {
-  const created = await Quiz.create({ ...quizFrom(req.body), createdBy: req.user._id });
+  const created = await Quiz.create({ ...(await quizFrom(req)), createdBy: req.user._id });
   sendQuiz(
     res,
     await created.populate({ path: 'createdBy', select: 'name username' }),
@@ -121,7 +151,7 @@ export const getQuiz = async (req, res) => {
 // already played keep the questions (and pictures) they were played with.
 export const updateQuiz = async (req, res) => {
   const stored = await ownQuiz(req);
-  const quiz = quizFrom(req.body);
+  const quiz = await quizFrom(req);
   const before = imagesOf(stored);
   stored.title = quiz.title;
   stored.questions = quiz.questions;
@@ -233,6 +263,8 @@ function gameView(game) {
   const question = game.questions[idx];
   const open = game.status === 'question';
   const reveal = game.status === 'reveal';
+  // The last question is closed: what it brought each player may be seen.
+  const closed = reveal || game.status === 'standings';
   const current = game.answers.filter((a) => a.questionIdx === idx);
   const counted = open ? game.answers.filter((a) => a.questionIdx !== idx) : game.answers;
   const people = new Map(playersOf(game).map((p) => [refId(p.user), p.user]));
@@ -262,7 +294,13 @@ function gameView(game) {
         rank: row.rank,
         // The open (or just closed) question.
         answered: !!mine,
-        ...(reveal && { answer: mine?.answer ?? null, points: mine?.points ?? 0 }),
+        ...(closed && { answer: mine?.answer ?? null, points: mine?.points ?? 0 }),
+        // A map question: where their pin was, and how far off.
+        ...(closed &&
+          question.type === 'map' && {
+            guess: mine ? { lat: mine.lat, lng: mine.lng } : null,
+            km: mine ? Math.round(distanceKm(question.place, mine) * 10) / 10 : null,
+          }),
       };
     }),
     question:
@@ -270,16 +308,24 @@ function gameView(game) {
         ? {
             type: question.type,
             text: question.text,
-            // A picture question's: uncovered slowly while the clock runs.
-            image: question.image ?? null,
             answers: question.answers,
             timeLimitSec: question.timeLimitSec,
             startedAt: game.questionStartedAt,
             endsAt: new Date(endsAt(game)),
+            // picture, zoom: the picture, shown bit by bit while the clock runs.
+            image: question.image ?? null,
+            ...(question.focus && { focus: question.focus }),
+            // map: the part of the map that's shown.
+            ...(question.bounds && { bounds: question.bounds }),
             ...(reveal && {
               correct: question.correct,
               // How many tapped each answer.
               counts: question.answers.map((_, i) => current.filter((a) => a.answer === i).length),
+              // song: which one it was (its audio: getGameSong, the host's only).
+              ...(question.song && {
+                song: { title: question.song.title, artist: question.song.artist },
+              }),
+              ...(question.place && { place: question.place }),
             }),
           }
         : null,
@@ -394,7 +440,14 @@ async function sendGame(res, gameId, user, code = 200) {
   );
   res.status(code).json({
     status: 'success',
-    data: { game: { ...gameView(game), myAnswer: mine?.answer ?? null } },
+    data: {
+      game: {
+        ...gameView(game),
+        myAnswer: mine?.answer ?? null,
+        // On a map question: where my pin is.
+        myGuess: isPlace(mine) ? { lat: mine.lat, lng: mine.lng } : null,
+      },
+    },
   });
 }
 
@@ -434,52 +487,38 @@ export const getGames = async (req, res) => {
   res.status(200).json({ status: 'success', data: { games: games.map(gameSummary) } });
 };
 
-// GET /jatekok/quiz/leaderboard - who stood on the podium how often, over
-// every finished game. Best first: the most wins, then 2nd and 3rd places,
-// then the points.
+// GET /jatekok/quiz/leaderboard - the best results of all time: who scored
+// how much in which game, over every finished game - the most points
+// first (then the earlier game). A player is in it once for each game they
+// played.
+const LEADERBOARD_SIZE = 50;
 export const getLeaderboard = async (req, res) => {
-  const games = await QuizGame.find({ status: 'finished' }).populate({
-    path: 'players.user',
-    select: PLAYER_SELECT,
-  });
+  const games = await QuizGame.find({ status: 'finished' })
+    .select('title finishedAt players answers')
+    .populate({ path: 'players.user', select: PLAYER_SELECT });
 
-  const rows = new Map();
+  const results = [];
   for (const game of games) {
     const people = new Map(playersOf(game).map((p) => [refId(p.user), p.user]));
     for (const place of standings([...people.keys()], game.answers)) {
       const user = people.get(place.user);
-      if (!rows.has(place.user)) {
-        rows.set(place.user, {
-          userId: place.user,
-          name: shownName(user),
-          photoUpdatedAt: user.photoUpdatedAt ?? null,
-          games: 0,
-          firsts: 0,
-          seconds: 0,
-          thirds: 0,
-          points: 0,
-          correct: 0,
-        });
-      }
-      const row = rows.get(place.user);
-      row.games += 1;
-      if (place.rank === 1) row.firsts += 1;
-      if (place.rank === 2) row.seconds += 1;
-      if (place.rank === 3) row.thirds += 1;
-      row.points += place.score;
-      row.correct += place.correct;
+      results.push({
+        userId: place.user,
+        name: shownName(user),
+        photoUpdatedAt: user.photoUpdatedAt ?? null,
+        gameId: game._id,
+        title: game.title,
+        finishedAt: game.finishedAt,
+        // Where they finished in that game.
+        place: place.rank,
+        points: place.score,
+      });
     }
   }
-
-  const players = [...rows.values()].sort(
-    (a, b) =>
-      b.firsts - a.firsts ||
-      b.seconds - a.seconds ||
-      b.thirds - a.thirds ||
-      b.points - a.points ||
-      a.name.localeCompare(b.name, 'hu'),
-  );
-  res.status(200).json({ status: 'success', data: { players } });
+  results.sort((a, b) => b.points - a.points || a.finishedAt - b.finishedAt);
+  res
+    .status(200)
+    .json({ status: 'success', data: { results: results.slice(0, LEADERBOARD_SIZE) } });
 };
 
 // GET /jatekok/quiz/games/pin/:pin - which live game this code belongs to.
@@ -533,8 +572,9 @@ export const joinGame = async (req, res) => {
 };
 
 // POST /jatekok/quiz/games/:id/next - the host's one button: the first
-// question from the lobby; an open question closed early; from the answers
-// shown the next question - or, after the last one, the end.
+// question from the lobby; an open question closed early; from the answer
+// shown the standings, and from those the next question - after the last
+// question's answer comes the end instead.
 export const nextStep = async (req, res) => {
   const game = await gameToLead(req);
   const last = game.questionIdx === game.questions.length - 1;
@@ -544,10 +584,10 @@ export const nextStep = async (req, res) => {
     await openQuestion(game, 0);
   } else if (game.status === 'question') {
     await closeQuestion(game._id, game.questionIdx);
-  } else if (last) {
+  } else if (game.status === 'reveal') {
     const result = await QuizGame.updateOne(
-      { _id: game._id, status: 'reveal' },
-      { status: 'finished', finishedAt: new Date() },
+      { _id: game._id, status: 'reveal', questionIdx: game.questionIdx },
+      last ? { status: 'finished', finishedAt: new Date() } : { status: 'standings' },
     );
     if (result.modifiedCount) await broadcast(game._id);
   } else {
@@ -567,6 +607,7 @@ export const answerQuestion = async (req, res) => {
 
   const { questionIdx } = game;
   const question = game.questions[questionIdx];
+  if (question.type === 'map') return putPin(req, res, game);
   const answer = req.body?.answer;
   if (!Number.isInteger(answer) || answer < 0 || answer >= question.answers.length) {
     throw new AppError('Ilyen válasz nincs.', 400);
@@ -594,6 +635,57 @@ export const answerQuestion = async (req, res) => {
   if (answered >= now.players.length) await closeQuestion(game._id, questionIdx);
   else await broadcast(game._id);
   await sendGame(res, game._id, req.user);
+};
+
+// A map question's answer: a pin - { lat, lng }. It may be moved until the
+// time is up (the last place counts), so the question isn't closed early
+// when everyone has one. Worth more the closer it is - not by speed.
+async function putPin(req, res, game) {
+  const { questionIdx } = game;
+  const question = game.questions[questionIdx];
+  const guess = { lat: req.body?.lat, lng: req.body?.lng };
+  if (!isPlace(guess)) throw new AppError('Koppints a térképre.', 400);
+  const pin = {
+    ...guess,
+    ms: Date.now() - game.questionStartedAt.getTime(),
+    points: mapPoints(question.place, guess, question.bounds),
+  };
+
+  const open = { _id: game._id, status: 'question', questionIdx, 'players.user': req.user._id };
+  const mine = { user: req.user._id, questionIdx };
+  // Moved, if there is one already - put down otherwise (a second first
+  // tap that got here at the same moment moves it instead).
+  const move = () =>
+    QuizGame.updateOne(
+      { ...open, answers: { $elemMatch: mine } },
+      { $set: Object.fromEntries(Object.entries(pin).map(([k, v]) => [`answers.$[a].${k}`, v])) },
+      { arrayFilters: [{ 'a.user': req.user._id, 'a.questionIdx': questionIdx }] },
+    );
+  let result = await move();
+  if (!result.matchedCount) {
+    result = await QuizGame.updateOne(
+      { ...open, answers: { $not: { $elemMatch: mine } } },
+      { $push: { answers: { ...mine, ...pin } } },
+    );
+    if (!result.modifiedCount) result = await move();
+  }
+  if (!result.matchedCount) throw new AppError('Erre a kérdésre már nem lehet válaszolni.', 400);
+
+  await broadcast(game._id);
+  await sendGame(res, game._id, req.user);
+}
+
+// GET /jatekok/quiz/games/:id/song - the song of the question that is open
+// (or was just closed), for the host's device: the players hear it from
+// there. Nothing in what the players get says which song it is.
+export const getGameSong = async (req, res) => {
+  const game = await gameToLead(req);
+  const song = ['question', 'reveal'].includes(game.status)
+    ? game.questions[game.questionIdx].song
+    : null;
+  if (!song?.id) throw new AppError('Ehhez a kérdéshez nincs dal.', 404);
+  playlistByKey(song.playlist);
+  await pipeTrackAudio(req, res, song.id);
 };
 
 // POST /jatekok/quiz/games/:id/abandon - the host calls it off: it's gone

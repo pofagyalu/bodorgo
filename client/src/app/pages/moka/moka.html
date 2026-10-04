@@ -6,11 +6,11 @@
     </div>
 
     <nav class="moka-nav" aria-label="Móka főmenü">
-      <!-- Darts and Futókörök: still only for whoever auth/moka.guard.ts lets in. -->
-      @if (seesAll()) {
-        <a routerLink="darts" routerLinkActive="active" class="nav-item" title="Darts">
-          <mat-icon>track_changes</mat-icon><span>Darts</span>
-        </a>
+      <a routerLink="darts" routerLinkActive="active" class="nav-item" title="Darts">
+        <mat-icon>track_changes</mat-icon><span>Darts</span>
+      </a>
+      <!-- Futókörök: still only for whoever auth/futokor.guard.ts lets in. -->
+      @if (seesRace()) {
         <a routerLink="futokor" routerLinkActive="active" class="nav-item" title="Futókörök">
           <mat-icon>directions_run</mat-icon><span>Futókörök</span>
         </a>
@@ -60,8 +60,8 @@
          (its own back arrow leads out). -->
     @if (!inGame()) {
       <nav class="moka-mobile-nav" aria-label="Móka főmenü mobilon">
-        @if (seesAll()) {
-          <a routerLink="darts" routerLinkActive="active">Darts</a>
+        <a routerLink="darts" routerLinkActive="active">Darts</a>
+        @if (seesRace()) {
           <a routerLink="futokor" routerLinkActive="active">Futókörök</a>
         }
         <a routerLink="kviz" routerLinkActive="active">Kvíz</a>

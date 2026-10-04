@@ -15,11 +15,15 @@ import {
 } from '../../../../testing/component';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
-import { Quiz, QuizGame, QuizGameSummary, QuizPlayer } from '../../../services/quiz';
+import { Quiz, QuizGame, QuizGameSummary, QuizPlayer, QuizQuestion } from '../../../services/quiz';
 import { TourSocketService } from '../../../services/tour-socket';
 import { Moka } from '../moka';
 import { QuizPhotoPicker } from './quiz-edit/photo-picker/photo-picker';
 import { QuizEdit } from './quiz-edit/quiz-edit';
+import { QuizPreview } from './quiz-edit/quiz-preview/quiz-preview';
+import { QuizSongPicker } from './quiz-edit/song-picker/song-picker';
+import { QuizQuestionView } from './quiz-question/quiz-question';
+import { QuizStandings } from './quiz-standings/quiz-standings';
 import { QuizGamePage } from './quiz-game/quiz-game';
 import { QuizHome } from './quiz-home';
 import { QuizList } from './quiz-list/quiz-list';
@@ -224,11 +228,11 @@ describe('QuizGamePage', () => {
     expect(page.myAnswer()).toBe(1);
     expect(page.myResult()).toBe('right');
     expect(page.answeredCount()).toBe(2);
-    expect(page.barWidth(1)).toBe(100);
-    expect(page.barWidth(0)).toBe(0);
+    const bars = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.bar')];
+    expect(bars.map((b) => b.style.width)).toEqual(['0%', '100%', '0%']);
     expect(page.top().map((p) => p.name)).toEqual(['Béla', 'Én']);
     expect(text()).toContain('+700 pont');
-    expect(text()).toContain('A következőt Zoli indítja');
+    expect(text()).toContain('Mindjárt jön az állás');
   });
 
   it('takes the tap back if the answer could not be sent', () => {
@@ -286,28 +290,138 @@ describe('QuizGamePage', () => {
     expect(el.querySelector<HTMLImageElement>('.picture img')?.src).toContain(
       `/jatekok/quiz/images/${'a'.repeat(24)}`,
     );
-    // Every tile has a turn of its own, and none is off yet.
-    expect([...page.tileTurns()].sort((a, b) => a - b)).toEqual([...Array(48).keys()]);
-    expect(page.tilesGone()).toBe(0);
+    // Every tile is there, and none is off yet.
     expect(el.querySelectorAll('.tiles span')).toHaveLength(48);
     expect(el.querySelectorAll('.tiles .gone')).toHaveLength(0);
 
     // Halfway through the time: more than half of them are off.
     socket.fire('quiz-game', { ...pictured({}, 10_000), myAnswer: undefined });
     fixture.detectChanges();
-    expect(page.tilesGone()).toBeGreaterThan(24);
-    expect(page.tilesGone()).toBeLessThan(48);
-    expect(el.querySelectorAll('.tiles .gone')).toHaveLength(page.tilesGone());
+    const gone = el.querySelectorAll('.tiles .gone').length;
+    expect(gone).toBeGreaterThan(24);
+    expect(gone).toBeLessThan(48);
 
     socket.fire('quiz-game', { ...pictured({ status: 'reveal' }, 12_000), myAnswer: undefined });
     fixture.detectChanges();
     expect(el.querySelectorAll('.tiles .gone')).toHaveLength(48);
   });
 
-  it('has no tiles on a question without a picture', () => {
+  it('has no picture on a plain question', () => {
     open(asked({ myAnswer: null }));
-    expect(page.tileTurns()).toEqual([]);
     expect((fixture.nativeElement as HTMLElement).querySelector('.picture')).toBeNull();
+  });
+
+  it('shows the standings between two questions, until the host starts the next one', () => {
+    const standing = game({
+      status: 'standings',
+      questionIdx: 0,
+      players: [
+        player('u2', 'Béla', { score: 900, points: 900 }),
+        player('me', 'Én', { rank: 2, score: 700, points: 700 }),
+      ],
+    });
+    open(standing);
+    expect(page.live()).toBe(true);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-quiz-standings')).not.toBeNull();
+    expect(text()).toContain('Jön a(z) 2. kérdés');
+    expect(el.querySelector('.lead-btn')).toBeNull();
+
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    open(standing, 'host');
+    expect(text()).toContain('Következő kérdés');
+  });
+
+  it('lets me put a pin on a map question and move it, and says how far off it was', () => {
+    const bounds = { south: 45.7, west: 16.1, north: 48.6, east: 22.9 };
+    const mapped = (over: Partial<QuizGame> = {}) => {
+      const g = asked({ myAnswer: null, myGuess: null, ...over });
+      g.question = { ...g.question!, type: 'map', answers: [], bounds };
+      return g;
+    };
+    open(mapped());
+    expect(text()).toContain('Koppints a térképre');
+
+    page.putPin({ lat: 47.6, lng: 19 });
+    expect(page.myGuess()).toEqual({ lat: 47.6, lng: 19 });
+    const first = http.expectOne(`${games}/g1/answers`);
+    expect(first.request.body).toEqual({ lat: 47.6, lng: 19 });
+    first.flush(
+      dataOf(mapped({ myGuess: { lat: 47.6, lng: 19 }, serverNow: at(serverNow() + 1) })),
+    );
+    fixture.detectChanges();
+    expect(text()).toContain('áthelyezheted');
+    // It may be moved while the question is open.
+    expect(page.canAnswer()).toBe(true);
+    page.putPin({ lat: 47.9, lng: 20.4 });
+    http
+      .expectOne(`${games}/g1/answers`)
+      .flush({ message: 'Lejárt.' }, { status: 400, statusText: 'x' });
+    expect(error).toHaveBeenCalledWith('Lejárt.');
+    respond({ 'GET /jatekok/quiz/games/g1': dataOf(mapped({ serverNow: at(serverNow() + 2) })) });
+
+    // Closed: the place, everyone's pins, and what mine came to.
+    const closed = mapped({ status: 'reveal', serverNow: at(serverNow() + 9000) });
+    closed.question = { ...closed.question!, place: { lat: 47.9, lng: 20.37 }, counts: [] };
+    closed.players = [
+      player('me', 'Én', {
+        answered: true,
+        points: 880,
+        km: 36.5,
+        guess: { lat: 47.6, lng: 20.2 },
+      }),
+      player('u2', 'Béla', { rank: 2, points: 0, km: null, guess: null }),
+    ];
+    socket.fire('quiz-game', { ...closed, myAnswer: undefined, myGuess: undefined });
+    fixture.detectChanges();
+    expect(page.myResult()).toBe('far');
+    expect(page.myPin()).toEqual({ lat: 47.6, lng: 20.2 });
+    expect(page.mapGuesses()).toEqual([{ lat: 47.6, lng: 20.2, name: 'Én', me: true }]);
+    expect(text()).toContain('36.5 km-re voltál');
+    expect(text()).toContain('+880 pont');
+    expect(page.canAnswer()).toBe(false);
+  });
+
+  it('plays a song question’s song on the host’s device only - with a button if the browser wants a tap', async () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(new Error('x'));
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    const sung = (over: Partial<QuizGame> = {}) => {
+      const g = asked({ myAnswer: null, ...over });
+      g.question = { ...g.question!, type: 'song' };
+      return g;
+    };
+    // A player's phone stays silent.
+    open(sung());
+    await settle();
+    expect(play).not.toHaveBeenCalled();
+    expect(text()).toContain('Szól a zene');
+
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    open(sung(), 'host');
+    await settle();
+    fixture.detectChanges();
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(page.songBlocked()).toBe(true);
+    expect(text()).toContain('Zene indítása');
+
+    play.mockResolvedValue(undefined);
+    page.startSong();
+    await settle();
+    expect(page.songBlocked()).toBe(false);
+
+    // Which song it was, once the question is closed.
+    const closed = sung({ status: 'reveal', serverNow: at(serverNow() + 5000) });
+    closed.question = {
+      ...closed.question!,
+      correct: 0,
+      counts: [0, 0, 0],
+      song: { title: 'Tavaszi szél', artist: 'Népdal' },
+    };
+    socket.fire('quiz-game', closed);
+    fixture.detectChanges();
+    expect(text()).toContain('Tavaszi szél');
   });
 
   it('puts the winners on the podium at the end', async () => {
@@ -401,17 +515,16 @@ describe('QuizHome', () => {
       'GET /jatekok/quiz/games': list instanceof Failure ? list : { data: { games: list } },
       'GET /jatekok/quiz/leaderboard': {
         data: {
-          players: [
+          results: [
             {
               userId: 'u2',
               name: 'Béla',
               photoUpdatedAt: null,
-              games: 1,
-              firsts: 1,
-              seconds: 0,
-              thirds: 0,
+              gameId: 'g1',
+              title: 'Táborok',
+              finishedAt: '2026-01-01T10:20:00Z',
+              place: 1,
               points: 900,
-              correct: 1,
             },
           ],
         },
@@ -430,6 +543,8 @@ describe('QuizHome', () => {
     expect(text).toContain('Most megy');
     expect(text).toContain('🥇 Béla');
     expect(text).toContain('Ranglista');
+    const row = (fixture.nativeElement as HTMLElement).querySelector('.leaders tbody tr');
+    expect(row?.textContent?.replace(/\s+/g, ' ')).toContain('Béla Táborok2026. 01. 01.900');
   });
 
   it('finds a game by its code - digits only', () => {
@@ -635,7 +750,7 @@ describe('QuizEdit', () => {
     fixture.detectChanges();
     expect(el.querySelectorAll('.picture .pic-btn')).toHaveLength(2);
     expect(page.problem()).toContain('válassz hozzá képet');
-    expect(el.textContent).toContain('lassan tárul fel');
+    expect(el.textContent).toContain('csempénként tárul fel');
 
     // A tour's photo: the picker opens for that question, the server copies it.
     page.pickingFor.set(0);
@@ -753,6 +868,397 @@ describe('QuizPhotoPicker', () => {
   });
 });
 
+describe('QuizEdit: the kinds of question', () => {
+  function open() {
+    setUp([routeWith({})]);
+    const fixture = TestBed.createComponent(QuizEdit);
+    fixture.detectChanges();
+    const page = fixture.componentInstance;
+    page.title.set('Vegyes');
+    page.setText(0, 'Kérdés');
+    return { fixture, page, el: fixture.nativeElement as HTMLElement };
+  }
+
+  /** What would be saved of the open question. */
+  function saved(page: QuizEdit) {
+    page.save();
+    const req = http.expectOne({ method: 'POST', url: quizzes });
+    req.flush({ message: 'x' }, { status: 400, statusText: 'x' });
+    return req.request.body.questions[0];
+  }
+
+  it('offers six kinds, one question open at a time', () => {
+    const { fixture, page, el } = open();
+    expect(el.querySelectorAll('.kinds .choice')).toHaveLength(6);
+    page.addQuestion();
+    fixture.detectChanges();
+    expect(page.selected()).toBe(1);
+    expect(el.querySelectorAll('.q-nav .q-item')).toHaveLength(3); // two questions + "new"
+    expect(el.querySelectorAll('.card.question')).toHaveLength(1);
+    expect(el.querySelector('.q-head strong')?.textContent).toBe('2. kérdés');
+
+    // The open question stays the open one when it's moved; removing it
+    // opens the one that takes its place.
+    page.setText(1, 'Második');
+    page.move(1, -1);
+    expect(page.selected()).toBe(0);
+    expect(page.questions()[0].text).toBe('Második');
+    page.select(1);
+    void page.removeQuestion(1);
+    expect(page.questions()).toHaveLength(2); // asked first: it has a text
+    expect(el.querySelector('app-quiz-preview')).not.toBeNull();
+  });
+
+  it('true or false: no answers to write, only which one it is', () => {
+    const { fixture, page, el } = open();
+    page.setCorrect(0, 3);
+    page.setType(0, 'truefalse');
+    fixture.detectChanges();
+    expect(page.questions()[0].correct).toBe(1);
+    expect(el.querySelector('.form-cols .answers')).toBeNull();
+    expect(el.querySelectorAll('.truth .choice')).toHaveLength(2);
+    expect(page.problem()).toBeNull();
+    page.setCorrect(0, 0);
+    expect(saved(page)).toEqual({
+      type: 'truefalse',
+      text: 'Kérdés',
+      timeLimitSec: 20,
+      answers: [],
+      correct: 0,
+    });
+  });
+
+  it('a song: picked from a playlist, the answers filled in with it and three others', () => {
+    const { fixture, page, el } = open();
+    page.setType(0, 'song');
+    expect(page.problem()).toContain('válassz hozzá dalt');
+    page.pickingSongFor.set(0);
+    fixture.detectChanges();
+    expect(el.parentElement?.querySelector('app-quiz-song-picker')).not.toBeNull();
+
+    const song = { playlist: 'buli' as const, id: 'c3', title: 'Buli van', artist: 'Valaki' };
+    page.songPicked({ song, label: 'Valaki – Buli van', others: ['A – a', 'B – b', 'C – c'] });
+    fixture.detectChanges();
+    const q = page.questions()[0];
+    expect(page.pickingSongFor()).toBeNull();
+    expect([...q.answers].sort()).toEqual(['A – a', 'B – b', 'C – c', 'Valaki – Buli van']);
+    expect(q.answers[q.correct]).toBe('Valaki – Buli van');
+    expect(page.problem()).toBeNull();
+    expect(page.playlistName(song)).toBe('Buli rádió');
+    expect(el.querySelector('audio')?.src).toBe(`${API}/music/buli/stream/c3`);
+
+    // Every answer can be rewritten.
+    page.setAnswer(0, q.correct, 'Buli van');
+    expect(saved(page)).toMatchObject({ type: 'song', song, correct: q.correct });
+  });
+
+  it('a zoom: a picture, and a tap on it for the detail it starts on', () => {
+    const { fixture, page, el } = open();
+    page.setType(0, 'zoom');
+    page.setAnswer(0, 0, 'Anna');
+    page.setAnswer(0, 1, 'Béla');
+    expect(page.problem()).toContain('válassz hozzá képet');
+    page.pickingFor.set(0);
+    page.fromTour({ tourId: 't1', filename: 'IMG_1.jpg' });
+    http
+      .expectOne(`${API}/jatekok/quiz/images/from-tour`)
+      .flush({ data: { image: 'b'.repeat(24) } });
+    fixture.detectChanges();
+    // From the middle until told otherwise.
+    expect(saved(page).focus).toEqual({ x: 0.5, y: 0.5 });
+
+    const box = el.querySelector<HTMLElement>('.focus-box')!;
+    vi.spyOn(box, 'getBoundingClientRect').mockReturnValue({
+      left: 100,
+      top: 50,
+      width: 400,
+      height: 300,
+    } as DOMRect);
+    box.dispatchEvent(new MouseEvent('click', { clientX: 200, clientY: 275 }));
+    fixture.detectChanges();
+    expect(page.questions()[0].focus).toEqual({ x: 0.25, y: 0.75 });
+    expect(el.querySelector<HTMLElement>('.focus-dot')?.style.left).toBe('25%');
+    expect(saved(page)).toMatchObject({
+      type: 'zoom',
+      image: 'b'.repeat(24),
+      focus: { x: 0.25, y: 0.75 },
+    });
+  });
+
+  it('a map: the place tapped, the part shown chosen - or a tour’s place taken', () => {
+    const { fixture, page, el } = open();
+    page.setType(0, 'map');
+    fixture.detectChanges();
+    expect(el.querySelector('app-quiz-map')).not.toBeNull();
+    expect(el.querySelector('.form-cols .answers')).toBeNull();
+    expect(page.problem()).toContain('koppints a térképen');
+
+    page.setPlace(0, { lat: 47.9, lng: 20.37 });
+    expect(page.problem()).toBeNull();
+    // The map moved off the place: it can't be saved like that.
+    page.setBounds(0, { south: 46, west: 16, north: 47, east: 18 });
+    expect(page.problem()).toContain('nincs a térkép látható részén');
+
+    // A tour's place: the map is moved over it, the same size.
+    page.showTours(0);
+    http.expectOne(`${API}/tours`).flush({
+      data: {
+        tours: [
+          {
+            _id: 't1',
+            title: 'Mátra',
+            startDate: '2024-07-01',
+            location: { coordinates: [19.9, 47.87] },
+          },
+          { _id: 't2', title: 'Sehol', startDate: '2025-07-01', location: { coordinates: [] } },
+        ],
+      },
+    });
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.tour-list button')).toHaveLength(2);
+    expect(page.tourYear(page.tours()![0])).toBe(2025);
+    page.placeFromTour(0, page.tours()![0]);
+    expect(error).toHaveBeenCalledWith('Ennek a tábornak nincs megadva a helye.');
+    page.placeFromTour(0, page.tours()![1]);
+    const q = page.questions()[0];
+    expect(q.place).toEqual({ lat: 47.87, lng: 19.9 });
+    expect(q.bounds).toEqual({ south: 47.37, north: 48.37, west: 18.9, east: 20.9 });
+    expect(page.toursFor()).toBeNull();
+    expect(saved(page)).toEqual({
+      type: 'map',
+      text: 'Kérdés',
+      timeLimitSec: 20,
+      answers: [],
+      correct: 0,
+      place: q.place,
+      bounds: q.bounds,
+    });
+  });
+});
+
+describe('QuizSongPicker', () => {
+  it('offers the playlists I may hear, searches them, and adds three others to the song picked', () => {
+    setUp();
+    const fixture = TestBed.createComponent(QuizSongPicker);
+    const picker = fixture.componentInstance;
+    fixture.detectChanges();
+    const track = (id: string, artist: string, title: string) => ({ id, artist, title });
+    respond({
+      'GET /music/bodorgo-fm/playlist': {
+        data: {
+          tracks: [
+            track('a1', 'Népdal', 'Tavaszi szél'),
+            track('b2', 'Kormorán', 'Az a szép'),
+            track('c3', 'LGT', 'Neked írom a dalt'),
+            track('d4', 'Omega', 'Gyöngyhajú lány'),
+            track('e5', 'Omega', 'Gyöngyhajú lány'), // written the same: offered once
+          ],
+        },
+      },
+      'GET /music/buli/playlist': fail(403),
+      'GET /music/hatter/playlist': { data: { tracks: [track('x1', 'Valaki', 'Halk dal')] } },
+    });
+    fixture.detectChanges();
+    expect(picker.lists()?.map((l) => l.name)).toEqual(['Bódorgó FM', 'Duruzsoló']);
+    expect(picker.current()).toBe('bodorgo-fm');
+
+    picker.search.set('omega');
+    expect(picker.tracks().map((t) => t.id)).toEqual(['d4', 'e5']);
+    picker.show('hatter');
+    expect(picker.search()).toBe('');
+    expect(picker.tracks()).toHaveLength(1);
+
+    const picked = vi.fn();
+    picker.picked.subscribe(picked);
+    picker.show('bodorgo-fm');
+    picker.pick(picker.tracks()[0]);
+    const { song, label, others } = picked.mock.calls[0][0];
+    expect(song).toEqual({
+      playlist: 'bodorgo-fm',
+      id: 'a1',
+      title: 'Tavaszi szél',
+      artist: 'Népdal',
+    });
+    expect(label).toBe('Népdal – Tavaszi szél');
+    expect([...others].sort()).toEqual([
+      'Kormorán – Az a szép',
+      'LGT – Neked írom a dalt',
+      'Omega – Gyöngyhajú lány',
+    ]);
+
+    const closed = vi.fn();
+    picker.closed.subscribe(closed);
+    picker.close();
+    expect(closed).toHaveBeenCalled();
+  });
+});
+
+describe('QuizQuestionView', () => {
+  it('zooms out of a picture from the detail it starts on', () => {
+    setUp();
+    const fixture = TestBed.createComponent(QuizQuestionView);
+    const set = (name: string, value: unknown) => fixture.componentRef.setInput(name, value);
+    set('question', {
+      type: 'zoom',
+      text: 'Ki ez?',
+      answers: ['Anna', 'Béla'],
+      image: 'a'.repeat(24),
+      focus: { x: 0.25, y: 0.75 },
+    });
+    fixture.detectChanges();
+    const img = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.picture img')!;
+    expect(img.style.transform).toBe('scale(10)');
+    expect(img.style.transformOrigin).toBe('25% 75%');
+
+    set('timeLeft', 0.575); // half of the way to "all shown"
+    fixture.detectChanges();
+    expect(fixture.componentInstance.zoomScale()).toBeCloseTo(Math.sqrt(10), 2);
+
+    set('open', false);
+    fixture.detectChanges();
+    expect(img.style.transform).toBe('scale(1)');
+  });
+});
+
+describe('QuizStandings', () => {
+  it('opens as it stood before the last question, then moves to how it stands now', () => {
+    vi.useFakeTimers();
+    setUp();
+    const fixture = TestBed.createComponent(QuizStandings);
+    fixture.componentRef.setInput('players', [
+      player('u2', 'Béla', { rank: 1, score: 1500, points: 900 }),
+      player('me', 'Én', { rank: 2, score: 1000, points: 0 }),
+      ...Array.from({ length: 8 }, (_, i) =>
+        player(`x${i}`, `Más ${i}`, { rank: 3 + i, score: 100, points: 0 }),
+      ),
+      player('u9', 'Utolsó', { rank: 11, score: 0, points: 0 }),
+    ]);
+    fixture.componentRef.setInput('myId', 'me');
+    fixture.detectChanges();
+    const view = fixture.componentInstance;
+    // The best eight are shown.
+    expect(view.rows()).toHaveLength(8);
+    const [bela, me] = view.rows();
+    // Before: I led with 1000 against Béla's 600.
+    expect([bela.before, bela.beforePlace, me.before, me.beforePlace]).toEqual([600, 1, 1000, 0]);
+    expect(view.moved()).toBe(false);
+    expect(view.width(bela)).toBe(40);
+    expect(view.width(me)).toBe(67);
+
+    vi.advanceTimersByTime(1000);
+    fixture.detectChanges();
+    expect(view.moved()).toBe(true);
+    expect(view.width(bela)).toBe(100);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('+900');
+
+    // Someone further down still sees their own row.
+    fixture.componentRef.setInput('myId', 'u9');
+    expect(view.rows().at(-1)?.name).toBe('Utolsó');
+    expect(view.rows()).toHaveLength(9);
+  });
+});
+
+describe('QuizPreview', () => {
+  const question = (over: Partial<QuizQuestion> = {}): QuizQuestion => ({
+    type: 'choice',
+    text: 'Hol?',
+    answers: ['', 'Mátra', '', 'Bükk'],
+    correct: 3,
+    timeLimitSec: 20,
+    ...over,
+  });
+
+  function open(q: QuizQuestion) {
+    vi.useFakeTimers();
+    setUp();
+    const fixture = TestBed.createComponent(QuizPreview);
+    fixture.componentRef.setInput('question', q);
+    fixture.componentRef.setInput('label', '1 / 1');
+    fixture.detectChanges();
+    return { fixture, preview: fixture.componentInstance };
+  }
+
+  it('plays the question as the players get it: the clock, a tap, what it was worth', () => {
+    const { fixture, preview } = open(question());
+    // The filled answers only - the right one's place among them.
+    expect(preview.shown()).toMatchObject({ answers: ['Mátra', 'Bükk'], text: 'Hol?' });
+    expect(preview.shown().correct).toBeUndefined();
+    expect(preview.phase()).toBe('idle');
+    expect(preview.canAnswer()).toBe(false);
+    preview.answer(1); // not started: nothing
+
+    preview.start();
+    vi.advanceTimersByTime(5000);
+    expect(preview.secondsLeft()).toBe(15);
+    preview.answer(1);
+    expect(preview.phase()).toBe('done');
+    expect(preview.shown().correct).toBe(1);
+    expect(preview.outcome()).toEqual({ kind: 'right', points: 875 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('+875 pont');
+
+    preview.start();
+    preview.answer(0);
+    expect(preview.outcome()).toEqual({ kind: 'wrong', points: 0 });
+
+    // Nothing tapped: the clock closes it.
+    preview.start();
+    vi.advanceTimersByTime(20_500);
+    expect(preview.outcome()).toEqual({ kind: 'none', points: 0 });
+
+    // The question changed in the editor: back to its start.
+    fixture.componentRef.setInput('question', question({ text: 'Merre?' }));
+    fixture.detectChanges();
+    expect(preview.phase()).toBe('idle');
+    expect(preview.outcome()).toBeNull();
+  });
+
+  it('true or false has its two answers; a map counts the pin where it is at the end', () => {
+    const tf = open(question({ type: 'truefalse', correct: 1 })).preview;
+    expect(tf.shown().answers).toEqual(['Igaz', 'Hamis']);
+    tf.start();
+    tf.answer(1);
+    expect(tf.outcome()?.kind).toBe('right');
+
+    TestBed.resetTestingModule();
+    const bounds = { south: 45.7, west: 16.1, north: 48.6, east: 22.9 };
+    const { preview } = open(
+      question({ type: 'map', answers: [], place: { lat: 47.9, lng: 20.37 }, bounds }),
+    );
+    expect(preview.shown()).toMatchObject({ answers: [], bounds });
+    preview.start();
+    preview.finish();
+    expect(preview.outcome()).toEqual({ kind: 'none', points: 0 });
+
+    preview.start();
+    preview.putPin({ lat: 47.68, lng: 16.59 });
+    preview.putPin({ lat: 47.9, lng: 20.37 }); // moved onto the place
+    expect(preview.phase()).toBe('running');
+    preview.finish();
+    expect(preview.outcome()).toEqual({ kind: 'far', km: 0, points: 1000 });
+    expect(preview.shown().place).toEqual({ lat: 47.9, lng: 20.37 });
+    preview.reset();
+    expect(preview.myGuess()).toBeNull();
+  });
+
+  it('plays a song question’s song here', () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    const { fixture, preview } = open(
+      question({
+        type: 'song',
+        song: { playlist: 'buli', id: 'c3', title: 'Buli van', artist: 'Valaki' },
+      }),
+    );
+    preview.start();
+    expect(play).toHaveBeenCalledTimes(1);
+    preview.answer(1);
+    expect(preview.shown().song?.title).toBe('Buli van');
+    fixture.destroy();
+    expect(pause).toHaveBeenCalled();
+  });
+});
+
 describe('Moka with the quiz', () => {
   function open(url: string, user: { role: string; canManageRoles?: boolean }) {
     TestBed.configureTestingModule({ providers: [pageTesting()] });
@@ -763,16 +1269,16 @@ describe('Moka with the quiz', () => {
     return fixture;
   }
 
-  it('shows only the quiz to whoever isn’t let into the rest yet', () => {
+  it('shows Darts and the quiz to everyone - the race only to its own people', () => {
     const fixture = open('/moka/kviz/jatekok', { role: 'member' });
     const page = fixture.componentInstance;
     expect(page.inQuiz()).toBe(true);
-    expect(page.seesAll()).toBe(false);
+    expect(page.seesRace()).toBe(false);
     expect(page.inGame()).toBe(false);
     const links = [
       ...(fixture.nativeElement as HTMLElement).querySelectorAll('.moka-nav .nav-item'),
     ];
-    expect(links.map((a) => a.textContent?.trim())).toEqual(['quizKvíz']);
+    expect(links.map((a) => a.textContent?.trim())).toEqual(['track_changesDarts', 'quizKvíz']);
   });
 
   it('shows everything to the role manager, and hides the tabs during a quiz game', () => {
@@ -780,7 +1286,7 @@ describe('Moka with the quiz', () => {
       role: 'admin',
       canManageRoles: true,
     }).componentInstance;
-    expect(page.seesAll()).toBe(true);
+    expect(page.seesRace()).toBe(true);
     expect(page.inGame()).toBe(true);
   });
 });

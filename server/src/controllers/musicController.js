@@ -68,9 +68,13 @@ const PASSED_HEADERS = ['content-type', 'content-length', 'content-range', 'acce
 // GET /music/:key/stream/:itemId - one song's audio, piped through. Only a
 // song of that playlist - not any Jellyfin item by its id.
 export const streamTrack = async (req, res) => {
-  const { itemId } = req.params;
   await trackOf(req);
+  await pipeTrackAudio(req, res, req.params.itemId);
+};
 
+// A song's audio from Jellyfin, piped to this request - for whoever has
+// already checked that it may be heard (here; the quiz's song question).
+export async function pipeTrackAudio(req, res, itemId) {
   // The listener skipped or left: stop fetching from Jellyfin too.
   const abort = new AbortController();
   res.on('close', () => abort.abort());
@@ -96,4 +100,4 @@ export const streamTrack = async (req, res) => {
       res.destroy();
     })
     .pipe(res);
-};
+}

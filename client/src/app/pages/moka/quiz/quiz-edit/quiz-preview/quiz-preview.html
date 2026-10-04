@@ -1,0 +1,69 @@
+<div class="frame">
+  <div class="top">
+    <span class="tag"><mat-icon>visibility</mat-icon> Előnézet · {{ label() }}</span>
+    <span class="clock" [class.clock--late]="phase() === 'running' && secondsLeft() <= 5">
+      {{ phase() === 'done' ? 0 : secondsLeft() }}
+    </span>
+  </div>
+  <!-- The time left, running out. -->
+  <div class="timebar" aria-hidden="true">
+    <span [style.transform]="'scaleX(' + timeLeft() + ')'"></span>
+  </div>
+
+  <app-quiz-question
+    [question]="shown()"
+    [open]="phase() !== 'done'"
+    [timeLeft]="timeLeft()"
+    seed="előnézet"
+    [myAnswer]="myAnswer()"
+    [myGuess]="myGuess()"
+    [canAnswer]="canAnswer()"
+    (answered)="answer($event)"
+    (pinned)="putPin($event)"
+  />
+
+  <!-- What trying it came to. -->
+  @if (outcome(); as o) {
+    @switch (o.kind) {
+      @case ('right') {
+        <p class="result result--right">
+          <mat-icon>celebration</mat-icon> Talált! <strong>+{{ o.points }} pont</strong>
+        </p>
+      }
+      @case ('wrong') {
+        <p class="result result--wrong"><mat-icon>close</mat-icon> Ez most nem talált.</p>
+      }
+      @case ('none') {
+        <p class="result result--wrong"><mat-icon>timer_off</mat-icon> Lejárt az idő.</p>
+      }
+      @case ('far') {
+        <p class="result" [class.result--right]="o.points" [class.result--wrong]="!o.points">
+          <mat-icon>location_on</mat-icon> {{ o.km }} km-re voltál
+          <strong>+{{ o.points }} pont</strong>
+        </p>
+      }
+    }
+  }
+
+  <div class="controls">
+    @switch (phase()) {
+      @case ('idle') {
+        <button type="button" class="go" (click)="start()">
+          <mat-icon>play_arrow</mat-icon> Kipróbálom
+        </button>
+      }
+      @case ('running') {
+        <button type="button" class="go go--quiet" (click)="finish()">
+          <mat-icon>stop_circle</mat-icon> Lezárás
+        </button>
+      }
+      @case ('done') {
+        <button type="button" class="go" (click)="start()"><mat-icon>replay</mat-icon> Újra</button>
+        <button type="button" class="go go--quiet" (click)="reset()">
+          <mat-icon>skip_previous</mat-icon> Az elejére
+        </button>
+      }
+    }
+  </div>
+  <p class="note">Így látják majd a játékosok. Itt semmi sem számít bele semmibe.</p>
+</div>

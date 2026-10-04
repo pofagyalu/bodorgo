@@ -1,0 +1,96 @@
+@let q = question();
+
+<h2 class="question">{{ q.text }}</h2>
+
+@switch (q.type) {
+  <!-- The picture under tiles that go one by one. -->
+  @case ('picture') {
+    @if (q.image; as image) {
+      <div class="picture">
+        <img [src]="imageUrl(image)" alt="" draggable="false" />
+        <div class="tiles" aria-hidden="true">
+          @for (turn of tileTurns(); track $index) {
+            <span [class.gone]="turn < tilesGone()"></span>
+          }
+        </div>
+      </div>
+    }
+  }
+  <!-- The picture from a detail of it, backing away. -->
+  @case ('zoom') {
+    @if (q.image; as image) {
+      <div class="picture picture--zoom">
+        <img
+          [src]="imageUrl(image)"
+          alt=""
+          draggable="false"
+          [style.transform]="'scale(' + zoomScale() + ')'"
+          [style.transform-origin]="zoomOrigin()"
+        />
+      </div>
+    }
+  }
+  <!-- A song is playing (on the host's device); which one, once it's closed. -->
+  @case ('song') {
+    <p class="song-note">
+      @if (open()) {
+        <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <span>Szól a zene – figyelj!</span>
+      } @else if (q.song; as song) {
+        <mat-icon>music_note</mat-icon>
+        <span
+          >{{ song.title }}<small>{{ song.artist }}</small></span
+        >
+      }
+    </p>
+  }
+  <!-- The map to put a pin on - and, once it's closed, the place and
+       everyone's pins. -->
+  @case ('map') {
+    @if (q.bounds; as bounds) {
+      <app-quiz-map
+        class="place-map"
+        [bounds]="bounds"
+        [pickable]="canAnswer()"
+        [pin]="myGuess()"
+        [place]="open() ? null : (q.place ?? null)"
+        [guesses]="open() ? [] : guesses()"
+        (picked)="pinned.emit($event)"
+      />
+    }
+  }
+}
+
+@if (q.answers.length) {
+  <div
+    class="answers"
+    [class.answers--closed]="!open()"
+    [class.answers--compact]="q.type === 'picture' || q.type === 'zoom'"
+  >
+    @for (a of q.answers; track $index; let i = $index) {
+      <button
+        type="button"
+        class="answer a{{ i }}"
+        [class.picked]="myAnswer() === i"
+        [class.dimmed]="open() ? myAnswer() !== null && myAnswer() !== i : q.correct !== i"
+        [class.correct]="!open() && q.correct === i"
+        [disabled]="!canAnswer()"
+        (click)="answered.emit(i)"
+      >
+        <span class="shape" aria-hidden="true">{{ shapes[i] }}</span>
+        <span class="text">{{ a }}</span>
+        @if (!open()) {
+          <span class="count">
+            @if (q.correct === i) {
+              <mat-icon>check_circle</mat-icon>
+            }
+            @if (q.counts; as counts) {
+              {{ counts[i] }}
+            }
+          </span>
+          <span class="bar" [style.width.%]="barWidth(i)" aria-hidden="true"></span>
+        }
+      </button>
+    }
+  </div>
+}

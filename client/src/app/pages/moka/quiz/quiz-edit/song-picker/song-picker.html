@@ -1,0 +1,49 @@
+<div class="backdrop" (click)="close()"></div>
+<div class="panel" role="dialog" aria-modal="true" aria-label="Dal választása">
+  <header class="head">
+    <strong>Melyik dal szóljon?</strong>
+    <button type="button" class="icon-btn" aria-label="Bezárás" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  @if (lists(); as all) {
+    @if (all.length) {
+      <!-- Which playlist - every one I may hear. -->
+      <div class="tabs" role="tablist">
+        @for (l of all; track l.key) {
+          <button type="button" role="tab" [class.on]="current() === l.key" (click)="show(l.key)">
+            {{ l.name }}
+          </button>
+        }
+      </div>
+      <label class="search">
+        <mat-icon>search</mat-icon>
+        <input
+          type="search"
+          placeholder="Keresés előadóra vagy címre"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+      </label>
+
+      <div class="body">
+        @for (t of tracks(); track t.id) {
+          <button type="button" class="track" (click)="pick(t)">
+            <mat-icon>music_note</mat-icon>
+            <span class="track-main">
+              <span class="track-title">{{ t.title }}</span>
+              <small>{{ t.artist }}</small>
+            </span>
+          </button>
+        } @empty {
+          <p class="empty">Nincs találat.</p>
+        }
+      </div>
+    } @else {
+      <p class="empty">A zene most nem érhető el.</p>
+    }
+  } @else {
+    <p class="empty">Betöltés…</p>
+  }
+</div>

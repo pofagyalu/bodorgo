@@ -2,12 +2,13 @@ import { inject } from '@angular/core';
 import { Router, RouterStateSnapshot } from '@angular/router';
 import { map, catchError, of } from 'rxjs';
 import { AuthService, CurrentUser } from './auth.service';
+import { canSeeFutokor } from './futokor.guard';
 
-// Who sees Móka (the games) - the menu item and its pages alike. While the
-// games are being built: only the one initial admin (the role manager, see
-// the server's utils/roleManager.js) - not the other admins. Once they're
-// ready, this is the line that opens them to everyone logged in.
-export const canSeeMoka = (user: CurrentUser | null) => !!user?.canManageRoles;
+// Who sees Móka (the games) - the menu item and its pages alike: everyone
+// logged in, since 2026-10-04 (while the games were being built, only the
+// role manager did). The server's twin: jatekok/access.js. Futókörök, the
+// running race, is still its own people's only (futokor.guard.ts).
+export const canSeeMoka = (user: CurrentUser | null) => !!user;
 
 // Asks the server first (like authGuard), so it also works on a fresh page
 // load straight to a Móka URL.
@@ -15,19 +16,19 @@ export const canSeeMoka = (user: CurrentUser | null) => !!user?.canManageRoles;
 // course on it, whatever the server says or doesn't: in the garden there
 // may be no connection to ask, and the run must go on (what the phone
 // sends is checked by the server anyway).
-// The quiz is open to everyone logged in already: a game needs its
-// players, who get there by its QR code or link (Móka isn't in their menu
-// yet).
+// Also the guard of every page inside Móka (canActivateChild), so the
+// race's pages stay closed to whoever just walks over from another game.
 export const mokaGuard = (_route: unknown, state: RouterStateSnapshot) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const raceOnThisPhone =
     state.url.startsWith('/moka/futokor') && !!localStorage.getItem('futokor-course');
-  const quiz = state.url.startsWith('/moka/kviz');
+  const race = state.url.startsWith('/moka/futokor');
 
   return auth.checkAuth().pipe(
     map(() => {
-      if (canSeeMoka(auth.user()) || raceOnThisPhone || (quiz && auth.isLoggedIn())) return true;
+      const allowed = race ? canSeeFutokor(auth.user()) : canSeeMoka(auth.user());
+      if (allowed || raceOnThisPhone) return true;
       router.navigate(['/']);
       return false;
     }),

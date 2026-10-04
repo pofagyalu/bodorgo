@@ -6,14 +6,14 @@ import { Avatar } from '../../../components/avatar/avatar';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { errorMessage } from '../../../shared/errors';
-import { ANSWER_SHAPES, QuizGameSummary, QuizLeader, QuizService } from '../../../services/quiz';
+import { ANSWER_SHAPES, QuizGameSummary, QuizResult, QuizService } from '../../../services/quiz';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 const PIN_LENGTH = 6;
 
-// Móka → Kvíz → Játékok: the opening page - a code to join a game with,
-// the games on right now, the leaderboard (who stood on the podium how
-// often) and every game played so far, the newest first, with its winners.
+// Móka → Kvíz → Játékszoba: the opening page - a code to join a game with,
+// the games on right now, the leaderboard (the best results of all time:
+// who scored how much in which game) and every game played so far, the newest first, with its winners.
 @Component({
   selector: 'app-quiz-home',
   imports: [RouterLink, DatePipe, MatIconModule, Avatar],
@@ -30,7 +30,7 @@ export class QuizHome {
 
   // null: still loading.
   games = signal<QuizGameSummary[] | null>(null);
-  leaders = signal<QuizLeader[] | null>(null);
+  leaders = signal<QuizResult[] | null>(null);
   pin = signal('');
   joining = signal(false);
 

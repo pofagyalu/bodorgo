@@ -5,19 +5,29 @@ import { NotificationsService } from '../../../../notifications/notifications.se
 import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
 import { errorMessage } from '../../../../shared/errors';
 import { shrinkImage } from '../../../../shared/image-resize';
+import { PLAYLIST_NAMES } from '../../../../services/music-player';
 import {
   ANSWER_SHAPES,
+  DEFAULT_BOUNDS,
   DEFAULT_TIME_LIMIT,
   MAX_ANSWERS,
   MAX_QUESTIONS,
   MIN_ANSWERS,
+  QuizBounds,
   QuizDraft,
+  QuizPlace,
   QuizQuestion,
   QuizQuestionType,
   QuizService,
+  QuizSong,
   TIME_LIMITS,
+  hasPicture,
 } from '../../../../services/quiz';
+import { Tour, TourService } from '../../../../services/tour';
+import { QuizMap } from '../quiz-map/quiz-map';
 import { PickedTourPhoto, QuizPhotoPicker } from './photo-picker/photo-picker';
+import { QuizPreview } from './quiz-preview/quiz-preview';
+import { PickedSong, QuizSongPicker } from './song-picker/song-picker';
 
 // A question in the editor always has all four answer slots: one left
 // empty simply isn't an answer (see toDraft).
@@ -31,6 +41,8 @@ const blankQuestion = (): QuizQuestion => ({
 });
 
 const filled = (answers: string[]) => answers.filter((a) => a.trim()).length;
+const onMap = (p: QuizPlace, b: QuizBounds) =>
+  p.lat >= b.south && p.lat <= b.north && p.lng >= b.west && p.lng <= b.east;
 
 // The kinds of question to choose from - each with what it means, and what
 // to put where the question goes.
@@ -44,27 +56,63 @@ const TYPES: { value: QuizQuestionType; label: string; icon: string; hint: strin
       ask: 'A kérdés',
     },
     {
+      value: 'truefalse',
+      label: 'Igaz–hamis',
+      icon: 'rule',
+      hint: 'Egy állítás – igaz vagy hamis?',
+      ask: 'Az állítás – pl. A Kékes Magyarország legmagasabb pontja.',
+    },
+    {
       value: 'picture',
       label: 'Képfelfedő',
       icon: 'image_search',
-      hint: 'Egy kép játék közben lassan tárul fel – aki hamarabb rájön, több pontot kap.',
+      hint: 'Egy kép játék közben csempénként tárul fel – aki hamarabb rájön, több pontot kap.',
       ask: 'A kérdés – pl. Hol készült ez a kép?',
+    },
+    {
+      value: 'zoom',
+      label: 'Nagyító',
+      icon: 'zoom_out_map',
+      hint: 'Egy kép apró részletéről indulunk, és lassan távolodunk – aki hamarabb rájön, több pontot kap.',
+      ask: 'A kérdés – pl. Ki van a képen?',
+    },
+    {
+      value: 'song',
+      label: 'Dal',
+      icon: 'music_note',
+      hint: 'Egy dal szól a te készülékeden – a játékosok a válaszok közül választanak.',
+      ask: 'A kérdés – pl. Melyik dal ez?',
+    },
+    {
+      value: 'map',
+      label: 'Térkép',
+      icon: 'location_on',
+      hint: 'Mindenki a térképre koppint, és a jelölőt az idő végéig áthelyezheti – aki a legközelebb van, a legtöbb pontot kapja.',
+      ask: 'A kérdés – pl. Hol volt a 2019-es tábor?',
     },
   ];
 
-// Móka → Kvíz → Kvízek → a new quiz, or one of my own: its title and its
-// questions - each of a kind chosen first (a plain one, or a picture
-// uncovered slowly), with up to four answers, the right one ticked, and
-// how long there is to think. Only a picture question has a picture: one
-// of my own, or a photo of a tour's album.
+// Which kinds are answered by picking one of up to four written answers.
+const hasAnswers = (type: QuizQuestionType) => type !== 'truefalse' && type !== 'map';
+
+// Móka → Kvíz → Alkotóműhely → a new quiz, or one of my own: its title and its
+// questions - each of a kind chosen first, and how long there is to
+// think. What a question needs depends on its kind: up to four answers
+// with the right one ticked; true or false; a picture (one of my own, or a
+// tour's photo) - for the zoom, with the detail it starts on; a song of a
+// playlist; a place on the map and the part of the map to show.
+// One question is open at a time (`selected`), with a preview of it to be
+// tried on the spot (quiz-preview) - beside the form on a wide screen,
+// over it on a phone.
 @Component({
   selector: 'app-quiz-edit',
-  imports: [RouterLink, MatIconModule, QuizPhotoPicker],
+  imports: [RouterLink, MatIconModule, QuizPhotoPicker, QuizSongPicker, QuizMap, QuizPreview],
   templateUrl: './quiz-edit.html',
   styleUrl: './quiz-edit.scss',
 })
 export class QuizEdit {
   private quiz = inject(QuizService);
+  private tourService = inject(TourService);
   private router = inject(Router);
   private notifications = inject(NotificationsService);
   private confirm = inject(ConfirmService);
@@ -74,16 +122,29 @@ export class QuizEdit {
   readonly shapes = ANSWER_SHAPES;
   readonly timeLimits = TIME_LIMITS;
   readonly types = TYPES;
+  readonly defaultBounds = DEFAULT_BOUNDS;
+  readonly hasPicture = hasPicture;
+  readonly hasAnswers = hasAnswers;
   typeOf = (q: QuizQuestion) => TYPES.find((t) => t.value === q.type) ?? TYPES[0];
 
   title = signal('');
   questions = signal<QuizQuestion[]>([blankQuestion()]);
   loaded = signal(!this.id);
+  // The question that is open in the form.
+  selected = signal(0);
+  // On a phone: the preview is over the form.
+  previewOpen = signal(false);
   saving = signal(false);
-  // The question a tour's photo is being picked for (the picker is open).
+  // The question a tour's photo / a song is being picked for (its picker
+  // is open).
   pickingFor = signal<number | null>(null);
+  pickingSongFor = signal<number | null>(null);
   // The question whose picture is on its way to the server.
   uploadingFor = signal<number | null>(null);
+  // The map question whose list of tours (to take a place from) is open.
+  toursFor = signal<number | null>(null);
+  // The tours, the newest first - loaded when first needed.
+  tours = signal<Tour[] | null>(null);
 
   isFull = computed(() => this.questions().length >= MAX_QUESTIONS);
 
@@ -92,10 +153,18 @@ export class QuizEdit {
     if (!this.title().trim()) return 'Adj címet a kvíznek.';
     for (const [i, q] of this.questions().entries()) {
       const nr = `${i + 1}. kérdés`;
-      if (q.type === 'picture' && !q.image) return `${nr}: válassz hozzá képet.`;
+      if (hasPicture(q.type) && !q.image) return `${nr}: válassz hozzá képet.`;
+      if (q.type === 'song' && !q.song) return `${nr}: válassz hozzá dalt.`;
       if (!q.text.trim()) return `${nr}: írd be a kérdést.`;
-      if (filled(q.answers) < MIN_ANSWERS) return `${nr}: legalább két válasz kell.`;
-      if (!q.answers[q.correct].trim()) return `${nr}: a helyesnek jelölt válasz üres.`;
+      if (q.type === 'map') {
+        if (!q.place) return `${nr}: koppints a térképen a helyes helyre.`;
+        if (!onMap(q.place, q.bounds ?? DEFAULT_BOUNDS)) {
+          return `${nr}: a hely nincs a térkép látható részén.`;
+        }
+      } else if (hasAnswers(q.type)) {
+        if (filled(q.answers) < MIN_ANSWERS) return `${nr}: legalább két válasz kell.`;
+        if (!q.answers[q.correct].trim()) return `${nr}: a helyesnek jelölt válasz üres.`;
+      }
     }
     return null;
   });
@@ -108,7 +177,12 @@ export class QuizEdit {
         this.questions.set(
           (quiz.questions ?? []).map((q) => ({
             ...q,
-            answers: [...q.answers, ...Array<string>(MAX_ANSWERS).fill('')].slice(0, MAX_ANSWERS),
+            // A true-or-false or a map question has its own answers - the
+            // four slots are there (empty) if its kind is changed.
+            answers: [
+              ...(hasAnswers(q.type) ? q.answers : []),
+              ...Array<string>(MAX_ANSWERS).fill(''),
+            ].slice(0, MAX_ANSWERS),
           })),
         );
         this.loaded.set(true);
@@ -124,10 +198,17 @@ export class QuizEdit {
     this.questions.update((list) => list.map((q, i) => (i === idx ? { ...q, ...change } : q)));
   }
 
-  // A picture already chosen stays with the question while it's being
-  // edited (in case the kind is switched back) - toDraft leaves it out.
+  // What belongs to another kind (a picture, a song, a place) stays with
+  // the question while it's being edited, in case the kind is switched
+  // back - toDraft leaves it out.
   setType(idx: number, type: QuizQuestionType) {
-    this.patch(idx, { type });
+    const q = this.questions()[idx];
+    this.patch(idx, {
+      type,
+      // True or false has only two to choose from.
+      ...(type === 'truefalse' && { correct: Math.min(q.correct, 1) }),
+      ...(type === 'map' && !q.bounds && { bounds: DEFAULT_BOUNDS }),
+    });
   }
 
   setText(idx: number, text: string) {
@@ -147,7 +228,7 @@ export class QuizEdit {
     this.patch(idx, { timeLimitSec });
   }
 
-  // --- A question's picture ---
+  // --- A picture (picture, zoom) ---
 
   imageUrl = (name: string) => this.quiz.imageUrl(name);
 
@@ -180,7 +261,8 @@ export class QuizEdit {
     return {
       next: (image: string) => {
         this.uploadingFor.set(null);
-        this.patch(idx, { image });
+        // A new picture: the zoom starts from its middle until told otherwise.
+        this.patch(idx, { image, focus: null });
       },
       error: (err: unknown) => {
         this.uploadingFor.set(null);
@@ -190,17 +272,103 @@ export class QuizEdit {
   }
 
   removeImage(idx: number) {
-    this.patch(idx, { image: null });
+    this.patch(idx, { image: null, focus: null });
+  }
+
+  // Zoom: a tap on the picture says which detail the game starts on.
+  setFocus(idx: number, event: MouseEvent) {
+    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const within = (n: number) => Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000;
+    this.patch(idx, {
+      focus: {
+        x: within((event.clientX - box.left) / box.width),
+        y: within((event.clientY - box.top) / box.height),
+      },
+    });
+  }
+
+  // --- A song ---
+
+  playlistName = (song: QuizSong) => PLAYLIST_NAMES[song.playlist] ?? song.playlist;
+  trackUrl = (song: QuizSong) => this.quiz.trackUrl(song);
+
+  // The song picked: the answers are filled in with it - at a place of its
+  // own each time - and three others of its playlist. All of them can be
+  // rewritten afterwards.
+  songPicked(picked: PickedSong) {
+    const idx = this.pickingSongFor();
+    this.pickingSongFor.set(null);
+    if (idx === null) return;
+    const correct = Math.floor(Math.random() * (picked.others.length + 1));
+    const answers = [...picked.others];
+    answers.splice(correct, 0, picked.label);
+    this.patch(idx, {
+      song: picked.song,
+      answers: [...answers, ...Array<string>(MAX_ANSWERS).fill('')].slice(0, MAX_ANSWERS),
+      correct,
+    });
+  }
+
+  // --- A place on the map ---
+
+  setPlace(idx: number, place: QuizPlace) {
+    this.patch(idx, { place });
+  }
+
+  // The author moved or zoomed the map: that part is what the players see.
+  setBounds(idx: number, bounds: QuizBounds) {
+    this.patch(idx, { bounds });
+  }
+
+  // The list of tours, to take a tour's place from.
+  showTours(idx: number) {
+    this.toursFor.set(this.toursFor() === idx ? null : idx);
+    if (this.tours()) return;
+    this.tourService.getTours().subscribe({
+      next: (res) =>
+        this.tours.set(
+          [...res.data.tours].sort((a, b) => Date.parse(b.startDate) - Date.parse(a.startDate)),
+        ),
+      error: () => this.tours.set([]),
+    });
+  }
+
+  tourYear = (tour: Tour) => new Date(tour.startDate).getFullYear();
+
+  // The tour's place is the answer - the map is moved over it if it
+  // doesn't show it (the same size of area as before).
+  placeFromTour(idx: number, tour: Tour) {
+    this.toursFor.set(null);
+    const [lng, lat] = tour.location?.coordinates ?? [];
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      this.notifications.addError('Ennek a tábornak nincs megadva a helye.');
+      return;
+    }
+    const place = { lat, lng };
+    const b = this.questions()[idx].bounds ?? DEFAULT_BOUNDS;
+    const [h, w] = [(b.north - b.south) / 2, (b.east - b.west) / 2];
+    const bounds = onMap(place, b)
+      ? b
+      : { south: lat - h, north: lat + h, west: lng - w, east: lng + w };
+    this.patch(idx, { place, bounds });
+  }
+
+  // --- The questions ---
+
+  select(idx: number) {
+    this.selected.set(idx);
+    this.toursFor.set(null);
   }
 
   addQuestion() {
     if (this.isFull()) return;
     this.questions.update((list) => [...list, blankQuestion()]);
-    // Once it's on the page: into view, ready to type.
-    setTimeout(() => {
-      const cards = this.host.nativeElement.querySelectorAll<HTMLElement>('.question textarea');
-      cards[cards.length - 1]?.focus();
-    });
+    this.select(this.questions().length - 1);
+    // Once it's on the page: ready to type.
+    setTimeout(() =>
+      this.host.nativeElement.querySelector<HTMLElement>('.question textarea')?.focus(),
+    );
   }
 
   async removeQuestion(idx: number) {
@@ -210,6 +378,7 @@ export class QuizEdit {
       if (!ok) return;
     }
     this.questions.update((list) => list.filter((_, i) => i !== idx));
+    this.select(Math.min(this.selected(), this.questions().length - 1));
   }
 
   // One place up (-1) or down (+1).
@@ -221,22 +390,30 @@ export class QuizEdit {
       [next[idx], next[to]] = [next[to], next[idx]];
       return next;
     });
+    // The open question stays the open one, at its new place.
+    if (this.selected() === idx) this.select(to);
   }
 
-  // What's sent: the empty answer slots left out (the right answer's place
-  // counted among the ones that stay).
+  // What's sent: of each question only what its kind has. The empty answer
+  // slots are left out (the right answer's place counted among the ones
+  // that stay).
   private toDraft(): QuizDraft {
     return {
       title: this.title().trim(),
       questions: this.questions().map((q) => {
+        const base = { type: q.type, text: q.text.trim(), timeLimitSec: q.timeLimitSec };
+        if (q.type === 'map') {
+          return { ...base, answers: [], correct: 0, place: q.place, bounds: q.bounds };
+        }
+        if (q.type === 'truefalse') return { ...base, answers: [], correct: q.correct };
         const kept = q.answers.map((a, i) => ({ a: a.trim(), i })).filter((x) => x.a);
         return {
-          type: q.type,
-          text: q.text.trim(),
-          image: q.type === 'picture' ? (q.image ?? null) : null,
+          ...base,
           answers: kept.map((x) => x.a),
           correct: kept.findIndex((x) => x.i === q.correct),
-          timeLimitSec: q.timeLimitSec,
+          image: hasPicture(q.type) ? (q.image ?? null) : null,
+          ...(q.type === 'zoom' && { focus: q.focus ?? { x: 0.5, y: 0.5 } }),
+          ...(q.type === 'song' && { song: q.song }),
         };
       }),
     };

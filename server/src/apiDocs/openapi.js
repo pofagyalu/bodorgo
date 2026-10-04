@@ -479,15 +479,29 @@ const schemas = {
   QuizQuestion: obj(
     {
       type: str(
-        'The kind of question. Default choice: a plain one. picture: with a picture the app uncovers slowly while the clock runs - it needs an `image`.',
-        { enum: ['choice', 'picture'] },
+        'The kind of question. Default `choice`: a plain one. `picture`: with a picture the app uncovers tile by tile while the clock runs. `zoom`: with a picture that starts on a detail (`focus`) and zooms out. `truefalse`: a statement - the answers are always Igaz / Hamis, `correct` 0 or 1. `song`: a song plays on the host’s device (`song`). `map`: everyone puts a pin on the map, the closest scores the most (`place`, `bounds`; no answers). Each kind keeps only its own fields.',
+        { enum: ['choice', 'picture', 'zoom', 'truefalse', 'song', 'map'] },
       ),
       text: str('1-300 characters.'),
       image: {
         type: ['string', 'null'],
         description:
-          'Only on a picture question (required there; dropped from any other): the name of its picture, from `POST /jatekok/quiz/images` or `/images/from-tour`, shown by `GET /jatekok/quiz/images/{name}`.',
+          'Only on a `picture` or `zoom` question (required there; dropped from any other): the name of its picture, from `POST /jatekok/quiz/images` or `/images/from-tour`, shown by `GET /jatekok/quiz/images/{name}`.',
       },
+      focus: obj({
+        x: num('0-1, from the left of the picture’s 4:3 box.'),
+        y: num('0-1, from its top.'),
+      }),
+      song: obj({
+        playlist: str('One of the music playlists the author may hear.', {
+          enum: ['bodorgo-fm', 'buli', 'hatter'],
+        }),
+        id: str('The track’s id in that playlist.'),
+        title: str('Filled in by the server from the playlist.'),
+        artist: str('Filled in by the server from the playlist.'),
+      }),
+      place: obj({ lat: num(), lng: num() }),
+      bounds: obj({ south: num(), west: num(), north: num(), east: num() }),
       answers: { ...arrayOf(str('1-120 characters.')), description: '2-4 answers.' },
       correct: int('The right answer’s place in `answers` (from 0) - exactly one is right.'),
       timeLimitSec: int('How long the question stays open. Default 20.', {
@@ -521,8 +535,8 @@ const schemas = {
       description: 'Six digits to join with - null once the game is over.',
     },
     status: str(
-      'lobby → question → reveal → question → ... → reveal → finished; abandoned: called off by the host.',
-      { enum: ['lobby', 'question', 'reveal', 'finished', 'abandoned'] },
+      'lobby → question → reveal → standings → question → ... → reveal → finished (reveal: the answer; standings: how the game stands, before the next question); abandoned: called off by the host.',
+      { enum: ['lobby', 'question', 'reveal', 'standings', 'finished', 'abandoned'] },
     ),
     host: obj({ _id: id(), name: str() }),
     createdAt: date(),
@@ -545,9 +559,17 @@ const schemas = {
           answered: bool('Has answered the open (or just closed) question.'),
           answer: {
             type: ['integer', 'null'],
-            description: 'Only in `reveal`: what they tapped - null: nothing.',
+            description: 'Only in `reveal` and `standings`: what they tapped - null: nothing.',
           },
-          points: int('Only in `reveal`: what that answer was worth.'),
+          points: int('Only in `reveal` and `standings`: what that answer was worth.'),
+          guess: {
+            type: ['object', 'null'],
+            description: 'A map question, once closed: where their pin was ({ lat, lng }).',
+          },
+          km: {
+            type: ['number', 'null'],
+            description: 'A map question, once closed: how far their pin was from the place.',
+          },
         }),
       ),
       description: 'Best first.',
@@ -556,11 +578,22 @@ const schemas = {
       type: ['object', 'null'],
       description: 'In `question` and `reveal` only.',
       properties: {
-        type: str('', { enum: ['choice', 'picture'] }),
+        type: str('', { enum: ['choice', 'picture', 'zoom', 'truefalse', 'song', 'map'] }),
         text: str(),
         image: {
           type: ['string', 'null'],
-          description: 'A picture question’s picture (`GET /jatekok/quiz/images/{name}`).',
+          description: 'A picture or zoom question’s picture (`GET /jatekok/quiz/images/{name}`).',
+        },
+        focus: obj({ x: num(), y: num() }),
+        bounds: obj({ south: num(), west: num(), north: num(), east: num() }),
+        place: {
+          type: 'object',
+          description: 'Only in `reveal`, on a map question: the right place ({ lat, lng }).',
+        },
+        song: {
+          type: 'object',
+          description:
+            'Only in `reveal`, on a song question: which song it was ({ title, artist }). While it is open nothing says which - its audio is the host’s (`GET .../song`).',
         },
         answers: arrayOf(str()),
         timeLimitSec: int(),
@@ -578,6 +611,10 @@ const schemas = {
       type: ['integer', 'null'],
       description:
         'The caller’s own answer to the open question. Only in what is answered over HTTP - not in the `quiz-game` socket event, which is the same for everyone.',
+    },
+    myGuess: {
+      type: ['object', 'null'],
+      description: 'On a map question: where the caller’s pin is ({ lat, lng }). As `myAnswer`.',
     },
   }),
 
@@ -874,10 +911,7 @@ const tags = [
     T.songs,
     'Daloskönyv: the club’s songbook - songs with lyrics and chords as ChordPro text (chords in [brackets] before their syllable). Everyone logged in may read it; only the role manager (`INITIAL_ADMIN_USER`) may add, change or delete songs.',
   ],
-  [
-    T.games,
-    'Móka: the games - Darts so far. While they are being built, every call here is refused (403) for everyone but the role manager (`INITIAL_ADMIN_USER`).',
-  ],
+  [T.games, 'Móka: the games - Darts and the quiz (Kvíz). For everyone logged in, guests too.'],
   [
     T.race,
     'Futókör (Móka → Futókörök): a tour’s checkpoint running race. Cards with a QR code are scanned by the runners’ phones, which send their scans whenever they have a connection; the runs are worked out from the scans. While it is being built, every call here is refused (403) for everyone but the role manager (`INITIAL_ADMIN_USER`).',
@@ -3200,7 +3234,7 @@ const paths = {
     }),
   },
 
-  // Kvíz - for everyone logged in (not behind Móka's own gate).
+  // Kvíz
   '/jatekok/quiz/quizzes': {
     get: op({
       tag: T.games,
@@ -3213,7 +3247,7 @@ const paths = {
       tag: T.games,
       summary: 'Write a quiz',
       description:
-        'Anyone logged in may. 1-50 questions, each with 2-4 answers of which exactly one is right, open for 10, 20, 30 or 60 seconds. A question of the `picture` kind also needs its picture (uploaded first). The 400 says in Hungarian which question is wrong and why.',
+        'Anyone logged in may. 1-50 questions, each with 2-4 answers of which exactly one is right, open for 10, 20, 30 or 60 seconds - or of another kind (see `QuizQuestion.type`), with what that kind needs: a picture (uploaded first), a song of a playlist the author may hear, a place on the map. The 400 says in Hungarian which question is wrong and why.',
       body: obj({ title: str('1-80 characters.'), questions: arrayOf(ref('QuizQuestion')) }, [
         'title',
         'questions',
@@ -3311,7 +3345,7 @@ const paths = {
           obj({
             _id: id(),
             title: str(),
-            status: str('', { enum: ['lobby', 'question', 'reveal', 'finished'] }),
+            status: str('', { enum: ['lobby', 'question', 'reveal', 'standings', 'finished'] }),
             host: obj({ _id: id(), name: str() }),
             createdAt: date(),
             finishedAt: { type: ['string', 'null'], format: 'date-time' },
@@ -3339,19 +3373,18 @@ const paths = {
       tag: T.games,
       summary: 'The quiz leaderboard',
       description:
-        'Everyone’s numbers over every finished game. Best first: the most wins, then 2nd and 3rd places, then the points.',
+        'The best results of all time: who scored how much in which game, over every finished game. The most points first (then the earlier game), 50 at most. A player is in it once for each game they played.',
       data: obj({
-        players: arrayOf(
+        results: arrayOf(
           obj({
             userId: id(),
             name: str(),
             photoUpdatedAt: { type: ['string', 'null'] },
-            games: int('Finished games played.'),
-            firsts: int(),
-            seconds: int(),
-            thirds: int(),
-            points: int('All the points scored.'),
-            correct: int('All the right answers.'),
+            gameId: id('The game the result is from.'),
+            title: str('That game’s (its quiz’s) title.'),
+            finishedAt: date(),
+            place: int('Where they finished in that game.'),
+            points: int(),
           }),
         ),
       }),
@@ -3392,6 +3425,16 @@ const paths = {
       errors: [400, 403, 404],
     }),
   },
+  '/jatekok/quiz/games/{id}/song': {
+    get: op({
+      tag: T.games,
+      summary: 'The open song question’s song',
+      description:
+        'The audio itself (Range requests work), for the host’s device only - the players hear it from there. Only while a song question is open or has just been closed (404 otherwise).',
+      params: [path('id', 'The game.')],
+      errors: [403, 404],
+    }),
+  },
   '/jatekok/quiz/games/{id}/join': {
     post: op({
       tag: T.games,
@@ -3408,7 +3451,7 @@ const paths = {
       tag: T.games,
       summary: 'The host’s next step',
       description:
-        'One call for every step: from the lobby the first question (needs at least one player); an open question is closed early; from the answers shown the next question - or, after the last one, the game is finished. A question also closes by itself when its time is up, or once every player has answered.',
+        'One call for every step: from the lobby the first question (needs at least one player); an open question is closed early; from the answer shown the standings, and from those the next question - after the last question’s answer the game is finished instead. A question also closes by itself when its time is up, or (except a map question) once every player has answered.',
       params: [path('id', 'The game.')],
       data: obj({ game: ref('QuizGame') }),
       errors: [400, 403, 404],
@@ -3419,11 +3462,13 @@ const paths = {
       tag: T.games,
       summary: 'Answer the open question',
       description:
-        'A player’s one answer, timed by when it gets here. A right one is worth 1000 points at once, falling evenly to 500 by the end of the time; a wrong one nothing.',
+        'A player’s one answer (`answer`), timed by when it gets here: a right one is worth 1000 points at once, falling evenly to 500 by the end of the time; a wrong one nothing. On a map question the answer is a pin (`lat`, `lng`) that may be sent again and again while the question is open - the last one counts: 1000 points right on the place, falling evenly to nothing at half the shown map’s diagonal away, whenever it was put down.',
       params: [path('id', 'The game.')],
-      body: obj({ answer: int('The answer’s place in the question’s `answers` (from 0).') }, [
-        'answer',
-      ]),
+      body: obj({
+        answer: int('The answer’s place in the question’s `answers` (from 0).'),
+        lat: num('A map question: the pin.'),
+        lng: num('A map question: the pin.'),
+      }),
       data: obj({ game: ref('QuizGame') }),
       errors: [400, 403, 404],
     }),
