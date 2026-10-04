@@ -13,6 +13,7 @@ import {
   MIN_ANSWERS,
   QuizDraft,
   QuizQuestion,
+  QuizQuestionType,
   QuizService,
   TIME_LIMITS,
 } from '../../../../services/quiz';
@@ -21,6 +22,7 @@ import { PickedTourPhoto, QuizPhotoPicker } from './photo-picker/photo-picker';
 // A question in the editor always has all four answer slots: one left
 // empty simply isn't an answer (see toDraft).
 const blankQuestion = (): QuizQuestion => ({
+  type: 'choice',
   text: '',
   image: null,
   answers: Array<string>(MAX_ANSWERS).fill(''),
@@ -30,10 +32,31 @@ const blankQuestion = (): QuizQuestion => ({
 
 const filled = (answers: string[]) => answers.filter((a) => a.trim()).length;
 
+// The kinds of question to choose from - each with what it means, and what
+// to put where the question goes.
+const TYPES: { value: QuizQuestionType; label: string; icon: string; hint: string; ask: string }[] =
+  [
+    {
+      value: 'choice',
+      label: 'Sima kérdés',
+      icon: 'quiz',
+      hint: 'Egy kérdés, 2–4 válasz – egy a helyes.',
+      ask: 'A kérdés',
+    },
+    {
+      value: 'picture',
+      label: 'Képfelfedő',
+      icon: 'image_search',
+      hint: 'Egy kép játék közben lassan tárul fel – aki hamarabb rájön, több pontot kap.',
+      ask: 'A kérdés – pl. Hol készült ez a kép?',
+    },
+  ];
+
 // Móka → Kvíz → Kvízek → a new quiz, or one of my own: its title and its
-// questions - each with up to four answers, the right one ticked, how
-// long there is to think, and - for a picture question - a picture: one of
-// my own, or a photo of a tour's album.
+// questions - each of a kind chosen first (a plain one, or a picture
+// uncovered slowly), with up to four answers, the right one ticked, and
+// how long there is to think. Only a picture question has a picture: one
+// of my own, or a photo of a tour's album.
 @Component({
   selector: 'app-quiz-edit',
   imports: [RouterLink, MatIconModule, QuizPhotoPicker],
@@ -50,6 +73,8 @@ export class QuizEdit {
   readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id');
   readonly shapes = ANSWER_SHAPES;
   readonly timeLimits = TIME_LIMITS;
+  readonly types = TYPES;
+  typeOf = (q: QuizQuestion) => TYPES.find((t) => t.value === q.type) ?? TYPES[0];
 
   title = signal('');
   questions = signal<QuizQuestion[]>([blankQuestion()]);
@@ -67,6 +92,7 @@ export class QuizEdit {
     if (!this.title().trim()) return 'Adj címet a kvíznek.';
     for (const [i, q] of this.questions().entries()) {
       const nr = `${i + 1}. kérdés`;
+      if (q.type === 'picture' && !q.image) return `${nr}: válassz hozzá képet.`;
       if (!q.text.trim()) return `${nr}: írd be a kérdést.`;
       if (filled(q.answers) < MIN_ANSWERS) return `${nr}: legalább két válasz kell.`;
       if (!q.answers[q.correct].trim()) return `${nr}: a helyesnek jelölt válasz üres.`;
@@ -96,6 +122,12 @@ export class QuizEdit {
 
   private patch(idx: number, change: Partial<QuizQuestion>) {
     this.questions.update((list) => list.map((q, i) => (i === idx ? { ...q, ...change } : q)));
+  }
+
+  // A picture already chosen stays with the question while it's being
+  // edited (in case the kind is switched back) - toDraft leaves it out.
+  setType(idx: number, type: QuizQuestionType) {
+    this.patch(idx, { type });
   }
 
   setText(idx: number, text: string) {
@@ -199,8 +231,9 @@ export class QuizEdit {
       questions: this.questions().map((q) => {
         const kept = q.answers.map((a, i) => ({ a: a.trim(), i })).filter((x) => x.a);
         return {
+          type: q.type,
           text: q.text.trim(),
-          image: q.image ?? null,
+          image: q.type === 'picture' ? (q.image ?? null) : null,
           answers: kept.map((x) => x.a),
           correct: kept.findIndex((x) => x.i === q.correct),
           timeLimitSec: q.timeLimitSec,

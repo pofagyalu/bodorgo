@@ -51,39 +51,52 @@
             </span>
           </div>
 
+          <!-- What kind of question it is - chosen first. -->
+          <div class="kinds">
+            @for (k of types; track k.value) {
+              <button
+                type="button"
+                class="choice"
+                [class.on]="q.type === k.value"
+                [attr.aria-pressed]="q.type === k.value"
+                (click)="setType(i, k.value)"
+              >
+                <mat-icon>{{ k.icon }}</mat-icon> {{ k.label }}
+              </button>
+            }
+          </div>
+          <p class="hint">{{ typeOf(q).hint }}</p>
+
           <textarea
             rows="2"
             maxlength="300"
-            placeholder="A kérdés"
+            [placeholder]="typeOf(q).ask"
             aria-label="A kérdés szövege"
             [value]="q.text"
             (input)="setText(i, $any($event.target).value)"
           ></textarea>
 
-          <!-- A picture question: the picture is uncovered slowly in the
-               game. One of my own, or a photo of a tour's album. -->
-          <div class="picture">
-            @if (q.image; as image) {
-              <img [src]="imageUrl(image)" alt="A kérdés képe" />
-              <button type="button" class="pic-btn pic-btn--remove" (click)="removeImage(i)">
-                <mat-icon>hide_image</mat-icon> Kép levétele
-              </button>
-            } @else if (uploadingFor() === i) {
-              <span class="hint">Kép mentése…</span>
-            } @else {
-              <label class="pic-btn">
-                <input type="file" accept="image/*" hidden (change)="pickFile(i, $event)" />
-                <mat-icon>add_photo_alternate</mat-icon> Saját kép
-              </label>
-              <button type="button" class="pic-btn" (click)="pickingFor.set(i)">
-                <mat-icon>photo_library</mat-icon> Tábor fotóiból
-              </button>
-            }
-          </div>
-          @if (q.image) {
-            <p class="hint">
-              A kép játék közben lassan tárul fel – aki hamarabb rájön, több pontot kap.
-            </p>
+          <!-- Only a picture question has a picture: one of my own, or a
+               photo of a tour's album. -->
+          @if (q.type === 'picture') {
+            <div class="picture">
+              @if (q.image; as image) {
+                <img [src]="imageUrl(image)" alt="A kérdés képe" />
+                <button type="button" class="pic-btn pic-btn--remove" (click)="removeImage(i)">
+                  <mat-icon>hide_image</mat-icon> Kép levétele
+                </button>
+              } @else if (uploadingFor() === i) {
+                <span class="hint">Kép mentése…</span>
+              } @else {
+                <label class="pic-btn">
+                  <input type="file" accept="image/*" hidden (change)="pickFile(i, $event)" />
+                  <mat-icon>add_photo_alternate</mat-icon> Saját kép
+                </label>
+                <button type="button" class="pic-btn" (click)="pickingFor.set(i)">
+                  <mat-icon>photo_library</mat-icon> Tábor fotóiból
+                </button>
+              }
+            </div>
           }
 
           <!-- The four answer slots, in the game's colours: the ticked one

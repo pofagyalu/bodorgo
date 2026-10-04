@@ -49,6 +49,7 @@ const quizView = (quiz, user, full = false) => ({
   mine: refId(quiz.createdBy) === refId(user),
   ...(full && {
     questions: quiz.questions.map((q) => ({
+      type: q.type,
       text: q.text,
       image: q.image ?? null,
       answers: q.answers,
@@ -267,8 +268,9 @@ function gameView(game) {
     question:
       open || reveal
         ? {
+            type: question.type,
             text: question.text,
-            // A picture question: uncovered slowly while the clock runs.
+            // A picture question's: uncovered slowly while the clock runs.
             image: question.image ?? null,
             answers: question.answers,
             timeLimitSec: question.timeLimitSec,

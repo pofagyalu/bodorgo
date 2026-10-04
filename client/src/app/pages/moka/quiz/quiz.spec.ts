@@ -65,6 +65,7 @@ const asked = (over: Partial<QuizGame> = {}, sentAt = serverNow()): QuizGame =>
     questionIdx: 0,
     players: [player('me', 'Én'), player('u2', 'Béla', { rank: 2 })],
     question: {
+      type: 'choice',
       text: 'Hol volt az első tábor?',
       answers: ['Mátra', 'Bükk', 'Zemplén'],
       timeLimitSec: 20,
@@ -273,6 +274,7 @@ describe('QuizGamePage', () => {
       const g = asked({ myAnswer: null, ...over }, sentAt);
       g.question = {
         ...g.question!,
+        type: 'picture',
         image: 'a'.repeat(24),
         startedAt: at(sentAt - elapsed),
         endsAt: at(sentAt - elapsed + 20_000),
@@ -544,7 +546,14 @@ describe('QuizEdit', () => {
     expect(req.request.body).toEqual({
       title: 'Táborok',
       questions: [
-        { text: 'Hol?', image: null, answers: ['Mátra', 'Bükk'], correct: 1, timeLimitSec: 30 },
+        {
+          type: 'choice',
+          text: 'Hol?',
+          image: null,
+          answers: ['Mátra', 'Bükk'],
+          correct: 1,
+          timeLimitSec: 30,
+        },
       ],
     });
     req.flush({ data: { quiz: quiz() } });
@@ -584,7 +593,15 @@ describe('QuizEdit', () => {
       'GET /jatekok/quiz/quizzes/q1': {
         data: {
           quiz: quiz({
-            questions: [{ text: 'Hol?', answers: ['Mátra', 'Bükk'], correct: 1, timeLimitSec: 20 }],
+            questions: [
+              {
+                type: 'choice',
+                text: 'Hol?',
+                answers: ['Mátra', 'Bükk'],
+                correct: 1,
+                timeLimitSec: 20,
+              },
+            ],
           }),
         },
       },
@@ -605,6 +622,21 @@ describe('QuizEdit', () => {
     const page = fixture.componentInstance;
     const el = fixture.nativeElement as HTMLElement;
 
+    // A plain question has nowhere to put a picture; a picture question
+    // can't be saved without one.
+    page.title.set('Képek');
+    page.setText(0, 'Hol készült?');
+    page.setAnswer(0, 0, 'Mátra');
+    page.setAnswer(0, 1, 'Bükk');
+    fixture.detectChanges();
+    expect(el.querySelector('.picture')).toBeNull();
+    expect(page.problem()).toBeNull();
+    page.setType(0, 'picture');
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.picture .pic-btn')).toHaveLength(2);
+    expect(page.problem()).toContain('válassz hozzá képet');
+    expect(el.textContent).toContain('lassan tárul fel');
+
     // A tour's photo: the picker opens for that question, the server copies it.
     page.pickingFor.set(0);
     fixture.detectChanges();
@@ -620,7 +652,15 @@ describe('QuizEdit', () => {
     expect(el.querySelector<HTMLImageElement>('.picture img')?.src).toBe(
       `${API}/jatekok/quiz/images/${'a'.repeat(24)}`,
     );
-    expect(el.textContent).toContain('lassan tárul fel');
+    expect(page.problem()).toBeNull();
+
+    // Made a plain question again: saved without the picture.
+    page.setType(0, 'choice');
+    page.save();
+    const saved = http.expectOne({ method: 'POST', url: quizzes });
+    expect(saved.request.body.questions[0]).toMatchObject({ type: 'choice', image: null });
+    saved.flush({ message: 'x' }, { status: 400, statusText: 'x' });
+    page.setType(0, 'picture');
 
     page.removeImage(0);
     expect(page.questions()[0].image).toBeNull();

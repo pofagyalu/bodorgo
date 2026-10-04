@@ -151,6 +151,26 @@ textarea {
   font-weight: 600;
 }
 
+// The kinds of question, side by side - the chosen one lit.
+.kinds {
+  display: flex;
+  gap: 0.375rem;
+
+  .choice {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-height: 2.75rem;
+
+    mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+}
+
 // The question's picture, or the two ways to give it one.
 .picture {
   display: flex;

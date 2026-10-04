@@ -17,10 +17,14 @@ export const DEFAULT_TIME_LIMIT = 20;
 // pages' .a0 - .a3).
 export const ANSWER_SHAPES = ['▲', '◆', '●', '■'];
 
-// 2-4 answers, one of them right. With a picture (its name on the server
-// - see QuizService.imageUrl) it's a picture question: the picture is
-// uncovered slowly while the clock runs.
+// The kinds of question (more to come): a plain one, or one with a picture
+// that is uncovered slowly while the clock runs.
+export type QuizQuestionType = 'choice' | 'picture';
+
+// 2-4 answers, one of them right. Only a picture question has a picture
+// (its name on the server - see QuizService.imageUrl).
 export interface QuizQuestion {
+  type: QuizQuestionType;
   text: string;
   image?: string | null;
   answers: string[];
@@ -76,6 +80,7 @@ export interface QuizGame {
   questionIdx: number; // -1 in the lobby
   players: QuizPlayer[]; // best first
   question: {
+    type: QuizQuestionType;
     text: string;
     image?: string | null;
     answers: string[];

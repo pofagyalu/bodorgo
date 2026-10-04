@@ -1,14 +1,16 @@
 import mongoose from 'mongoose';
-import { DEFAULT_TIME_LIMIT, TIME_LIMITS } from '../jatekok/quiz/scoring.js';
+import { DEFAULT_TIME_LIMIT, QUESTION_TYPES, TIME_LIMITS } from '../jatekok/quiz/scoring.js';
 
 const { Schema } = mongoose;
 
 // A question: 2-4 answers, one of them right (see jatekok/quiz/scoring.js
 // for what's valid - the controller checks it before anything is stored).
-// With a picture (its name - see jatekok/quiz/quizImages.js) it's a
-// picture question: the picture is uncovered slowly while the clock runs.
+// Its kind: `choice` - a plain one; `picture` - with a picture (its name -
+// see jatekok/quiz/quizImages.js) that is uncovered slowly while the clock
+// runs. Only a picture question has an `image`.
 const questionSchema = new Schema(
   {
+    type: { type: String, enum: QUESTION_TYPES, default: 'choice' },
     text: { type: String, required: true, trim: true },
     image: { type: String, default: null },
     answers: { type: [String], required: true },

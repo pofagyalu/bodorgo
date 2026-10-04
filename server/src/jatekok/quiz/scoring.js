@@ -1,6 +1,10 @@
 // Móka → Kvíz: the rules - what a quiz may look like, what an answer is
 // worth, and who stands where. Nothing here touches the database.
 
+// The kinds of question (more to come): `choice` - a plain one; `picture` -
+// with a picture that is uncovered slowly while the clock runs.
+export const QUESTION_TYPES = ['choice', 'picture'];
+
 // A question has 2-4 answers, exactly one of them right.
 export const MIN_ANSWERS = 2;
 export const MAX_ANSWERS = 4;
@@ -36,6 +40,8 @@ export function cleanQuiz(body) {
   const cleaned = [];
   for (const [i, q] of questions.entries()) {
     const nr = `${i + 1}. kérdés`;
+    const type = q?.type ?? 'choice';
+    if (!QUESTION_TYPES.includes(type)) return { error: `${nr}: ismeretlen kérdéstípus.` };
     const text = typeof q?.text === 'string' ? q.text.trim() : '';
     if (!text || text.length > MAX_QUESTION_TEXT) {
       return { error: `${nr}: a szövege 1-${MAX_QUESTION_TEXT} karakter lehet.` };
@@ -58,12 +64,13 @@ export function cleanQuiz(body) {
     if (!TIME_LIMITS.includes(timeLimitSec)) {
       return { error: `${nr}: a gondolkodási idő ${TIME_LIMITS.join(', ')} másodperc lehet.` };
     }
-    // A picture question: the name of its picture (quizImages.js).
-    const image = q.image ?? null;
-    if (image !== null && !/^[0-9a-f]{24}$/.test(image)) {
-      return { error: `${nr}: a képe nem található – válaszd ki újra.` };
+    // Only a picture question has a picture - and it must have one: its
+    // name (quizImages.js).
+    const image = type === 'picture' ? (q.image ?? null) : null;
+    if (type === 'picture' && (typeof image !== 'string' || !/^[0-9a-f]{24}$/.test(image))) {
+      return { error: `${nr}: a képfelfedő kérdéshez válassz képet.` };
     }
-    cleaned.push({ text, image, answers, correct: q.correct, timeLimitSec });
+    cleaned.push({ type, text, image, answers, correct: q.correct, timeLimitSec });
   }
   return { quiz: { title, questions: cleaned } };
 }

@@ -32,7 +32,16 @@ describe('cleanQuiz', () => {
     expect(error).toBeUndefined();
     expect(quiz).toEqual({
       title: 'Táborok',
-      questions: [{ text: 'Hol?', image: null, answers: ['A', 'B'], correct: 0, timeLimitSec: 20 }],
+      questions: [
+        {
+          type: 'choice',
+          text: 'Hol?',
+          image: null,
+          answers: ['A', 'B'],
+          correct: 0,
+          timeLimitSec: 20,
+        },
+      ],
     });
   });
 
@@ -51,11 +60,27 @@ describe('cleanQuiz', () => {
       [{ title: 'Jó', questions: [question(), question({ correct: 3 })] }, '2. kérdés: jelöld'],
       [{ title: 'Jó', questions: [question({ correct: '1' })] }, 'jelöld'],
       [{ title: 'Jó', questions: [question({ timeLimitSec: 7 })] }, 'gondolkodási idő'],
-      [{ title: 'Jó', questions: [question({ image: '../x' })] }, 'a képe'],
+      [{ title: 'Jó', questions: [question({ type: 'essay' })] }, 'ismeretlen kérdéstípus'],
+      [{ title: 'Jó', questions: [question({ type: 'picture' })] }, 'válassz képet'],
+      [{ title: 'Jó', questions: [question({ type: 'picture', image: '../x' })] }, 'válassz képet'],
     ];
     for (const [body, part] of bad) {
       expect(cleanQuiz(body).error, JSON.stringify(body)).toContain(part);
     }
+  });
+});
+
+describe('cleanQuiz: the kinds of question', () => {
+  it('keeps a picture only on a picture question', () => {
+    const image = 'a'.repeat(24);
+    const { quiz } = cleanQuiz({
+      title: 'Képek',
+      questions: [question({ type: 'picture', image }), question({ image })],
+    });
+    expect(quiz.questions.map((q) => [q.type, q.image])).toEqual([
+      ['picture', image],
+      ['choice', null],
+    ]);
   });
 });
 

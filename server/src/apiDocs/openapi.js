@@ -478,11 +478,15 @@ const schemas = {
 
   QuizQuestion: obj(
     {
+      type: str(
+        'The kind of question. Default choice: a plain one. picture: with a picture the app uncovers slowly while the clock runs - it needs an `image`.',
+        { enum: ['choice', 'picture'] },
+      ),
       text: str('1-300 characters.'),
       image: {
         type: ['string', 'null'],
         description:
-          'A picture question: the name of its picture (from `POST /jatekok/quiz/images` or `/images/from-tour`, shown by `GET /jatekok/quiz/images/{name}`). In the game the app uncovers it slowly while the clock runs. Null: a plain question.',
+          'Only on a picture question (required there; dropped from any other): the name of its picture, from `POST /jatekok/quiz/images` or `/images/from-tour`, shown by `GET /jatekok/quiz/images/{name}`.',
       },
       answers: { ...arrayOf(str('1-120 characters.')), description: '2-4 answers.' },
       correct: int('The right answer’s place in `answers` (from 0) - exactly one is right.'),
@@ -552,6 +556,7 @@ const schemas = {
       type: ['object', 'null'],
       description: 'In `question` and `reveal` only.',
       properties: {
+        type: str('', { enum: ['choice', 'picture'] }),
         text: str(),
         image: {
           type: ['string', 'null'],
@@ -3208,7 +3213,7 @@ const paths = {
       tag: T.games,
       summary: 'Write a quiz',
       description:
-        'Anyone logged in may. 1-50 questions, each with 2-4 answers of which exactly one is right, open for 10, 20, 30 or 60 seconds, and optionally a picture (it must have been uploaded first). The 400 says in Hungarian which question is wrong and why.',
+        'Anyone logged in may. 1-50 questions, each with 2-4 answers of which exactly one is right, open for 10, 20, 30 or 60 seconds. A question of the `picture` kind also needs its picture (uploaded first). The 400 says in Hungarian which question is wrong and why.',
       body: obj({ title: str('1-80 characters.'), questions: arrayOf(ref('QuizQuestion')) }, [
         'title',
         'questions',

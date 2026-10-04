@@ -70,6 +70,7 @@ describe('quizzes', () => {
     const quiz = await createQuiz(anna);
     expect(quiz).toMatchObject({ title: 'Táborok', questionCount: 2, mine: true });
     expect(quiz.questions[0]).toEqual({
+      type: 'choice',
       text: 'Hol volt az első tábor?',
       image: null,
       answers: ['Mátra', 'Bükk', 'Zemplén'],
@@ -325,7 +326,9 @@ describe('a picture question', () => {
       .attach('image', buffer ?? (await phonePhoto()), { filename: 'x.jpg', contentType: type });
 
   const pictureQuiz = (image) => ({
-    questions: [{ text: 'Hol készült?', image, answers: ['Mátra', 'Bükk'], correct: 0 }],
+    questions: [
+      { type: 'picture', text: 'Hol készült?', image, answers: ['Mátra', 'Bükk'], correct: 0 },
+    ],
   });
 
   it('takes an uploaded picture: shrunk to 1600 px, its EXIF (GPS) dropped, served to whoever is logged in', async () => {
@@ -395,10 +398,12 @@ describe('a picture question', () => {
     expect((await as(host).post(QUIZZES, quizBody(pictureQuiz('../x')))).status).toBe(400);
 
     const quiz = await createQuiz(host, pictureQuiz(first));
-    expect(quiz.questions[0].image).toBe(first);
+    expect(quiz.questions[0]).toMatchObject({ type: 'picture', image: first });
+    // A picture question without a picture won't do either.
+    expect((await as(host).post(QUIZZES, quizBody(pictureQuiz(null)))).status).toBe(400);
     const game = (await as(host).post(`${QUIZZES}/${quiz._id}/games`)).body.data.game;
     await as(anna).post(`${GAMES}/${game._id}/join`);
-    expect((await next(host, game)).question.image).toBe(first);
+    expect((await next(host, game)).question).toMatchObject({ type: 'picture', image: first });
 
     // The quiz gets another picture: the game still on keeps the first.
     await as(host).put(`${QUIZZES}/${quiz._id}`, quizBody(pictureQuiz(second)));
