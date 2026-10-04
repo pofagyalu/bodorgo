@@ -280,6 +280,43 @@ describe('SongPage', () => {
     expect(keep()?.disabled).toBe(true);
   });
 
+  it('lets the keeper take someone else’s song into the book, after a yes', async () => {
+    const theirs = song({ inBook: false, ownerName: 'Melinda' });
+    open({ data: { song: theirs } });
+    const button = () =>
+      fixture.nativeElement.querySelector('button.take-in') as HTMLButtonElement | null;
+    // Not the keeper: no such button.
+    expect(button()).toBeNull();
+
+    TestBed.inject(SongService).canEdit.set(true);
+    fixture.detectChanges();
+    const confirm = TestBed.inject(ConfirmService);
+    button()!.click();
+    expect(confirm.pending()?.detail).toContain('Melinda többé nem tudja szerkeszteni');
+    confirm.answer(false);
+    await Promise.resolve();
+    http.expectNone((r) => r.method === 'PATCH');
+
+    const taking = page.takeIntoBook();
+    confirm.answer(true);
+    await taking;
+    const req = http.expectOne((r) => r.method === 'PATCH');
+    expect(req.request.body).toEqual({ inBook: true });
+    req.flush({ data: { song: song({ inBook: true, ownerName: '' }) } });
+    http.expectOne((r) => r.url === songs && r.method === 'GET'); // the list follows
+    fixture.detectChanges();
+    expect(success).toHaveBeenCalledWith('A dal bekerült a daloskönyvbe.');
+    // In the book now: nothing left to take in.
+    expect(button()).toBeNull();
+  });
+
+  it('has no take-in button on a song of the book', () => {
+    open();
+    TestBed.inject(SongService).canEdit.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('button.take-in')).toBeNull();
+  });
+
   it('saves the song in the transposed key after a yes', async () => {
     open();
     const confirm = TestBed.inject(ConfirmService);
@@ -617,6 +654,16 @@ describe('SongEdit', () => {
     expect(success).toHaveBeenCalledWith('A dal elmentve.');
     expect(navigate).toHaveBeenCalledWith(['/daloskonyv', 'uj-dal']);
     http.expectOne((r) => r.url === songs && r.method === 'GET'); // the list is reloaded
+  });
+
+  it('leaves the checks to the app, so a refused save always says why', () => {
+    open(null);
+    const form: HTMLFormElement = fixture.nativeElement.querySelector('form.editor');
+    // The browser's own checks would stop the save without a word.
+    expect(form.noValidate).toBe(true);
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    expect(error).toHaveBeenCalledWith('A dalnak kell legyen címe.');
+    http.expectNone((r) => r.method === 'POST');
   });
 
   it('takes the tempo typed or tapped, and saves it with the song', () => {

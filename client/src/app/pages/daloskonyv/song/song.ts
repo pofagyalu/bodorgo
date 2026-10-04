@@ -334,6 +334,42 @@ export class SongPage implements OnDestroy {
   // from then on this is its key, for everyone and in the PDF.
   savingKey = signal(false);
 
+  // The keeper takes a song someone added beside the book into the
+  // Daloskönyv: part of the book from then on (its PDF, its count), and
+  // the keeper's own - who added it can no longer change it.
+  takingIn = signal(false);
+
+  async takeIntoBook() {
+    const song = this.song();
+    if (!song || song.inBook || this.takingIn()) return;
+    const ok = await this.confirm.ask({
+      title: 'Felvétel a daloskönyvbe',
+      message: `„${song.title}” a daloskönyv része lesz: bekerül a könyv PDF-jébe és a dalok számába.`,
+      detail: song.ownerName
+        ? `A dal ezentúl a tiéd: ${song.ownerName} többé nem tudja szerkeszteni vagy törölni.`
+        : 'A dal ezentúl a tiéd.',
+      confirmText: 'Felvétel',
+      danger: false,
+    });
+    if (!ok) return;
+    this.takingIn.set(true);
+    this.songService.updateSong(song._id, { inBook: true }).subscribe({
+      next: (saved) => {
+        if (this.song()?._id === saved._id) this.song.set(saved);
+        this.takingIn.set(false);
+        // The list's tag and the book's count follow.
+        this.songService.loadSongs();
+        this.notifications.addSuccess('A dal bekerült a daloskönyvbe.');
+      },
+      error: (err) => {
+        this.takingIn.set(false);
+        this.notifications.addError(
+          err?.error?.message ?? 'A dalt nem sikerült felvenni a daloskönyvbe.',
+        );
+      },
+    });
+  }
+
   async saveTransposed() {
     const song = this.song();
     const steps = this.transpose();

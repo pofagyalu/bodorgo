@@ -158,6 +158,23 @@
 
       <!-- Only for who may change this song: its owner, and the book's
            keeper. -->
+      <!-- The keeper, on a song someone added beside the book: into the
+           book with it - and the keeper's own from then on. -->
+      @if (canEdit() && song() && !song()!.inBook) {
+        <div class="tool">
+          <button
+            type="button"
+            class="take-in"
+            (click)="takeIntoBook()"
+            [disabled]="takingIn()"
+            title="Felvétel a daloskönyvbe"
+            aria-label="A dal felvétele a daloskönyvbe"
+          >
+            <mat-icon>library_add</mat-icon>
+          </button>
+        </div>
+      }
+
       @if (song()?.canEdit && song(); as s) {
         <div class="tool">
           <a

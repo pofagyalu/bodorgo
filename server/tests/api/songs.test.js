@@ -130,10 +130,19 @@ describe('Daloskönyv: who gets in', () => {
       ownerName: '',
     });
     expect(await pages()).toBe(7);
-    // Still hers to change, in the book too.
-    expect((await patch(melinda, { artist: 'Ő maga' })).status).toBe(200);
-    // And out again.
-    expect((await patch(owner, { inBook: false })).body.data.song.inBook).toBe(false);
+    // Taken into the book it is the keeper's own, like every song of the
+    // book: no longer hers to change or delete.
+    expect(String((await Song.findById(hers._id)).owner)).toBe(String(owner._id));
+    expect((await patch(melinda, { artist: 'Ő maga' })).status).toBe(403);
+    expect((await request(app).delete(`/songs/${hers._id}`).set(asUser(melinda))).status).toBe(403);
+    const seen = (await request(app).get('/songs/melinda-dala').set(asUser(melinda))).body.data
+      .song;
+    expect(seen).toMatchObject({ inBook: true, ownerName: '', canEdit: false });
+    // And out again: beside the book, the keeper's still - under the
+    // keeper's name now.
+    const out = (await patch(owner, { inBook: false })).body.data.song;
+    expect(out).toMatchObject({ inBook: false, ownerName: 'Zoli' });
+    expect((await patch(melinda, { artist: 'Ő maga' })).status).toBe(403);
     expect(await pages()).toBe(6);
   });
 

@@ -668,7 +668,7 @@ const schemas = {
         'The song’s tempo in beats a minute (30–300), given by hand in the editor - typed, or tapped there. null: none given. A marker only ("♩ = 96" after the key on the song’s page and in the PDF; the song page’s metronome blinks it, without sound) - it doesn’t drive the page’s scrolling, and changing the chords or the key leaves it alone.',
     },
     inBook: bool(
-      'The song is the Daloskönyv’s own: in the book’s PDF, its count and its index. True for the keeper’s songs (and for every song from before owners); false for a song another user added, until the keeper takes it in.',
+      'The song is the Daloskönyv’s own: in the book’s PDF, its count and its index. True for the keeper’s songs (and for every song from before owners); false for a song another user added, until the keeper takes it in - which also makes it the keeper’s own.',
     ),
     ownerName: str(
       'The given name of the user who added the song ("Melinda") - on a song that isn’t the book’s own, the tag it carries in the list. Empty on the book’s own songs.',
@@ -3043,7 +3043,7 @@ const paths = {
       tag: T.songs,
       summary: 'Change a song',
       description:
-        'The song’s owner, or the book’s keeper (the role manager, `INITIAL_ADMIN_USER`) - 403 for everyone else, admins included. Only the fields sent change. A new title gives the song a new slug (its address). `inBook` is the keeper’s alone to send (403 from anyone else): it takes the song into the book, or out of it.',
+        'The song’s owner, or the book’s keeper (the role manager, `INITIAL_ADMIN_USER`) - 403 for everyone else, admins included. Only the fields sent change. A new title gives the song a new slug (its address). `inBook` is the keeper’s alone to send (403 from anyone else): `true` takes the song into the book and makes it the keeper’s own, like every song of the book - who added it can no longer change or delete it -; `false` takes it out again (it stays the keeper’s).',
       params: [path('id', 'The song’s id.')],
       body: ref('SongInput'),
       data: obj({ song: ref('Song') }),

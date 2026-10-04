@@ -182,6 +182,21 @@ button {
   color: #b3261e;
 }
 
+// "Felvétel a daloskönyvbe": the keeper's, on a song that isn't the
+// book's yet - the owner tag's orange, so the two are seen together.
+.tool button.take-in {
+  color: #c2620f;
+
+  &:hover {
+    background: #fff6ec;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
 // "Már játszottuk": grey until set, then the list's orange tick.
 .tool button.played-toggle {
   color: #9aa7ab;

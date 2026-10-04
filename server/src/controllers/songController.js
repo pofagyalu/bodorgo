@@ -339,7 +339,10 @@ export const createSong = async (req, res) => {
 // key set by hand holds only until the song's chords are next changed:
 // new chords without a key sent with them drop it, and the key is the one
 // the chords say again. Only the song's owner and the book's keeper; and
-// only the keeper says whether a song is the book's (`inBook`).
+// only the keeper says whether a song is the book's (`inBook`). A song
+// taken into the book becomes the keeper's own, like every song of the
+// book: who added it can no longer change it. Taken out again, it stays
+// the keeper's.
 export const updateSong = async (req, res) => {
   const song = await findSong(req.params.id);
   assertMayEdit(req.user, song);
@@ -349,6 +352,7 @@ export const updateSong = async (req, res) => {
       throw new AppError('A daloskönyvbe csak a gazdája vehet fel dalt.', 403);
     }
     fields.inBook = req.body.inBook === true;
+    if (fields.inBook) fields.owner = req.user._id;
   }
   if (fields.title && fields.title !== song.title) {
     song.slug = await Song.freeSlug(fields.title, song._id);
