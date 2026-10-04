@@ -181,8 +181,15 @@ describe('the invitation e-mail intro', () => {
     const mail = vi.mocked(sendResendEmail).mock.calls.at(-1)[0];
     expect(mail.text).toContain('Kedves Pál!\n\nSzia!\n\nItt az új oldal <b>bold</b>.');
     // Paragraphs, and never raw HTML from the text.
-    expect(mail.html).toContain('<p>Szia!</p>');
-    expect(mail.html).toContain('<p>Itt az új oldal &lt;b&gt;bold&lt;/b&gt;.</p>');
+    expect(mail.html).toMatch(/<p style="[^"]*">Szia!<\/p>/);
+    expect(mail.html).toMatch(/<p style="[^"]*">Itt az új oldal &lt;b&gt;bold&lt;\/b&gt;\.<\/p>/);
+    // The card it stands in, like the confirming e-mail that follows it:
+    // the logo, the heading, the button with the person's own link.
+    expect(mail.html).toContain('oridzsinator-logo.png');
+    expect(mail.html).toContain('Meghívó a Bódorgó klubba');
+    expect(mail.html).toMatch(
+      /<a href="[^"]+" style="[^"]*background:#1a796c[^"]*">Regisztrálok<\/a>/,
+    );
 
     expect(
       (await request(app).put('/users/invitations/intro').set(asUser(admin)).send({ intro: ' ' }))
