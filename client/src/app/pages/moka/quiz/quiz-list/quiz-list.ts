@@ -7,7 +7,7 @@ import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.servic
 import { errorMessage } from '../../../../shared/errors';
 import { Quiz, QuizService } from '../../../../services/quiz';
 
-// Móka → Kvíz → Kvízek: every quiz there is. Anyone may write one; its
+// Móka → Kvíz → Alkotóműhely: every quiz there is. Anyone may write one; its
 // author alone may change, delete or start it (the others would see the
 // answers in the editor) - everyone else only sees that it exists, and
 // joins when it's played.

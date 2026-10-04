@@ -1,12 +1,10 @@
 import AppError from '../utils/appError.js';
 
-// Who may use Móka (the games). While they're being built: only the one
-// initial admin (the role manager, see utils/roleManager.js) - not the
-// other admins. Once they're ready, this is the line that opens them to
-// everyone logged in (the client's twin: auth/moka.guard.ts).
-// The quiz is not behind it: a game needs its players, so it's open to
-// everyone logged in already (routes/jatekRoutes.js).
-export const canUseMoka = (user) => !!user?.canManageRoles;
+// Who may use Móka (the games): everyone logged in - opened on 2026-10-04
+// (while the games were being built, only the role manager got in). The
+// client's twin: auth/moka.guard.ts. The running race is not part of this:
+// it has a gate of its own (futokor/access.js).
+export const canUseMoka = (user) => !!user;
 
 // After requireAuth.
 export function requireMoka(req, res, next) {

@@ -57,6 +57,8 @@ router.get('/quiz/leaderboard', requireAuth, quizController.getLeaderboard);
 router.get('/quiz/games/pin/:pin', requireAuth, quizController.findByPin);
 router.get('/quiz/games/:id', requireAuth, quizController.getGame);
 router.get('/quiz/games/:id/qr', requireAuth, quizController.getGameQr);
+// A song question's song, for the host's device.
+router.get('/quiz/games/:id/song', requireAuth, quizController.getGameSong);
 router.post('/quiz/games/:id/join', requireAuth, quizController.joinGame);
 router.post('/quiz/games/:id/next', requireAuth, quizController.nextStep);
 router.post('/quiz/games/:id/answers', requireAuth, quizController.answerQuestion);

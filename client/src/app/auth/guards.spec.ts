@@ -107,9 +107,13 @@ describe('route guards', () => {
   describe('mokaGuard', () => {
     const moka = (url: string) => () => mokaGuard(null, state(url));
 
-    it('is for the role manager', () => {
-      expect(run(moka('/moka/darts'), owner)).toBe(true);
-      expect(run(moka('/moka/darts'), member)).toBe(false);
+    it('is for everyone logged in - but the race only for its own people', () => {
+      expect(run(moka('/moka/darts'), guest)).toBe(true);
+      expect(run(moka('/moka/kviz/jatekok/abc'), member)).toBe(true);
+      expect(run(moka('/moka/futokor/futas'), owner)).toBe(true);
+      expect(navigate).not.toHaveBeenCalled();
+      expect(run(moka('/moka/futokor/futas'), member)).toBe(false);
+      expect(run(moka('/moka/darts'), nobody)).toBe(false);
       expect(navigate).toHaveBeenCalledWith(['/']);
       expect(canSeeMoka(null)).toBe(false);
     });
@@ -118,11 +122,6 @@ describe('route guards', () => {
       localStorage.setItem('futokor-course', '[]');
       expect(run(moka('/moka/futokor/fut'), nobody)).toBe(true);
       expect(run(moka('/moka/darts'), nobody)).toBe(false);
-    });
-
-    it('lets everyone logged in onto the quiz pages', () => {
-      expect(run(moka('/moka/kviz/jatekok/abc'), guest)).toBe(true);
-      expect(run(moka('/moka/kviz'), nobody)).toBe(false);
     });
   });
 

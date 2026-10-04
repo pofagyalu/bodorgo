@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,8 +8,12 @@ import { NotificationsService } from '../../../../notifications/notifications.se
 import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
 import { errorMessage } from '../../../../shared/errors';
 import { Podium, PodiumWinner } from '../../../../shared/podium/podium';
-import { ANSWER_SHAPES, QuizGame, QuizPlayer, QuizService } from '../../../../services/quiz';
+import { MusicPlayerService } from '../../../../services/music-player';
+import { QuizGame, QuizPlace, QuizPlayer, QuizService } from '../../../../services/quiz';
 import { TourSocketService } from '../../../../services/tour-socket';
+import { MapGuess } from '../quiz-map/quiz-map';
+import { QuizQuestionView } from '../quiz-question/quiz-question';
+import { QuizStandings } from '../quiz-standings/quiz-standings';
 
 const TICK_MS = 200;
 // A question still open this long after its time: the closing was missed
@@ -18,39 +22,24 @@ const OVERDUE_MS = 1500;
 const REFETCH_GAP_MS = 3000;
 // How many are shown of the standings between two questions.
 const TOP = 5;
-// A picture question's picture is under this many tiles (8 x 6, see
-// quiz-game.scss), which go one by one - the last one this far into the
-// question's time, so the whole picture is there for the end.
-const TILES = 48;
-const UNCOVERED_BY = 0.85;
-
-// 0..count-1 shuffled, the same way for the same seed: every phone takes
-// the tiles off in the same order.
-function shuffled(count: number, seed: string): number[] {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  const random = () => {
-    h = Math.imul(h ^ (h >>> 15), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    return ((h ^= h >>> 16) >>> 0) / 4294967296;
-  };
-  const order = Array.from({ length: count }, (_, i) => i);
-  for (let i = count - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  return order;
-}
-
 // Móka → Kvíz: a game, live - the same page for the host (who leads: the
 // code to join with, then one button from question to question) and for
-// the players (who answer on their own phones). The question, the
-// countdown and the answers are on every screen. Everything is decided by
+// the players (who answer on their own phones). The question (shown by
+// quiz-question), the countdown and the answers are on every screen; a
+// song question's song plays on the host's device only. Everything is decided by
 // the server, its clock included; after each change it sends the game as
 // it now stands ('quiz-game'), and this only shows it.
 @Component({
   selector: 'app-quiz-game',
-  imports: [NgTemplateOutlet, RouterLink, MatIconModule, Avatar, Podium],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    MatIconModule,
+    Avatar,
+    Podium,
+    QuizQuestionView,
+    QuizStandings,
+  ],
   templateUrl: './quiz-game.html',
   styleUrl: './quiz-game.scss',
 })
@@ -59,17 +48,21 @@ export class QuizGamePage implements OnDestroy {
   private socket = inject(TourSocketService);
   private notifications = inject(NotificationsService);
   private confirm = inject(ConfirmService);
+  private music = inject(MusicPlayerService);
   private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
   readonly myId = inject(AuthService).user()?.id;
-  readonly shapes = ANSWER_SHAPES;
   // Where to type the code in, for whoever can't scan it.
   readonly joinAddress = `${window.location.host}/moka/kviz`;
 
   game = signal<QuizGame | null>(null);
   // No such game (or it couldn't be loaded).
   missing = signal(false);
-  // What I tapped on the open question.
+  // What I tapped on the open question - on a map question, where my pin is.
   myAnswer = signal<number | null>(null);
+  myGuess = signal<QuizPlace | null>(null);
+  // The host's: the song couldn't start by itself (the browser wants a tap).
+  songBlocked = signal(false);
+  private song: HTMLAudioElement | null = null;
   // The host's: the game's link to scan.
   qr = signal<string | null>(null);
   busy = signal(false);
@@ -86,7 +79,9 @@ export class QuizGamePage implements OnDestroy {
 
   isHost = computed(() => this.game()?.host._id === this.myId);
   me = computed(() => this.game()?.players.find((p) => p.userId === this.myId) ?? null);
-  live = computed(() => ['lobby', 'question', 'reveal'].includes(this.game()?.status ?? ''));
+  live = computed(() =>
+    ['lobby', 'question', 'reveal', 'standings'].includes(this.game()?.status ?? ''),
+  );
   isLast = computed(() => {
     const g = this.game();
     return !!g && g.questionIdx === g.questionCount - 1;
@@ -105,23 +100,6 @@ export class QuizGamePage implements OnDestroy {
     return limit ? Math.min(1, this.msLeft() / limit) : 0;
   });
 
-  // --- A picture question ---
-
-  imageUrl = (name: string) => this.quiz.imageUrl(name);
-
-  // Each tile's turn to go (0: the first) - its own order for each question.
-  tileTurns = computed(() => {
-    const g = this.game();
-    return g?.question?.image ? shuffled(TILES, `${g._id}:${g.questionIdx}`) : [];
-  });
-
-  // How many tiles are off by now: more and more while the clock runs, all
-  // of them once the question is closed.
-  tilesGone = computed(() => {
-    if (this.game()?.status !== 'question') return TILES;
-    return Math.floor(Math.min(1, (1 - this.timeLeft()) / UNCOVERED_BY) * TILES);
-  });
-
   // Between two questions: the best few - and me, if I'm not among them.
   top = computed<QuizPlayer[]>(() => {
     const players = this.game()?.players ?? [];
@@ -129,9 +107,6 @@ export class QuizGamePage implements OnDestroy {
     const best = players.slice(0, TOP);
     return me && !best.includes(me) ? [...best, me] : best;
   });
-
-  // The most taps an answer got - the bars are measured against it.
-  private mostTaps = computed(() => Math.max(1, ...(this.game()?.question?.counts ?? [])));
 
   winners = computed<PodiumWinner[]>(() =>
     (this.game()?.players ?? [])
@@ -144,7 +119,31 @@ export class QuizGamePage implements OnDestroy {
       })),
   );
 
+  // What the tiles' order is made from - the same on every phone.
+  seed = computed(() => `${this.game()?._id}:${this.game()?.questionIdx}`);
+
+  // A map question: my pin - once it's closed, where the server has it -
+  // and then everyone's.
+  myPin = computed(() =>
+    this.game()?.status === 'reveal' ? (this.me()?.guess ?? null) : this.myGuess(),
+  );
+  mapGuesses = computed<MapGuess[]>(() =>
+    (this.game()?.players ?? []).flatMap((p) =>
+      p.guess ? [{ ...p.guess, name: p.name, me: p.userId === this.myId }] : [],
+    ),
+  );
+
+  // The song question whose song should be heard here: the host's device
+  // only, from the question's opening until the next one.
+  private songOn = computed(() => {
+    const g = this.game();
+    const on =
+      this.isHost() && g?.question?.type === 'song' && ['question', 'reveal'].includes(g.status);
+    return on ? g!.questionIdx : null;
+  });
+
   constructor() {
+    effect(() => this.playSong(this.songOn()));
     this.load(true);
     this.socket.joinQuiz(this.id);
     this.stopListening = [
@@ -162,6 +161,7 @@ export class QuizGamePage implements OnDestroy {
     this.stopListening.forEach((stop) => stop());
     this.socket.leaveQuiz(this.id);
     document.removeEventListener('visibilitychange', this.onVisible);
+    this.playSong(null);
     void this.wakeLock?.release().catch(() => {});
   }
 
@@ -208,8 +208,13 @@ export class QuizGamePage implements OnDestroy {
     this.offset = Date.parse(game.serverNow) - this.now();
     // What's sent to everyone has nobody's answer in it: mine stays while
     // the question does.
-    if (game.myAnswer !== undefined) this.myAnswer.set(game.myAnswer);
-    else if (before?.questionIdx !== game.questionIdx) this.myAnswer.set(null);
+    if (game.myAnswer !== undefined) {
+      this.myAnswer.set(game.myAnswer);
+      this.myGuess.set(game.myGuess ?? null);
+    } else if (before?.questionIdx !== game.questionIdx) {
+      this.myAnswer.set(null);
+      this.myGuess.set(null);
+    }
     this.game.set(game);
 
     if (before && before.status !== 'finished' && game.status === 'finished') {
@@ -238,9 +243,12 @@ export class QuizGamePage implements OnDestroy {
 
   // --- A player's ---
 
-  canAnswer = computed(
-    () => this.game()?.status === 'question' && !!this.me() && this.myAnswer() === null,
-  );
+  // One answer each - but a map question's pin may be moved while it's open.
+  canAnswer = computed(() => {
+    const g = this.game();
+    if (g?.status !== 'question' || !this.me()) return false;
+    return g.question?.type === 'map' || this.myAnswer() === null;
+  });
 
   answer(idx: number) {
     if (!this.canAnswer()) return;
@@ -255,15 +263,56 @@ export class QuizGamePage implements OnDestroy {
     });
   }
 
-  // What my last answer came to, once the question is closed.
-  myResult = computed<'right' | 'wrong' | 'none' | null>(() => {
+  // A map question: my pin down, or moved.
+  putPin(place: QuizPlace) {
+    if (!this.canAnswer()) return;
+    // Shown at once - the server's word comes after.
+    this.myGuess.set(place);
+    this.quiz.putPin(this.id, place).subscribe({
+      next: (game) => this.show(game),
+      error: (err) => {
+        this.notifications.addError(errorMessage(err, 'Nem sikerült elküldeni a jelölőt.'));
+        this.load();
+      },
+    });
+  }
+
+  // What my last answer came to, once the question is closed - on a map
+  // question: how far off my pin was (`far`), or that I had none.
+  myResult = computed<'right' | 'wrong' | 'none' | 'far' | null>(() => {
+    const g = this.game();
     const me = this.me();
-    if (this.game()?.status !== 'reveal' || !me) return null;
+    if (g?.status !== 'reveal' || !me) return null;
+    if (g.question?.type === 'map') return me.guess ? 'far' : 'none';
     if (me.answer == null) return 'none';
     return me.points ? 'right' : 'wrong';
   });
 
   // --- The host's ---
+
+  // A song question's song, on this device: started when its question
+  // opens (whatever else was playing here stops), stopped with the next
+  // question. `questionIdx` null: no song now.
+  private playSong(questionIdx: number | null) {
+    this.song?.pause();
+    this.song = null;
+    this.songBlocked.set(false);
+    if (questionIdx === null) return;
+    if (this.music.isPlaying()) this.music.stop();
+    this.song = new Audio(this.quiz.songUrl(this.id, questionIdx));
+    this.startSong();
+  }
+
+  // Also the "Zene indítása" button: a browser may want a tap first.
+  startSong() {
+    if (!this.song) return;
+    this.songBlocked.set(false);
+    try {
+      void this.song.play()?.catch(() => this.songBlocked.set(true));
+    } catch {
+      this.songBlocked.set(true);
+    }
+  }
 
   next() {
     if (this.busy()) return;
@@ -293,11 +342,5 @@ export class QuizGamePage implements OnDestroy {
       error: (err) =>
         this.notifications.addError(errorMessage(err, 'Nem sikerült megszakítani a játékot.')),
     });
-  }
-
-  // How wide an answer's bar is once the question is closed, in percent.
-  barWidth(idx: number): number {
-    const count = this.game()?.question?.counts?.[idx] ?? 0;
-    return Math.round((count / this.mostTaps()) * 100);
   }
 }

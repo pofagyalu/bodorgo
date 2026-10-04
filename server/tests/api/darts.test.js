@@ -7,7 +7,7 @@ import { EDIT_WINDOW_MS } from '../../src/controllers/dartsController.js';
 
 // Móka → Darts over HTTP (the rules themselves: tests/unit/dartsX01.test.js).
 
-// While Móka is being built only the role manager gets in (jatekok/access.js).
+// (Móka is everyone's who is logged in - the role manager is just someone to play as.)
 const createOwner = () => createAdmin({ name: 'Nagy Zoli', canManageRoles: true });
 
 const GAMES = '/jatekok/darts/games';
@@ -33,20 +33,13 @@ async function throwDarts(user, gameId, s) {
 }
 
 describe('Móka: who gets in', () => {
-  it('only the role manager, for now', async () => {
+  it('everyone logged in - a guest too', async () => {
     expect((await request(app).get(GAMES)).status).toBe(401);
     for (const user of [await createAdmin(), await createMember(), await createGuest()]) {
-      expect((await request(app).get(GAMES).set(asUser(user))).status).toBe(403);
-      expect((await start(user, { players: [{ guestName: 'Peti' }] })).status).toBe(403);
-      expect((await request(app).get('/jatekok/players').set(asUser(user))).status).toBe(403);
+      expect((await request(app).get(GAMES).set(asUser(user))).status).toBe(200);
+      expect((await start(user, { players: [{ guestName: 'Peti' }] })).status).toBe(201);
+      expect((await request(app).get('/jatekok/players').set(asUser(user))).status).toBe(200);
     }
-    expect(
-      (
-        await request(app)
-          .get(GAMES)
-          .set(asUser(await createOwner()))
-      ).status,
-    ).toBe(200);
   });
 });
 

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { MusicTrack, PlaylistKey } from './music-player';
 
 // Móka → Kvíz. The rules live on the server (jatekok/quiz/scoring.js,
 // quizController.js) - its clock too: the app only shows what it answers.
@@ -17,19 +18,57 @@ export const DEFAULT_TIME_LIMIT = 20;
 // pages' .a0 - .a3).
 export const ANSWER_SHAPES = ['▲', '◆', '●', '■'];
 
-// The kinds of question (more to come): a plain one, or one with a picture
-// that is uncovered slowly while the clock runs.
-export type QuizQuestionType = 'choice' | 'picture';
+// The kinds of question (the server's jatekok/quiz/scoring.js):
+// - choice: a plain one;
+// - picture: with a picture uncovered tile by tile while the clock runs;
+// - zoom: with a picture that starts on a detail and zooms out;
+// - truefalse: a statement - true or false;
+// - song: a song plays on the host's device - which one is it;
+// - map: where is it - everyone puts a pin on the map, the closest wins.
+export type QuizQuestionType = 'choice' | 'picture' | 'zoom' | 'truefalse' | 'song' | 'map';
+// The kinds that have a picture.
+export const hasPicture = (type: QuizQuestionType) => type === 'picture' || type === 'zoom';
 
-// 2-4 answers, one of them right. Only a picture question has a picture
-// (its name on the server - see QuizService.imageUrl).
+export interface QuizPlace {
+  lat: number;
+  lng: number;
+}
+
+// The part of the map that's shown.
+export interface QuizBounds {
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+}
+
+// What a new map question shows: Hungary and a little around it.
+export const DEFAULT_BOUNDS: QuizBounds = { south: 45.5, west: 15.8, north: 48.8, east: 23.2 };
+
+// A song of one of the playlists (services/music-player.ts).
+export interface QuizSong {
+  playlist: PlaylistKey;
+  id: string;
+  title?: string;
+  artist?: string;
+}
+
+// Every kind but `map` has 2-4 answers, one of them right; the rest is
+// each kind's own.
 export interface QuizQuestion {
   type: QuizQuestionType;
   text: string;
-  image?: string | null;
   answers: string[];
   correct: number; // the right answer's place in `answers`
   timeLimitSec: number;
+  // picture, zoom: the picture's name on the server (QuizService.imageUrl).
+  image?: string | null;
+  // zoom: the detail it starts on - where in the picture's box, 0-1.
+  focus?: { x: number; y: number } | null;
+  song?: QuizSong | null;
+  // map: the place, and the part of the map that's shown.
+  place?: QuizPlace | null;
+  bounds?: QuizBounds | null;
 }
 
 export interface Quiz {
@@ -49,9 +88,11 @@ export interface QuizDraft {
   questions: QuizQuestion[];
 }
 
-// lobby → question → reveal → question → ... → reveal → finished;
-// abandoned: called off by the host.
-export type QuizGameStatus = 'lobby' | 'question' | 'reveal' | 'finished' | 'abandoned';
+// lobby → question → reveal → standings → question → ... → reveal →
+// finished (reveal: the answer; standings: how the game stands, before the
+// next question); abandoned: called off by the host.
+export type QuizGameStatus =
+  'lobby' | 'question' | 'reveal' | 'standings' | 'finished' | 'abandoned';
 
 export interface QuizPlayer {
   userId: string;
@@ -66,6 +107,9 @@ export interface QuizPlayer {
   // Only once the question is closed: what they tapped, and what it was worth.
   answer?: number | null;
   points?: number;
+  // ...and on a map question: where their pin was, and how far off.
+  guess?: QuizPlace | null;
+  km?: number | null;
 }
 
 export interface QuizGame {
@@ -83,6 +127,11 @@ export interface QuizGame {
     type: QuizQuestionType;
     text: string;
     image?: string | null;
+    focus?: { x: number; y: number };
+    bounds?: QuizBounds;
+    // Only once it's closed: where it is; which song it was.
+    place?: QuizPlace;
+    song?: { title: string; artist: string };
     answers: string[];
     timeLimitSec: number;
     startedAt: string;
@@ -95,6 +144,8 @@ export interface QuizGame {
   // My own answer to the open question - only in what the server answers
   // to me, not in what it sends to everyone.
   myAnswer?: number | null;
+  // ...and on a map question, where my pin is.
+  myGuess?: QuizPlace | null;
 }
 
 // A game in the list.
@@ -116,17 +167,17 @@ export interface QuizGameSummary {
   }[];
 }
 
-// One line of the leaderboard: someone's numbers over every finished game.
-export interface QuizLeader {
+// One line of the leaderboard: someone's result in one game - the best
+// results of all time are listed.
+export interface QuizResult {
   userId: string;
   name: string;
   photoUpdatedAt: string | null;
-  games: number;
-  firsts: number;
-  seconds: number;
-  thirds: number;
+  gameId: string;
+  title: string; // the game's (its quiz's)
+  finishedAt: string;
+  place: number; // in that game
   points: number;
-  correct: number;
 }
 
 interface QuizResponse {
@@ -211,10 +262,11 @@ export class QuizService {
       .pipe(map((res) => res.data.games));
   }
 
-  getLeaderboard(): Observable<QuizLeader[]> {
+  // The best results of all time, the most points first.
+  getLeaderboard(): Observable<QuizResult[]> {
     return this.http
-      .get<{ data: { players: QuizLeader[] } }>(`${this.apiUrl}/leaderboard`)
-      .pipe(map((res) => res.data.players));
+      .get<{ data: { results: QuizResult[] } }>(`${this.apiUrl}/leaderboard`)
+      .pipe(map((res) => res.data.results));
   }
 
   // Which live game a code belongs to.
@@ -251,6 +303,35 @@ export class QuizService {
     return this.http
       .post<GameResponse>(`${this.gamesUrl}/${id}/answers`, { answer })
       .pipe(map(this.game));
+  }
+
+  // A map question's answer: my pin - it may be moved until the time is up.
+  putPin(id: string, place: QuizPlace): Observable<QuizGame> {
+    return this.http
+      .post<GameResponse>(`${this.gamesUrl}/${id}/answers`, place)
+      .pipe(map(this.game));
+  }
+
+  // The open song question's song - a plain URL for the host's player (the
+  // question's number only makes each one's address its own).
+  songUrl(id: string, questionIdx: number): string {
+    return `${this.gamesUrl}/${id}/song?q=${questionIdx}`;
+  }
+
+  // --- A song question's song (the editor) ---
+
+  // A playlist's tracks to pick from.
+  getTracks(playlist: PlaylistKey): Observable<MusicTrack[]> {
+    return this.http
+      .get<{ data: { tracks: MusicTrack[] } }>(
+        `${environment.apiBaseUrl}/music/${playlist}/playlist`,
+      )
+      .pipe(map((res) => res.data.tracks));
+  }
+
+  // To listen to it while writing the question.
+  trackUrl(song: QuizSong): string {
+    return `${environment.apiBaseUrl}/music/${song.playlist}/stream/${song.id}`;
   }
 
   // The host calls it off.

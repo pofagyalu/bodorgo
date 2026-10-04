@@ -4,7 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
-import { canSeeMoka } from '../../auth/moka.guard';
+import { canSeeFutokor } from '../../auth/futokor.guard';
 
 // A game's own page: a darts game (moka/darts/<id> - not the list, not
 // "uj") or a quiz being played (moka/kviz/jatekok/<id>).
@@ -49,14 +49,13 @@ export class Moka {
   // Kvíz's own pages: the games (to join, and the ones played) and the
   // quizzes themselves, with their editor.
   readonly quizPages = [
-    { link: 'kviz/jatekok', label: 'Játékok', icon: 'emoji_events' },
-    { link: 'kviz/szerkeszto', label: 'Kvízek', icon: 'edit_note' },
+    { link: 'kviz/jatekok', label: 'Játékszoba', icon: 'meeting_room' },
+    { link: 'kviz/szerkeszto', label: 'Alkotóműhely', icon: 'handyman' },
   ];
 
-  // Darts and Futókörök are still only for whoever moka.guard.ts lets in;
-  // the quiz is everyone's - they see only that. (Someone running a race
-  // already on their phone keeps Futókörök.)
-  seesAll = computed(() => canSeeMoka(this.auth.user()) || this.inFutokor());
+  // Futókörök is still only for whoever futokor.guard.ts lets in - and for
+  // someone running a race already on their phone.
+  seesRace = computed(() => canSeeFutokor(this.auth.user()) || this.inFutokor());
 
   // During a game the phone's tabs go away: the whole screen is the game's.
   inGame = toSignal(
