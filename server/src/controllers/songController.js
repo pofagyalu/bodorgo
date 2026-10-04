@@ -13,23 +13,47 @@ import {
 import { chordSignature, detectKey, parseChord, plainLyrics } from '../songs/songText.js';
 import { DOCUMENT_PREVIEWS_DIR, pdfFirstPagePreview } from '../utils/documentPreviews.js';
 import { budapestYmd } from '../utils/huDate.js';
+import { givenName } from '../utils/birthday.js';
 
-// Daloskönyv: the club's songbook. Reading is for everyone logged in;
-// writing only for the one role manager (utils/roleManager.js) - the
-// client's twin: auth/song-edit.guard.ts.
+// Daloskönyv: the club's songbook. Reading is for everyone logged in, and
+// so is adding a song: whoever adds one owns it, and may change and delete
+// that one. The book's keeper - the one role manager
+// (utils/roleManager.js) - may change every song, and only the keeper's
+// songs are the book itself (`inBook`: its PDF, its count, its index);
+// the others' are listed in the app beside them, each with its owner's
+// name, until the keeper takes one in.
 export const canEditSongs = (user) => !!user?.canManageRoles;
 
-// After requireAuth.
-export function requireSongEditor(req, res, next) {
-  if (!canEditSongs(req.user)) {
-    return next(new AppError('A daloskönyvet csak a gazdája szerkesztheti.', 403));
-  }
-  next();
+// A song without an owner (from before owners) is the keeper's.
+export const canEditSong = (user, song) =>
+  canEditSongs(user) || (!!song.owner && !!user && String(ownerId(song)) === String(user._id));
+
+// The owner's id, whether the song carries the id or the user itself.
+const ownerId = (song) => song.owner?._id ?? song.owner;
+
+// The songs of the book itself: `inBook` - and the ones from before that
+// field, which have none.
+const IN_BOOK = { inBook: { $ne: false } };
+const isInBook = (song) => song.inBook !== false;
+
+// What a song says of its owner and of who is asking. ownerName: the
+// owner's given name ("Melinda") on a song that isn't the book's - the tag
+// it carries in the list; '' on the book's own songs.
+function ownership(song, user) {
+  const inBook = isInBook(song);
+  const owner = song.owner && typeof song.owner === 'object' && 'name' in song.owner;
+  return {
+    inBook,
+    ownerName: !inBook && owner ? givenName(song.owner) : '',
+    canEdit: canEditSong(user, song),
+  };
 }
+
+const OWNER_FIELDS = 'name firstName lastName';
 
 // The table of contents needs no lyrics - but the songs' keys are worked
 // out from their chords (detectedKey below), so the text is read too.
-const LIST_FIELDS = 'title artist slug key chordpro updatedAt';
+const LIST_FIELDS = 'title artist slug key chordpro updatedAt owner inBook';
 
 // A song's key as its chords say (songs/songText.js's detectKey: "C",
 // "am"; '' without chords) - remembered per song until the song changes.
@@ -48,9 +72,11 @@ function detectedKey(song) {
 
 // A whole song as it is sent: with the key its chords say beside the one
 // set by hand (`key`, '' while none is).
-function songView(song) {
-  const { updatedBy: _updatedBy, __v, ...fields } = song.toObject();
-  return { ...fields, detectedKey: detectedKey(song) };
+// And with whose it is (`ownership` above) - the owner itself isn't sent,
+// only the name the list shows.
+function songView(song, user) {
+  const { updatedBy: _updatedBy, owner: _owner, __v, ...fields } = song.toObject();
+  return { ...fields, detectedKey: detectedKey(song), ...ownership(song, user) };
 }
 
 // The book's order: by title, the Hungarian way (á with a, ö after o...).
@@ -107,12 +133,15 @@ async function findSong(id) {
   return song;
 }
 
-// GET /songs - the table of contents: no lyrics. lastChanged: when a song
-// was last added or changed (null without songs) - the book's date on the
-// Dokumentumok card.
+// GET /songs - the table of contents: no lyrics. Every song there is - the
+// book's own and the ones others added, each saying which it is, whose,
+// and whether the one asking may change it. canEdit: the one asking is
+// the book's keeper (every song is theirs to change). lastChanged: when a
+// song was last added or changed (null without songs) - the book's date
+// on the Dokumentumok card.
 export const getSongs = async (req, res) => {
   const [songs, last] = await Promise.all([
-    inBookOrder(Song.find().select(LIST_FIELDS)),
+    inBookOrder(Song.find().select(LIST_FIELDS).populate('owner', OWNER_FIELDS)),
     Song.findOne().sort('-updatedAt').select('updatedAt'),
   ]);
   res.status(200).json({
@@ -125,6 +154,7 @@ export const getSongs = async (req, res) => {
         slug: song.slug,
         key: song.key ?? '',
         detectedKey: detectedKey(song),
+        ...ownership(song, req.user),
       })),
       canEdit: canEditSongs(req.user),
       lastChanged: last?.updatedAt ?? null,
@@ -161,9 +191,9 @@ export const getLyrics = async (req, res) => {
 
 // GET /songs/:slug - one song, whole.
 export const getSong = async (req, res) => {
-  const song = await Song.findOne({ slug: req.params.slug });
+  const song = await Song.findOne({ slug: req.params.slug }).populate('owner', OWNER_FIELDS);
   if (!song) throw new AppError('Nincs ilyen dal.', 404);
-  res.status(200).json({ status: 'success', data: { song: songView(song) } });
+  res.status(200).json({ status: 'success', data: { song: songView(song, req.user) } });
 };
 
 // The finished PDFs, by what was asked for ("guitar|A4") - kept until a
@@ -176,10 +206,11 @@ async function currentBook(query) {
   const diagrams = BOOK_DIAGRAMS.includes(query.diagrams) ? query.diagrams : null;
   const size = BOOK_SIZES.includes(query.size) ? query.size : 'A4';
 
+  // The book's own songs only - not the ones others added beside it.
   const [count, newest, lastChanged] = await Promise.all([
-    Song.countDocuments(),
-    Song.findOne().sort('-createdAt').select('createdAt'),
-    Song.findOne().sort('-updatedAt').select('updatedAt'),
+    Song.countDocuments(IN_BOOK),
+    Song.findOne(IN_BOOK).sort('-createdAt').select('createdAt'),
+    Song.findOne(IN_BOOK).sort('-updatedAt').select('updatedAt'),
   ]);
   if (!count) throw new AppError('Még nincs dal a daloskönyvben.', 404);
 
@@ -187,7 +218,9 @@ async function currentBook(query) {
   const version = `${count}|${newest._id}|${lastChanged.updatedAt.getTime()}`;
   let book = bookCache.get(key);
   if (book?.version !== version) {
-    const songs = await inBookOrder(Song.find().select('title artist chordpro key tempo')).lean();
+    const songs = await inBookOrder(
+      Song.find(IN_BOOK).select('title artist chordpro key tempo'),
+    ).lean();
     // The cover's "edition": the day the newest song came in.
     const pdf = await renderSongBook(songs, { diagrams, size, lastAdded: newest.createdAt });
     book = { version, pdf };
@@ -243,8 +276,8 @@ const coverPreviews = new Map();
 export const getSongBookPreview = async (req, res) => {
   const diagrams = BOOK_DIAGRAMS.includes(req.query.diagrams) ? req.query.diagrams : null;
   const [count, newest] = await Promise.all([
-    Song.countDocuments(),
-    Song.findOne().sort('-createdAt').select('createdAt'),
+    Song.countDocuments(IN_BOOK),
+    Song.findOne(IN_BOOK).sort('-createdAt').select('createdAt'),
   ]);
   if (!count) throw new AppError('Még nincs dal a daloskönyvben.', 404);
 
@@ -275,24 +308,48 @@ export const getSongBookPreview = async (req, res) => {
   res.send(preview);
 };
 
-// POST /songs
+// The song with its owner's name read in, as it is sent back.
+async function sent(song, user) {
+  await song.populate('owner', OWNER_FIELDS);
+  return songView(song, user);
+}
+
+// May this user change this song? 403 if not.
+function assertMayEdit(user, song) {
+  if (!canEditSong(user, song)) {
+    throw new AppError('Ezt a dalt csak az módosíthatja, aki felvette.', 403);
+  }
+}
+
+// POST /songs - anyone logged in. The song is theirs; the keeper's goes
+// into the book, anyone else's stands beside it.
 export const createSong = async (req, res) => {
   const fields = songFields(req.body);
   const song = await Song.create({
     ...fields,
     slug: await Song.freeSlug(fields.title),
+    owner: req.user._id,
+    inBook: canEditSongs(req.user),
     updatedBy: req.user._id,
   });
-  res.status(201).json({ status: 'success', data: { song: songView(song) } });
+  res.status(201).json({ status: 'success', data: { song: await sent(song, req.user) } });
 };
 
 // PATCH /songs/:id - a new title gets a new slug (the song's address). A
 // key set by hand holds only until the song's chords are next changed:
 // new chords without a key sent with them drop it, and the key is the one
-// the chords say again.
+// the chords say again. Only the song's owner and the book's keeper; and
+// only the keeper says whether a song is the book's (`inBook`).
 export const updateSong = async (req, res) => {
   const song = await findSong(req.params.id);
+  assertMayEdit(req.user, song);
   const fields = songFields(req.body, { partial: true });
+  if (req.body.inBook !== undefined) {
+    if (!canEditSongs(req.user)) {
+      throw new AppError('A daloskönyvbe csak a gazdája vehet fel dalt.', 403);
+    }
+    fields.inBook = req.body.inBook === true;
+  }
   if (fields.title && fields.title !== song.title) {
     song.slug = await Song.freeSlug(fields.title, song._id);
   }
@@ -302,12 +359,13 @@ export const updateSong = async (req, res) => {
   if (newChords && fields.key === undefined) fields.key = '';
   song.set({ ...fields, updatedBy: req.user._id });
   await song.save();
-  res.status(200).json({ status: 'success', data: { song: songView(song) } });
+  res.status(200).json({ status: 'success', data: { song: await sent(song, req.user) } });
 };
 
-// DELETE /songs/:id
+// DELETE /songs/:id - the song's owner, or the book's keeper.
 export const deleteSong = async (req, res) => {
   const song = await findSong(req.params.id);
+  assertMayEdit(req.user, song);
   await song.deleteOne();
   res.status(204).send();
 };

@@ -137,8 +137,9 @@ export const routes: Routes = [
         title: 'Média – Duruzsoló',
         loadComponent: () => import('./pages/media/music/lounge').then((m) => m.Lounge),
       },
-      // Daloskönyv: the songbook (pages/daloskonyv). Its editor - only the
-      // role manager's - comes first, so "uj" isn't taken for a song's slug.
+      // Daloskönyv: the songbook (pages/daloskonyv). Its editor - for a
+      // new song, or one's own - comes first, so "uj" isn't taken for a
+      // song's slug.
       {
         path: 'zene/daloskonyv/uj',
         title: 'Daloskönyv – Új dal',
@@ -175,10 +176,24 @@ export const routes: Routes = [
       },
     ],
   },
+  // The guests' editor - like the members' one inside Média: before the
+  // songbook's own page, so "uj" isn't taken for a song's slug.
+  {
+    path: 'daloskonyv/uj',
+    title: 'Daloskönyv – Új dal',
+    canActivate: [songEditGuard],
+    loadComponent: () => import('./pages/daloskonyv/song-edit/song-edit').then((m) => m.SongEdit),
+  },
+  {
+    path: 'daloskonyv/:slug/szerkesztes',
+    title: 'Daloskönyv – Szerkesztés',
+    canActivate: [songEditGuard],
+    loadComponent: () => import('./pages/daloskonyv/song-edit/song-edit').then((m) => m.SongEdit),
+  },
   {
     // Daloskönyv: the club's songbook on a page of its own - the guests'
     // way in (Klub's menu), since they have no Média. Members have the same
-    // pages inside Média → Zene (media/zene/daloskonyv, with the editor);
+    // pages inside Média → Zene (media/zene/daloskonyv);
     // services/song.ts's base says which one the links use.
     // The open song is the child, beside the list on a wide screen.
     path: 'daloskonyv',

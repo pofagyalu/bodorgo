@@ -2,12 +2,15 @@ import express from 'express';
 import * as songController from '../controllers/songController.js';
 import requireAuth from '../auth/requireAuth.js';
 
-// Daloskönyv (the songbook): reading for anyone logged in - guests too;
-// writing only for the role manager (see songController.js).
+// Daloskönyv (the songbook): reading and adding for anyone logged in -
+// guests too; changing and deleting a song for its owner and for the
+// book's keeper, the role manager (see songController.js).
 const router = express.Router();
-const editor = [requireAuth, songController.requireSongEditor];
 
-router.route('/').get(requireAuth, songController.getSongs).post(editor, songController.createSong);
+router
+  .route('/')
+  .get(requireAuth, songController.getSongs)
+  .post(requireAuth, songController.createSong);
 
 // The whole book as a PDF, and its cover as a small picture - before
 // /:slug, so they aren't taken for a song.
@@ -22,7 +25,7 @@ router.get('/:slug/pdf', requireAuth, songController.getSongPdf);
 
 router
   .route('/:id')
-  .patch(editor, songController.updateSong)
-  .delete(editor, songController.deleteSong);
+  .patch(requireAuth, songController.updateSong)
+  .delete(requireAuth, songController.deleteSong);
 
 export default router;

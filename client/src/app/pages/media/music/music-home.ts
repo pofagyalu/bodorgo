@@ -71,7 +71,8 @@ export class MusicHome implements OnInit {
   // The Daloskönyv's card: how many songs (null until the list arrives) -
   // and, like the playlists' length, how long that lasts.
   bookSummary = computed(() => {
-    const songs = this.songService.songs();
+    // The book's own songs - not the ones others added beside it.
+    const songs = this.songService.bookSongs();
     return songs ? `${songs.length} dal · kb. egy hétvége` : null;
   });
 

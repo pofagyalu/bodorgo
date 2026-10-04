@@ -2,6 +2,8 @@ import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } fr
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Song, SongService } from '../../../services/song';
+import { AuthService } from '../../../auth/auth.service';
+import { canEditSongs } from '../../../auth/song-edit.guard';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { SongSheet } from '../song-sheet/song-sheet';
@@ -29,6 +31,7 @@ import { TEMPO_MAX, TEMPO_MIN, TapTempo, readTempo } from '../tempo';
 })
 export class SongEdit implements OnInit {
   private songService = inject(SongService);
+  private auth = inject(AuthService);
   private notifications = inject(NotificationsService);
   private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
@@ -36,6 +39,10 @@ export class SongEdit implements OnInit {
 
   // The preview's chords can be pointed at, like on the song page.
   instrument = this.songService.instrument;
+
+  // The book's keeper: their songs are the book itself. Anyone else's
+  // song stands beside it (the note over the text says so).
+  isKeeper = computed(() => canEditSongs(this.auth.user()));
 
   private textarea = viewChild<ElementRef<HTMLTextAreaElement>>('text');
 
@@ -100,6 +107,12 @@ export class SongEdit implements OnInit {
     if (!slug) return;
     this.songService.getSong(slug).subscribe({
       next: (song) => {
+        // Someone else's song: to look at, not to change.
+        if (!song.canEdit) {
+          this.notifications.addError('Ezt a dalt csak az módosíthatja, aki felvette.');
+          void this.router.navigate([this.songService.base(), song.slug]);
+          return;
+        }
         this.song.set(song);
         this.title.set(song.title);
         this.artist.set(song.artist);

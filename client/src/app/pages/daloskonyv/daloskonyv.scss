@@ -414,11 +414,36 @@ $line: #e4eae7;
   }
 }
 
+// The row's end: whose song it is, and its key.
+.row-tags {
+  flex: none;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+// "Melinda": a song someone added beside the book - theirs, not the
+// Daloskönyv's own.
+.owner-tag {
+  padding: 0.1rem 0.5rem;
+  border-radius: 10rem;
+  background: #fff6ec;
+  color: #8a3f0d;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.song-list a.active .owner-tag {
+  background: #ffffff38;
+  color: #fff;
+}
+
 // The song's key at its row's end ("a-moll"): small and quiet.
 .song-key {
   flex: none;
-  align-self: center;
-  margin-left: auto;
   padding: 0.1rem 0.5rem;
   border-radius: 10rem;
   background: #e8f3ee;

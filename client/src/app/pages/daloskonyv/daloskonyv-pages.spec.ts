@@ -32,6 +32,9 @@ const song = (over: Partial<Song> = {}): Song => ({
   tempo: null,
   key: '',
   detectedKey: 'C',
+  inBook: true,
+  ownerName: '',
+  canEdit: true,
   updatedAt: '2026-01-01',
   ...over,
 });
@@ -44,6 +47,9 @@ const LIST = [
     slug: 'almodj',
     key: 'am',
     detectedKey: 'C',
+    inBook: true,
+    ownerName: '',
+    canEdit: true,
   },
   {
     _id: 's2',
@@ -52,6 +58,9 @@ const LIST = [
     slug: 'tavaszi-szel',
     key: '',
     detectedKey: 'C',
+    inBook: true,
+    ownerName: '',
+    canEdit: true,
   },
   {
     _id: 's3',
@@ -60,6 +69,9 @@ const LIST = [
     slug: 'zold-erdoben',
     key: '',
     detectedKey: '',
+    inBook: true,
+    ownerName: '',
+    canEdit: true,
   },
 ];
 
@@ -241,14 +253,19 @@ describe('SongPage', () => {
     expect(page.transpose()).toBe(0);
   });
 
-  it('keeps the save button in its place for the owner - idle until the song is moved', () => {
+  it('has no save button and no pencil on a song that is someone else’s', () => {
+    open({ data: { song: song({ canEdit: false, inBook: false, ownerName: 'Melinda' }) } });
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.keep-key')).toBeNull();
+    expect(el.querySelector('a[aria-label="A dal szerkesztése"]')).toBeNull();
+    // Its PDF is everyone's.
+    expect(el.querySelector('a.song-pdf')).toBeTruthy();
+  });
+
+  it('keeps the save button in its place on one’s own song - idle until the song is moved', () => {
     open();
     const keep = () => fixture.nativeElement.querySelector('.keep-key') as HTMLButtonElement | null;
-    // Not the owner: no such button at all.
-    expect(keep()).toBeNull();
-
-    TestBed.inject(SongService).canEdit.set(true);
-    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a[aria-label="A dal szerkesztése"]')).toBeTruthy();
     expect(keep()?.disabled).toBe(true);
     expect(keep()?.classList).toContain('keep-key--idle');
 
@@ -482,6 +499,13 @@ describe('SongEdit', () => {
     open('nincs', fail(404));
     expect(error).toHaveBeenCalledWith('Nincs ilyen dal a daloskönyvben.');
     expect(navigate).toHaveBeenCalledWith(['/daloskonyv']);
+  });
+
+  it('doesn’t open someone else’s song for editing', () => {
+    open('tavaszi-szel', { data: { song: song({ canEdit: false, ownerName: 'Melinda' }) } });
+    expect(error).toHaveBeenCalledWith('Ezt a dalt csak az módosíthatja, aki felvette.');
+    expect(navigate).toHaveBeenCalledWith(['/daloskonyv', 'tavaszi-szel']);
+    expect(page.song()).toBeNull();
   });
 
   it('puts a chord at the caret and wraps a selection as chorus', () => {
@@ -756,6 +780,29 @@ describe('Daloskonyv', () => {
     expect(page.filtered()).toHaveLength(3);
     expect(page.annexes()).toHaveLength(3);
     expect(tag()).toBeNull();
+  });
+
+  it('lets everyone add a song, and shows whose a song is that isn’t the book’s own', () => {
+    setUp({ firstChild: null });
+    fixture = TestBed.createComponent(Daloskonyv);
+    page = fixture.componentInstance;
+    fixture.detectChanges();
+    // Not the keeper; one song was added by someone else, beside the book.
+    const theirs = { ...LIST[2], inBook: false, ownerName: 'Melinda', canEdit: false };
+    respond({
+      'GET /songs': {
+        data: { songs: [LIST[0], LIST[1], theirs], canEdit: false, lastChanged: 'x' },
+      },
+    });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+
+    expect(page.canEdit()).toBe(false);
+    expect(el.querySelector('.new-song-btn')).toBeTruthy();
+    const tags = [...el.querySelectorAll('.owner-tag')].map((t) => t.textContent?.trim());
+    expect(tags).toEqual(['Melinda']);
+    // The book counts its own songs only.
+    expect(TestBed.inject(SongService).bookSongs()).toHaveLength(2);
   });
 
   it('marks what is searched for in the titles and the artists', () => {

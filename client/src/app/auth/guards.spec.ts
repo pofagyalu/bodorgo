@@ -81,11 +81,12 @@ describe('route guards', () => {
   });
 
   describe('songEditGuard', () => {
-    it('is for the role manager only', () => {
-      expect(run(songEditGuard, owner)).toBe(true);
-      expect(run(songEditGuard, admin)).toBe(false);
+    it('is for anyone logged in - the song says whose it is to change', () => {
+      for (const me of [owner, admin, member, guest]) expect(run(songEditGuard, me)).toBe(true);
+      expect(run(songEditGuard, nobody)).toBe(false);
       expect(run(songEditGuard, 'error')).toBe(false);
       expect(navigate).toHaveBeenCalledTimes(2);
+      // The book's keeper is still the role manager alone.
       expect(canEditSongs(null)).toBe(false);
     });
   });

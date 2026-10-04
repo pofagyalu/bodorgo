@@ -525,6 +525,13 @@ const schemas = {
       description:
         'The song’s tempo in beats a minute (30–300), given by hand in the editor - typed, or tapped there. null: none given. A marker only ("♩ = 96" after the key on the song’s page and in the PDF; the song page’s metronome blinks it, without sound) - it doesn’t drive the page’s scrolling, and changing the chords or the key leaves it alone.',
     },
+    inBook: bool(
+      'The song is the Daloskönyv’s own: in the book’s PDF, its count and its index. True for the keeper’s songs (and for every song from before owners); false for a song another user added, until the keeper takes it in.',
+    ),
+    ownerName: str(
+      'The given name of the user who added the song ("Melinda") - on a song that isn’t the book’s own, the tag it carries in the list. Empty on the book’s own songs.',
+    ),
+    canEdit: bool('The caller may change and delete this song: its owner, or the book’s keeper.'),
     createdAt: date(),
     updatedAt: date(),
   }),
@@ -542,6 +549,9 @@ const schemas = {
       description:
         'The tempo in beats a minute - see Song; a whole number from 30 to 300, 400 for anything else. null (or an empty string): no tempo.',
     },
+    inBook: bool(
+      'On a change (PATCH), from the book’s keeper only: the song into the book, or out of it - see Song.',
+    ),
     tags: arrayOf(str()),
     originalKey: str(
       'See Song - sent by the song page with the transposed `chordpro` when a song is saved in a new key. At most 12 characters.',
@@ -2770,7 +2780,7 @@ const paths = {
       tag: T.songs,
       summary: 'The table of contents',
       description:
-        'Every song in the book’s order - by title, the Hungarian alphabet’s way - without the lyrics. `canEdit`: whether the caller may add and change songs (the role manager).',
+        'Every song in the book’s order - by title, the Hungarian alphabet’s way - without the lyrics. Every song there is: the book’s own, and the ones other users added beside it - each says which it is (`inBook`), whose (`ownerName`) and whether the caller may change it (`canEdit`). The top-level `canEdit`: the caller is the book’s keeper (the role manager), who may change every song. Adding a song is open to everyone logged in.',
       data: obj({
         songs: arrayOf(
           obj({
@@ -2782,7 +2792,9 @@ const paths = {
             detectedKey: str('The key the song’s chords say - see Song.'),
           }),
         ),
-        canEdit: bool('The caller may add, change and delete songs.'),
+        canEdit: bool(
+          'The caller is the book’s keeper (the role manager): may change and delete every song, and take a song into the book.',
+        ),
         lastChanged: {
           type: ['string', 'null'],
           format: 'date-time',
@@ -2795,11 +2807,11 @@ const paths = {
       tag: T.songs,
       summary: 'Add a song',
       description:
-        'Only the role manager (`INITIAL_ADMIN_USER`) - 403 for everyone else, admins included. The slug is made from the title (accents folded; `-2`, `-3`… if taken).',
+        'Anyone logged in, guests too. The song is the caller’s own: only they (and the book’s keeper, the role manager) may change or delete it. The keeper’s song goes into the book (`inBook: true`); anyone else’s stands beside it (`inBook: false`) - in the list with its owner’s name, with its own PDF, but not in the book’s PDF. The slug is made from the title (accents folded; `-2`, `-3`… if taken).',
       body: ref('SongInput'),
       ok: 201,
       data: obj({ song: ref('Song') }),
-      errors: [400, 403],
+      errors: [400],
     }),
   },
   '/songs/book.pdf': {
@@ -2892,7 +2904,7 @@ const paths = {
       tag: T.songs,
       summary: 'Change a song',
       description:
-        'Only the role manager (`INITIAL_ADMIN_USER`) - 403 for everyone else, admins included. Only the fields sent change. A new title gives the song a new slug (its address).',
+        'The song’s owner, or the book’s keeper (the role manager, `INITIAL_ADMIN_USER`) - 403 for everyone else, admins included. Only the fields sent change. A new title gives the song a new slug (its address). `inBook` is the keeper’s alone to send (403 from anyone else): it takes the song into the book, or out of it.',
       params: [path('id', 'The song’s id.')],
       body: ref('SongInput'),
       data: obj({ song: ref('Song') }),
@@ -2902,7 +2914,7 @@ const paths = {
       tag: T.songs,
       summary: 'Delete a song',
       description:
-        'Only the role manager (`INITIAL_ADMIN_USER`) - 403 for everyone else, admins included.',
+        'The song’s owner, or the book’s keeper (the role manager, `INITIAL_ADMIN_USER`) - 403 for everyone else, admins included.',
       params: [path('id', 'The song’s id.')],
       ok: 204,
       errors: [403, 404],
