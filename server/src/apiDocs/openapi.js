@@ -942,7 +942,7 @@ const paths = {
       role: 'public',
       summary: 'Login callback',
       description:
-        'Authentik returns here. Finds the user an admin added (by Authentik id, or at the first login by e-mail, any case) and refreshes their name and e-mail - never their role - then starts the session and redirects to the app. Someone not added is sent back with `login?error=not-invited`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
+        'Authentik returns here. Finds the user an admin added by their e-mail (any case) - the e-mail alone says who someone is; the Authentik id is only noted on the account, so an Authentik user deleted and made again with the same address is the same person, and an id arriving with another address is whoever that address belongs to - and refreshes their name - never their role - then starts the session and redirects to the app. Someone not added is sent back with `login?error=not-invited`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
       response: { description: 'Redirect to the app.' },
       ok: 302,
     }),

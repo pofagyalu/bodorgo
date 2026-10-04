@@ -94,12 +94,21 @@ export const callback = async (req, res, next) => {
     const claims = tokens.claims();
     logger.info(`ID Token Claims for sub=${claims.sub}`);
 
-    // Who is it: known by their Authentik id, or - their first login - an
-    // account an admin added with this e-mail and nobody has claimed yet.
-    let user = await User.findOne({ sub: claims.sub });
-    if (!user && claims.email) {
-      user = await User.findOne({ ...emailMatch(claims.email), sub: { $exists: false } });
-      if (user) logger.info(`Claiming the account added for ${claims.email} (sub=${claims.sub})`);
+    // Who is it: the e-mail says, and nothing else - the account an admin
+    // added with this address (any case). The Authentik id (sub) is only
+    // noted on it: an Authentik user deleted and made again comes with a
+    // new id and is the same person here; an id that comes with another
+    // address is whoever that address belongs to.
+    let user = claims.email ? await User.findOne(emailMatch(claims.email)) : null;
+    if (user && user.sub !== claims.sub) {
+      logger.info(
+        user.sub
+          ? `New Authentik id for ${claims.email} (sub=${claims.sub}) - the account stays theirs`
+          : `Claiming the account added for ${claims.email} (sub=${claims.sub})`,
+      );
+      // The id is one account's alone (the model says so): off any other
+      // record that still carries it.
+      await User.updateMany({ sub: claims.sub, _id: { $ne: user._id } }, { $unset: { sub: 1 } });
     }
 
     const owner = isInitialAdmin(claims.email);

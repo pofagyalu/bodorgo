@@ -51,9 +51,48 @@ describe('login - Authentik says who, the app says the role', () => {
     expect(user.lastLoginAt).toBeTruthy();
     expect(await User.countDocuments({ email: /meglevo/i })).toBe(1);
 
-    // The next login finds them by their Authentik id; the role still stays.
+    // The next login finds them by their e-mail again; the role still stays.
     await loginAs({ sub: 'sub-2', email: 'meglevo@test.local', name: 'Meglévő Tag' });
     expect((await User.findById(added._id)).role).toBe('member');
+  });
+
+  it('knows people by their e-mail alone: a new Authentik id is the same person', async () => {
+    // Their Authentik user was deleted and made again: a new id, the same
+    // address.
+    const known = await createUser({ email: 'ujra@test.local', role: 'member', sub: 'sub-old' });
+    const res = await loginAs({ sub: 'sub-new', email: 'ujra@test.local', name: 'Újra Felvett' });
+    expect(res.headers.location).not.toContain('error');
+    expect(await User.findById(known._id)).toMatchObject({ sub: 'sub-new', role: 'member' });
+    expect(await User.countDocuments({ email: 'ujra@test.local' })).toBe(1);
+  });
+
+  it('an id that comes with another address is whoever that address belongs to', async () => {
+    const first = await createUser({ email: 'egyik@test.local', role: 'admin', sub: 'sub-a' });
+    const second = await createUser({ email: 'masik@test.local', role: 'guest' });
+    // The Authentik user that was "egyik" now has "masik"'s address: here
+    // they are "masik" - a guest -, not the admin the id used to be.
+    const res = await loginAs({ sub: 'sub-a', email: 'masik@test.local', name: 'Másik' });
+    expect(res.headers.location).not.toContain('error');
+    expect(await User.findById(second._id)).toMatchObject({ sub: 'sub-a', role: 'guest' });
+    // The id is off the record it was on; that account is untouched otherwise.
+    const before = await User.findById(first._id);
+    expect(before.sub).toBeUndefined();
+    expect(before).toMatchObject({ email: 'egyik@test.local', role: 'admin' });
+  });
+
+  it('refuses a known id that comes with an address nobody was added with', async () => {
+    const known = await createUser({ email: 'regi@test.local', role: 'member', sub: 'sub-k' });
+    // Their address was changed in Authentik: the app doesn't know the new one.
+    const res = await loginAs({ sub: 'sub-k', email: 'uj-cim@test.local', name: 'Régi Tag' });
+    expect(res.headers.location).toContain('login?error=not-invited');
+    expect(await User.findById(known._id)).toMatchObject({
+      email: 'regi@test.local',
+      sub: 'sub-k',
+    });
+    // And without any address at all.
+    expect((await loginAs({ sub: 'sub-k', name: 'Régi Tag' })).headers.location).toContain(
+      'login?error=not-invited',
+    );
   });
 
   it('refuses anyone not added in the app - no account is created', async () => {
