@@ -142,7 +142,10 @@ function op({
 
 const tourId = path('id', 'The tour id.');
 const tourIdT = path('tourId', 'The tour id.');
-const musicKey = path('key', '`bodorgo-fm` (everyone) or `buli` (members only).');
+const musicKey = path(
+  'key',
+  '`bodorgo-fm` (everyone), `buli` or `hatter` (members only - the party list and Duruzsoló, the quiet one).',
+);
 const chatRoomIdP = path('chatRoomId', 'The chat room id (the general one, or a tour’s).');
 // ?w= on a photo: a smaller version for the viewer (photos/imageSizes.js).
 const sizeW = query('w', 'Width: `800`, `1200` or `1920`. Omit for the original.', {
@@ -750,7 +753,7 @@ const tags = [
   [T.media, "Média → Videók and Fotók - the club's own videos and photo folders on the NAS."],
   [
     T.music,
-    'The music: Jellyfin playlists (Bódorgó FM for everyone, Buli rádió for members), streamed through this server - the Jellyfin key never reaches the browser.',
+    'The music: Jellyfin playlists (Bódorgó FM for everyone, Buli rádió and Duruzsoló for members), streamed through this server - the Jellyfin key never reaches the browser.',
   ],
   [
     T.songs,
@@ -2707,7 +2710,7 @@ const paths = {
       tag: T.music,
       summary: 'A music playlist',
       description:
-        'The Jellyfin playlist’s tracks, in order. `bodorgo-fm`: everyone logged in; `buli`: members and admins (403 for guests). Loaded at server start and answered from memory; refreshed in the background every 12 hours (browsers may keep it 30 minutes). 503 if not set up (JELLYFIN_* settings), 502 if Jellyfin can’t be reached on the very first load.',
+        'The Jellyfin playlist’s tracks, in order. `bodorgo-fm`: everyone logged in; `buli` and `hatter`: members and admins (403 for guests). `hatter`: where Jellyfin has a collection’s name for the artist, the artist and the title are read out of the song’s name ("Artist - Title (Official Video)"). Loaded at server start and answered from memory from then on - reloaded only by an admin (`POST .../refresh`) or a server restart, never by the clock (browsers may keep it 30 minutes). 503 if not set up (JELLYFIN_* settings), 502 if Jellyfin can’t be reached on the very first load.',
       params: [musicKey],
       data: obj({
         tracks: arrayOf(
@@ -2731,7 +2734,8 @@ const paths = {
       tag: T.music,
       role: 'admin',
       summary: 'Reload a playlist from Jellyfin now',
-      description: 'After a change in Jellyfin - otherwise it is refreshed every 12 hours.',
+      description:
+        'After a change in Jellyfin - the only reload besides a server restart. New songs’ pictures (and changed ones) are fetched then too.',
       params: [musicKey],
       data: obj({ tracks: arrayOf({ type: 'object' }) }),
       errors: [404, 502, 503],
@@ -2742,7 +2746,7 @@ const paths = {
       tag: T.music,
       summary: 'One track’s thumbnail',
       description:
-        'The artist’s photo if Jellyfin has one, otherwise the album cover (or the track’s own picture) - square, resized by Jellyfin, cached a day. Only a track of that playlist.',
+        'The artist’s photo if Jellyfin has one, otherwise the album cover (or the track’s own picture) - square, resized by Jellyfin, a WebP, cached a day. Served from the server’s own copy (THUMBNAILS_ROOT/_music): fetched from Jellyfin once - when a list is loaded and a song’s picture isn’t there yet, or has changed in Jellyfin. Only a track of that playlist.',
       params: [musicKey, path('itemId', 'A track’s id from the playlist.')],
       response: file(['image/jpeg'], 'The picture.'),
       errors: [403, 404, 502],
@@ -2803,7 +2807,7 @@ const paths = {
       tag: T.songs,
       summary: 'The whole songbook as a PDF',
       description:
-        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page with its key after the artist ("a-moll" - the one set by hand, or the detected one) and the chords over their syllables, two annexes: the circle of fifths (Kvintkör) and the table of every major key’s seven chords (Akkordtáblázat), and on the last pages an index ("Dalok előadók szerint"): the songs grouped by their artists - the artists in alphabetical order, the songs without one last under "Előadó nélkül" -, each with its page number and a link to its song. Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
+        'A cover (with the edition: the day the newest song was added), the table of contents - every line a link to its song, with its page number -, then the songs in the book’s order, each from a new page with its key after the artist ("a-moll" - the one set by hand, or the detected one) and the chords over their syllables, two annexes: the circle of fifths (Kvintkör) and the table of every major key’s seven chords (Akkordmenet), and on the last pages an index ("Dalok előadók szerint"): the songs grouped by their artists - the artists in alphabetical order, the songs without one last under "Előadó nélkül" -, each with its page number and a link to its song. Every page after the contents has a link back to it in its foot; the songs are in the PDF’s bookmarks too. Drawn once and kept until a song is added, changed or deleted. 404 while the book is empty.',
       params: [
         query(
           'diagrams',

@@ -40,22 +40,45 @@
   }
 }
 
-// The filter bar and the admin's "+Tábor" on one line, in the middle.
-.top-row {
-  display: flex;
-  align-items: center;
+// The line above the cards, exactly as wide as a full row of them: the
+// same columns as .card-container below (its width, gap and padding), kept
+// even when empty, and .top-row across all of them - so its right end is
+// the right edge of the last card in a full row.
+.top-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 20rem);
   justify-content: center;
-  gap: 1rem;
+  column-gap: 1.8rem;
+  padding: 0 1.8rem;
   margin: 0 0 2rem;
+}
+
+// One card to a row: that's too narrow for the bar and the button, the
+// line takes the page's width instead.
+@media (max-width: 800px) {
+  .top-grid {
+    display: block;
+  }
+}
+
+// One line: the filter bar in the middle, the admin's "+Tábor" at the
+// right end - away from the bar's order arrow, so a click meant for one
+// doesn't land on the other. Three columns: the two sides share what the
+// bar leaves, which keeps the bar centred with or without the button.
+.top-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 40rem) 1fr;
+  align-items: center;
+  gap: 1rem;
 }
 
 // The bar's place in the row, and what the year panel hangs from (the bar
 // itself has overflow: hidden for its round corners).
 .filters-wrap {
   position: relative;
-  flex: 1 1 auto;
+  grid-column: 2;
   min-width: 0;
-  max-width: 40rem;
 }
 
 // Search, year and order as one piece: one white bar (the same card
@@ -253,9 +276,18 @@
 }
 
 @media (max-width: 600px) {
-  .top-row {
-    gap: 0.5rem;
+  .top-grid {
+    padding: 0;
     margin: 0 0 1.2rem;
+  }
+
+  // The bar alone, across the whole width.
+  .top-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filters-wrap {
+    grid-column: 1;
   }
 
   // Out of the row: the floating + of a phone (shared/_fab.scss).
@@ -292,10 +324,12 @@
   }
 }
 
-// The admin's own action, after the filter bar on its line. Same
+// The admin's own action, at the right end of the filter bar's line, in
+// line with the cards' right edge. Same
 // dark-filled look as the admin icon buttons on tour-details/tour-event.
 .new-tour-btn {
-  flex: none;
+  grid-column: 3;
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   // "+Tábor": the plus right against the word.

@@ -148,7 +148,7 @@ const config = {
     privateKey: process.env.VAPID_PRIVATE_KEY,
     subject: process.env.VAPID_SUBJECT || 'https://bodorgo.hu',
   },
-  // The background music (see music/jellyfin.js): one Jellyfin playlist,
+  // The music (see music/jellyfin.js): a Jellyfin playlist each,
   // read with a server-side API key - it never reaches the browser. userId:
   // optional - whose view lists the playlist (any user; by default the
   // first one Jellyfin has).
@@ -157,7 +157,11 @@ const config = {
     apiKey: process.env.JELLYFIN_API_KEY,
     playlistId: process.env.JELLYFIN_PLAYLIST_ID, // Bódorgó FM
     buliPlaylistId: process.env.JELLYFIN_BULI_PLAYLIST_ID, // Buli - members only
+    hatterPlaylistId: process.env.JELLYFIN_HATTER_PLAYLIST_ID, // Duruzsoló - members only
     userId: process.env.JELLYFIN_USER_ID,
+    // Where the songs' pictures are kept (optional - by default
+    // THUMBNAILS_ROOT/_music, see music/jellyfin.js).
+    imageCacheDir: process.env.MUSIC_IMAGES_ROOT,
   },
 };
 

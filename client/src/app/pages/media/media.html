@@ -92,7 +92,7 @@
           >expand_more</mat-icon
         >
       </a>
-      <!-- The playlists (Jellyfin): the club radio and the party list. -->
+      <!-- The playlists (Jellyfin): the club radio, the party list and the quiet one. -->
       <div
         class="sub-fold"
         [class.sub-fold--open]="section() === 'zene'"
@@ -112,6 +112,15 @@
             <a routerLink="zene/buli" routerLinkActive="active" class="sub-item" title="Buli rádió">
               <mat-icon [style.color]="'#ff2e93'">celebration</mat-icon>
               <span class="sub-title">Buli rádió</span>
+            </a>
+            <a
+              routerLink="zene/hatter"
+              routerLinkActive="active"
+              class="sub-item"
+              title="Duruzsoló"
+            >
+              <mat-icon [style.color]="'#f0b860'">nightlight</mat-icon>
+              <span class="sub-title">Duruzsoló</span>
             </a>
             <!-- The songbook: lyrics and chords (pages/daloskonyv). -->
             <a

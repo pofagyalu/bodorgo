@@ -14,11 +14,13 @@ export interface MusicTrack {
 }
 
 // The playlists, by the name in their addresses (see server
-// music/jellyfin.js): Bódorgó FM for everyone, Buli for members.
-export type PlaylistKey = 'bodorgo-fm' | 'buli';
+// music/jellyfin.js): Bódorgó FM for everyone, Buli and Duruzsoló (quiet
+// music behind a conversation) for members.
+export type PlaylistKey = 'bodorgo-fm' | 'buli' | 'hatter';
 export const PLAYLIST_NAMES: Record<PlaylistKey, string> = {
   'bodorgo-fm': 'Bódorgó FM',
   buli: 'Buli rádió',
+  hatter: 'Duruzsoló',
 };
 
 const VOLUME_KEY = 'bodorgo-music-volume';

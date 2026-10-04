@@ -114,8 +114,8 @@ export const routes: Routes = [
         title: 'Média – Fotók',
         loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
       },
-      // Zene: the two playlists as cards, then each one's own page -
-      // Bódorgó FM and Buli (pages/media/music).
+      // Zene: the playlists as cards, then each one's own page - Bódorgó
+      // FM, Buli and Duruzsoló (pages/media/music).
       {
         path: 'zene',
         pathMatch: 'full',
@@ -131,6 +131,11 @@ export const routes: Routes = [
         path: 'zene/buli',
         title: 'Média – Buli rádió',
         loadComponent: () => import('./pages/media/music/party').then((m) => m.Party),
+      },
+      {
+        path: 'zene/hatter',
+        title: 'Média – Duruzsoló',
+        loadComponent: () => import('./pages/media/music/lounge').then((m) => m.Lounge),
       },
       // Daloskönyv: the songbook (pages/daloskonyv). Its editor - only the
       // role manager's - comes first, so "uj" isn't taken for a song's slug.

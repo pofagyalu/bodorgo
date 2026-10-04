@@ -1,7 +1,7 @@
 import { CIRCLE, DEGREES, keyChords } from './songText.js';
 
 // The Daloskönyv PDF's last two pages (songBook.js): the circle of fifths
-// (Kvintkör) and the table of every key's chords (Akkordtáblázat) - both
+// (Kvintkör) and the table of every key's chords (Akkordmenet) - both
 // drawn, in the songbook's own notation (H is B, B is B♭, minors in lower
 // case). The app shows the same two beside the songs (the client's
 // pages/daloskonyv/circle-of-fifths and chord-table).
@@ -56,6 +56,20 @@ function notes(doc, lines, margin, top) {
   let y = top;
   const options = { width: doc.page.width - margin * 2 - 12, lineGap: 1.5 };
   for (const line of lines) {
+    // { sub }: a line of the list under the note before it - indented, a
+    // dash for a bullet, close to its neighbours.
+    if (line.sub) {
+      const subOptions = { ...options, width: options.width - 14 };
+      const text = `– ${line.sub}`;
+      y -= 3;
+      doc
+        .font('Body')
+        .fontSize(10)
+        .fillColor(INK)
+        .text(text, margin + 26, y, subOptions);
+      y += doc.heightOfString(text, subOptions) + 6;
+      continue;
+    }
     doc.circle(margin + 3, y + 5.5, 1.6).fill(RUST);
     doc
       .font('Body')
@@ -160,7 +174,7 @@ function drawCircleOfFifths(doc, { margin, bottom }) {
   );
 }
 
-// --- Akkordtáblázat ---
+// --- Akkordmenet ---
 
 const TABLE_ABOUT = 'Melyik hangnemben milyen akkordok – hallás utáni kereséshez';
 
@@ -168,7 +182,7 @@ const TABLE_ABOUT = 'Melyik hangnemben milyen akkordok – hallás utáni keres�
 // ones (I, IV, V) in tinted columns.
 function drawChordTable(doc, { margin }) {
   const { width } = doc.page;
-  heading(doc, 2, 'Akkordtáblázat', TABLE_ABOUT, margin);
+  heading(doc, 2, 'Akkordmenet', TABLE_ABOUT, margin);
 
   const left = margin;
   const right = width - margin;
@@ -235,11 +249,14 @@ function drawChordTable(doc, { margin }) {
       .lineTo(right, top + row * r)
       .stroke();
   }
+  doc.roundedRect(left, top, right - left, row * (keys.length + 1), 6).stroke();
+  // After the key, a stronger one: what follows are the degrees.
   doc
+    .lineWidth(1.4)
+    .strokeColor(GREY)
     .moveTo(left + keyWidth, top)
     .lineTo(left + keyWidth, top + row * (keys.length + 1))
     .stroke();
-  doc.roundedRect(left, top, right - left, row * (keys.length + 1), 6).stroke();
 
   notes(
     doc,
@@ -248,7 +265,10 @@ function drawChordTable(doc, { margin }) {
       'Ha egy dalban moll is szól, az leggyakrabban a vi (C-dúrban: am), utána a ii és a iii.',
       'Hallás után: keresd meg, melyik akkordon „ér haza” a dal – az az I. A sorában megvan a többi is.',
       'Moll hangnemű dalhoz a párhuzamos dúr sorát nézd: az a-moll dal akkordjai a C-dúr sorában vannak (a vi a „hazai” akkord).',
-      'Gyakori menetek: I – IV – V – I, I – vi – IV – V, I – V – vi – IV.',
+      'Gyakori akkordmenetek:',
+      { sub: 'I – IV – V – I – alap: népdal, blues, rock and roll' },
+      { sub: 'I – vi – IV – V – ötvenes évek, doo-wop' },
+      { sub: 'I – V – vi – IV – pop/rock' },
     ],
     margin,
     top + row * (keys.length + 1) + 22,
@@ -260,5 +280,5 @@ function drawChordTable(doc, { margin }) {
 // its text ends).
 export const ANNEXES = [
   { title: `${annexLabel(1)} – Kvintkör`, draw: drawCircleOfFifths },
-  { title: `${annexLabel(2)} – Akkordtáblázat`, draw: drawChordTable },
+  { title: `${annexLabel(2)} – Akkordmenet`, draw: drawChordTable },
 ];

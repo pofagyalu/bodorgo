@@ -3,9 +3,10 @@ import AppError from '../utils/appError.js';
 import logger from '../logger.js';
 import {
   fetchTrackAudio,
-  fetchTrackImage,
+  imageType,
   playlistByKey,
   playlistTracks,
+  trackImage,
 } from '../music/jellyfin.js';
 
 // The music (see music/jellyfin.js): the playlists' tracks, audio and
@@ -22,8 +23,10 @@ export const playlistAccess = (req, res, next) => {
   next();
 };
 
-// imageFrom (which Jellyfin item the picture is) stays on the server.
-const forClient = (tracks) => tracks.map(({ imageFrom: _imageFrom, ...track }) => track);
+// imageFrom, imageTag (which Jellyfin item the picture is, and which
+// version of it) stay on the server.
+const forClient = (tracks) =>
+  tracks.map(({ imageFrom: _imageFrom, imageTag: _imageTag, ...track }) => track);
 
 // GET /music/:key/playlist - the tracks, in order.
 export const getPlaylist = async (req, res) => {
@@ -34,7 +37,7 @@ export const getPlaylist = async (req, res) => {
 };
 
 // POST /music/:key/refresh (admin) - reloaded from Jellyfin now, after a
-// change there (otherwise every 12 hours).
+// change there (otherwise only a server restart reloads it).
 export const refreshPlaylist = async (req, res) => {
   const tracks = forClient(await playlistTracks(req.params.key, { fresh: true }));
   res.status(200).json({ status: 'success', results: tracks.length, data: { tracks } });
@@ -47,14 +50,15 @@ async function trackOf(req) {
 }
 
 // GET /music/:key/image/:itemId - a song's thumbnail (the artist's photo,
-// or the album cover). Only a song of that playlist.
+// or the album cover) - from the server's own copy, from Jellyfin only the
+// first time. Only a song of that playlist.
 export const getTrackImage = async (req, res) => {
   const track = await trackOf(req);
   if (!track.imageFrom) throw new AppError('Nincs kép ehhez a számhoz.', 404);
-  const upstream = await fetchTrackImage(track.imageFrom);
-  res.setHeader('Content-Type', upstream.headers.get('content-type') ?? 'image/jpeg');
+  const data = await trackImage(track);
+  res.setHeader('Content-Type', imageType(data));
   res.setHeader('Cache-Control', 'private, max-age=86400');
-  res.send(Buffer.from(await upstream.arrayBuffer()));
+  res.send(data);
 };
 
 // What's passed on from Jellyfin's answer - enough for the browser to play

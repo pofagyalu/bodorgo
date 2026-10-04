@@ -28,9 +28,9 @@ export const ANNEXES: Annex[] = [
   },
   {
     id: 'akkordtablazat',
-    title: 'Akkordtáblázat',
+    title: 'Akkordmenet',
     about: 'melyik hangnemben milyen akkordok',
     icon: 'table_chart',
-    keywords: 'akkordmenet hangnem fokok dúr moll',
+    keywords: 'akkordtáblázat hangnem fokok dúr moll',
   },
 ];

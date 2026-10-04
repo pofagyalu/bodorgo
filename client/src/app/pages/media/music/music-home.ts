@@ -30,12 +30,21 @@ const CARDS: PlaylistCard[] = [
     cover: 'assets/images/buli-cover.svg',
     icon: 'celebration',
   },
+  {
+    key: 'hatter',
+    route: 'hatter',
+    name: 'Duruzsoló',
+    tagline: 'Zene a beszélgetések mellé',
+    cover: 'assets/images/hatter-cover.svg',
+    icon: 'nightlight',
+  },
 ];
 
-// Média → Zene: the two playlists as cards - each in its own page's look
-// (the cream radio, the dark party list), with how much is on it and
-// whether it's the one playing now. A card opens the playlist's own page
-// (music.ts, party.ts). The same kind of start page as Videók's and Fotók's.
+// Média → Zene: the playlists as cards - each in its own page's look (the
+// cream radio, the dark party list, the evening of the quiet one), with how
+// much is on it and whether it's the one playing now. A card opens the
+// playlist's own page (music.ts, party.ts, lounge.ts). The same kind of
+// start page as Videók's and Fotók's.
 @Component({
   selector: 'app-music-home',
   imports: [RouterLink, MatIconModule],
@@ -63,7 +72,7 @@ export class MusicHome implements OnInit {
   // and, like the playlists' length, how long that lasts.
   bookSummary = computed(() => {
     const songs = this.songService.songs();
-    return songs ? `${songs.length} dal · kb. egy egész hétvége` : null;
+    return songs ? `${songs.length} dal · kb. egy hétvége` : null;
   });
 
   ngOnInit() {

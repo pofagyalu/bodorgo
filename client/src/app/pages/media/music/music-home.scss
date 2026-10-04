@@ -1,6 +1,7 @@
 // The Zene start page: the same frame and heading as Videók and Fotók
 // (photos.scss), and a card per playlist in that playlist's own colors
-// (music.scss's cream and brass, party.scss's dark and green).
+// (music.scss's cream and brass, party.scss's dark and green,
+// lounge.scss's dusk and amber).
 :host {
   display: block;
   font-family:
@@ -194,6 +195,28 @@
   }
 }
 
+// Duruzsoló: the evening sky, cream, candlelight amber.
+.playlist-card--hatter {
+  background: linear-gradient(160deg, #121a30, #2b2850 60%, #5a3558);
+  border: 1px solid #2b2850;
+  color: #f3e9d8;
+
+  .card-kind {
+    color: #f0b860;
+  }
+
+  .card-name {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .card-tagline,
+  .card-summary {
+    color: #a9a8c0;
+  }
+}
+
 // Daloskönyv: a white sheet, the green of the app, chords in rust (the
 // song page's own colors - pages/daloskonyv); its cover is the PDF
 // cover's evening in small (assets/images/daloskonyv-cover.svg).
@@ -214,6 +237,56 @@
   .card-tagline,
   .card-summary {
     color: #56666e;
+  }
+}
+
+// A wide screen: small tall cards - the cover on top, as wide as the card,
+// the text under it - spread evenly over the page's whole width: the same
+// room before the first, between each two and after the last. A fourth
+// card fits the row too (the gaps give way), more wrap below.
+@media (min-width: 900px) {
+  .playlist-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    gap: 1.5rem 1rem;
+  }
+
+  .playlist-card {
+    flex: none;
+    width: clamp(11rem, 16%, 14rem);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  // The card's own corners round the cover's top.
+  .cover {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 0;
+  }
+
+  // The cards are equally tall: the text fills what's under the cover, and
+  // "42 dal · kb. 2 óra" sits at its bottom - on one line across the cards,
+  // however many lines the tagline above it takes.
+  .card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.8rem 0.9rem 1rem;
+  }
+
+  .card-name {
+    font-size: 1.2rem;
+  }
+
+  .card-summary {
+    margin-top: auto;
+    padding-top: 0.9rem;
   }
 }
 

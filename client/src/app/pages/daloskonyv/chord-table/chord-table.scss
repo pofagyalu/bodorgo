@@ -4,6 +4,7 @@ $ink: #1f2d3a;
 $muted: #56666e;
 $rust: #b5533a;
 $line: #e4eae7;
+$divider: #9fb0aa;
 
 :host {
   display: block;
@@ -41,7 +42,8 @@ thead th {
   font-weight: 700;
 }
 
-// The key: bold, on the left, never scrolling away.
+// The key: bold, on the left, never scrolling away - and a clear line
+// after it: what follows are the degrees (I, ii, iii...), another thing.
 tbody th,
 .key-head {
   position: sticky;
@@ -50,7 +52,7 @@ tbody th,
   color: $ink;
   font-weight: 800;
   text-align: left;
-  box-shadow: 1px 0 0 $line;
+  box-shadow: inset -2px 0 0 $divider;
 }
 
 .key-head {
@@ -92,5 +94,21 @@ td.dim {
 
   li::marker {
     color: $rust;
+  }
+}
+
+// The common progressions, one to a line under their note: the degrees,
+// then the kind of song they are typical of.
+.progressions {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  list-style: '– ';
+
+  li {
+    margin-bottom: 0.2rem;
+  }
+
+  strong {
+    white-space: nowrap;
   }
 }

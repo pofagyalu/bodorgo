@@ -1,6 +1,6 @@
 // The keys and their chords, in the songbook's own notation (H is B, B is
 // B♭; minors in lower case) - for the two annexes: the circle of fifths
-// (Kvintkör) and the table of each key's chords (Akkordtáblázat). The
+// (Kvintkör) and the table of each key's chords (Akkordmenet). The
 // server's PDF draws from the same lists (see its scripts/buildSongText.mjs).
 
 // One key of the circle, clockwise from the top - a fifth up at each step.
