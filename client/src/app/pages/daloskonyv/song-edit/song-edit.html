@@ -7,7 +7,11 @@
   @if (loading()) {
     <p class="note">Betöltés…</p>
   } @else {
-    <form class="editor" (submit)="$event.preventDefault(); save()">
+    <!-- novalidate: the browser's own checks (a title, the tempo's bounds)
+         would stop the save without a word here - a small bubble at a field
+         far above the button. save() checks the same, and says so in a
+         notice. -->
+    <form class="editor" novalidate (submit)="$event.preventDefault(); save()">
       <div class="fields">
         <label class="field field--title">
           <span>Cím</span>

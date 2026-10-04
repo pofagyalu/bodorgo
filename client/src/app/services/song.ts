@@ -54,6 +54,9 @@ export interface SongInput {
   key?: string;
   // Beats a minute; null takes the tempo away.
   tempo?: number | null;
+  // The book's keeper alone: true takes the song into the Daloskönyv -
+  // and makes it the keeper's own.
+  inBook?: boolean;
 }
 
 // Whose chord diagrams the PDF has - or none.
