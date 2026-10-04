@@ -1,0 +1,753 @@
+:host {
+  display: block;
+  // A warm backdrop in the logo's colors behind the whole game (like Darts).
+  min-height: calc(100dvh - var(--header-height));
+  background:
+    radial-gradient(circle at 0% 0%, #f6b52833, transparent 45%),
+    radial-gradient(circle at 100% 30%, #09639622, transparent 45%), #fffaf0;
+}
+
+// A phone's width by default; on a wide screen the game spreads out (the
+// standings beside the question) - see the end.
+.game {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 0.625rem 0.75rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  color: #23354a;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border-radius: 50%;
+  color: var(--logo-orange);
+  text-decoration: none;
+}
+
+.title {
+  display: grid;
+  min-width: 0;
+
+  strong {
+    font-family: Marhey, sans-serif;
+    font-size: 1.25rem;
+    line-height: 1.2;
+    color: var(--logo-red);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span {
+    font-size: 0.75rem;
+    color: #6a7a83;
+  }
+}
+
+// "Megszakítás": the host calls the game off.
+.quit {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+  min-height: 2.5rem;
+  padding: 0.25rem 0.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #f40e0d14;
+  color: #b3261e;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+.stage {
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 0.375rem 1.25rem #213b4112;
+  text-align: center;
+  animation: rise 0.4s ease-out both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--logo-orange);
+}
+
+.hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #6a7a83;
+
+  &.center {
+    text-align: center;
+    margin-top: 1rem;
+  }
+}
+
+// --- The lobby ---
+
+// The code to join with: big enough to read from across the room.
+.pin {
+  margin: 0.25rem 0 0.75rem;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(2.75rem, 14vw, 5rem);
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  background: linear-gradient(90deg, var(--logo-red), var(--logo-orange), var(--logo-yellow));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.qr {
+  display: block;
+  width: min(16rem, 70%);
+  height: auto;
+  margin: 0 auto;
+  border-radius: 0.75rem;
+}
+
+.wait-card {
+  h2 {
+    margin: 0.25rem 0;
+    font-family: Marhey, sans-serif;
+    font-size: 2rem;
+    color: var(--logo-dark-green);
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.big-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  font-size: 3.5rem;
+  color: var(--logo-green);
+  animation: bob 1.8s ease-in-out infinite;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-0.375rem);
+  }
+}
+
+.side-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.625rem;
+  font-size: 1rem;
+
+  mat-icon {
+    color: var(--logo-orange);
+  }
+}
+
+.people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+// Each arrival pops in.
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.5rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: 0 0.125rem 0.5rem #213b4114;
+  font-size: 0.875rem;
+  font-weight: 650;
+  animation: pop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+
+  &.me {
+    background: #fff0c9;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+.face {
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--logo-dark-green);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+// The host's one button, pinned within thumb reach.
+.lead-btn {
+  position: sticky;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: min(24rem, 100%);
+  min-height: 3.5rem;
+  margin: 1.5rem auto 0;
+  border: 0;
+  border-radius: 1.75rem;
+  background: linear-gradient(135deg, var(--logo-orange), var(--logo-red));
+  color: #fff;
+  font-family: Marhey, sans-serif;
+  font-size: 1.25rem;
+  cursor: pointer;
+  box-shadow: 0 0.5rem 1.5rem #f0782766;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+// --- A question ---
+
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+}
+
+.step {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #6a7a83;
+}
+
+// The seconds left, in a ring that turns red at the end.
+.clock {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 0.25rem solid var(--logo-blue);
+  font-family: Marhey, sans-serif;
+  font-size: 1.375rem;
+  color: var(--logo-blue);
+
+  &--late {
+    border-color: var(--logo-red);
+    color: var(--logo-red);
+    animation: beat 1s ease-in-out infinite;
+  }
+}
+
+@keyframes beat {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+.timebar {
+  height: 0.5rem;
+  margin: 0.375rem 0 0.75rem;
+  border-radius: 0.25rem;
+  background: #e4eae7;
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--logo-red), var(--logo-orange), var(--logo-yellow));
+    transform-origin: left;
+    transition: transform 0.2s linear;
+  }
+}
+
+.question {
+  margin: 0 0 0.875rem;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 0.375rem 1.25rem #213b4112;
+  font-size: clamp(1.125rem, 4.5vw, 1.75rem);
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+// A picture question's picture, under 8 x 6 tiles in the logo's colours
+// that go one by one (quiz-game.ts: tilesGone).
+.picture {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  max-height: 42dvh;
+  margin: 0 auto 0.875rem;
+  border-radius: 1.25rem;
+  background: #142a3c;
+  overflow: hidden;
+  box-shadow: 0 0.375rem 1.25rem #213b4126;
+  // Not something to long-press and save mid-game.
+  user-select: none;
+  -webkit-touch-callout: none;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+}
+
+.tiles {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+
+  span {
+    background: var(--logo-orange);
+    // A hair bigger than its cell, so no line of the picture shows between two.
+    transform: scale(1.02);
+    transition:
+      opacity 0.45s ease,
+      transform 0.45s ease;
+
+    &:nth-child(5n + 1) {
+      background: var(--logo-yellow);
+    }
+
+    &:nth-child(5n + 2) {
+      background: var(--logo-green);
+    }
+
+    &:nth-child(5n + 3) {
+      background: var(--logo-blue);
+    }
+
+    &:nth-child(5n + 4) {
+      background: #d8231c;
+    }
+
+    &.gone {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+  }
+}
+
+// One under the other on a phone - a long answer has room; two by two on
+// a wide screen.
+.answers {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.answer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4rem;
+  padding: 0.625rem 0.875rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--answer);
+  color: var(--answer-text, #fff);
+  font: inherit;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 0.25rem 0 var(--answer-edge);
+  transition:
+    transform 0.12s ease,
+    opacity 0.2s ease,
+    box-shadow 0.12s ease;
+
+  &:not(:disabled):active {
+    transform: translateY(0.1875rem);
+    box-shadow: 0 0.0625rem 0 var(--answer-edge);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  // What I tapped.
+  &.picked {
+    outline: 0.25rem solid #23354a;
+    outline-offset: 0.125rem;
+  }
+
+  &.dimmed {
+    opacity: 0.35;
+  }
+}
+
+// Under a picture: two by two on a phone too, so it all fits on one screen.
+.answers--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+
+  .answer {
+    min-height: 3.25rem;
+    padding: 0.5rem 0.625rem;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+  }
+}
+
+// The answers' own colours - the logo's, never purple.
+.a0 {
+  --answer: #d8231c;
+  --answer-edge: #9c1611;
+}
+
+.a1 {
+  --answer: var(--logo-blue);
+  --answer-edge: #06466b;
+}
+
+.a2 {
+  --answer: var(--logo-yellow);
+  --answer-edge: #c08a12;
+  --answer-text: #3d2a05;
+}
+
+.a3 {
+  --answer: #2f8a4e;
+  --answer-edge: #1b6548;
+}
+
+.shape {
+  flex: none;
+  width: 1.5rem;
+  font-size: 1.375rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  // Above the bar.
+  position: relative;
+  z-index: 1;
+}
+
+// Once the question is closed: how many tapped each answer.
+.count {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+  font-family: Marhey, sans-serif;
+  font-size: 1.125rem;
+}
+
+.bar {
+  position: absolute;
+  inset: auto auto 0 0;
+  height: 0.375rem;
+  background: currentColor;
+  opacity: 0.55;
+  transition: width 0.5s ease-out;
+}
+
+.answers--closed .correct {
+  animation: right 0.5s ease-out both;
+}
+
+@keyframes right {
+  40% {
+    transform: scale(1.04);
+  }
+}
+
+.status {
+  margin: 0.875rem 0 0;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: #3c4d57;
+
+  &--sent {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    font-weight: 700;
+    color: var(--logo-blue);
+  }
+}
+
+// What my answer came to.
+.result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0.875rem 0 0;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  font-family: Marhey, sans-serif;
+  font-size: 1.25rem;
+  animation: pop 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+
+  &--right {
+    background: #e3f3df;
+    color: var(--logo-dark-green);
+  }
+
+  &--wrong {
+    background: #fde7e5;
+    color: #b3261e;
+  }
+}
+
+// --- How the game stands ---
+
+.table {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.375rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+  border-radius: 0.875rem;
+  background: #fff;
+  box-shadow: 0 0.125rem 0.5rem #213b4110;
+
+  &.me {
+    background: #fff0c9;
+  }
+}
+
+.rank {
+  width: 1.75rem;
+  flex: none;
+  font-family: Marhey, sans-serif;
+  color: var(--logo-orange);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gain {
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--logo-dark-green);
+}
+
+.done {
+  flex: none;
+  color: var(--logo-green);
+}
+
+.right {
+  flex: none;
+  font-size: 0.8125rem;
+  color: #6a7a83;
+}
+
+.score {
+  flex: none;
+  min-width: 3rem;
+  text-align: right;
+  font-family: Marhey, sans-serif;
+}
+
+// A player's phone has only the question on it while it's open.
+.side--quiet {
+  display: none;
+}
+
+// --- The end ---
+
+.results {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.table--final {
+  width: min(34rem, 100%);
+  margin: 0 auto;
+}
+
+.banner {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #fde7e5;
+  color: #b3261e;
+  font-weight: 700;
+  text-align: center;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  color: var(--logo-orange);
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+
+  mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+// --- A wide screen (a laptop, a TV): the game spreads out - the
+// standings (or the players arriving) beside the question, the answers
+// two by two. ---
+@media (min-width: 62rem) {
+  .game {
+    max-width: 76rem;
+    padding: 1.25rem 2rem 2rem;
+  }
+
+  .title strong {
+    font-size: 1.75rem;
+  }
+
+  .stage {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    align-items: start;
+    gap: 2rem;
+  }
+
+  .side {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+    background: #ffffffb3;
+  }
+
+  // The host's screen is the one everybody may be looking at: the
+  // standings stay beside an open question too.
+  .game--host .side--quiet {
+    display: block;
+  }
+
+  .game:not(.game--host) .stage:has(.side--quiet) {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 52rem;
+    margin: 0 auto;
+  }
+
+  .answers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .answer {
+    min-height: 6rem;
+    font-size: 1.375rem;
+    padding: 1rem 1.25rem;
+  }
+
+  .answers--compact .answer {
+    min-height: 4.5rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 1.25rem;
+  }
+
+  .question {
+    padding: 2rem;
+    font-size: clamp(1.75rem, 2.6vw, 2.75rem);
+  }
+
+  .qr {
+    width: min(20rem, 60%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tiles span {
+    transition: none;
+  }
+
+  .card,
+  .person,
+  .result,
+  .big-icon,
+  .clock--late,
+  .answers--closed .correct {
+    animation: none;
+  }
+}

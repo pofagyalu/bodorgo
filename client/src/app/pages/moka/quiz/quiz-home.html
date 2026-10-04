@@ -1,0 +1,140 @@
+<section class="quiz-home">
+  <div class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">Bódorgó Móka</p>
+      <h1>Kvíz</h1>
+      <p class="lead">
+        Mindenki a saját telefonján válaszol – aki gyorsabb, több pontot kap. A végén hárman
+        állhatnak a dobogóra.
+      </p>
+
+      <!-- Into a game with the code on its host's screen. -->
+      <form class="pin-form" (submit)="joinByPin(); $event.preventDefault()">
+        <input
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength="6"
+          placeholder="Játékkód"
+          aria-label="Játékkód"
+          [value]="pin()"
+          (input)="typePin($any($event.target).value); $any($event.target).value = pin()"
+        />
+        <button type="submit" [disabled]="!pinReady() || joining()">
+          <mat-icon>login</mat-icon> Beszállok
+        </button>
+      </form>
+      <p class="hint">
+        Saját kvízt indítanál? A <a routerLink="/moka/kviz/szerkeszto">Kvízek</a> között találod.
+      </p>
+    </div>
+
+    <!-- The four answers, as on the game's screen. -->
+    <div class="hero-art" aria-hidden="true">
+      @for (s of shapes; track s; let i = $index) {
+        <span class="tile a{{ i }}">{{ s }}</span>
+      }
+    </div>
+  </div>
+
+  <!-- On right now. -->
+  @if (live().length) {
+    <h2><mat-icon>sensors</mat-icon> Most megy</h2>
+    <ul class="games">
+      @for (g of live(); track g._id) {
+        <li>
+          <a [routerLink]="g._id" class="game-row live">
+            <span class="row-main">
+              <span class="game-title">{{ g.title }}</span>
+              <small>
+                {{ g.host.name }} vezeti · {{ g.playerCount }} játékos ·
+                {{ g.questionCount }} kérdés
+              </small>
+            </span>
+            <span class="status on">
+              {{
+                g.host._id === myId ? 'vezetem' : g.status === 'lobby' ? 'gyülekező' : 'folyamatban'
+              }}
+            </span>
+            <mat-icon class="chevron">chevron_right</mat-icon>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+
+  <!-- Everyone's places over every finished game. -->
+  <h2><mat-icon>leaderboard</mat-icon> Ranglista</h2>
+  @if (leaders(); as list) {
+    @if (list.length) {
+      <div class="board-scroll">
+        <table class="leaders">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="left">Játékos</th>
+              <th title="Első helyek">🥇</th>
+              <th title="Második helyek">🥈</th>
+              <th title="Harmadik helyek">🥉</th>
+              <th title="Befejezett játékok">Játék</th>
+              <th title="Helyes válaszok">Helyes</th>
+              <th title="Összes pont">Pont</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of list; track p.userId; let i = $index) {
+              <tr [class.me]="p.userId === myId">
+                <td class="rank">{{ i + 1 }}.</td>
+                <td class="left who">
+                  <app-avatar
+                    class="face"
+                    [name]="p.name"
+                    [userId]="p.userId"
+                    [photoVersion]="p.photoUpdatedAt"
+                  />
+                  {{ p.name }}
+                </td>
+                <td class="gold">{{ p.firsts }}</td>
+                <td>{{ p.seconds }}</td>
+                <td>{{ p.thirds }}</td>
+                <td>{{ p.games }}</td>
+                <td>{{ p.correct }}</td>
+                <td>{{ p.points }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="empty">Még nincs befejezett kvíz – legyél te az első bajnok!</p>
+    }
+  }
+
+  <!-- Every game played so far, the newest first. -->
+  @if (played().length) {
+    <h2><mat-icon>history</mat-icon> Lejátszott játékok</h2>
+    <ul class="games games--played">
+      @for (g of played(); track g._id) {
+        <li>
+          <a [routerLink]="g._id" class="game-row">
+            <span class="row-main">
+              <span class="game-title">{{ g.title }}</span>
+              <span class="winners">
+                @for (w of g.winners; track w.userId) {
+                  <span class="winner">{{ medals[w.place - 1] }} {{ w.name }}</span>
+                } @empty {
+                  <span class="winner">Senki sem játszott</span>
+                }
+              </span>
+              <small>
+                {{ g.finishedAt ?? g.createdAt | date: 'yyyy. MM. dd. HH:mm' }} ·
+                {{ g.playerCount }} játékos · vezette: {{ g.host.name }}
+              </small>
+            </span>
+            <mat-icon class="chevron">chevron_right</mat-icon>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+</section>

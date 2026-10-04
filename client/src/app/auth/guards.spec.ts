@@ -119,6 +119,11 @@ describe('route guards', () => {
       expect(run(moka('/moka/futokor/fut'), nobody)).toBe(true);
       expect(run(moka('/moka/darts'), nobody)).toBe(false);
     });
+
+    it('lets everyone logged in onto the quiz pages', () => {
+      expect(run(moka('/moka/kviz/jatekok/abc'), guest)).toBe(true);
+      expect(run(moka('/moka/kviz'), nobody)).toBe(false);
+    });
   });
 
   // checkAuth() swallows HTTP errors itself; the guards' own catch is for

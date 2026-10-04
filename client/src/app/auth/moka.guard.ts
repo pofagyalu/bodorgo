@@ -15,15 +15,19 @@ export const canSeeMoka = (user: CurrentUser | null) => !!user?.canManageRoles;
 // course on it, whatever the server says or doesn't: in the garden there
 // may be no connection to ask, and the run must go on (what the phone
 // sends is checked by the server anyway).
+// The quiz is open to everyone logged in already: a game needs its
+// players, who get there by its QR code or link (Móka isn't in their menu
+// yet).
 export const mokaGuard = (_route: unknown, state: RouterStateSnapshot) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const raceOnThisPhone =
     state.url.startsWith('/moka/futokor') && !!localStorage.getItem('futokor-course');
+  const quiz = state.url.startsWith('/moka/kviz');
 
   return auth.checkAuth().pipe(
     map(() => {
-      if (canSeeMoka(auth.user()) || raceOnThisPhone) return true;
+      if (canSeeMoka(auth.user()) || raceOnThisPhone || (quiz && auth.isLoggedIn())) return true;
       router.navigate(['/']);
       return false;
     }),

@@ -1,0 +1,391 @@
+.quiz-home {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+// A warm card in the logo's colors (like Darts' opening page), the four
+// answers beside the text (under it on a phone).
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(circle at 12% 0%, #f6b52855, transparent 55%),
+    radial-gradient(circle at 100% 100%, #09639633, transparent 50%), #fffaf0;
+  box-shadow: 0 0.625rem 2rem #213b4118;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--logo-orange);
+}
+
+h1 {
+  margin: 0.25rem 0 0.75rem;
+  font-family: Marhey, sans-serif;
+  font-size: clamp(2.75rem, 8vw, 4.5rem);
+  line-height: 1;
+  background: linear-gradient(90deg, var(--logo-red), var(--logo-orange), var(--logo-yellow));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  // The gradient is only painted inside the title's own box: room on top
+  // for the accents of capital letters (Ő, Á...), most of it taken back from the margin.
+  padding-top: 0.3em;
+  margin-top: calc(0.25rem - 0.1em);
+}
+
+.lead {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: #3c4d57;
+}
+
+// The code of a game, and the way in.
+.pin-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 1.5rem;
+
+  input {
+    flex: 1 1 9rem;
+    min-width: 0;
+    max-width: 14rem;
+    height: 3.5rem;
+    padding: 0 1rem;
+    border: 2px solid #e4d9bd;
+    border-radius: 1rem;
+    background: #fff;
+    font-family: Marhey, sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.12em;
+    text-align: center;
+    color: #23354a;
+
+    &::placeholder {
+      font-family: inherit;
+      font-size: 1rem;
+      letter-spacing: 0;
+      color: #9aa8ae;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--logo-orange);
+    }
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 3.5rem;
+    padding: 0.625rem 1.25rem;
+    border: 0;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, var(--logo-orange), var(--logo-red));
+    box-shadow: 0 0.375rem 1rem #f0782755;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.55;
+      box-shadow: none;
+      cursor: default;
+    }
+  }
+}
+
+.hint {
+  margin: 0.875rem 0 0;
+  font-size: 0.875rem;
+  color: #6a7a83;
+
+  a {
+    color: var(--logo-orange);
+    font-weight: 700;
+  }
+}
+
+// The four answers, two by two, bobbing one after the other.
+.hero-art {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 5 / 3;
+  border-radius: 1.25rem;
+  background: var(--answer);
+  box-shadow: 0 0.375rem 0 var(--answer-edge);
+  color: var(--answer-text, #fff);
+  font-size: clamp(1.75rem, 5vw, 2.75rem);
+  animation: bob 3.2s ease-in-out infinite;
+
+  &:nth-child(2) {
+    animation-delay: 0.4s;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 0.8s;
+  }
+
+  &:nth-child(4) {
+    animation-delay: 1.2s;
+  }
+}
+
+// The same colours as on the game's screen (quiz-game.scss).
+.a0 {
+  --answer: #d8231c;
+  --answer-edge: #9c1611;
+}
+
+.a1 {
+  --answer: var(--logo-blue);
+  --answer-edge: #06466b;
+}
+
+.a2 {
+  --answer: var(--logo-yellow);
+  --answer-edge: #c08a12;
+  --answer-text: #3d2a05;
+}
+
+.a3 {
+  --answer: #2f8a4e;
+  --answer-edge: #1b6548;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-0.375rem);
+  }
+}
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 2rem 0 0.75rem;
+  font-size: 1.125rem;
+  color: #23354a;
+
+  mat-icon {
+    color: var(--logo-orange);
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #fff;
+  color: #6a7a83;
+  font-size: 0.875rem;
+}
+
+// --- The leaderboard (as Darts') ---
+
+// Scrolls sideways on a narrow phone instead of squeezing the numbers.
+.board-scroll {
+  overflow-x: auto;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 0.25rem 0.875rem #213b4110;
+}
+
+.leaders {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: #23354a;
+  white-space: nowrap;
+
+  th,
+  td {
+    padding: 0.5rem 0.5rem;
+    text-align: center;
+  }
+
+  th {
+    background: #fff3d1;
+    color: var(--logo-brown);
+    font-size: 0.75rem;
+  }
+
+  .left {
+    text-align: left;
+  }
+
+  tbody tr + tr td {
+    border-top: 1px solid #f0ece0;
+  }
+
+  // My own line.
+  tr.me td {
+    background: #fff8e6;
+    font-weight: 700;
+  }
+
+  // The top three, in the medals' colors.
+  tbody tr:nth-child(1) .rank {
+    color: #c99a06;
+  }
+
+  tbody tr:nth-child(2) .rank {
+    color: #8a949b;
+  }
+
+  tbody tr:nth-child(3) .rank {
+    color: #b0703c;
+  }
+}
+
+.rank {
+  font-family: Marhey, sans-serif;
+  font-size: 1rem;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 650;
+}
+
+.face {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--logo-dark-green);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.gold {
+  font-weight: 800;
+  color: var(--logo-orange);
+}
+
+// --- The games ---
+
+.games {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.625rem 0.75rem 0.625rem 1rem;
+  border-radius: 1rem;
+  background: #fff;
+  border-left: 0.3125rem solid #dce6e3;
+  box-shadow: 0 0.25rem 0.875rem #213b4110;
+  color: #23354a;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateX(0.1875rem);
+  }
+
+  // On right now.
+  &.live {
+    border-left-color: var(--logo-orange);
+  }
+}
+
+.row-main {
+  flex: 1;
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+
+  small {
+    color: #8a989f;
+    font-size: 0.75rem;
+  }
+}
+
+.game-title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.winners {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.status {
+  flex: none;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+
+  &.on {
+    background: #f0782722;
+    color: #b5530f;
+  }
+}
+
+.chevron {
+  flex: none;
+  color: #b3c0c6;
+}
+
+// A wide screen has room for the played games side by side.
+@media (min-width: 62rem) {
+  .games--played {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-art {
+    max-width: 16rem;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    animation: none;
+  }
+}

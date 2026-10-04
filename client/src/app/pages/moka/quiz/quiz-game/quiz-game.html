@@ -1,0 +1,281 @@
+@if (game(); as g) {
+  <section class="game" [class.game--host]="isHost()">
+    <header class="top">
+      <a routerLink="/moka/kviz/jatekok" class="icon-btn" aria-label="Vissza a játékokhoz">
+        <mat-icon>arrow_back</mat-icon>
+      </a>
+      <div class="title">
+        <strong>{{ g.title }}</strong>
+        <span>játékvezető: {{ g.host.name }}</span>
+      </div>
+      @if (isHost() && live()) {
+        <button type="button" class="quit" (click)="abandon()">
+          <mat-icon>close</mat-icon> Megszakítás
+        </button>
+      }
+    </header>
+
+    @switch (g.status) {
+      <!-- The lobby: the host shows the code, the players arrive. -->
+      @case ('lobby') {
+        <div class="stage">
+          <div class="main">
+            @if (isHost()) {
+              <div class="card join-card">
+                <p class="eyebrow">Csatlakozzatok!</p>
+                <p class="pin" aria-label="A játék kódja">{{ g.pin }}</p>
+                @if (qr(); as code) {
+                  <img class="qr" [src]="code" alt="QR-kód a csatlakozáshoz" />
+                }
+                <p class="hint">
+                  Olvasd be a QR-kódot a telefonoddal, vagy nyisd meg a
+                  <strong>{{ joinAddress }}</strong> oldalt, és írd be a kódot.
+                </p>
+              </div>
+            } @else {
+              <div class="card wait-card">
+                <mat-icon class="big-icon">how_to_reg</mat-icon>
+                <h2>Bent vagy!</h2>
+                <p>Mindjárt kezdünk – a játékot {{ g.host.name }} indítja.</p>
+                <p class="hint">Hagyd nyitva ezt az oldalt.</p>
+              </div>
+            }
+          </div>
+
+          <aside class="side">
+            <h2 class="side-title">
+              <mat-icon>groups</mat-icon> Játékosok ({{ g.players.length }})
+            </h2>
+            @if (g.players.length) {
+              <ul class="people">
+                @for (p of g.players; track p.userId) {
+                  <li class="person" [class.me]="p.userId === myId">
+                    <app-avatar
+                      class="face"
+                      [name]="p.name"
+                      [userId]="p.userId"
+                      [photoVersion]="p.photoUpdatedAt"
+                      [preview]="false"
+                    />
+                    {{ p.name }}
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="hint">Még senki – várjuk az elsőt.</p>
+            }
+          </aside>
+        </div>
+
+        @if (isHost()) {
+          <button
+            type="button"
+            class="lead-btn"
+            [disabled]="!g.players.length || busy()"
+            (click)="next()"
+          >
+            <mat-icon>play_arrow</mat-icon> Kezdjük!
+          </button>
+        }
+      }
+
+      <!-- A question, open ('question') or closed, with the answer ('reveal'). -->
+      @case ('question') {
+        <ng-container *ngTemplateOutlet="questionView" />
+      }
+      @case ('reveal') {
+        <ng-container *ngTemplateOutlet="questionView" />
+      }
+
+      <!-- The end: the podium and everyone's points. -->
+      @case ('finished') {
+        <div class="results">
+          <app-podium [winners]="winners()" title="Vége a kvíznek!" />
+          @if (g.players.length) {
+            <ol class="table table--final">
+              @for (p of g.players; track p.userId) {
+                <li class="row" [class.me]="p.userId === myId">
+                  <span class="rank">{{ p.rank }}.</span>
+                  <app-avatar
+                    class="face"
+                    [name]="p.name"
+                    [userId]="p.userId"
+                    [photoVersion]="p.photoUpdatedAt"
+                  />
+                  <span class="name">{{ p.name }}</span>
+                  <span class="right" title="Helyes válaszok">
+                    {{ p.correct }} / {{ g.questionCount }}
+                  </span>
+                  <strong class="score">{{ p.score }}</strong>
+                </li>
+              }
+            </ol>
+          }
+          <a routerLink="/moka/kviz/jatekok" class="back-link">
+            <mat-icon>arrow_back</mat-icon> Vissza a játékokhoz
+          </a>
+        </div>
+      }
+
+      @case ('abandoned') {
+        <p class="banner">Ezt a játékot a játékvezető megszakította.</p>
+        <a routerLink="/moka/kviz/jatekok" class="back-link">
+          <mat-icon>arrow_back</mat-icon> Vissza a játékokhoz
+        </a>
+      }
+    }
+  </section>
+
+  <ng-template #questionView>
+    @if (g.question; as q) {
+      <div class="stage">
+        <div class="main">
+          <div class="progress">
+            <span class="step">{{ g.questionIdx + 1 }} / {{ g.questionCount }}</span>
+            @if (g.status === 'question') {
+              <span class="clock" [class.clock--late]="secondsLeft() <= 5" aria-live="off">
+                {{ secondsLeft() }}
+              </span>
+            } @else {
+              <span class="step">{{ answeredCount() }} / {{ g.players.length }} válaszolt</span>
+            }
+          </div>
+          <!-- The time left, running out. -->
+          <div class="timebar" aria-hidden="true">
+            <span [style.transform]="'scaleX(' + (g.status === 'question' ? timeLeft() : 0) + ')'">
+            </span>
+          </div>
+
+          <h2 class="question">{{ q.text }}</h2>
+
+          <!-- A picture question: the picture under tiles that go one by one. -->
+          @if (q.image; as image) {
+            <div class="picture">
+              <img [src]="imageUrl(image)" alt="" draggable="false" />
+              <div class="tiles" aria-hidden="true">
+                @for (turn of tileTurns(); track $index) {
+                  <span [class.gone]="turn < tilesGone()"></span>
+                }
+              </div>
+            </div>
+          }
+
+          <div
+            class="answers"
+            [class.answers--closed]="g.status === 'reveal'"
+            [class.answers--compact]="!!q.image"
+          >
+            @for (a of q.answers; track $index; let i = $index) {
+              <button
+                type="button"
+                class="answer a{{ i }}"
+                [class.picked]="myAnswer() === i"
+                [class.dimmed]="
+                  g.status === 'question'
+                    ? myAnswer() !== null && myAnswer() !== i
+                    : q.correct !== i
+                "
+                [class.correct]="q.correct === i"
+                [disabled]="!canAnswer()"
+                (click)="answer(i)"
+              >
+                <span class="shape" aria-hidden="true">{{ shapes[i] }}</span>
+                <span class="text">{{ a }}</span>
+                @if (g.status === 'reveal') {
+                  <span class="count">
+                    @if (q.correct === i) {
+                      <mat-icon>check_circle</mat-icon>
+                    }
+                    {{ q.counts?.[i] ?? 0 }}
+                  </span>
+                  <span class="bar" [style.width.%]="barWidth(i)" aria-hidden="true"></span>
+                }
+              </button>
+            }
+          </div>
+
+          <!-- Under the answers: what's happening, for whoever is looking. -->
+          @if (g.status === 'question') {
+            @if (isHost()) {
+              <p class="status">{{ answeredCount() }} / {{ g.players.length }} válaszolt</p>
+            } @else if (myAnswer() !== null) {
+              <p class="status status--sent">
+                <mat-icon>send</mat-icon> Válasz elküldve – várjuk a többieket…
+              </p>
+            } @else if (me()) {
+              <p class="status">Minél gyorsabb vagy, annál több pontot ér!</p>
+            }
+          } @else {
+            @switch (myResult()) {
+              @case ('right') {
+                <p class="result result--right">
+                  <mat-icon>celebration</mat-icon> Talált! <strong>+{{ me()!.points }} pont</strong>
+                </p>
+              }
+              @case ('wrong') {
+                <p class="result result--wrong"><mat-icon>close</mat-icon> Ez most nem talált.</p>
+              }
+              @case ('none') {
+                <p class="result result--wrong"><mat-icon>timer_off</mat-icon> Lejárt az idő.</p>
+              }
+            }
+            @if (me(); as mine) {
+              <p class="status">
+                Most a(z) <strong>{{ mine.rank }}.</strong> helyen állsz,
+                <strong>{{ mine.score }}</strong> ponttal.
+              </p>
+            }
+          }
+        </div>
+
+        <!-- Between two questions: how the game stands. While a question is
+             open, only the host's (wide) screen keeps it. -->
+        <aside class="side" [class.side--quiet]="g.status === 'question'">
+          <h2 class="side-title"><mat-icon>leaderboard</mat-icon> Állás</h2>
+          <ol class="table">
+            @for (p of top(); track p.userId) {
+              <li class="row" [class.me]="p.userId === myId">
+                <span class="rank">{{ p.rank }}.</span>
+                <app-avatar
+                  class="face"
+                  [name]="p.name"
+                  [userId]="p.userId"
+                  [photoVersion]="p.photoUpdatedAt"
+                  [preview]="false"
+                />
+                <span class="name">{{ p.name }}</span>
+                @if (g.status === 'reveal' && p.points) {
+                  <span class="gain">+{{ p.points }}</span>
+                } @else if (g.status === 'question' && p.answered) {
+                  <mat-icon class="done" aria-label="Válaszolt">check</mat-icon>
+                }
+                <strong class="score">{{ p.score }}</strong>
+              </li>
+            }
+          </ol>
+        </aside>
+      </div>
+
+      @if (isHost()) {
+        <button type="button" class="lead-btn" [disabled]="busy()" (click)="next()">
+          @if (g.status === 'question') {
+            <mat-icon>stop_circle</mat-icon> Kérdés lezárása
+          } @else if (isLast()) {
+            <mat-icon>emoji_events</mat-icon> Eredményhirdetés
+          } @else {
+            <mat-icon>skip_next</mat-icon> Következő kérdés
+          }
+        </button>
+      } @else if (g.status === 'reveal') {
+        <p class="hint center">A következőt {{ g.host.name }} indítja…</p>
+      }
+    }
+  </ng-template>
+} @else if (missing()) {
+  <section class="game">
+    <p class="banner">Nincs ilyen játék.</p>
+    <a routerLink="/moka/kviz/jatekok" class="back-link">
+      <mat-icon>arrow_back</mat-icon> Vissza a játékokhoz
+    </a>
+  </section>
+}

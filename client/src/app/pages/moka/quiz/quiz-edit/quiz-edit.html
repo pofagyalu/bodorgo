@@ -1,0 +1,180 @@
+<section class="edit">
+  <a routerLink="/moka/kviz/szerkeszto" class="back"><mat-icon>arrow_back</mat-icon> Kvízek</a>
+  <h1>{{ id ? 'Kvíz szerkesztése' : 'Új kvíz' }}</h1>
+
+  @if (loaded()) {
+    <label class="card title-card">
+      <span class="label">A kvíz címe</span>
+      <input
+        type="text"
+        maxlength="80"
+        placeholder="pl. Mennyire ismered a táborainkat?"
+        [value]="title()"
+        (input)="title.set($any($event.target).value)"
+      />
+    </label>
+
+    <div class="questions">
+      @for (q of questions(); track $index; let i = $index) {
+        <div class="card question">
+          <div class="q-head">
+            <strong>{{ i + 1 }}. kérdés</strong>
+            <span class="q-tools">
+              <button
+                type="button"
+                aria-label="Feljebb"
+                title="Feljebb"
+                [disabled]="i === 0"
+                (click)="move(i, -1)"
+              >
+                <mat-icon>arrow_upward</mat-icon>
+              </button>
+              <button
+                type="button"
+                aria-label="Lejjebb"
+                title="Lejjebb"
+                [disabled]="i === questions().length - 1"
+                (click)="move(i, 1)"
+              >
+                <mat-icon>arrow_downward</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="danger"
+                aria-label="Kérdés törlése"
+                title="Törlés"
+                [disabled]="questions().length === 1"
+                (click)="removeQuestion(i)"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </span>
+          </div>
+
+          <!-- What kind of question it is - chosen first. -->
+          <div class="kinds">
+            @for (k of types; track k.value) {
+              <button
+                type="button"
+                class="choice"
+                [class.on]="q.type === k.value"
+                [attr.aria-pressed]="q.type === k.value"
+                (click)="setType(i, k.value)"
+              >
+                <mat-icon>{{ k.icon }}</mat-icon> {{ k.label }}
+              </button>
+            }
+          </div>
+          <p class="hint">{{ typeOf(q).hint }}</p>
+
+          <textarea
+            rows="2"
+            maxlength="300"
+            [placeholder]="typeOf(q).ask"
+            aria-label="A kérdés szövege"
+            [value]="q.text"
+            (input)="setText(i, $any($event.target).value)"
+          ></textarea>
+
+          <!-- Only a picture question has a picture: one of my own, or a
+               photo of a tour's album. -->
+          @if (q.type === 'picture') {
+            <div class="picture">
+              @if (q.image; as image) {
+                <img [src]="imageUrl(image)" alt="A kérdés képe" />
+                <button type="button" class="pic-btn pic-btn--remove" (click)="removeImage(i)">
+                  <mat-icon>hide_image</mat-icon> Kép levétele
+                </button>
+              } @else if (uploadingFor() === i) {
+                <span class="hint">Kép mentése…</span>
+              } @else {
+                <label class="pic-btn">
+                  <input type="file" accept="image/*" hidden (change)="pickFile(i, $event)" />
+                  <mat-icon>add_photo_alternate</mat-icon> Saját kép
+                </label>
+                <button type="button" class="pic-btn" (click)="pickingFor.set(i)">
+                  <mat-icon>photo_library</mat-icon> Tábor fotóiból
+                </button>
+              }
+            </div>
+          }
+
+          <!-- The four answer slots, in the game's colours: the ticked one
+               is right, an empty one isn't an answer. -->
+          <div class="answers">
+            @for (a of q.answers; track $index; let j = $index) {
+              <div class="answer a{{ j }}" [class.right]="q.correct === j">
+                <span class="shape" aria-hidden="true">{{ shapes[j] }}</span>
+                <input
+                  type="text"
+                  maxlength="120"
+                  [placeholder]="j < 2 ? 'Válasz' : 'Válasz (elhagyható)'"
+                  [attr.aria-label]="j + 1 + '. válasz'"
+                  [value]="a"
+                  (input)="setAnswer(i, j, $any($event.target).value)"
+                />
+                <button
+                  type="button"
+                  class="mark"
+                  [class.on]="q.correct === j"
+                  [attr.aria-pressed]="q.correct === j"
+                  [attr.aria-label]="j + 1 + '. válasz a helyes'"
+                  title="Ez a helyes válasz"
+                  (click)="setCorrect(i, j)"
+                >
+                  <mat-icon>{{
+                    q.correct === j ? 'check_circle' : 'radio_button_unchecked'
+                  }}</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+          <p class="hint">Pipáld ki a helyes választ. Amit üresen hagysz, az nem jelenik meg.</p>
+
+          <div class="time">
+            <span class="label"><mat-icon>timer</mat-icon> Gondolkodási idő</span>
+            <div class="choices">
+              @for (s of timeLimits; track s) {
+                <button
+                  type="button"
+                  class="choice"
+                  [class.on]="q.timeLimitSec === s"
+                  (click)="setTime(i, s)"
+                >
+                  {{ s }} mp
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (!isFull()) {
+      <button type="button" class="add" (click)="addQuestion()">
+        <mat-icon>add</mat-icon> Új kérdés
+      </button>
+    }
+
+    <!-- Pinned to the bottom: what's still missing, or the way to save. -->
+    <div class="save-bar">
+      @if (problem(); as p) {
+        <span class="problem">{{ p }}</span>
+      } @else {
+        <span class="ok">{{ questions().length }} kérdés – mehet!</span>
+      }
+      <button
+        type="button"
+        class="save"
+        [disabled]="!!problem() || saving() || uploadingFor() !== null"
+        (click)="save()"
+      >
+        <mat-icon>save</mat-icon> Mentés
+      </button>
+    </div>
+  }
+</section>
+
+@if (pickingFor() !== null) {
+  <app-quiz-photo-picker (picked)="fromTour($event)" (closed)="pickingFor.set(null)" />
+}
