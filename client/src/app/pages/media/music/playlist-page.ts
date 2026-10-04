@@ -92,7 +92,8 @@ export abstract class PlaylistPage implements OnInit {
     if (this.active()) this.music.stop();
   }
 
-  // Admins: reload the list from Jellyfin now (otherwise every 12 hours).
+  // Admins: reload the list from Jellyfin now (otherwise only a server
+  // restart does).
   async refresh() {
     if (this.refreshing()) return;
     this.refreshing.set(true);

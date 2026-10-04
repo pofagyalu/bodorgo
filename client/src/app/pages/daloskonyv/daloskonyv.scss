@@ -410,18 +410,17 @@ $line: #e4eae7;
     .toc,
     .song-pane {
       min-height: 0;
-      overflow-y: auto;
       // Both in the one row, whatever their order in the page.
       grid-row: 1;
     }
 
     .song-pane {
       grid-column: 1;
+      overflow-y: auto;
     }
 
     .toc {
       grid-column: 2;
-      overflow-x: hidden;
     }
 
     // Beside a song the column is the list alone: the search, the
@@ -432,19 +431,42 @@ $line: #e4eae7;
       display: none;
     }
 
+    // The column's top stays put - "Játszottak jelölésének törlése", the
+    // tuner and the two annexes; only the songs under them scroll.
     .toc {
+      display: flex;
+      flex-direction: column;
       margin: 0;
-      padding: 1.5rem 1rem 2rem 1.25rem;
+      padding: 1rem 1rem 0 1.25rem;
+      overflow: hidden;
       background: #fff;
       border-left: 1px solid $line;
     }
 
-    .heading p {
-      display: none;
+    .toc > * {
+      flex: none;
     }
 
-    .heading h1 {
-      font-size: 1.5rem;
+    // The two pills keep their own width.
+    .artist-filter,
+    .clear-played {
+      align-self: flex-start;
+    }
+
+    // The songs: what's left of the column's height, its scrollbar at the
+    // column's edge.
+    .toc > .song-list:not(.annex-list) {
+      flex: 1 1 0;
+      min-height: 0;
+      margin-right: -1rem;
+      padding: 0 1rem 2rem 0;
+      overflow-y: auto;
+    }
+
+    // No "Zene / Daloskönyv" over the column: the menu and the song's own
+    // bar say where one is.
+    .heading {
+      display: none;
     }
 
     .song-list {

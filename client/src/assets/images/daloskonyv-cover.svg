@@ -1,15 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="Daloskönyv">
   <!-- The Daloskönyv's cover (Média → Zene → Daloskönyv): the PDF cover's
-       evening in small - cream paper in a thin frame, the sun going down
-       behind the hills, a campfire, and the song rising from it (the
-       server's songs/songBookCover.js draws the big one). -->
-  <defs>
-    <clipPath id="frame">
-      <rect x="24" y="24" width="552" height="552" rx="26" />
-    </clipPath>
-  </defs>
+       evening in small - cream paper to the very edges (no frame: the card
+       zooms it under the pointer), the sun going down behind the hills, a
+       campfire, and the song rising from it (the server's
+       songs/songBookCover.js draws the big one). -->
   <rect width="600" height="600" fill="#f6ecd6" />
-  <g clip-path="url(#frame)">
+  <g>
     <!-- The sun, and three hills from the far to the near. -->
     <circle cx="452" cy="300" r="74" fill="#f6b528" />
     <path d="M0 372 C210 250 400 262 600 352 L600 600 L0 600 Z" fill="#a9d08f" />
@@ -49,5 +45,4 @@
       </g>
     </g>
   </g>
-  <rect x="24" y="24" width="552" height="552" rx="26" fill="none" stroke="#c9a25a" stroke-width="4" />
 </svg>

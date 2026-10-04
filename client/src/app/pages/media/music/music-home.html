@@ -2,7 +2,7 @@
   <div class="heading">
     <div class="kicker">Média</div>
     <h1>Zene</h1>
-    <p>A klub két lejátszási listája és a daloskönyv.</p>
+    <p>A klub lejátszási listái és a daloskönyv.</p>
   </div>
 
   <div class="playlist-grid">
@@ -11,6 +11,7 @@
         class="playlist-card"
         [class.playlist-card--fm]="card.key === 'bodorgo-fm'"
         [class.playlist-card--buli]="card.key === 'buli'"
+        [class.playlist-card--hatter]="card.key === 'hatter'"
         [routerLink]="card.route"
       >
         <span class="cover"><img [src]="card.cover" alt="" /></span>

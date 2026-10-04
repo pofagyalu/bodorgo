@@ -599,10 +599,11 @@ input[type='range'] {
   }
 }
 
-// Phone (no Média sidebar): Bódorgó FM | Buli rádió - shown exactly when the
+// Phone (no Média sidebar): Bódorgó FM | Buli rádió | Duruzsoló - shown exactly when the
 // sidebar isn't (media.scss).
 .list-chips {
   display: none;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 

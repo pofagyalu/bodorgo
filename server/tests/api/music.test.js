@@ -1,9 +1,12 @@
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember } from '../helpers/factories.js';
 import config from '../../src/config.js';
-import { clearPlaylistCache } from '../../src/music/jellyfin.js';
+import { clearPlaylistCache, titleAndArtist } from '../../src/music/jellyfin.js';
 
 // The background music (see music/jellyfin.js): a fake Jellyfin stands in
 // for the real one - global fetch is replaced for these tests.
@@ -29,14 +32,17 @@ const ITEMS = [
 ];
 
 let calls;
-beforeEach(() => {
+beforeEach(async () => {
   calls = [];
   clearPlaylistCache();
   Object.assign(config.jellyfin, {
+    // The pictures' folder: an empty one for every test.
+    imageCacheDir: await fs.mkdtemp(path.join(os.tmpdir(), 'music-test-')),
     url: 'https://jellyfin.test',
     apiKey: 'secret-key',
     playlistId: 'pl1',
     buliPlaylistId: 'pl2',
+    hatterPlaylistId: 'pl3',
     userId: undefined,
   });
   vi.stubGlobal(
@@ -54,6 +60,11 @@ beforeEach(() => {
       }
       if (String(url).includes('/Playlists/pl2/Items')) {
         return new Response(JSON.stringify({ Items: [{ Id: 'p9', Name: 'Buli dal' }] }), {
+          status: 200,
+        });
+      }
+      if (String(url).includes('/Playlists/pl3/Items')) {
+        return new Response(JSON.stringify({ Items: [{ Id: 'h7', Name: 'Halk dal' }] }), {
           status: 200,
         });
       }
@@ -81,7 +92,10 @@ beforeEach(() => {
     }),
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(async () => {
+  vi.unstubAllGlobals();
+  await fs.rm(config.jellyfin.imageCacheDir, { recursive: true, force: true }).catch(() => {});
+});
 
 describe('background music', () => {
   it('lists the playlist for anyone logged in - with our own stream addresses', async () => {
@@ -153,7 +167,34 @@ describe('background music', () => {
     );
   });
 
-  it('once loaded, answers at once - an old list is refreshed in the background', async () => {
+  it('the pictures are kept on the server: Jellyfin is asked for each only once', async () => {
+    const guest = await createGuest();
+    const pictureCalls = (id) =>
+      calls.filter((c) => c.url.includes(`/Items/${id}/Images/Primary`)).length;
+    // Loading the list fetches them all, before anyone asks for one.
+    await request(app).get('/music/bodorgo-fm/playlist').set(asUser(guest));
+    await vi.waitFor(async () =>
+      expect((await fs.readdir(config.jellyfin.imageCacheDir)).sort()).toEqual([
+        'alb2.t.webp',
+        'art1.x.webp',
+      ]),
+    );
+    expect([pictureCalls('art1'), pictureCalls('alb2')]).toEqual([1, 1]);
+
+    const a1 = await request(app).get('/music/bodorgo-fm/image/a1').set(asUser(guest));
+    expect(a1.status).toBe(200);
+    expect(a1.body.toString()).toBe('JPEGDATA');
+    // Not even after a restart (the list forgotten, the files still there).
+    clearPlaylistCache();
+    await request(app).get('/music/bodorgo-fm/image/b2').set(asUser(guest));
+    await request(app).get('/music/bodorgo-fm/playlist').set(asUser(guest));
+    expect([pictureCalls('art1'), pictureCalls('alb2')]).toEqual([1, 1]);
+    // The server's own notes about the picture never reach the browser.
+    const list = await request(app).get('/music/bodorgo-fm/playlist').set(asUser(guest));
+    expect(JSON.stringify(list.body)).not.toMatch(/imageFrom|imageTag/);
+  });
+
+  it('once loaded, never reloaded by the clock - only by an admin', async () => {
     const guest = await createGuest();
     const list = async () =>
       (
@@ -161,16 +202,23 @@ describe('background music', () => {
       ).body.data.tracks.map((t) => t.id);
     expect(await list()).toEqual(['a1', 'b2', 'c3']);
 
-    // Jellyfin's list changes; hours later someone asks.
+    // Jellyfin's list changes; days later someone asks.
     ITEMS.push({ Id: 'd4', Name: 'Új dal' });
     const playlistCalls = () => calls.filter((c) => c.url.includes('/Playlists/')).length;
     const before = playlistCalls();
     vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(Date.now() + 13 * 60 * 60 * 1000);
+    vi.setSystemTime(Date.now() + 3 * 24 * 60 * 60 * 1000);
     try {
-      expect(await list()).toEqual(['a1', 'b2', 'c3']); // the old one, at once
-      await vi.waitFor(() => expect(playlistCalls()).toBe(before + 1));
-      await vi.waitFor(async () => expect(await list()).toEqual(['a1', 'b2', 'c3', 'd4']));
+      expect(await list()).toEqual(['a1', 'b2', 'c3']);
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(playlistCalls()).toBe(before);
+      // The admin's reload brings the new song - for everyone.
+      const reload = await request(app)
+        .post('/music/bodorgo-fm/refresh')
+        .set(asUser(await createAdmin()));
+      expect(reload.status).toBe(200);
+      expect(playlistCalls()).toBe(before + 1);
+      expect(await list()).toEqual(['a1', 'b2', 'c3', 'd4']);
     } finally {
       vi.useRealTimers();
       ITEMS.pop();
@@ -205,6 +253,74 @@ describe('background music', () => {
     expect((await request(app).get('/music/bodorgo-fm/stream/p9').set(asUser(member))).status).toBe(
       404,
     );
+  });
+
+  it('Duruzsoló (hatter): members and admins only - a list of its own', async () => {
+    const guest = await request(app)
+      .get('/music/hatter/playlist')
+      .set(asUser(await createGuest()));
+    expect(guest.status).toBe(403);
+    const member = await createMember();
+    const res = await request(app).get('/music/hatter/playlist').set(asUser(member));
+    expect(res.status).toBe(200);
+    expect(res.body.data.tracks.map((t) => t.streamUrl)).toEqual(['/music/hatter/stream/h7']);
+    expect((await request(app).get('/music/hatter/stream/p9').set(asUser(member))).status).toBe(
+      404,
+    );
+    // Not set up (no JELLYFIN_HATTER_PLAYLIST_ID): the other lists still work.
+    config.jellyfin.hatterPlaylistId = undefined;
+    expect((await request(app).get('/music/hatter/playlist').set(asUser(member))).status).toBe(503);
+    expect((await request(app).get('/music/buli/playlist').set(asUser(member))).status).toBe(200);
+  });
+
+  it("a collection's songs: the artist read out of the title", () => {
+    const collections = ['Házigazda kedvencei'];
+    const of = (Name, Artists = [], AlbumArtist = 'Házigazda kedvencei') =>
+      titleAndArtist({ Name, Artists, AlbumArtist }, collections);
+    expect(of('Depeche Mode - Personal Jesus (Official Video)', ['Cutt & Shutt'])).toEqual({
+      title: 'Personal Jesus',
+      artist: 'Depeche Mode',
+    });
+    expect(of('Rosa Linn - Snap - (Official Video)')).toEqual({
+      title: 'Snap',
+      artist: 'Rosa Linn',
+    });
+    expect(of('Alkyone - Mine [Official Audio]')).toEqual({ title: 'Mine', artist: 'Alkyone' });
+    expect(of('Bohemian Betyars - Csavargó // Official Music Video')).toEqual({
+      title: 'Csavargó',
+      artist: 'Bohemian Betyars',
+    });
+    expect(of('Robbie Williams | Love My Life (Official Video)')).toEqual({
+      title: 'Love My Life',
+      artist: 'Robbie Williams',
+    });
+    expect(of('Sean Rowe - "To Leave Something Behind"')).toEqual({
+      title: 'To Leave Something Behind',
+      artist: 'Sean Rowe',
+    });
+    // The artist second: known from the track's own tag.
+    expect(of('Golden Brown - The Stranglers', ['The Stranglers'])).toEqual({
+      title: 'Golden Brown',
+      artist: 'The Stranglers',
+    });
+    expect(of('Los Chocolatinos "Chocolatineando"')).toEqual({
+      title: 'Chocolatineando',
+      artist: 'Los Chocolatinos',
+    });
+    // No artist in the name: the track's tag, or nobody - never the collection.
+    expect(of('Je Veux', ['Zaz'])).toEqual({ title: 'Je Veux', artist: 'Zaz' });
+    expect(of('03.Viva Cuba')).toEqual({ title: 'Viva Cuba', artist: 'Ismeretlen előadó' });
+    expect(of('16 tonna fekete szén', ['Republic']).title).toBe('16 tonna fekete szén');
+    // A properly tagged song stays as it is.
+    expect(of('Hála Veled', ['Kowalsky meg a Vega'], 'Kowalsky meg a Vega')).toEqual({
+      title: 'Hála Veled',
+      artist: 'Kowalsky meg a Vega',
+    });
+    // The other playlists: Jellyfin's own, untouched.
+    expect(titleAndArtist({ Name: 'A - B (Official Video)', AlbumArtist: 'X' })).toEqual({
+      title: 'A - B (Official Video)',
+      artist: 'X',
+    });
   });
 
   it('an admin reloads a list from Jellyfin at once', async () => {
