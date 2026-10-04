@@ -1,0 +1,50 @@
+<div class="backdrop" (click)="close()"></div>
+<div class="panel" role="dialog" aria-modal="true" aria-label="Kép választása a táborok fotóiból">
+  <header class="head">
+    @if (tour(); as t) {
+      <button type="button" class="icon-btn" aria-label="Vissza a táborokhoz" (click)="back()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <strong>{{ t.title }}</strong>
+    } @else {
+      <strong>Melyik tábor fotóiból?</strong>
+    }
+    <button type="button" class="icon-btn close" aria-label="Bezárás" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div class="body">
+    @if (tour()) {
+      <!-- The album: tap a photo to take it. -->
+      @if (photos(); as list) {
+        <div class="photos">
+          @for (p of list; track p.filename) {
+            <button type="button" class="photo" (click)="pick(p)">
+              <img [src]="thumbUrl(p)" alt="" loading="lazy" />
+            </button>
+          } @empty {
+            <p class="empty">Ennek a tábornak nincs fotója.</p>
+          }
+        </div>
+      } @else {
+        <p class="empty">Betöltés…</p>
+      }
+    } @else if (tours(); as list) {
+      <!-- Every tour, the newest first. -->
+      <div class="tours">
+        @for (t of list; track t._id) {
+          <button type="button" class="tour" (click)="open(t)">
+            <span class="year">{{ year(t) }}</span>
+            <span class="tour-title">{{ t.title }}</span>
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        } @empty {
+          <p class="empty">Nincs egy tábor sem.</p>
+        }
+      </div>
+    } @else {
+      <p class="empty">Betöltés…</p>
+    }
+  </div>
+</div>

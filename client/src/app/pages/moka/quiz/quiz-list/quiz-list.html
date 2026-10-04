@@ -1,0 +1,54 @@
+<section class="quiz-list">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Bódorgó Móka · Kvíz</p>
+      <h1>Kvízek</h1>
+    </div>
+    <a routerLink="uj" class="new"><mat-icon>add_circle</mat-icon> Új kvíz</a>
+  </div>
+  <p class="lead">
+    Bárki írhat kvízt. A sajátodat te szerkesztheted és te indíthatod el – a többiek csak játszani
+    tudnak vele, a kérdéseket nem látják előre.
+  </p>
+
+  @if (quizzes(); as list) {
+    <ul class="cards">
+      @for (q of list; track q._id) {
+        <li class="card" [class.mine]="q.mine">
+          <div class="card-main">
+            <strong class="card-title">{{ q.title }}</strong>
+            <small>
+              {{ q.questionCount }} kérdés ·
+              {{ q.mine ? 'a te kvízed' : 'készítette: ' + q.createdBy.name }} ·
+              {{ q.updatedAt | date: 'yyyy. MM. dd.' }}
+            </small>
+          </div>
+          @if (q.mine) {
+            <div class="card-actions">
+              <button
+                type="button"
+                class="btn btn--start"
+                [disabled]="!!starting()"
+                (click)="start(q)"
+              >
+                <mat-icon>play_arrow</mat-icon> Indítás
+              </button>
+              <a [routerLink]="q._id" class="btn"><mat-icon>edit</mat-icon> Szerkesztés</a>
+              <button
+                type="button"
+                class="btn btn--danger"
+                aria-label="Kvíz törlése"
+                title="Törlés"
+                (click)="remove(q)"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
+        </li>
+      } @empty {
+        <li class="empty">Még nincs egy kvíz sem – írd meg az elsőt!</li>
+      }
+    </ul>
+  }
+</section>

@@ -95,23 +95,15 @@
     font-size: 1.125rem;
   }
 
-  &:not(.coming) {
-    @include nav.nav-item-glow;
-  }
+  @include nav.nav-item-glow;
 
   &.active {
     font-weight: 650;
   }
-
-  &.coming {
-    border: 1px solid transparent;
-    opacity: 0.6;
-    cursor: default;
-  }
 }
 
-// Futókörök's own pages, indented under it with a thin guide line (the
-// same as the video categories under Média → Videók).
+// Futókörök's and Kvíz's own pages, indented under them with a thin guide
+// line (the same as the video categories under Média → Videók).
 .sub-nav {
   display: grid;
   gap: 0.125rem;
@@ -142,19 +134,6 @@
     flex: none;
     color: #f6b528;
   }
-}
-
-.soon {
-  margin-left: auto;
-  font-size: 0.625rem;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #f7b37f;
-  background: #f0782722;
-  border-radius: 0.375rem;
-  padding: 0.125rem 0.375rem;
 }
 
 .side-bottom {
@@ -199,7 +178,6 @@
 
   .brand-text,
   .side-bottom,
-  .soon,
   .sub-title {
     display: none;
   }
@@ -246,8 +224,7 @@
     padding: 0.5rem 0.625rem;
   }
 
-  .moka-mobile-nav a,
-  .moka-mobile-nav .coming {
+  .moka-mobile-nav a {
     flex: none;
     white-space: nowrap;
     border-radius: 0.5rem;
@@ -263,11 +240,7 @@
     }
   }
 
-  .moka-mobile-nav .coming {
-    opacity: 0.5;
-  }
-
-  // Futókörök's own pages: a second, lighter row under the games' tabs.
+  // Futókörök's or Kvíz's own pages: a second, lighter row under the games' tabs.
   .moka-mobile-sub {
     background: #fffaf0;
     padding-block: 0.375rem;

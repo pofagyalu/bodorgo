@@ -476,6 +476,106 @@ const schemas = {
     },
   }),
 
+  QuizQuestion: obj(
+    {
+      text: str('1-300 characters.'),
+      image: {
+        type: ['string', 'null'],
+        description:
+          'A picture question: the name of its picture (from `POST /jatekok/quiz/images` or `/images/from-tour`, shown by `GET /jatekok/quiz/images/{name}`). In the game the app uncovers it slowly while the clock runs. Null: a plain question.',
+      },
+      answers: { ...arrayOf(str('1-120 characters.')), description: '2-4 answers.' },
+      correct: int('The right answer’s place in `answers` (from 0) - exactly one is right.'),
+      timeLimitSec: int('How long the question stays open. Default 20.', {
+        enum: [10, 20, 30, 60],
+      }),
+    },
+    ['text', 'answers', 'correct'],
+  ),
+
+  Quiz: obj({
+    _id: id(),
+    title: str('1-80 characters.'),
+    questionCount: int(),
+    createdBy: obj({ _id: id(), name: str() }),
+    createdAt: date(),
+    updatedAt: date(),
+    mine: bool(
+      'The caller wrote it: only they may read its questions, change, delete or start it.',
+    ),
+    questions: {
+      ...arrayOf(ref('QuizQuestion')),
+      description: 'Only on a single quiz, for its author - not in the list.',
+    },
+  }),
+
+  QuizGame: obj({
+    _id: id(),
+    title: str('The quiz’s title when the game was started.'),
+    pin: {
+      type: ['string', 'null'],
+      description: 'Six digits to join with - null once the game is over.',
+    },
+    status: str(
+      'lobby → question → reveal → question → ... → reveal → finished; abandoned: called off by the host.',
+      { enum: ['lobby', 'question', 'reveal', 'finished', 'abandoned'] },
+    ),
+    host: obj({ _id: id(), name: str() }),
+    createdAt: date(),
+    finishedAt: { type: ['string', 'null'], format: 'date-time' },
+    questionCount: int(),
+    questionIdx: int('The open (or last) question, from 0; -1 in the lobby.'),
+    players: {
+      ...arrayOf(
+        obj({
+          userId: id(),
+          name: str(),
+          photoUpdatedAt: { type: ['string', 'null'] },
+          score: int(
+            'Without the open question’s answers - those count once it is closed (the scores would show who has just got it right).',
+          ),
+          correct: int('Right answers so far.'),
+          rank: int(
+            'Everyone has a place of their own: the most points, then the least time spent on right answers, then who joined earlier.',
+          ),
+          answered: bool('Has answered the open (or just closed) question.'),
+          answer: {
+            type: ['integer', 'null'],
+            description: 'Only in `reveal`: what they tapped - null: nothing.',
+          },
+          points: int('Only in `reveal`: what that answer was worth.'),
+        }),
+      ),
+      description: 'Best first.',
+    },
+    question: {
+      type: ['object', 'null'],
+      description: 'In `question` and `reveal` only.',
+      properties: {
+        text: str(),
+        image: {
+          type: ['string', 'null'],
+          description: 'A picture question’s picture (`GET /jatekok/quiz/images/{name}`).',
+        },
+        answers: arrayOf(str()),
+        timeLimitSec: int(),
+        startedAt: date(),
+        endsAt: date(),
+        correct: int('Only in `reveal`: the right answer’s place.'),
+        counts: {
+          ...arrayOf(int()),
+          description: 'Only in `reveal`: how many tapped each answer.',
+        },
+      },
+    },
+    serverNow: date('The server’s clock when this was sent - the countdown runs by it.'),
+    myAnswer: {
+      type: ['integer', 'null'],
+      description:
+        'The caller’s own answer to the open question. Only in what is answered over HTTP - not in the `quiz-game` socket event, which is the same for everyone.',
+    },
+  }),
+
   Poll: obj({
     _id: id(),
     tour: {
@@ -3091,6 +3191,246 @@ const paths = {
         'A game still on is given up (started by mistake, say): it stays in the list, nothing more is thrown, and it does not count on the leaderboard.',
       params: [path('id', 'The game.')],
       data: obj({ game: ref('DartsGame') }),
+      errors: [400, 403, 404],
+    }),
+  },
+
+  // Kvíz - for everyone logged in (not behind Móka's own gate).
+  '/jatekok/quiz/quizzes': {
+    get: op({
+      tag: T.games,
+      summary: 'Every quiz',
+      description:
+        'Everyone’s quizzes, the last changed first (200 at most), without their questions. For everyone logged in, guests too - as every quiz call.',
+      data: obj({ quizzes: arrayOf(ref('Quiz')) }),
+    }),
+    post: op({
+      tag: T.games,
+      summary: 'Write a quiz',
+      description:
+        'Anyone logged in may. 1-50 questions, each with 2-4 answers of which exactly one is right, open for 10, 20, 30 or 60 seconds, and optionally a picture (it must have been uploaded first). The 400 says in Hungarian which question is wrong and why.',
+      body: obj({ title: str('1-80 characters.'), questions: arrayOf(ref('QuizQuestion')) }, [
+        'title',
+        'questions',
+      ]),
+      ok: 201,
+      data: obj({ quiz: ref('Quiz') }),
+      errors: [400],
+    }),
+  },
+  '/jatekok/quiz/quizzes/{id}': {
+    get: op({
+      tag: T.games,
+      summary: 'One quiz, with its questions',
+      description:
+        'Its author’s only - the questions would give the answers away (403 for everyone else, admins included).',
+      params: [path('id', 'The quiz.')],
+      data: obj({ quiz: ref('Quiz') }),
+      errors: [403, 404],
+    }),
+    put: op({
+      tag: T.games,
+      summary: 'Change a quiz',
+      description:
+        'The whole quiz replaced, by its author. The games already played keep the questions they were played with.',
+      params: [path('id', 'The quiz.')],
+      body: obj({ title: str(), questions: arrayOf(ref('QuizQuestion')) }, ['title', 'questions']),
+      data: obj({ quiz: ref('Quiz') }),
+      errors: [400, 403, 404],
+    }),
+    delete: op({
+      tag: T.games,
+      summary: 'Delete a quiz',
+      description: 'By its author. The games played from it stay.',
+      params: [path('id', 'The quiz.')],
+      ok: 204,
+      errors: [403, 404],
+    }),
+  },
+  '/jatekok/quiz/quizzes/{id}/games': {
+    post: op({
+      tag: T.games,
+      summary: 'Start a game of a quiz',
+      description:
+        'By the quiz’s author, who becomes the game’s host: they lead it and do not play. The game copies the quiz’s title and questions, gets a six-digit code no other live game has, and waits in the lobby for its players.',
+      params: [path('id', 'The quiz.')],
+      ok: 201,
+      data: obj({ game: ref('QuizGame') }),
+      errors: [403, 404],
+    }),
+  },
+  '/jatekok/quiz/images': {
+    post: op({
+      tag: T.games,
+      summary: 'Upload a picture for a quiz question',
+      description:
+        'Multipart, field `image` (at most 12 MB). Kept as a WebP of at most 1600 px without its EXIF (location). The answer is the name to put in the question’s `image`. A picture no quiz and no game shows any more is deleted when its quiz is changed or deleted.',
+      ok: 201,
+      data: obj({ image: str('The picture’s name: 24 hex characters.') }),
+      errors: [400],
+    }),
+  },
+  '/jatekok/quiz/images/from-tour': {
+    post: op({
+      tag: T.games,
+      summary: 'Take a tour photo for a quiz question',
+      description:
+        'The quiz gets a copy of its own of a photo in a tour’s album, so a game played later still has it whatever happens to the album. Not a restricted photo (404, as if it were not there) - in a quiz everybody would see it.',
+      body: obj({ tourId: id(), filename: str('As in the tour’s `images`.') }, [
+        'tourId',
+        'filename',
+      ]),
+      ok: 201,
+      data: obj({ image: str('The picture’s name: 24 hex characters.') }),
+      errors: [404],
+    }),
+  },
+  '/jatekok/quiz/images/{name}': {
+    get: op({
+      tag: T.games,
+      summary: 'A quiz question’s picture',
+      description:
+        'The WebP itself, for anyone logged in. It never changes under its name, so browsers may keep it.',
+      params: [path('name', 'The picture’s name.')],
+      errors: [404],
+    }),
+  },
+  '/jatekok/quiz/games': {
+    get: op({
+      tag: T.games,
+      summary: 'The quiz games',
+      description:
+        'Everyone’s games, the newest 100 first: the ones on now (to join) and the finished ones with their first three. Not the ones called off.',
+      data: obj({
+        games: arrayOf(
+          obj({
+            _id: id(),
+            title: str(),
+            status: str('', { enum: ['lobby', 'question', 'reveal', 'finished'] }),
+            host: obj({ _id: id(), name: str() }),
+            createdAt: date(),
+            finishedAt: { type: ['string', 'null'], format: 'date-time' },
+            questionCount: int(),
+            playerCount: int(),
+            winners: {
+              ...arrayOf(
+                obj({
+                  place: int('1-3.'),
+                  userId: id(),
+                  name: str(),
+                  photoUpdatedAt: { type: ['string', 'null'] },
+                  score: int(),
+                }),
+              ),
+              description: 'Of a finished game; empty otherwise.',
+            },
+          }),
+        ),
+      }),
+    }),
+  },
+  '/jatekok/quiz/leaderboard': {
+    get: op({
+      tag: T.games,
+      summary: 'The quiz leaderboard',
+      description:
+        'Everyone’s numbers over every finished game. Best first: the most wins, then 2nd and 3rd places, then the points.',
+      data: obj({
+        players: arrayOf(
+          obj({
+            userId: id(),
+            name: str(),
+            photoUpdatedAt: { type: ['string', 'null'] },
+            games: int('Finished games played.'),
+            firsts: int(),
+            seconds: int(),
+            thirds: int(),
+            points: int('All the points scored.'),
+            correct: int('All the right answers.'),
+          }),
+        ),
+      }),
+    }),
+  },
+  '/jatekok/quiz/games/pin/{pin}': {
+    get: op({
+      tag: T.games,
+      summary: 'Find a live quiz game by its code',
+      params: [path('pin', 'The six digits on the host’s screen.')],
+      description: 'Only a game still on has a code; 404 otherwise.',
+      data: obj({ gameId: id() }),
+      errors: [404],
+    }),
+  },
+  '/jatekok/quiz/games/{id}': {
+    get: op({
+      tag: T.games,
+      summary: 'One quiz game, as it stands',
+      description:
+        'For anyone logged in. While a question is open, its right answer and what the answers so far are worth are not in it. A question whose time is up is closed first. The same game (without `myAnswer`) is sent to everyone in the game’s Socket.IO channel after each change: join with `join-quiz` `{ gameId }`, listen to `quiz-game`.',
+      params: [path('id', 'The game.')],
+      data: obj({ game: ref('QuizGame') }),
+      errors: [404],
+    }),
+  },
+  '/jatekok/quiz/games/{id}/qr': {
+    get: op({
+      tag: T.games,
+      summary: 'The game’s link as a QR code',
+      description:
+        'For the host’s screen, while the game is on: whoever scans it lands in the game (`<origin>/moka/kviz/jatekok/<id>`).',
+      params: [
+        path('id', 'The game.'),
+        query('origin', 'The app the host is using - one of the server’s known client addresses.'),
+      ],
+      data: obj({ url: str('The link in the code.'), qr: str('A PNG as a data URL.') }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/jatekok/quiz/games/{id}/join': {
+    post: op({
+      tag: T.games,
+      summary: 'Join a quiz game',
+      description:
+        'Into a game still on, at any point - a latecomer has no points for what they missed. Joining again changes nothing. The host cannot join; at most 100 players.',
+      params: [path('id', 'The game.')],
+      data: obj({ game: ref('QuizGame') }),
+      errors: [400, 404],
+    }),
+  },
+  '/jatekok/quiz/games/{id}/next': {
+    post: op({
+      tag: T.games,
+      summary: 'The host’s next step',
+      description:
+        'One call for every step: from the lobby the first question (needs at least one player); an open question is closed early; from the answers shown the next question - or, after the last one, the game is finished. A question also closes by itself when its time is up, or once every player has answered.',
+      params: [path('id', 'The game.')],
+      data: obj({ game: ref('QuizGame') }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/jatekok/quiz/games/{id}/answers': {
+    post: op({
+      tag: T.games,
+      summary: 'Answer the open question',
+      description:
+        'A player’s one answer, timed by when it gets here. A right one is worth 1000 points at once, falling evenly to 500 by the end of the time; a wrong one nothing.',
+      params: [path('id', 'The game.')],
+      body: obj({ answer: int('The answer’s place in the question’s `answers` (from 0).') }, [
+        'answer',
+      ]),
+      data: obj({ game: ref('QuizGame') }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/jatekok/quiz/games/{id}/abandon': {
+    post: op({
+      tag: T.games,
+      summary: 'Call a quiz game off',
+      description:
+        'By its host, while it is on: it is gone from the list and counts for nothing on the leaderboard.',
+      params: [path('id', 'The game.')],
+      data: obj({ game: ref('QuizGame') }),
       errors: [400, 403, 404],
     }),
   },

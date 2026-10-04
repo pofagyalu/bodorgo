@@ -22,6 +22,11 @@ export const RECEIPTS_DIR = process.env.RECEIPTS_DIR || path.join(CLUB_DOCUMENTS
 // and not watched by pm2.
 export const GPX_DIR = process.env.GPX_DIR || path.join(CLUB_DOCUMENTS_DIR, 'gpx');
 
+// The pictures of quiz questions (see jatekok/quiz/quizImages.js). Under
+// documents/ too - not synced, and not watched by pm2.
+export const QUIZ_IMAGES_DIR =
+  process.env.QUIZ_IMAGES_DIR || path.join(CLUB_DOCUMENTS_DIR, 'quiz-images');
+
 // Photos sent in the tour chats (see chat/chatImages.js) - kept under a
 // size quota, the oldest going first. Not in git, never synced; pm2 must
 // not watch it (/volume2/server/ecosystem.config.js's ignore_watch).

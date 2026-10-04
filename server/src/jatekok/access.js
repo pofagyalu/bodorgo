@@ -4,6 +4,8 @@ import AppError from '../utils/appError.js';
 // initial admin (the role manager, see utils/roleManager.js) - not the
 // other admins. Once they're ready, this is the line that opens them to
 // everyone logged in (the client's twin: auth/moka.guard.ts).
+// The quiz is not behind it: a game needs its players, so it's open to
+// everyone logged in already (routes/jatekRoutes.js).
 export const canUseMoka = (user) => !!user?.canManageRoles;
 
 // After requireAuth.

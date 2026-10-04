@@ -4,12 +4,14 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
+import { canSeeMoka } from '../../auth/moka.guard';
 
-// A darts game's own page (moka/darts/<id>) - not the list, not "uj".
-const isGameUrl = (url: string) => /^\/moka\/darts\/(?!uj\b)[^/?#]+/.test(url);
+// A game's own page: a darts game (moka/darts/<id> - not the list, not
+// "uj") or a quiz being played (moka/kviz/jatekok/<id>).
+const isGameUrl = (url: string) => /^\/moka\/(darts\/(?!uj\b)|kviz\/jatekok\/)[^/?#]+/.test(url);
 
 // Outer shell for moka/* - the games: Darts, Futókörök (the running
-// race), the quiz later. Same
+// race), Kvíz. Same
 // sidebar layout as the Klub and Média shells.
 @Component({
   selector: 'app-moka',
@@ -42,6 +44,19 @@ export class Moka {
     { initialValue: this.router.url },
   );
   inFutokor = computed(() => this.url().startsWith('/moka/futokor'));
+  inQuiz = computed(() => this.url().startsWith('/moka/kviz'));
+
+  // Kvíz's own pages: the games (to join, and the ones played) and the
+  // quizzes themselves, with their editor.
+  readonly quizPages = [
+    { link: 'kviz/jatekok', label: 'Játékok', icon: 'emoji_events' },
+    { link: 'kviz/szerkeszto', label: 'Kvízek', icon: 'edit_note' },
+  ];
+
+  // Darts and Futókörök are still only for whoever moka.guard.ts lets in;
+  // the quiz is everyone's - they see only that. (Someone running a race
+  // already on their phone keeps Futókörök.)
+  seesAll = computed(() => canSeeMoka(this.auth.user()) || this.inFutokor());
 
   // During a game the phone's tabs go away: the whole screen is the game's.
   inGame = toSignal(

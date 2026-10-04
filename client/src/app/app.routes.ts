@@ -214,7 +214,7 @@ export const routes: Routes = [
     ],
   },
   {
-    // Móka: the games - Darts, and Futókörök, the running race (the
+    // Móka: the games - Darts, Futókörök (the running race) and Kvíz (the
     // server's side: src/jatekok, src/futokor).
     path: 'moka',
     canActivate: [mokaGuard],
@@ -284,6 +284,41 @@ export const routes: Routes = [
       },
       // Its first address.
       { path: 'futokor/palyak', pathMatch: 'full', redirectTo: 'futokor/palyaszerkeszto' },
+      // Kvíz: the games (to join, and the ones played), and the quizzes
+      // themselves with their editor - for everyone logged in already
+      // (see moka.guard.ts).
+      { path: 'kviz', pathMatch: 'full', redirectTo: 'kviz/jatekok' },
+      {
+        path: 'kviz/jatekok',
+        title: 'Kvíz – Játékok',
+        loadComponent: () => import('./pages/moka/quiz/quiz-home').then((m) => m.QuizHome),
+      },
+      {
+        // A game, live: where its QR code leads.
+        path: 'kviz/jatekok/:id',
+        title: 'Kvíz',
+        loadComponent: () =>
+          import('./pages/moka/quiz/quiz-game/quiz-game').then((m) => m.QuizGamePage),
+      },
+      {
+        path: 'kviz/szerkeszto',
+        title: 'Kvíz – Kvízek',
+        loadComponent: () =>
+          import('./pages/moka/quiz/quiz-list/quiz-list').then((m) => m.QuizList),
+      },
+      // Before szerkeszto/:id, so "uj" isn't taken for a quiz's id.
+      {
+        path: 'kviz/szerkeszto/uj',
+        title: 'Kvíz – Új kvíz',
+        loadComponent: () =>
+          import('./pages/moka/quiz/quiz-edit/quiz-edit').then((m) => m.QuizEdit),
+      },
+      {
+        path: 'kviz/szerkeszto/:id',
+        title: 'Kvíz – Szerkesztés',
+        loadComponent: () =>
+          import('./pages/moka/quiz/quiz-edit/quiz-edit').then((m) => m.QuizEdit),
+      },
     ],
   },
   {

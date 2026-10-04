@@ -3,18 +3,22 @@ import { io, Socket } from 'socket.io-client';
 import { environment } from '../../environments/environment';
 
 // One live connection to the server, shared by everything on the chat page.
-// It can be in two kinds of channels at once (see server
-// src/chat/chatSocket.js):
+// (and the quiz's game page). It can be in these kinds of channels at once
+// (see server src/chat/chatSocket.js):
 // - a tour's (joinTour): its Szobabeosztás changes ("rooms-changed", for
 //   pages/chat/room-board);
 // - a chat room's (joinChat): its messages, reactions and polls (for
-//   components/feed) - the general Kotyogó or a tour's.
+//   components/feed) - the general Kotyogó or a tour's;
+// - a quiz game's (joinQuiz): the game as it stands after each change
+//   ('quiz-game', for pages/moka/quiz/quiz-game - see server
+//   src/jatekok/quiz/quizSocket.js).
 // Stays connected across switches - only the joined tour / room changes.
 @Injectable({ providedIn: 'root' })
 export class TourSocketService {
   private socket: Socket | null = null;
   private joinedTourId: string | null = null;
   private joinedChatRoomId: string | null = null;
+  private joinedQuizId: string | null = null;
 
   private connection(): Socket {
     if (!this.socket) {
@@ -26,6 +30,7 @@ export class TourSocketService {
         if (this.joinedChatRoomId) {
           this.socket!.emit('join-chat', { chatRoomId: this.joinedChatRoomId });
         }
+        if (this.joinedQuizId) this.socket!.emit('join-quiz', { gameId: this.joinedQuizId });
       });
       // Tell the server when the chat's tab goes to the background (or
       // comes back): someone looking at the chat gets no push notification
@@ -87,6 +92,23 @@ export class TourSocketService {
       this.socket.emit('leave-chat', { chatRoomId: this.joinedChatRoomId });
     }
     this.joinedChatRoomId = null;
+  }
+
+  // --- A quiz game's channel ---
+
+  joinQuiz(gameId: string) {
+    const socket = this.connection();
+    if (this.joinedQuizId && this.joinedQuizId !== gameId && socket.connected) {
+      socket.emit('leave-quiz', { gameId: this.joinedQuizId });
+    }
+    this.joinedQuizId = gameId;
+    if (socket.connected) socket.emit('join-quiz', { gameId });
+  }
+
+  leaveQuiz(gameId: string) {
+    if (this.joinedQuizId !== gameId) return;
+    if (this.socket?.connected) this.socket.emit('leave-quiz', { gameId });
+    this.joinedQuizId = null;
   }
 
   // Returns the function that removes this listener again.
