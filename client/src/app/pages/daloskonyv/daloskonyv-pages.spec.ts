@@ -497,6 +497,33 @@ describe('SongEdit', () => {
     expect(page.chordpro()).toBe('{start_of_chorus}\nelső sor\n{end_of_chorus}\nmásodik sor');
   });
 
+  it('marks repeats and screen-only chords from the buttons over the text', () => {
+    open(null);
+    const press = (label: string) => {
+      const button = [...fixture.nativeElement.querySelectorAll('.text-tools button')].find((b) =>
+        (b as HTMLElement).textContent?.includes(label),
+      ) as HTMLButtonElement;
+      button.click();
+      fixture.detectChanges();
+    };
+
+    // Made-up words; the caret in the second verse's first line.
+    select('első sor\n\nmásik vers\nvége', 12);
+    press('Ismétlés');
+    expect(page.chordpro()).toBe('első sor\n\n||: másik vers :||\nvége');
+    expect(box.value).toBe(page.chordpro());
+    press('Ismétlés');
+    expect(page.chordpro()).toBe('első sor\n\nmásik vers\nvége');
+
+    box.setSelectionRange(12, 12);
+    press('Csak képernyőn');
+    // Standing alone: an empty line above it and one under it.
+    expect(page.chordpro()).toBe('első sor\n\n{screen}\n\nmásik vers\nvége');
+    expect(box.value).toBe(page.chordpro());
+    press('Csak képernyőn');
+    expect(page.chordpro()).toBe('első sor\n\nmásik vers\nvége');
+  });
+
   it('turns a pasted song with chords over its words into ChordPro', () => {
     open(null);
     const paste = (text: string) =>
@@ -729,6 +756,49 @@ describe('Daloskonyv', () => {
     expect(page.filtered()).toHaveLength(3);
     expect(page.annexes()).toHaveLength(3);
     expect(tag()).toBeNull();
+  });
+
+  it('marks what is searched for in the titles and the artists', () => {
+    open();
+    const marks = () =>
+      [...fixture.nativeElement.querySelectorAll('.song-name mark')].map((m) => m.textContent);
+    expect(marks()).toEqual([]);
+
+    // In a title, accents aside.
+    page.search.set('zold');
+    fixture.detectChanges();
+    expect(marks()).toEqual(['Zöld']);
+    // In the artists' names: both songs of the artist.
+    page.search.set('népdal');
+    fixture.detectChanges();
+    expect(marks()).toEqual(['Népdal', 'Népdal']);
+    page.search.set('');
+  });
+
+  it('has the alphabet beside the list - a letter brings its first song to the top', () => {
+    open();
+    const el: HTMLElement = fixture.nativeElement;
+    const letters = [...el.querySelectorAll<HTMLButtonElement>('.letters button')];
+    expect(letters.map((b) => b.textContent?.trim()).slice(0, 3)).toEqual(['#', 'A', 'B']);
+    expect(letters).toHaveLength(27);
+    // The list's titles start with Á, T and Z: only those letters lead somewhere.
+    expect(letters.filter((b) => !b.disabled).map((b) => b.textContent?.trim())).toEqual([
+      'A',
+      'T',
+      'Z',
+    ]);
+    // The first row of each letter carries it.
+    const marked = [...el.querySelectorAll('.song-list li[data-letter]')];
+    expect(marked.map((li) => li.getAttribute('data-letter'))).toEqual(['A', 'T', 'Z']);
+
+    const list = el.querySelector('.songs > .song-list') as HTMLElement;
+    const scrollTo = vi.fn();
+    list.scrollTo = scrollTo as unknown as typeof list.scrollTo;
+    letters.find((b) => b.textContent?.trim() === 'T')!.click();
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+    // A letter without songs does nothing.
+    page.jumpTo('Q');
+    expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 
   it('searches the songs’ words too, and shows the line that was found', () => {

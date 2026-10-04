@@ -8,8 +8,15 @@
 //   {comment: 2x}
 //
 // Known directives: title/t, artist, comment/c, start_of_chorus/soc,
-// end_of_chorus/eoc, start_of_verse/sov, end_of_verse/eov. Anything else in
-// {braces} is skipped. An empty line parts the verses.
+// end_of_chorus/eoc, start_of_verse/sov, end_of_verse/eov, screen, print.
+// Anything else in {braces} is skipped. An empty line parts the verses.
+//
+// {screen} and {print} - the songbook's own. From a {screen} line to the
+// end of the song (or to a {print} line) the chords are for the screen
+// only: the song page shows them like any others, the PDF prints those
+// lines with their words alone (screen-chords.ts). So a song keeps to its
+// one printed page, and still has its chords under the fingers when its
+// first verse has scrolled away.
 
 // A piece of a line: a chord (or none) and the text sung from it on.
 export interface Segment {
@@ -21,7 +28,9 @@ export type Section = 'chorus' | 'verse';
 
 export type SongLine =
   // 'chords-only': chords with no words under them (an intro, an ending).
-  | { type: 'lyrics' | 'chords-only'; segments: Segment[] }
+  // screenOnly: the line stands after a {screen} - its chords aren't
+  // printed.
+  | { type: 'lyrics' | 'chords-only'; segments: Segment[]; screenOnly?: true }
   | { type: 'comment'; text: string }
   | { type: 'empty' }
   | { type: 'section-start' | 'section-end'; section: Section };
@@ -47,6 +56,8 @@ const SECTION_MARKS: Record<string, SongLine> = {
 
 export function parseChordPro(source: string): ParsedSong {
   const song: ParsedSong = { lines: [] };
+  // After a {screen}, until a {print}: chords for the screen only.
+  let screenOnly = false;
   for (const raw of source.replace(/\r\n?/g, '\n').split('\n')) {
     const line = raw.trimEnd();
     if (!line.trim()) {
@@ -62,11 +73,17 @@ export function parseChordPro(source: string): ParsedSong {
       else if (name === 'comment' || name === 'c')
         song.lines.push({ type: 'comment', text: value });
       else if (SECTION_MARKS[name]) song.lines.push(SECTION_MARKS[name]);
+      else if (name === 'screen') screenOnly = true;
+      else if (name === 'print') screenOnly = false;
       continue;
     }
     const segments = parseLine(line);
     const chordsOnly = segments.every((s) => !s.text.trim()) && segments.some((s) => s.chord);
-    song.lines.push({ type: chordsOnly ? 'chords-only' : 'lyrics', segments });
+    song.lines.push({
+      type: chordsOnly ? 'chords-only' : 'lyrics',
+      segments,
+      ...(screenOnly && { screenOnly: true }),
+    });
   }
   return song;
 }

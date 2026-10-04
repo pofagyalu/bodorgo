@@ -1,4 +1,4 @@
-import { fold, searchSongs } from './search';
+import { LETTERS, fold, foundIn, letterOf, searchSongs } from './search';
 
 const SONGS = [
   { _id: 'a', title: 'Adj helyet magad mellett', artist: 'Bikini' },
@@ -68,5 +68,45 @@ describe('searchSongs', () => {
 
   it('finds nothing where there is nothing', () => {
     expect(found('xyzzy')).toEqual([]);
+  });
+});
+
+describe('letterOf', () => {
+  it('finds a title under its first letter, accents aside', () => {
+    expect(letterOf('Dal')).toBe('D');
+    expect(letterOf('álom')).toBe('A');
+    expect(letterOf('Ördög')).toBe('O');
+    expect(letterOf('  Űr')).toBe('U');
+  });
+
+  it('puts numbers and signs under #', () => {
+    expect(letterOf('67-es')).toBe('#');
+    expect(letterOf('…és')).toBe('#');
+    expect(letterOf('')).toBe('#');
+  });
+
+  it('has # first, then the alphabet', () => {
+    expect(LETTERS[0]).toBe('#');
+    expect(LETTERS.slice(1).join('')).toBe('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+  });
+});
+
+describe('foundIn', () => {
+  it('cuts a name around what was searched for, accents and capitals aside', () => {
+    expect(foundIn('Tavaszi szél', 'szel')).toEqual({
+      before: 'Tavaszi ',
+      match: 'szél',
+      after: '',
+    });
+    expect(foundIn('Zöld erdőben', ' ZOLD ')).toEqual({
+      before: '',
+      match: 'Zöld',
+      after: ' erdőben',
+    });
+  });
+
+  it('gives null where it isn’t, and for an empty search', () => {
+    expect(foundIn('Tavaszi szél', 'nyár')).toBeNull();
+    expect(foundIn('Tavaszi szél', '  ')).toBeNull();
   });
 });

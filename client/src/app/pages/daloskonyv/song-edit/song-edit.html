@@ -74,8 +74,10 @@
            (under it on a phone). -->
       <div class="panes">
         <div class="pane">
-          <div class="pane-head">
-            <strong>Szöveg és akkordok</strong>
+          <!-- No heading here: the room is the buttons'. They stay at the
+               top of the screen while a long song's text scrolls under
+               them - always at hand for the line being worked on. -->
+          <div class="pane-head pane-head--tools">
             <div class="text-tools">
               <button type="button" (click)="addChord()" title="Akkord a kurzorhoz">
                 <mat-icon>add</mat-icon>[ ] Akkord
@@ -101,6 +103,20 @@
               <button type="button" (click)="markChorus()" title="A kijelölt sorok: refrén">
                 Refrén
               </button>
+              <button
+                type="button"
+                (click)="markRepeat()"
+                title="A kijelölt sorok (vagy a kurzor sora) ismétlőjelek közé: ||: … :|| (újra megnyomva leveszi)"
+              >
+                ||: Ismétlés :||
+              </button>
+              <button
+                type="button"
+                (click)="markScreenOnly()"
+                title="A kurzor versszakától a dal végéig az akkordok csak a képernyőn látszanak, a PDF-ben nem (újra megnyomva leveszi a jelet)"
+              >
+                Csak képernyőn
+              </button>
             </div>
           </div>
           <textarea
@@ -121,6 +137,17 @@
             gombokkal (vagy Alt + ← →) betűnként arrébb teheted. Üres sor: új versszak. Megjegyzés:
             <code>&#123;comment: 2x&#125;</code>. Weboldalról másolt dalt (akkordsor a szövegsor
             fölött) csak illessz be: az akkordok maguktól a szövegbe kerülnek.
+          </p>
+          <!-- The agreement about {screen}, where it can't be forgotten. -->
+          <p class="hint hint--rule">
+            <strong>Akkordok csak a képernyőre:</strong> egy külön sorba írt
+            <code>&#123;screen&#125;</code> jeltől a dal végéig az akkordok csak a dal oldalán
+            látszanak (görgetés közben is kéznél vannak), a PDF-be – a Daloskönyvbe és a dal saját
+            PDF-jébe – onnantól csak a szöveg kerül. Így az ismétlődő akkordokat bátran kiírhatod, a
+            dal mégis elfér egy lapon. Ha lejjebb mégis kell akkord a PDF-be (például egy
+            átvezetésnél), egy <code>&#123;print&#125;</code> sor visszakapcsolja a nyomtatást. A
+            „Csak képernyőn” gomb a kurzor versszaka elé teszi (vagy onnan leveszi) a
+            <code>&#123;screen&#125;</code> jelet.
           </p>
         </div>
 

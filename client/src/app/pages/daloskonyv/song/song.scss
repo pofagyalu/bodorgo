@@ -529,6 +529,35 @@ button {
   }
 }
 
+// A phone: the instrument, the letters' size and the transposing (with
+// the owner's save button) in one row - narrower buttons, as high as they
+// were for the finger. The rest of the tools are the row under it.
+@media (max-width: 580px) {
+  .tools {
+    width: 100%;
+    gap: 0.25rem;
+  }
+
+  .tool button,
+  .tool a {
+    min-width: 2.1rem;
+    padding: 0 0.2rem;
+  }
+
+  .tool--choice {
+    padding: 0.15rem;
+  }
+
+  .tool--choice button {
+    padding: 0 0.45rem;
+    font-size: 0.8125rem;
+  }
+
+  .tool button.transpose-value {
+    min-width: 2.9rem;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .play,
   .pause {

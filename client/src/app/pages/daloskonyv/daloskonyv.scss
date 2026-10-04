@@ -243,27 +243,44 @@ $line: #e4eae7;
 }
 
 // The pages that aren't songs (the tuner, the annexes): before the songs,
-// each with its icon, parted from them by a thin line.
-.annex-list {
-  margin-bottom: 0.6rem;
-  padding-bottom: 0.6rem;
+// one row of round icon buttons - their names are in their tooltips -,
+// parted from the songs by a thin line.
+.annex-row {
+  display: flex;
+  // Spread evenly along the row.
+  justify-content: space-evenly;
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0 0 0.6rem;
   border-bottom: 1px solid $line;
 
   a {
-    align-items: center;
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border: 1px solid $line;
+    border-radius: 50%;
+    background: #fff;
+    color: $teal;
+
+    &:hover,
+    &:focus-visible {
+      background: #e8f3ee;
+    }
+
+    &.active {
+      border-color: $teal;
+      background: $teal;
+      color: #fff;
+    }
   }
-}
 
-.annex-icon {
-  flex: none;
-  font-size: 1.3rem;
-  width: 1.3rem;
-  height: 1.3rem;
-  color: $teal;
-}
-
-.song-list a.active .annex-icon {
-  color: #fff;
+  mat-icon {
+    font-size: 1.3rem;
+    width: 1.3rem;
+    height: 1.3rem;
+  }
 }
 
 // A song played tonight: a tick before it, its name fainter.
@@ -288,6 +305,43 @@ $line: #e4eae7;
   margin: 2rem 0;
   color: #999;
   font-style: italic;
+}
+
+// The alphabet down the side of the list ("#" first, for the titles that
+// start with a number): only where the list is the narrow column beside an
+// open song (see the wide screen's rules) - a tap on a letter brings its
+// first song to the top. As tall as the list: the letters share its height.
+.letters {
+  display: none;
+  flex: none;
+  flex-direction: column;
+  width: 1.6rem;
+  padding: 0.15rem 0 0.4rem;
+  border-left: 1px solid $line;
+
+  button {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: $teal;
+    font: inherit;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #e8f3ee;
+    }
+
+    // No song under this letter.
+    &:disabled {
+      color: #c3ccd0;
+      cursor: default;
+    }
+  }
 }
 
 // The songs: down the first column, then the next - like a book's contents.
@@ -335,12 +389,21 @@ $line: #e4eae7;
   font-style: italic;
 
   mark {
-    padding: 0 0.1em;
-    border-radius: 0.2em;
-    background: #fde9b8;
-    color: inherit;
     font-weight: 600;
   }
+}
+
+// What was searched for, marked wherever it was found: in the title, in
+// the artist's name, in the found line.
+.song-name mark {
+  padding: 0 0.1em;
+  border-radius: 0.2em;
+  background: #fde9b8;
+  color: inherit;
+}
+
+.song-list a.active .song-name mark {
+  background: #ffffff38;
 }
 
 .song-list a.active .found-line {
@@ -453,14 +516,25 @@ $line: #e4eae7;
       align-self: flex-start;
     }
 
-    // The songs: what's left of the column's height, its scrollbar at the
-    // column's edge.
-    .toc > .song-list:not(.annex-list) {
+    // The songs and the alphabet beside them: what's left of the column's
+    // height.
+    .toc > .songs {
       flex: 1 1 0;
       min-height: 0;
+      display: flex;
       margin-right: -1rem;
-      padding: 0 1rem 2rem 0;
+    }
+
+    // The songs scroll; the alphabet stands at the column's edge.
+    .songs > .song-list {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0 0.4rem 2rem 0;
       overflow-y: auto;
+    }
+
+    .letters {
+      display: flex;
     }
 
     // No "Zene / Daloskönyv" over the column: the menu and the song's own
