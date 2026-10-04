@@ -66,18 +66,59 @@ export function invitationEmail(user, link, expiresAt, intro = DEFAULT_INVITATIO
     'Üdvözlettel:',
     'a Bódorgó klub',
   ].join('\n');
-  const html = `<p>Kedves ${escapeHtml(first)}!</p>
-${introParagraphs.map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('\n')}
-<p style="margin:24px 0"><a href="${link}" style="background:#1a796c;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">Regisztrálok</a></p>
-<p>A gomb a saját meghívó linked - csak neked szól, egyszer használható.</p>
-<ol>
-<li>Nyisd meg - a neved és az e-mail címed (<strong>${user.email}</strong>) már ki van töltve.</li>
-<li>Adj meg egy <strong>legalább 15 karakteres</strong> jelszót (bármilyen karakterekből), és küldd el.</li>
-<li>Kapsz egy megerősítő e-mailt - kattints a benne lévő linkre.</li>
-<li>Ezután lépj be a <a href="https://bodorgo.hu">bodorgo.hu</a> oldalon.</li>
-</ol>
-<p>A link <strong>${dateHu(expiresAt)}</strong>-ig érvényes. Ha lejárt vagy elakadtál, szólj egy adminnak, és küld újat.</p>
-<p>Üdvözlettel:<br>a Bódorgó klub</p>`;
+  // The same look as the e-mail that follows it - Authentik's "confirm your
+  // address" (authentik/bodorgo-email-megerosites.html): a white card on
+  // grey with the logo on top, the green button, the club's name under it.
+  // Tables and inline styles only: that is what mail programs keep.
+  const P = 'margin:0 0 14px;font-size:15px;line-height:1.6;';
+  const SMALL = 'font-size:13px;line-height:1.5;color:#56666e;';
+  const html = `<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f0f2f5;font-family:Arial,Helvetica,sans-serif;color:#203747;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f5;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;">
+            <tr>
+              <td style="padding:32px 32px 8px;">
+                <img src="https://bodorgo.hu/assets/images/oridzsinator-logo.png" width="180" height="31" alt="ORIDZS vagy-e?" style="display:block;border:0;margin:0 0 20px;color:#c8102e;font-family:Arial,Helvetica,sans-serif;font-weight:bold;" />
+                <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#193346;">Meghívó a Bódorgó klubba</h1>
+                <p style="${P}">Kedves ${escapeHtml(first)}!</p>
+                ${introParagraphs.map((p) => `<p style="${P}">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('\n                ')}
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:8px 32px 20px;">
+                <a href="${link}" style="display:inline-block;background:#1a796c;color:#ffffff;padding:13px 26px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:15px;">Regisztrálok</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 28px;">
+                <p style="margin:0 0 14px;${SMALL}">A gomb a saját meghívó linked - csak neked szól, egyszer használható.</p>
+                <ol style="margin:0 0 14px;padding-left:22px;font-size:15px;line-height:1.6;">
+                  <li>Nyisd meg - a neved és az e-mail címed (<strong>${escapeHtml(user.email)}</strong>) már ki van töltve.</li>
+                  <li>Adj meg egy <strong>legalább 15 karakteres</strong> jelszót (bármilyen karakterekből), és küldd el.</li>
+                  <li>Kapsz egy megerősítő e-mailt - kattints a benne lévő linkre.</li>
+                  <li>Ezután lépj be a <a href="https://bodorgo.hu" style="color:#1a796c;">bodorgo.hu</a> oldalon.</li>
+                </ol>
+                <p style="${P}">A link <strong>${dateHu(expiresAt)}</strong>-ig érvényes. Ha lejárt vagy elakadtál, szólj egy adminnak, és küld újat.</p>
+                <p style="margin:0 0 8px;${SMALL}">Ha a gomb nem működik, másold be ezt a linket a böngésződbe:</p>
+                <p style="margin:0 0 18px;font-size:12px;line-height:1.5;word-break:break-all;"><a href="${link}" style="color:#1a796c;">${escapeHtml(link)}</a></p>
+                <p style="margin:0;font-size:15px;line-height:1.6;">Üdvözlettel:<br>a Bódorgó klub</p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:16px 0 0;font-size:12px;color:#7a858b;">Bódorgó Szabadidős, Kulturális és Fogyasztóvédelmi Klub</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
   return { subject, text, html };
 }
 
