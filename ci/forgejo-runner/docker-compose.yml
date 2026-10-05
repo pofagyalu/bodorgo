@@ -1,5 +1,5 @@
 # The Forgejo Actions runner, as a Container Manager (or Dockge) project on
-# the NAS. See README.md in this folder for the setup.
+# the NAS. See the root README ("Tests, lint and CI") for the setup.
 #
 # The runner itself is tiny; for each job it starts a separate, throwaway
 # container (node:22-bookworm) through the NAS's own Docker - hence the

@@ -18,7 +18,6 @@ documents/
 # scripts/importAttendance.js - working data, not permanent seed data,
 # never needs committing.
 scripts/input/*
-!scripts/input/README.md
 !scripts/input/example-tour.json
 !scripts/input/example-events.json
 !scripts/input/example-attendance.json

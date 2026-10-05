@@ -106,7 +106,7 @@ const config = {
     apiKey: process.env.OPENROUTESERVICE_API_KEY,
   },
   // Two different values depending on where the process runs - see
-  // tour-photos-implementation-plan.md's Config section. The live pm2
+  // the root README's settings section. The live pm2
   // process (S:\bodorgo\.env) needs the NAS-native absolute paths; running
   // scripts/syncTourImages.js by hand from this dev machine needs the
   // Windows-mapped-drive form instead (Z:\..., S:\...) in the local .env.

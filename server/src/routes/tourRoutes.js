@@ -162,8 +162,8 @@ router
   .route('/:tourId/schedule/:eventId')
   .patch(requireAuth, restrictTo('admin'), tourOpen, tourController.updateScheduleEvent);
 
-// Gallery routes - all requireAuth (see
-// tour-photos-implementation-plan.md), same "logged in, that's it, no
+// Gallery routes - all requireAuth (see the root README's "Tour
+// photos"), same "logged in, that's it, no
 // role restriction" bar as the homepage documents. The literal
 // "download-zip" path must be registered before the generic "/:filename"
 // one below it, or Express would match "download-zip" as a filename.
