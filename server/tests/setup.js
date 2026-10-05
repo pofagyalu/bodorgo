@@ -29,6 +29,9 @@ process.env.AUTHENTIK_CLIENT_ID ??= 'test-client';
 process.env.AUTHENTIK_CLIENT_SECRET ??= 'test-secret';
 process.env.AUTHENTIK_PROVIDER_SLUG ??= 'bodorgo';
 process.env.AUTHENTIK_POSTLOGOUT_URI ??= 'http://localhost:4200/';
+// What the secrets saved on Beállítások → OIDC szolgáltató are encrypted
+// with (utils/secretBox.js).
+process.env.APP_SECRET_KEY = 'test-app-secret-key';
 // Uploaded/generated files (utils/dataDirs.js) go to a temporary folder,
 // never the real server/documents or public/documents/tours.
 const TEST_FILES = path.join(os.tmpdir(), `bodorgo-test-files-${process.pid}`);

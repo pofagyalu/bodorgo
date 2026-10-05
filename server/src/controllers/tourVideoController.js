@@ -109,7 +109,7 @@ export async function notifyAttendeesOfNewVideo(tour) {
   const { eligible } = partitionAttendeesByEmailEligibility([...recipientsById.values()]);
   if (eligible.length === 0) return;
 
-  const videoPageUrl = `${config.oridzs.clientBaseUrl.replace(/\/$/, '')}/taborok/${tour.slug || tour._id}`;
+  const videoPageUrl = `${config.clientBaseUrl.replace(/\/$/, '')}/taborok/${tour.slug || tour._id}`;
 
   // Per-recipient try/catch - one bad address/API hiccup shouldn't cost
   // every other attendee their notification too.

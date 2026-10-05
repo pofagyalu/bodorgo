@@ -60,6 +60,25 @@ export class AuthService {
     window.location.href = `${environment.apiBaseUrl}/auth/login`;
   }
 
+  // Which login the page shows: with LOCAL_LOGIN=true on the server an
+  // e-mail and password form, otherwise the way to the OIDC provider (also
+  // when the question itself fails).
+  loginMode() {
+    return this.http
+      .get<{ localLogin: boolean }>(`${environment.apiBaseUrl}/auth/mode`)
+      .pipe(catchError(() => of({ localLogin: false })));
+  }
+
+  // E-mail and password (server authOidcController.js's localLogin) - the
+  // session cookie comes with the answer.
+  localLogin(email: string, password: string) {
+    return this.http.post<{ status: string }>(
+      `${environment.apiBaseUrl}/auth/local-login`,
+      { email, password },
+      { withCredentials: true },
+    );
+  }
+
   // Same as login(): the server redirects on to Authentik's end-session page.
   logout() {
     window.location.href = `${environment.apiBaseUrl}/auth/logout`;

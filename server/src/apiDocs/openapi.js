@@ -763,6 +763,53 @@ const schemas = {
     },
     ['enabled', 'effect', 'message'],
   ),
+  OidcSettings: obj({
+    serverUrl: str('Authentik’s address.'),
+    providerSlug: str(),
+    clientId: str(),
+    hasClientSecret: bool('A client secret is set (never shown).'),
+    postLogoutRedirectUri: str(),
+    hasApiToken: bool('An API token is set (never shown) - invitations work.'),
+    invitationFlow: str(),
+    source: str('Where the values in use come from.', { enum: ['database', 'env'] }),
+    unreadable: bool('The saved secrets cannot be read with this server’s APP_SECRET_KEY.'),
+    canSave: bool('APP_SECRET_KEY is set: the secrets can be saved.'),
+    active: str('Which provider everybody logs in through: `authentik` or a provider’s id.'),
+    providers: {
+      type: 'array',
+      description: 'The other providers, added next to Authentik.',
+      items: obj({
+        id: str(),
+        name: str(),
+        issuerUrl: str(),
+        clientId: str(),
+        hasClientSecret: bool('A client secret is set (never shown).'),
+        postLogoutRedirectUri: str(),
+        requireVerifiedEmail: bool('Only people whose e-mail the provider confirms get in.'),
+        unreadable: bool('Its secret cannot be read with this server’s APP_SECRET_KEY.'),
+      }),
+    },
+    issuer: str('The provider’s issuer address.'),
+    redirectUri: str('This API’s own callback.'),
+    redirectUris: {
+      type: 'array',
+      items: str(),
+      description:
+        'Information for setting a provider up: everything to list among its Redirect URIs - a developer’s own server’s callback (`http://localhost:8235/auth/callback`), the live API’s callback, the live site (where a logout lands), and this server’s own callback when it is at another address.',
+    },
+    localLogin: bool('LOCAL_LOGIN=true: people log in with a password instead.'),
+  }),
+  OidcProviderInput: obj(
+    {
+      name: str('Its name on the page, at most 50 characters; not "Authentik".'),
+      issuerUrl: str('The provider’s Issuer URL.'),
+      clientId: str(),
+      clientSecret: str('Empty on a change = keep the one it has.'),
+      postLogoutRedirectUri: str('Where a logout lands; may be empty.'),
+      requireVerifiedEmail: bool('Only accept an e-mail the provider confirms (default true).'),
+    },
+    ['name', 'issuerUrl', 'clientId'],
+  ),
   BarionWallet: obj({
     payeeEmail: str('Barion wallet e-mail - payments land here.'),
     withdrawName: str('Account holder.'),
@@ -931,9 +978,36 @@ const paths = {
       tag: T.auth,
       role: 'public',
       summary: 'Start login',
-      description: 'Redirects to Authentik; comes back to `/auth/callback`.',
+      description:
+        'Redirects to the active OIDC provider (Authentik, unless another was chosen on Beállítások → OIDC szolgáltató); comes back to `/auth/callback`. With `LOCAL_LOGIN=true` it redirects to the app’s own login page instead, which asks for the e-mail and password (`/auth/local-login`).',
       response: { description: 'Redirect to Authentik.' },
       ok: 302,
+    }),
+  },
+  '/auth/mode': {
+    get: op({
+      tag: T.auth,
+      role: 'public',
+      summary: 'Which login the page shows',
+      description:
+        '`localLogin: true` when the server runs with `LOCAL_LOGIN=true`: the login page asks for an e-mail and a password (`/auth/local-login`) instead of sending people to the OIDC provider. Not in the usual envelope.',
+      response: {
+        description: 'The login mode.',
+        content: {
+          'application/json': { schema: obj({ localLogin: bool() }, ['localLogin']) },
+        },
+      },
+    }),
+  },
+  '/auth/local-login': {
+    post: op({
+      tag: T.auth,
+      role: 'public',
+      summary: 'Log in with e-mail and password',
+      description:
+        'The emergency way in, only with `LOCAL_LOGIN=true` in the server’s `.env` (404 otherwise) - for when there is no working OIDC provider. One person only: the e-mail must be `INITIAL_ADMIN_USER` and the password `INITIAL_ADMIN_PASSWORD` (at least 12 characters), both read from `.env`; the app stores and changes no password. Their account is created if it does not exist, and gets the admin role and the role-manager flag. Starts the session. Meant to be temporary: set the provider up on Beállítások → OIDC szolgáltató, then switch `LOCAL_LOGIN` off. Ten wrong tries from an address in 15 minutes, then 429.',
+      body: obj({ email: str(), password: str() }, ['email', 'password']),
+      errors: [401, 404, 429],
     }),
   },
   '/auth/callback': {
@@ -942,7 +1016,7 @@ const paths = {
       role: 'public',
       summary: 'Login callback',
       description:
-        'Authentik returns here. Finds the user an admin added by their e-mail (any case) - the e-mail alone says who someone is; the Authentik id is only noted on the account, so an Authentik user deleted and made again with the same address is the same person, and an id arriving with another address is whoever that address belongs to - and refreshes their name - never their role - then starts the session and redirects to the app. Someone not added is sent back with `login?error=not-invited`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
+        'Authentik returns here. Finds the user an admin added by their e-mail (any case) - the e-mail alone says who someone is; the Authentik id is only noted on the account (as `sub`, and among the user’s `identities` under the provider’s issuer address - one line per provider they have logged in through), so an Authentik user deleted and made again with the same address is the same person, and an id arriving with another address is whoever that address belongs to - and refreshes their name - never their role - then starts the session and redirects to the app. Someone not added is sent back with `login?error=not-invited`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
       response: { description: 'Redirect to the app.' },
       ok: 302,
     }),
@@ -952,7 +1026,8 @@ const paths = {
       tag: T.auth,
       role: 'public',
       summary: 'Log out',
-      description: 'Ends the session, and the Authentik one too.',
+      description:
+        'Ends the session, and the Authentik one too (a session started with `/auth/local-login` just returns to the app).',
       response: { description: 'Redirect.' },
       ok: 302,
     }),
@@ -2799,6 +2874,86 @@ const paths = {
       body: ref('BirthdaySettings'),
       data: ref('BirthdaySettings'),
       errors: [400],
+    }),
+  },
+  '/settings/oidc': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'The OIDC provider (Authentik)',
+      description:
+        '**The role manager only** (403 for any other admin). Where people log in, and the Authentik API token invitations are made with - were the `AUTHENTIK_*` lines of `.env`, which the first start copies over. The two secrets never leave the server: only `hasClientSecret` / `hasApiToken` say there is one. `source` is `env` while nothing is saved, or when the saved secrets cannot be read with this server’s `APP_SECRET_KEY` (`unreadable`); once login works from the saved ones the `.env` lines can be deleted. Also lists the other providers added next to Authentik (`providers`) and which one everybody logs in through (`active`). The way back in after a wrong save is the emergency login (`LOCAL_LOGIN`, see `/auth/local-login`).',
+      data: ref('OidcSettings'),
+    }),
+    put: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Set Authentik’s settings',
+      description:
+        '**The role manager only.** An empty `clientSecret` / `apiToken` keeps the one in use; `removeApiToken: true` takes the token away (no invitations). Refused (400) unless the provider answers at the new address (`<serverUrl>/application/o/<providerSlug>/`) - a typo would lock everybody out -, and without `APP_SECRET_KEY` on the server. The secrets are stored encrypted (AES-256-GCM, key from `APP_SECRET_KEY`). Recorded in the history without the secrets’ values, and **e-mailed to every admin**.',
+      body: obj(
+        {
+          serverUrl: str('Authentik’s address, e.g. https://auth.example.org'),
+          providerSlug: str('The provider’s (application’s) slug in Authentik.'),
+          clientId: str(),
+          clientSecret: str('Empty = keep the one in use.'),
+          postLogoutRedirectUri: str('Where a logout lands; may be empty.'),
+          apiToken: str('The invitations’ service-account token. Empty = keep.'),
+          removeApiToken: bool('Take the API token away.'),
+          invitationFlow: str('The invitation flow’s slug; empty = enrollment-invitation.'),
+        },
+        ['serverUrl', 'providerSlug', 'clientId'],
+      ),
+      data: ref('OidcSettings'),
+      errors: [400],
+    }),
+  },
+  '/settings/oidc/providers': {
+    post: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Add another OIDC provider',
+      description:
+        '**The role manager only.** A provider next to Authentik (which always stays): any OIDC provider that describes itself at its Issuer URL (`<issuerUrl>/.well-known/openid-configuration`). Not active yet - that is `/settings/oidc/active`. Refused (400) unless it answers there, with a name already taken, and over 10 providers. The secret is stored encrypted and never sent back. `created` in the answer is the new provider’s id. Recorded in the history and e-mailed to every admin.',
+      body: ref('OidcProviderInput'),
+      data: ref('OidcSettings'),
+      ok: 201,
+      errors: [400],
+    }),
+  },
+  '/settings/oidc/providers/{id}': {
+    put: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Change another OIDC provider',
+      description:
+        '**The role manager only.** The same fields; an empty `clientSecret` keeps the one it has. Refused (400) unless the provider answers at its Issuer URL. Recorded in the history and e-mailed to every admin.',
+      params: [path('id', 'The provider’s id.')],
+      body: ref('OidcProviderInput'),
+      data: ref('OidcSettings'),
+      errors: [400, 404],
+    }),
+    delete: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Delete another OIDC provider',
+      description:
+        '**The role manager only.** Not the active one (400). Authentik cannot be deleted. Recorded in the history and e-mailed to every admin.',
+      params: [path('id', 'The provider’s id.')],
+      data: ref('OidcSettings'),
+      errors: [400, 404],
+    }),
+  },
+  '/settings/oidc/active': {
+    put: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Choose the provider everybody logs in through',
+      description:
+        '**The role manager only.** `provider` is `authentik` or another provider’s id. Refused (400) unless that provider answers at its address and has a readable secret. From then on `/auth/login` goes there; people are matched by their e-mail, so their accounts stay (each provider’s own id of them is kept among the user’s `identities`). A provider with `requireVerifiedEmail` lets in only those whose `email_verified` claim is true (`login?error=unverified-email` otherwise). Invitations only work while Authentik is the active one’s user store. Recorded in the history and e-mailed to every admin.',
+      body: obj({ provider: str('`authentik` or a provider’s id.') }, ['provider']),
+      data: ref('OidcSettings'),
+      errors: [400, 404],
     }),
   },
   '/settings/president': {

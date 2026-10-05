@@ -21,8 +21,14 @@ import {
   updateChatImageSettings,
   updateImageCacheSettings,
   updateMembershipReminder,
+  getOidcSettingsView,
+  updateOidcSettings,
+  addOidcProvider,
+  updateOidcProvider,
+  deleteOidcProvider,
+  setActiveOidcProvider,
 } from '../controllers/settingsController.js';
-import requireAuth, { restrictTo } from '../auth/requireAuth.js';
+import requireAuth, { restrictTo, roleManagerOnly } from '../auth/requireAuth.js';
 
 // Klub → Beállítások (see settingsController.js).
 const router = express.Router();
@@ -81,5 +87,19 @@ router
   .get(requireAuth, restrictTo('admin'), getPresident)
   .put(requireAuth, restrictTo('admin'), updatePresident);
 router.get('/president/seal.png', requireAuth, restrictTo('admin'), getPresidentSeal);
+
+// OIDC szolgáltató: where people log in - a wrong value locks everybody
+// out, so the role manager only. Secrets go in, never out.
+router
+  .route('/oidc')
+  .get(requireAuth, roleManagerOnly, getOidcSettingsView)
+  .put(requireAuth, roleManagerOnly, updateOidcSettings);
+// Other providers next to Authentik, and which one is the active one.
+router.post('/oidc/providers', requireAuth, roleManagerOnly, addOidcProvider);
+router
+  .route('/oidc/providers/:id')
+  .put(requireAuth, roleManagerOnly, updateOidcProvider)
+  .delete(requireAuth, roleManagerOnly, deleteOidcProvider);
+router.put('/oidc/active', requireAuth, roleManagerOnly, setActiveOidcProvider);
 
 export default router;

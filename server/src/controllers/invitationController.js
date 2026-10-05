@@ -3,14 +3,15 @@ import User from '../models/userModel.js';
 import AppError from '../utils/appError.js';
 import logger from '../logger.js';
 import sendResendEmail from '../utils/resendEmail.js';
-import config from '../config.js';
 import { getClubSettings } from '../utils/clubSettings.js';
 import {
   INVITATION_DAYS,
   createInvitation,
   deleteInvitation,
+  invitationLink,
   invitationsEnabled,
 } from '../utils/authentikInvitations.js';
+import { getOidcSettings } from '../utils/oidcSettings.js';
 import { huDate } from '../utils/huDate.js';
 
 // Felhasználók → Meghívók (admins): everyone an admin added who has an
@@ -163,7 +164,7 @@ export const getInvitations = async (req, res) => {
   res.status(200).json({
     status: 'success',
     data: {
-      enabled: invitationsEnabled(),
+      enabled: await invitationsEnabled(),
       days: INVITATION_DAYS,
       intro: await currentIntro(),
       people: users.map(view),
@@ -190,8 +191,11 @@ async function invite(user, byName, intro) {
 // only those not invited yet - resending is by userIds). One at a time;
 // a failure doesn't stop the others and is reported by name.
 export const sendInvitations = async (req, res) => {
-  if (!invitationsEnabled()) {
-    throw new AppError('A meghívók nincsenek beállítva a szerveren (AUTHENTIK_API_TOKEN).', 400);
+  if (!(await invitationsEnabled())) {
+    throw new AppError(
+      'A meghívók nincsenek beállítva (Beállítások → OIDC szolgáltató: API token).',
+      400,
+    );
   }
   const { userIds, group } = req.body ?? {};
   let filter;
@@ -263,8 +267,7 @@ export const sendTestInvitation = async (req, res) => {
   if (!req.user.email) throw new AppError('Nincs e-mail címed a fiókodban.', 400);
   const draft = String(req.body?.intro ?? '').trim();
   const intro = draft || (await currentIntro());
-  const base = String(config.oridzs.server ?? '').replace(/\/$/, '');
-  const link = `${base}/if/flow/${config.authentik.invitationFlow}/?itoken=PROBA`;
+  const link = invitationLink(await getOidcSettings(), 'PROBA');
   const expiresAt = new Date(Date.now() + INVITATION_DAYS * 24 * 60 * 60 * 1000);
   const email = invitationEmail(req.user, link, expiresAt, intro);
   await sendResendEmail({ to: req.user.email, ...email, subject: `[Próba] ${email.subject}` });

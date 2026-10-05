@@ -27,4 +27,4 @@ export function verifyTagToken(token) {
 }
 
 export const tagUrl = (tagId) =>
-  `${(config.oridzs.clientBaseUrl || 'https://bodorgo.hu').replace(/\/+$/, '')}/fk/${tagToken(tagId)}`;
+  `${(config.clientBaseUrl || 'https://bodorgo.hu').replace(/\/+$/, '')}/fk/${tagToken(tagId)}`;

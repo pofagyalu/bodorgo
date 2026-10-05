@@ -1,8 +1,12 @@
 import * as openidClient from 'openid-client';
+import crypto from 'crypto';
 import config from '../config.js';
 import User from '../models/userModel.js';
 import logger from '../logger.js';
+import AppError from '../utils/appError.js';
 import { emailMatch, isInitialAdmin } from '../utils/roleManager.js';
+import { AUTHENTIK, getOidcClient } from '../utils/oidcSettings.js';
+import { linkIdentity } from '../utils/userIdentities.js';
 
 // Authentik is only the identity provider: it says who someone is, not
 // their role - roles live in the app (see utils/roleManager.js). Only
@@ -17,28 +21,16 @@ import { emailMatch, isInitialAdmin } from '../utils/roleManager.js';
 // callers can append a path directly (e.g. `${base}login`).
 function getClientBaseUrl(req) {
   const isLocalRequest = ['localhost', '127.0.0.1'].includes(req.hostname);
-  return isLocalRequest ? 'http://localhost:4200/' : config.oridzs.clientBaseUrl || '/';
-}
-
-let oidcConfigPromise;
-
-function getOidcConfig() {
-  if (!oidcConfigPromise) {
-    const { server, clientId, clientSecret, providerSlug } = config.oridzs;
-
-    oidcConfigPromise = openidClient
-      .discovery(new URL(`${server}/application/o/${providerSlug}/`), clientId, clientSecret)
-      .catch((err) => {
-        oidcConfigPromise = undefined;
-        throw err;
-      });
-  }
-
-  return oidcConfigPromise;
+  return isLocalRequest ? 'http://localhost:4200/' : config.clientBaseUrl || '/';
 }
 
 export const login = async (req, res) => {
-  const oidcConfig = await getOidcConfig();
+  // The emergency login is on (LOCAL_LOGIN=true, see localLogin below):
+  // nobody goes to the provider - every "log in" button lands on the
+  // client's login page, which asks for the e-mail and password.
+  if (config.localLogin) return res.redirect(`${getClientBaseUrl(req)}login`);
+
+  const { oidcConfig } = await getOidcClient();
 
   /**
    * code_verifier, state and nonce MUST be generated fresh for every
@@ -78,7 +70,7 @@ export const callback = async (req, res, next) => {
   logger.info('🔵 CALLBACK HIT');
 
   try {
-    const oidcConfig = await getOidcConfig();
+    const { oidcConfig, provider } = await getOidcClient();
 
     const currentUrl = new URL(`${req.protocol}://${req.get('host')}${req.originalUrl}`);
 
@@ -93,6 +85,15 @@ export const callback = async (req, res, next) => {
 
     const claims = tokens.claims();
     logger.info(`ID Token Claims for sub=${claims.sub}`);
+
+    // People are known by their e-mail (below), so at a provider set to
+    // accept confirmed addresses only, one it doesn't vouch for is nobody's.
+    if (provider.requireVerifiedEmail && claims.email_verified !== true) {
+      logger.error(
+        `Denying login for sub=${claims.sub} (${claims.email}): "${provider.name}" doesn't say the e-mail is verified`,
+      );
+      return res.redirect(`${getClientBaseUrl(req)}login?error=unverified-email`);
+    }
 
     // Who is it: the e-mail says, and nothing else - the account an admin
     // added with this address (any case). The Authentik id (sub) is only
@@ -125,6 +126,9 @@ export const callback = async (req, res, next) => {
     // Name and e-mail follow Authentik (the identity provider); the role is
     // the app's own and never changes here.
     user.sub = claims.sub;
+    // The same id, under its provider (the token's issuer) - what stays
+    // true of them when the provider is changed (userModel.js's identities).
+    await linkIdentity(user, claims.iss || provider.issuer, claims.sub);
     user.email = claims.email;
     user.name = claims.name || claims.preferred_username || claims.email;
     user.emailVerified = !!claims.email_verified;
@@ -145,6 +149,8 @@ export const callback = async (req, res, next) => {
         name: user.name,
         role: user.role,
         id_token: tokens.id_token,
+        // Which provider the token is from - the one to log out of.
+        provider: provider.id,
       };
 
       req.session.save(() => {
@@ -196,18 +202,29 @@ export const me = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    const { server, providerSlug, postLogoutRedirectUri } = config.oridzs;
-
     const idToken = req.session?.user?.id_token;
-
-    const logoutUrl = new URL(`${server}/application/o/${providerSlug}/end-session/`);
-
-    if (idToken) {
-      logoutUrl.searchParams.set('id_token_hint', idToken);
+    // Logged in with a password (localLogin below): there is no provider to
+    // log out of.
+    if (!idToken) {
+      return req.session.destroy(() => res.redirect(getClientBaseUrl(req)));
     }
 
-    if (postLogoutRedirectUri) {
-      logoutUrl.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri);
+    const { provider, oidcConfig } = await getOidcClient();
+    // Where the provider ends its own session: it says so itself; Authentik's
+    // is known anyway.
+    const endSession =
+      oidcConfig.serverMetadata?.().end_session_endpoint ??
+      (provider.id === AUTHENTIK ? `${provider.issuer}end-session/` : null);
+    // The token is another provider's (the active one was changed since
+    // this login), or this one has no logout of its own: only the app's
+    // session ends.
+    if ((req.session.user.provider ?? AUTHENTIK) !== provider.id || !endSession) {
+      return req.session.destroy(() => res.redirect(getClientBaseUrl(req)));
+    }
+    const logoutUrl = new URL(endSession);
+    logoutUrl.searchParams.set('id_token_hint', idToken);
+    if (provider.postLogoutRedirectUri) {
+      logoutUrl.searchParams.set('post_logout_redirect_uri', provider.postLogoutRedirectUri);
     }
 
     req.session.destroy(() => res.redirect(logoutUrl.href));
@@ -215,4 +232,66 @@ export const logout = async (req, res) => {
     logger.error(`LOGOUT ERROR: ${err}`);
     return res.status(500).send('Logout failed');
   }
+};
+
+// --- Local login: the emergency way in, without a provider ---
+//
+// LOCAL_LOGIN=true in the server's .env: the login page asks for an e-mail
+// and a password instead of sending people to the OIDC provider - so the
+// app can be entered where there is no Authentik (yet): a reinstall
+// somewhere else, a broken provider. One person only, the role manager:
+// the e-mail is INITIAL_ADMIN_USER, the password INITIAL_ADMIN_PASSWORD -
+// both read from .env at every try. The app keeps and changes no password:
+// they set the new provider up (Beállítások → OIDC szolgáltató), LOCAL_LOGIN
+// goes back to false, and everybody logs in through the provider again.
+
+// GET /auth/mode - public: which of the two the login page shows.
+export const mode = (req, res) => res.json({ localLogin: config.localLogin });
+
+const MIN_ADMIN_PASSWORD = 12;
+
+// Compared as digests: the same length whatever was typed, in the same time.
+const sameText = (a, b) => {
+  const digest = (text) => crypto.createHash('sha256').update(String(text)).digest();
+  return crypto.timingSafeEqual(digest(a), digest(b));
+};
+
+// POST /auth/local-login - { email, password }.
+export const localLogin = async (req, res, next) => {
+  if (!config.localLogin) throw new AppError('A jelszavas belépés nincs bekapcsolva.', 404);
+
+  const email = String(req.body?.email ?? '').trim();
+  const expected = config.initialAdminPassword ?? '';
+  const matches = sameText(req.body?.password ?? '', expected);
+  if (expected.length < MIN_ADMIN_PASSWORD) {
+    logger.error(
+      `LOCAL_LOGIN=true, but INITIAL_ADMIN_PASSWORD is missing or shorter than ${MIN_ADMIN_PASSWORD} characters - nobody can log in.`,
+    );
+  }
+  if (expected.length < MIN_ADMIN_PASSWORD || !isInitialAdmin(email) || !matches) {
+    logger.warn(`Local login refused for ${email || '(no e-mail)'}`);
+    throw new AppError('Hibás e-mail cím vagy jelszó.', 401);
+  }
+
+  // Their account - made now on an installation that has none yet -, with
+  // every right, as at a provider login.
+  const user =
+    (await User.findOne(emailMatch(email))) ??
+    new User({ email: config.initialAdminUser, name: config.initialAdminUser });
+  if (user.isNew) logger.info(`Created the role manager's account (${user.email})`);
+  user.role = 'admin';
+  user.canManageRoles = true;
+  user.lastLoginAt = new Date();
+  await user.save({ validateModifiedOnly: true });
+
+  req.session.regenerate((err) => {
+    if (err) return next(err);
+    req.session.user = {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+    req.session.save(() => res.status(200).json({ status: 'success' }));
+  });
 };

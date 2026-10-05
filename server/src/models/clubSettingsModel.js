@@ -96,6 +96,40 @@ const clubSettingsSchema = new Schema(
     // Elnök: the club's president - named, with the wax seal, at the end of
     // a tour's beszámoló PDF (tourReportController.js, utils/waxSeal.js).
     presidentName: { type: String, trim: true, maxlength: 100, default: 'Biró Melinda' },
+    // OIDC szolgáltató (Beállítások, the role manager only): the Authentik
+    // provider people log in through, and the API token invitations are
+    // made with - were AUTHENTIK_* in .env (see utils/oidcSettings.js). The
+    // two secrets are stored encrypted (utils/secretBox.js) and never go
+    // out with the document unless asked for.
+    oidc: {
+      serverUrl: { type: String, trim: true },
+      providerSlug: { type: String, trim: true },
+      clientId: { type: String, trim: true },
+      clientSecretEnc: { type: String, select: false },
+      postLogoutRedirectUri: { type: String, trim: true },
+      apiTokenEnc: { type: String, select: false },
+      invitationFlow: { type: String, trim: true },
+    },
+    // Other OIDC providers, added on the same tab next to Authentik (which
+    // is `oidc` above and stays for good): any provider that describes
+    // itself at its Issuer URL. requireVerifiedEmail: only people whose
+    // e-mail address the provider says is confirmed get in - people are
+    // matched by their e-mail, so an unconfirmed one could be anybody's.
+    oidcProviders: [
+      {
+        _id: false,
+        id: String,
+        name: { type: String, trim: true, maxlength: 50 },
+        issuerUrl: { type: String, trim: true },
+        clientId: { type: String, trim: true },
+        clientSecretEnc: { type: String, select: false },
+        postLogoutRedirectUri: { type: String, trim: true },
+        requireVerifiedEmail: { type: Boolean, default: true },
+      },
+    ],
+    // Which one everybody logs in through: 'authentik' (also when unset),
+    // or the id of one of oidcProviders.
+    oidcActiveProvider: String,
     history: [{ _id: false, at: Date, byName: String, change: String }],
   },
   { timestamps: true },

@@ -19,6 +19,13 @@ const userSchema = new Schema(
     // their own and can never log in - they exist purely as an attendee
     // record shared with their family. See familyId below.
     sub: { type: String, sparse: true, unique: true, required: false },
+    // Who this person is at each identity provider they have logged in
+    // through: the provider (its OIDC issuer address) and their id there
+    // (the token's sub). The user's own id here (_id) is what everything
+    // else refers to, so another provider is just one more line - the
+    // account and its data stay. `sub` above is the one of the provider in
+    // use now. Empty for someone who has never logged in through a provider.
+    identities: [{ _id: false, issuer: String, subject: String, linkedAt: Date }],
     name: {
       type: String,
       required: [true, 'Névtelenül, mi???'],
@@ -309,6 +316,12 @@ userSchema.pre('save', async function () {
     }
   }
 });
+
+// An id at a provider is one account's alone.
+userSchema.index(
+  { 'identities.issuer': 1, 'identities.subject': 1 },
+  { unique: true, partialFilterExpression: { 'identities.subject': { $exists: true } } },
+);
 
 const User = mongoose.model('User', userSchema);
 
