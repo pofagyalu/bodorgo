@@ -6,6 +6,8 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createMember, createReservation, createTour } from '../helpers/factories.js';
 import Tour from '../../src/models/tourModel.js';
+import MediaPhoto from '../../src/models/mediaPhotoModel.js';
+import MediaPhotoSettings from '../../src/models/mediaPhotoSettingsModel.js';
 import config from '../../src/config.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
 import { romanToInt, findFolderForOrder } from '../../src/photos/tourFolders.js';
@@ -189,6 +191,77 @@ describe('Új média felfedezése', () => {
 
   it('Média photos are for members only', async () => {
     expect((await request(app).get('/media/photos')).status).toBe(401);
+  });
+});
+
+describe('Média photos: a name and viewers', () => {
+  const sinners = async (user) =>
+    (await request(app).get('/media/photos').set(asUser(user))).body.data.categories.find(
+      (c) => c.key === 'sinners',
+    );
+  const patch = (user, body, filename = 'agnes.jpg') =>
+    request(app).patch(`/media/photos/sinners/${filename}`).set(asUser(user)).send(body);
+  const get = (user, tail = '', filename = 'agnes.jpg') =>
+    request(app).get(`/media/photos/sinners/${filename}${tail}`).set(asUser(user));
+
+  it('the role manager names a photo and says who may see it, one photo at a time', async () => {
+    for (const filename of ['agnes.jpg', 'beni.jpg']) {
+      await MediaPhoto.findOneAndUpdate(
+        { category: 'sinners', filename },
+        { width: 60, height: 40 },
+        { upsert: true },
+      );
+    }
+    // Only the role manager edits a photo - no other admin.
+    const admin = await createAdmin({ canManageRoles: true });
+    const otherAdmin = await createAdmin();
+    const chosen = await createMember();
+    const other = await createMember();
+    const names = (category) => category.photos.map((p) => p.filename).sort();
+    const agnes = (category) => category.photos.find((p) => p.filename === 'agnes.jpg');
+
+    expect((await patch(other, { title: 'x' })).status).toBe(403);
+    expect((await patch(otherAdmin, { title: 'x' })).status).toBe(403);
+    expect((await patch(admin, { title: 'x' }, 'nincs.jpg')).status).toBe(404);
+    expect((await patch(admin, { viewers: ['64b000000000000000000000'] })).status).toBe(400);
+    // No name until one is given - the file's is not one.
+    expect(agnes(await sinners(admin))).toMatchObject({ title: null, viewers: [] });
+
+    const res = await patch(admin, { title: 'Ágnes', viewers: [String(chosen._id)] });
+    expect(res.body.data.photo).toEqual({
+      filename: 'agnes.jpg',
+      title: 'Ágnes',
+      viewers: [String(chosen._id)],
+    });
+
+    // Only the role manager is told who the viewers are; any admin sees it.
+    expect(agnes(await sinners(admin)).viewers).toEqual([String(chosen._id)]);
+    expect(agnes(await sinners(otherAdmin)).title).toBe('Ágnes');
+    expect(agnes(await sinners(otherAdmin)).viewers).toBeUndefined();
+    expect(agnes(await sinners(chosen))).toMatchObject({ title: 'Ágnes' });
+    expect(agnes(await sinners(chosen)).viewers).toBeUndefined();
+    // The other photo of the folder stays everyone's.
+    expect(names(await sinners(other))).toEqual(['beni.jpg']);
+    expect((await get(other, '', 'beni.jpg')).status).toBe(200);
+
+    for (const tail of ['', '/thumb', '/download']) {
+      expect((await get(chosen, tail)).status).toBe(200);
+      expect((await get(admin, tail)).status).toBe(200);
+      expect((await get(other, tail)).status).toBe(404);
+    }
+
+    // A folder with nothing left to show is left out.
+    await patch(admin, { viewers: [String(chosen._id)] }, 'beni.jpg');
+    expect(await sinners(other)).toBeUndefined();
+    await patch(admin, { viewers: [] }, 'beni.jpg');
+
+    // The name is taken away, the viewers stay; then open again.
+    expect((await patch(admin, { title: '' })).body.data.photo.title).toBeNull();
+    expect(agnes(await sinners(chosen)).title).toBeNull();
+    expect(names(await sinners(other))).toEqual(['beni.jpg']);
+    await patch(admin, { viewers: [] });
+    expect((await get(other)).status).toBe(200);
+    expect(await MediaPhotoSettings.countDocuments()).toBe(0);
   });
 });
 

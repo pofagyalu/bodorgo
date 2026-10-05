@@ -2452,7 +2452,7 @@ const paths = {
       role: 'member',
       summary: 'All video categories and videos',
       description:
-        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name.",
+        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. A video an admin kept for chosen members is left out for everyone else (an admin gets every video). The role manager only: `viewers` - the ids of the users who may see the video; empty when every member may.",
       data: obj({ categories: arrayOf({ type: 'object' }) }),
     }),
   },
@@ -2470,19 +2470,23 @@ const paths = {
     patch: op({
       tag: T.media,
       role: 'admin',
-      summary: 'Give a video its own title',
+      summary: 'Give a video its own title, and say who may see it',
       description:
-        "Shown instead of the title read from the file name; the file itself is not renamed. An empty title (or one equal to the file name's) removes the correction, so the discovered title shows again. At most 200 characters.",
+        "The role manager only (403 for any other admin). Only the fields sent change. `title` is shown instead of the one read from the file name; the file itself is not renamed. An empty title (or one equal to the file name's) removes the correction, so the discovered title shows again. At most 200 characters. `viewers` are the only members who see the video from then on - in the list, and its video, cover and subtitles (404 for anyone else); admins always see it. An empty list gives it back to every member. 400 when an id is not a user's.",
       params: [path('category', 'The category.'), path('id', 'The video.')],
-      body: obj({ title: str('The new title; empty to go back to the discovered one.') }),
+      body: obj({
+        title: str('The new title; empty to go back to the discovered one.'),
+        viewers: arrayOf(str('A user id.')),
+      }),
       data: obj({
         video: obj({
           id: str('The video.'),
           title: str('The title now shown.'),
           discoveredTitle: str('The title from the file name.'),
+          viewers: arrayOf(str('A user id.')),
         }),
       }),
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
   },
   '/media/videos/{category}/{id}/video': {
@@ -2490,7 +2494,8 @@ const paths = {
       tag: T.media,
       role: 'member',
       summary: 'A video',
-      description: 'Supports `Range`.',
+      description:
+        'Supports `Range`. 404 for a video kept for other members (see PATCH /media/videos/{category}/{id}) - the same goes for its cover and subtitles.',
       params: [path('category', 'The category.'), path('id', 'The video.')],
       response: file(['video/mp4'], 'The video.'),
       errors: [404],
@@ -2521,12 +2526,34 @@ const paths = {
       tag: T.media,
       role: 'member',
       summary: 'All photo folders and photos',
+      description:
+        "Each folder with its photos, in the order taken. A photo's `title` is the name an admin gave it (see PATCH /media/photos/{category}/{filename}) - null when it has none; the file name is not a name to show. A photo an admin kept for chosen members is left out for everyone else (an admin gets every photo), and so is a folder with nothing left to show. The role manager only: `viewers` on each photo - the ids of the users who may see it; empty when every member may.",
       data: obj({
         categories: arrayOf(obj({ key: str(), title: str(), photos: arrayOf({ type: 'object' }) })),
       }),
     }),
   },
   '/media/photos/{category}/{filename}': {
+    patch: op({
+      tag: T.media,
+      role: 'admin',
+      summary: 'Give a photo a name, and say who may see it',
+      description:
+        "The role manager only (403 for any other admin). Only the fields sent change. `title` is the photo's name (it has none otherwise); an empty one takes it away. At most 200 characters. `viewers` are the only members who see the photo from then on - in the list, and the photo itself, its thumbnail and its download (404 for anyone else); admins always see it. An empty list gives it back to every member. 400 when an id is not a user's.",
+      params: [path('category', 'The folder.'), path('filename', 'The photo.')],
+      body: obj({
+        title: str('The name; empty for none.'),
+        viewers: arrayOf(str('A user id.')),
+      }),
+      data: obj({
+        photo: obj({
+          filename: str('The photo.'),
+          title: str('The name now shown - null when it has none.'),
+          viewers: arrayOf(str('A user id.')),
+        }),
+      }),
+      errors: [400, 403, 404],
+    }),
     get: op({
       tag: T.media,
       role: 'member',

@@ -3,6 +3,8 @@ import path from 'path';
 import AppError from '../utils/appError.js';
 import config from '../config.js';
 import MediaPhoto from '../models/mediaPhotoModel.js';
+import MediaPhotoSettings from '../models/mediaPhotoSettingsModel.js';
+import { canEditMedia, maySee, ownSettingsFrom, saveOwnSettings } from '../utils/mediaAccess.js';
 import { byTakenAt, thumbRelPath } from '../photos/imageFiles.js';
 import { mediaThumbDir } from '../photos/mediaPhotoSync.js';
 import { LONG_CACHE, requestedWidth, sendPhoto } from '../photos/imageSizes.js';
@@ -10,22 +12,38 @@ import { discoveryStatus, startDiscovery } from '../photos/discovery.js';
 
 // Média → Fotók (members only - see mediaRoutes.js). The categories and
 // photos are what "Új média felfedezése" last recorded (MediaPhoto); the
-// files themselves are streamed from MEDIA_PHOTOS_ROOT.
+// files themselves are streamed from MEDIA_PHOTOS_ROOT. The role manager may give a
+// photo a name (it has none otherwise - the file's is never shown) and say
+// who may see it (MediaPhotoSettings) - anyone else (but an admin) doesn't
+// get it in the list, and can't fetch it either.
 
 // "sinners" -> "Sinners": the folder's name is the category's title.
 const titleOf = (category) => category.charAt(0).toUpperCase() + category.slice(1);
 
 // GET /media/photos - every category with its photos, in the order taken.
+// A category with no photo this user may see is left out.
 export const listMediaPhotos = async (req, res) => {
+  const canEdit = canEditMedia(req.user);
+  // What was set for them, by "category/filename".
+  const settings = new Map(
+    (await MediaPhotoSettings.find().lean()).map((s) => [`${s.category}/${s.filename}`, s]),
+  );
   const photos = await MediaPhoto.find().select('category filename width height takenAt').lean();
   const byCategory = new Map();
   for (const p of photos.sort(byTakenAt)) {
+    const own = settings.get(`${p.category}/${p.filename}`);
+    if (!maySee(req.user, own)) continue;
     if (!byCategory.has(p.category)) byCategory.set(p.category, []);
     byCategory.get(p.category).push({
       filename: p.filename,
+      // The name it was given - null: it has none.
+      title: own?.title || null,
       width: p.width,
       height: p.height,
       takenAt: p.takenAt,
+      // Who may see it (empty: every member) - only the one who sets it is
+      // told.
+      ...(canEdit ? { viewers: (own?.viewers ?? []).map(String) } : {}),
     });
   }
   const categories = [...byCategory.entries()]
@@ -34,10 +52,33 @@ export const listMediaPhotos = async (req, res) => {
   res.status(200).json({ status: 'success', data: { categories } });
 };
 
-// Only a recorded photo is ever served, and only from inside its folder -
-// never trust the address alone.
-async function ensureRecorded(category, filename) {
+// PATCH /media/photos/:category/:filename - the role manager: the photo's name and
+// who may see it. Only what is sent changes. An empty title leaves the
+// photo without a name; an empty viewers list gives it back to every
+// member.
+export const updateMediaPhoto = async (req, res) => {
+  const { category, filename } = req.params;
   if (!(await MediaPhoto.exists({ category, filename }))) {
+    throw new AppError('Nincs ilyen fénykép.', 404);
+  }
+  const own = await MediaPhotoSettings.findOne({ category, filename }).lean();
+  const { title, viewers } = await ownSettingsFrom(req.body, own, '');
+  await saveOwnSettings(MediaPhotoSettings, { category, filename }, { title, viewers });
+  res.status(200).json({
+    status: 'success',
+    data: { photo: { filename, title: title || null, viewers } },
+  });
+};
+
+// Only a recorded photo is ever served, and only from inside its folder -
+// never trust the address alone. A photo kept for others is, to this user,
+// not there.
+async function ensureRecorded(req) {
+  const { category, filename } = req.params;
+  if (
+    !(await MediaPhoto.exists({ category, filename })) ||
+    !maySee(req.user, await MediaPhotoSettings.findOne({ category, filename }).lean())
+  ) {
     throw new AppError('Nincs ilyen fénykép.', 404);
   }
 }
@@ -58,7 +99,7 @@ const originalPath = (category, filename) =>
 export const getMediaPhoto = async (req, res) => {
   const { category, filename } = req.params;
   const width = requestedWidth(req.query);
-  await ensureRecorded(category, filename);
+  await ensureRecorded(req);
   await sendPhoto(res, originalPath(category, filename), {
     key: `media/${category}`,
     filename,
@@ -72,7 +113,7 @@ export const getMediaPhoto = async (req, res) => {
 // API's subdomains (same as tourImageController.js's).
 export const downloadMediaPhoto = async (req, res) => {
   const { category, filename } = req.params;
-  await ensureRecorded(category, filename);
+  await ensureRecorded(req);
   const full = originalPath(category, filename);
   if (!fs.existsSync(full)) throw new AppError('A fénykép nem található a lemezen.', 404);
   res.download(full, path.basename(filename));
@@ -82,7 +123,7 @@ export const downloadMediaPhoto = async (req, res) => {
 // original if the thumbnail is missing.
 export const getMediaPhotoThumb = async (req, res) => {
   const { category, filename } = req.params;
-  await ensureRecorded(category, filename);
+  await ensureRecorded(req);
   const thumb = insideRoot(mediaThumbDir(category), thumbRelPath(filename));
   if (fs.existsSync(thumb)) {
     res.set('Cache-Control', LONG_CACHE);

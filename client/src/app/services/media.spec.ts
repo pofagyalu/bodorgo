@@ -66,16 +66,19 @@ describe('MediaService', () => {
       http.expectOne(videos).flush({ data: { categories: [] } });
     });
 
-    it('renames a video in the loaded list, leaving the others alone', () => {
+    it('renames a video and sets its viewers in the loaded list, leaving the others alone', () => {
       service.categories.set([category('tabor', ['v1', 'v2']), category('egyeb', ['v1'])]);
-      service.setVideoTitle('tabor', 'v1', 'Új cím').subscribe();
+      service.updateVideo('tabor', 'v1', { title: 'Új cím', viewers: ['u1'] }).subscribe();
       const req = http.expectOne(`${videos}/tabor/v1`);
       expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({ title: 'Új cím' });
-      req.flush({ data: { video: { id: 'v1', title: 'Új cím', discoveredTitle: 'v1' } } });
+      expect(req.request.body).toEqual({ title: 'Új cím', viewers: ['u1'] });
+      req.flush({
+        data: { video: { id: 'v1', title: 'Új cím', discoveredTitle: 'v1', viewers: ['u1'] } },
+      });
 
       const [tabor, egyeb] = service.categories();
       expect(tabor.videos.map((v) => v.title)).toEqual(['Új cím', 'régi v2']);
+      expect(tabor.videos.map((v) => v.viewers)).toEqual([['u1'], undefined]);
       expect(egyeb.videos[0].title).toBe('régi v1');
     });
 
@@ -100,6 +103,28 @@ describe('MediaService', () => {
       service.loadPhotos(true);
       http.expectOne(`${media}/photos`).flush({ data: { categories: [] } });
       expect(service.photoCategories()).toEqual([]);
+    });
+
+    it('names a photo and sets its viewers in the loaded list, leaving the others alone', () => {
+      const photo = (filename: string) => ({ filename, width: 1, height: 1, takenAt: null });
+      service.photoCategories.set([
+        { key: 'régi képek', title: 'Régi képek', photos: [photo('a b.jpg'), photo('c.jpg')] },
+        { key: 'más', title: 'Más', photos: [photo('a b.jpg')] },
+      ]);
+      service
+        .updatePhoto('régi képek', 'a b.jpg', { title: 'Nagyapa', viewers: ['u1'] })
+        .subscribe();
+      const req = http.expectOne(`${media}/photos/r%C3%A9gi%20k%C3%A9pek/a%20b.jpg`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ title: 'Nagyapa', viewers: ['u1'] });
+      req.flush({ data: { photo: { filename: 'a b.jpg', title: 'Nagyapa', viewers: ['u1'] } } });
+
+      const [regi, mas] = service.photoCategories();
+      expect(regi.photos).toEqual([
+        { ...photo('a b.jpg'), title: 'Nagyapa', viewers: ['u1'] },
+        photo('c.jpg'),
+      ]);
+      expect(mas.photos).toEqual([photo('a b.jpg')]);
     });
 
     it('flags an error', () => {
