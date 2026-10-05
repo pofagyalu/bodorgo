@@ -53,6 +53,24 @@ button {
   font-size: 14px;
 }
 
+// --- Tabs (components/tab-strip) ---
+
+.settings-tabs {
+  margin: 0 0 1.4rem;
+}
+
+// The pages that aren't open: .cards and .info-cards set their own
+// display, which would win over the hidden attribute's.
+[hidden] {
+  display: none !important;
+}
+
+// The third page: Értesítések, and Szoftver verziók under it, full width.
+.info-cards {
+  display: grid;
+  gap: 18px;
+}
+
 // Masonry: the cards flow down in as many columns as fit (at least
 // 480px wide each), a card never split between two - so the right side
 // isn't left empty on a wide screen.
@@ -98,11 +116,6 @@ button {
   color: #267c68;
   font-size: 13px;
   white-space: nowrap;
-}
-
-// Verzió: at the bottom of the page, under Értesítések.
-.version-panel {
-  margin-top: 18px;
 }
 
 // Verzió: the client's and the server's, one under the other.
@@ -435,13 +448,7 @@ button {
   }
 }
 
-// --- Értesítések: every e-mail and push (info), under the settings ---
-
-// A column's last card loses its bottom margin (the column ends there),
-// so the full gap is set here.
-.notifications {
-  margin-top: 18px;
-}
+// --- Értesítések: every e-mail and push (info), on its own page ---
 
 // E-mails | pushes, side by side - each list as tall as it is.
 .notif-columns {

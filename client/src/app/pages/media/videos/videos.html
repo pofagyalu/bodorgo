@@ -7,18 +7,18 @@
         Szilveszteri műsorok, különkiadások, farsangok és reklámok – csak a klub tagjainak.
       </p>
     </div>
-    <!-- Narrow screens only - on a wide one the Média sidebar does this. -->
-    @if (media.categories().length) {
-      <app-period-picker
-        class="category-picker"
-        label="Kategória"
-        [list]="true"
-        [options]="categoryOptions()"
-        [value]="categoryKey() ?? 'all'"
-        (valueChange)="chooseCategory($event)"
-      />
-    }
   </div>
+
+  <!-- Narrow screens only - on a wide one the Média sidebar does this. -->
+  @if (media.categories().length) {
+    <app-tab-strip
+      class="category-tabs"
+      label="Kategória"
+      [options]="categoryOptions()"
+      [value]="categoryKey() ?? 'all'"
+      (valueChange)="chooseCategory($event)"
+    />
+  }
 
   @if (media.loading() && !media.categories().length) {
     <p class="empty-note">Betöltés...</p>

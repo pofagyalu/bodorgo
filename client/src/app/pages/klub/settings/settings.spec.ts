@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
 
 import { API } from '../../../../testing/http';
 import { fail, logIn, pageTesting, respond, settle } from '../../../../testing/component';
@@ -7,7 +8,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { BirthdayService } from '../../../shared/birthday/birthday.service';
 import { BarionWithdraw } from './barion-withdraw/barion-withdraw';
-import { KlubSettings } from './settings';
+import { KlubSettings, TAB_KEYS } from './settings';
 
 const MB = 1024 * 1024;
 const method = { enabled: true, feePercent: 2, feeFixed: 0, feeMin: 0 };
@@ -103,6 +104,23 @@ describe('KlubSettings', () => {
     expect(page.sealUrl()).toBe(`${API}/settings/president/seal.png?v=Eln%C3%B6k%20Elek`);
     expect(page.serverBuild()?.version).toBe('1.2.3');
     expect(fixture.nativeElement.textContent).toContain('Tag Tamás');
+  });
+
+  it('shows one page of cards at a time, and writes the open one into the address', () => {
+    open();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const hidden = () =>
+      [...fixture.nativeElement.querySelectorAll('[role="tabpanel"]')].map(
+        (panel: HTMLElement) => panel.hidden,
+      );
+    expect(page.activeTab()).toBe('club');
+    expect(hidden()).toEqual([false, true, true]);
+
+    fixture.nativeElement.querySelectorAll('[role="tab"]')[2].click();
+    fixture.detectChanges();
+    expect(page.activeTab()).toBe('info');
+    expect(hidden()).toEqual([true, true, false]);
+    expect(navigate.mock.calls[0][1]).toMatchObject({ queryParams: { lap: TAB_KEYS.info } });
   });
 
   it('still opens when the requests fail', () => {

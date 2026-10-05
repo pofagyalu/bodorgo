@@ -5,59 +5,17 @@
       <h1>Felhasználók</h1>
       <p class="heading-text">A klubtagok, a többiek, és mindenki egy listában.</p>
     </div>
-    <!-- A phone's tabs: one pill beside the title (the tab buttons below
-         are a wide screen's). -->
-    <app-period-picker
-      class="tab-picker"
+  </div>
+
+  <!-- The tabs (components/tab-strip), and at the bar's end the admin's +
+       and the search. -->
+  <div class="people-tabs">
+    <app-tab-strip
       label="Felhasználók típusa"
-      [list]="true"
       [options]="tabOptions()"
       [value]="activeTab()"
       (valueChange)="selectTab($any($event))"
     />
-  </div>
-
-  <div class="people-tabs" role="tablist" aria-label="Felhasználók típusa">
-    <button
-      role="tab"
-      type="button"
-      [attr.aria-selected]="activeTab() === 'club'"
-      [class.active]="activeTab() === 'club'"
-      (click)="selectTab('club')"
-    >
-      Klubtagok <span class="tab-count">{{ clubMembers().length }}</span>
-    </button>
-    <button
-      role="tab"
-      type="button"
-      [attr.aria-selected]="activeTab() === 'casual'"
-      [class.active]="activeTab() === 'casual'"
-      (click)="selectTab('casual')"
-    >
-      A többiek
-      <span class="tab-count">{{ casualUsers().length }}</span>
-    </button>
-    <button
-      role="tab"
-      type="button"
-      [attr.aria-selected]="activeTab() === 'everyone'"
-      [class.active]="activeTab() === 'everyone'"
-      (click)="selectTab('everyone')"
-    >
-      Mindenki
-      <span class="tab-count">{{ users().length }}</span>
-    </button>
-    @if (isAdmin()) {
-      <button
-        role="tab"
-        type="button"
-        [attr.aria-selected]="activeTab() === 'invites'"
-        [class.active]="activeTab() === 'invites'"
-        (click)="selectTab('invites')"
-      >
-        Meghívók
-      </button>
-    }
     @if (isAdmin()) {
       <a
         [routerLink]="['/klub/felhasznalok', 'uj']"

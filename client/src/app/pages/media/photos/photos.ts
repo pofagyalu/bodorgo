@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
-import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
+import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
 import { PhotoGalleryService } from '../../../shared/photo-gallery';
 import { MediaEdit, MediaEditDialog } from '../../../shared/media-edit-dialog/media-edit-dialog';
 import { MediaPhoto, MediaPhotoCategory, MediaService } from '../../../services/media';
@@ -18,7 +18,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 // file name is never shown.
 @Component({
   selector: 'app-media-photos',
-  imports: [MatIconModule, MediaEditDialog, PeriodPicker],
+  imports: [MatIconModule, MediaEditDialog, TabStrip],
   templateUrl: './photos.html',
   styleUrl: './photos.scss',
 })
@@ -30,9 +30,9 @@ export class Photos implements OnInit {
   categoryKey = toSignal(this.route.paramMap.pipe(map((p) => p.get('category'))), {
     initialValue: null,
   });
-  // A phone's category picker beside the title (a wide screen has the
-  // Média sidebar): "Mind", then the categories, each with its count.
-  categoryOptions = computed<PeriodOption[]>(() => [
+  // A phone's category tabs under the title (a wide screen has the Média
+  // sidebar): "Mind", then the categories, each with its count.
+  categoryOptions = computed<TabOption[]>(() => [
     { value: 'all', label: 'Mind', count: this.totalCount() },
     ...this.media.photoCategories().map((c) => ({
       value: c.key,

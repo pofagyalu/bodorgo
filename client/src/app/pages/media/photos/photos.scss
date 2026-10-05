@@ -26,31 +26,26 @@ button {
   margin-bottom: 22px;
 }
 
-// A phone's category picker (components/period-picker), beside the title -
+// A phone's category tabs (components/tab-strip), under the title -
 // elsewhere the Média sidebar lists the categories.
-.category-picker {
+.category-tabs {
   display: none;
-  --period-picker-accent: #1a796c;
 }
 
 @media (max-width: 580px) and (hover: none) {
-  // One row: the title, and the picker at its end - the first category
-  // starts right under it, so the describing sentence is left out here.
+  // The tabs come right under the title, so the describing sentence is
+  // left out here.
   .heading {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.25rem;
   }
 
   .heading-text {
     display: none;
   }
 
-  .category-picker {
-    display: inline-block;
-    max-width: 62%;
+  .category-tabs {
+    display: block;
+    margin-bottom: 1rem;
   }
 }
 

@@ -55,13 +55,6 @@ button {
   font-size: 14px;
 }
 
-// A phone's tabs (components/period-picker), beside the title - a wide
-// screen has the tab buttons.
-.tab-picker {
-  display: none;
-  --period-picker-accent: #1a796c;
-}
-
 .panel {
   background: #fff;
   border: 1px solid #e7edea;
@@ -77,13 +70,18 @@ button {
   gap: 7px;
   border-bottom: 1px solid #dde8e3;
   margin: 0 0 22px;
-  overflow-x: auto;
 }
 
-// A plain <a>, not a <button> - the .people-tabs button rule below never
-// touches it, so it keeps .icon-btn's own compact round look instead of
-// picking up the tab styling. Pushed to the row's far end (margin-left:
-// auto) rather than sitting right next to the tabs.
+// The tabs themselves (components/tab-strip): as wide as they need, and
+// narrower - scrolling sideways - when the bar has no more room. The line
+// under them is the bar's.
+.people-tabs app-tab-strip {
+  flex: 0 1 auto;
+  border-bottom: 0;
+}
+
+// Pushed to the row's far end (margin-left: auto) rather than sitting
+// right next to the tabs.
 .people-tabs .icon-btn--add {
   margin-left: auto;
   background: #1a796c;
@@ -101,30 +99,6 @@ button {
 
 .people-tabs .icon-btn--add ~ .member-search {
   margin-left: 8px;
-}
-
-.people-tabs button {
-  background: transparent;
-  border: 0;
-  border-bottom: 3px solid transparent;
-  color: #56666e;
-  padding: 12px 17px;
-  font-size: 13px;
-  font-weight: 750;
-  white-space: nowrap;
-}
-
-.people-tabs button.active {
-  border-bottom-color: #258e79;
-  color: #205a50;
-}
-
-.tab-count {
-  background: #edf3f0;
-  border-radius: 6px;
-  padding: 3px 6px;
-  margin-left: 5px;
-  font-size: 11px;
 }
 
 .casual-intro {
@@ -680,41 +654,35 @@ button {
     flex-direction: column;
   }
 
-  // One row: the title, and the tab picker at its end; the describing
-  // sentence and the tab buttons are left out, so the list starts sooner.
+  // The tabs come right under the title - the describing sentence is left
+  // out, so the list starts sooner.
   .heading {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.25rem;
   }
 
   .heading-text {
     display: none;
   }
 
-  .tab-picker {
-    display: inline-block;
-    max-width: 62%;
-  }
-
-  .people-tabs button[role='tab'] {
-    display: none;
-  }
-
-  // Only the search is left in the bar, on its own full-width line.
+  // The tabs on a line of their own (with their own line under them), the
+  // search on the next one.
   .people-tabs {
     flex-wrap: wrap;
     border-bottom: 0;
     margin-bottom: 0.5rem;
   }
 
+  .people-tabs app-tab-strip {
+    flex: none;
+    width: 100%;
+    border-bottom: 1px solid #dde8e3;
+  }
+
   .people-tabs .member-search,
   .people-tabs .icon-btn--add ~ .member-search {
     order: 10;
     width: 100%;
-    margin: 6px 0 10px;
+    margin: 0.75rem 0 0.625rem;
   }
 
   // The admin's "new user" + out of the tab bar: the floating + of a phone
