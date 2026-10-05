@@ -9,34 +9,71 @@
       <!-- Top content -->
       <h2 class="font-rokkitt mb-5 text-4xl font-bold">Belépés</h2>
       <p class="max-w-sm mb-12 font-mulish font-light text-gray-600">
-        Registráld magad sakko megtudsz sokmindent.
+        @if (mode() === 'local') {
+          Vészhelyzeti belépés: most csak az alkalmazás gazdája léphet be, a szerveren beállított
+          e-mail címmel és jelszóval.
+        } @else {
+          A klub alkalmazásába a gombra kattintva léphetsz be.
+        }
       </p>
-      <!-- Middle content -->
-      <div
-        class="flex flex-col items-center justify-between mt-6 space-y-6 md:flex-row md:space-y-0"
-      >
-        <button
-          (click)="continueWithAuthentik()"
-          class="w-full md:w-auto flex justify-center items-center p-6 space-x-4 font-mulish font-bold text*white rounded-md shadow-sm px-9 bg-primaryDark shadow-primaryLight hover:bg-opacity-90 hover:shadow-lg border transition hover:translate-y-0.5 duration-150"
+      <!-- Middle content: on to the OIDC provider (Authentik, or whichever is
+           the active one - the button doesn't say) - or, when the server runs with
+           LOCAL_LOGIN=true, an e-mail and a password kept in the app. -->
+      @if (mode() === 'oidc') {
+        <div
+          class="flex flex-col items-center justify-between mt-6 space-y-6 md:flex-row md:space-y-0"
         >
-          <span>Tovább Authentik-kel</span>
-          <svg
-            xmlns="http:www.w3.org/2000/svg"
-            class="w-7"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="#ffffff"
-            fill="none"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <button
+            (click)="continueWithAuthentik()"
+            class="w-full md:w-auto flex justify-center items-center p-6 space-x-4 font-mulish font-bold text*white rounded-md shadow-sm px-9 bg-primaryDark shadow-primaryLight hover:bg-opacity-90 hover:shadow-lg border transition hover:translate-y-0.5 duration-150"
           >
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <line x1="13" y1="18" x2="19" y2="12" />
-            <line x1="13" y1="6" x2="19" y2="12" />
-          </svg>
-        </button>
-      </div>
+            <span>Gyere bé</span>
+            <svg
+              xmlns="http:www.w3.org/2000/svg"
+              class="w-7"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="#ffffff"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <line x1="13" y1="18" x2="19" y2="12" />
+              <line x1="13" y1="6" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
+      } @else if (mode() === 'local') {
+        <form class="local-login" (ngSubmit)="logInWithPassword()">
+          <label>
+            E-mail cím
+            <input
+              type="email"
+              name="email"
+              autocomplete="username"
+              required
+              [ngModel]="email()"
+              (ngModelChange)="email.set($event)"
+            />
+          </label>
+          <label>
+            Jelszó
+            <input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              required
+              [ngModel]="password()"
+              (ngModelChange)="password.set($event)"
+            />
+          </label>
+          <button type="submit" [disabled]="loggingIn() || !email().trim() || !password()">
+            {{ loggingIn() ? 'Belépés…' : 'Belépés' }}
+          </button>
+        </form>
+      }
     </div>
     <!-- Right side -->
     <img src="assets/images/login-image.jpg" alt="" class="w-[430px] hidden md:block" />

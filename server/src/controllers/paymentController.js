@@ -263,7 +263,7 @@ export const startMembershipPayment = async (req, res) => {
   const requestOrigin = req.headers.origin;
   const clientBase = config.corsOrigins.includes(requestOrigin)
     ? requestOrigin
-    : config.oridzs.clientBaseUrl;
+    : config.clientBaseUrl;
   const returnUrl = `${clientBase.replace(/\/$/, '')}/klub/felhasznalok?paymentId=${payment._id}`;
 
   let gatewayPayment;
@@ -320,7 +320,7 @@ export const startPayment = async (req, res) => {
   });
 
   // The payer's browser needs to land back wherever it actually started -
-  // config.oridzs.clientBaseUrl is fixed to production (needed elsewhere,
+  // config.clientBaseUrl is fixed to production (needed elsewhere,
   // e.g. links inside emails), so it's wrong when testing this flow from a
   // local dev client. The request's own Origin header (sent by the SPA's
   // fetch call) tells us exactly where the browser is running; only trust
@@ -329,7 +329,7 @@ export const startPayment = async (req, res) => {
   const requestOrigin = req.headers.origin;
   const clientBase = config.corsOrigins.includes(requestOrigin)
     ? requestOrigin
-    : config.oridzs.clientBaseUrl;
+    : config.clientBaseUrl;
   // Same URL either way (success or the payer navigating back/canceling)
   // - the payment page itself figures out which happened by asking
   // GET /payments/:id/status once it sees ?paymentId= on load.

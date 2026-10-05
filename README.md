@@ -310,8 +310,10 @@ Both environment files need a real OpenWeatherMap key in `openWeatherApi` for th
 | `PORT` | `8235` |
 | `DB_URI` | the MongoDB connection string, database name included |
 | `COOKIE_SECRET` | a long random string |
-| `AUTHENTIK_SERVER_URL`, `AUTHENTIK_PROVIDER_SLUG`, `AUTHENTIK_CLIENT_ID`, `AUTHENTIK_CLIENT_SECRET` | the Authentik provider |
-| `AUTHENTIK_REDIRECT_URI`, `AUTHENTIK_POSTLOGOUT_URI` | where login returns, where logout lands |
+| `APP_SECRET_KEY` | a long random string: encrypts the secrets kept in the database (the OIDC client secret, the Authentik API token). Keep it with the backups — a database restored under another key cannot read them |
+| `AUTHENTIK_SERVER_URL`, `AUTHENTIK_PROVIDER_SLUG`, `AUTHENTIK_CLIENT_ID`, `AUTHENTIK_CLIENT_SECRET`, `AUTHENTIK_POSTLOGOUT_URI` | the Authentik provider. Set in the app (**Klub → Beállítások → OIDC szolgáltató**, the role manager only) and kept in the database, the secrets encrypted. These lines are only for getting started: the first start copies them over. **Delete them once you can log in and the tab shows them** — nothing reads them any more. Other providers can be added on the same tab, and one of them chosen as the active one |
+| `LOCAL_LOGIN` | normally `false`. `true` is the **emergency login** for when the OIDC provider cannot be used: the login page asks for an e-mail and a password, and lets in only `INITIAL_ADMIN_USER` with `INITIAL_ADMIN_PASSWORD`, as admin. Set the provider up on Beállítások → OIDC szolgáltató, then switch it back (the steps are in `server/src/.env.example`) |
+| `INITIAL_ADMIN_PASSWORD` | the password of that emergency login (at least 12 characters). Read from here at every try, never stored or changed in the app; with `LOCAL_LOGIN=false` it does nothing and can stay in the file |
 | `CLIENT_BASE_URL` | the client's full address (`http://localhost:4200/` locally) |
 | `CLIENT_ORIGIN` | comma-separated origins allowed to call the API |
 | `API_BASE_URL` | this server's own public address (Barion callbacks need it) |
@@ -321,7 +323,7 @@ Both environment files need a real OpenWeatherMap key in `openWeatherApi` for th
 
 | Name | Feature |
 | --- | --- |
-| `AUTHENTIK_API_TOKEN`, `AUTHENTIK_INVITATION_FLOW` (optional) | invitations |
+| `AUTHENTIK_API_TOKEN`, `AUTHENTIK_INVITATION_FLOW` (optional) | invitations — set in the app too (Beállítások → OIDC szolgáltató), used from here like the other `AUTHENTIK_*` lines |
 | `RESEND_API_KEY`, `RESEND_EMAIL_FROM` | sending e-mail |
 | `EMAIL_REDIRECT_TO` | **local only**: every e-mail goes to this address instead of the real people. Never on live |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | push notifications |
@@ -579,7 +581,7 @@ The NAS setup in section 7 is how the live site runs today. This section is the 
    - **The two addresses must be under one domain**, like `example.org` and `api.example.org`. The login cookie is only sent between addresses of the same site.
    - With `NODE_ENV=production` the cookie is HTTPS-only: over plain HTTP nobody stays logged in.
 
-8. **Authentik.** Add `https://<API address>/auth/callback` to the provider's Redirect URIs, and set `AUTHENTIK_REDIRECT_URI`, `AUTHENTIK_POSTLOGOUT_URI`, `CLIENT_BASE_URL`, `CLIENT_ORIGIN` and `API_BASE_URL` in `server/.env` to the new addresses.
+8. **Authentik.** Add `https://<API address>/auth/callback` to the provider's Redirect URIs, and set `CLIENT_BASE_URL`, `CLIENT_ORIGIN` and `API_BASE_URL` in `server/.env` to the new addresses. The provider's own settings (address, client ID and secret, where a logout lands) are on **Klub → Beállítások → OIDC szolgáltató**; a restored database brings them along, readable only with the same `APP_SECRET_KEY`. Without an Authentik at all: `LOCAL_LOGIN=true` and `INITIAL_ADMIN_PASSWORD` let the role manager in with a password.
 
 9. **Log in** as the person `INITIAL_ADMIN_USER` names. Then press **Új média felfedezése** once to make the photos' thumbnails.
 

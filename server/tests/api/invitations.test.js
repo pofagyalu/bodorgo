@@ -14,6 +14,7 @@ import {
 vi.mock('../../src/utils/authentikInvitations.js', () => ({
   INVITATION_DAYS: 30,
   invitationsEnabled: vi.fn(() => true),
+  invitationLink: (settings, token) => `https://auth.test/if/flow/x/?itoken=${token}`,
   createInvitation: vi.fn(async ({ email }) => ({
     id: `inv-${email}`,
     link: `https://auth.test/if/flow/enrollment-invitation/?itoken=inv-${email}`,

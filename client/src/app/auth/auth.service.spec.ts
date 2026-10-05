@@ -87,6 +87,26 @@ describe('AuthService', () => {
     expect(service.user()).toBeNull();
   });
 
+  it('asks which login the server runs with - the provider when it cannot be asked', () => {
+    let mode: unknown;
+    service.loginMode().subscribe((res) => (mode = res));
+    http.expectOne(`${API}/auth/mode`).flush({ localLogin: true });
+    expect(mode).toEqual({ localLogin: true });
+
+    service.loginMode().subscribe((res) => (mode = res));
+    http.expectOne(`${API}/auth/mode`).flush('', { status: 500, statusText: 'Error' });
+    expect(mode).toEqual({ localLogin: false });
+  });
+
+  it('logs in with e-mail and password, taking the session cookie', () => {
+    service.localLogin('a@b.hu', 'jelszo').subscribe();
+    const req = http.expectOne(`${API}/auth/local-login`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ email: 'a@b.hu', password: 'jelszo' });
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ status: 'success' });
+  });
+
   it('patches the current user, but only when there is one', () => {
     service.patchCurrentUser({ name: 'Senki' });
     expect(service.user()).toBeNull();

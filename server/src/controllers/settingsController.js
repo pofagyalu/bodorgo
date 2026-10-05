@@ -23,6 +23,21 @@ import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js
 import { DEFAULT_RANK_MESSAGE } from '../utils/ranks.js';
 import { waxSealPng } from '../utils/waxSeal.js';
 import { stripeAccountReady } from '../utils/stripe.js';
+import config from '../config.js';
+import crypto from 'crypto';
+import ClubSettings from '../models/clubSettingsModel.js';
+import {
+  AUTHENTIK,
+  DEFAULT_INVITATION_FLOW,
+  authentikProvider,
+  discover,
+  getOidcSettings,
+  getOtherProviders,
+  issuerUrl,
+  storedOidc,
+  trimUrl,
+} from '../utils/oidcSettings.js';
+import { canEncrypt, encryptSecret } from '../utils/secretBox.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
 // fee, by the year each amount takes effect (see utils/clubSettings.js).
@@ -567,6 +582,388 @@ export const updateRankSettings = async (req, res) => {
     await settings.save();
   }
   res.status(200).json({ status: 'success', data: after });
+};
+
+// --- OIDC szolgáltató (see utils/oidcSettings.js) - the role manager only ---
+
+const SLUG = /^[A-Za-z0-9_-]{1,100}$/;
+
+const isWebAddress = (value) => {
+  try {
+    return ['http:', 'https:'].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+};
+
+// What has to be listed among a provider's Redirect URIs - shown on the
+// page as information, for setting the provider up: the callback of a
+// server run on one's own machine, the live API's callback, and the live
+// site (where a logout lands) - the club's own three, the same whichever
+// server shows them. A server at another address adds its own callback.
+const CLUB_REDIRECT_URIS = [
+  'http://localhost:8235/auth/callback',
+  'https://api.bodorgo.hu/auth/callback',
+  'https://bodorgo.hu',
+];
+
+const redirectUrisFor = (req) => [
+  ...new Set([
+    ...CLUB_REDIRECT_URIS,
+    ...[`${req.protocol}://${req.get('host')}`, trimUrl(config.apiBaseUrl)]
+      .filter(Boolean)
+      .map((base) => `${base}/auth/callback`),
+  ]),
+];
+
+// What the page shows: never a secret, only whether there is one.
+async function oidcView(req) {
+  const s = await getOidcSettings();
+  return {
+    serverUrl: s.serverUrl,
+    providerSlug: s.providerSlug,
+    clientId: s.clientId,
+    hasClientSecret: !!s.clientSecret,
+    postLogoutRedirectUri: s.postLogoutRedirectUri,
+    hasApiToken: !!s.apiToken,
+    invitationFlow: s.invitationFlow,
+    // Where they come from now: 'database' (saved here) or 'env'.
+    source: s.source,
+    // The saved secrets can't be read with this server's APP_SECRET_KEY.
+    unreadable: !!s.unreadable,
+    // APP_SECRET_KEY is set: the secrets can be saved.
+    canSave: canEncrypt(),
+    issuer: s.serverUrl && s.providerSlug ? issuerUrl(s) : '',
+    // This server's own callback, and everything to list among the
+    // provider's Redirect URIs (information only).
+    redirectUri: `${req.protocol}://${req.get('host')}/auth/callback`,
+    redirectUris: redirectUrisFor(req),
+    // LOCAL_LOGIN=true: people log in with a password, not through this.
+    localLogin: config.localLogin,
+    // Which provider everybody logs in through: 'authentik' or one of
+    // `providers` (the others, added next to Authentik) by its id.
+    ...(await otherProvidersView()),
+  };
+}
+
+async function otherProvidersView() {
+  const { providers, active } = await getOtherProviders();
+  return {
+    active,
+    providers: providers.map((p) => ({
+      id: p.id,
+      name: p.name,
+      issuerUrl: p.issuer,
+      clientId: p.clientId,
+      hasClientSecret: !!p.clientSecret,
+      postLogoutRedirectUri: p.postLogoutRedirectUri,
+      requireVerifiedEmail: p.requireVerifiedEmail,
+      unreadable: !!p.unreadable,
+    })),
+  };
+}
+
+// Nothing about the providers can be saved without the key the secrets are
+// encrypted with.
+function assertOidcCanBeSaved() {
+  if (!canEncrypt()) {
+    throw new AppError(
+      'A szerver .env fájljából hiányzik az APP_SECRET_KEY - enélkül a titkok nem menthetők.',
+      400,
+    );
+  }
+}
+
+// Refused unless the provider answers at its address - a typo there would
+// lock everybody out.
+async function assertProviderAnswers(provider) {
+  try {
+    await discover(provider);
+  } catch (err) {
+    logger.warn(`OIDC settings refused - ${provider.issuer} doesn't answer: ${err.message}`);
+    throw new AppError(
+      `A szolgáltató nem válaszol ezen a címen: ${provider.issuer} - semmi nem változott.`,
+      400,
+    );
+  }
+}
+
+// Every change to where people log in is e-mailed to all admins.
+async function mailOidcChange(req, changes) {
+  logger.info(`OIDC settings changed by ${req.user.name}: ${changes.join('; ')}`);
+  const admins = await User.find({ role: 'admin', email: { $nin: [null, ''] } }).select('email');
+  if (!admins.length) return;
+  const lines = changes.map((c) => `<li>${c}</li>`).join('');
+  await sendResendEmail({
+    to: admins.map((a) => a.email),
+    subject: 'Bódorgó: megváltozott az OIDC szolgáltató beállítása',
+    html: `<p>${req.user.name} megváltoztatta a bejelentkezés (OIDC szolgáltató) beállításait:</p><ul>${lines}</ul><p>Ha nem tudsz róla, azonnal szólj a szerepkör-kezelő adminnak!</p>`,
+    text: [
+      `${req.user.name} megváltoztatta a bejelentkezés (OIDC szolgáltató) beállításait:`,
+      ...changes,
+      '',
+      'Ha nem tudsz róla, azonnal szólj a szerepkör-kezelő adminnak!',
+    ].join('\n'),
+  }).catch((err) => logger.error(`OIDC settings e-mail failed: ${err.message}`));
+}
+
+// GET /settings/oidc (role manager).
+export const getOidcSettingsView = async (req, res) => {
+  res.status(200).json({ status: 'success', data: await oidcView(req) });
+};
+
+// PUT /settings/oidc (role manager) - { serverUrl, providerSlug, clientId,
+// clientSecret, postLogoutRedirectUri, apiToken, removeApiToken,
+// invitationFlow }. An empty clientSecret / apiToken keeps the one in use;
+// removeApiToken takes the token away (no invitations). Refused unless the
+// provider answers at the new address - a typo there would lock everybody
+// out. In the history (never a secret's value), and e-mailed to every admin.
+export const updateOidcSettings = async (req, res) => {
+  assertOidcCanBeSaved();
+
+  const body = req.body ?? {};
+  const current = await getOidcSettings();
+  const next = {
+    serverUrl: trimUrl(body.serverUrl),
+    providerSlug: String(body.providerSlug ?? '').trim(),
+    clientId: String(body.clientId ?? '').trim(),
+    clientSecret: String(body.clientSecret ?? '').trim() || current.clientSecret,
+    postLogoutRedirectUri: String(body.postLogoutRedirectUri ?? '').trim(),
+    apiToken:
+      body.removeApiToken === true ? '' : String(body.apiToken ?? '').trim() || current.apiToken,
+    invitationFlow: String(body.invitationFlow ?? '').trim() || DEFAULT_INVITATION_FLOW,
+  };
+  if (!isWebAddress(next.serverUrl)) {
+    throw new AppError('A Server URL http:// vagy https:// kezdetű cím legyen.', 400);
+  }
+  if (!SLUG.test(next.providerSlug) || !SLUG.test(next.invitationFlow)) {
+    throw new AppError('A slug csak betűt, számot, kötőjelet és aláhúzást tartalmazhat.', 400);
+  }
+  if (!next.clientId || next.clientId.length > 200) {
+    throw new AppError('Add meg a Client ID-t.', 400);
+  }
+  if (!next.clientSecret) throw new AppError('Add meg a Client secretet.', 400);
+  if ([next.clientSecret, next.apiToken].some((secret) => secret.length > 500)) {
+    throw new AppError('A titok legfeljebb 500 karakter lehet.', 400);
+  }
+  if (next.postLogoutRedirectUri && !isWebAddress(next.postLogoutRedirectUri)) {
+    throw new AppError('A Logout URI http:// vagy https:// kezdetű cím legyen.', 400);
+  }
+
+  await assertProviderAnswers(authentikProvider(next));
+
+  const changes = [
+    ['Server URL', current.serverUrl, next.serverUrl],
+    ['Provider slug', current.providerSlug, next.providerSlug],
+    ['Client ID', current.clientId, next.clientId],
+    ['Logout URI', current.postLogoutRedirectUri, next.postLogoutRedirectUri],
+    ['Invitation flow', current.invitationFlow, next.invitationFlow],
+  ]
+    .filter(([, a, b]) => (a ?? '') !== b)
+    .map(([label, a, b]) => `${label}: ${a || '(nincs)'} → ${b || '(nincs)'}`);
+  if (current.clientSecret !== next.clientSecret) changes.push('Client secret: megváltozott');
+  if (current.apiToken !== next.apiToken) {
+    changes.push(`API token: ${next.apiToken ? 'megváltozott' : 'törölve'}`);
+  }
+
+  // Also the first save of what was only in .env until now.
+  if (changes.length || current.source !== 'database') {
+    const settings = await getClubSettings();
+    settings.set('oidc', storedOidc(next));
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `OIDC szolgáltató: ${changes.join('; ') || 'mentve (változás nélkül)'}`,
+    });
+    await settings.save();
+  }
+
+  if (changes.length) await mailOidcChange(req, changes);
+
+  res.status(200).json({ status: 'success', data: await oidcView(req) });
+};
+
+// --- The other OIDC providers, next to Authentik (the role manager only) ---
+
+const MAX_OTHER_PROVIDERS = 10;
+
+// The settings with the other providers' secrets loaded too - saving the
+// list without them would lose them.
+const settingsWithProviders = async () => {
+  await getClubSettings();
+  return ClubSettings.findOne({ key: 'club' }).select('+oidcProviders.clientSecretEnc');
+};
+
+// One provider's fields from a request, checked; `saved` is what it is now
+// (an empty clientSecret keeps that one's), `others` the rest of the list.
+function readProvider(body = {}, saved, others) {
+  const next = {
+    name: String(body.name ?? '').trim(),
+    issuer: String(body.issuerUrl ?? '').trim(),
+    clientId: String(body.clientId ?? '').trim(),
+    clientSecret: String(body.clientSecret ?? '').trim() || (saved?.clientSecret ?? ''),
+    postLogoutRedirectUri: String(body.postLogoutRedirectUri ?? '').trim(),
+    requireVerifiedEmail: body.requireVerifiedEmail !== false,
+  };
+  const sameName = (name) => name.toLowerCase() === next.name.toLowerCase();
+  if (!next.name || next.name.length > 50) {
+    throw new AppError('Adj nevet a szolgáltatónak (legfeljebb 50 karakter).', 400);
+  }
+  if (sameName('Authentik') || others.some((p) => sameName(p.name))) {
+    throw new AppError('Ilyen nevű szolgáltató már van.', 400);
+  }
+  if (!isWebAddress(next.issuer)) {
+    throw new AppError('Az Issuer URL http:// vagy https:// kezdetű cím legyen.', 400);
+  }
+  if (!next.clientId || next.clientId.length > 200) {
+    throw new AppError('Add meg a Client ID-t.', 400);
+  }
+  if (!next.clientSecret) throw new AppError('Add meg a Client secretet.', 400);
+  if (next.clientSecret.length > 500) {
+    throw new AppError('A titok legfeljebb 500 karakter lehet.', 400);
+  }
+  if (next.postLogoutRedirectUri && !isWebAddress(next.postLogoutRedirectUri)) {
+    throw new AppError('A Logout URI http:// vagy https:// kezdetű cím legyen.', 400);
+  }
+  return next;
+}
+
+const storedProvider = (id, p) => ({
+  id,
+  name: p.name,
+  issuerUrl: p.issuer,
+  clientId: p.clientId,
+  clientSecretEnc: encryptSecret(p.clientSecret),
+  postLogoutRedirectUri: p.postLogoutRedirectUri || undefined,
+  requireVerifiedEmail: p.requireVerifiedEmail,
+});
+
+const onOff = (value) => (value ? 'igen' : 'nem');
+
+// POST /settings/oidc/providers (role manager) - { name, issuerUrl,
+// clientId, clientSecret, postLogoutRedirectUri, requireVerifiedEmail }: a
+// new provider next to Authentik. Not active yet - that is its own step.
+export const addOidcProvider = async (req, res) => {
+  assertOidcCanBeSaved();
+  const { providers } = await getOtherProviders();
+  if (providers.length >= MAX_OTHER_PROVIDERS) {
+    throw new AppError(`Legfeljebb ${MAX_OTHER_PROVIDERS} további szolgáltató lehet.`, 400);
+  }
+  const next = readProvider(req.body, null, providers);
+  await assertProviderAnswers(next);
+
+  const settings = await settingsWithProviders();
+  const id = crypto.randomUUID();
+  settings.oidcProviders.push(storedProvider(id, next));
+  const change = `Új szolgáltató: ${next.name} (${next.issuer})`;
+  settings.history.push({
+    at: new Date(),
+    byName: req.user.name,
+    change: `OIDC szolgáltató: ${change}`,
+  });
+  await settings.save();
+  await mailOidcChange(req, [change]);
+  res.status(201).json({ status: 'success', data: { ...(await oidcView(req)), created: id } });
+};
+
+// PUT /settings/oidc/providers/:id (role manager) - the same fields; an
+// empty clientSecret keeps the one it has.
+export const updateOidcProvider = async (req, res) => {
+  assertOidcCanBeSaved();
+  const { providers } = await getOtherProviders();
+  const saved = providers.find((p) => p.id === req.params.id);
+  if (!saved) throw new AppError('Nincs ilyen szolgáltató.', 404);
+  const next = readProvider(
+    req.body,
+    saved,
+    providers.filter((p) => p !== saved),
+  );
+  await assertProviderAnswers(next);
+
+  const changes = [
+    ['Név', saved.name, next.name],
+    ['Issuer URL', saved.issuer, next.issuer],
+    ['Client ID', saved.clientId, next.clientId],
+    ['Logout URI', saved.postLogoutRedirectUri, next.postLogoutRedirectUri],
+    [
+      'Csak megerősített e-mail',
+      onOff(saved.requireVerifiedEmail),
+      onOff(next.requireVerifiedEmail),
+    ],
+  ]
+    .filter(([, a, b]) => (a ?? '') !== b)
+    .map(([label, a, b]) => `${label}: ${a || '(nincs)'} → ${b || '(nincs)'}`);
+  if (saved.clientSecret !== next.clientSecret) changes.push('Client secret: megváltozott');
+
+  if (changes.length) {
+    const settings = await settingsWithProviders();
+    const index = settings.oidcProviders.findIndex((p) => p.id === saved.id);
+    settings.oidcProviders.set(index, storedProvider(saved.id, next));
+    const change = `${saved.name}: ${changes.join('; ')}`;
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `OIDC szolgáltató: ${change}`,
+    });
+    await settings.save();
+    await mailOidcChange(req, [change]);
+  }
+  res.status(200).json({ status: 'success', data: await oidcView(req) });
+};
+
+// DELETE /settings/oidc/providers/:id (role manager) - not the active one.
+export const deleteOidcProvider = async (req, res) => {
+  assertOidcCanBeSaved();
+  const { providers, active } = await getOtherProviders();
+  const saved = providers.find((p) => p.id === req.params.id);
+  if (!saved) throw new AppError('Nincs ilyen szolgáltató.', 404);
+  if (active === saved.id) {
+    throw new AppError('Az aktív szolgáltató nem törölhető - előbb válassz másikat.', 400);
+  }
+  const settings = await settingsWithProviders();
+  settings.oidcProviders = settings.oidcProviders.filter((p) => p.id !== saved.id);
+  const change = `Törölve: ${saved.name}`;
+  settings.history.push({
+    at: new Date(),
+    byName: req.user.name,
+    change: `OIDC szolgáltató: ${change}`,
+  });
+  await settings.save();
+  await mailOidcChange(req, [change]);
+  res.status(200).json({ status: 'success', data: await oidcView(req) });
+};
+
+// PUT /settings/oidc/active (role manager) - { provider: 'authentik' | id }:
+// which one everybody logs in through from now on. Refused unless it
+// answers at its address.
+export const setActiveOidcProvider = async (req, res) => {
+  assertOidcCanBeSaved();
+  const { providers, active } = await getOtherProviders();
+  const id = String(req.body?.provider ?? '');
+  const chosen =
+    id === AUTHENTIK
+      ? authentikProvider(await getOidcSettings())
+      : providers.find((p) => p.id === id);
+  if (!chosen) throw new AppError('Nincs ilyen szolgáltató.', 404);
+  if (!chosen.clientSecret) {
+    throw new AppError('Ennek a szolgáltatónak nincs (olvasható) Client secretje.', 400);
+  }
+  await assertProviderAnswers(chosen);
+
+  if (active !== chosen.id) {
+    const before = providers.find((p) => p.id === active)?.name ?? 'Authentik';
+    const settings = await settingsWithProviders();
+    settings.oidcActiveProvider = chosen.id;
+    const change = `Aktív szolgáltató: ${before} → ${chosen.name}`;
+    settings.history.push({
+      at: new Date(),
+      byName: req.user.name,
+      change: `OIDC szolgáltató: ${change}`,
+    });
+    await settings.save();
+    await mailOidcChange(req, [change]);
+  }
+  res.status(200).json({ status: 'success', data: await oidcView(req) });
 };
 
 // --- Elnök (the beszámoló PDF's signature and wax seal) ---

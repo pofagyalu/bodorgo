@@ -375,6 +375,300 @@ describe('KlubSettings', () => {
     });
   });
 
+  describe('OIDC szolgáltató - the role manager only', () => {
+    const oidc = {
+      serverUrl: 'https://auth.test',
+      providerSlug: 'bodorgo',
+      clientId: 'client-1',
+      hasClientSecret: true,
+      postLogoutRedirectUri: 'https://klub.test',
+      hasApiToken: true,
+      invitationFlow: 'enrollment-invitation',
+      source: 'database',
+      unreadable: false,
+      canSave: true,
+      issuer: 'https://auth.test/application/o/bodorgo/',
+      redirectUri: 'http://localhost:8235/auth/callback',
+      redirectUris: [
+        'http://localhost:8235/auth/callback',
+        'https://api.bodorgo.hu/auth/callback',
+        'https://bodorgo.hu',
+      ],
+      localLogin: false,
+      active: 'authentik',
+      providers: [] as object[],
+    };
+    const other = {
+      id: 'p1',
+      name: 'Másik',
+      issuerUrl: 'https://id.test/realms/klub',
+      clientId: 'klub-app',
+      hasClientSecret: true,
+      postLogoutRedirectUri: '',
+      requireVerifiedEmail: true,
+      unreadable: false,
+    };
+    const asOwner = (data: object = oidc) => {
+      logIn({ role: 'admin', canManageRoles: true });
+      open({ ...loaded(), 'GET /settings/oidc': { data } });
+    };
+    const tabLabels = () =>
+      [...fixture.nativeElement.querySelectorAll('[role="tab"]')].map((tab: HTMLElement) =>
+        tab.textContent?.trim(),
+      );
+
+    it('another admin has no such tab, and nothing is asked for', () => {
+      logIn({ role: 'admin' });
+      open();
+      expect(tabLabels()).not.toContain('OIDC szolgáltató');
+      expect(fixture.nativeElement.querySelector('.danger-zone')).toBeNull();
+      http.expectNone(`${API}/settings/oidc`);
+    });
+
+    it('the role manager gets the tab, with the warning and no secret anywhere', () => {
+      asOwner();
+      expect(tabLabels()).toContain('OIDC szolgáltató');
+      expect(fixture.nativeElement.querySelector('.danger-zone').textContent).toContain(
+        'VESZÉLYES ZÓNA!!!',
+      );
+      expect(page.oidcServerUrl()).toBe('https://auth.test');
+      expect(page.oidcClientSecret()).toBe('');
+      expect(page.oidcApiToken()).toBe('');
+      expect(page.oidcDirty()).toBe(false);
+      // What to list among the provider's Redirect URIs: all three, as
+      // information only - nothing to type into.
+      const shown = [
+        ...fixture.nativeElement.querySelectorAll('.oidc-authentik .oidc-uri code'),
+      ].map((code: HTMLElement) => code.textContent);
+      expect(shown).toEqual([
+        'http://localhost:8235/auth/callback',
+        'https://api.bodorgo.hu/auth/callback',
+        'https://bodorgo.hu',
+      ]);
+      expect(
+        fixture.nativeElement.querySelector('.oidc-info textarea, .oidc-info input'),
+      ).toBeNull();
+      expect(page.redirectUris().map((r) => r.note)).toEqual([
+        'belépés után ide érkezik – a saját gépeden futó szerver',
+        'belépés után ide érkezik – az éles szerver',
+        'kilépés után ide érkezik (Logout URI)',
+      ]);
+    });
+
+    it('saves only after a yes; an empty secret is sent empty (the server keeps its own)', async () => {
+      asOwner();
+      const confirm = TestBed.inject(ConfirmService);
+      page.oidcClientId.set(' client-2 ');
+      expect(page.oidcDirty()).toBe(true);
+
+      void page.saveOidc();
+      confirm.answer(false);
+      await settle();
+      http.expectNone(`${API}/settings/oidc`);
+
+      void page.saveOidc();
+      confirm.answer(true);
+      await settle();
+      const req = http.expectOne(`${API}/settings/oidc`);
+      expect(req.request.body).toEqual({
+        serverUrl: 'https://auth.test',
+        providerSlug: 'bodorgo',
+        clientId: 'client-2',
+        clientSecret: '',
+        postLogoutRedirectUri: 'https://klub.test',
+        apiToken: '',
+        removeApiToken: false,
+        invitationFlow: 'enrollment-invitation',
+      });
+      req.flush({ data: { ...oidc, clientId: 'client-2' } });
+      respond({ 'GET /settings/membership-fees': loaded()['GET /settings/membership-fees'] });
+      expect(success).toHaveBeenCalledWith('OIDC szolgáltató mentve.');
+      expect(page.oidcDirty()).toBe(false);
+    });
+
+    it('a new secret is sent once and gone from the form afterwards; a refusal is shown', async () => {
+      asOwner();
+      const confirm = TestBed.inject(ConfirmService);
+      page.oidcClientSecret.set('new-secret');
+      page.oidcRemoveApiToken.set(true);
+      void page.saveOidc();
+      confirm.answer(true);
+      await settle();
+      const req = http.expectOne(`${API}/settings/oidc`);
+      expect(req.request.body).toMatchObject({ clientSecret: 'new-secret', removeApiToken: true });
+      req.flush({ data: { ...oidc, hasApiToken: false } });
+      expect(page.oidcClientSecret()).toBe('');
+      expect(page.oidcRemoveApiToken()).toBe(false);
+
+      page.oidcServerUrl.set('https://typo.test');
+      void page.saveOidc();
+      confirm.answer(true);
+      await settle();
+      respond({ 'PUT /settings/oidc': fail(400, 'A szolgáltató nem válaszol.') });
+      expect(error).toHaveBeenCalledWith('A szolgáltató nem válaszol.');
+      expect(page.savingOidc()).toBe(false);
+
+      page.resetOidc();
+      expect(page.oidcServerUrl()).toBe('https://auth.test');
+    });
+
+    it("what is still only in the server's .env can be saved as it is", () => {
+      asOwner({ ...oidc, source: 'env' });
+      expect(page.oidcDirty()).toBe(false);
+      expect(page.oidcNotSavedYet()).toBe(true);
+      expect(fixture.nativeElement.querySelector('.danger-btn').disabled).toBe(false);
+    });
+
+    it('nothing can be saved while the server has no key for the secrets', () => {
+      asOwner({ ...oidc, source: 'env', canSave: false });
+      expect(fixture.nativeElement.textContent).toContain('APP_SECRET_KEY');
+      expect(fixture.nativeElement.querySelector('.oidc-authentik .danger-btn').disabled).toBe(
+        true,
+      );
+    });
+
+    it('once saved here, says the .env lines can go; the way back in is the emergency login', () => {
+      asOwner();
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('törölhetők');
+      expect(text).toContain('LOCAL_LOGIN=true');
+    });
+
+    describe('other providers next to Authentik', () => {
+      const confirm = () => TestBed.inject(ConfirmService);
+      const rows = () =>
+        [...fixture.nativeElement.querySelectorAll('.oidc-provider-list li')] as HTMLElement[];
+
+      it('lists Authentik first, marks the active one, and opens the one clicked', () => {
+        asOwner({ ...oidc, providers: [other] });
+        expect(rows().map((row) => row.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+          'Authentik aktív',
+          'Másik',
+        ]);
+        expect(fixture.nativeElement.querySelector('.oidc-authentik').hidden).toBe(false);
+
+        rows()[1].querySelector('button')!.click();
+        fixture.detectChanges();
+        expect(page.oidcOpen()).toBe('p1');
+        expect(fixture.nativeElement.querySelector('.oidc-authentik').hidden).toBe(true);
+        expect(page.pIssuerUrl()).toBe('https://id.test/realms/klub');
+        expect(page.pClientSecret()).toBe('');
+        expect(page.providerDirty()).toBe(false);
+      });
+
+      it('adds a new one after a yes, and opens it', async () => {
+        asOwner();
+        page.openProvider('new');
+        expect(page.providerDirty()).toBe(false);
+        page.pName.set(' Másik ');
+        page.pIssuerUrl.set('https://id.test/realms/klub');
+        page.pClientId.set('klub-app');
+        page.pClientSecret.set('secret');
+
+        void page.saveProvider();
+        confirm().answer(false);
+        await settle();
+        http.expectNone(`${API}/settings/oidc/providers`);
+
+        void page.saveProvider();
+        confirm().answer(true);
+        await settle();
+        const req = http.expectOne(`${API}/settings/oidc/providers`);
+        expect(req.request.method).toBe('POST');
+        expect(req.request.body).toEqual({
+          name: 'Másik',
+          issuerUrl: 'https://id.test/realms/klub',
+          clientId: 'klub-app',
+          clientSecret: 'secret',
+          postLogoutRedirectUri: '',
+          requireVerifiedEmail: true,
+        });
+        req.flush({ data: { ...oidc, providers: [other], created: 'p1' } });
+        expect(success).toHaveBeenCalledWith('Másik mentve.');
+        expect(page.oidcOpen()).toBe('p1');
+        expect(page.pClientSecret()).toBe('');
+      });
+
+      it('changes one (an empty secret is sent empty), and shows a refusal', async () => {
+        asOwner({ ...oidc, providers: [other] });
+        page.openProvider('p1');
+        page.pVerifiedOnly.set(false);
+        void page.saveProvider();
+        confirm().answer(true);
+        await settle();
+        const req = http.expectOne(`${API}/settings/oidc/providers/p1`);
+        expect(req.request.method).toBe('PUT');
+        expect(req.request.body).toMatchObject({ clientSecret: '', requireVerifiedEmail: false });
+        req.flush({ data: { ...oidc, providers: [{ ...other, requireVerifiedEmail: false }] } });
+        expect(page.providerDirty()).toBe(false);
+
+        page.pIssuerUrl.set('https://typo.test');
+        void page.saveProvider();
+        confirm().answer(true);
+        await settle();
+        respond({ 'PUT /settings/oidc/providers/p1': fail(400, 'A szolgáltató nem válaszol.') });
+        expect(error).toHaveBeenCalledWith('A szolgáltató nem válaszol.');
+        expect(page.savingProvider()).toBe(false);
+      });
+
+      it('the radio button makes one the active only after a yes', async () => {
+        asOwner({ ...oidc, providers: [other] });
+        const radio = rows()[1].querySelector('input') as HTMLInputElement;
+        radio.click();
+        confirm().answer(false);
+        await settle();
+        http.expectNone(`${API}/settings/oidc/active`);
+
+        radio.click();
+        expect(confirm().pending()?.title).toBe('VESZÉLYES ZÓNA!!!');
+        confirm().answer(true);
+        await settle();
+        const req = http.expectOne(`${API}/settings/oidc/active`);
+        expect(req.request.body).toEqual({ provider: 'p1' });
+        req.flush({ data: { ...oidc, active: 'p1', providers: [other] } });
+        fixture.detectChanges();
+        expect(success).toHaveBeenCalledWith('Az aktív szolgáltató: Másik.');
+        expect(rows()[1].textContent).toContain('aktív');
+
+        // The one already active: nothing to ask.
+        void page.activateProvider('p1');
+        await settle();
+        expect(confirm().pending()).toBeNull();
+
+        void page.activateProvider('authentik');
+        confirm().answer(true);
+        await settle();
+        respond({ 'PUT /settings/oidc/active': fail(400, 'Nem válaszol.') });
+        expect(error).toHaveBeenCalledWith('Nem válaszol.');
+        expect(page.oidc()?.active).toBe('p1');
+      });
+
+      it('deletes one after a yes - but the active one has no working delete button', async () => {
+        asOwner({ ...oidc, active: 'p1', providers: [other] });
+        page.openProvider('p1');
+        fixture.detectChanges();
+        const button = fixture.nativeElement.querySelector(
+          '.oidc-other .actions .outline-btn',
+        ) as HTMLButtonElement;
+        expect(button.disabled).toBe(true);
+
+        page.oidc.set({ ...page.oidc()!, active: 'authentik' });
+        void page.deleteProvider('p1');
+        confirm().answer(true);
+        await settle();
+        const req = http.expectOne(`${API}/settings/oidc/providers/p1`);
+        expect(req.request.method).toBe('DELETE');
+        req.flush({ data: oidc });
+        expect(success).toHaveBeenCalledWith('Másik törölve.');
+        expect(page.oidcOpen()).toBe('authentik');
+
+        void page.deleteProvider('nincs'); // not there: nothing happens
+        await settle();
+        expect(confirm().pending()).toBeNull();
+      });
+    });
+  });
+
   describe('birthday and rank celebrations', () => {
     let play: ReturnType<typeof vi.spyOn>;
 

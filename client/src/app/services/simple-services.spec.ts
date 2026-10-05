@@ -317,6 +317,24 @@ describe('SettingsService', () => {
   const wallet = { payeeEmail: 'a@b.hu', withdrawName: 'Klub', withdrawIban: 'HU00' };
   const method: PaymentMethodSettings = { enabled: true, feePercent: 1, feeFixed: 0, feeMin: 0 };
   const birthday = { enabled: true, effect: 'confetti' as never, message: 'Boldog, {név}!' };
+  const provider = {
+    name: 'Másik',
+    issuerUrl: 'https://id.test',
+    clientId: 'klub-app',
+    clientSecret: '',
+    postLogoutRedirectUri: '',
+    requireVerifiedEmail: true,
+  };
+  const oidc = {
+    serverUrl: 'https://auth.test',
+    providerSlug: 'bodorgo',
+    clientId: 'client-1',
+    clientSecret: '',
+    postLogoutRedirectUri: '',
+    apiToken: '',
+    removeApiToken: false,
+    invitationFlow: 'enrollment-invitation',
+  };
 
   itSendsRequests([
     [
@@ -415,6 +433,41 @@ describe('SettingsService', () => {
       'PUT',
       `${settings}/rank`,
       birthday,
+    ],
+    ['getOidcSettings', () => service().getOidcSettings(), 'GET', `${settings}/oidc`],
+    [
+      'updateOidcSettings',
+      () => service().updateOidcSettings(oidc),
+      'PUT',
+      `${settings}/oidc`,
+      oidc,
+    ],
+    [
+      'addOidcProvider',
+      () => service().addOidcProvider(provider),
+      'POST',
+      `${settings}/oidc/providers`,
+      provider,
+    ],
+    [
+      'updateOidcProvider',
+      () => service().updateOidcProvider('p1', provider),
+      'PUT',
+      `${settings}/oidc/providers/p1`,
+      provider,
+    ],
+    [
+      'deleteOidcProvider',
+      () => service().deleteOidcProvider('p1'),
+      'DELETE',
+      `${settings}/oidc/providers/p1`,
+    ],
+    [
+      'setActiveOidcProvider',
+      () => service().setActiveOidcProvider('p1'),
+      'PUT',
+      `${settings}/oidc/active`,
+      { provider: 'p1' },
     ],
     ['getPresident', () => service().getPresident(), 'GET', `${settings}/president`],
     [

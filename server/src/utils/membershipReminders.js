@@ -73,8 +73,7 @@ export async function unpaidMembers(year) {
     .sort((a, b) => a.name.localeCompare(b.name, 'hu'));
 }
 
-const paymentPageUrl = () =>
-  `${(config.oridzs.clientBaseUrl || '').replace(/\/$/, '')}/klub/felhasznalok`;
+const paymentPageUrl = () => `${(config.clientBaseUrl || '').replace(/\/$/, '')}/klub/felhasznalok`;
 
 const forint = (n) => new Intl.NumberFormat('hu-HU').format(n);
 

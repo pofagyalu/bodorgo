@@ -123,6 +123,69 @@ export interface BirthdaySettings {
   message: string; // {név} = the given name
 }
 
+// OIDC szolgáltató (Beállítások, the role manager only): the Authentik
+// provider people log in through, and the token its invitations are made
+// with. The two secrets never come from the server - only whether there
+// is one.
+export interface OidcSettings {
+  serverUrl: string;
+  providerSlug: string;
+  clientId: string;
+  hasClientSecret: boolean;
+  postLogoutRedirectUri: string;
+  hasApiToken: boolean;
+  invitationFlow: string;
+  source: 'database' | 'env'; // saved here, or still the server's .env
+  unreadable: boolean; // the saved secrets can't be read with the server's key
+  canSave: boolean; // the server has the key its secrets are encrypted with
+  issuer: string;
+  redirectUri: string; // this server's own callback
+  // Information for setting a provider up: everything to list among its
+  // Redirect URIs (a developer's own server, the live API, the live site).
+  redirectUris: string[];
+  localLogin: boolean; // LOCAL_LOGIN=true: the emergency login is on
+  // Which provider everybody logs in through: 'authentik', or the id of
+  // one of the others added next to it.
+  active: string;
+  providers: OidcProvider[];
+}
+
+// Another OIDC provider next to Authentik: any that describes itself at
+// its Issuer URL.
+export interface OidcProvider {
+  id: string;
+  name: string;
+  issuerUrl: string;
+  clientId: string;
+  hasClientSecret: boolean;
+  postLogoutRedirectUri: string;
+  // Only people whose e-mail the provider says is confirmed get in.
+  requireVerifiedEmail: boolean;
+  unreadable: boolean; // its secret can't be read with the server's key
+}
+
+// What's sent of one: an empty secret keeps the one it has.
+export interface OidcProviderInput {
+  name: string;
+  issuerUrl: string;
+  clientId: string;
+  clientSecret: string;
+  postLogoutRedirectUri: string;
+  requireVerifiedEmail: boolean;
+}
+
+// What's sent: an empty secret keeps the one in use.
+export interface OidcSettingsUpdate {
+  serverUrl: string;
+  providerSlug: string;
+  clientId: string;
+  clientSecret: string;
+  postLogoutRedirectUri: string;
+  apiToken: string;
+  removeApiToken: boolean;
+  invitationFlow: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private http = inject(HttpClient);
@@ -250,6 +313,37 @@ export class SettingsService {
   // The seal as it looks now (v: a fresh picture after a name change).
   presidentSealUrl(v: string) {
     return `${this.apiUrl}/president/seal.png?v=${encodeURIComponent(v)}`;
+  }
+
+  // --- OIDC szolgáltató (the role manager only) ---
+
+  getOidcSettings() {
+    return this.http.get<{ data: OidcSettings }>(`${this.apiUrl}/oidc`);
+  }
+
+  updateOidcSettings(settings: OidcSettingsUpdate) {
+    return this.http.put<{ data: OidcSettings }>(`${this.apiUrl}/oidc`, settings);
+  }
+
+  // Another provider next to Authentik; `created` is its id.
+  addOidcProvider(provider: OidcProviderInput) {
+    return this.http.post<{ data: OidcSettings & { created: string } }>(
+      `${this.apiUrl}/oidc/providers`,
+      provider,
+    );
+  }
+
+  updateOidcProvider(id: string, provider: OidcProviderInput) {
+    return this.http.put<{ data: OidcSettings }>(`${this.apiUrl}/oidc/providers/${id}`, provider);
+  }
+
+  deleteOidcProvider(id: string) {
+    return this.http.delete<{ data: OidcSettings }>(`${this.apiUrl}/oidc/providers/${id}`);
+  }
+
+  // Which one everybody logs in through: 'authentik' or a provider's id.
+  setActiveOidcProvider(provider: string) {
+    return this.http.put<{ data: OidcSettings }>(`${this.apiUrl}/oidc/active`, { provider });
   }
 
   // The reminder as a member would get it, to the admin themselves.

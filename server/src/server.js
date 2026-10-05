@@ -16,6 +16,8 @@ import {
   notifyAdminsIfAllMembersPaid,
 } from './utils/membershipReminders.js';
 import { syncRoleManager } from './utils/roleManager.js';
+import { importOidcSettingsFromEnv } from './utils/oidcSettings.js';
+import { migrateUserIdentities } from './utils/userIdentities.js';
 import { ensureFutokodok } from './utils/futokod.js';
 import { FutokorCourse } from './models/futokorModels.js';
 
@@ -62,6 +64,13 @@ mongoose
     // (each makes its own).
     // The role manager (INITIAL_ADMIN_USER) - see utils/roleManager.js.
     syncRoleManager().catch((err) => logger.error(`Role manager sync failed: ${err.message}`));
+
+    // The OIDC provider's settings: copied from .env the first time (see
+    // utils/oidcSettings.js), then everyone's id at it noted as their
+    // identity there (utils/userIdentities.js).
+    importOidcSettingsFromEnv()
+      .then(migrateUserIdentities)
+      .catch((err) => logger.error(`OIDC settings / identities at start failed: ${err.message}`));
 
     // Futókör: the courses' index changed (a user's own track has no tour)
     // - an index made before that is replaced.

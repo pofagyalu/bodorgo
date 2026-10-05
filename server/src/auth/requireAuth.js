@@ -15,6 +15,15 @@ export default async function requireAuth(req, res, next) {
   next();
 }
 
+// The one admin who may change roles (utils/roleManager.js) - and the only
+// one for what can lock everybody out (Beállítások → OIDC szolgáltató).
+export const roleManagerOnly = (req, res, next) => {
+  if (!req.user.canManageRoles) {
+    return next(new AppError('Ezt csak a szerepkör-kezelő admin teheti meg.', 403));
+  }
+  next();
+};
+
 export const restrictTo =
   (...roles) =>
   (req, res, next) => {

@@ -72,22 +72,29 @@ const config = {
   cookie: {
     secret: process.env.COOKIE_SECRET,
   },
-  oridzs: {
-    server: process.env.AUTHENTIK_SERVER_URL,
+  // The client's full address: where the API sends people after login, and
+  // what links in e-mails and on the Futókör cards point at.
+  clientBaseUrl: process.env.CLIENT_BASE_URL,
+  // The OIDC provider (Authentik) as .env has it. Since Beállítások → OIDC
+  // szolgáltató these are set in the app and kept in the database (see
+  // utils/oidcSettings.js); the .env lines are only what the first start
+  // copies from, and can be taken out once login works from the saved ones.
+  // apiToken/invitationFlow: invitations through Authentik's REST API
+  // (utils/authentikInvitations.js) - the bodorgo-app service account's
+  // token, and the invitation-only registration flow's slug.
+  oidcEnv: {
+    serverUrl: process.env.AUTHENTIK_SERVER_URL,
+    providerSlug: process.env.AUTHENTIK_PROVIDER_SLUG,
     clientId: process.env.AUTHENTIK_CLIENT_ID,
     clientSecret: process.env.AUTHENTIK_CLIENT_SECRET,
-    redirectUri: process.env.AUTHENTIK_REDIRECT_URI,
-    providerSlug: process.env.AUTHENTIK_PROVIDER_SLUG,
     postLogoutRedirectUri: process.env.AUTHENTIK_POSTLOGOUT_URI,
-    clientBaseUrl: process.env.CLIENT_BASE_URL,
-  },
-  // Invitations through Authentik's REST API (utils/authentikInvitations.js):
-  // the bodorgo-app service account's token, and the invitation-only
-  // registration flow's slug.
-  authentik: {
     apiToken: process.env.AUTHENTIK_API_TOKEN,
-    invitationFlow: process.env.AUTHENTIK_INVITATION_FLOW || 'enrollment-invitation',
+    invitationFlow: process.env.AUTHENTIK_INVITATION_FLOW,
   },
+  // What the secrets kept in the database are encrypted with (see
+  // utils/secretBox.js). Without it they can't be saved in the app; with
+  // another one the saved ones can't be read.
+  appSecretKey: process.env.APP_SECRET_KEY,
   clientOrigin: process.env.CLIENT_ORIGIN, // comma-separated list of allowed CORS origins
   openRouteService: {
     apiKey: process.env.OPENROUTESERVICE_API_KEY,
@@ -127,6 +134,13 @@ const config = {
   // The one admin who may change roles (utils/roleManager.js) - their
   // e-mail. Checked at every start; changing it hands the app over.
   initialAdminUser: process.env.INITIAL_ADMIN_USER?.trim().toLowerCase() || null,
+  // The emergency way in (authOidcController.js's localLogin), for when
+  // there is no working OIDC provider: with LOCAL_LOGIN=true the login page
+  // asks for an e-mail and a password, and lets in one person only - the
+  // INITIAL_ADMIN_USER with this password. It is never stored or changed in
+  // the app; with LOCAL_LOGIN off it does nothing.
+  initialAdminPassword: process.env.INITIAL_ADMIN_PASSWORD || null,
+  localLogin: process.env.LOCAL_LOGIN === 'true',
   // Web push notifications (see utils/push.js) - off when the keys aren't
   // set. The same key pair on every server: a device subscribed through
   // one can only be reached with that pair.
