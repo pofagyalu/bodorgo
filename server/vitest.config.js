@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
-// The server's automated tests (see tests/README.md). Every run uses its
+// The server's automated tests (see the root README). Every run uses its
 // own throwaway in-memory MongoDB (tests/globalSetup.js) - never the real
 // database, which local development shares with production.
 export default defineConfig({

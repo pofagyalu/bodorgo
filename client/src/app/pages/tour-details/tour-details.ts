@@ -123,7 +123,7 @@ export class TourDetails {
   allUsers = signal<AdminUser[]>([]);
   private pickerDataRequested = false;
 
-  // Gallery (see tour-photos-implementation-plan.md) - only ever fetched
+  // Gallery (see the root README's "Tour photos") - only ever fetched
   // for a logged-in viewer (the route is requireAuth-gated server-side
   // anyway), so an anonymous visitor never triggers a guaranteed 401.
   // Deliberately not shown as a thumbnail grid on the page itself (that

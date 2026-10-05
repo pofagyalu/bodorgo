@@ -15,7 +15,7 @@
 #
 # Only when a pull request is opened/updated and when something lands on
 # main - not on every push to a work branch - to keep the load on the NAS
-# small (see ci/forgejo-runner/README.md). A PR with a lint error or a
+# small (see the README's "Tests, lint and CI"). A PR with a lint error or a
 # failing test can't be merged. (The workflow keeps its old name,
 # server-tests, because the required checks are named after it.)
 name: server-tests
@@ -27,7 +27,7 @@ on:
 
 jobs:
   lint:
-    # The label the runner was registered with (ci/forgejo-runner/README.md).
+    # The label the runner was registered with (ci/forgejo-runner/data/config.yml).
     runs-on: docker
     container:
       image: node:22-bookworm

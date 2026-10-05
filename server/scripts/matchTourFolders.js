@@ -1,5 +1,5 @@
-// One-time helper for the tour photo gallery (see
-// tour-photos-implementation-plan.md): every folder under PHOTOS_ROOT ends
+// One-time helper for the tour photo gallery (see the root README's
+// "Tour photos"): every folder under PHOTOS_ROOT ends
 // in a roman numeral that's identical to that tour's `order` field -
 // confirmed against all 31 real folders (e.g. "...bodorgo_xxii" is the
 // 22nd tour, "...MTB_bodorgo_xxix" the 29th). This fills in

@@ -4,8 +4,8 @@
 // of already-recorded photos across re-syncs - new ones are just appended
 // after them. Also generates a small .webp thumbnail per newly-added photo
 // via sharp, written to THUMBNAILS_ROOT/<sourceFolder>/ - sharp only ever
-// runs here, never inside the bundled server (see
-// tour-photos-implementation-plan.md for why that split matters).
+// runs here, never inside the bundled server (its native part can't be
+// bundled).
 //
 // Also prunes the other direction: any tour.images entry whose file no
 // longer exists in the folder (deleted or renamed by hand) is removed,
