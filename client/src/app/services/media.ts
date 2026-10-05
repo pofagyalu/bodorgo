@@ -9,7 +9,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 // uploaded here.
 export interface MediaVideo {
   id: string;
-  // An admin's own title when one was given, otherwise the discovered one.
+  // Its own title when it was given one, otherwise the discovered one.
   title: string;
   // The title read from the file name.
   discoveredTitle: string;
@@ -20,6 +20,9 @@ export interface MediaVideo {
   hasSubtitles: boolean;
   // Its length - null if the server couldn't read it from the file.
   durationSeconds?: number | null;
+  // The role manager only: the only members who see it - empty: every
+  // member does.
+  viewers?: string[];
 }
 
 export interface MediaVideoCategory {
@@ -34,7 +37,13 @@ export interface MediaVideoCategory {
 // (see server/src/photos/mediaPhotoSync.js), recorded by "Új média
 // felfedezése".
 export interface MediaPhoto {
+  // Only to address the photo by - never shown.
   filename: string;
+  // The name it was given - most photos have none.
+  title?: string | null;
+  // The role manager only: the only members who see it - empty: every
+  // member does.
+  viewers?: string[];
   width: number;
   height: number;
   takenAt: string | null;
@@ -44,6 +53,12 @@ export interface MediaPhotoCategory {
   key: string; // the folder's name
   title: string;
   photos: MediaPhoto[];
+}
+
+// What the role manager sets for a video or a photo.
+export interface MediaSettings {
+  title: string;
+  viewers: string[];
 }
 
 // "Új média felfedezése" - what the last (or running) discovery found.
@@ -89,13 +104,13 @@ export class MediaService {
   readonly error = signal(false);
   private loaded = false;
 
-  // Admin: a video's own title, instead of the one from its file name -
-  // an empty one goes back to that. The list here follows.
-  setVideoTitle(categoryKey: string, id: string, title: string) {
+  // The role manager: a video's own title, instead of the one from its file name (an
+  // empty one goes back to that), and who may see it. The list here follows.
+  updateVideo(categoryKey: string, id: string, settings: MediaSettings) {
     return this.http
       .patch<{
-        data: { video: { id: string; title: string; discoveredTitle: string } };
-      }>(`${this.apiUrl}/${categoryKey}/${id}`, { title })
+        data: { video: { id: string; title: string; discoveredTitle: string; viewers: string[] } };
+      }>(`${this.apiUrl}/${categoryKey}/${id}`, settings)
       .pipe(
         tap((res) =>
           this.categories.update((categories) =>
@@ -105,7 +120,9 @@ export class MediaService {
                 : {
                     ...c,
                     videos: c.videos.map((v) =>
-                      v.id === id ? { ...v, title: res.data.video.title } : v,
+                      v.id === id
+                        ? { ...v, title: res.data.video.title, viewers: res.data.video.viewers }
+                        : v,
                     ),
                   },
             ),
@@ -175,6 +192,33 @@ export class MediaService {
           this.photosLoading.set(false);
         },
       });
+  }
+
+  // The role manager: a photo's name (an empty one: none) and who may see it. The
+  // list here follows.
+  updatePhoto(categoryKey: string, filename: string, settings: MediaSettings) {
+    return this.http
+      .patch<{
+        data: { photo: { filename: string; title: string | null; viewers: string[] } };
+      }>(this.photoUrl(categoryKey, filename), settings)
+      .pipe(
+        tap((res) =>
+          this.photoCategories.update((categories) =>
+            categories.map((c) =>
+              c.key !== categoryKey
+                ? c
+                : {
+                    ...c,
+                    photos: c.photos.map((p) =>
+                      p.filename === filename
+                        ? { ...p, title: res.data.photo.title, viewers: res.data.photo.viewers }
+                        : p,
+                    ),
+                  },
+            ),
+          ),
+        ),
+      );
   }
 
   photoUrl(category: string, filename: string): string {

@@ -8,6 +8,7 @@ import { checkerTransparentPngs } from './pswp-checker';
 // photo routes); the smaller sizes come from ?w= (see shared/photo-sizes).
 export interface GalleryPhoto {
   name: string; // the file name - the alt text, and PNGs get a checkerboard
+  caption?: string | null; // a name given to it (Média → Fotók) - shown in the top bar
   width: number;
   height: number;
   thumbUrl: string;
@@ -43,7 +44,7 @@ const PHONE_SVG =
 // the tour albums' and Média → Fotók's alike: the photo in the size the
 // screen needs (its thumbnail as the placeholder), and in the top bar, next
 // to the zoom: full screen, download - and per page: download all (zip),
-// the admin's restrict lock, a phone icon on phone photos. A strip of
+// the admin's restrict lock, a phone icon on phone photos, a photo's name. A strip of
 // thumbnails along the bottom jumps to any photo. The viewer lives on
 // <body>, outside Angular - its buttons and strip are plain DOM, styled in
 // styles.scss.
@@ -89,6 +90,24 @@ export class PhotoGalleryService {
           el.classList.add('pswp__mobile-indicator');
           el.title = 'Mobillal készült';
           const refresh = () => (el.hidden = !current()?.mobile);
+          pswp.on('change', refresh);
+          refresh();
+        },
+      });
+    }
+
+    // A photo with a name: the name in the top bar while it's the one open.
+    if (photos.some((p) => p.caption)) {
+      ui.registerElement({
+        name: 'caption',
+        order: 6,
+        isButton: false,
+        onInit: (el) => {
+          el.classList.add('pswp__caption');
+          const refresh = () => {
+            el.textContent = current()?.caption ?? '';
+            el.hidden = !current()?.caption;
+          };
           pswp.on('change', refresh);
           refresh();
         },

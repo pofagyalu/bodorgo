@@ -1,12 +1,4 @@
-import {
-  Component,
-  computed,
-  ElementRef,
-  HostListener,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
@@ -15,6 +7,7 @@ import { PeriodOption, PeriodPicker } from '../../../components/period-picker/pe
 import { MediaService, MediaVideo, MediaVideoCategory } from '../../../services/media';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
+import { MediaEdit, MediaEditDialog } from '../../../shared/media-edit-dialog/media-edit-dialog';
 import { VideoCard } from '../../../shared/video-card/video-card';
 import { VideoPlayer } from '../../../shared/video-player/video-player';
 
@@ -35,7 +28,7 @@ const EDGE_GAP = 8;
 
 @Component({
   selector: 'app-media-videos',
-  imports: [MatIconModule, PeriodPicker, VideoCard, VideoPlayer],
+  imports: [MatIconModule, MediaEditDialog, PeriodPicker, VideoCard, VideoPlayer],
   templateUrl: './videos.html',
   styleUrl: './videos.scss',
 })
@@ -128,43 +121,33 @@ export class Videos {
     return this.media.subtitlesUrl(p.category.key, p.video.id);
   }
 
-  // --- Admin: a video's own title (the pencil on its card) ---
+  // --- The role manager: a video's own title and who may see it (the pencil on its
+  // card, shared/media-edit-dialog) ---
 
   private auth = inject(AuthService);
   private notifications = inject(NotificationsService);
-  isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  // Only the role manager's - no other admin's.
+  canEdit = computed(() => !!this.auth.user()?.canManageRoles);
 
   editing = signal<Playing | null>(null);
-  editTitle = signal('');
   savingEdit = signal(false);
   editError = signal<string | null>(null);
-  private titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
 
   startEdit(category: MediaVideoCategory, video: MediaVideo) {
-    this.editTitle.set(video.title);
     this.editError.set(null);
     this.editing.set({ category, video });
-    // Once the dialog is there: the cursor in the field, the title selected.
-    setTimeout(() => this.titleInput()?.nativeElement.select());
   }
 
-  @HostListener('document:keydown.escape')
-  cancelEdit() {
-    if (!this.savingEdit()) this.editing.set(null);
-  }
-
-  // An emptied title goes back to the one from the file name.
-  saveEdit(event: Event) {
-    event.preventDefault();
+  saveEdit(edit: MediaEdit) {
     const e = this.editing();
     if (!e || this.savingEdit()) return;
     this.savingEdit.set(true);
     this.editError.set(null);
-    this.media.setVideoTitle(e.category.key, e.video.id, this.editTitle().trim()).subscribe({
+    this.media.updateVideo(e.category.key, e.video.id, edit).subscribe({
       next: () => {
         this.savingEdit.set(false);
         this.editing.set(null);
-        this.notifications.addSuccess('Cím mentve');
+        this.notifications.addSuccess('Mentve');
       },
       error: (err) => {
         this.savingEdit.set(false);

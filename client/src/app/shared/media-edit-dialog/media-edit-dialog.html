@@ -1,0 +1,88 @@
+<div class="backdrop" (click)="cancel()">
+  <form class="dialog" (click)="$event.stopPropagation()" (submit)="save($event)">
+    <h2>{{ heading() }}</h2>
+
+    <label class="field-label" for="media-edit-title">{{ titleLabel() }}</label>
+    <input
+      #titleInput
+      id="media-edit-title"
+      class="title-input"
+      type="text"
+      maxlength="200"
+      [value]="editTitle()"
+      (input)="editTitle.set($any($event.target).value)"
+    />
+    @if (discoveredLabel()) {
+      <p class="note">
+        {{ discoveredLabel() }}: <strong>{{ discoveredTitle() }}</strong>
+        @if (editTitle().trim() !== discoveredTitle()) {
+          <button type="button" class="link-btn" (click)="editTitle.set(discoveredTitle())">
+            visszaállítás
+          </button>
+        }
+      </p>
+    }
+
+    <fieldset class="access">
+      <legend class="field-label">Ki láthatja?</legend>
+      <label class="choice">
+        <input
+          type="radio"
+          name="media-edit-access"
+          [checked]="!restricted()"
+          (change)="restricted.set(false); nobodyChosen.set(false)"
+        />
+        Minden klubtag
+      </label>
+      <label class="choice">
+        <input
+          type="radio"
+          name="media-edit-access"
+          [checked]="restricted()"
+          (change)="restricted.set(true)"
+        />
+        Csak a kiválasztott tagok
+        @if (restricted() && chosen().size) {
+          <span class="chosen-count">{{ chosen().size }}</span>
+        }
+      </label>
+
+      @if (restricted()) {
+        @if (membersLoading()) {
+          <p class="note">Tagok betöltése…</p>
+        } @else if (membersError()) {
+          <p class="error">Nem sikerült betölteni a tagokat.</p>
+        } @else {
+          <div class="members">
+            @for (m of members(); track m._id) {
+              <label class="choice">
+                <input type="checkbox" [checked]="chosen().has(m._id)" (change)="toggle(m._id)" />
+                {{ m.name }}
+              </label>
+            }
+          </div>
+        }
+        <p class="note">Az adminok mindig mindent látnak.</p>
+      }
+    </fieldset>
+
+    @if (nobodyChosen()) {
+      <p class="error">Válassz ki legalább egy tagot.</p>
+    }
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+    <div class="actions">
+      <button type="button" class="outline-btn" [disabled]="saving()" (click)="cancel()">
+        Mégse
+      </button>
+      <button
+        type="submit"
+        class="primary-btn"
+        [disabled]="saving() || (restricted() && (membersLoading() || membersError()))"
+      >
+        {{ saving() ? 'Mentés…' : 'Mentés' }}
+      </button>
+    </div>
+  </form>
+</div>

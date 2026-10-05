@@ -4,6 +4,7 @@ import AppError from '../utils/appError.js';
 import { mp4DurationSeconds } from '../utils/mp4Duration.js';
 import config from '../config.js';
 import MediaVideoTitle from '../models/mediaVideoTitleModel.js';
+import { canEditMedia, maySee, ownSettingsFrom, saveOwnSettings } from '../utils/mediaAccess.js';
 import {
   VIDEO_EXTENSIONS,
   findSubtitlePath,
@@ -15,9 +16,11 @@ import {
 // The videos aren't stored in the database: each category is a
 // Jellyfin-organized folder under MEDIA_ROOT (next to the tour videos'
 // a-bodorgo-klan), and whatever is in it is what the page shows, covers
-// included - add or replace a file there and the page follows. The one
-// thing that is stored: an admin's own title for a video
-// (mediaVideoTitleModel.js), shown instead of the one from its file name.
+// included - add or replace a file there and the page follows. What is
+// stored is what the role manager set for a video (mediaVideoTitleModel.js): its
+// own title, shown instead of the one from its file name, and the members
+// who may see it - anyone else (but an admin) doesn't get it in the list,
+// and can't fetch it, its cover or its subtitles either.
 //
 // Folder -> the name shown on the page, in display order (also the order
 // of the Média sidebar's sub-menu). The folder name is only used to find
@@ -143,18 +146,24 @@ function sendCover(res, filePath) {
 // GET /media/videos - every category with its videos, newest first. Empty
 // categories are left out.
 export const listMediaVideos = async (req, res) => {
-  // The admins' own titles, by "category/path".
-  const ownTitles = new Map(
-    (await MediaVideoTitle.find().lean()).map((t) => [`${t.category}/${t.path}`, t.title]),
+  const canEdit = canEditMedia(req.user);
+  // What was set for them, by "category/path".
+  const settings = new Map(
+    (await MediaVideoTitle.find().lean()).map((s) => [`${s.category}/${s.path}`, s]),
   );
   const categories = MEDIA_VIDEO_CATEGORIES.map((category) => {
     const root = categoryRoot(category);
     const videos = findVideoFiles(root)
+      .filter((relPath) => maySee(req.user, settings.get(`${category.key}/${relPath}`)))
       .map((relPath) => {
         const parsed = parseVideoName(relPath);
+        const own = settings.get(`${category.key}/${relPath}`);
         return {
           id: encodeId(relPath),
-          title: ownTitles.get(`${category.key}/${relPath}`) ?? parsed.title,
+          title: own?.title || parsed.title,
+          // Who may see it (empty: every member) - only the one who sets it
+          // is told.
+          ...(canEdit ? { viewers: (own?.viewers ?? []).map(String) } : {}),
           // What the file name says - what an emptied title goes back to.
           discoveredTitle: parsed.title,
           year: parsed.year,
@@ -186,8 +195,22 @@ export const listMediaVideos = async (req, res) => {
   res.status(200).json({ status: 'success', data: { categories } });
 };
 
-// Resolves :category/:id to a real video file inside that category folder.
-function videoPath(req) {
+// A file's path the one way it can be compared: the same file can be
+// asked for in other spellings (upper/lower case on the NAS, a Windows
+// short name).
+function canonicalPath(fullPath) {
+  let real = fullPath;
+  try {
+    real = fs.realpathSync.native(fullPath);
+  } catch {
+    // Not there (any more) - compared as written.
+  }
+  return real.normalize('NFC').toLowerCase();
+}
+
+// Resolves :category/:id to a real video file inside that category folder -
+// one this user may see: a video kept for others is, to them, not there.
+async function videoPath(req) {
   const root = categoryRoot(categoryOf(req.params.category));
   let relPath;
   try {
@@ -200,46 +223,51 @@ function videoPath(req) {
   }
   const fullPath = resolveVideoPath(root, relPath);
   if (!fs.existsSync(fullPath)) throw new AppError('Nincs ilyen videó.', 404);
+
+  if (req.user.role !== 'admin') {
+    // The category's videos this user is not among the viewers of.
+    const hidden = await MediaVideoTitle.find({
+      category: req.params.category,
+      'viewers.0': { $exists: true },
+      viewers: { $ne: req.user._id },
+    }).lean();
+    const asked = hidden.length ? canonicalPath(fullPath) : null;
+    if (hidden.some((h) => canonicalPath(resolveVideoPath(root, h.path)) === asked)) {
+      throw new AppError('Nincs ilyen videó.', 404);
+    }
+  }
   return { root, relPath, fullPath };
 }
 
-// PATCH /media/videos/:category/:id - admin: the video's own title, shown
-// instead of the one from its file name. An empty title (or the file
-// name's own) takes the correction away.
-export const updateMediaVideoTitle = async (req, res) => {
-  const { relPath } = videoPath(req);
+// PATCH /media/videos/:category/:id - the role manager: the video's own title, shown
+// instead of the one from its file name, and who may see it. Only what is
+// sent changes. An empty title (or the file name's own) takes the
+// correction away; an empty viewers list gives the video back to every
+// member.
+export const updateMediaVideo = async (req, res) => {
+  const { relPath } = await videoPath(req);
   const category = req.params.category;
   const discoveredTitle = parseVideoName(relPath).title;
-  if (req.body?.title != null && typeof req.body.title !== 'string') {
-    throw new AppError('A cím szöveg legyen.', 400);
-  }
-  const title = (req.body?.title ?? '').trim();
-  if (title.length > 200) throw new AppError('A cím legfeljebb 200 karakter lehet.', 400);
-
-  if (!title || title === discoveredTitle) {
-    await MediaVideoTitle.deleteOne({ category, path: relPath });
-  } else {
-    await MediaVideoTitle.findOneAndUpdate(
-      { category, path: relPath },
-      { title },
-      { upsert: true, runValidators: true },
-    );
-  }
+  const own = await MediaVideoTitle.findOne({ category, path: relPath }).lean();
+  const { title, viewers } = await ownSettingsFrom(req.body, own, discoveredTitle);
+  await saveOwnSettings(MediaVideoTitle, { category, path: relPath }, { title, viewers });
   res.status(200).json({
     status: 'success',
-    data: { video: { id: req.params.id, title: title || discoveredTitle, discoveredTitle } },
+    data: {
+      video: { id: req.params.id, title: title || discoveredTitle, discoveredTitle, viewers },
+    },
   });
 };
 
 // GET /media/videos/:category/:id/video - res.sendFile handles Range
 // requests itself, so seeking just works (same as the tour videos).
 export const getMediaVideo = async (req, res) => {
-  res.sendFile(videoPath(req).fullPath);
+  res.sendFile((await videoPath(req)).fullPath);
 };
 
 // GET /media/videos/:category/:id/cover
 export const getMediaVideoCover = async (req, res) => {
-  const { root, relPath } = videoPath(req);
+  const { root, relPath } = await videoPath(req);
   const thumb = findThumb(root, relPath);
   if (!thumb) throw new AppError('Ehhez a videóhoz nincs borítókép.', 404);
   sendCover(res, thumb);
@@ -248,7 +276,7 @@ export const getMediaVideoCover = async (req, res) => {
 // GET /media/videos/:category/:id/subtitles.vtt - 404 when there's none;
 // the page only asks for it when the list said hasSubtitles.
 export const getMediaVideoSubtitles = async (req, res) => {
-  const { root, relPath } = videoPath(req);
+  const { root, relPath } = await videoPath(req);
   const subtitlePath = findSubtitlePath(root, relPath);
   if (!subtitlePath) throw new AppError('Ehhez a videóhoz nincs felirat.', 404);
   res.setHeader('Content-Type', 'text/vtt; charset=utf-8');

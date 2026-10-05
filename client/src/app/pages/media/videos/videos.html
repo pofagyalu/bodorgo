@@ -59,14 +59,19 @@
                 [tooltip]="v.title + (v.year ? ' (' + v.year + ')' : '')"
                 (playClicked)="play(c, v)"
               />
-              <!-- Admin: the title, when the one from the file name isn't
-                   the best. -->
-              @if (isAdmin()) {
+              <!-- The role manager: its title and who may see it - and a lock on one
+                   that isn't every member's. -->
+              @if (canEdit()) {
+                @if (v.viewers?.length; as count) {
+                  <span class="restricted-badge" [title]="'Csak ' + count + ' tag láthatja'">
+                    <mat-icon>lock</mat-icon>{{ count }}
+                  </span>
+                }
                 <button
                   type="button"
                   class="title-edit-btn"
-                  title="Cím szerkesztése"
-                  aria-label="Cím szerkesztése"
+                  title="Szerkesztés"
+                  aria-label="Szerkesztés"
                   (click)="startEdit(c, v)"
                 >
                   <mat-icon>edit</mat-icon>
@@ -90,38 +95,17 @@
   />
 }
 
-<!-- Admin: a video's title. -->
+<!-- The role manager: a video's title and who may see it. -->
 @if (editing(); as e) {
-  <div class="title-modal-backdrop" (click)="cancelEdit()">
-    <form class="title-modal" (click)="$event.stopPropagation()" (submit)="saveEdit($event)">
-      <h2>Videó címe</h2>
-      <input
-        #titleInput
-        type="text"
-        maxlength="200"
-        aria-label="Videó címe"
-        [value]="editTitle()"
-        (input)="editTitle.set($any($event.target).value)"
-      />
-      <p class="title-modal-note">
-        A fájl neve szerint: <strong>{{ e.video.discoveredTitle }}</strong>
-        @if (editTitle().trim() !== e.video.discoveredTitle) {
-          <button type="button" class="link-btn" (click)="editTitle.set(e.video.discoveredTitle)">
-            visszaállítás
-          </button>
-        }
-      </p>
-      @if (editError()) {
-        <p class="title-modal-error">{{ editError() }}</p>
-      }
-      <div class="title-modal-actions">
-        <button type="button" class="outline-btn" [disabled]="savingEdit()" (click)="cancelEdit()">
-          Mégse
-        </button>
-        <button type="submit" class="primary-btn" [disabled]="savingEdit()">
-          {{ savingEdit() ? 'Mentés…' : 'Mentés' }}
-        </button>
-      </div>
-    </form>
-  </div>
+  <app-media-edit-dialog
+    heading="Videó szerkesztése"
+    discoveredLabel="A fájl neve szerint"
+    [title]="e.video.title"
+    [discoveredTitle]="e.video.discoveredTitle"
+    [viewers]="e.video.viewers ?? []"
+    [saving]="savingEdit()"
+    [error]="editError()"
+    (saved)="saveEdit($event)"
+    (cancelled)="editing.set(null)"
+  />
 }
