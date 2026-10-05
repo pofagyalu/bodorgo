@@ -7,9 +7,21 @@
     </div>
   </div>
 
-  <!-- The settings, in columns (masonry): as many as fit, each card whole;
-       the Értesítések info below them, full width. -->
-  <div class="cards">
+  <!-- Three pages of cards, so no page is crowded: the club and its money,
+       what the app does by itself, and the info (Értesítések, versions). -->
+  <app-tab-strip
+    class="settings-tabs"
+    label="Beállítások csoportja"
+    [options]="tabs"
+    [value]="activeTab()"
+    (valueChange)="selectTab($any($event))"
+  />
+
+  <!-- Every page stays in the DOM (only hidden), so a half-filled card
+       keeps what was typed into it while another page is looked at.
+       Each page's cards in columns (masonry): as many as fit, each card
+       whole. -->
+  <div class="cards" role="tabpanel" [hidden]="activeTab() !== 'club'">
     <section class="panel">
       <div class="panel-title">
         <div>
@@ -225,6 +237,61 @@
     <app-barion-withdraw wallet="membership" />
     <app-barion-withdraw wallet="tour" />
 
+    <!-- Elnök: named at the end of a tour's beszámoló, with the wax seal
+         (server utils/waxSeal.js) - which carries this name too. -->
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2>Elnök</h2>
+          <p class="subtext">
+            A táborok beszámolójának végén szerepel („Elnök: …”), és a viaszpecsét peremén is ez a
+            név áll.
+          </p>
+        </div>
+      </div>
+
+      @if (presidentSaved() !== null) {
+        <div class="chat-fields president-row">
+          <img class="president-seal" [src]="sealUrl()" alt="A beszámoló viaszpecsétje" />
+          <label>
+            Név
+            <input
+              type="text"
+              maxlength="100"
+              [ngModel]="presidentName()"
+              (ngModelChange)="presidentName.set($event)"
+            />
+          </label>
+        </div>
+
+        <div class="actions">
+          <span class="spacer"></span>
+          @if (presidentDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="presidentName.set(presidentSaved() ?? '')"
+              [disabled]="savingPresident()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="savePresident()"
+            [disabled]="!presidentDirty() || !presidentName().trim() || savingPresident()"
+          >
+            {{ savingPresident() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      } @else {
+        <p class="empty-note">Betöltés...</p>
+      }
+    </section>
+  </div>
+
+  <div class="cards" role="tabpanel" [hidden]="activeTab() !== 'app'">
     <!-- Tagdíj emlékeztető: e-mails to members who haven't paid this year's
        dues - its settings (the Értesítések list below describes it too). -->
     <section class="panel reminder-card">
@@ -349,154 +416,6 @@
           </div>
         }
       </div>
-    </section>
-
-    <!-- Chat photos: how much room they may take and how many a person may
-       send a day. Over the limit the oldest go - their messages stay. -->
-    <section class="panel chat-images">
-      <div class="panel-title">
-        <div>
-          <h2>Kotyogó fotók</h2>
-          <p class="subtext">
-            A táborok Kotyogójában küldött fotók. Ha betelik a keret, a legrégebbiek törlődnek – az
-            üzenet megmarad, „A fotó már nem érhető el” jelzéssel.
-          </p>
-        </div>
-      </div>
-
-      @if (chatImages(); as c) {
-        <div class="chat-usage">
-          <div class="chat-usage-bar" [class.chat-usage-bar--full]="chatUsagePercent() >= 80">
-            <span [style.width.%]="chatUsagePercent()"></span>
-          </div>
-          <small>
-            {{ chatUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} fotó ({{
-              chatUsagePercent()
-            }}%)
-          </small>
-        </div>
-
-        <div class="chat-fields">
-          <label>
-            Tárhely keret (MB)
-            <input
-              type="number"
-              min="50"
-              step="50"
-              [ngModel]="chatQuotaMB()"
-              (ngModelChange)="chatQuotaMB.set(+$event)"
-            />
-          </label>
-          <label>
-            Fotó naponta, személyenként
-            <input
-              type="number"
-              min="1"
-              [ngModel]="chatDailyLimit()"
-              (ngModelChange)="chatDailyLimit.set(+$event)"
-            />
-          </label>
-        </div>
-
-        <div class="actions">
-          <span class="spacer"></span>
-          @if (chatImagesDirty()) {
-            <button
-              type="button"
-              class="outline-btn"
-              (click)="applyChatImages(c)"
-              [disabled]="savingChatImages()"
-            >
-              Mégse
-            </button>
-          }
-          <button
-            type="button"
-            class="primary-btn"
-            (click)="saveChatImages()"
-            [disabled]="!chatImagesDirty() || savingChatImages()"
-          >
-            {{ savingChatImages() ? 'Mentés…' : 'Mentés' }}
-          </button>
-        </div>
-      } @else {
-        <p class="empty-note">Betöltés...</p>
-      }
-    </section>
-
-    <!-- Kép gyorsítótár: the smaller versions of the album photos the viewer
-       shows (server photos/imageSizes.js). Over the limit the least
-       recently viewed go - they're made again when needed. -->
-    <section class="panel image-cache">
-      <div class="panel-title">
-        <div>
-          <h2>Kép gyorsítótár</h2>
-          <p class="subtext">
-            A táborok és a Média fotóinak kisebb változatai, amiket a képnézegető mutat – így
-            mobilon is gyorsan betöltenek. Az első megnézéskor készülnek. Ha betelik a keret, a
-            legrégebben nézettek törlődnek, és legközelebb újra elkészülnek. Az eredeti fotókat nem
-            érinti.
-          </p>
-        </div>
-      </div>
-
-      @if (imageCache(); as c) {
-        <div class="chat-usage">
-          <div class="chat-usage-bar" [class.chat-usage-bar--full]="imageCachePercent() >= 80">
-            <span [style.width.%]="imageCachePercent()"></span>
-          </div>
-          <small>
-            {{ imageCacheUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} kép ({{
-              imageCachePercent()
-            }}%)
-          </small>
-        </div>
-
-        <div class="chat-fields">
-          <label>
-            Tárhely keret (MB)
-            <input
-              type="number"
-              min="100"
-              step="512"
-              [ngModel]="imageCacheQuotaMB()"
-              (ngModelChange)="imageCacheQuotaMB.set(+$event)"
-            />
-          </label>
-        </div>
-
-        <div class="actions">
-          <button
-            type="button"
-            class="outline-btn"
-            (click)="clearImageCache()"
-            [disabled]="savingImageCache() || !c.usage.count"
-          >
-            Gyorsítótár ürítése
-          </button>
-          <span class="spacer"></span>
-          @if (imageCacheDirty()) {
-            <button
-              type="button"
-              class="outline-btn"
-              (click)="applyImageCache(c)"
-              [disabled]="savingImageCache()"
-            >
-              Mégse
-            </button>
-          }
-          <button
-            type="button"
-            class="primary-btn"
-            (click)="saveImageCache()"
-            [disabled]="!imageCacheDirty() || savingImageCache()"
-          >
-            {{ savingImageCache() ? 'Mentés…' : 'Mentés' }}
-          </button>
-        </div>
-      } @else {
-        <p class="empty-note">Betöltés...</p>
-      }
     </section>
 
     <!-- Születésnap: confetti and a greeting for whoever logs in on their
@@ -649,41 +568,61 @@
       }
     </section>
 
-    <!-- Elnök: named at the end of a tour's beszámoló, with the wax seal
-         (server utils/waxSeal.js) - which carries this name too. -->
-    <section class="panel">
+    <!-- Chat photos: how much room they may take and how many a person may
+       send a day. Over the limit the oldest go - their messages stay. -->
+    <section class="panel chat-images">
       <div class="panel-title">
         <div>
-          <h2>Elnök</h2>
+          <h2>Kotyogó fotók</h2>
           <p class="subtext">
-            A táborok beszámolójának végén szerepel („Elnök: …”), és a viaszpecsét peremén is ez a
-            név áll.
+            A táborok Kotyogójában küldött fotók. Ha betelik a keret, a legrégebbiek törlődnek – az
+            üzenet megmarad, „A fotó már nem érhető el” jelzéssel.
           </p>
         </div>
       </div>
 
-      @if (presidentSaved() !== null) {
-        <div class="chat-fields president-row">
-          <img class="president-seal" [src]="sealUrl()" alt="A beszámoló viaszpecsétje" />
+      @if (chatImages(); as c) {
+        <div class="chat-usage">
+          <div class="chat-usage-bar" [class.chat-usage-bar--full]="chatUsagePercent() >= 80">
+            <span [style.width.%]="chatUsagePercent()"></span>
+          </div>
+          <small>
+            {{ chatUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} fotó ({{
+              chatUsagePercent()
+            }}%)
+          </small>
+        </div>
+
+        <div class="chat-fields">
           <label>
-            Név
+            Tárhely keret (MB)
             <input
-              type="text"
-              maxlength="100"
-              [ngModel]="presidentName()"
-              (ngModelChange)="presidentName.set($event)"
+              type="number"
+              min="50"
+              step="50"
+              [ngModel]="chatQuotaMB()"
+              (ngModelChange)="chatQuotaMB.set(+$event)"
+            />
+          </label>
+          <label>
+            Fotó naponta, személyenként
+            <input
+              type="number"
+              min="1"
+              [ngModel]="chatDailyLimit()"
+              (ngModelChange)="chatDailyLimit.set(+$event)"
             />
           </label>
         </div>
 
         <div class="actions">
           <span class="spacer"></span>
-          @if (presidentDirty()) {
+          @if (chatImagesDirty()) {
             <button
               type="button"
               class="outline-btn"
-              (click)="presidentName.set(presidentSaved() ?? '')"
-              [disabled]="savingPresident()"
+              (click)="applyChatImages(c)"
+              [disabled]="savingChatImages()"
             >
               Mégse
             </button>
@@ -691,10 +630,85 @@
           <button
             type="button"
             class="primary-btn"
-            (click)="savePresident()"
-            [disabled]="!presidentDirty() || !presidentName().trim() || savingPresident()"
+            (click)="saveChatImages()"
+            [disabled]="!chatImagesDirty() || savingChatImages()"
           >
-            {{ savingPresident() ? 'Mentés…' : 'Mentés' }}
+            {{ savingChatImages() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      } @else {
+        <p class="empty-note">Betöltés...</p>
+      }
+    </section>
+
+    <!-- Kép gyorsítótár: the smaller versions of the album photos the viewer
+       shows (server photos/imageSizes.js). Over the limit the least
+       recently viewed go - they're made again when needed. -->
+    <section class="panel image-cache">
+      <div class="panel-title">
+        <div>
+          <h2>Kép gyorsítótár</h2>
+          <p class="subtext">
+            A táborok és a Média fotóinak kisebb változatai, amiket a képnézegető mutat – így
+            mobilon is gyorsan betöltenek. Az első megnézéskor készülnek. Ha betelik a keret, a
+            legrégebben nézettek törlődnek, és legközelebb újra elkészülnek. Az eredeti fotókat nem
+            érinti.
+          </p>
+        </div>
+      </div>
+
+      @if (imageCache(); as c) {
+        <div class="chat-usage">
+          <div class="chat-usage-bar" [class.chat-usage-bar--full]="imageCachePercent() >= 80">
+            <span [style.width.%]="imageCachePercent()"></span>
+          </div>
+          <small>
+            {{ imageCacheUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} kép ({{
+              imageCachePercent()
+            }}%)
+          </small>
+        </div>
+
+        <div class="chat-fields">
+          <label>
+            Tárhely keret (MB)
+            <input
+              type="number"
+              min="100"
+              step="512"
+              [ngModel]="imageCacheQuotaMB()"
+              (ngModelChange)="imageCacheQuotaMB.set(+$event)"
+            />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="clearImageCache()"
+            [disabled]="savingImageCache() || !c.usage.count"
+          >
+            Gyorsítótár ürítése
+          </button>
+          <span class="spacer"></span>
+          @if (imageCacheDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="applyImageCache(c)"
+              [disabled]="savingImageCache()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="saveImageCache()"
+            [disabled]="!imageCacheDirty() || savingImageCache()"
+          >
+            {{ savingImageCache() ? 'Mentés…' : 'Mentés' }}
           </button>
         </div>
       } @else {
@@ -703,95 +717,96 @@
     </section>
   </div>
 
-  <!-- Info only: every e-mail and push the app sends - what triggers it and
-     who gets it. (The settings are all in the cards above.) -->
-  <section class="panel notifications">
-    <div class="panel-title">
-      <div>
-        <h2>Értesítések</h2>
-        <p class="subtext">
-          Minden e-mail és telefonos értesítés, amit az alkalmazás küld – mikor és kinek.
-        </p>
+  <div class="info-cards" role="tabpanel" [hidden]="activeTab() !== 'info'">
+    <!-- Info only: every e-mail and push the app sends - what triggers it and
+       who gets it. (Their settings are on the other two pages.) -->
+    <section class="panel notifications">
+      <div class="panel-title">
+        <div>
+          <h2>Értesítések</h2>
+          <p class="subtext">
+            Minden e-mail és telefonos értesítés, amit az alkalmazás küld – mikor és kinek.
+          </p>
+        </div>
       </div>
-    </div>
 
-    <!-- E-mails on the left, pushes on the right (one column on a phone). -->
-    <div class="notif-columns">
-      <div>
-        <h3 class="notif-group">E-mailek</h3>
-        <ul class="notif-list">
-          @for (e of emails; track e.name) {
-            <li class="notif" [class.notif--settings]="e.settings">
-              <div class="notif-head">
-                <strong>{{ e.name }}</strong>
-                @if (e.settings) {
-                  <span class="notif-badge">beállítható</span>
+      <!-- E-mails on the left, pushes on the right (one column on a phone). -->
+      <div class="notif-columns">
+        <div>
+          <h3 class="notif-group">E-mailek</h3>
+          <ul class="notif-list">
+            @for (e of emails; track e.name) {
+              <li class="notif" [class.notif--settings]="e.settings">
+                <div class="notif-head">
+                  <strong>{{ e.name }}</strong>
+                  @if (e.settings) {
+                    <span class="notif-badge">beállítható</span>
+                  }
+                </div>
+                <p><span class="notif-label">Mikor:</span> {{ e.when }}</p>
+                <p><span class="notif-label">Kinek:</span> {{ e.who }}</p>
+                @if (e.note) {
+                  <p class="notif-note">{{ e.note }}</p>
                 }
-              </div>
-              <p><span class="notif-label">Mikor:</span> {{ e.when }}</p>
-              <p><span class="notif-label">Kinek:</span> {{ e.who }}</p>
-              @if (e.note) {
-                <p class="notif-note">{{ e.note }}</p>
-              }
-            </li>
-          }
-        </ul>
-      </div>
-      <div>
-        <h3 class="notif-group">Telefonos értesítések (push)</h3>
-        <p class="notif-note">
-          Csak akinek a böngészőjében / telefonján be vannak kapcsolva az értesítések (Profilom).
-        </p>
-        <ul class="notif-list">
-          @for (p of pushes; track p.name) {
-            <li class="notif">
-              <div class="notif-head">
-                <strong>{{ p.name }}</strong>
-              </div>
-              <p><span class="notif-label">Mikor:</span> {{ p.when }}</p>
-              <p><span class="notif-label">Kinek:</span> {{ p.who }}</p>
-            </li>
-          }
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- Verzió: which client and server are running - each is stamped at
-     its deploy with its commit and that commit's date. The last thing on
-     the page. -->
-  <section class="panel version-panel">
-    <div class="panel-title">
-      <div>
-        <h2>Szoftver verziók</h2>
-        <p class="subtext">
-          A futó kliens és szerver – a telepített változat dátuma és azonosítója.
-        </p>
-      </div>
-    </div>
-    <dl class="version-list">
-      <div>
-        <dt>Kliens</dt>
-        <dd>
-          {{ clientVersion }}
-          @if (clientBuiltAt) {
-            <small>telepítve: {{ clientBuiltAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
-          }
-        </dd>
-      </div>
-      <div>
-        <dt>Szerver</dt>
-        <dd>
-          @if (serverBuild(); as server) {
-            {{ server.version }}
-            @if (server.builtAt) {
-              <small>telepítve: {{ server.builtAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+              </li>
             }
-          } @else {
-            …
-          }
-        </dd>
+          </ul>
+        </div>
+        <div>
+          <h3 class="notif-group">Telefonos értesítések (push)</h3>
+          <p class="notif-note">
+            Csak akinek a böngészőjében / telefonján be vannak kapcsolva az értesítések (Profilom).
+          </p>
+          <ul class="notif-list">
+            @for (p of pushes; track p.name) {
+              <li class="notif">
+                <div class="notif-head">
+                  <strong>{{ p.name }}</strong>
+                </div>
+                <p><span class="notif-label">Mikor:</span> {{ p.when }}</p>
+                <p><span class="notif-label">Kinek:</span> {{ p.who }}</p>
+              </li>
+            }
+          </ul>
+        </div>
       </div>
-    </dl>
-  </section>
+    </section>
+
+    <!-- Verzió: which client and server are running - each is stamped at
+       its deploy with its commit and that commit's date. -->
+    <section class="panel version-panel">
+      <div class="panel-title">
+        <div>
+          <h2>Szoftver verziók</h2>
+          <p class="subtext">
+            A futó kliens és szerver – a telepített változat dátuma és azonosítója.
+          </p>
+        </div>
+      </div>
+      <dl class="version-list">
+        <div>
+          <dt>Kliens</dt>
+          <dd>
+            {{ clientVersion }}
+            @if (clientBuiltAt) {
+              <small>telepítve: {{ clientBuiltAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+            }
+          </dd>
+        </div>
+        <div>
+          <dt>Szerver</dt>
+          <dd>
+            @if (serverBuild(); as server) {
+              {{ server.version }}
+              @if (server.builtAt) {
+                <small>telepítve: {{ server.builtAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+              }
+            } @else {
+              …
+            }
+          </dd>
+        </div>
+      </dl>
+    </section>
+  </div>
 </div>

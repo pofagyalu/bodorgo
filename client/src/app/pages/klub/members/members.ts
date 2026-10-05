@@ -12,7 +12,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { InvitationsPanel } from './invitations-panel/invitations-panel';
 import { ExtraColumn, PeopleTable } from './people-table/people-table';
-import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
+import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
 import {
   SettingsService,
   MembershipFee,
@@ -53,7 +53,7 @@ const TAB_BY_KEY: Record<string, MembersTab> = Object.fromEntries(
     MatIconModule,
     PeopleTable,
     InvitationsPanel,
-    PeriodPicker,
+    TabStrip,
     PayProviderPicker,
   ],
   templateUrl: './members.html',
@@ -348,9 +348,8 @@ export class Members implements OnInit {
     });
   }
 
-  // The tabs as a phone's picker beside the title (see members.html) -
-  // Meghívók only for an admin, like its tab.
-  tabOptions = computed<PeriodOption[]>(() => [
+  // The tabs (see members.html) - Meghívók only for an admin.
+  tabOptions = computed<TabOption[]>(() => [
     { value: 'club', label: 'Klubtagok', count: this.clubMembers().length },
     { value: 'casual', label: 'A többiek', count: this.casualUsers().length },
     { value: 'everyone', label: 'Mindenki', count: this.users().length },

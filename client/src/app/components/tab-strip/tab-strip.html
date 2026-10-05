@@ -1,0 +1,49 @@
+<div
+  #scroller
+  class="scroller"
+  role="tablist"
+  [attr.aria-label]="label()"
+  [class.more-before]="moreBefore()"
+  [class.more-after]="moreAfter()"
+  (scroll)="measure()"
+>
+  @for (o of options(); track o.value) {
+    <button
+      role="tab"
+      type="button"
+      [attr.aria-selected]="o.value === value()"
+      [class.active]="o.value === value()"
+      (click)="value.set(o.value)"
+    >
+      {{ o.label }}
+      @if (o.count !== undefined) {
+        <span class="count">{{ o.count }}</span>
+      }
+    </button>
+  }
+</div>
+
+<!-- More tabs that way: an arrow over the faded end (the tabs themselves
+     are reached with Tab, so these stay out of the keyboard's way). -->
+@if (moreBefore()) {
+  <button
+    type="button"
+    class="arrow arrow--before"
+    tabindex="-1"
+    aria-hidden="true"
+    (click)="page(-1)"
+  >
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+}
+@if (moreAfter()) {
+  <button
+    type="button"
+    class="arrow arrow--after"
+    tabindex="-1"
+    aria-hidden="true"
+    (click)="page(1)"
+  >
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+}
