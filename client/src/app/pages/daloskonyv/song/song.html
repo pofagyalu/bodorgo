@@ -270,17 +270,44 @@
         [showDiagrams]="showDiagrams()"
       />
 
-      <nav class="neighbours" aria-label="Előző és következő dal">
+      <!-- The song before and the song after, each with a player's skip
+           icon beside its title - and between them a song picked by chance
+           from the ones not played tonight. -->
+      <nav class="neighbours" aria-label="Előző, véletlen és következő dal">
         @if (previous(); as p) {
-          <a class="neighbour" [routerLink]="[base(), p.slug]">
-            <mat-icon>chevron_left</mat-icon>
-            <span><small>Előző</small>{{ p.title }}</span>
+          <a
+            class="neighbour"
+            [routerLink]="[base(), p.slug]"
+            [title]="'Előző dal: ' + p.title"
+            [attr.aria-label]="'Előző dal: ' + p.title"
+          >
+            <mat-icon>skip_previous</mat-icon>
+            <span>{{ p.title }}</span>
           </a>
         }
+        <button
+          type="button"
+          class="random-song"
+          (click)="randomSong()"
+          [disabled]="!canPickRandom()"
+          [title]="
+            canPickRandom()
+              ? 'Véletlen dal azok közül, amiket ma még nem játszottunk'
+              : 'Ma már minden dalt játszottunk'
+          "
+          aria-label="Véletlen dal"
+        >
+          <mat-icon>shuffle</mat-icon>
+        </button>
         @if (next(); as n) {
-          <a class="neighbour neighbour--next" [routerLink]="[base(), n.slug]">
-            <span><small>Következő</small>{{ n.title }}</span>
-            <mat-icon>chevron_right</mat-icon>
+          <a
+            class="neighbour neighbour--next"
+            [routerLink]="[base(), n.slug]"
+            [title]="'Következő dal: ' + n.title"
+            [attr.aria-label]="'Következő dal: ' + n.title"
+          >
+            <span>{{ n.title }}</span>
+            <mat-icon>skip_next</mat-icon>
           </a>
         }
       </nav>

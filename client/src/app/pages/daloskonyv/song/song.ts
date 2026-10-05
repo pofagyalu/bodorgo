@@ -122,6 +122,28 @@ export class SongPage implements OnDestroy {
     return i < 0 ? null : ((this.songService.songs() ?? [])[i + 1] ?? null);
   });
 
+  // A song picked by chance, for when nobody knows what to play next: any
+  // song of the list but this one and the ones played tonight (their
+  // ticks) - so an evening doesn't land on the same song twice.
+  private randomPool = computed(() => {
+    const played = this.songService.played();
+    return (this.songService.songs() ?? []).filter(
+      (s) => s.slug !== this.slug() && !played.has(s._id),
+    );
+  });
+  canPickRandom = computed(() => this.randomPool().length > 0);
+
+  randomSong() {
+    const pool = this.randomPool();
+    if (!pool.length) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    // Any song of the book: whatever the list was narrowed to (a search,
+    // one artist) is let go, so the pick is seen in the list as well.
+    this.songService.search.set('');
+    this.songService.artist.set('');
+    void this.router.navigate([this.base(), pick.slug]);
+  }
+
   // --- Play: the page scrolls by itself ---
 
   // 0: stopped; 1-3: ▶, ▶▶, ▶▶▶.

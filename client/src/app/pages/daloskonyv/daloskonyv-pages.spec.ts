@@ -121,6 +121,51 @@ describe('SongPage', () => {
     expect(fixture.nativeElement.textContent).toContain('vizet');
   });
 
+  it('jumps to a song picked by chance - never this one, never one played tonight', () => {
+    open();
+    const service = TestBed.inject(SongService);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('.random-song');
+    expect(button.disabled).toBe(false);
+
+    // The open song is "tavaszi-szel": whatever chance says, one of the other two.
+    const chance = vi.spyOn(Math, 'random');
+    chance.mockReturnValue(0);
+    button.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'almodj']);
+    chance.mockReturnValue(0.999);
+    button.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'zold-erdoben']);
+
+    // Any song of the book, whatever the list is narrowed to - and the
+    // narrowing is let go, so the pick shows in the list too.
+    service.search.set('tavasz');
+    service.artist.set('Népdal');
+    chance.mockReturnValue(0);
+    button.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'almodj']); // Zorán's
+    expect(service.search()).toBe('');
+    expect(service.artist()).toBe('');
+
+    // One of them was played tonight: only the other is left.
+    service.setPlayed('s1', true);
+    chance.mockReturnValue(0);
+    button.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'zold-erdoben']);
+
+    // Both played: nothing to pick, the button is idle.
+    service.setPlayed('s3', true);
+    fixture.detectChanges();
+    expect(page.canPickRandom()).toBe(false);
+    expect(button.disabled).toBe(true);
+    navigate.mockClear();
+    page.randomSong();
+    expect(navigate).not.toHaveBeenCalled();
+
+    chance.mockRestore();
+    service.clearPlayed();
+  });
+
   it('shows the tempo of a song that has one, and beats it on a tap', () => {
     vi.useFakeTimers();
     try {

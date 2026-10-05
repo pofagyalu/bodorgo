@@ -367,9 +367,12 @@ button {
 
 // --- Previous / next ---
 
+// Three places: the song before, the random pick in the very middle
+// (wherever the two names end), the song after.
 .neighbours {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: 0.75rem;
   margin-top: 2rem;
   padding-top: 1.25rem;
@@ -379,9 +382,11 @@ button {
 .neighbour {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.4rem;
+  grid-column: 1;
+  justify-self: start;
   min-width: 0;
-  max-width: 48%;
+  max-width: 100%;
   padding: 0.5rem 0.75rem 0.5rem 0.4rem;
   border-radius: 0.75rem;
   color: $ink;
@@ -400,21 +405,39 @@ button {
     white-space: nowrap;
   }
 
-  small {
-    display: block;
-    color: $muted;
-    font-weight: 500;
-    font-size: 0.75rem;
-  }
-
+  // The players' skip icons say which way it leads.
   mat-icon {
     flex: none;
-    color: #7a8a90;
+    color: $teal;
+  }
+}
+
+// "Véletlen dal": a round button between the two.
+.random-song {
+  grid-column: 2;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid $line;
+  border-radius: 50%;
+  background: #fff;
+  color: $teal;
+
+  &:hover:not(:disabled) {
+    background: #e8f3ee;
+  }
+
+  // Every song was played tonight: nothing left to pick.
+  &:disabled {
+    color: #c3ccd0;
+    cursor: default;
   }
 }
 
 .neighbour--next {
-  margin-left: auto;
+  grid-column: 3;
+  justify-self: end;
   padding: 0.5rem 0.4rem 0.5rem 0.75rem;
   text-align: right;
 }
@@ -551,6 +574,33 @@ button {
   .tools {
     width: 100%;
     gap: 0.25rem;
+  }
+
+  // The bottom row as a player's three buttons - the song before, a random
+  // one, the song after -, together in the middle and without the two
+  // titles: on a screen this narrow they would be cut to a few letters.
+  // Each keeps its own place, so the random one stays in the middle at the
+  // book's first and last song too.
+  .neighbours {
+    grid-template-columns: repeat(3, 2.75rem);
+    justify-content: center;
+    gap: 1.5rem;
+  }
+
+  .neighbour,
+  .neighbour--next {
+    justify-self: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 1px solid $line;
+    border-radius: 50%;
+    background: #fff;
+
+    span {
+      display: none;
+    }
   }
 
   .tool button,
