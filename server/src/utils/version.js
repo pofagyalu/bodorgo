@@ -8,7 +8,8 @@ import { execSync } from 'child_process';
 //
 // A deployed server has it written into its bundle (build.js puts
 // __BODORGO_BUILD__ there); run from the source it's read from git, with
-// no build time.
+// no build time. A Docker image has neither the bundle nor git: there the
+// image's build passes it in (BUILD_COMMIT, BUILD_DATE - see the Dockerfile).
 
 function git(command) {
   return execSync(`git ${command}`, {
@@ -18,6 +19,10 @@ function git(command) {
 }
 
 export function gitStamp() {
+  const { BUILD_COMMIT: builtFrom, BUILD_DATE: builtOn } = process.env;
+  if (builtFrom && builtOn) {
+    return { version: `${builtOn} · ${builtFrom}`, commit: builtFrom, date: builtOn };
+  }
   try {
     const commit = git('rev-parse --short=7 HEAD');
     const date = git('log -1 --format=%cd --date=format:%Y.%m.%d');

@@ -1,0 +1,5 @@
+# Files read inside Linux containers (Docker, the CI): always with Unix line
+# ends, whatever machine checked them out.
+*.sh text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
