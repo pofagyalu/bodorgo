@@ -42,10 +42,14 @@ for (const t of transactions) {
   console.log(`  Transaction ${t._id}: "${t.name}", ${t.amount} Ft, ${t.paymentMethod ?? '-'}`);
 }
 for (const p of payments) {
-  const others = p.members.filter((m) => String(m.user) !== String(user._id) || m.membershipYear !== year);
+  const others = p.members.filter(
+    (m) => String(m.user) !== String(user._id) || m.membershipYear !== year,
+  );
   console.log(
     `  Payment ${p._id}: ${p.method}, ${p.status}, ${p.amount} Ft, ${p.createdAt.toISOString()}` +
-      (others.length ? ` - ALSO covers ${others.map((m) => `${m.name} ${m.membershipYear}`).join(', ')} (kept)` : ''),
+      (others.length
+        ? ` - ALSO covers ${others.map((m) => `${m.name} ${m.membershipYear}`).join(', ')} (kept)`
+        : ''),
   );
 }
 
@@ -55,7 +59,9 @@ const removable = payments.filter((p) =>
 );
 
 if (!go) {
-  console.log(`\nDry run: would delete ${transactions.length} transaction(s), ${removable.length} payment(s). Add --go to delete.`);
+  console.log(
+    `\nDry run: would delete ${transactions.length} transaction(s), ${removable.length} payment(s). Add --go to delete.`,
+  );
 } else {
   await Transaction.deleteMany({ _id: { $in: transactions.map((t) => t._id) } });
   await Payment.deleteMany({ _id: { $in: removable.map((p) => p._id) } });

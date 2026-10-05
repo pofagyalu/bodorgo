@@ -63,7 +63,9 @@ if (!user) {
   const pointing = others.filter((o) => JSON.stringify(o).includes(id));
   if (pointing.length) {
     found += pointing.length;
-    console.log(`users: ${pointing.length} other user(s) carry this id: ${pointing.map((o) => o.name).join(', ')}`);
+    console.log(
+      `users: ${pointing.length} other user(s) carry this id: ${pointing.map((o) => o.name).join(', ')}`,
+    );
   }
   if (!found) console.log('nothing else carries this user’s id');
 }

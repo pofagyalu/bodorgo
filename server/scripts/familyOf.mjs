@@ -10,12 +10,20 @@ const line = fs
   .readFileSync(envFile, 'utf8')
   .split(/\r?\n/)
   .find((l) => l.startsWith('DB_URI='));
-await mongoose.connect(line.slice('DB_URI='.length).trim().replace(/^["']|["']$/g, ''));
+await mongoose.connect(
+  line
+    .slice('DB_URI='.length)
+    .trim()
+    .replace(/^["']|["']$/g, ''),
+);
 const users = mongoose.connection.db.collection('users');
 const user = await users.findOne({ email });
 if (!user?.familyId) console.log('no family');
 else {
   const family = await users.find({ familyId: user.familyId }).toArray();
-  for (const m of family) console.log(`${m.name}  role: ${m.role}  has login: ${!!m.sub}  ${m.email === email ? '<- this user' : ''}`);
+  for (const m of family)
+    console.log(
+      `${m.name}  role: ${m.role}  has login: ${!!m.sub}  ${m.email === email ? '<- this user' : ''}`,
+    );
 }
 await mongoose.disconnect();

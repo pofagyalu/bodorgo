@@ -25,11 +25,16 @@ const db = mongoose.connection.db;
 console.log(`database: ${db.databaseName}`);
 const users = await db
   .collection('users')
-  .find({ email }, { projection: { name: 1, email: 1, role: 1, sub: 1, createdAt: 1, updatedAt: 1 } })
+  .find(
+    { email },
+    { projection: { name: 1, email: 1, role: 1, sub: 1, createdAt: 1, updatedAt: 1 } },
+  )
   .toArray();
 if (!users.length) console.log(`no user with the e-mail ${email}`);
 for (const user of users) {
-  const sub = user.sub ? `${String(user.sub).slice(0, 10)}… (${String(user.sub).length} chars)` : 'NONE';
+  const sub = user.sub
+    ? `${String(user.sub).slice(0, 10)}… (${String(user.sub).length} chars)`
+    : 'NONE';
   console.log(
     `${user.name} <${user.email}>  role: ${user.role}  sub: ${sub}  created: ${user.createdAt?.toISOString() ?? '?'}  updated: ${user.updatedAt?.toISOString() ?? '?'}`,
   );

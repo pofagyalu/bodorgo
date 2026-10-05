@@ -17,7 +17,10 @@ const uriFrom = (envFile) => {
 };
 
 const go = process.argv.includes('--go');
-const orders = process.argv.slice(2).filter((a) => /^\d+$/.test(a)).map(Number);
+const orders = process.argv
+  .slice(2)
+  .filter((a) => /^\d+$/.test(a))
+  .map(Number);
 if (!orders.length) throw new Error('Which tours? e.g. 30 32');
 
 const dev = await mongoose.createConnection(uriFrom('.env')).asPromise();
@@ -29,8 +32,12 @@ const fields = { order: 1, title: 1, panoramaUrl: 1, panoramaTitle: 1 };
 for (const order of orders) {
   const from = await dev.collection('tours').findOne({ order }, { projection: fields });
   const to = await live.collection('tours').findOne({ order }, { projection: fields });
-  console.log(`\n${order}. dev:  ${from?.title} | ${from?.panoramaUrl ?? '-'} | ${from?.panoramaTitle ?? '-'}`);
-  console.log(`${order}. live: ${to?.title} | ${to?.panoramaUrl ?? '-'} | ${to?.panoramaTitle ?? '-'}`);
+  console.log(
+    `\n${order}. dev:  ${from?.title} | ${from?.panoramaUrl ?? '-'} | ${from?.panoramaTitle ?? '-'}`,
+  );
+  console.log(
+    `${order}. live: ${to?.title} | ${to?.panoramaUrl ?? '-'} | ${to?.panoramaTitle ?? '-'}`,
+  );
   if (!from?.panoramaUrl || !to) {
     console.log('   skipped (no link on dev, or no such tour on live)');
     continue;
