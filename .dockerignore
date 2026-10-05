@@ -1,0 +1,20 @@
+# What a Docker build may see (compose.yaml builds both images from the
+# repository's root). Nothing but the code: no settings, no uploads, no
+# database copy - an image can be handed to anyone.
+*
+
+!client
+!server/package.json
+!server/package-lock.json
+!server/src
+!server/assets
+!server/scripts
+
+**/node_modules
+**/.env
+**/*.env
+client/dist
+client/.angular
+client/coverage
+client/design
+server/scripts/input

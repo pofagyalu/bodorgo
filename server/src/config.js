@@ -3,15 +3,8 @@ import path from 'path';
 const config = {
   nodeEnv: process.env.NODE_ENV,
   port: process.env.PORT,
-  registerUrl: process.env.REGISTER_REDIRECT_URL,
-  resetUrl: process.env.RESET_REDIRECT_URL,
   db: {
     uri: process.env.DB_URI,
-  },
-  jwt: {
-    secret: process.env.JWT_SECRET,
-    expiry: process.env.JWT_EXPIRES_IN,
-    cookieExpiry: process.env.JWT_COOKIE_EXPIRES_IN,
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY,
@@ -19,11 +12,6 @@ const config = {
     // Local .env only: every e-mail goes to this address instead (see
     // utils/emailRedirect.js). Never set on the live server.
     redirectTo: process.env.EMAIL_REDIRECT_TO,
-  },
-  redisUrl: process.env.REDIS_URL,
-  sendgrid: {
-    user: process.env.SENDGRID_USERNAME,
-    password: process.env.SENDGRID_PASSWORD,
   },
   // The advance-payment flow (see paymentController.js) - test mode by
   // default (a Stripe test secret key, sk_test_...), since this is a real
@@ -41,7 +29,6 @@ const config = {
   // key isn't set takes no Stripe payments (its button is greyed out) - so
   // advances never land in the club's account by mistake.
   stripe: {
-    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     accounts: {
       membership: {
         secretKey: process.env.STRIPE_SECRET_KEY,
@@ -179,28 +166,5 @@ config.futokor = {
 config.corsOrigins = (config.clientOrigin || 'https://bodorgo.hu,http://localhost:4200')
   .split(',')
   .map((origin) => origin.trim());
-
-export const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'OkiDoki API',
-      version: 1.0,
-    },
-    servers: [{ url: `http://127.0.0.1:${config.port}` }],
-    components: {
-      securitySchemes: {
-        BearerAuth: {
-          type: 'apiKey',
-          in: 'header',
-          name: 'Authorization',
-          bearerFormat: 'JWT',
-          scheme: 'bearer',
-        },
-      },
-    },
-  },
-  apis: ['**/*.yaml'],
-};
 
 export default config;

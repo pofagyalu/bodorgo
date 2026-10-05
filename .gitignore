@@ -8,6 +8,11 @@ brand/fonts/
 # - users' pictures, never in git.
 chat-images/
 
+# Docker (compose.yaml): its settings, and what is handed over beside the
+# images - the database copy and the uploaded files. Real data, never in git.
+/.env
+/handover/
+
 # Local only: the day's logs and a tool's cache folder at the root...
 /logs/
 /node_modules/

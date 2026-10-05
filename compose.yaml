@@ -1,0 +1,111 @@
+# The whole app on one machine with Docker: the database, the API and the
+# website. See the root README's "Running it in Docker".
+#
+#   1. copy .env.docker.example to .env            (this file's settings)
+#   2. copy server/src/.env.example to server/.env (the app's settings)
+#   3. docker compose up -d --build
+#
+# Not in here, because the app only talks to them: Authentik (logins - it
+# does not work without one), Jellyfin (music), and the HTTPS reverse proxy
+# in front of the two published ports.
+
+name: bodorgo
+
+services:
+  mongo:
+    image: mongo:8.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-bodorgo}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env}
+      # For docker/mongo-restore.sh: which database of the copy, loaded
+      # under which name, without which collections.
+      MONGO_DB: ${MONGO_DB:-bodorgo}
+      DUMP_DB: ${DUMP_DB:-bodorgo}
+      DUMP_SKIP: ${DUMP_SKIP-sessions}
+    volumes:
+      - mongo-data:/data/db
+      # The database copy to start from - read once, when mongo-data is
+      # still empty.
+      - ${DUMP_DIR:-./handover/db}:/dump:ro
+      - ./docker/mongo-restore.sh:/docker-entrypoint-initdb.d/restore.sh:ro
+    healthcheck:
+      # By the container's own name, not localhost: while the copy is being
+      # loaded the database listens on localhost only, and the API must
+      # wait until that is over.
+      test: ['CMD-SHELL', 'mongosh --quiet --host "$$(hostname)" --eval "db.adminCommand({ ping: 1 }).ok" | grep -q 1']
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      args:
+        BUILD_COMMIT: ${BUILD_COMMIT:-}
+        BUILD_DATE: ${BUILD_DATE:-}
+    image: bodorgo-api
+    restart: unless-stopped
+    # The signal the server closes itself on (server.js).
+    stop_signal: SIGINT
+    depends_on:
+      mongo:
+        condition: service_healthy
+    # The app's own settings: logins, e-mail, payments... (the same file a
+    # server run without Docker uses).
+    env_file: ./server/.env
+    # What is different inside a container - these win over server/.env.
+    environment:
+      PORT: '8235'
+      DB_URI: mongodb://${MONGO_ROOT_USER:-bodorgo}:${MONGO_ROOT_PASSWORD}@mongo:27017/${MONGO_DB:-bodorgo}?authSource=admin
+      PHOTOS_ROOT: /data/photos
+      MEDIA_PHOTOS_ROOT: /data/media-photos
+      MEDIA_ROOT: /data/videos
+      THUMBNAILS_ROOT: /data/thumbnails
+      # Emptied, so a path meant for another machine can't come in from
+      # server/.env: each then has its default.
+      VIDEOS_ROOT: ''
+      MEDIA_VIDEOS_ROOT: ''
+      MUSIC_IMAGES_ROOT: ''
+      CLUB_DOCUMENTS_DIR: ''
+      RECEIPTS_DIR: ''
+      GPX_DIR: ''
+      QUIZ_IMAGES_DIR: ''
+      CHAT_IMAGES_DIR: ''
+    ports:
+      - '${API_PORT:-8235}:8235'
+    volumes:
+      # What the server writes.
+      - documents:/app/documents
+      - chat-images:/app/chat-images
+      - thumbnails:/data/thumbnails
+      - logs:/app/logs
+      # What it only reads: the photos and videos, wherever they are on
+      # this machine.
+      - ${PHOTOS_DIR:-./handover/files/photos}:/data/photos:ro
+      - ${MEDIA_PHOTOS_DIR:-./handover/files/media-photos}:/data/media-photos:ro
+      - ${VIDEOS_DIR:-./handover/files/videos}:/data/videos:ro
+
+  web:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        # Written into the app as it is built: a change needs a rebuild.
+        API_BASE_URL: ${PUBLIC_API_URL:?set PUBLIC_API_URL in .env}
+        OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+        BUILD_COMMIT: ${BUILD_COMMIT:-docker}
+        BUILD_DATE: ${BUILD_DATE:-image}
+    image: bodorgo-web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-8080}:80'
+
+volumes:
+  mongo-data:
+  documents:
+  chat-images:
+  thumbnails:
+  logs:

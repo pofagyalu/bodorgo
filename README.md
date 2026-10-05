@@ -20,12 +20,13 @@ This is the only README. It replaces the separate ones that used to sit in `clie
 5. [Tests, lint and CI](#5-tests-lint-and-ci)
 6. [Data and files](#6-data-and-files)
 7. [The live site and deploying](#7-the-live-site-and-deploying)
-8. [Authentik](#8-authentik)
-9. [How some parts work inside](#9-how-some-parts-work-inside)
-10. [Helper scripts](#10-helper-scripts)
-11. [House rules](#11-house-rules)
-12. [Still to do](#12-still-to-do)
-13. [Repository history](#13-repository-history)
+8. [Running it in Docker (handing the app over)](#8-running-it-in-docker-handing-the-app-over)
+9. [Authentik](#9-authentik)
+10. [How some parts work inside](#10-how-some-parts-work-inside)
+11. [Helper scripts](#11-helper-scripts)
+12. [House rules](#12-house-rules)
+13. [Still to do](#13-still-to-do)
+14. [Repository history](#14-repository-history)
 
 ---
 
@@ -61,7 +62,7 @@ The main menu, and what is behind each item. Page names are the Hungarian ones t
 - Text, photos, reactions, `@mentions`, polls started from the chat.
 - A tour's room has a weekly changing pale background from the tour's own album, and beside it the **Szobabeosztás**: who sleeps in which room. Admins drag people into rooms; everyone else watches it live.
 - A tour's chat closes at midnight after the tour's last day and stays as an archive.
-- Push notifications for new messages (see [9.1](#91-push-notifications)).
+- Push notifications for new messages (see [10.1](#101-push-notifications)).
 
 ### Voks — votes (`/szavazasok`)
 
@@ -97,7 +98,7 @@ Members reach it in Média → Zene (`/media/zene/daloskonyv`); guests, who have
 
 - **Darts** — X01 (301 / 201 / 101) and Cricket, scored on one phone with a keypad; play goes on until everyone is placed; a leaderboard per game type. A game is visible only to its own players.
 - **Kvíz** — Kahoot-style quiz games. Anyone logged in may write a quiz; players join by QR code or code, and the question is on every phone. Six kinds of question: plain, picture uncovered tile by tile, true/false, zoom-out, song (plays on the host's device) and map (drop a pin; points by distance).
-- **Futókörök** — a checkpoint running race. Runners scan QR/NFC cards at the checkpoints with their phone; the app times the laps and shows results, splits and a map. **Still open only to the role manager** (see [12](#12-still-to-do)).
+- **Futókörök** — a checkpoint running race. Runners scan QR/NFC cards at the checkpoints with their phone; the app times the laps and shows results, splits and a map. **Still open only to the role manager** (see [13](#13-still-to-do)).
 
 ### Across the whole app
 
@@ -254,6 +255,8 @@ The API's top-level paths: `/auth`, `/tours`, `/users`, `/payments`, `/finance`,
 | --- | --- |
 | `.forgejo/workflows/server-tests.yml`, `ci/` | CI: lint and tests on every pull request |
 | `ci/forgejo-runner/` | the CI runner's Docker setup for the NAS |
+| `compose.yaml`, `.env.docker.example`, `server/Dockerfile`, `client/Dockerfile`, `docker/`, `.dockerignore` | running the whole app in Docker (section 8) |
+| `handover/` | not in git: the database copy and files that travel with the app |
 | `server/authentik/` | the two e-mail templates Authentik uses |
 | `server/scripts/` | one-off and helper scripts |
 | `brand/` | logo sources (the fonts are kept locally only: their licence forbids redistributing them) |
@@ -277,7 +280,7 @@ cd server
 npm install
 ```
 
-Create `server/.env` (next to `package.json`; it is gitignored, never commit it). `src/.env.example` is a starting point, but it is **out of date** — the table below is the real list.
+Copy `src/.env.example` to `server/.env` (next to `package.json`; it is gitignored, never commit it) and fill it in. The example file lists every setting the server reads, each with an explanation; the table below is the short version.
 
 ```
 npm start
@@ -330,7 +333,7 @@ Both environment files need a real OpenWeatherMap key in `openWeatherApi` for th
 | `MEDIA_ROOT` (or `VIDEOS_ROOT` / `MEDIA_VIDEOS_ROOT`) | the videos |
 | `JELLYFIN_URL`, `JELLYFIN_API_KEY`, `JELLYFIN_PLAYLIST_ID`, `JELLYFIN_BULI_PLAYLIST_ID`, `JELLYFIN_HATTER_PLAYLIST_ID`, `JELLYFIN_USER_ID` (optional), `MUSIC_IMAGES_ROOT` (optional) | music |
 | `OPENROUTESERVICE_API_KEY` | a tour's driving distance from Budapest |
-| `FUTOKOR_TAG_SECRET` | signs the Futókör cards' links (see the warning in [9.6](#96-futókörök)) |
+| `FUTOKOR_TAG_SECRET` | signs the Futókör cards' links (see the warning in [10.6](#106-futókörök)) |
 | `TOUR_VIDEO_EMAILS=on`, `BACKGROUND_JOBS=on` | **live only**: the "your tour's video is ready" e-mails and the timed jobs (poll reminders) |
 
 The folder settings need a different form on each machine for the same NAS storage: the live server runs on the NAS and needs real paths (`/volume1/photo/bódorgó_táborok`), a Windows development machine needs the mapped drive (`Z:/bódorgó_táborok`).
@@ -511,7 +514,123 @@ A syntax error in `.htaccess` takes the whole site down. Back the file up first,
 
 ---
 
-## 8. Authentik
+## 8. Running it in Docker (handing the app over)
+
+The NAS setup in section 7 is how the live site runs today. This section is the other way to run the same app: on **any machine that has Docker**, with nothing installed by hand. It is meant for handing the app over, and for trying a copy of it.
+
+`compose.yaml` starts three containers:
+
+| Container | What | Image |
+| --- | --- | --- |
+| `mongo` | the database | `mongo:8.0` (the version the live database runs) |
+| `api` | the server | `bodorgo-api`, built by `server/Dockerfile` |
+| `web` | the website | `bodorgo-web`, built by `client/Dockerfile`: the built app served by Apache with the live site's own `.htaccess` |
+
+**The images hold only code.** No settings, no passwords, no uploads and no database copy are ever built into them (`.dockerignore` sees to that), so an image can be given to anyone. The data travels beside them, in the `handover/` folder, which is never in git.
+
+**Not in the containers**, because the app only talks to them:
+
+- **Authentik** — nobody can log in without one. Keep using the existing one, or set up a new one as in section 9.
+- **The HTTPS reverse proxy** in front of the two ports.
+- **Jellyfin** (music), and the accounts at Resend, Stripe, Barion, openrouteservice and OpenWeatherMap.
+
+### What has to be handed over
+
+- [ ] **The code**: this repository.
+- [ ] **The database copy**: one `mongodump --archive --gzip` file. The NAS's hourly backup file (`bodorgo-db/hourly/mongo-NN.archive.gz`) is exactly that.
+- [ ] **The uploaded files** from the old server's folder: `documents/` and `chat-images/`. The database only holds their names. (`thumbnails/` need not be copied: "Új média felfedezése" makes them again.)
+- [ ] **The photo and video folders**: tour photos, Média photos, videos.
+- [ ] **The settings**: the old `server/.env`. Three values must stay exactly as they were:
+  - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — or every phone has to switch notifications on again;
+  - `FUTOKOR_TAG_SECRET` — or the printed Futókör cards stop working. If it was never set, the cards were signed with `COOKIE_SECRET`: then that one must stay;
+  - `INITIAL_ADMIN_USER` — until the new role manager is named.
+- [ ] **Authentik**: the client id and secret, and the new addresses added to the provider's Redirect URIs.
+- [ ] **The outside accounts**: Resend (the sender's domain), Stripe (its webhook must point at the new API address), Barion, the DNS records.
+
+### Setting it up
+
+1. **Install Docker** (Docker Desktop, or Docker Engine with the compose plugin) and get the repository.
+
+2. **Docker's settings.** Copy `.env.docker.example` to `.env` (next to `compose.yaml`) and fill it in: the database password, the two ports, the API's public address, and where the photo and video folders are on this machine.
+
+3. **The app's settings.** Copy `server/src/.env.example` to `server/.env` and fill it in (or bring the old one). The lines marked *[Docker sets this]* — port, database address, folders — are set by `compose.yaml`; what `server/.env` says for them is ignored.
+
+4. **The database copy.** Put the one dump file into `handover/db/`. It is loaded once, the first time the database starts empty. If the file holds several databases, `DUMP_DB` in `.env` says which one to take. The old place's logins (`sessions`) are left out.
+
+5. **Start it.**
+
+   ```
+   docker compose up -d --build
+   docker compose logs mongo
+   ```
+
+   The first start builds the two images (a few minutes). In the database's log look for **`bodorgo: database copy loaded`** and the line before it, `… document(s) restored successfully. 0 document(s) failed`. If it says the loading failed, fix the cause and start over with `docker compose down -v` (this deletes the new, still empty volumes) and `up` again.
+
+6. **The uploaded files.** Copy the old server's two folders into the running container, then give them to the user the server runs as:
+
+   ```
+   docker compose cp ./documents/. api:/app/documents/
+   docker compose cp ./chat-images/. api:/app/chat-images/
+   docker compose exec -u root api chown -R node:node /app/documents /app/chat-images
+   ```
+
+7. **The reverse proxy.** Point the site's address at `WEB_PORT` and the API's address at `API_PORT`, both over HTTPS. Three things matter:
+   - **WebSockets** must be let through to the API (chat and quiz use them).
+   - **The two addresses must be under one domain**, like `example.org` and `api.example.org`. The login cookie is only sent between addresses of the same site.
+   - With `NODE_ENV=production` the cookie is HTTPS-only: over plain HTTP nobody stays logged in.
+
+8. **Authentik.** Add `https://<API address>/auth/callback` to the provider's Redirect URIs, and set `AUTHENTIK_REDIRECT_URI`, `AUTHENTIK_POSTLOGOUT_URI`, `CLIENT_BASE_URL`, `CLIENT_ORIGIN` and `API_BASE_URL` in `server/.env` to the new addresses.
+
+9. **Log in** as the person `INITIAL_ADMIN_USER` names. Then press **Új média felfedezése** once to make the photos' thumbnails.
+
+### Trying it on your own machine
+
+No proxy and no HTTPS needed: in `server/.env` keep `NODE_ENV=development` and the `localhost` addresses, and in `.env` set `PUBLIC_API_URL=http://localhost:8235`. The site is then at `http://localhost:<WEB_PORT>` — which must be the address `CLIENT_BASE_URL` and `CLIENT_ORIGIN` name.
+
+A try-out started from a copy of the live database is a real copy of real people's data:
+
+- keep `EMAIL_REDIRECT_TO` set, so no e-mail reaches them;
+- leave `BACKGROUND_JOBS` and `TOUR_VIDEO_EMAILS` off;
+- set `DUMP_SKIP=sessions pushsubscriptions` in `.env`, so it cannot send notifications to their phones.
+
+### Living with it
+
+| To | Do |
+| --- | --- |
+| See what is running | `docker compose ps` |
+| Read the server's log | `docker compose logs -f api` (the daily files are in the `logs` volume, `/app/logs`) |
+| Stop / start | `docker compose stop` / `docker compose up -d` |
+| Change a setting | edit `server/.env`, then `docker compose up -d` |
+| Update to newer code | `git pull`, then `docker compose up -d --build` |
+| Run a helper script | `docker compose exec api node scripts/<name>` |
+| Open a database shell | `docker compose exec mongo mongosh -u <user> -p --authenticationDatabase admin bodorgo` |
+| **Delete everything**, data included | `docker compose down -v` |
+
+**The API's address is built into the website.** After changing `PUBLIC_API_URL`, rebuild: `docker compose up -d --build web`.
+
+**The version** the app shows (bottom of the page) comes from `BUILD_COMMIT` and `BUILD_DATE` in `.env`. Before a build, set them from git: `git rev-parse --short=7 HEAD` and `git log -1 --format=%cd --date=format:%Y.%m.%d`. An open app reloads itself when the version changes.
+
+**Backing up.** Everything that matters is in the Docker volumes `mongo-data`, `documents` and `chat-images` (plus the photo and video folders, which are yours anyway). A database backup, in the same format the restore takes:
+
+```
+docker compose exec mongo sh -c 'mongodump -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db "$MONGO_DB" --archive=/tmp/bodorgo.archive.gz --gzip'
+docker compose cp mongo:/tmp/bodorgo.archive.gz ./bodorgo-backup.archive.gz
+```
+
+Schedule that, and a copy of the volumes, on whatever the new machine uses for backups. Nothing does it by itself.
+
+**Without the source.** The images can be moved as files: `docker save -o bodorgo-images.tar bodorgo-api bodorgo-web mongo:8.0`, then `docker load -i bodorgo-images.tar` on the other machine. `compose.yaml`, `docker/`, the two settings files and `handover/` are still needed beside them. Remember that `bodorgo-web` only works for the API address it was built with.
+
+### How it differs from the NAS setup
+
+- The server runs its source (`node src/server.js`), not the one-file bundle: inside a Linux image npm installs every package for Linux itself, so nothing is shipped by hand.
+- No pm2: Docker restarts a container that stops (`restart: unless-stopped`) and waits for the database before starting the API.
+- The container's clock is set to Budapest time (`TZ`), like the NAS.
+- The website gets the same caching and Brotli rules as live, from `client/live.htaccess`.
+
+---
+
+## 9. Authentik
 
 Authentik (`oridzs.terfotozas.hu`) is set up by hand in its admin UI. What the app relies on:
 
@@ -547,9 +666,9 @@ The invitation e-mail itself is sent by the app through Resend; Authentik's own 
 
 ---
 
-## 9. How some parts work inside
+## 10. How some parts work inside
 
-### 9.1 Push notifications
+### 10.1 Push notifications
 
 A website can show real system notifications through the **Web Push** standard, with no app store and no cost. The user allows notifications once per device; the browser gives the site a private address at its push service (Google, Mozilla or Apple). When something happens, the server posts a small encrypted message to that address, and the site's **service worker** shows it.
 
@@ -579,7 +698,7 @@ A website can show real system notifications through the **Web Push** standard, 
 
 **When it does not show up:** notifications off for the browser in the operating system, or Do not disturb; the site blocked in the browser (re-allow at the padlock); iPhone not opened from the Home Screen icon; Android battery saver delaying it. After changing `angular.json`, restart `ng serve`, otherwise `/sw.js` answers 404.
 
-### 9.2 Tour photos
+### 10.2 Tour photos
 
 - Every image request goes browser → API → session check → the tour's recorded photo list → the file on disk. The browser never sees a folder path, only a tour id and a file name, checked against that tour's own list.
 - One NAS folder per tour, named `<4-digit code>_<place>_bodorgo_<roman numeral>`; the numeral is the tour's `order`.
@@ -589,15 +708,15 @@ A website can show real system notifications through the **Web Push** standard, 
 - **Restricted photos:** visible to admins and that tour's attendees only. For anyone else the photo is left out of the list and answers exactly like a file that does not exist.
 - PhotoSwipe's script is lazy-loaded. It resolves its gallery elements once, at `init()`, so it has to be initialized after Angular has rendered them.
 
-### 9.3 Videos
+### 10.3 Videos
 
 Streamed straight from the Jellyfin library's folder with byte-range requests (that is why CORS allows the `Range` header). A tour's recap videos are matched by the tour number the file name starts with — `10 - Sarud (2017) - Directors Cut - S06E01.mp4` is tour #10's — so a correctly named file dropped into the folder shows up on its tour's page.
 
-### 9.4 Music
+### 10.4 Music
 
 The server proxies Jellyfin, so its key never reaches the browser. The playlists are loaded at server start; after that only the admin's refresh button on each page (or a restart) reloads them. A new radio = an entry in `PLAYLISTS` in `server/src/music/jellyfin.js`, its `.env` id, and a page. Jellyfin drops requests when asked for many artists at once, so artist photos are looked up one by one.
 
-### 9.5 Daloskönyv
+### 10.5 Daloskönyv
 
 - Songs are stored as **ChordPro** text. Notation is Hungarian (H = B, B = B♭), minors in lower case.
 - The parsing, chord, chord-shape and key logic is written once, in the client (TypeScript), and compiled for the server's PDF by `server/scripts/buildSongText.mjs` into `server/src/songs/songText.js` (generated, committed). **Change the client files, then rerun the script.**
@@ -607,7 +726,7 @@ The server proxies Jellyfin, so its key never reaches the browser. The playlists
 - **The songs are corrected by hand on the live site.** Never re-import or overwrite them from dev.
 - A trap: the client has Tailwind, so a component class named like a Tailwind utility (`contents`, `block`, `hidden`, `flex`, `grid`…) silently gets that utility's CSS.
 
-### 9.6 Futókörök
+### 10.6 Futókörök
 
 - **Cards:** each checkpoint is a card with a QR code (and an NFC sticker) whose link is `<site>/fk/<token>`. The token is signed with `FUTOKOR_TAG_SECRET`.
 
@@ -619,14 +738,14 @@ The server proxies Jellyfin, so its key never reaches the browser. The playlists
 - **Results:** per course — podium, everyone by best lap, splits, filters. Each course stands alone; tours are never compared with one another.
 - **Élő követés:** a runner may opt in to show their place on the map during a run. Only the latest position is kept, never a trail, and only logged-in users see it.
 
-### 9.7 Payments
+### 10.7 Payments
 
 - Two purposes, two destinations: **membership fees** go to the club's account, **tour advances** to the organizer's. Hence two Stripe accounts and two Barion wallets.
 - The payer chooses the gateway and pays its fee, shown before paying: charge = (sum + fixed fee) / (1 − percent), so the full sum arrives. Fees and on/off per gateway are set on Klub → Beállítások → Fizetési módok. A fee of 0 turns the surcharge off.
 - Stripe's webhook needs the raw request body, so its route is registered before the JSON body parser (`app.js`).
 - Cash recorded by an admin always remains possible.
 
-### 9.8 The soap bubble in the main menu
+### 10.8 The soap bubble in the main menu
 
 The main menu has one bubble behind the selected item. On hover it floats to the hovered item, stretches to its width and wobbles; when the mouse leaves, it floats back. The code is in `client/src/app/components/header/` (`header.html`, `header.ts`'s `placeBubble()`, `header.scss`'s `.menu-bubble` and `.menu-bubble-skin`).
 
@@ -643,7 +762,7 @@ To tune it: raise the `1.4` / `1.5` for more bounce, lengthen the durations for 
 
 ---
 
-## 10. Helper scripts
+## 11. Helper scripts
 
 In `server/scripts/`, run from `server/` (`node scripts/<name>`). With the local `.env` they work on the dev database. Many have a dry run by default and need `--go` to change anything.
 
@@ -677,7 +796,7 @@ The `migrate*`, `backfill*` and `importSongsFromOdt.mjs` scripts were one-off st
 
 ---
 
-## 11. House rules
+## 12. House rules
 
 How the work on this app is done. Following them keeps it consistent.
 
@@ -695,7 +814,7 @@ How the work on this app is done. Following them keeps it consistent.
 
 ---
 
-## 12. Still to do
+## 13. Still to do
 
 Collected from everything open so far. Items marked *(check)* may already be done — confirm before working on them.
 
@@ -750,9 +869,30 @@ Collected from everything open so far. Items marked *(check)* may already be don
 - [ ] More push notifications: a new letter to attendees, a tour's video is ready, the Szobabeosztás is finalized, a day-before reminder.
 - [ ] Tablet side menu grouping for Média (and maybe Klub) — proposed, not decided.
 
+### Handing over: Authentik
+
+The Docker setup (section 8) does not contain Authentik, and nobody can log in without one. Today's Authentik runs on the owner's NAS, under the owner's own domain (`oridzs.terfotozas.hu`), and also serves other things there (Forgejo). Before a real handover:
+
+- [ ] **Decide where logins will live**: the new place keeps using today's Authentik (it then still depends on the old NAS), or gets an Authentik of its own.
+- [ ] If its own: **add Authentik to the Docker setup** as an optional compose file (server, worker, its PostgreSQL), so it starts with the rest.
+- [ ] **Export the set-up instead of redoing it by hand**: the Bódorgó application and provider, the `bodorgo` group, the flows of section 9 (`enrollment-invitation`, the Google source's enrollment, `bodorgo-logout`), the password policy and the `bodorgo-app` service account with its role — as an Authentik blueprint kept in `server/authentik/`.
+- [ ] **Decide how people get across**: carry the accounts over (Authentik's database is in the NAS's hourly PostgreSQL backup, together with other databases that must not travel), or invite everyone again. The app matches people by e-mail alone, so a newly made account with the same e-mail simply works.
+- [ ] What a new Authentik needs by hand whichever way: its own address and HTTPS, an SMTP account for its e-mails, the two e-mail templates from `server/authentik/` copied into its `custom-templates` folder, a new Google sign-in client for the new address, a new API token for `AUTHENTIK_API_TOKEN`, and the trusted-proxy setting (section 9).
+- [ ] In either case: add the new API address's `/auth/callback` to the provider's Redirect URIs, and try the three paths end to end — invitation sign-up, Google sign-up, logout.
+- [ ] The e-mail templates' logo is fetched from `bodorgo.hu`; at another address change the link in both templates.
+
+### Handing over: the rest
+
+- [ ] Copy the uploaded files (`documents/`, `chat-images/` from the live server's folder) into `handover/` when the handover happens — only the database copy is there now.
+- [ ] Decide what happens to the photos, videos and the Jellyfin library, which live on the same NAS.
+- [ ] Schedule backups at the new place (section 8, "Backing up").
+- [ ] Try a full login in the Docker try-out.
+
 ### Code and housekeeping
 
-- [ ] **Bring `server/src/.env.example` up to date** — it still lists settings nothing reads (JWT, Mailtrap, Redis, SendGrid, register/reset redirects) and lacks many that are needed (see [4](#4-installing-and-running-it-locally)). Remove the matching leftovers from `config.js`.
+- [ ] **Moving to another address than `bodorgo.hu`:** a few texts still name it — the invitation e-mail (`invitationController.js`), the Programfüzet's foot (`tourPdfController.js`), the footer's and the privacy notice's e-mail address, the calendar entries' id. Make them follow `CLIENT_BASE_URL`, or change them by hand.
+- [ ] The server does not retry when the database is not reachable at start (`server.js` only logs it). Docker waits for the database, pm2 restarts; a retry would be sturdier.
+- [ ] `swagger-jsdoc` and `swagger-ui-express` look unused since the API page moved to Scalar — check and remove.
 - [ ] `app.js` has an open TODO: a replacement for the disabled `express-mongo-sanitize`.
 - [ ] Client tests still missing for: the Futókör pages, the Média pages (music, photos, videos), home / landing, the tours map, the age chart, the photo gallery, the crop dialog. The header is about half covered.
 - [ ] Decide the fate of three unmerged branches: `feature/bodri-assistant` (an AI assistant on a self-hosted Ollama), `feature/strava-club-stats` (a sport-activity section from the club's Strava feed), `music-pill-icon` (the header's music pill).
@@ -762,7 +902,7 @@ Collected from everything open so far. Items marked *(check)* may already be don
 
 ---
 
-## 13. Repository history
+## 14. Repository history
 
 - The repository lives on a self-hosted Forgejo (`forgejo.terfotozas.hu/gazda/bodorgo`). It used to be split into separate client and server repositories; those still exist there with their own history but are no longer used. GitHub holds a snapshot of Forgejo's `main`.
 - **The history was rewritten on 2026-09-25** to remove club documents that had once been committed, so every commit ID changed then. A clone from before that date must be re-cloned (or hard-reset to the new branches), never merged.

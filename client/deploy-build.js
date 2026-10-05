@@ -16,9 +16,12 @@ const { execSync, spawnSync } = require('child_process');
 const git = (command) =>
   execSync(`git ${command}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 
-const commit = git('rev-parse --short=7 HEAD');
-const date = git('log -1 --format=%cd --date=format:%Y.%m.%d');
-const dirty = git('status --porcelain --untracked-files=no') ? '+' : '';
+// A Docker image is built without git: there the commit and its date are
+// passed in (BUILD_COMMIT, BUILD_DATE - see the Dockerfile).
+const passedIn = process.env.BUILD_COMMIT && process.env.BUILD_DATE;
+const commit = passedIn ? process.env.BUILD_COMMIT : git('rev-parse --short=7 HEAD');
+const date = passedIn ? process.env.BUILD_DATE : git('log -1 --format=%cd --date=format:%Y.%m.%d');
+const dirty = !passedIn && git('status --porcelain --untracked-files=no') ? '+' : '';
 const build = {
   version: `${date} · ${commit}${dirty}`,
   commit,
