@@ -56,9 +56,20 @@ $line: #e4eae7;
 }
 
 // Gitár | Ukulele: two halves of one pill, the chosen one filled.
-.instrument {
-  display: inline-flex;
+// The first row of the list's controls: the instrument switch, the book
+// as a PDF, the played marks wiped - on one line on a phone too.
+.tools-row {
+  display: flex;
+  align-items: center;
+  // Room between the three on a wide screen; a phone spreads them along
+  // the row (see its rules below).
+  gap: 1.25rem;
   margin-bottom: 0.9rem;
+}
+
+.instrument {
+  flex: none;
+  display: inline-flex;
   padding: 0.2rem;
   border: 1px solid #cfd9d5;
   border-radius: 10rem;
@@ -115,27 +126,31 @@ $line: #e4eae7;
 }
 
 // "PDF": the whole book to take along - light, beside the dark "+Dal".
+// The played marks' button among the tuner's and the annexes' icons: only
+// in the column beside an open song (the wide screen's rules show it).
+.annex-row-clear {
+  display: none;
+}
+
+// The book as a PDF: the PDF icon alone, without a circle around it - as
+// tall as the instrument switch beside it.
 .book-btn {
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.6rem 1rem 0.6rem 0.8rem;
-  border: 1px solid #cfd9d5;
-  border-radius: 10rem;
-  background: #fff;
-  color: $ink;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.6rem;
   text-decoration: none;
-  font-weight: 600;
 
-  &:hover {
-    background: #e8f3ee;
+  &:hover mat-icon {
+    color: #8c1d18;
   }
 
   mat-icon {
-    font-size: 1.2rem;
-    width: 1.2rem;
-    height: 1.2rem;
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
     color: #b3261e;
   }
 }
@@ -215,31 +230,51 @@ $line: #e4eae7;
 }
 
 .clear-played {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 0.9rem;
-  padding: 0.45rem 0.9rem 0.45rem 0.7rem;
+  flex: none;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 1px solid #f0c9a8;
-  border-radius: 10rem;
+  border-radius: 50%;
   background: #fff6ec;
-  color: #8a3f0d;
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-align: left;
+  color: #c2620f;
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #ffeeda;
   }
 
-  mat-icon {
-    flex: none;
-    font-size: 1.1rem;
-    width: 1.1rem;
-    height: 1.1rem;
+  // No song is marked tonight: nothing to wipe - pale, in its place.
+  &:disabled {
+    border-color: $line;
+    background: #fff;
+    color: #c3ccd0;
+    cursor: default;
   }
+
+  mat-icon {
+    font-size: 1.3rem;
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+}
+
+// How many songs carry the mark: a small number on the button's corner.
+.clear-count {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.3rem;
+  min-width: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 10rem;
+  background: #f07827;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
 }
 
 // The pages that aren't songs (the tuner, the annexes): before the songs,
@@ -354,6 +389,25 @@ $line: #e4eae7;
 
   li {
     break-inside: avoid;
+  }
+
+  // A letter of the alphabet over the first song under it: a capital
+  // about as tall as a song's row (title and artist), in the book's
+  // green. It stays with the song it stands over, in the list's columns
+  // too.
+  .letter-head {
+    break-after: avoid;
+    margin: 0.5rem 0 0.1rem;
+    padding: 0 0.75rem;
+    color: $teal;
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+
+    &:first-child {
+      margin-top: 0;
+    }
   }
 
   a {
@@ -514,9 +568,24 @@ $line: #e4eae7;
     // Beside a song the column is the list alone: the search, the
     // instrument switch and the owner's "+" are in the song's own bar,
     // above the song (song.html).
-    .instrument,
     .top-row {
       display: none;
+    }
+
+    // The first row's three are in the song's own bar here, and the
+    // played marks' button is the fourth icon of the row below.
+    .tools-row {
+      display: none;
+    }
+
+    .annex-row-clear {
+      display: block;
+    }
+
+    // As big as the three beside it.
+    .annex-row .clear-played {
+      width: 2.6rem;
+      height: 2.6rem;
     }
 
     // The column's top stays put - "Játszottak jelölésének törlése", the
@@ -585,6 +654,12 @@ $line: #e4eae7;
 @media (max-width: 580px) {
   .toc {
     padding: 1.5rem 1rem 3rem;
+  }
+
+  // The first row's three spread evenly from edge to edge.
+  .tools-row {
+    justify-content: space-between;
+    gap: 0.5rem;
   }
 
   .search {

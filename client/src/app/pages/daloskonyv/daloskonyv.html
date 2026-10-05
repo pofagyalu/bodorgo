@@ -1,3 +1,27 @@
+<!-- The played marks' button: an icon with how many songs carry the mark -
+     idle while there are none, in its place all the same. In the list's
+     first row, and beside an open song among the tuner's and the annexes'
+     icons. -->
+<ng-template #clearButton>
+  <button
+    type="button"
+    class="clear-played"
+    (click)="clearPlayed()"
+    [disabled]="!played().size"
+    [title]="
+      played().size
+        ? 'Játszottak jelölésének törlése (' + played().size + ')'
+        : 'Ma még egy dal sincs megjelölve'
+    "
+    aria-label="Játszottak jelölésének törlése"
+  >
+    <mat-icon>remove_done</mat-icon>
+    @if (played().size) {
+      <span class="clear-count">{{ played().size }}</span>
+    }
+  </button>
+</ng-template>
+
 <div class="book" [class.book--open]="isOpen()">
   <!-- The table of contents: the whole page until a song is chosen, then
        the left column (hidden on a phone, where the song takes its place). -->
@@ -8,24 +32,39 @@
       <p>A klub dalai szöveggel és akkordokkal – tábortűzhöz, gitárhoz, ukulelére.</p>
     </div>
 
-    <!-- Whose chord diagrams the songs show. -->
-    <div class="instrument" role="group" aria-label="Hangszer az akkordokhoz">
-      <button
-        type="button"
-        [class.on]="instrument() === 'guitar'"
-        [attr.aria-pressed]="instrument() === 'guitar'"
-        (click)="chooseInstrument('guitar')"
+    <!-- The first row: whose chord diagrams the songs show, the book as a
+         PDF, and the played marks wiped. The second: the search, and "+ Dal". -->
+    <div class="tools-row">
+      <div class="instrument" role="group" aria-label="Hangszer az akkordokhoz">
+        <button
+          type="button"
+          [class.on]="instrument() === 'guitar'"
+          [attr.aria-pressed]="instrument() === 'guitar'"
+          (click)="chooseInstrument('guitar')"
+        >
+          Gitár
+        </button>
+        <button
+          type="button"
+          [class.on]="instrument() === 'ukulele'"
+          [attr.aria-pressed]="instrument() === 'ukulele'"
+          (click)="chooseInstrument('ukulele')"
+        >
+          Ukulele
+        </button>
+      </div>
+      <!-- The whole book as a PDF, with the chosen instrument's diagrams. -->
+      <a
+        class="book-btn"
+        [href]="bookUrl()"
+        title="A daloskönyv letöltése PDF-ben"
+        aria-label="A daloskönyv letöltése PDF-ben"
       >
-        Gitár
-      </button>
-      <button
-        type="button"
-        [class.on]="instrument() === 'ukulele'"
-        [attr.aria-pressed]="instrument() === 'ukulele'"
-        (click)="chooseInstrument('ukulele')"
-      >
-        Ukulele
-      </button>
+        <mat-icon>picture_as_pdf</mat-icon>
+      </a>
+      <!-- The songs played tonight carry a tick; one tap here wipes them
+           all (the button itself: the template at the top). -->
+      <ng-container [ngTemplateOutlet]="clearButton" />
     </div>
 
     <div class="top-row">
@@ -39,15 +78,6 @@
           (input)="search.set($any($event.target).value)"
         />
       </label>
-      <!-- The whole book as a PDF, with the chosen instrument's diagrams. -->
-      <a
-        class="book-btn"
-        [href]="bookUrl()"
-        title="A daloskönyv letöltése PDF-ben"
-        aria-label="A daloskönyv letöltése PDF-ben"
-      >
-        <mat-icon>picture_as_pdf</mat-icon><span class="book-text">PDF</span>
-      </a>
       <!-- Anyone may add a song of their own. On a phone: the floating +
            in the bottom right corner. -->
       @if (songs() !== null) {
@@ -73,17 +103,12 @@
       </button>
     }
 
-    <!-- The songs played tonight carry a tick; one tap wipes them all. -->
-    @if (played().size) {
-      <button type="button" class="clear-played" (click)="clearPlayed()">
-        <mat-icon>remove_done</mat-icon>
-        Játszottak jelölésének törlése ({{ played().size }})
-      </button>
-    }
-
     <!-- Not songs, but found like one: the tuner and the two annexes - one
          row of icons, each saying what it is under the pointer. -->
-    @if (annexes().length) {
+    <!-- Beside an open song the played marks' button is the row's fourth
+         icon (the first row above is the song's own bar there) - so the row
+         is drawn there even when a search has left none of the three. -->
+    @if (annexes().length || isOpen()) {
       <ul class="annex-row">
         @for (annex of annexes(); track annex.id) {
           <li>
@@ -97,6 +122,9 @@
             </a>
           </li>
         }
+        <li class="annex-row-clear">
+          <ng-container [ngTemplateOutlet]="clearButton" />
+        </li>
       </ul>
     }
 
@@ -116,6 +144,11 @@
         <ol class="song-list" #list>
           @for (hit of found(); track hit.song._id) {
             @let song = hit.song;
+            <!-- A new letter of the alphabet starts here: its capital over
+                 the first song under it - to look at, not to press. -->
+            @if (letterHeads().get(song._id); as letter) {
+              <li class="letter-head" aria-hidden="true">{{ letter }}</li>
+            }
             <li [attr.data-letter]="firstOfLetter().get(song._id)">
               <a
                 [routerLink]="[base(), song.slug]"

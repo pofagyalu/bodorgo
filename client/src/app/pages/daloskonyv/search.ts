@@ -101,3 +101,31 @@ export function foundIn(text: string, search: string): FoundLine | null {
     after: text.slice(at + q.length),
   };
 }
+
+// The letters written with two or three characters, the longest first.
+const MULTI_LETTERS = ['dzs', 'cs', 'dz', 'gy', 'ly', 'ny', 'sz', 'ty', 'zs'];
+// A long vowel stands with its short one, the way a dictionary has them.
+const VOWEL_HEADS: Record<string, string> = {
+  á: 'A',
+  é: 'E',
+  í: 'I',
+  ó: 'O',
+  ő: 'Ö',
+  ú: 'U',
+  ű: 'Ü',
+};
+
+// The letter of the Hungarian alphabet a title stands under in the song
+// list - its heading there: "Cs", "Gy", "Sz"… are letters of their own
+// ("Csak" is under Cs, not C), a long vowel goes with its short one
+// ("Álom" under A, "Őrzöm" under Ö). '' for a title that starts with a
+// number or a sign: those get no heading. The same letters the list's
+// order goes by (the server sorts the Hungarian way).
+export function hungarianLetter(title: string): string {
+  const start = title.trim().toLocaleLowerCase('hu');
+  const first = start.charAt(0);
+  if (!first || !/\p{L}/u.test(first)) return '';
+  const multi = MULTI_LETTERS.find((letter) => start.startsWith(letter));
+  if (multi) return multi.charAt(0).toUpperCase() + multi.slice(1);
+  return VOWEL_HEADS[first] ?? first.toLocaleUpperCase('hu');
+}
