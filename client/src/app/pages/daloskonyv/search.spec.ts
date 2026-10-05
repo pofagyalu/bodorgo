@@ -1,4 +1,4 @@
-import { LETTERS, fold, foundIn, letterOf, searchSongs } from './search';
+import { LETTERS, fold, foundIn, hungarianLetter, letterOf, searchSongs } from './search';
 
 const SONGS = [
   { _id: 'a', title: 'Adj helyet magad mellett', artist: 'Bikini' },
@@ -108,5 +108,42 @@ describe('foundIn', () => {
   it('gives null where it isn’t, and for an empty search', () => {
     expect(foundIn('Tavaszi szél', 'nyár')).toBeNull();
     expect(foundIn('Tavaszi szél', '  ')).toBeNull();
+  });
+});
+
+describe('hungarianLetter', () => {
+  it('gives the letter a title stands under', () => {
+    expect(hungarianLetter('Alma')).toBe('A');
+    expect(hungarianLetter('  bor')).toBe('B');
+    expect(hungarianLetter('Zene')).toBe('Z');
+  });
+
+  it('keeps the letters written with more characters apart', () => {
+    expect(hungarianLetter('Csak')).toBe('Cs');
+    expect(hungarianLetter('gyere')).toBe('Gy');
+    expect(hungarianLetter('SZÉL')).toBe('Sz');
+    expect(hungarianLetter('Zsák')).toBe('Zs');
+    expect(hungarianLetter('Dzsungel')).toBe('Dzs');
+    expect(hungarianLetter('Dzéta')).toBe('Dz');
+    // A plain C, S or Z is still its own.
+    expect(hungarianLetter('Cica')).toBe('C');
+    expect(hungarianLetter('Sál')).toBe('S');
+  });
+
+  it('puts a long vowel with its short one, Ö and Ü on their own', () => {
+    expect(hungarianLetter('Álom')).toBe('A');
+    expect(hungarianLetter('Éj')).toBe('E');
+    expect(hungarianLetter('Óra')).toBe('O');
+    expect(hungarianLetter('Öröm')).toBe('Ö');
+    expect(hungarianLetter('Őrzöm')).toBe('Ö');
+    expect(hungarianLetter('Út')).toBe('U');
+    expect(hungarianLetter('Ünnep')).toBe('Ü');
+    expect(hungarianLetter('Űr')).toBe('Ü');
+  });
+
+  it('gives nothing for a number or a sign', () => {
+    expect(hungarianLetter('67-es')).toBe('');
+    expect(hungarianLetter('…és')).toBe('');
+    expect(hungarianLetter('')).toBe('');
   });
 });

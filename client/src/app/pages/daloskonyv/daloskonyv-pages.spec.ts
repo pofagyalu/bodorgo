@@ -833,6 +833,122 @@ describe('Daloskonyv', () => {
     fixture.detectChanges();
   }
 
+  it('has the instrument, the PDF and the played marks in one row, the search under it', () => {
+    open();
+    const el: HTMLElement = fixture.nativeElement;
+    const first = el.querySelector('.tools-row')!;
+    expect(first.querySelector('.instrument')).toBeTruthy();
+    expect(first.querySelector('a.book-btn')).toBeTruthy();
+    const second = el.querySelector('.top-row')!;
+    expect(second.querySelector('.search')).toBeTruthy();
+    expect(second.querySelector('.new-song-btn')).toBeTruthy();
+    expect(second.querySelector('.book-btn')).toBeNull();
+
+    // The played marks' button: an icon, idle while nothing is marked.
+    const clear = first.querySelector('button.clear-played') as HTMLButtonElement;
+    expect(clear.disabled).toBe(true);
+    expect(clear.title).toBe('Ma még egy dal sincs megjelölve');
+    expect(clear.querySelector('.clear-count')).toBeNull();
+
+    const service = TestBed.inject(SongService);
+    service.setPlayed('s1', true);
+    service.setPlayed('s3', true);
+    fixture.detectChanges();
+    expect(clear.disabled).toBe(false);
+    expect(clear.title).toBe('Játszottak jelölésének törlése (2)');
+    expect(clear.querySelector('.clear-count')?.textContent?.trim()).toBe('2');
+
+    clear.click();
+    fixture.detectChanges();
+    expect(service.played().size).toBe(0);
+    expect(clear.disabled).toBe(true);
+  });
+
+  it('puts a letter of the alphabet over the first song under it', () => {
+    setUp({ firstChild: null });
+    fixture = TestBed.createComponent(Daloskonyv);
+    page = fixture.componentInstance;
+    fixture.detectChanges();
+    // In the book's order; made-up titles.
+    const titled = (id: string, title: string) => ({ ...LIST[0], _id: id, slug: id, title });
+    respond({
+      'GET /songs': {
+        data: {
+          songs: [
+            titled('n1', '67-es út'),
+            titled('a1', 'Alma'),
+            titled('a2', 'Álom'),
+            titled('c1', 'Cica'),
+            titled('c2', 'Csak'),
+            titled('o1', 'Óra'),
+            titled('o2', 'Öröm'),
+          ],
+          canEdit: false,
+          lastChanged: 'x',
+        },
+      },
+    });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    // What stands in the list, top to bottom: headings and titles.
+    const rows = () =>
+      [...el.querySelectorAll('.songs > .song-list > li')].map((li) =>
+        li.classList.contains('letter-head')
+          ? `[${li.textContent?.trim()}]`
+          : li.querySelector('strong')?.textContent?.trim(),
+      );
+    // No heading over the number; Á with A; Cs and Ö letters of their own.
+    expect(rows()).toEqual([
+      '67-es út',
+      '[A]',
+      'Alma',
+      'Álom',
+      '[C]',
+      'Cica',
+      '[Cs]',
+      'Csak',
+      '[O]',
+      'Óra',
+      '[Ö]',
+      'Öröm',
+    ]);
+    // To look at, not to press.
+    expect(el.querySelector('.letter-head a, .letter-head button')).toBeNull();
+
+    // A search lists what it finds by how well it fits: no headings then.
+    page.search.set('a');
+    fixture.detectChanges();
+    expect(el.querySelector('.letter-head')).toBeNull();
+    page.search.set('');
+  });
+
+  it('has the played marks’ button among the tuner’s and the annexes’ icons too', () => {
+    open();
+    const el: HTMLElement = fixture.nativeElement;
+    const row = el.querySelector('.annex-row')!;
+    // The three icons, and the button as the fourth (the styles show it
+    // there only beside an open song).
+    expect(row.querySelectorAll(':scope > li')).toHaveLength(4);
+    const inRow = row.querySelector('.annex-row-clear button.clear-played') as HTMLButtonElement;
+    expect(inRow.disabled).toBe(true);
+
+    const service = TestBed.inject(SongService);
+    service.setPlayed('s2', true);
+    fixture.detectChanges();
+    expect(inRow.disabled).toBe(false);
+    expect(inRow.querySelector('.clear-count')?.textContent?.trim()).toBe('1');
+    inRow.click();
+    fixture.detectChanges();
+    expect(service.played().size).toBe(0);
+
+    // A search that leaves none of the three: on the list's own page the
+    // row goes (its first row has the button).
+    page.search.set('zzz');
+    fixture.detectChanges();
+    expect(el.querySelector('.annex-row')).toBeNull();
+    page.search.set('');
+  });
+
   it('lists the songs and the annexes', () => {
     open();
     expect(page.filtered()).toHaveLength(3);

@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnInit, computed, effect, inject, viewChild } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,7 +8,7 @@ import { SongListItem, SongService } from '../../services/song';
 import { keyName } from './song-key';
 import { Instrument } from './chord-shapes';
 import { ANNEXES } from './annexes';
-import { LETTERS, fold, foundIn, letterOf, searchSongs, songsOf } from './search';
+import { LETTERS, fold, foundIn, hungarianLetter, letterOf, searchSongs, songsOf } from './search';
 
 // Daloskönyv: the club's songbook - for everyone logged in. The table of
 // contents (searchable), and the chosen song beside it (song/song.ts, the
@@ -15,7 +16,7 @@ import { LETTERS, fold, foundIn, letterOf, searchSongs, songsOf } from './search
 // screen the list stays on the left.
 @Component({
   selector: 'app-daloskonyv',
-  imports: [RouterLink, RouterOutlet, MatIconModule],
+  imports: [NgTemplateOutlet, RouterLink, RouterOutlet, MatIconModule],
   templateUrl: './daloskonyv.html',
   styleUrl: './daloskonyv.scss',
 })
@@ -101,6 +102,23 @@ export class Daloskonyv implements OnInit {
     }
     return first;
   });
+  // The list's headings: the letter of the Hungarian alphabet over the
+  // first song that stands under it (by the song's id) - "A", "B", "Cs"…
+  // None over the titles that start with a number. Only while the list is
+  // in the book's order: what a search finds comes by how well it fits,
+  // not by the alphabet.
+  letterHeads = computed(() => {
+    const heads = new Map<string, string>();
+    if (this.search().trim()) return heads;
+    let last = '';
+    for (const { song } of this.found()) {
+      const letter = hungarianLetter(song.title);
+      if (letter && letter !== last) heads.set(song._id, letter);
+      last = letter;
+    }
+    return heads;
+  });
+
   // The letters that have a song - the others are pale, and lead nowhere.
   hasLetter = computed(() => new Set(this.firstOfLetter().values()));
 
