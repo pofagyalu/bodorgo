@@ -21,7 +21,9 @@ import {
 // The whole Daloskönyv as one PDF: a cover, the table of contents (every
 // line a link to its song, with its page number), then the songs - each
 // from a new page, the chords over their syllables, and (if asked) how the
-// song's chords are held on the guitar or the ukulele -, two annexes (the
+// song's chords are held on the guitar or the ukulele: down the right of
+// the page beside the words where the song's lines leave that room, in a
+// strip above them otherwise -, two annexes (the
 // circle of fifths and the table of the keys' chords), and last an index:
 // the songs once more, grouped by their artists, each a link to its song.
 // Every page after the contents has a link back to it in its foot; the
@@ -48,11 +50,27 @@ const MARGIN = 15 * MM;
 // Room under the text for the page number.
 const BOTTOM = 18 * MM;
 
+// The words' size (pt): never smaller than this, and as much bigger - up to
+// TEXT_SIZE_MAX - as a song has room for on its page (fitSong below). A
+// short song is printed large enough to read by a campfire; a long one
+// keeps to its page.
 const TEXT_SIZE = 11;
-const CHORD_SIZE = 9;
-const TEXT_ROW = 14.5;
-const CHORD_ROW = 10.5;
-const VERSE_GAP = 9;
+const TEXT_SIZE_MAX = 14;
+const TEXT_SIZE_STEP = 0.5;
+
+// What follows the words' size, in the proportions they have at 11: the
+// chords over the words, a row of words, the row of chords over it, the
+// gap between two verses.
+const sizes = (text) => {
+  const scale = text / TEXT_SIZE;
+  return {
+    text,
+    chord: 9 * scale,
+    textRow: 14.5 * scale,
+    chordRow: 10.5 * scale,
+    verseGap: 9 * scale,
+  };
+};
 const CHORUS_INDENT = 12;
 const TOC_ROW = 15.5;
 
@@ -276,70 +294,117 @@ function drawSong(doc, song, diagrams) {
   y += 9;
 
   const { lines } = parseChordPro(song.chordpro);
-  if (diagrams) {
-    const chords = lines.flatMap((l) =>
-      l.type === 'lyrics' || l.type === 'chords-only' ? l.segments.map((s) => s.chord ?? '') : [],
-    );
-    y = drawDiagrams(doc, uniqueChords(chords), diagrams, y);
-  }
-
   // From a {screen} mark on (to the song's end, or to a {print}) the lines
   // are printed with their words alone: those chords are for the song
   // page, where the first verse scrolls out of sight.
-  for (const block of withoutScreenChords(toBlocks(lines))) {
+  const blocks = withoutScreenChords(toBlocks(lines));
+  const chords = lines.flatMap((l) =>
+    l.type === 'lyrics' || l.type === 'chords-only' ? l.segments.map((s) => s.chord ?? '') : [],
+  );
+  const shapes = diagrams ? diagramShapes(uniqueChords(chords), diagrams) : [];
+
+  const plan = fitSong(doc, blocks, shapes, y);
+  // How the chords are held: down the right side of the page beside the
+  // words, or in a strip above them (planSong says which).
+  if (plan.column) drawDiagramColumn(doc, shapes, plan.column, y);
+  else drawDiagrams(doc, shapes, y);
+
+  let page = 0;
+  for (const { row, chorus, ...at } of plan.rows) {
+    for (; page < at.page; page += 1) doc.addPage();
+    drawRow(doc, row, at.y, plan.sizes);
+    // The chorus: a line down its side.
+    if (chorus) {
+      doc
+        .moveTo(left + 3, at.y)
+        .lineTo(left + 3, at.y + row.height)
+        .lineWidth(1.6)
+        .strokeColor('#cfe3dc')
+        .stroke();
+    }
+  }
+}
+
+// Where everything of a song goes at one size of the words, without
+// drawing any of it: the diagrams - in a column down the right of the
+// page, beside the words, where every line leaves that room (the words
+// rarely pass the middle of the page, and a strip of diagrams above them
+// costs the song four or five lines), in the strip above the words
+// otherwise -, and every row of the song with its page and its place on
+// it. `top`: where the song's own part starts, under its heading.
+function planSong(doc, blocks, shapes, top, m) {
+  const left = MARGIN;
+  let y = top;
+  let column = diagramColumn(doc, shapes, top);
+  if (column) {
+    const widest = widestLine(doc, blocks, left, m);
+    // Beside the words - and as large as the room left of them allows.
+    column =
+      widest <= column.left - DIAGRAM_GUTTER - left
+        ? largestColumn(doc, shapes, top, column, widest)
+        : null;
+  }
+  if (!column) y = top + diagramStripHeight(doc, shapes);
+
+  const rows = [];
+  let page = 0;
+  const bottom = contentBottom(doc);
+  for (const block of blocks) {
     const indent = block.chorus ? CHORUS_INDENT : 0;
-    const rows = block.lines.flatMap((line) => layoutLine(doc, line, left + indent));
-    const height = rows.reduce((sum, row) => sum + row.height, 0);
+    const blockRows = block.lines.flatMap((line) => layoutLine(doc, line, left + indent, m));
+    const height = blockRows.reduce((sum, row) => sum + row.height, 0);
     // A verse stays in one piece when it fits on a page at all.
-    const pageHeight = contentBottom(doc) - MARGIN;
-    if (y + height > contentBottom(doc) && height <= pageHeight && y > MARGIN) {
-      doc.addPage();
+    if (y + height > bottom && height <= bottom - MARGIN && y > MARGIN) {
+      page += 1;
       y = MARGIN;
     }
-    for (const row of rows) {
-      if (y + row.height > contentBottom(doc)) {
-        doc.addPage();
+    for (const row of blockRows) {
+      if (y + row.height > bottom) {
+        page += 1;
         y = MARGIN;
       }
-      drawRow(doc, row, y);
-      // The chorus: a line down its side.
-      if (block.chorus) {
-        doc
-          .moveTo(left + 3, y)
-          .lineTo(left + 3, y + row.height)
-          .lineWidth(1.6)
-          .strokeColor('#cfe3dc')
-          .stroke();
-      }
+      rows.push({ row, chorus: block.chorus, page, y });
       y += row.height;
     }
-    y += VERSE_GAP;
+    y += m.verseGap;
   }
+  return { sizes: m, column, rows, pages: page + 1 };
+}
+
+// The song planned at the largest size of the words it has room for: as
+// big as TEXT_SIZE_MAX, as long as it takes no more pages than at the
+// smallest size, and no line that stood on one row there is broken in two.
+function fitSong(doc, blocks, shapes, top) {
+  const smallest = planSong(doc, blocks, shapes, top, sizes(TEXT_SIZE));
+  for (let size = TEXT_SIZE_MAX; size > TEXT_SIZE; size -= TEXT_SIZE_STEP) {
+    const plan = planSong(doc, blocks, shapes, top, sizes(size));
+    if (plan.pages <= smallest.pages && plan.rows.length <= smallest.rows.length) return plan;
+  }
+  return smallest;
 }
 
 // A line of the song as the rows it takes on the page: it wraps between
 // words, and a word's pieces - each a chord over its text - stay together,
 // so a chord never leaves its syllable (the page's twin of
-// song-sheet.scss).
-function layoutLine(doc, line, left) {
+// song-sheet.scss). m: the sizes it is set in.
+function layoutLine(doc, line, left, m, right = contentRight(doc)) {
   if (line.type === 'comment') {
-    return [{ comment: line.text, left, height: TEXT_ROW, pieces: [] }];
+    return [{ comment: line.text, left, height: m.textRow, pieces: [] }];
   }
-  const right = contentRight(doc);
   const rows = [];
   let row = null;
   let x = left;
   const newRow = () => {
-    row = { left, pieces: [], hasChords: false, height: TEXT_ROW };
+    row = { left, pieces: [], hasChords: false, height: m.textRow };
     rows.push(row);
     x = left;
   };
   newRow();
   for (const word of toWords(line.segments)) {
     const pieces = word.map((piece) => {
-      const textWidth = widthOf(doc, piece.text, 'Body', TEXT_SIZE);
+      const textWidth = widthOf(doc, piece.text, 'Body', m.text);
       // A chord never touches the next one, even over a short syllable.
-      const chordWidth = piece.chord ? chordNameWidth(doc, piece.chord, CHORD_SIZE) + 4 : 0;
+      const chordWidth = piece.chord ? chordNameWidth(doc, piece.chord, m.chord) + 4 : 0;
       return { ...piece, width: Math.max(textWidth, chordWidth) };
     });
     const width = pieces.reduce((sum, p) => sum + p.width, 0);
@@ -355,27 +420,30 @@ function layoutLine(doc, line, left) {
   // on the verse it belongs to.
   const chordsOnly = line.type === 'chords-only';
   for (const r of rows) {
-    if (r.hasChords) r.height = chordsOnly ? CHORD_ROW + 3 : TEXT_ROW + CHORD_ROW;
+    if (r.hasChords) r.height = chordsOnly ? m.chordRow + 3 : m.textRow + m.chordRow;
   }
   return rows;
 }
 
-function drawRow(doc, row, y) {
+// A comment's size beside words of this size.
+const commentSize = (m) => (10 * m.text) / TEXT_SIZE;
+
+function drawRow(doc, row, y, m) {
   if (row.comment !== undefined) {
-    put(doc, row.comment, row.left, y, { font: 'Italic', size: 10, color: GREY });
+    put(doc, row.comment, row.left, y, { font: 'Italic', size: commentSize(m), color: GREY });
     return;
   }
-  const textY = row.hasChords ? y + CHORD_ROW : y;
+  const textY = row.hasChords ? y + m.chordRow : y;
   for (const piece of row.pieces) {
     if (piece.chord) {
       // In brackets but not a chord ("Intro", "2x"): a quiet label.
       if (parseChord(piece.chord)) {
-        putChordName(doc, piece.chord, piece.x, y + 1, { size: CHORD_SIZE, color: CHORD });
+        putChordName(doc, piece.chord, piece.x, y + 1, { size: m.chord, color: CHORD });
       } else {
-        put(doc, piece.chord, piece.x, y + 1, { font: 'Italic', size: CHORD_SIZE, color: GREY });
+        put(doc, piece.chord, piece.x, y + 1, { font: 'Italic', size: m.chord, color: GREY });
       }
     }
-    if (piece.text.trim()) put(doc, piece.text, piece.x, textY);
+    if (piece.text.trim()) put(doc, piece.text, piece.x, textY, { size: m.text });
   }
 }
 
@@ -388,16 +456,110 @@ const DIAGRAM_GAP = 13;
 const NAME_HEIGHT = 11;
 const MARKS_HEIGHT = 8;
 
-function drawDiagrams(doc, chords, instrument, top) {
-  const shapes = chords
-    .map((name) => ({ name, shape: chordShape(name, instrument) }))
-    .filter((c) => c.shape);
+// Between the words and the column of diagrams beside them.
+const DIAGRAM_GUTTER = 14;
+// The column may take this much of the page's width at most - more chords
+// than that go above the words.
+const DIAGRAM_COLUMN_SHARE = 0.4;
+
+// The chords that have a diagram on this instrument, with how each is held.
+const diagramShapes = (chords, instrument) =>
+  chords.map((name) => ({ name, shape: chordShape(name, instrument) })).filter((c) => c.shape);
+
+// In the column beside the words the diagrams are drawn as much larger as
+// there is room for, up to this - the largest first.
+const DIAGRAM_SCALES = [1.5, 1.4, 1.3, 1.2, 1.1];
+
+// A diagram's place: the neck's width, the cell it stands in (with room on
+// its left for a fret number, "5."), and a row's height - `scale` times
+// their own size.
+function diagramCell(shapes, scale = 1) {
+  const neck = (shapes[0].shape.frets.length - 1) * STRING_GAP;
+  return {
+    neck,
+    cell: (neck + 12) * scale + DIAGRAM_GAP,
+    rowHeight: (NAME_HEIGHT + MARKS_HEIGHT + (DIAGRAM_FRETS + 1) * FRET_GAP + 8) * scale,
+  };
+}
+
+// The column the diagrams would stand in down the right of the page, from
+// `top` to the page's foot, drawn `scale` times their size: how many per
+// column, how many columns side by side, and where the column starts. null
+// where there are no diagrams, or too many for a column that leaves the
+// words their room.
+function diagramColumn(doc, shapes, top, scale = 1) {
+  if (!shapes.length) return null;
+  const { cell, rowHeight } = diagramCell(shapes, scale);
+  const perColumn = Math.floor((contentBottom(doc) - top) / rowHeight);
+  if (perColumn < 1) return null;
+  const columns = Math.ceil(shapes.length / perColumn);
+  const width = columns * cell - DIAGRAM_GAP;
+  if (width > (contentRight(doc) - MARGIN) * DIAGRAM_COLUMN_SHARE) return null;
+  return { scale, perColumn, columns, left: contentRight(doc) - width };
+}
+
+// The column at the largest size the diagrams have room for beside words
+// that reach `widest` from the left margin: no more columns side by side
+// than at their own size, and clear of the longest line. `column`: the
+// column at their own size, which fits.
+function largestColumn(doc, shapes, top, column, widest) {
+  for (const scale of DIAGRAM_SCALES) {
+    const larger = diagramColumn(doc, shapes, top, scale);
+    const fits =
+      larger && larger.columns <= column.columns && widest <= larger.left - DIAGRAM_GUTTER - MARGIN;
+    if (fits) return larger;
+  }
+  return column;
+}
+
+// The diagrams one under the other, in the order the chords come in the
+// song; a column that is full is followed by one on its right.
+function drawDiagramColumn(doc, shapes, column, top) {
+  const { neck, cell, rowHeight } = diagramCell(shapes, column.scale);
+  shapes.forEach(({ name, shape }, i) => {
+    const x = column.left + Math.floor(i / column.perColumn) * cell;
+    const y = top + (i % column.perColumn) * rowHeight;
+    // Drawn at its own size on a sheet stretched to the column's.
+    doc.save();
+    doc.translate(x, y).scale(column.scale);
+    drawDiagram(doc, name, shape, 12, 0, neck);
+    doc.restore();
+  });
+}
+
+// How far the song's longest line reaches from the left margin, set on one
+// row: its words with the chords over them, a chorus with its indent.
+function widestLine(doc, blocks, left, m) {
+  let widest = 0;
+  for (const block of blocks) {
+    const start = left + (block.chorus ? CHORUS_INDENT : 0);
+    for (const line of block.lines) {
+      if (line.type === 'comment') {
+        const width = widthOf(doc, line.text, 'Italic', commentSize(m));
+        widest = Math.max(widest, start - left + width);
+        continue;
+      }
+      const [row] = layoutLine(doc, line, start, m, Infinity);
+      const last = row.pieces[row.pieces.length - 1];
+      if (last) widest = Math.max(widest, last.x + last.width - left);
+    }
+  }
+  return widest;
+}
+
+// How much of the page the strip of diagrams above the words takes (0
+// without diagrams) - what drawDiagrams below uses up.
+function diagramStripHeight(doc, shapes) {
+  if (!shapes.length) return 0;
+  const { cell, rowHeight } = diagramCell(shapes);
+  const perRow = Math.max(1, Math.floor((contentRight(doc) - MARGIN + DIAGRAM_GAP) / cell));
+  return Math.ceil(shapes.length / perRow) * rowHeight + 6;
+}
+
+// The diagrams in a strip above the words, row after row.
+function drawDiagrams(doc, shapes, top) {
   if (!shapes.length) return top;
-  const strings = shapes[0].shape.frets.length;
-  const neck = (strings - 1) * STRING_GAP;
-  // Room on the left for a fret number ("5.").
-  const cell = neck + 12 + DIAGRAM_GAP;
-  const rowHeight = NAME_HEIGHT + MARKS_HEIGHT + (DIAGRAM_FRETS + 1) * FRET_GAP + 8;
+  const { neck, cell, rowHeight } = diagramCell(shapes);
   let x = MARGIN;
   let y = top;
   for (const { name, shape } of shapes) {

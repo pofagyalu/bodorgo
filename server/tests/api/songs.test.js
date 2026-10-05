@@ -522,6 +522,39 @@ describe('Daloskönyv: the book as a PDF', () => {
     expect(text).not.toContain('screen');
   });
 
+  it('stands the chord diagrams down the right of the page where the lines leave room', async () => {
+    // Made-up words: 46 short lines in one verse. With the diagrams in a
+    // strip above them the verse no longer fits under it and moves to a
+    // second page; beside them, in a column, it stays on the first.
+    const owner = await createOwner();
+    const lines = Array.from({ length: 46 }, (_, i) => (i ? `sor ${i + 1}` : '[C]sor [G]egy'));
+    await add(owner, { title: 'Rövid sorok', chordpro: lines.join('\n') });
+    // The same song with one line that reaches across the page: no room
+    // for a column, the strip stays above the words.
+    const long = [...lines];
+    long[5] = Array.from({ length: 14 }, () => 'hosszúsor').join(' ');
+    await add(owner, { title: 'Hosszú sor', chordpro: long.join('\n') });
+
+    const pagesOf = async (slug, query) => {
+      const res = await request(app)
+        .get(`/songs/${slug}/pdf${query}`)
+        .set(asUser(owner))
+        .buffer()
+        .parse((r, done) => {
+          const chunks = [];
+          r.on('data', (c) => chunks.push(c));
+          r.on('end', () => done(null, Buffer.concat(chunks)));
+        });
+      const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      return (await getDocument({ data: new Uint8Array(res.body), verbosity: 0 }).promise).numPages;
+    };
+
+    expect(await pagesOf('rovid-sorok', '?diagrams=guitar')).toBe(1);
+    expect(await pagesOf('hosszu-sor', '?diagrams=guitar')).toBe(2);
+    // Without diagrams there is nothing to place: one page either way.
+    expect(await pagesOf('rovid-sorok', '')).toBe(1);
+  });
+
   it('gives one song alone as a PDF - moved to another key if asked', async () => {
     const owner = await createOwner();
     await add(owner, {

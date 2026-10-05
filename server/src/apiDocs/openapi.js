@@ -2989,7 +2989,7 @@ const paths = {
       params: [
         query(
           'diagrams',
-          'Whose chord diagrams to draw under each song’s title: `guitar` or `ukulele`. Omit for none.',
+          'Whose chord diagrams to draw with each song: `guitar` or `ukulele`. Omit for none. They stand in a column down the right of the song’s first page, beside the words, where every line of the song leaves that room (and the chords are few enough for it) - drawn up to one and a half times their size there, as the room allows -; otherwise in a strip under the title, above the words. Each song’s words are set as large as the song has room for on its page, between 11 and 14 pt (the chords over them and the line spacing follow): a short song is printed bigger, a long one keeps to its page.',
           { type: 'string', enum: ['guitar', 'ukulele'] },
         ),
         query('size', 'The paper. Default: A4.', { type: 'string', enum: ['A4', 'A5'] }),
@@ -3049,10 +3049,14 @@ const paths = {
         'The song alone, as its page of the songbook - no cover, no contents: its title, artist and key, the chords over the lyrics, and how its chords are held if `diagrams` asks. With `transpose` the song is moved by that many semitones first - the chords spelled for the new key, as the song page shows them at that transposition. The lines after a `{screen}` mark (see Song.chordpro) are printed with their words alone, as in the book. A song longer than a page has its pages numbered ("1 / 2"). The file is named after the song’s slug.',
       params: [
         path('slug', 'The song’s slug, from the table of contents.'),
-        query('diagrams', 'Whose chord diagrams to draw under the title. Omit for none.', {
-          type: 'string',
-          enum: ['guitar', 'ukulele'],
-        }),
+        query(
+          'diagrams',
+          'Whose chord diagrams to draw with the song - down the right of its first page where its lines leave room, under the title otherwise, as in the book. Omit for none.',
+          {
+            type: 'string',
+            enum: ['guitar', 'ukulele'],
+          },
+        ),
         query('size', 'The paper. Default: A4.', { type: 'string', enum: ['A4', 'A5'] }),
         query(
           'transpose',
