@@ -7,3 +7,18 @@ brand/fonts/
 # Photos sent in the tour chats (server/chat-images/, see chat/chatImages.js)
 # - users' pictures, never in git.
 chat-images/
+
+# Local only: the day's logs and a tool's cache folder at the root...
+/logs/
+/node_modules/
+
+# ...and the owner's own working files - specs, the songbook's sources, a
+# Futókör course as downloaded, private papers. Kept on disk, never in git.
+/GAMES_README.md
+/DALOSKONYV_SPEC.md
+/Dalosfüzet_*.odt
+/songs.json
+/songs.txt
+/COURSE_*.gpx
+/COURSE_*.html
+/server/erste_szerződés/
