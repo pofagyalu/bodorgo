@@ -2,7 +2,9 @@ import logger from '../logger.js';
 import config from '../config.js';
 import Tour from '../models/tourModel.js';
 import { checkForNewTourVideos } from '../controllers/tourVideoController.js';
-import { clearTourVideoCache } from '../utils/tourVideos.js';
+import { mediaVideoFiles } from '../controllers/mediaVideoController.js';
+import { clearTourVideoCache, tourVideoFiles } from '../utils/tourVideos.js';
+import { smallCopyState } from '../utils/videoCopies.js';
 import { loadSharp } from './imageFiles.js';
 import { matchNewTourFolders, syncAllTourPhotos } from './tourPhotoSync.js';
 import { syncMediaPhotos } from './mediaPhotoSync.js';
@@ -43,7 +45,18 @@ async function run() {
   const matched = await matchNewTourFolders();
   const tours = await syncAllTourPhotos(sharp);
   const media = await syncMediaPhotos(sharp);
-  return { matched, tours, media, videos: await announceNewTourVideos() };
+  const videos = await announceNewTourVideos();
+  return { matched, tours, media, videos, videosWithoutSmall: videosWithoutSmallCopy() };
+}
+
+// How many videos have no small copy (utils/videoCopies.js) and none on
+// the way - a reminder only: an admin makes them, one by one.
+function videosWithoutSmallCopy() {
+  clearTourVideoCache(); // read the video folders now, not a minute-old list
+  return [...tourVideoFiles(), ...mediaVideoFiles()].filter((v) => {
+    const state = smallCopyState(v);
+    return state === 'none' || state === 'failed';
+  }).length;
 }
 
 // Tours whose recap video has just appeared get their attendees e-mailed

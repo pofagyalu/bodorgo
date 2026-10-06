@@ -12,6 +12,8 @@ import {
   getTourVideo,
   getTourVideoCover,
   getTourVideoSubtitles,
+  removeTourVideoSmall,
+  startTourVideoSmall,
 } from '../controllers/tourVideoController.js';
 import * as reviewController from '../controllers/reviewController.js';
 import { downloadTourPdf, emailTourPdf } from '../controllers/tourPdfController.js';
@@ -189,6 +191,11 @@ router
 router.route('/:tourId/videos/:videoId/video').get(requireAuth, getTourVideo);
 router.route('/:tourId/videos/:videoId/cover').get(requireAuth, getTourVideoCover);
 router.route('/:tourId/videos/:videoId/subtitles.vtt').get(requireAuth, getTourVideoSubtitles);
+// A video's small copy (utils/videoCopies.js) - made and removed by admins.
+router
+  .route('/:tourId/videos/:videoId/small')
+  .post(requireAuth, restrictTo('admin'), startTourVideoSmall)
+  .delete(requireAuth, restrictTo('admin'), removeTourVideoSmall);
 
 // Reviews - requireAuth only, not restrictTo('admin')/anything role-based;
 // the actual "who's allowed" check is attendance-based, enforced inside

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SmallCopyState } from './video-copies';
 
 // Média → Videók - discovered by the server from the NAS folders (see
 // server/src/controllers/mediaVideoController.js), nothing stored or
@@ -20,6 +21,9 @@ export interface MediaVideo {
   hasSubtitles: boolean;
   // Its length - null if the server couldn't read it from the file.
   durationSeconds?: number | null;
+  // Its small copy (see services/video-copies.ts) - 'ready': that one
+  // plays unless the original is picked.
+  small?: SmallCopyState;
   // The role manager only: the only members who see it - empty: every
   // member does.
   viewers?: string[];
@@ -84,6 +88,8 @@ export interface DiscoveryStatus {
     media: DiscoveryResult[];
     // Tours whose new recap video was announced to their attendees.
     videos?: string[];
+    // How many videos (tours' and Média's) have no small copy yet.
+    videosWithoutSmall?: number;
   };
 }
 
@@ -149,9 +155,10 @@ export class MediaService {
   }
 
   // Plain URLs for <video>/<img>/<track> - the browser sends the session
-  // cookie itself (crossorigin="use-credentials" on the video).
-  videoUrl(category: string, id: string): string {
-    return `${this.apiUrl}/${category}/${id}/video`;
+  // cookie itself (crossorigin="use-credentials" on the video). The video
+  // in the quality asked for: the original, or its small copy.
+  videoUrl(category: string, id: string, quality: 'small' | 'original'): string {
+    return `${this.apiUrl}/${category}/${id}/video?quality=${quality}`;
   }
 
   coverUrl(category: string, id: string): string {
@@ -263,6 +270,10 @@ export class MediaService {
         const line = describe(r);
         return line ? `Média – ${line}` : null;
       }),
+      // A reminder: they are made one by one, on the video's own card.
+      report.videosWithoutSmall
+        ? `${report.videosWithoutSmall} videónak nincs kis méretű változata`
+        : null,
     ].filter((l): l is string => !!l);
   });
 

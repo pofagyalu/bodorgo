@@ -80,8 +80,14 @@ services:
       # What the server writes.
       - documents:/app/documents
       - chat-images:/app/chat-images
-      - thumbnails:/data/thumbnails
       - logs:/app/logs
+      # What it makes out of the photos and videos: thumbnails, the photos'
+      # smaller sizes, the videos' small copies (hours of work each). A
+      # folder of this machine, not a Docker volume: it can be backed up
+      # and carried to another machine as it is, and everything in it is
+      # found again by its place alone. The container's user (node, id
+      # 1000) must be able to write into it.
+      - ${THUMBNAILS_DIR:-./handover/files/thumbnails}:/data/thumbnails
       # What it only reads: the photos and videos, wherever they are on
       # this machine.
       - ${PHOTOS_DIR:-./handover/files/photos}:/data/photos:ro
@@ -107,5 +113,4 @@ volumes:
   mongo-data:
   documents:
   chat-images:
-  thumbnails:
   logs:

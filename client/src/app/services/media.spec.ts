@@ -83,7 +83,12 @@ describe('MediaService', () => {
     });
 
     it('builds the video URLs', () => {
-      expect(service.videoUrl('tabor', 'v1')).toBe(`${videos}/tabor/v1/video`);
+      expect(service.videoUrl('tabor', 'v1', 'original')).toBe(
+        `${videos}/tabor/v1/video?quality=original`,
+      );
+      expect(service.videoUrl('tabor', 'v1', 'small')).toBe(
+        `${videos}/tabor/v1/video?quality=small`,
+      );
       expect(service.coverUrl('tabor', 'v1')).toBe(`${videos}/tabor/v1/cover`);
       expect(service.subtitlesUrl('tabor', 'v1')).toBe(`${videos}/tabor/v1/subtitles.vtt`);
       expect(service.categoryCoverUrl('tabor')).toBe(`${videos}/tabor/cover`);
