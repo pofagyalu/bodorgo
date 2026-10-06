@@ -1,10 +1,28 @@
-import { Component, ElementRef, OnInit, computed, effect, inject, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragHandle,
+  CdkDropList,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
 import { SongListItem, SongService } from '../../services/song';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { keyName } from './song-key';
 import { Instrument } from './chord-shapes';
 import { ANNEXES } from './annexes';
@@ -16,12 +34,22 @@ import { LETTERS, fold, foundIn, hungarianLetter, letterOf, searchSongs, songsOf
 // screen the list stays on the left.
 @Component({
   selector: 'app-daloskonyv',
-  imports: [NgTemplateOutlet, RouterLink, RouterOutlet, MatIconModule],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    RouterOutlet,
+    MatIconModule,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
+  ],
   templateUrl: './daloskonyv.html',
   styleUrl: './daloskonyv.scss',
 })
 export class Daloskonyv implements OnInit {
   private songService = inject(SongService);
+  private notifications = inject(NotificationsService);
+  private confirm = inject(ConfirmService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -65,13 +93,155 @@ export class Daloskonyv implements OnInit {
   openAnnex = computed(() => this.open().annex);
   isOpen = computed(() => !!(this.openSlug() || this.openAnnex()));
 
+  // Inside Média (members): its own menu says where one is, so a phone
+  // needs no heading here. Guests have the page on its own.
+  inMedia = computed(() => this.base() !== '/daloskonyv');
+
+  // A phone keeps the first row's controls (the instrument, the PDF, the
+  // played marks) behind one button: open, they drop down over the songs.
+  controlsOpen = signal(false);
+  // One panel at a time: the controls' or the playlists'.
+  toggleControls() {
+    this.listsOpen.set(false);
+    this.controlsOpen.set(!this.controlsOpen());
+  }
+  toggleLists() {
+    this.controlsOpen.set(false);
+    this.listsOpen.set(!this.listsOpen());
+  }
+
+  // --- Playlists: one's own lists of songs (services/song.ts) ---
+
+  lists = this.songService.lists;
+  // The list the songbook is on - null for the whole book.
+  playlist = this.songService.list;
+  // The panel with every list to choose from, and the new list's name.
+  listsOpen = signal(false);
+  newListName = signal('');
+  // Picking: the whole book is shown, each song with a tick box - a tap
+  // puts it into the chosen list, or takes it out.
+  picking = signal(false);
+  // Ordering: the list's songs with a handle each, to drag into place.
+  ordering = signal(false);
+  // The chosen list's new name, while it is being typed - null otherwise.
+  renaming = signal<string | null>(null);
+
+  // The chosen list's songs, for the tick boxes.
+  private inPlaylist = computed(() => new Set(this.playlist()?.songs ?? []));
+  isInPlaylist(song: SongListItem) {
+    return this.inPlaylist().has(song._id);
+  }
+
+  chooseList(id: string) {
+    this.songService.chooseList(id);
+    this.listsOpen.set(false);
+    this.picking.set(false);
+    this.ordering.set(false);
+    this.renaming.set(null);
+  }
+
+  createList() {
+    const name = this.newListName().trim();
+    if (!name) return;
+    this.songService.createList(name).subscribe({
+      next: () => {
+        this.newListName.set('');
+        this.listsOpen.set(false);
+        this.renaming.set(null);
+        this.ordering.set(false);
+        // A new list is empty: straight to filling it.
+        this.picking.set(true);
+      },
+      error: (err) =>
+        this.notifications.addError(err?.error?.message ?? 'A listát nem sikerült létrehozni.'),
+    });
+  }
+
+  togglePicking() {
+    this.picking.update((on) => !on);
+    this.ordering.set(false);
+  }
+
+  // Ordering goes by the list as it stands: a search or an artist would
+  // show only some of its songs.
+  toggleOrdering() {
+    this.ordering.update((on) => !on);
+    this.picking.set(false);
+    if (this.ordering()) {
+      this.search.set('');
+      this.artist.set('');
+    }
+  }
+
+  // A row of the song list: while picking, a tap ticks the song in or out
+  // of the list - it doesn't open it.
+  onRowClick(event: Event, song: SongListItem) {
+    const list = this.playlist();
+    if (!this.picking() || !list) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.songService.toggleInList(list._id, song._id);
+  }
+
+  // A song dragged to a new place in the list.
+  moveSong(drop: CdkDragDrop<unknown>) {
+    const list = this.playlist();
+    if (!list || drop.previousIndex === drop.currentIndex) return;
+    // The rows are the list's songs that still exist, in its order.
+    const songs = this.filtered().map((song) => song._id);
+    moveItemInArray(songs, drop.previousIndex, drop.currentIndex);
+    this.songService.setListSongs(list._id, songs);
+  }
+
+  startRenaming() {
+    this.listsOpen.set(false);
+    this.renaming.set(this.playlist()?.name ?? null);
+  }
+
+  rename() {
+    const list = this.playlist();
+    const name = this.renaming()?.trim();
+    if (!list || !name) return;
+    this.songService.renameList(list._id, name).subscribe({
+      next: () => this.renaming.set(null),
+      error: (err) =>
+        this.notifications.addError(err?.error?.message ?? 'A listát nem sikerült átnevezni.'),
+    });
+  }
+
+  async deleteList() {
+    const list = this.playlist();
+    if (!list) return;
+    this.listsOpen.set(false);
+    const ok = await this.confirm.ask({
+      title: 'Lista törlése',
+      message: `Biztosan törlöd ezt a listát: „${list.name}”?`,
+      detail: 'A dalok a daloskönyvben megmaradnak, csak a lista tűnik el.',
+    });
+    if (!ok) return;
+    this.songService.deleteList(list._id).subscribe({
+      next: () => {
+        this.picking.set(false);
+        this.ordering.set(false);
+        this.renaming.set(null);
+      },
+      error: (err) =>
+        this.notifications.addError(err?.error?.message ?? 'A listát nem sikerült törölni.'),
+    });
+  }
+
   // What the search finds (search.ts): the songs with it in their title or
   // artist, then the ones with it only in their words - those with the
   // line it was found in. Without a search: every song.
-  // Narrowed first to the one artist chosen on a song's page, if any.
+  // Narrowed first to the chosen playlist - its songs in its own order
+  // (while picking, the whole book: that is where its songs are picked
+  // from) -, then to the one artist chosen on a song's page, if any.
   found = computed(() =>
     searchSongs(
-      songsOf(this.songs() ?? [], this.artist()),
+      songsOf(
+        (this.playlist() && !this.picking() ? this.songService.playOrder() : this.songs()) ?? [],
+        this.artist(),
+      ),
       this.search(),
       this.songService.lyrics(),
     ),
@@ -109,7 +279,8 @@ export class Daloskonyv implements OnInit {
   // not by the alphabet.
   letterHeads = computed(() => {
     const heads = new Map<string, string>();
-    if (this.search().trim()) return heads;
+    // A playlist is in its own order, not the alphabet's.
+    if (this.search().trim() || (this.playlist() && !this.picking())) return heads;
     let last = '';
     for (const { song } of this.found()) {
       const letter = hungarianLetter(song.title);
@@ -165,5 +336,6 @@ export class Daloskonyv implements OnInit {
 
   ngOnInit() {
     this.songService.loadSongs();
+    this.songService.loadLists();
   }
 }

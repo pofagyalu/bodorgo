@@ -407,8 +407,22 @@
     display: none;
   }
 
+  // How tall the menu below is - for what a page keeps on the screen
+  // right under it (the songbook's search: daloskonyv.scss).
+  .media-shell {
+    --media-nav-height: 3.375rem;
+  }
+
+  // Videók, Fotók, Zene: on the screen all along, while the page scrolls
+  // under it (the page scrolls in the app's own frame, under the header).
   .media-mobile-nav {
+    position: sticky;
+    top: 0;
+    z-index: 25;
     display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: var(--media-nav-height);
     overflow-x: auto;
     background: #fff;
     border-bottom: 1px solid #e4eae7;

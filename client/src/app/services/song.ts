@@ -1,12 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { Instrument } from '../pages/daloskonyv/chord-shapes';
 
 const INSTRUMENT_KEY = 'daloskonyv-instrument';
 const PLAYED_KEY = 'daloskonyv-played';
+const LIST_KEY = 'daloskonyv-list';
 
 // A song in the table of contents - no lyrics. The book is in the order of
 // the titles.
@@ -57,6 +58,14 @@ export interface SongInput {
   // The book's keeper alone: true takes the song into the Daloskönyv -
   // and makes it the keeper's own.
   inBook?: boolean;
+}
+
+// A playlist: one's own named list of songs (their ids), in the order
+// they were put in it. Nobody else sees it.
+export interface SongPlaylist {
+  _id: string;
+  name: string;
+  songs: string[];
 }
 
 // Whose chord diagrams the PDF has - or none.
@@ -236,6 +245,117 @@ export class SongService {
 
   deleteSong(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  // --- Playlists: one's own named lists of songs (songListController.js) ---
+
+  // My lists, by name - null until they arrive.
+  readonly lists = signal<SongPlaylist[] | null>(null);
+
+  // The list the songbook is on (its id) - '' for the whole book.
+  // Remembered on this device.
+  readonly listId = signal(storedList());
+
+  // The list the songbook is on - null for the whole book (or while the
+  // lists are on their way, or once that list is gone).
+  readonly list = computed(() => this.lists()?.find((list) => list._id === this.listId()) ?? null);
+
+  // The songs in the order they are played: the chosen list's songs in the
+  // list's own order, or the whole book in its own. What the song page's
+  // previous / next and its random pick go by. null until the songs arrive.
+  readonly playOrder = computed(() => {
+    const songs = this.songs();
+    const list = this.list();
+    if (!songs || !list) return songs;
+    const byId = new Map(songs.map((song) => [song._id, song]));
+    return list.songs.flatMap((id) => byId.get(id) ?? []);
+  });
+
+  chooseList(id: string) {
+    this.listId.set(id);
+    try {
+      if (id) localStorage.setItem(LIST_KEY, id);
+      else localStorage.removeItem(LIST_KEY);
+    } catch {
+      // Private mode: not remembered.
+    }
+  }
+
+  loadLists() {
+    this.http.get<{ data: { lists: SongPlaylist[] } }>(`${this.apiUrl}/lists`).subscribe({
+      next: (res) => this.lists.set(res.data.lists),
+      error: () => this.lists.update((lists) => lists ?? []),
+    });
+  }
+
+  // A new, empty list - it becomes the one the songbook is on.
+  createList(name: string): Observable<SongPlaylist> {
+    return this.http.post<{ data: { list: SongPlaylist } }>(`${this.apiUrl}/lists`, { name }).pipe(
+      map((res) => res.data.list),
+      tap((list) => {
+        this.lists.update((lists) => sortedLists([...(lists ?? []), list]));
+        this.chooseList(list._id);
+      }),
+    );
+  }
+
+  renameList(id: string, name: string): Observable<SongPlaylist> {
+    return this.patchList(id, { name });
+  }
+
+  // The list's songs anew, in their order. Shown at once - the server is
+  // told after; if it refuses, the list is read again as it stands there.
+  setListSongs(id: string, songs: string[]) {
+    this.lists.update(
+      (lists) => lists?.map((list) => (list._id === id ? { ...list, songs } : list)) ?? null,
+    );
+    this.patchList(id, { songs }).subscribe({ error: () => this.loadLists() });
+  }
+
+  // A song into the list (at its end), or out of it.
+  toggleInList(id: string, songId: string) {
+    const list = this.lists()?.find((l) => l._id === id);
+    if (!list) return;
+    this.setListSongs(
+      id,
+      list.songs.includes(songId)
+        ? list.songs.filter((s) => s !== songId)
+        : [...list.songs, songId],
+    );
+  }
+
+  deleteList(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/lists/${id}`).pipe(
+      tap(() => {
+        this.lists.update((lists) => lists?.filter((list) => list._id !== id) ?? null);
+        if (this.listId() === id) this.chooseList('');
+      }),
+    );
+  }
+
+  private patchList(id: string, change: { name?: string; songs?: string[] }) {
+    return this.http
+      .patch<{ data: { list: SongPlaylist } }>(`${this.apiUrl}/lists/${id}`, change)
+      .pipe(
+        map((res) => res.data.list),
+        tap((saved) =>
+          this.lists.update((lists) =>
+            lists ? sortedLists(lists.map((list) => (list._id === id ? saved : list))) : lists,
+          ),
+        ),
+      );
+  }
+}
+
+const byHungarian = new Intl.Collator('hu', { sensitivity: 'base' });
+const sortedLists = (lists: SongPlaylist[]) =>
+  [...lists].sort((a, b) => byHungarian.compare(a.name, b.name));
+
+function storedList(): string {
+  try {
+    return localStorage.getItem(LIST_KEY) ?? '';
+  } catch {
+    return '';
   }
 }
 

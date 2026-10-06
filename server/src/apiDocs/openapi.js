@@ -677,6 +677,24 @@ const schemas = {
     createdAt: date(),
     updatedAt: date(),
   }),
+  SongList: obj({
+    _id: id(),
+    name: str('The list’s name, as its owner gave it. At most 60 characters.'),
+    songs: {
+      ...arrayOf(id('A song of the songbook - any song, the ones other users added too.')),
+      description:
+        'The songs in the list’s order, each once. A song deleted from the songbook leaves every list by itself.',
+    },
+    updatedAt: date(),
+  }),
+  SongListInput: obj({
+    name: str('Required for a new list; 1-60 characters after trimming.'),
+    songs: {
+      ...arrayOf(id()),
+      description:
+        'The whole list in its order. Ids sent twice count once; an id of a song that no longer exists is left out; anything that isn’t an id is a 400. At most 1000.',
+    },
+  }),
   SongInput: obj({
     title: str('Required for a new song.'),
     artist: str(),
@@ -3167,6 +3185,46 @@ const paths = {
         }),
       ],
       response: file(['image/webp'], 'The cover.'),
+      errors: [404],
+    }),
+  },
+  '/songs/lists': {
+    get: op({
+      tag: T.songs,
+      summary: 'My playlists',
+      description:
+        'The caller’s own playlists of the songbook, by name: named lists of songs in an order of their choosing ("Szomorú dalok", "Tábortűz"). Private - every user has their own, and nobody sees anyone else’s, admins neither. Guests have them too.',
+      data: obj({ lists: arrayOf(ref('SongList')) }),
+    }),
+    post: op({
+      tag: T.songs,
+      summary: 'A new playlist',
+      description:
+        'A list of the caller’s own - empty, or with the `songs` sent. At most 100 lists per user.',
+      body: ref('SongListInput'),
+      ok: 201,
+      data: obj({ list: ref('SongList') }),
+      errors: [400],
+    }),
+  },
+  '/songs/lists/{id}': {
+    patch: op({
+      tag: T.songs,
+      summary: 'Rename a playlist, or set its songs',
+      description:
+        'Only the list’s owner - anyone else gets 404, as if the list weren’t there. `name` renames it; `songs` is the whole list anew, in its order: adding a song, taking one out and reordering are all done by sending the list as it should be. Only the fields sent change.',
+      params: [path('id', 'The list’s id.')],
+      body: ref('SongListInput'),
+      data: obj({ list: ref('SongList') }),
+      errors: [400, 404],
+    }),
+    delete: op({
+      tag: T.songs,
+      summary: 'Delete a playlist',
+      description:
+        'Only the list’s owner - 404 for anyone else. The list goes; its songs stay in the songbook.',
+      params: [path('id', 'The list’s id.')],
+      ok: 204,
       errors: [404],
     }),
   },

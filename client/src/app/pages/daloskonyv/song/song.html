@@ -1,7 +1,7 @@
 <div class="song-page" [style.--scale]="fontScale()">
   <!-- The song's own bar: back to the list (a phone has no list beside
        the song), and how it's shown. -->
-  <div class="song-bar">
+  <div class="song-bar" [class.song-bar--playing]="pace()">
     <a class="back" [routerLink]="base()" aria-label="Vissza a dalokhoz">
       <mat-icon>arrow_back</mat-icon><span>Dalok</span>
     </a>
@@ -19,173 +19,232 @@
     </label>
 
     <div class="tools">
-      <!-- Whose chord diagrams: the guitar's or the ukulele's. -->
-      <div class="tool tool--choice" role="group" aria-label="Hangszer az akkordokhoz">
-        <button
-          type="button"
-          [class.on]="instrument() === 'guitar'"
-          [attr.aria-pressed]="instrument() === 'guitar'"
-          (click)="chooseInstrument('guitar')"
-        >
-          Gitár
-        </button>
-        <button
-          type="button"
-          [class.on]="instrument() === 'ukulele'"
-          [attr.aria-pressed]="instrument() === 'ukulele'"
-          (click)="chooseInstrument('ukulele')"
-        >
-          Ukulele
-        </button>
-      </div>
-
-      <div class="tool" role="group" aria-label="Betűméret">
-        <button
-          type="button"
-          (click)="changeFont(-1)"
-          title="Kisebb betűk"
-          aria-label="Kisebb betűk"
-        >
-          <mat-icon>text_decrease</mat-icon>
-        </button>
-        <button
-          type="button"
-          (click)="changeFont(1)"
-          title="Nagyobb betűk"
-          aria-label="Nagyobb betűk"
-        >
-          <mat-icon>text_increase</mat-icon>
-        </button>
-      </div>
-
-      <div class="tool" role="group" aria-label="Transzponálás">
-        <button
-          type="button"
-          (click)="changeTranspose(-1)"
-          title="Fél hanggal lejjebb"
-          aria-label="Fél hanggal lejjebb"
-        >
-          <mat-icon>remove</mat-icon>
-        </button>
-        <button
-          type="button"
-          class="transpose-value"
-          [class.transpose-value--on]="transpose() !== 0"
-          (click)="transpose.set(0)"
-          title="Vissza az eredeti hangnemre"
-          aria-label="Transzponálás: {{ transposeLabel() }} félhang – vissza az eredetire"
-        >
-          <mat-icon>music_note</mat-icon>{{ transposeLabel() }}
-        </button>
-        <button
-          type="button"
-          (click)="changeTranspose(1)"
-          title="Fél hanggal feljebb"
-          aria-label="Fél hanggal feljebb"
-        >
-          <mat-icon>add</mat-icon>
-        </button>
-        <!-- Who may change the song, once it is moved: keep it so. The
-             button is there all along (pale and idle while the song isn't
-             moved), so the − and + never shift under the finger. -->
-        @if (song()?.canEdit) {
+      <!-- Every tool but the playlists': in the bar on a wide screen; on a
+           phone a dark panel that the controls' button drops over the
+           song. -->
+      <div class="tools-panel" [class.tools-panel--open]="controlsOpen()">
+        <!-- Whose chord diagrams: the guitar's or the ukulele's. -->
+        <div class="tool tool--choice" role="group" aria-label="Hangszer az akkordokhoz">
           <button
             type="button"
-            class="keep-key"
-            [class.keep-key--idle]="transpose() === 0"
-            (click)="saveTransposed()"
-            [disabled]="transpose() === 0 || savingKey()"
-            [title]="
-              transpose() === 0
-                ? 'Mentés ebben a hangnemben (előbb transzponáld a dalt)'
-                : 'Mentés ebben a hangnemben'
-            "
-            aria-label="A dal mentése ebben a hangnemben"
+            [class.on]="instrument() === 'guitar'"
+            [attr.aria-pressed]="instrument() === 'guitar'"
+            (click)="chooseInstrument('guitar'); controlsOpen.set(false)"
           >
-            <mat-icon>save</mat-icon>
+            Gitár
           </button>
+          <button
+            type="button"
+            [class.on]="instrument() === 'ukulele'"
+            [attr.aria-pressed]="instrument() === 'ukulele'"
+            (click)="chooseInstrument('ukulele'); controlsOpen.set(false)"
+          >
+            Ukulele
+          </button>
+        </div>
+
+        <div class="tool" role="group" aria-label="Betűméret">
+          <button
+            type="button"
+            (click)="changeFont(-1)"
+            title="Kisebb betűk"
+            aria-label="Kisebb betűk"
+          >
+            <mat-icon>text_decrease</mat-icon>
+          </button>
+          <button
+            type="button"
+            (click)="changeFont(1)"
+            title="Nagyobb betűk"
+            aria-label="Nagyobb betűk"
+          >
+            <mat-icon>text_increase</mat-icon>
+          </button>
+        </div>
+
+        <div class="tool tool--transpose" role="group" aria-label="Transzponálás">
+          <button
+            type="button"
+            (click)="changeTranspose(-1)"
+            title="Fél hanggal lejjebb"
+            aria-label="Fél hanggal lejjebb"
+          >
+            <mat-icon>remove</mat-icon>
+          </button>
+          <button
+            type="button"
+            class="transpose-value"
+            [class.transpose-value--on]="transpose() !== 0"
+            (click)="transpose.set(0)"
+            title="Vissza az eredeti hangnemre"
+            aria-label="Transzponálás: {{ transposeLabel() }} félhang – vissza az eredetire"
+          >
+            <mat-icon>music_note</mat-icon>{{ transposeLabel() }}
+          </button>
+          <button
+            type="button"
+            (click)="changeTranspose(1)"
+            title="Fél hanggal feljebb"
+            aria-label="Fél hanggal feljebb"
+          >
+            <mat-icon>add</mat-icon>
+          </button>
+          <!-- Who may change the song, once it is moved: keep it so. The
+             button is there all along (pale and idle while the song isn't
+             moved), so the − and + never shift under the finger. -->
+          @if (song()?.canEdit) {
+            <button
+              type="button"
+              class="keep-key"
+              [class.keep-key--idle]="transpose() === 0"
+              (click)="saveTransposed()"
+              [disabled]="transpose() === 0 || savingKey()"
+              [title]="
+                transpose() === 0
+                  ? 'Mentés ebben a hangnemben (előbb transzponáld a dalt)'
+                  : 'Mentés ebben a hangnemben'
+              "
+              aria-label="A dal mentése ebben a hangnemben"
+            >
+              <mat-icon>save</mat-icon>
+            </button>
+          }
+        </div>
+
+        <!-- The chords are always over the lyrics; this only shows or hides
+           how they are held, in a strip above the song. -->
+        <div class="tool tool--diagrams">
+          <button
+            type="button"
+            [class.off]="!showDiagrams()"
+            (click)="toggleDiagrams(); controlsOpen.set(false)"
+            [attr.aria-pressed]="showDiagrams()"
+            title="Akkordok a dal fölött"
+            aria-label="Akkordok a dal fölött"
+          >
+            <mat-icon>grid_on</mat-icon>
+          </button>
+        </div>
+
+        <!-- This song alone as a PDF, the way it is shown now (its key, the
+           chords over it). -->
+        @if (pdfUrl(); as url) {
+          <div class="tool">
+            <a
+              class="song-pdf"
+              [href]="url"
+              title="A dal letöltése PDF-ben"
+              aria-label="A dal letöltése PDF-ben"
+            >
+              <mat-icon>picture_as_pdf</mat-icon>
+            </a>
+          </div>
+        }
+
+        <!-- Played tonight: a tick on this song in the list. -->
+        @if (song(); as s) {
+          <div class="tool">
+            <button
+              type="button"
+              class="played-toggle"
+              [class.on]="isPlayed()"
+              (click)="togglePlayed(); controlsOpen.set(false)"
+              [attr.aria-pressed]="isPlayed()"
+              [title]="
+                isPlayed() ? 'Már játszottuk – jelölés törlése' : 'Megjelölés: már játszottuk'
+              "
+              [attr.aria-label]="
+                isPlayed() ? 'Már játszottuk – jelölés törlése' : 'Megjelölés: már játszottuk'
+              "
+            >
+              <mat-icon>task_alt</mat-icon>
+            </button>
+          </div>
+        }
+
+        <!-- Only for who may change this song: its owner, and the book's
+           keeper. -->
+        <!-- The keeper, on a song someone added beside the book: into the
+           book with it - and the keeper's own from then on. -->
+        @if (canEdit() && song() && !song()!.inBook) {
+          <div class="tool tool--owner">
+            <button
+              type="button"
+              class="take-in"
+              (click)="takeIntoBook()"
+              [disabled]="takingIn()"
+              title="Felvétel a daloskönyvbe"
+              aria-label="A dal felvétele a daloskönyvbe"
+            >
+              <mat-icon>library_add</mat-icon>
+            </button>
+          </div>
+        }
+
+        @if (song()?.canEdit && song(); as s) {
+          <div class="tool tool--owner">
+            <a
+              [routerLink]="[base(), s.slug, 'szerkesztes']"
+              title="Szerkesztés"
+              aria-label="A dal szerkesztése"
+            >
+              <mat-icon>edit</mat-icon>
+            </a>
+          </div>
         }
       </div>
 
-      <!-- The chords are always over the lyrics; this only shows or hides
-           how they are held, in a strip above the song. -->
-      <div class="tool">
-        <button
-          type="button"
-          [class.off]="!showDiagrams()"
-          (click)="toggleDiagrams()"
-          [attr.aria-pressed]="showDiagrams()"
-          title="Akkordok a dal fölött"
-          aria-label="Akkordok a dal fölött"
-        >
-          <mat-icon>grid_on</mat-icon>
-        </button>
-      </div>
-
-      <!-- This song alone as a PDF, the way it is shown now (its key, the
-           chords over it). -->
-      @if (pdfUrl(); as url) {
-        <div class="tool">
-          <a
-            class="song-pdf"
-            [href]="url"
-            title="A dal letöltése PDF-ben"
-            aria-label="A dal letöltése PDF-ben"
-          >
-            <mat-icon>picture_as_pdf</mat-icon>
-          </a>
-        </div>
-      }
-
-      <!-- Played tonight: a tick on this song in the list. -->
+      <!-- Into one of my playlists, or out of it: a panel with every list,
+           each ticked if this song is in it. -->
       @if (song(); as s) {
-        <div class="tool">
+        <div class="tool list-tool">
           <button
             type="button"
-            class="played-toggle"
-            [class.on]="isPlayed()"
-            (click)="togglePlayed()"
-            [attr.aria-pressed]="isPlayed()"
-            [title]="isPlayed() ? 'Már játszottuk – jelölés törlése' : 'Megjelölés: már játszottuk'"
-            [attr.aria-label]="
-              isPlayed() ? 'Már játszottuk – jelölés törlése' : 'Megjelölés: már játszottuk'
-            "
+            [class.on]="listsOpen()"
+            [attr.aria-expanded]="listsOpen()"
+            (click)="toggleLists()"
+            title="Hozzáadás lejátszási listához"
+            aria-label="A dal hozzáadása lejátszási listához"
           >
-            <mat-icon>task_alt</mat-icon>
+            <mat-icon>playlist_add</mat-icon>
           </button>
+          @if (listsOpen()) {
+            <div class="list-menu" role="group" aria-label="Lejátszási listáim">
+              @for (l of lists() ?? []; track l._id) {
+                <button
+                  type="button"
+                  class="list-menu-item"
+                  role="checkbox"
+                  [attr.aria-checked]="l.songs.includes(s._id)"
+                  (click)="toggleInList(l._id)"
+                >
+                  <mat-icon>{{
+                    l.songs.includes(s._id) ? 'check_box' : 'check_box_outline_blank'
+                  }}</mat-icon>
+                  <span>{{ l.name }}</span>
+                </button>
+              } @empty {
+                <p class="list-menu-empty">
+                  Még nincs listád. A dalok listája fölött, a „Minden dal” gombnál hozhatsz létre.
+                </p>
+              }
+            </div>
+          }
         </div>
       }
 
-      <!-- Only for who may change this song: its owner, and the book's
-           keeper. -->
-      <!-- The keeper, on a song someone added beside the book: into the
-           book with it - and the keeper's own from then on. -->
-      @if (canEdit() && song() && !song()!.inBook) {
-        <div class="tool">
-          <button
-            type="button"
-            class="take-in"
-            (click)="takeIntoBook()"
-            [disabled]="takingIn()"
-            title="Felvétel a daloskönyvbe"
-            aria-label="A dal felvétele a daloskönyvbe"
-          >
-            <mat-icon>library_add</mat-icon>
-          </button>
-        </div>
-      }
-
-      @if (song()?.canEdit && song(); as s) {
-        <div class="tool">
-          <a
-            [routerLink]="[base(), s.slug, 'szerkesztes']"
-            title="Szerkesztés"
-            aria-label="A dal szerkesztése"
-          >
-            <mat-icon>edit</mat-icon>
-          </a>
-        </div>
-      }
+      <!-- A phone only: calls the tools above. -->
+      <button
+        type="button"
+        class="controls-btn"
+        [class.on]="controlsOpen()"
+        [attr.aria-expanded]="controlsOpen()"
+        (click)="toggleControls()"
+        title="Vezérlők"
+        aria-label="Vezérlők"
+      >
+        <mat-icon>tune</mat-icon>
+      </button>
     </div>
   </div>
 
@@ -200,7 +259,7 @@
         <!-- The artist, and after it the song's key in a quiet tag: the one
              set by hand, or what the chords say - moved with the
              transposing on the screen. -->
-        @if (song()!.artist || keyLabel() || song()!.tempo) {
+        @if (song()!.artist || keyLabel() || song()!.tempo || isPlayed()) {
           <p class="artist">
             <!-- A tap on the artist: the song list with this artist's songs
                  alone. -->
@@ -245,6 +304,13 @@
                 </svg>
                 = {{ tempo }}
               </button>
+            }
+            <!-- Marked as played tonight: the list's tick, here too (a
+                 phone has the mark's button behind the controls). -->
+            @if (isPlayed()) {
+              <span class="song-played" title="Már játszottuk" aria-label="Már játszottuk">
+                <mat-icon>task_alt</mat-icon>
+              </span>
             }
           </p>
         }

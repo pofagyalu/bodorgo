@@ -1,5 +1,6 @@
 import express from 'express';
 import * as songController from '../controllers/songController.js';
+import * as songListController from '../controllers/songListController.js';
 import requireAuth from '../auth/requireAuth.js';
 
 // Daloskönyv (the songbook): reading and adding for anyone logged in -
@@ -16,6 +17,17 @@ router
 // /:slug, so they aren't taken for a song.
 router.get('/book.pdf', requireAuth, songController.getSongBook);
 router.get('/book.webp', requireAuth, songController.getSongBookPreview);
+// The caller's own playlists (songListController.js) - before /:slug and
+// /:id too, so "lists" isn't taken for a song.
+router
+  .route('/lists')
+  .get(requireAuth, songListController.getSongLists)
+  .post(requireAuth, songListController.createSongList);
+router
+  .route('/lists/:id')
+  .patch(requireAuth, songListController.updateSongList)
+  .delete(requireAuth, songListController.deleteSongList);
+
 // Every song's words, for the search - before /:slug as well.
 router.get('/lyrics', requireAuth, songController.getLyrics);
 

@@ -95,6 +95,16 @@ button {
   margin-left: auto;
 }
 
+// The tools but the playlists': the bar's own on a wide screen (a phone's
+// rules make a panel of them, called by the button below).
+.tools-panel {
+  display: contents;
+}
+
+.controls-btn {
+  display: none;
+}
+
 // A group of buttons in one pill.
 .tool {
   display: flex;
@@ -197,6 +207,78 @@ button {
   }
 }
 
+// "Hozzáadás lejátszási listához": the button, and under it the panel
+// with every list of mine - each with a box, ticked if the song is in it.
+// The pill doesn't clip it: the panel hangs out of it.
+.tool.list-tool {
+  position: relative;
+  overflow: visible;
+
+  > button {
+    border-radius: 10rem;
+  }
+
+  > button.on {
+    background: $teal;
+    color: #fff;
+  }
+}
+
+.list-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  display: grid;
+  gap: 0.1rem;
+  width: 16rem;
+  max-width: calc(100vw - 1.5rem);
+  max-height: min(60vh, 24rem);
+  padding: 0.4rem;
+  overflow-y: auto;
+  border: 1px solid $line;
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 0.6rem 1.8rem #213b4133;
+}
+
+// Not one of the bar's square buttons: a row as wide as the panel.
+.tool.list-tool .list-menu-item {
+  justify-content: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.6rem;
+  color: $ink;
+  text-align: left;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  mat-icon {
+    flex: none;
+    color: #9aa7ab;
+  }
+
+  &[aria-checked='true'] mat-icon {
+    color: $teal;
+  }
+}
+
+.list-menu-empty {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  color: $muted;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
 // "Már játszottuk": grey until set, then the list's orange tick.
 .tool button.played-toggle {
   color: #9aa7ab;
@@ -292,6 +374,24 @@ button {
   font-size: 0.86em;
   font-weight: 700;
   white-space: nowrap;
+}
+
+// "Már játszottuk": a small tag after them with the list's orange tick.
+.song-played {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.5em;
+  border-radius: 10rem;
+  background: #fff6ec;
+  color: #f07827;
+  font-size: 0.86em;
+
+  mat-icon {
+    font-size: 1.2em;
+    width: 1em;
+    height: 1.2em;
+    line-height: 1.2;
+  }
 }
 
 // The song's tempo after its key ("♩ = 96"): as quiet as the key - and a
@@ -567,13 +667,179 @@ button {
   }
 }
 
-// A phone: the instrument, the letters' size and the transposing (with
-// the owner's save button) in one row - narrower buttons, as high as they
-// were for the finger. The rest of the tools are the row under it.
+// A phone: two round buttons at the bar's end, as over the list of songs
+// (daloskonyv.scss) - into a playlist, and the controls. Each drops a dark,
+// a little see-through panel from the bar, from one side to the other, over
+// the song: nothing is pushed lower.
 @media (max-width: 580px) {
+  // The bar stays on the screen, a line of its own on the sheet's white,
+  // while the song scrolls under it; the two panels hang from it. While
+  // the song plays by itself it slides away, so there is nothing but the
+  // lyrics.
+  .song-page {
+    padding-top: 0;
+  }
+
+  .song-bar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin: 0 0 0.25rem;
+    padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 0.5rem 0.5rem;
+    background: #fff;
+    transition: transform 0.25s ease;
+  }
+
+  .song-bar--playing {
+    transform: translateY(-100%);
+  }
+
   .tools {
-    width: 100%;
-    gap: 0.25rem;
+    gap: 0.4rem;
+  }
+
+  %phone-panel {
+    position: absolute;
+    z-index: 40;
+    top: 100%;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    max-width: none;
+    padding: 0.6rem;
+    border: 0;
+    border-radius: 0.9rem;
+    background: #193346bf;
+    backdrop-filter: blur(1px);
+    box-shadow: 0 0.6rem 1.8rem #213b4155;
+    color: #fff;
+    transform-origin: top right;
+  }
+
+  .tools-panel {
+    @extend %phone-panel;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-0.5rem) scaleY(0.9);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease,
+      visibility 0s 0.2s;
+  }
+
+  // Two rows: how the song is shown (the instrument, the letters' size,
+  // the chord diagrams), then what anyone does with it (the PDF, the
+  // played mark, the key) - and at that row's end, together, what only
+  // who may change the song has: the key's save button, into the book,
+  // the editing.
+  .tools-panel > .tool:nth-child(-n + 2) {
+    order: -2;
+  }
+
+  .tools-panel > .tool--diagrams {
+    order: -1;
+  }
+
+  .tools-panel > .tool--transpose {
+    order: 1;
+  }
+
+  .tools-panel > .tool--owner {
+    order: 2;
+  }
+
+  // A little narrower, so the keeper's "into the book" fits the row too.
+  .tools-panel .tool button.transpose-value {
+    min-width: 3rem;
+  }
+
+  .tools-panel--open {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  // The two buttons: round, filled while their panel is open.
+  .tool.list-tool {
+    position: static;
+    border-color: #cfd9d5;
+  }
+
+  .tool.list-tool > button,
+  .controls-btn {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    min-width: 0;
+    height: 2.75rem;
+    padding: 0;
+    border-radius: 50%;
+    color: $teal;
+  }
+
+  // Its pill has the border: with it, as large as the button beside it.
+  .tool.list-tool > button {
+    width: calc(2.75rem - 2px);
+    height: calc(2.75rem - 2px);
+  }
+
+  .controls-btn {
+    border: 1px solid #cfd9d5;
+    background: #fff;
+
+    &.on {
+      border-color: $teal;
+      background: $teal;
+      color: #fff;
+    }
+
+    mat-icon {
+      font-size: 1.35rem;
+      width: 1.35rem;
+      height: 1.35rem;
+    }
+  }
+
+  // The playlists' panel in light letters on the dark ground.
+  .list-menu {
+    @extend %phone-panel;
+    padding: 0.4rem;
+    animation: phone-panel-in 0.2s ease;
+  }
+
+  .tool.list-tool .list-menu-item {
+    color: #fff;
+
+    &:hover {
+      background: #ffffff1f;
+    }
+
+    mat-icon {
+      color: #ffffff99;
+    }
+
+    &[aria-checked='true'] mat-icon {
+      color: #a5e6d6;
+    }
+  }
+
+  .list-menu-empty {
+    color: #ffffffcc;
+  }
+
+  @keyframes phone-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(-0.5rem) scaleY(0.9);
+    }
   }
 
   // The bottom row as a player's three buttons - the song before, a random
@@ -603,23 +869,16 @@ button {
     }
   }
 
-  .tool button,
-  .tool a {
-    min-width: 2.1rem;
-    padding: 0 0.2rem;
+  // In the panel there is room: the tools as large as on a wide screen.
+  .tools-panel .tool button,
+  .tools-panel .tool a {
+    min-width: 2.75rem;
+    height: 2.75rem;
   }
 
-  .tool--choice {
-    padding: 0.15rem;
-  }
-
-  .tool--choice button {
-    padding: 0 0.45rem;
-    font-size: 0.8125rem;
-  }
-
-  .tool button.transpose-value {
-    min-width: 2.9rem;
+  .tools-panel .tool--choice button {
+    height: 2.35rem;
+    padding: 0 0.8rem;
   }
 }
 

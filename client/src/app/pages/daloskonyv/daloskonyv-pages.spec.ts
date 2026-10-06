@@ -166,6 +166,122 @@ describe('SongPage', () => {
     service.clearPlayed();
   });
 
+  it('follows the chosen playlist: its order for the neighbours, its songs for the random pick', () => {
+    open();
+    const service = TestBed.inject(SongService);
+    // A list of mine with the three songs turned around: s3, s2, s1.
+    service.lists.set([{ _id: 'l1', name: 'Esti dalok', songs: ['s3', 's2', 's1'] }]);
+    service.chooseList('l1');
+    fixture.detectChanges();
+    // The open song is s2 (tavaszi-szel): before it now the list's first.
+    expect(page.previous()?.slug).toBe('zold-erdoben');
+    expect(page.next()?.slug).toBe('almodj');
+
+    // A list without the open song: the book's own order serves it.
+    service.lists.set([{ _id: 'l1', name: 'Esti dalok', songs: ['s3'] }]);
+    fixture.detectChanges();
+    expect(page.previous()?.slug).toBe('almodj');
+    expect(page.next()?.slug).toBe('zold-erdoben');
+    // The random pick stays in the list - and the list stays chosen.
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    vi.spyOn(Math, 'random').mockReturnValue(0.999);
+    page.randomSong();
+    expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'zold-erdoben']);
+    expect(service.listId()).toBe('l1');
+    // Its one song played: nothing left to pick there.
+    service.setPlayed('s3', true);
+    expect(page.canPickRandom()).toBe(false);
+
+    service.clearPlayed();
+    service.chooseList('');
+  });
+
+  it('puts the open song into a playlist of mine, or takes it out, from a panel', () => {
+    open();
+    const service = TestBed.inject(SongService);
+    const el: HTMLElement = fixture.nativeElement;
+    const button = el.querySelector('.list-tool > button') as HTMLButtonElement;
+    expect(el.querySelector('.list-menu')).toBeNull();
+
+    // No list yet: the panel says where to make one.
+    service.lists.set([]);
+    button.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.list-menu-empty')?.textContent).toContain('Még nincs listád');
+
+    service.lists.set([
+      { _id: 'l1', name: 'Esti dalok', songs: ['s2'] },
+      { _id: 'l2', name: 'Tábortűz', songs: [] },
+    ]);
+    fixture.detectChanges();
+    const items = () => [...el.querySelectorAll<HTMLButtonElement>('.list-menu-item')];
+    // The open song (s2) is in the first list, not in the second.
+    expect(items().map((i) => i.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+
+    items()[1].click();
+    const added = http.expectOne((r) => r.method === 'PATCH' && r.url.endsWith('/songs/lists/l2'));
+    expect(added.request.body).toEqual({ songs: ['s2'] });
+    added.flush({ data: { list: { _id: 'l2', name: 'Tábortűz', songs: ['s2'] } } });
+    items()[0].click();
+    const removed = http.expectOne(
+      (r) => r.method === 'PATCH' && r.url.endsWith('/songs/lists/l1'),
+    );
+    expect(removed.request.body).toEqual({ songs: [] });
+    removed.flush({ data: { list: { _id: 'l1', name: 'Esti dalok', songs: [] } } });
+    fixture.detectChanges();
+    expect(items().map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'true']);
+  });
+
+  it('keeps the tools behind one button for a phone - one panel open at a time', () => {
+    open();
+    const service = TestBed.inject(SongService);
+    service.lists.set([]);
+    const el: HTMLElement = fixture.nativeElement;
+    const panel = el.querySelector('.tools-panel') as HTMLElement;
+    const controls = el.querySelector('.song-bar .controls-btn') as HTMLButtonElement;
+    const tap = (target: HTMLElement) => {
+      target.click();
+      fixture.detectChanges();
+    };
+    // Every tool but the playlists' is in the panel; that one stands beside
+    // the controls' button.
+    expect(panel.querySelector('.played-toggle')).toBeTruthy();
+    expect(panel.querySelector('.list-tool')).toBeNull();
+    expect(panel.classList).not.toContain('tools-panel--open');
+
+    tap(controls);
+    expect(panel.classList).toContain('tools-panel--open');
+    expect(controls.getAttribute('aria-expanded')).toBe('true');
+    // The playlists' panel takes its place, and the other way round.
+    tap(el.querySelector('.list-tool > button') as HTMLElement);
+    expect(panel.classList).not.toContain('tools-panel--open');
+    expect(el.querySelector('.list-menu')).toBeTruthy();
+    tap(controls);
+    expect(el.querySelector('.list-menu')).toBeNull();
+
+    // What is set with one tap closes the panel: the instrument, the chord
+    // diagrams, the played mark. The letters' size is tapped again and again.
+    tap(panel.querySelector('[aria-label="Nagyobb betűk"]') as HTMLElement);
+    expect(page.controlsOpen()).toBe(true);
+    tap(panel.querySelector('.tool--choice button') as HTMLElement);
+    expect(page.controlsOpen()).toBe(false);
+    tap(controls);
+    tap(panel.querySelector('.tool--diagrams button') as HTMLElement);
+    expect(page.controlsOpen()).toBe(false);
+    // Undo, so the choice doesn't stay for the tests after.
+    page.toggleDiagrams();
+
+    // The played mark shows in the song's head as well, while it is set.
+    expect(el.querySelector('.song-head .song-played')).toBeNull();
+    tap(controls);
+    tap(panel.querySelector('.played-toggle') as HTMLElement);
+    expect(page.controlsOpen()).toBe(false);
+    expect(el.querySelector('.song-head .song-played')).toBeTruthy();
+    service.clearPlayed();
+    fixture.detectChanges();
+    expect(el.querySelector('.song-head .song-played')).toBeNull();
+  });
+
   it('shows the tempo of a song that has one, and beats it on a tap', () => {
     vi.useFakeTimers();
     try {
@@ -833,6 +949,195 @@ describe('Daloskonyv', () => {
     fixture.detectChanges();
   }
 
+  describe('playlists', () => {
+    // Two lists of mine; made-up names. s1 Álmodj…, s2 Tavaszi szél, s3 Zöld erdőben.
+    const MY_LISTS = [
+      { _id: 'l1', name: 'Esti dalok', songs: ['s3', 's1'] },
+      { _id: 'l2', name: 'Üres lista', songs: [] },
+    ];
+    const el = () => fixture.nativeElement as HTMLElement;
+    const titles = () => page.filtered().map((s) => s.slug);
+
+    function openWithLists() {
+      open();
+      respond({ 'GET /songs/lists': { data: { lists: MY_LISTS } } });
+      fixture.detectChanges();
+    }
+
+    it('offers every list in a panel, and shows the chosen one in its own order', () => {
+      openWithLists();
+      // The selector: a round icon at the end of the first row - no row of
+      // its own, and with the whole book nothing more than that.
+      const firstRow = el().querySelector('.tools-row') as HTMLElement;
+      const button = firstRow.querySelector('.list-btn') as HTMLButtonElement;
+      expect(button.classList).not.toContain('list-btn--on');
+      expect(button.querySelector('.list-count')).toBeNull();
+      expect(el().querySelector('.list-panel')).toBeNull();
+      expect(el().querySelector('.list-active')).toBeNull();
+
+      button.click();
+      fixture.detectChanges();
+      const options = [...firstRow.querySelectorAll<HTMLButtonElement>('.list-option')];
+      expect(options.map((o) => o.querySelector('span')?.textContent)).toEqual([
+        'Minden dal',
+        'Esti dalok',
+        'Üres lista',
+      ]);
+
+      options[1].click();
+      fixture.detectChanges();
+      expect(el().querySelector('.list-panel')).toBeNull();
+      // Chosen: the button filled, with the number of the list's songs -
+      // and a line with its name and what is done with it.
+      expect(button.classList).toContain('list-btn--on');
+      expect(button.querySelector('.list-count')?.textContent?.trim()).toBe('2');
+      expect(el().querySelector('.list-tag')?.textContent).toContain('Esti dalok');
+      // The list's own order, not the alphabet's - and no letters over it.
+      expect(titles()).toEqual(['zold-erdoben', 'almodj']);
+      expect(el().querySelector('.letter-head')).toBeNull();
+      expect(el().querySelector('.list-actions')).toBeTruthy();
+      // Remembered on the device.
+      expect(localStorage.getItem('daloskonyv-list')).toBe('l1');
+
+      // Back to the whole book: a tap on the list's name.
+      (el().querySelector('.list-tag') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(page.playlist()).toBeNull();
+      expect(el().querySelector('.list-active')).toBeNull();
+      expect(titles()).toHaveLength(3);
+      expect(el().querySelector('.letter-head')).toBeTruthy();
+    });
+
+    it('ticks songs into the list and out of it while picking', () => {
+      openWithLists();
+      page.chooseList('l1');
+      page.togglePicking();
+      fixture.detectChanges();
+      // The whole book to pick from, each row with a box.
+      expect(titles()).toHaveLength(3);
+      const rows = [...el().querySelectorAll<HTMLAnchorElement>('.song-list li a')];
+      expect(rows.map((a) => a.classList.contains('picked'))).toEqual([true, false, true]);
+
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+      // A tap on a song that isn't in the list: in, at its end - and the
+      // song isn't opened.
+      rows[1].click();
+      fixture.detectChanges();
+      expect(navigate).not.toHaveBeenCalled();
+      const added = http.expectOne(
+        (r) => r.method === 'PATCH' && r.url.endsWith('/songs/lists/l1'),
+      );
+      expect(added.request.body).toEqual({ songs: ['s3', 's1', 's2'] });
+      added.flush({ data: { list: { ...MY_LISTS[0], songs: ['s3', 's1', 's2'] } } });
+      // A tap on one that is: out.
+      rows[0].click();
+      const removed = http.expectOne((r) => r.method === 'PATCH');
+      expect(removed.request.body).toEqual({ songs: ['s3', 's2'] });
+      removed.flush({ data: { list: { ...MY_LISTS[0], songs: ['s3', 's2'] } } });
+
+      // Done picking: the list as it is now.
+      page.togglePicking();
+      fixture.detectChanges();
+      expect(titles()).toEqual(['zold-erdoben', 'tavaszi-szel']);
+    });
+
+    it('creates a list and goes straight to filling it; an empty list says how', () => {
+      openWithLists();
+      page.chooseList('l2');
+      fixture.detectChanges();
+      expect(el().querySelector('.list-note')?.textContent).toContain('még nincs dal');
+
+      page.listsOpen.set(true);
+      page.newListName.set('  Tábortűz ');
+      page.createList();
+      const created = http.expectOne((r) => r.method === 'POST' && r.url.endsWith('/songs/lists'));
+      expect(created.request.body).toEqual({ name: 'Tábortűz' });
+      created.flush({ data: { list: { _id: 'l3', name: 'Tábortűz', songs: [] } } });
+      fixture.detectChanges();
+      expect(page.playlist()?.name).toBe('Tábortűz');
+      expect(page.picking()).toBe(true);
+      expect(page.listsOpen()).toBe(false);
+      // By name among the others.
+      expect(page.lists()?.map((l) => l.name)).toEqual(['Esti dalok', 'Tábortűz', 'Üres lista']);
+    });
+
+    it('reorders, renames and deletes the chosen list', async () => {
+      openWithLists();
+      page.chooseList('l1');
+      page.search.set('valami');
+      page.toggleOrdering();
+      fixture.detectChanges();
+      // Ordering goes by the whole list: the search is let go.
+      expect(page.search()).toBe('');
+      expect(el().querySelectorAll('.drag-handle')).toHaveLength(2);
+
+      page.moveSong({ previousIndex: 0, currentIndex: 1 } as never);
+      const moved = http.expectOne((r) => r.method === 'PATCH');
+      expect(moved.request.body).toEqual({ songs: ['s1', 's3'] });
+      moved.flush({ data: { list: { ...MY_LISTS[0], songs: ['s1', 's3'] } } });
+      expect(titles()).toEqual(['almodj', 'zold-erdoben']);
+
+      page.startRenaming();
+      page.renaming.set(' Éjszakai dalok ');
+      page.rename();
+      const renamed = http.expectOne((r) => r.method === 'PATCH');
+      expect(renamed.request.body).toEqual({ name: 'Éjszakai dalok' });
+      renamed.flush({ data: { list: { _id: 'l1', name: 'Éjszakai dalok', songs: ['s1', 's3'] } } });
+      expect(page.playlist()?.name).toBe('Éjszakai dalok');
+      expect(page.renaming()).toBeNull();
+
+      const confirm = TestBed.inject(ConfirmService);
+      const deleting = page.deleteList();
+      expect(confirm.pending()?.message).toContain('Éjszakai dalok');
+      confirm.answer(true);
+      await deleting;
+      http.expectOne((r) => r.method === 'DELETE' && r.url.endsWith('/songs/lists/l1')).flush(null);
+      // Back on the whole book, the list gone.
+      expect(page.playlist()).toBeNull();
+      expect(page.lists()?.map((l) => l._id)).toEqual(['l2']);
+      expect(titles()).toHaveLength(3);
+    });
+  });
+
+  it('keeps the controls behind one button for a phone, the playlists’ selector beside it', () => {
+    open();
+    const el: HTMLElement = fixture.nativeElement;
+    const row = el.querySelector('.tools-row') as HTMLElement;
+    const button = el.querySelector('.top-row .controls-btn') as HTMLButtonElement;
+    // Away until called (the phone's styles hide the row meanwhile).
+    expect(row.classList).not.toContain('tools-row--open');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    // The playlists' selector stands in the search's row too, always at hand.
+    expect(el.querySelector('.top-row .top-row-phone .list-btn')).toBeTruthy();
+
+    button.click();
+    fixture.detectChanges();
+    expect(row.classList).toContain('tools-row--open');
+    expect(button.classList).toContain('on');
+    button.click();
+    fixture.detectChanges();
+    expect(row.classList).not.toContain('tools-row--open');
+
+    // One panel at a time: the playlists' closes the controls', and the
+    // other way round.
+    button.click();
+    (el.querySelector('.top-row-phone .list-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(row.classList).not.toContain('tools-row--open');
+    expect(page.listsOpen()).toBe(true);
+    button.click();
+    fixture.detectChanges();
+    expect(page.listsOpen()).toBe(false);
+    expect(row.classList).toContain('tools-row--open');
+    button.click();
+    fixture.detectChanges();
+
+    // The guests' page stands on its own: it keeps its heading on a phone.
+    // Inside Média the menu says where one is.
+    expect(el.querySelector('.book')!.classList).not.toContain('book--in-media');
+    expect(page.inMedia()).toBe(false);
+  });
+
   it('has the instrument, the PDF and the played marks in one row, the search under it', () => {
     open();
     const el: HTMLElement = fixture.nativeElement;
@@ -926,9 +1231,10 @@ describe('Daloskonyv', () => {
     open();
     const el: HTMLElement = fixture.nativeElement;
     const row = el.querySelector('.annex-row')!;
-    // The three icons, and the button as the fourth (the styles show it
-    // there only beside an open song).
-    expect(row.querySelectorAll(':scope > li')).toHaveLength(4);
+    // The three icons, then the played marks' button and the playlists'
+    // selector (the styles show those two there only beside an open song).
+    expect(row.querySelectorAll(':scope > li')).toHaveLength(5);
+    expect(row.querySelector('.annex-row-clear .list-btn')).toBeTruthy();
     const inRow = row.querySelector('.annex-row-clear button.clear-played') as HTMLButtonElement;
     expect(inRow.disabled).toBe(true);
 
