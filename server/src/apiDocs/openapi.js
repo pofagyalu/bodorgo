@@ -360,7 +360,11 @@ const schemas = {
     },
     name: str(),
     opensAt: date(),
-    closesAt: date(),
+    closesAt: {
+      type: ['string', 'null'],
+      format: 'date-time',
+      description: 'Null: a user’s own track that is open for good.',
+    },
     distanceM: { type: ['number', 'null'], description: 'The whole loop, in metres.' },
     track: {
       type: 'array',
@@ -3913,7 +3917,7 @@ const paths = {
       tag: T.race,
       summary: 'Make a course',
       description:
-        'Two kinds. **A tour’s course** (admins only; with `tourId`, `opensAt`, `closesAt`): one per tour, its cards chosen afterwards from the club’s; no two tours’ courses may be open at the same time. **My own track** (anyone; `name` and `points`, 1-20): mine to change, open from now for a year unless `opensAt` / `closesAt` say otherwise, and it can be open alongside any other course; its cards - a START/FINISH and one per point, P<n>-S, P<n>-01... - are made with it.',
+        'Two kinds. **A tour’s course** (admins only; with `tourId`, `opensAt`, `closesAt`): one per tour, its cards chosen afterwards from the club’s; no two tours’ courses may be open at the same time. **My own track** (anyone; `name` and `points`, 1-20): mine to change, open from now (or from `opensAt`) and for good unless a `closesAt` is given, and it can be open alongside any other course; its cards - a START/FINISH and one per point, P<n>-S, P<n>-01... - are made with it.',
       body: obj({
         tourId: id('A tour’s course.'),
         name: str(
@@ -3921,7 +3925,12 @@ const paths = {
         ),
         points: int('My own track: how many checkpoints (1-20).'),
         opensAt: date(),
-        closesAt: date(),
+        closesAt: {
+          type: ['string', 'null'],
+          format: 'date-time',
+          description:
+            'A tour’s course needs it. My own track: none (or null) - it is open for good.',
+        },
       }),
       ok: 201,
       data: obj({ course: ref('FutokorCourse') }),
@@ -3938,7 +3947,12 @@ const paths = {
       body: obj({
         name: str(),
         opensAt: date(),
-        closesAt: date(),
+        closesAt: {
+          type: ['string', 'null'],
+          format: 'date-time',
+          description:
+            'My own track: null (or an empty string) takes the closing time away - it is then open for good. A tour’s course always has one.',
+        },
         maxRunDurationMin: num(),
         distanceM: { type: ['number', 'null'], description: 'The whole loop, in metres.' },
         startTagId: str(),
@@ -4077,7 +4091,7 @@ const paths = {
             tour: { type: ['object', 'null'], description: 'A tour’s course: its tour.' },
             owner: obj({ _id: id(), name: str() }),
             opensAt: date(),
-            closesAt: date(),
+            closesAt: { type: ['string', 'null'], format: 'date-time' },
             distanceM: { type: ['number', 'null'] },
             runners: int('How many people ran it.'),
             finishedRuns: int(),

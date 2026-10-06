@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
-import { FutokorService, ScanAnswer, raceTime } from '../../../services/futokor';
+import { FutokorService, ScanAnswer, isClosed, raceTime } from '../../../services/futokor';
 import { CourseMap, MapRunner } from './course-map/course-map';
 import { QrScanner, canScanInApp } from './qr-scanner/qr-scanner';
 import { ScanAnswerView, cardName } from './scan-answer/scan-answer';
@@ -58,7 +58,7 @@ export class FutokorHome implements OnDestroy {
     if (!c) return null;
     const now = this.now();
     if (now < Date.parse(c.opensAt)) return 'soon';
-    return now > Date.parse(c.closesAt) ? 'over' : 'open';
+    return isClosed(c, now) ? 'over' : 'open';
   });
   stops = computed(() => (this.course()?.checkpoints.length ?? 1) - 1);
   // There's something to draw: the loop, or at least where the cards are.

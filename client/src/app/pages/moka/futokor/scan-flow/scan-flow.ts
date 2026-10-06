@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
-import { FutokorService, ScanAnswer, tagOfToken } from '../../../../services/futokor';
+import { FutokorService, ScanAnswer, isClosed, tagOfToken } from '../../../../services/futokor';
 import { ScanAnswerView, unlockSound } from '../scan-answer/scan-answer';
 import { NfcCards } from '../nfc/nfc-cards';
 
@@ -54,7 +54,7 @@ export class ScanFlow implements OnInit {
     const course = this.futokor.course();
     const run = this.futokor.run();
     const now = Date.now();
-    if (!course || now < Date.parse(course.opensAt) || now > Date.parse(course.closesAt)) {
+    if (!course || now < Date.parse(course.opensAt) || isClosed(course, now)) {
       return false;
     }
     const tagId = tagOfToken(this.token());

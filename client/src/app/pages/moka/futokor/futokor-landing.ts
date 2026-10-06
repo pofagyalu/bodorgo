@@ -3,7 +3,13 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Avatar } from '../../../components/avatar/avatar';
-import { CourseSummary, FutokorService, racePace, raceTime } from '../../../services/futokor';
+import {
+  CourseSummary,
+  FutokorService,
+  isClosed,
+  racePace,
+  raceTime,
+} from '../../../services/futokor';
 
 // The page asks the server again this often: who is running right now.
 const REFRESH_MS = 10 * 1000;
@@ -51,9 +57,7 @@ export class FutokorLanding implements OnDestroy {
   // What's open to run right now, as the phone last knew it.
   open = computed(() => {
     const now = Date.now();
-    return this.futokor
-      .courses()
-      .filter((c) => now >= Date.parse(c.opensAt) && now <= Date.parse(c.closesAt));
+    return this.futokor.courses().filter((c) => now >= Date.parse(c.opensAt) && !isClosed(c, now));
   });
 
   // Ticks every second, for the clocks of the runs that are on.

@@ -522,3 +522,12 @@ a.text {
     }
   }
 }
+
+// A note under a field (the editor: "left empty, it's open for good").
+.field-note {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #6a7a83;
+}

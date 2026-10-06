@@ -138,7 +138,7 @@
             <span><mat-icon>flag</mat-icon> {{ stops() }} ellenőrzőpont</span>
             <span
               ><mat-icon>schedule</mat-icon> {{ c.opensAt | date: 'MM. dd. HH:mm' }} –
-              {{ c.closesAt | date: 'MM. dd. HH:mm' }}</span
+              {{ c.closesAt ? (c.closesAt | date: 'MM. dd. HH:mm') : 'nincs zárás' }}</span
             >
           </p>
           <p class="offline">

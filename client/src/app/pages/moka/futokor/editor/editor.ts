@@ -23,7 +23,7 @@ interface DraftStop {
 interface Draft {
   name: string;
   opensAt: string; // as a datetime-local input has it
-  closesAt: string;
+  closesAt: string; // empty: none (my own track, open for good)
   distanceM: string;
   maxRunDurationMin: string;
   // A tour's course: its START/FINISH card (a user's own track has its own).
@@ -207,7 +207,7 @@ export class FutokorEditor {
     this.draft.set({
       name: course.name,
       opensAt: toInput(course.opensAt),
-      closesAt: toInput(course.closesAt),
+      closesAt: course.closesAt ? toInput(course.closesAt) : '',
       distanceM: course.distanceM ? String(course.distanceM) : '',
       maxRunDurationMin: String(course.maxRunDurationMin ?? ''),
       startTagId:
@@ -335,7 +335,7 @@ export class FutokorEditor {
       .updateCourse(course._id, {
         name: d.name,
         opensAt: fromInput(d.opensAt),
-        closesAt: fromInput(d.closesAt),
+        closesAt: d.closesAt ? fromInput(d.closesAt) : null,
         distanceM: numberOrNull(d.distanceM),
         maxRunDurationMin: numberOrNull(d.maxRunDurationMin),
         ...(own ? { points: stops.length } : { startTagId: d.startTagId }),
