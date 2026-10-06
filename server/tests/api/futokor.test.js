@@ -16,10 +16,10 @@ import { ensureFutokodok } from '../../src/utils/futokod.js';
 
 // Futókör over HTTP (the rules of a run: tests/unit/futokorRunRules.test.js).
 
-// While it's being built only the role manager gets in (futokor/access.js).
+// An admin: the club's cards and the tours' courses are theirs.
 const createOwner = () => createAdmin({ name: 'Nagy Zoli', canManageRoles: true });
-// Someone else who is in (as everyone will be, once it opens).
-const createRunner = (overrides = {}) => createMember({ canManageRoles: true, ...overrides });
+// Anyone logged in gets in (futokor/access.js).
+const createRunner = (overrides = {}) => createMember(overrides);
 
 const get = (user, url) => request(app).get(`/futokor${url}`).set(asUser(user));
 const post = (user, url, body) => request(app).post(`/futokor${url}`).set(asUser(user)).send(body);
@@ -72,16 +72,20 @@ const lap = (from, lapSec) => [
 const send = (user, scans) => post(user, '/scans', { scans });
 
 describe('Futókör: who gets in', () => {
-  it('only the role manager, for now - and the cards and the tours’ courses are the admins’', async () => {
+  it('everyone logged in, guests too - but the cards and the tours’ courses are the admins’', async () => {
     expect((await request(app).get('/futokor/active')).status).toBe(401);
-    for (const user of [await createAdmin(), await createMember(), await createGuest()]) {
-      expect((await get(user, '/active')).status).toBe(403);
+    expect((await request(app).get('/futokor/results')).status).toBe(401);
+    for (const user of [await createMember(), await createGuest()]) {
+      expect((await get(user, '/active')).status).toBe(200);
+      expect((await get(user, '/results')).status).toBe(200);
+      expect((await send(user, [])).status).toBe(200);
+      // A track of their own is theirs to make.
+      expect((await post(user, '/courses', { name: 'Erdei kör', points: 2 })).status).toBe(201);
       expect((await get(user, '/tags')).status).toBe(403);
-      expect((await send(user, [])).status).toBe(403);
     }
+    // Any admin, not only the role manager.
+    expect((await get(await createAdmin(), '/tags')).status).toBe(200);
     const runner = await createRunner();
-    expect((await get(runner, '/active')).status).toBe(200);
-    expect((await get(runner, '/tags')).status).toBe(403);
     // A tour's course is the admins' to make.
     const tour = await createTour();
     expect((await post(runner, '/courses', { tourId: String(tour._id) })).status).toBe(403);
@@ -480,14 +484,15 @@ describe('Futókör: live positions', () => {
     await request(app).delete(`/futokor/courses/${course._id}`).set(asUser(owner));
     expect(await FutokorPosition.countDocuments()).toBe(0);
 
-    // Not for anyone who isn't in.
-    expect((await put(await createMember(), course._id, here)).status).toBe(403);
+    // Not for anyone who isn't logged in (and gives no futókód).
+    expect(
+      (await request(app).put(`/futokor/courses/${course._id}/position`).send(here)).status,
+    ).toBe(401);
   });
 
   it('follows someone running with their futókód too - on a phone nobody is logged in on', async () => {
     const owner = await createOwner();
     const course = await openCourse(owner);
-    // (Not someone who is in: with a code that doesn't matter.)
     const peti = await createMember({ name: 'Kiss Peti' });
     await ensureFutokodok();
     const { futokod } = await User.findById(peti._id).select('+futokod');

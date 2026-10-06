@@ -7,7 +7,8 @@ import { canSeeFutokor } from './futokor.guard';
 // Who sees Móka (the games) - the menu item and its pages alike: everyone
 // logged in, since 2026-10-04 (while the games were being built, only the
 // role manager did). The server's twin: jatekok/access.js. Futókörök, the
-// running race, is still its own people's only (futokor.guard.ts).
+// running race, has its own line (futokor.guard.ts) - everyone's too,
+// since 2026-10-06.
 export const canSeeMoka = (user: CurrentUser | null) => !!user;
 
 // Asks the server first (like authGuard), so it also works on a fresh page
@@ -16,8 +17,7 @@ export const canSeeMoka = (user: CurrentUser | null) => !!user;
 // course on it, whatever the server says or doesn't: in the garden there
 // may be no connection to ask, and the run must go on (what the phone
 // sends is checked by the server anyway).
-// Also the guard of every page inside Móka (canActivateChild), so the
-// race's pages stay closed to whoever just walks over from another game.
+// Also the guard of every page inside Móka (canActivateChild).
 export const mokaGuard = (_route: unknown, state: RouterStateSnapshot) => {
   const auth = inject(AuthService);
   const router = inject(Router);

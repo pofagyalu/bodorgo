@@ -92,14 +92,14 @@ describe('route guards', () => {
   });
 
   describe('futokorAdminGuard', () => {
-    it('needs both the admin role and the role-manager right', () => {
+    it('needs the admin role - any admin', () => {
       expect(run(futokorAdminGuard, owner)).toBe(true);
-      expect(run(futokorAdminGuard, admin)).toBe(false);
+      expect(run(futokorAdminGuard, admin)).toBe(true);
       expect(run(futokorAdminGuard, { loggedIn: true, role: 'member', canManageRoles: true })).toBe(
         false,
       );
       expect(run(futokorAdminGuard, 'error')).toBe(false);
-      expect(navigate).toHaveBeenCalledTimes(3);
+      expect(navigate).toHaveBeenCalledTimes(2);
       expect(canSeeFutokor(null)).toBe(false);
     });
   });
@@ -107,12 +107,14 @@ describe('route guards', () => {
   describe('mokaGuard', () => {
     const moka = (url: string) => () => mokaGuard(null, state(url));
 
-    it('is for everyone logged in - but the race only for its own people', () => {
+    it('is for everyone logged in - the race too', () => {
       expect(run(moka('/moka/darts'), guest)).toBe(true);
       expect(run(moka('/moka/kviz/jatekok/abc'), member)).toBe(true);
       expect(run(moka('/moka/futokor/futas'), owner)).toBe(true);
+      expect(run(moka('/moka/futokor/futas'), member)).toBe(true);
+      expect(run(moka('/moka/futokor/eredmenyek'), guest)).toBe(true);
       expect(navigate).not.toHaveBeenCalled();
-      expect(run(moka('/moka/futokor/futas'), member)).toBe(false);
+      expect(run(moka('/moka/futokor/futas'), nobody)).toBe(false);
       expect(run(moka('/moka/darts'), nobody)).toBe(false);
       expect(navigate).toHaveBeenCalledWith(['/']);
       expect(canSeeMoka(null)).toBe(false);

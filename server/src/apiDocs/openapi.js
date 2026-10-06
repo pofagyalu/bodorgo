@@ -994,7 +994,7 @@ const tags = [
   [T.games, 'Móka: the games - Darts and the quiz (Kvíz). For everyone logged in, guests too.'],
   [
     T.race,
-    'Futókör (Móka → Futókörök): a tour’s checkpoint running race. Cards with a QR code are scanned by the runners’ phones, which send their scans whenever they have a connection; the runs are worked out from the scans. While it is being built, every call here is refused (403) for everyone but the role manager (`INITIAL_ADMIN_USER`).',
+    'Futókör (Móka → Futókörök): a tour’s checkpoint running race. Cards with a QR code are scanned by the runners’ phones, which send their scans whenever they have a connection; the runs are worked out from the scans. Open to everyone logged in, guests too (since 2026-10-06): running, the results, and making one’s own tracks; the club’s cards and a tour’s course are the admins’. Someone not logged in can still run with a futókód.',
   ],
   [
     T.settings,

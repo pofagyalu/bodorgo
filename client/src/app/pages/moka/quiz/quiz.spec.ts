@@ -1269,16 +1269,20 @@ describe('Moka with the quiz', () => {
     return fixture;
   }
 
-  it('shows Darts and the quiz to everyone - the race only to its own people', () => {
+  it('shows Darts, the race and the quiz to everyone', () => {
     const fixture = open('/moka/kviz/jatekok', { role: 'member' });
     const page = fixture.componentInstance;
     expect(page.inQuiz()).toBe(true);
-    expect(page.seesRace()).toBe(false);
+    expect(page.seesRace()).toBe(true);
     expect(page.inGame()).toBe(false);
     const links = [
       ...(fixture.nativeElement as HTMLElement).querySelectorAll('.moka-nav .nav-item'),
     ];
-    expect(links.map((a) => a.textContent?.trim())).toEqual(['track_changesDarts', 'quizKvíz']);
+    expect(links.map((a) => a.textContent?.trim())).toEqual([
+      'track_changesDarts',
+      'directions_runFutókörök',
+      'quizKvíz',
+    ]);
   });
 
   it('shows everything to the role manager, and hides the tabs during a quiz game', () => {
