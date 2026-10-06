@@ -4,7 +4,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import config from '../config.js';
 import logger from '../logger.js';
-import { mp4DurationSeconds } from './mp4Duration.js';
+import { mp4DurationSeconds, mp4VideoHeight } from './mp4Duration.js';
 
 // The videos' small copies: a 720p, ~1.9 Mbps version of a video, made by
 // ffmpeg when an admin asks for it, and from then on what is played unless
@@ -75,6 +75,20 @@ function copiesOf(video) {
     .map((n) => path.join(dir, n));
 }
 
+// What a list of videos says about one: its small copy's state ('ready' is
+// what plays unless the original is asked for), and the lines of the two
+// pictures - what the player's quality switch is labelled with ("720p",
+// "1080p"). The small copy's is the original's, 720 at most; null when the
+// file's header can't be read.
+export function videoQualityInfo(video) {
+  const height = mp4VideoHeight(video.fullPath);
+  return {
+    small: smallCopyState(video),
+    height,
+    smallHeight: height ? Math.min(height, SMALL_COPY.height) : null,
+  };
+}
+
 // key -> { key, ref, video, output, state, percent, error, child }
 const jobs = new Map();
 const queue = [];
@@ -116,7 +130,7 @@ export function requestSmallCopy(video, ref) {
   const key = keyOf(video);
   const output = copyPath(video);
   if (!output)
-    return { ref, state: 'failed', error: 'A kis méretű videók mappája nincs beállítva.' };
+    return { ref, state: 'failed', error: 'A tömörített videók mappája nincs beállítva.' };
 
   const known = jobs.get(key);
   if (known && (known.state === 'queued' || known.state === 'converting')) return publicJob(known);

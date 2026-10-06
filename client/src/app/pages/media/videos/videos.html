@@ -99,6 +99,8 @@
     [subtitle]="p.category.title + (p.video.year ? ' · ' + p.video.year : '')"
     [src]="videoUrl(p)"
     [smallSrc]="smallVideoUrl(p)"
+    [height]="p.video.height"
+    [smallHeight]="p.video.smallHeight"
     [subtitlesSrc]="p.video.hasSubtitles ? subtitlesUrl(p) : null"
     (closed)="close()"
   />

@@ -83,9 +83,7 @@ export class VideoCopiesService {
         this.pollWhileActive();
       },
       error: (err) =>
-        this.notifications.addError(
-          err?.error?.message ?? 'Nem sikerült elindítani az átalakítást.',
-        ),
+        this.notifications.addError(err?.error?.message ?? 'Nem sikerült elindítani a tömörítést.'),
     });
   }
 
@@ -95,7 +93,7 @@ export class VideoCopiesService {
       next: () => this.set({ ref: target.ref, state: 'none' }),
       error: (err) =>
         this.notifications.addError(
-          err?.error?.message ?? 'Nem sikerült törölni a kis méretű változatot.',
+          err?.error?.message ?? 'Nem sikerült törölni a tömörített változatot.',
         ),
     });
   }

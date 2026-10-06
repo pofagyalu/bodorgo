@@ -32,7 +32,7 @@ describe('VideoPlayer', () => {
     open('/video?quality=small');
     expect(source()).toBe('/video?quality=small');
     expect(qualityButtons()).toEqual([
-      ['Kis', true],
+      ['Tömörített', true],
       ['Eredeti', false],
     ]);
 
@@ -41,7 +41,7 @@ describe('VideoPlayer', () => {
     fixture.detectChanges();
     expect(source()).toBe('/video?quality=original');
     expect(qualityButtons()).toEqual([
-      ['Kis', false],
+      ['Tömörített', false],
       ['Eredeti', true],
     ]);
     // Another <video> - it goes on from where the first one was.
@@ -49,6 +49,48 @@ describe('VideoPlayer', () => {
     expect(video.currentTime).toBe(0);
     video.dispatchEvent(new Event('loadedmetadata'));
     expect(video.currentTime).toBe(42);
+  });
+
+  it('shows the resolution of the one playing, next to the switch', () => {
+    const resolution = () => el().querySelector('.player-resolution')?.textContent?.trim();
+    open('/video?quality=small');
+    expect(resolution()).toBeUndefined(); // not known: nothing
+    fixture.componentRef.setInput('height', 1080);
+    fixture.componentRef.setInput('smallHeight', 720);
+    fixture.detectChanges();
+    expect(resolution()).toBe('720p');
+    fixture.componentInstance.setQuality('original');
+    fixture.detectChanges();
+    expect(resolution()).toBe('1080p');
+
+    // An old video: its copy is the same size - the switch is still there.
+    fixture.componentRef.setInput('height', 576);
+    fixture.componentRef.setInput('smallHeight', 576);
+    fixture.componentInstance.setQuality('small');
+    fixture.detectChanges();
+    expect(resolution()).toBe('576p');
+    expect(qualityButtons()).toHaveLength(2);
+
+    // One without a copy: only the original's.
+    open(null);
+    fixture.componentRef.setInput('height', 720);
+    fixture.detectChanges();
+    expect(resolution()).toBe('720p');
+  });
+
+  it('shows the subtitles with either quality', () => {
+    const track = () => el().querySelector('track');
+    open('/video?quality=small');
+    fixture.componentRef.setInput('subtitlesSrc', '/subtitles.vtt');
+    fixture.detectChanges();
+    expect(track()?.getAttribute('src')).toBe('/subtitles.vtt');
+    expect(track()?.hasAttribute('default')).toBe(true);
+
+    fixture.componentInstance.setQuality('original');
+    fixture.detectChanges();
+    expect(source()).toBe('/video?quality=original');
+    expect(track()?.getAttribute('src')).toBe('/subtitles.vtt');
+    expect(track()?.hasAttribute('default')).toBe(true);
   });
 
   it('remembers the picked quality for the next video', () => {

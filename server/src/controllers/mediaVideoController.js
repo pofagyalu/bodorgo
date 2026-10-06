@@ -15,8 +15,8 @@ import {
   removeSmallCopy,
   requestSmallCopy,
   smallCopyJobs,
-  smallCopyState,
   videoFileFor,
+  videoQualityInfo,
 } from '../utils/videoCopies.js';
 
 // The club's own videos that don't belong to any one tour - Média → Videók.
@@ -178,9 +178,8 @@ export const listMediaVideos = async (req, res) => {
           episode: parsed.episode,
           hasCover: !!findThumb(root, relPath),
           hasSubtitles: !!findSubtitlePath(root, relPath),
-          // Its small copy (utils/videoCopies.js): 'ready' is what plays
-          // unless the original is asked for.
-          small: smallCopyState({
+          // Its small copy and the two pictures' lines (utils/videoCopies.js).
+          ...videoQualityInfo({
             area: category.folder,
             root,
             fullPath: resolveVideoPath(root, relPath),

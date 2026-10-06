@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
 import { VIDEO_EXTENSIONS, findSubtitlePath, resolveVideoPath } from './videoFiles.js';
-import { smallCopyState } from './videoCopies.js';
+import { videoQualityInfo } from './videoCopies.js';
 
 const THUMB_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
@@ -110,8 +110,8 @@ export const tourVideoFile = (root, relPath) => ({
 });
 
 // What the tour page gets for a tour: each version's id and name, whether
-// it has a cover / subtitles, and its small copy ('ready' is what plays
-// unless the original is asked for).
+// it has a cover / subtitles, and its small copy with the two pictures'
+// lines (utils/videoCopies.js).
 export function tourVideoList(order) {
   const root = tourVideosRoot();
   return (scanTourVideos().get(order) ?? []).map(({ relPath, label }) => ({
@@ -119,7 +119,7 @@ export function tourVideoList(order) {
     label: displayVersionLabel(label),
     hasCover: !!findVideoThumb(root, relPath),
     hasSubtitles: !!findSubtitlePath(root, relPath),
-    small: smallCopyState(tourVideoFile(root, relPath)),
+    ...videoQualityInfo(tourVideoFile(root, relPath)),
   }));
 }
 
