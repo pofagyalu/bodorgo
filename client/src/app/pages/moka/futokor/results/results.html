@@ -16,7 +16,7 @@
         <span><mat-icon>flag</mat-icon> {{ r.course.checkpoints.length - 1 }} ellenőrzőpont</span>
         <span
           ><mat-icon>schedule</mat-icon> {{ r.course.opensAt | date: 'yyyy. MM. dd.' }} –
-          {{ r.course.closesAt | date: 'MM. dd.' }}</span
+          {{ r.course.closesAt ? (r.course.closesAt | date: 'MM. dd.') : 'nincs zárás' }}</span
         >
       </p>
 

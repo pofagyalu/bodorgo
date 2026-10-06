@@ -88,7 +88,7 @@
           }}</span>
           <small
             >{{ c.opensAt | date: 'yyyy. MM. dd. HH:mm' }} –
-            {{ c.closesAt | date: 'yyyy. MM. dd.' }} ·
+            {{ c.closesAt ? (c.closesAt | date: 'yyyy. MM. dd.') : 'nincs zárás' }} ·
             {{ c.checkpoints.length ? c.checkpoints.length - 1 : 0 }} pont
             @if (c.distanceM) {
               · {{ c.distanceM }} m
@@ -130,6 +130,10 @@
                   [value]="d.closesAt"
                   (input)="set('closesAt', $any($event.target).value)"
                 />
+                <!-- My own track needs none: it's then open for good. -->
+                @if (c.kind === 'own') {
+                  <small class="field-note">Üresen hagyva a pálya mindig nyitva van.</small>
+                }
               </label>
               <label>
                 Leghosszabb futás (perc)

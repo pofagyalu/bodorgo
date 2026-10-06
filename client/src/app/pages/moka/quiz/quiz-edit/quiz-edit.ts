@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -106,7 +107,15 @@ const hasAnswers = (type: QuizQuestionType) => type !== 'truefalse' && type !== 
 // over it on a phone.
 @Component({
   selector: 'app-quiz-edit',
-  imports: [RouterLink, MatIconModule, QuizPhotoPicker, QuizSongPicker, QuizMap, QuizPreview],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    MatIconModule,
+    QuizPhotoPicker,
+    QuizSongPicker,
+    QuizMap,
+    QuizPreview,
+  ],
   templateUrl: './quiz-edit.html',
   styleUrl: './quiz-edit.scss',
 })

@@ -30,7 +30,8 @@ const tagSchema = new Schema(
 
 export const FutokorTag = mongoose.model('FutokorTag', tagSchema);
 
-// A course: a loop to run. Runs count while it's open (opensAt-closesAt).
+// A course: a loop to run. Runs count while it's open (opensAt-closesAt;
+// a user's own track may have no closesAt: then it's open for good).
 // Two kinds:
 // - a tour's course (`tour`): one per tour, the admins', with the club's
 //   cards; no two of them are open at the same time;
@@ -48,7 +49,7 @@ const courseSchema = new Schema(
     // The GPX file its loop is from (gpxTrackModel.js) - null if none.
     gpx: { type: Schema.Types.ObjectId, ref: 'GpxTrack', default: null },
     opensAt: { type: Date, required: true },
-    closesAt: { type: Date, required: true },
+    closesAt: { type: Date, default: null },
     maxRunDurationMin: { type: Number, default: DEFAULTS.maxRunDurationMin },
     flagSpeedMps: { type: Number, default: DEFAULTS.flagSpeedMps },
     duplicateScanWindowSec: { type: Number, default: DEFAULTS.duplicateScanWindowSec },

@@ -555,9 +555,24 @@ describe('Futókör: a user’s own track', () => {
     ]);
     expect(course.cards.map((c) => c.tagId)).toEqual(['P1-01', 'P1-02', 'P1-S']);
     expect(course.cards[0].url).toContain('/fk/P1-01.');
-    expect(Date.parse(course.closesAt) - Date.parse(course.opensAt)).toBeGreaterThan(
-      300 * 24 * HOUR,
-    );
+    // No closing time unless one is given: it's open for good.
+    expect(course.closesAt).toBeNull();
+    expect(Date.parse(course.opensAt)).toBeLessThanOrEqual(Date.now());
+    const open = (await get(anna, '/active')).body.data.courses;
+    expect(open.map((c) => c._id)).toContain(course._id);
+
+    // A closing time can be given, and taken away again (null, or the
+    // form's empty field) - but it can't be before the opening.
+    const closes = new Date(Date.now() + 2 * HOUR).toISOString();
+    const timed = await patch(anna, `/courses/${course._id}`, { closesAt: closes });
+    expect(timed.body.data.course.closesAt).toBe(closes);
+    const early = await patch(anna, `/courses/${course._id}`, { closesAt: new Date(0) });
+    expect(early.status).toBe(400);
+    for (const none of [null, '']) {
+      const cleared = await patch(anna, `/courses/${course._id}`, { closesAt: none });
+      expect(cleared.status, cleared.body.message).toBe(200);
+      expect(cleared.body.data.course.closesAt).toBeNull();
+    }
 
     // The next one has its own cards; neither is among the club's.
     const second = await makeTrack(anna, { name: 'Tóparti kör', points: 1 });

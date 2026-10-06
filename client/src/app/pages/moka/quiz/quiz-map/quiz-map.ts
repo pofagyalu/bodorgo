@@ -150,8 +150,8 @@ export class QuizMap implements OnDestroy {
           style: { color: '#8f8264', weight: 1.5, fillColor: '#f3ecd6', fillOpacity: 1 },
           attribution: 'Natural Earth',
         }),
-        L.geoJSON(data.streams as never, { ...still, style: { color: '#6fabd3', weight: 1.25 } }),
-        L.geoJSON(data.rivers as never, { ...still, style: { color: '#3d8ec4', weight: 3 } }),
+        L.geoJSON(data.streams as never, { ...still, style: { color: '#6fabd3', weight: 0.75 } }),
+        L.geoJSON(data.rivers as never, { ...still, style: { color: '#3d8ec4', weight: 1.5 } }),
         L.geoJSON(data.lakes as never, {
           ...still,
           style: { color: '#3d8ec4', weight: 1, fillColor: '#9fd0ee', fillOpacity: 1 },

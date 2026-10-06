@@ -88,9 +88,10 @@
           </span>
         </div>
 
-        <!-- Two columns where there's room: what is asked (and with what),
-             beside the answers and the time. -->
-        <div class="form-cols">
+        <!-- Two columns where the card has room: what is asked (and with
+             what), beside the answers and the time. A map question's map
+             has the second column to itself - the time is in the first. -->
+        <div class="form-cols" [class.form-cols--map]="q.type === 'map'">
           <div class="col">
             <!-- What kind of question it is - chosen first. -->
             <div class="kinds">
@@ -183,24 +184,10 @@
               </p>
             }
 
-            <!-- A place: the part of the map the players will see, and a tap
-               on the right place. -->
+            <!-- A map question: a tour's place can be taken for the answer
+                 (the map itself is in the second column). -->
             @if (q.type === 'map') {
-              <app-quiz-map
-                class="place-map"
-                [bounds]="q.bounds ?? defaultBounds"
-                [locked]="false"
-                [pickable]="true"
-                [pin]="q.place ?? null"
-                (picked)="setPlace(i, $event)"
-                (boundsChanged)="setBounds(i, $event)"
-              />
-              <p class="hint">
-                Állítsd be a térképet arra a területre, amit a játékosok lássanak (ők nem tudják
-                mozgatni vagy nagyítani), majd koppints a helyes helyre. A térképen csak határok,
-                folyók és tavak vannak – nevek nincsenek.
-              </p>
-              <button type="button" class="pic-btn" (click)="showTours(i)">
+              <button type="button" class="pic-btn tour-btn" (click)="showTours(i)">
                 <mat-icon>hiking</mat-icon> Egy tábor helye
               </button>
               @if (toursFor() === i) {
@@ -214,10 +201,30 @@
                   }
                 </div>
               }
+              <ng-container *ngTemplateOutlet="time" />
             }
           </div>
 
           <div class="col">
+            <!-- A place: the part of the map the players will see, and a tap
+                 on the right place. -->
+            @if (q.type === 'map') {
+              <app-quiz-map
+                class="place-map"
+                [bounds]="q.bounds ?? defaultBounds"
+                [locked]="false"
+                [pickable]="true"
+                [pin]="q.place ?? null"
+                (picked)="setPlace(i, $event)"
+                (boundsChanged)="setBounds(i, $event)"
+              />
+              <p class="hint map-hint">
+                Állítsd be a térképet arra a területre, amit a játékosok lássanak (ők nem tudják
+                mozgatni vagy nagyítani), majd koppints a helyes helyre. A térképen csak határok,
+                folyók és tavak vannak – nevek nincsenek.
+              </p>
+            }
+
             <!-- True or false: which one it is. -->
             @if (q.type === 'truefalse') {
               <div class="choices truth">
@@ -278,23 +285,30 @@
               </p>
             }
 
-            <div class="time">
-              <span class="label"><mat-icon>timer</mat-icon> Gondolkodási idő</span>
-              <div class="choices">
-                @for (s of timeLimits; track s) {
-                  <button
-                    type="button"
-                    class="choice"
-                    [class.on]="q.timeLimitSec === s"
-                    (click)="setTime(i, s)"
-                  >
-                    {{ s }} mp
-                  </button>
-                }
-              </div>
-            </div>
+            @if (q.type !== 'map') {
+              <ng-container *ngTemplateOutlet="time" />
+            }
           </div>
         </div>
+
+        <!-- How long there is to think. -->
+        <ng-template #time>
+          <div class="time">
+            <span class="label"><mat-icon>timer</mat-icon> Gondolkodási idő</span>
+            <div class="choices">
+              @for (s of timeLimits; track s) {
+                <button
+                  type="button"
+                  class="choice"
+                  [class.on]="q.timeLimitSec === s"
+                  (click)="setTime(i, s)"
+                >
+                  {{ s }} mp
+                </button>
+              }
+            </div>
+          </div>
+        </ng-template>
       </div>
 
       <!-- The question as the players will get it - to be tried right here. -->

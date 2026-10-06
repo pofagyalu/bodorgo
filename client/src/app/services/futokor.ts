@@ -38,7 +38,8 @@ export interface FutokorCourse extends RuleCourse {
   canManage: boolean;
   name: string;
   opensAt: string;
-  closesAt: string;
+  // None on a user's own track that is open for good.
+  closesAt: string | null;
   // The loop to draw on the map: [lat, lng] pairs - empty if it has none.
   track?: [number, number][];
   elevationGainM?: number | null;
@@ -69,7 +70,7 @@ export interface CourseSummary {
   tour: { _id: string; title?: string } | null;
   owner: { _id: string; name: string };
   opensAt: string;
-  closesAt: string;
+  closesAt: string | null;
   distanceM: number | null;
   runners: number;
   finishedRuns: number;
@@ -140,7 +141,8 @@ export interface StopChange {
 export interface CourseChanges {
   name?: string;
   opensAt?: string;
-  closesAt?: string;
+  // null: a user's own track is open for good.
+  closesAt?: string | null;
   maxRunDurationMin?: number | null;
   distanceM?: number | null;
   // A tour's course: its START/FINISH card.
@@ -235,8 +237,13 @@ export const tagOfToken = (token: string) => {
   return dot > 0 ? token.slice(0, dot) : token;
 };
 
+// Past its closing time - never, if it has none (a user's own track open
+// for good).
+export const isClosed = (course: { closesAt: string | null }, now = Date.now()) =>
+  !!course.closesAt && now > Date.parse(course.closesAt);
+
 const isOpenNow = (course: FutokorCourse, now = Date.now()) =>
-  now >= Date.parse(course.opensAt) && now <= Date.parse(course.closesAt);
+  now >= Date.parse(course.opensAt) && !isClosed(course, now);
 
 // Futókör: the running race. A runner's phone scans the cards; what each
 // scan means is decided right here, with the server's own rules, so it

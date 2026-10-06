@@ -34,8 +34,6 @@ import { computeAge } from './userController.js';
 const MAX_NEW_TAGS = 30;
 // A user's own track: how many checkpoints it may have.
 const MAX_OWN_POINTS = 20;
-// How long a user's own track is open if they don't say: a year.
-const OWN_OPEN_MS = 365 * 24 * 3600 * 1000;
 // (The request body is small - see app.js: the phone sends more in turns.)
 const MAX_SCANS_AT_ONCE = 40;
 // A phone's clock may be a little ahead of the server's - not more.
@@ -171,7 +169,12 @@ async function replayCourse(course) {
   }
 }
 
-const openAt = (time) => ({ opensAt: { $lte: time }, closesAt: { $gte: time } });
+// Open at that time: opened by then, and not closed yet - or never closing
+// (a user's own track without a closing time).
+const openAt = (time) => ({
+  opensAt: { $lte: time },
+  $or: [{ closesAt: null }, { closesAt: { $gte: time } }],
+});
 
 // --- The club's cards (the tours') ---
 
@@ -311,11 +314,20 @@ async function overlappingTourCourse(opensAt, closesAt, exceptId) {
   });
 }
 
-function parseWindow(body, current = {}) {
+// When a course is open, from what was sent (and what it had). A tour's
+// course needs both ends. A user's own track (`own`) may go without a
+// closing time - none sent, null or empty: it's open for good.
+function parseWindow(body, current = {}, own = false) {
   const opensAt = body.opensAt !== undefined ? new Date(body.opensAt) : current.opensAt;
-  const closesAt = body.closesAt !== undefined ? new Date(body.closesAt) : current.closesAt;
-  if (!opensAt || !closesAt || Number.isNaN(+opensAt) || Number.isNaN(+closesAt)) {
+  const sent = body.closesAt === '' ? null : body.closesAt;
+  const closesAt =
+    sent === undefined ? (current.closesAt ?? null) : sent === null ? null : new Date(sent);
+  if (!opensAt || Number.isNaN(+opensAt) || (closesAt && Number.isNaN(+closesAt))) {
     throw new AppError('A pálya nyitása és zárása kell.', 400);
+  }
+  if (!closesAt) {
+    if (!own) throw new AppError('A pálya nyitása és zárása kell.', 400);
+    return { opensAt, closesAt: null };
   }
   if (closesAt <= opensAt) throw new AppError('A pálya zárása a nyitása után legyen.', 400);
   return { opensAt, closesAt };
@@ -475,8 +487,8 @@ export const getCourses = async (req, res) => {
 // - A tour's (admins): { tourId, name?, opensAt, closesAt } - its cards
 //   are chosen afterwards, from the club's.
 // - My own track (anyone): { name, points, opensAt?, closesAt? } - open
-//   from now for a year unless said otherwise; its cards (a START/FINISH
-//   and one per point) are made with it.
+//   from now, and for good unless a closing time is given; its cards (a
+//   START/FINISH and one per point) are made with it.
 export const createCourse = async (req, res) => {
   const { tourId, name } = req.body ?? {};
 
@@ -508,11 +520,11 @@ export const createCourse = async (req, res) => {
   if (!Number.isInteger(points) || points < 1 || points > MAX_OWN_POINTS) {
     throw new AppError(`Egy pályán 1-${MAX_OWN_POINTS} ellenőrzőpont lehet.`, 400);
   }
-  const now = new Date();
-  const window = parseWindow({
-    opensAt: req.body.opensAt ?? now,
-    closesAt: req.body.closesAt ?? new Date(+now + OWN_OPEN_MS),
-  });
+  const window = parseWindow(
+    { opensAt: req.body.opensAt ?? new Date(), closesAt: req.body.closesAt ?? null },
+    {},
+    true,
+  );
   const course = new FutokorCourse({ name: cleanName, createdBy: req.user._id, ...window });
   await setOwnPoints(course, points);
   await course.save();
@@ -536,7 +548,7 @@ export const updateCourse = async (req, res) => {
     course.name = body.name.trim().slice(0, 60);
   }
   if (body.opensAt !== undefined || body.closesAt !== undefined) {
-    const window = parseWindow(body, course);
+    const window = parseWindow(body, course, isOwnTrack(course));
     if (
       !isOwnTrack(course) &&
       (await overlappingTourCourse(window.opensAt, window.closesAt, course._id))

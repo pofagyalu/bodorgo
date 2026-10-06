@@ -111,6 +111,36 @@
   min-width: 0;
 }
 
+// A map question in one column (a phone): its two halves run together, in
+// this order - the map and what belongs to it right under the question,
+// the time last. (Side by side - see the end - each half is its own again.)
+.form-cols--map {
+  > .col {
+    display: contents;
+  }
+
+  .place-map {
+    order: 1;
+  }
+
+  .map-hint {
+    order: 2;
+  }
+
+  .tour-btn {
+    order: 3;
+    justify-self: start;
+  }
+
+  .tour-list {
+    order: 4;
+  }
+
+  .time {
+    order: 5;
+  }
+}
+
 // "Előnézet": on a phone the way to the preview.
 .q-tools .preview-btn {
   display: inline-flex;
@@ -227,9 +257,11 @@ textarea {
   }
 }
 
+// (Its own width decides how its form is laid out - see the end.)
 .question {
   display: grid;
   gap: 0.625rem;
+  container-type: inline-size;
 }
 
 .q-head {
@@ -545,13 +577,16 @@ textarea {
   gap: 0.375rem;
 }
 
+// Side by side, as many as fit - the rest in a row below, never out of
+// the card.
 .choices {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.375rem;
 }
 
 .choice {
-  flex: 1 1 0;
+  flex: 1 1 4rem;
   min-height: 2.5rem;
   padding: 0.25rem 0.5rem;
   border: 2px solid #e4eae7;
@@ -629,16 +664,26 @@ textarea {
     padding: 1.5rem 2rem 2rem;
   }
 
-  .edit-head {
-    grid-template-columns: auto minmax(0, 36rem);
-    align-items: end;
-    gap: 2rem;
+  // The three columns' measures: the questions | the form | the preview.
+  .edit {
+    --nav-width: 15rem;
+    --preview-width: 24rem;
+    --col-gap: 1.25rem;
   }
 
   .workspace {
-    grid-template-columns: 15rem minmax(0, 1fr) 24rem;
+    grid-template-columns: var(--nav-width) minmax(0, 1fr) var(--preview-width);
     align-items: start;
-    gap: 1.25rem;
+    gap: var(--col-gap);
+  }
+
+  // The quiz's title above, and the way to save below, are the form's:
+  // exactly as wide as its card, right over and under it.
+  .title-field,
+  .save-bar {
+    width: auto;
+    margin-left: calc(var(--nav-width) + var(--col-gap));
+    margin-right: calc(var(--preview-width) + var(--col-gap));
   }
 
   // The questions under each other, each with its text.
@@ -686,22 +731,36 @@ textarea {
   .place-map {
     --map-max-height: 50dvh;
   }
+}
 
-  .save-bar {
-    margin-right: 0;
+@media (min-width: 100rem) {
+  .edit {
+    --nav-width: 17rem;
+    --preview-width: 26rem;
+    --col-gap: 1.5rem;
   }
 }
 
-// Wider still: the form itself in two columns - what is asked (and with
-// what) beside the answers and the time.
-@media (min-width: 100rem) {
-  .workspace {
-    grid-template-columns: 17rem minmax(0, 1fr) 26rem;
-    gap: 1.5rem;
-  }
-
+// The form in two columns - what is asked (and with what) beside the
+// answers and the time - once the card itself is wide enough for both,
+// whatever the window's width.
+@container (min-width: 46rem) {
   .form-cols {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
     gap: 1.75rem;
+  }
+
+  // A map question: the map is the big thing - it has the wider column to
+  // itself, everything else (the time too) is beside it.
+  .form-cols--map {
+    grid-template-columns: minmax(16rem, 1fr) minmax(0, 1.7fr);
+
+    > .col {
+      display: grid;
+    }
+  }
+
+  .place-map {
+    --map-max-height: 62dvh;
   }
 }
