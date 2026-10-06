@@ -39,7 +39,16 @@
   font-weight: 600;
   cursor: pointer;
 
-  &:hover {
+  // Only where there is a pointer to hover with: on a touch screen the
+  // look would stick after a tap (and an iPhone may spend a tap on it).
+  @media (hover: hover) {
+    &:hover {
+      background: var(--logo-orange, #f07827);
+      color: #fff;
+    }
+  }
+
+  &:active {
     background: var(--logo-orange, #f07827);
     color: #fff;
   }
@@ -70,7 +79,7 @@
   align-items: center;
   transition: color 0.1s ease;
 
-  &:disabled {
+  &.saving {
     cursor: default;
   }
 }

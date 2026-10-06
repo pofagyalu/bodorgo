@@ -478,6 +478,12 @@ describe('ReviewStars', () => {
     stars.onSwipeStart(at(125));
     stars.onSwipeMove(at(270));
     stars.onSwipeEnd(at(270));
+    // While saving the stars say so, but are not really disabled (an
+    // iPhone loses its next tap over a star disabled under the finger).
+    fixture.detectChanges();
+    const star = fixture.nativeElement.querySelector('.star-btn') as HTMLButtonElement;
+    expect(star.disabled).toBe(false);
+    expect(star.getAttribute('aria-disabled')).toBe('true');
     const req = http.expectOne(`${API}/tours/t1/reviews`);
     expect(req.request.body).toEqual({ rating: 9 });
     req.flush({ data: { rating: 9, ratingsAverage: 8.6, ratingsQuantity: 5 } });

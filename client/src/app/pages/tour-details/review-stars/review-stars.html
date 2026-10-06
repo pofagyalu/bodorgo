@@ -18,7 +18,10 @@
 } @else {
   <div class="review-stars">
     <!-- A phone: a finger drawn along the row fills the stars up to it,
-         and lifting it saves (see onSwipeStart). -->
+         and lifting it saves (see onSwipeStart). While saving the stars
+         only look and say disabled (onClick refuses a second save): a
+         star really disabled under the finger that has just been lifted
+         from it costs an iPhone its next tap. -->
     <div
       class="review-stars-row"
       (mouseleave)="onLeave()"
@@ -32,7 +35,8 @@
           type="button"
           class="star-btn"
           [class.filled]="value <= (displayRating() ?? 0)"
-          [disabled]="submitting()"
+          [class.saving]="submitting()"
+          [attr.aria-disabled]="submitting() ? 'true' : null"
           (mouseenter)="onHover(value)"
           (click)="onClick(value)"
           [attr.aria-label]="value + ' csillag'"
