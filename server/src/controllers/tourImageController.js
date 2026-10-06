@@ -8,6 +8,7 @@ import config from '../config.js';
 import logger from '../logger.js';
 import { thumbRelPath } from '../photos/imageFiles.js';
 import { LONG_CACHE, requestedWidth, sendPhoto } from '../photos/imageSizes.js';
+import { newMark } from '../utils/newMedia.js';
 
 // A restricted photo (see tourModel.js's images.restricted) is visible to
 // an admin, or to anyone who actually attended *this* tour - same
@@ -72,7 +73,14 @@ export const getTourImages = async (req, res) => {
   }
 
   const canSeeRestricted = await canViewRestrictedImages(req.user, req.params.tourId);
-  const images = tour.images.filter((i) => !i.restricted || canSeeRestricted);
+  // addedAt itself stays here: an admin gets "Új" (isNew) from it on what
+  // a discovery has just brought, nobody else anything.
+  const images = tour.images
+    .filter((i) => !i.restricted || canSeeRestricted)
+    .map((i) => {
+      const { addedAt, ...image } = i.toObject();
+      return { ...image, ...newMark(req.user, addedAt) };
+    });
 
   res.status(200).json({ status: 'success', data: { images } });
 };

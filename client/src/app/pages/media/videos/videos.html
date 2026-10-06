@@ -45,6 +45,10 @@
             <h2>{{ c.title }}</h2>
             <p>{{ c.description }}</p>
           </div>
+          <!-- Admins: how many of them a discovery has just met. -->
+          @if (newCount(c.videos); as fresh) {
+            <span class="new-tag">{{ fresh }} új</span>
+          }
           <span class="group-count">{{ c.videos.length }} videó</span>
         </div>
 
@@ -59,6 +63,15 @@
                 [tooltip]="v.title + (v.year ? ' (' + v.year + ')' : '')"
                 (playClicked)="play(c, v)"
               />
+              <!-- Admins: new since a discovery in the last two weeks. -->
+              @if (v.isNew) {
+                <span
+                  class="new-tag new-tag--corner"
+                  [class.new-tag--below]="canEdit() && !!v.viewers?.length"
+                  title="Új: a legutóbbi felfedezés hozta"
+                  >Új</span
+                >
+              }
               <!-- The role manager: its title and who may see it - and a lock on one
                    that isn't every member's. -->
               @if (canEdit()) {

@@ -331,6 +331,8 @@ export interface TourVideo {
   // 720...) - the player's quality switch is labelled with them.
   height?: number | null;
   smallHeight?: number | null;
+  // Admins only: an Új média felfedezése met it in the last two weeks.
+  isNew?: boolean;
 }
 
 // A tour's Extrák document - one of the club's documents with this tour
@@ -501,6 +503,8 @@ export interface TourImage {
   // with a small phone icon; absent for the camera's photos.
   source?: 'mobile';
   takenAt?: string | null;
+  // Admins only: an Új média felfedezése added it in the last two weeks.
+  isNew?: boolean;
 }
 
 export interface TourImagesResponse {

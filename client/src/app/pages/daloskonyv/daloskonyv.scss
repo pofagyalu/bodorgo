@@ -919,16 +919,8 @@ $line: #e4eae7;
   margin-left: auto;
 }
 
-// "Új": a song someone added since one's visit before this one.
-.new-tag {
-  padding: 0.1rem 0.5rem;
-  border-radius: 10rem;
-  background: #f40e0d;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
+// "Új": a song someone added since one's visit before this one (the tag
+// itself is styles.scss's .new-tag).
 
 .song-list a.active .new-tag {
   background: #fff;

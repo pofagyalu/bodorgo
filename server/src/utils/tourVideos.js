@@ -3,6 +3,7 @@ import path from 'path';
 import config from '../config.js';
 import { VIDEO_EXTENSIONS, findSubtitlePath, resolveVideoPath } from './videoFiles.js';
 import { videoQualityInfo } from './videoCopies.js';
+import { videoKey } from './newMedia.js';
 
 const THUMB_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
@@ -112,16 +113,22 @@ export const tourVideoFile = (root, relPath) => ({
 // What the tour page gets for a tour: each version's id and name, whether
 // it has a cover / subtitles, and its small copy with the two pictures'
 // lines (utils/videoCopies.js).
-export function tourVideoList(order) {
+export function tourVideoList(order, newKeys = new Set()) {
   const root = tourVideosRoot();
   return (scanTourVideos().get(order) ?? []).map(({ relPath, label }) => ({
     id: encodeVideoId(relPath),
+    // An admin: "Új" on one a discovery has just met (utils/newMedia.js).
+    ...(newKeys.has(videoKey('tour', relPath)) ? { isNew: true } : {}),
     label: displayVersionLabel(label),
     hasCover: !!findVideoThumb(root, relPath),
     hasSubtitles: !!findSubtitlePath(root, relPath),
     ...videoQualityInfo(tourVideoFile(root, relPath)),
   }));
 }
+
+// Every tour video as the "seen" records know it (utils/newMedia.js).
+export const tourVideoPaths = () =>
+  [...scanTourVideos().values()].flat().map((v) => ({ area: 'tour', path: v.relPath }));
 
 // Every tour video file - for "Új média felfedezése" to count the ones
 // without a small copy.

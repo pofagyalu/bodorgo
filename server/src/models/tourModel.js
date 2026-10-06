@@ -391,6 +391,9 @@ const tourSchema = new Schema(
           // When it was taken (EXIF) - the album is kept in this order;
           // null if the file doesn't say.
           takenAt: Date,
+          // When "Új média felfedezése" recorded it - its "Új" mark for
+          // the admins goes by this (utils/newMedia.js).
+          addedAt: Date,
         },
       ],
       select: false,

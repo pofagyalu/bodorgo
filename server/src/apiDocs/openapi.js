@@ -1205,7 +1205,7 @@ const paths = {
       tag: T.tours,
       summary: 'One tour',
       description:
-        "Everything the tour page shows - schedule, accommodation, weather, Extrák, attendees with their payment rows. Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy.",
+        "Everything the tour page shows - schedule, accommodation, weather, Extrák, attendees with their payment rows. Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
       params: [tourId],
       data: obj({ tour: ref('Tour') }),
       errors: [404],
@@ -1592,10 +1592,18 @@ const paths = {
       tag: T.gallery,
       summary: "A tour's photos",
       description:
-        '`{ filename, width, height }` in order. A restricted photo is left out for those who may not see it.',
+        '`{ filename, width, height }` in order. A restricted photo is left out for those who may not see it. `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.',
       params: [tourIdT],
       data: obj({
-        images: arrayOf(obj({ filename: str(), width: int(), height: int(), restricted: bool() })),
+        images: arrayOf(
+          obj({
+            filename: str(),
+            width: int(),
+            height: int(),
+            restricted: bool(),
+            isNew: bool('Admins only: added by a discovery in the last 14 days.'),
+          }),
+        ),
       }),
       errors: [404],
     }),
@@ -2591,7 +2599,7 @@ const paths = {
       role: 'member',
       summary: 'All video categories and videos',
       description:
-        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, `small` - its small copy: `none`, `queued`, `converting`, `ready` (then that is what plays unless the original is asked for) or `failed` -, `height` and `smallHeight` - the lines of the original's picture and of the small copy's (the original's, 720 at most), what the player's quality switch is labelled with; null when the file's header can't be read - and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. A video an admin kept for chosen members is left out for everyone else (an admin gets every video). The role manager only: `viewers` - the ids of the users who may see the video; empty when every member may.",
+        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, `small` - its small copy: `none`, `queued`, `converting`, `ready` (then that is what plays unless the original is asked for) or `failed` -, `height` and `smallHeight` - the lines of the original's picture and of the small copy's (the original's, 720 at most), what the player's quality switch is labelled with; null when the file's header can't be read - and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. A video an admin kept for chosen members is left out for everyone else (an admin gets every video). The role manager only: `viewers` - the ids of the users who may see the video; empty when every member may. On a video, `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
       data: obj({ categories: arrayOf({ type: 'object' }) }),
     }),
   },
@@ -2707,7 +2715,7 @@ const paths = {
       role: 'member',
       summary: 'All photo folders and photos',
       description:
-        "Each folder with its photos, in the order taken. A photo's `title` is the name an admin gave it (see PATCH /media/photos/{category}/{filename}) - null when it has none; the file name is not a name to show. A photo an admin kept for chosen members is left out for everyone else (an admin gets every photo), and so is a folder with nothing left to show. The role manager only: `viewers` on each photo - the ids of the users who may see it; empty when every member may.",
+        "Each folder with its photos, in the order taken. A photo's `title` is the name an admin gave it (see PATCH /media/photos/{category}/{filename}) - null when it has none; the file name is not a name to show. A photo an admin kept for chosen members is left out for everyone else (an admin gets every photo), and so is a folder with nothing left to show. The role manager only: `viewers` on each photo - the ids of the users who may see it; empty when every member may. On a photo, `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
       data: obj({
         categories: arrayOf(obj({ key: str(), title: str(), photos: arrayOf({ type: 'object' }) })),
       }),
@@ -2780,7 +2788,7 @@ const paths = {
       role: 'admin',
       summary: 'Új média felfedezése - start',
       description:
-        'Looks through the NAS for new tour photos/videos and Média photos, makes thumbnails, e-mails attendees about new tour videos. Runs in the background. Its report also says how many videos have no small copy yet (`videosWithoutSmall`) - a reminder only, none is made by it.',
+        'Looks through the NAS for new tour photos/videos and Média photos, makes thumbnails, e-mails attendees about new tour videos. Runs in the background. Its report also says how many videos have no small copy yet (`videosWithoutSmall`) - a reminder only, none is made by it - and how many video files (tour and Média videos alike) it met for the first time (`newVideos`; the very first run only takes stock, so it says 0). The photos and videos a run adds carry `isNew` in the lists for the admins for 14 days.',
     }),
   },
 

@@ -16,6 +16,7 @@ export interface GalleryPhoto {
   downloadUrl: string;
   mobile?: boolean; // taken with a phone - a small phone icon
   restricted?: boolean; // only the tour's attendees see it (admin toggle)
+  isNew?: boolean; // admins: a discovery has just brought it - "Új" on its thumbnail
 }
 
 export interface GalleryOptions {
@@ -224,19 +225,29 @@ export class PhotoGalleryService {
             thumb.loading = 'lazy';
             thumb.className = 'pswp__thumbnails-strip-item';
             thumb.addEventListener('click', () => pswp.goTo(i));
-            // A phone photo's thumbnail gets a small phone badge - the <img>
-            // can't hold one, hence the wrapper.
-            if (photo.mobile) {
+            // A phone photo's thumbnail gets a small phone badge, a new one
+            // (admins) its "Új" - the <img> can't hold one, hence the wrapper.
+            if (photo.mobile || photo.isNew) {
               const cell = document.createElement('span');
               cell.className = 'pswp__thumbnails-strip-cell';
-              cell.title = 'Mobillal készült';
-              cell.append(
-                thumb,
-                Object.assign(document.createElement('span'), {
-                  className: 'pswp__thumbnails-strip-mobile',
-                  innerHTML: PHONE_SVG,
-                }),
-              );
+              cell.append(thumb);
+              if (photo.mobile) {
+                cell.title = 'Mobillal készült';
+                cell.append(
+                  Object.assign(document.createElement('span'), {
+                    className: 'pswp__thumbnails-strip-mobile',
+                    innerHTML: PHONE_SVG,
+                  }),
+                );
+              }
+              if (photo.isNew) {
+                cell.append(
+                  Object.assign(document.createElement('span'), {
+                    className: 'pswp__thumbnails-strip-new',
+                    textContent: 'Új',
+                  }),
+                );
+              }
               el.appendChild(cell);
             } else {
               el.appendChild(thumb);

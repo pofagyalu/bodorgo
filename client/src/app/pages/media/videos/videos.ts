@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
-import { MediaService, MediaVideo, MediaVideoCategory } from '../../../services/media';
+import { MediaService, MediaVideo, MediaVideoCategory, newCount } from '../../../services/media';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { MediaEdit, MediaEditDialog } from '../../../shared/media-edit-dialog/media-edit-dialog';
@@ -69,6 +69,8 @@ export class Videos {
       !!this.categoryKey() && this.media.categories().length > 0 && !this.shownCategories().length,
   );
   totalCount = computed(() => this.media.categories().reduce((sum, c) => sum + c.videos.length, 0));
+  // Admins: how many of a category's videos carry "Új".
+  newCount = newCount;
 
   playing = signal<Playing | null>(null);
 

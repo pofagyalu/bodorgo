@@ -9,6 +9,7 @@ import { byTakenAt, thumbRelPath } from '../photos/imageFiles.js';
 import { mediaThumbDir } from '../photos/mediaPhotoSync.js';
 import { LONG_CACHE, requestedWidth, sendPhoto } from '../photos/imageSizes.js';
 import { discoveryStatus, startDiscovery } from '../photos/discovery.js';
+import { newMark } from '../utils/newMedia.js';
 
 // Média → Fotók (members only - see mediaRoutes.js). The categories and
 // photos are what "Új média felfedezése" last recorded (MediaPhoto); the
@@ -28,7 +29,9 @@ export const listMediaPhotos = async (req, res) => {
   const settings = new Map(
     (await MediaPhotoSettings.find().lean()).map((s) => [`${s.category}/${s.filename}`, s]),
   );
-  const photos = await MediaPhoto.find().select('category filename width height takenAt').lean();
+  const photos = await MediaPhoto.find()
+    .select('category filename width height takenAt addedAt')
+    .lean();
   const byCategory = new Map();
   for (const p of photos.sort(byTakenAt)) {
     const own = settings.get(`${p.category}/${p.filename}`);
@@ -41,6 +44,8 @@ export const listMediaPhotos = async (req, res) => {
       width: p.width,
       height: p.height,
       takenAt: p.takenAt,
+      // An admin: "Új" on what a discovery has just brought.
+      ...newMark(req.user, p.addedAt),
       // Who may see it (empty: every member) - only the one who sets it is
       // told.
       ...(canEdit ? { viewers: (own?.viewers ?? []).map(String) } : {}),

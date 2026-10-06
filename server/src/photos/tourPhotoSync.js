@@ -62,7 +62,12 @@ export async function syncTourPhotos(tour, sharp) {
         path.join(folderPath, filename),
         path.join(thumbDir, thumbRelPath(filename)),
       );
-      added.push({ filename, ...facts, ...(isMobile(filename) ? { source: 'mobile' } : {}) });
+      added.push({
+        filename,
+        ...facts,
+        ...(isMobile(filename) ? { source: 'mobile' } : {}),
+        addedAt: new Date(),
+      });
     } catch {
       failures++;
     }

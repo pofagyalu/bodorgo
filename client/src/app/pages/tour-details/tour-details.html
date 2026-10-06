@@ -11,6 +11,10 @@
           <span class="gallery-badge">
             <mat-icon>photo_library</mat-icon>
             {{ tourImages().length }}
+            <!-- Admins: how many a discovery has just brought. -->
+            @if (newImageCount(); as fresh) {
+              <span class="new-tag">{{ fresh }} új</span>
+            }
           </span>
         }
         @if (panoramaEmbedUrl()) {
@@ -206,6 +210,12 @@
                 prompt="Nyomd azt a gombot, te Béla!"
                 (playClicked)="playingVideo.set(v)"
               />
+              <!-- Admins: new since a discovery in the last two weeks. -->
+              @if (v.isNew) {
+                <span class="new-tag new-tag--corner" title="Új: a legutóbbi felfedezés hozta"
+                  >Új</span
+                >
+              }
               <!-- The admins: its small copy - made, going, or to be made. -->
               @if (isAdmin()) {
                 <app-video-small-copy

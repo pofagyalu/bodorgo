@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
 import { PhotoGalleryService } from '../../../shared/photo-gallery';
 import { MediaEdit, MediaEditDialog } from '../../../shared/media-edit-dialog/media-edit-dialog';
-import { MediaPhoto, MediaPhotoCategory, MediaService } from '../../../services/media';
+import { MediaPhoto, MediaPhotoCategory, MediaService, newCount } from '../../../services/media';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 
@@ -59,6 +59,8 @@ export class Photos implements OnInit {
   totalCount = computed(() =>
     this.media.photoCategories().reduce((sum, c) => sum + c.photos.length, 0),
   );
+  // Admins: how many of a category's photos carry "Új".
+  newCount = newCount;
 
   thumbUrl(c: MediaPhotoCategory, filename: string): string {
     return this.media.photoThumbUrl(c.key, filename);
@@ -78,6 +80,7 @@ export class Photos implements OnInit {
         thumbUrl: this.media.photoThumbUrl(c.key, p.filename),
         fullUrl: this.media.photoUrl(c.key, p.filename),
         downloadUrl: this.media.photoDownloadUrl(c.key, p.filename),
+        isNew: p.isNew,
       })),
       index,
     );

@@ -280,3 +280,46 @@ h1 {
 .pswp__button--fullscreen-on #pswp__icn-fullscreen-exit {
   display: inline;
 }
+
+/* "Új": the small red tag on something new - a song since one's last visit
+   (Daloskönyv), and for the admins a photo or video that an Új média
+   felfedezése has just brought (Média, the tour page). */
+.new-tag {
+  padding: 0.1rem 0.5rem;
+  border-radius: 10rem;
+  background: #f40e0d;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* On a photo's or a video's tile: its top left corner - under the lock of
+   one kept for chosen members (--below). */
+.new-tag--corner {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow: 0 0.1rem 0.4rem rgba(0, 0, 0, 0.35);
+}
+
+.new-tag--below {
+  top: 2.7rem;
+}
+
+/* The same on a filmstrip thumbnail of the photo viewer. */
+.pswp__thumbnails-strip-new {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  padding: 0 0.3rem;
+  border-radius: 10rem;
+  background: #f40e0d;
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  pointer-events: none;
+}

@@ -708,6 +708,7 @@ A website can show real system notifications through the **Web Push** standard, 
 - `tour.images` holds `{ filename, width, height, restricted }` (PhotoSwipe needs the sizes up front). `images` and `sourceFolder` are `select: false`, so they never leak through other tour endpoints.
 - Thumbnails (`.webp`) are made when photos are discovered, not at request time. A missing thumbnail falls back to the full image.
 - **Új média felfedezése** (an admin's button, never on a schedule) links new tour folders, syncs every album and the Média categories, and e-mails attendees about a newly added recap video.
+- **"Új" for the admins:** a photo or video a discovery has added carries a red **Új** tag for 14 days (`server/src/utils/newMedia.js`), with a count beside its Média category and on the tour's album badge — so whoever pressed the button finds what it brought. Nobody else gets it. Photos keep the time on their own record (`addedAt`); videos are not stored, so the run notes when it first met each file (`VideoSeen`). The first run after this was introduced only takes stock of the videos: none of them is new.
 - **Restricted photos:** visible to admins and that tour's attendees only. For anyone else the photo is left out of the list and answers exactly like a file that does not exist.
 - PhotoSwipe's script is lazy-loaded. It resolves its gallery elements once, at `init()`, so it has to be initialized after Angular has rendered them.
 
