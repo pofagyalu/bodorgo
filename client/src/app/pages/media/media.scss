@@ -217,6 +217,16 @@
   color: #7f96a1;
 }
 
+// "3 új" before the count (admins) - the count then follows it.
+.sub-new {
+  margin-left: auto;
+  font-size: 0.6875rem;
+
+  + .sub-count {
+    margin-left: 0.4rem;
+  }
+}
+
 .side-bottom {
   margin-top: auto;
   padding: 18px 14px;
@@ -359,6 +369,7 @@
   .side-bottom,
   .soon,
   .sub-title,
+  .sub-new,
   .sub-count,
   .media-nav .nav-item .chevron {
     display: none;

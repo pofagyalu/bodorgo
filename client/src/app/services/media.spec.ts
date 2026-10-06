@@ -160,12 +160,13 @@ describe('MediaService', () => {
           { title: 'Zemplén', error: 'nincs mappa' },
         ],
         media: [{ title: 'Régi képek', added: 1 }, { title: 'Üres' }],
+        newVideos: 2,
       },
     };
 
     beforeEach(() => vi.useFakeTimers());
 
-    it('starts, polls every two seconds, then reports and reloads the photos', () => {
+    it('starts, polls every two seconds, then reports and reloads the photos and videos', () => {
       const success = vi.spyOn(notifications, 'addSuccess');
       service.discover();
       http.expectOne(`${media}/discover`).flush({ data: running });
@@ -182,13 +183,16 @@ describe('MediaService', () => {
       http.expectOne(`${media}/discover`).flush({ data: done });
 
       expect(success).toHaveBeenCalledWith('Új média felfedezése kész');
+      // What it brought carries "Új" from now - both lists are asked for anew.
       http.expectOne(`${media}/photos`).flush({ data: { categories: [] } });
+      http.expectOne(`${media}/videos`).flush({ data: { categories: [] } });
       expect(service.discoveryReport()).toEqual([
         'Új tábormappa: 2026 Mátra',
         'Új tábori videó: Mátra film – értesítés kiküldve',
         'Mátra: +3 új fotó, 1 törölve, 2 nem sikerült, kihagyott almappa: raw, tmp',
         'Zemplén: hiba – nincs mappa',
         'Média – Régi képek: +1 új fotó',
+        '2 új videó',
       ]);
 
       service.closeDiscoveryReport();
@@ -204,6 +208,7 @@ describe('MediaService', () => {
       http.expectOne(`${media}/discover`).flush({ data: { running: false, error: 'elfogyott' } });
       expect(error).toHaveBeenCalledWith('A felfedezés megszakadt: elfogyott');
       http.expectOne(`${media}/photos`).flush({ data: { categories: [] } });
+      http.expectOne(`${media}/videos`).flush({ data: { categories: [] } });
     });
 
     it('keeps polling over a failed status request', () => {

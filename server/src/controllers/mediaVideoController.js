@@ -18,6 +18,7 @@ import {
   videoFileFor,
   videoQualityInfo,
 } from '../utils/videoCopies.js';
+import { newVideoKeys, videoKey } from '../utils/newMedia.js';
 
 // The club's own videos that don't belong to any one tour - Média → Videók.
 // The videos aren't stored in the database: each category is a
@@ -158,6 +159,7 @@ export const listMediaVideos = async (req, res) => {
   const settings = new Map(
     (await MediaVideoTitle.find().lean()).map((s) => [`${s.category}/${s.path}`, s]),
   );
+  const newKeys = await newVideoKeys(req.user);
   const categories = MEDIA_VIDEO_CATEGORIES.map((category) => {
     const root = categoryRoot(category);
     const videos = findVideoFiles(root)
@@ -168,6 +170,8 @@ export const listMediaVideos = async (req, res) => {
         return {
           id: encodeId(relPath),
           title: own?.title || parsed.title,
+          // An admin: "Új" on one a discovery has just met.
+          ...(newKeys.has(videoKey(`media:${category.key}`, relPath)) ? { isNew: true } : {}),
           // Who may see it (empty: every member) - only the one who sets it
           // is told.
           ...(canEdit ? { viewers: (own?.viewers ?? []).map(String) } : {}),
@@ -265,6 +269,17 @@ export function mediaVideoFiles() {
       fullPath: resolveVideoPath(root, relPath),
     }));
   });
+}
+
+// Every Média video as the "seen" records know it (utils/newMedia.js).
+export function mediaVideoPaths() {
+  if (!config.mediaVideosRoot) return [];
+  return MEDIA_VIDEO_CATEGORIES.flatMap((category) =>
+    findVideoFiles(categoryRoot(category)).map((relPath) => ({
+      area: `media:${category.key}`,
+      path: relPath,
+    })),
+  );
 }
 
 // PATCH /media/videos/:category/:id - the role manager: the video's own title, shown

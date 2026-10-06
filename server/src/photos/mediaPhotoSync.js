@@ -37,7 +37,7 @@ export async function syncMediaPhotos(sharp) {
           path.join(root, category, filename),
           path.join(mediaThumbDir(category), thumbRelPath(filename)),
         );
-        await MediaPhoto.create({ category, filename, ...facts });
+        await MediaPhoto.create({ category, filename, ...facts, addedAt: new Date() });
         added++;
       } catch {
         failures++;

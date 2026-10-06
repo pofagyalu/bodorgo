@@ -338,6 +338,7 @@
 }
 
 .video-item {
+  position: relative; // the admins' "Új" tag sits in its corner
   min-width: 0;
 }
 

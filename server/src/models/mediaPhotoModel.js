@@ -11,6 +11,9 @@ const mediaPhotoSchema = new mongoose.Schema({
   height: Number,
   size: Number,
   takenAt: Date,
+  // When "Új média felfedezése" recorded it - its "Új" mark for the admins
+  // goes by this (utils/newMedia.js); the ones from before have none.
+  addedAt: Date,
 });
 mediaPhotoSchema.index({ category: 1, filename: 1 }, { unique: true });
 

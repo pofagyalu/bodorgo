@@ -134,6 +134,8 @@ export class TourDetails {
   // photo is the only entry point, everything else happens in the app's
   // shared photo viewer (shared/photo-gallery).
   tourImages = signal<TourImage[]>([]);
+  // Admins: how many of them carry "Új" (see TourImage.isNew).
+  newImageCount = computed(() => this.tourImages().filter((i) => i.isNew).length);
   private imagesRequested = false;
   private gallery = inject(PhotoGalleryService);
 
@@ -576,8 +578,14 @@ export class TourDetails {
       downloadUrl: this.tourService.tourImageDownloadUrl(t._id, img.filename),
       mobile: img.source === 'mobile',
       restricted: img.restricted,
+      isNew: img.isNew,
     }));
-    void this.gallery.open(photos, 0, {
+    // An admin with new photos lands on the first of them.
+    const firstNew = Math.max(
+      0,
+      images.findIndex((img) => img.isNew),
+    );
+    void this.gallery.open(photos, firstNew, {
       zipUrl: this.tourService.tourImagesZipUrl(t._id),
       zipBytes: images.reduce((sum, img) => sum + img.size, 0),
       onRestrict: this.canEdit()

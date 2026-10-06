@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
-import { MediaService } from '../../services/media';
+import { MediaService, newCount } from '../../services/media';
 import { AuthService } from '../../auth/auth.service';
 
 // Outer shell for media/* - the club's videos (and later event photos)
@@ -21,6 +21,8 @@ export class Media implements OnInit {
   private router = inject(Router);
   // "Új média felfedezése" - the button at the bottom of the sidebar.
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  // Admins: how many of a category's photos or videos carry "Új".
+  newCount = newCount;
 
   // Which of the three one is in ("videok", "fotok", "zene") - the sidebar
   // shows only that one's sub-menu, so it stays short as the sections grow.

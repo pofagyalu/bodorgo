@@ -37,6 +37,9 @@
               >
                 <mat-icon [style.color]="categoryColor(c.key)">{{ categoryIcon(c.key) }}</mat-icon>
                 <span class="sub-title">{{ c.title }}</span>
+                @if (newCount(c.videos); as fresh) {
+                  <span class="new-tag sub-new">{{ fresh }} új</span>
+                }
                 <span class="sub-count">{{ c.videos.length }}</span>
               </a>
             }
@@ -73,6 +76,9 @@
               >
                 <mat-icon [style.color]="'#8fd3b8'">photo_camera</mat-icon>
                 <span class="sub-title">{{ c.title }}</span>
+                @if (newCount(c.photos); as fresh) {
+                  <span class="new-tag sub-new">{{ fresh }} új</span>
+                }
                 <span class="sub-count">{{ c.photos.length }}</span>
               </a>
             }

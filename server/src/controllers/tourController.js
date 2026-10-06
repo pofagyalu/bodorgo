@@ -8,6 +8,7 @@ import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservat
 import { tourHasEnded } from './reviewController.js';
 import { computeAge } from './userController.js';
 import { tourVideoList } from '../utils/tourVideos.js';
+import { newVideoKeys } from '../utils/newMedia.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import logger from '../logger.js';
@@ -307,7 +308,7 @@ export const getTour = async (req, res, next) => {
     filename: d.filename,
     mimeType: d.mimeType,
   }));
-  const videos = tourVideoList(tour.order);
+  const videos = tourVideoList(tour.order, await newVideoKeys(req.user));
   const hasVideo = videos.length > 0;
 
   res.status(200).json({

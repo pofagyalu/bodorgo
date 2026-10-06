@@ -31,6 +31,8 @@ export interface MediaVideo {
   // The role manager only: the only members who see it - empty: every
   // member does.
   viewers?: string[];
+  // Admins only: an Új média felfedezése met it in the last two weeks.
+  isNew?: boolean;
 }
 
 export interface MediaVideoCategory {
@@ -55,7 +57,12 @@ export interface MediaPhoto {
   width: number;
   height: number;
   takenAt: string | null;
+  // Admins only: an Új média felfedezése added it in the last two weeks.
+  isNew?: boolean;
 }
+
+// How many of them carry "Új" - the count beside a category's name.
+export const newCount = (items: { isNew?: boolean }[]) => items.filter((i) => i.isNew).length;
 
 export interface MediaPhotoCategory {
   key: string; // the folder's name
@@ -92,6 +99,8 @@ export interface DiscoveryStatus {
     media: DiscoveryResult[];
     // Tours whose new recap video was announced to their attendees.
     videos?: string[];
+    // How many video files (tours' and Média's) it met for the first time.
+    newVideos?: number;
     // How many videos (tours' and Média's) have no small copy yet.
     videosWithoutSmall?: number;
   };
@@ -141,8 +150,8 @@ export class MediaService {
       );
   }
 
-  loadVideos() {
-    if (this.loaded || this.loading()) return;
+  loadVideos(force = false) {
+    if ((this.loaded && !force) || this.loading()) return;
     this.loading.set(true);
     this.error.set(false);
     this.http.get<MediaVideosResponse>(this.apiUrl).subscribe({
@@ -274,6 +283,7 @@ export class MediaService {
         const line = describe(r);
         return line ? `Média – ${line}` : null;
       }),
+      report.newVideos ? `${report.newVideos} új videó` : null,
       // A reminder: they are made one by one, on the video's own card.
       report.videosWithoutSmall
         ? `${report.videosWithoutSmall} videónak nincs tömörített változata`
@@ -328,7 +338,9 @@ export class MediaService {
           } else {
             this.notifications.addSuccess('Új média felfedezése kész');
           }
+          // What it brought carries "Új" from now - both lists anew.
           this.loadPhotos(true);
+          this.loadVideos(true);
         },
         error: () => this.pollDiscovery(),
       });
