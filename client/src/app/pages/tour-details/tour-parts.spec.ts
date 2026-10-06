@@ -435,6 +435,56 @@ describe('ReviewStars', () => {
     expect(success).toHaveBeenCalledWith('Értékelés mentve');
   });
 
+  it('follows a finger drawn along the stars, and saves where it is lifted', () => {
+    open({ data: { isAttendee: true, hasEnded: true, rating: 7 } });
+    stars.startEditing(new MouseEvent('click'));
+    fixture.detectChanges();
+    // The row is 200 wide here: every star 20.
+    const row = { getBoundingClientRect: () => ({ left: 100, width: 200 }) };
+    const at = (clientX: number, pointerType = 'touch') =>
+      ({ clientX, pointerType, currentTarget: row }) as unknown as PointerEvent;
+    const value = () => fixture.nativeElement.querySelector('.review-value').textContent.trim();
+
+    // The mouse hovers and clicks as before - no swipe starts.
+    stars.onSwipeStart(at(130, 'mouse'));
+    stars.onSwipeMove(at(290, 'mouse'));
+    expect(stars.displayRating()).toBe(7);
+
+    // A tap that stays on its star is left to the star's own click.
+    stars.onSwipeStart(at(125));
+    expect(stars.displayRating()).toBe(2);
+    stars.onSwipeEnd(at(128));
+    http.expectNone(`${API}/tours/t1/reviews`);
+
+    // Drawn along: the stars and the number follow, past the ends too.
+    stars.onSwipeStart(at(125));
+    stars.onSwipeMove(at(205));
+    fixture.detectChanges();
+    expect(stars.displayRating()).toBe(6);
+    expect(value()).toBe('6/10');
+    expect(fixture.nativeElement.querySelectorAll('.star-btn.filled').length).toBe(6);
+    stars.onSwipeMove(at(900));
+    expect(stars.displayRating()).toBe(10);
+    stars.onSwipeMove(at(-50));
+    expect(stars.displayRating()).toBe(1);
+
+    // The page scrolls instead: back to what was saved, nothing sent.
+    stars.onSwipeCancel();
+    expect(stars.displayRating()).toBe(7);
+    stars.onSwipeEnd(at(205));
+    http.expectNone(`${API}/tours/t1/reviews`);
+
+    // Lifted on the ninth: saved.
+    stars.onSwipeStart(at(125));
+    stars.onSwipeMove(at(270));
+    stars.onSwipeEnd(at(270));
+    const req = http.expectOne(`${API}/tours/t1/reviews`);
+    expect(req.request.body).toEqual({ rating: 9 });
+    req.flush({ data: { rating: 9, ratingsAverage: 8.6, ratingsQuantity: 5 } });
+    expect(stars.savedRating()).toBe(9);
+    expect(stars.editing()).toBe(false);
+  });
+
   it('stops editing on Escape or a click elsewhere, and reports a failed save', () => {
     open({ data: { isAttendee: true, hasEnded: true, rating: null } });
     stars.startEditing(new MouseEvent('click'));

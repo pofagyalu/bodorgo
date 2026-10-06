@@ -1,6 +1,8 @@
 import {
   Component,
+  ElementRef,
   HostListener,
+  afterNextRender,
   inject,
   signal,
   computed,
@@ -64,6 +66,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 })
 export class TourDetails {
   private route = inject(ActivatedRoute);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private tourService = inject(TourService);
   private userService = inject(UserService);
   private sanitizer = inject(DomSanitizer);
@@ -358,6 +361,14 @@ export class TourDetails {
   });
 
   constructor() {
+    // A tour always opens at its top. The page that scrolls (app.component's
+    // .page-body, not the window) stays where the one before was left -
+    // the list's, at whichever card was clicked.
+    afterNextRender(() => {
+      const page = this.host.nativeElement.closest<HTMLElement>('.page-body');
+      if (page) page.scrollTop = 0;
+    });
+
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.loadError.set('Hiányzó tábor azonosító.');

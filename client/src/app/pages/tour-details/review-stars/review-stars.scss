@@ -53,6 +53,11 @@
 
 .review-stars-row {
   display: flex;
+  // A finger drawn sideways along the stars is ours (see onSwipeStart);
+  // up and down it still scrolls the page.
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .star-btn {

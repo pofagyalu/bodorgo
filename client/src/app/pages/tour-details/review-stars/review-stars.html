@@ -17,7 +17,16 @@
   </p>
 } @else {
   <div class="review-stars">
-    <div class="review-stars-row" (mouseleave)="onLeave()">
+    <!-- A phone: a finger drawn along the row fills the stars up to it,
+         and lifting it saves (see onSwipeStart). -->
+    <div
+      class="review-stars-row"
+      (mouseleave)="onLeave()"
+      (pointerdown)="onSwipeStart($event)"
+      (pointermove)="onSwipeMove($event)"
+      (pointerup)="onSwipeEnd($event)"
+      (pointercancel)="onSwipeCancel()"
+    >
       @for (value of stars; track value) {
         <button
           type="button"

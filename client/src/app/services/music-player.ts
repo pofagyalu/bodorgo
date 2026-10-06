@@ -27,6 +27,20 @@ const VOLUME_KEY = 'bodorgo-music-volume';
 // Until someone sets their own (remembered per device): quiet, 15%.
 const DEFAULT_VOLUME = 0.15;
 
+// An iPhone or iPad plays a page's sound at full level whatever the page
+// asks for - the loudness is the device's own buttons' - and its <audio>
+// keeps saying volume 1. Asked of the browser itself rather than guessed
+// from its name. (Muting does work there.)
+function volumeCanBeSet(): boolean {
+  try {
+    const probe = new Audio();
+    probe.volume = 0.5;
+    return probe.volume === 0.5;
+  } catch {
+    return false;
+  }
+}
+
 // The music: Jellyfin playlists, streamed through our server. App-wide
 // (providedIn: 'root') with a single <audio>, so it keeps playing while
 // moving between pages. One playlist plays at a time - the one started
@@ -56,7 +70,10 @@ export class MusicPlayerService {
   repeatOne = signal(false);
   currentTime = signal(0); // seconds
   duration = signal(0); // seconds, 0 until known
-  volume = signal(readVolume());
+  // False on an iPhone or iPad: the players leave the slider out there and
+  // keep only the mute button - and the level is what it really is, full.
+  readonly canSetVolume = volumeCanBeSet();
+  volume = signal(this.canSetVolume ? readVolume() : 1);
   muted = signal(false);
 
   private audio: HTMLAudioElement | null = null;

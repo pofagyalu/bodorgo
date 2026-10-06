@@ -21,7 +21,8 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 // their own status ("még nem értékeltél" / "a tied N") plus an
 // Értékelek/Módosítom button that swaps the whole line for the 10-star
 // input - clicking a star submits immediately and swaps back to the
-// summary line, updated.
+// summary line, updated. On a phone a finger can also be drawn along the
+// stars: they and the number follow it, and lifting it saves.
 @Component({
   selector: 'app-review-stars',
   standalone: true,
@@ -105,6 +106,48 @@ export class ReviewStars implements OnInit {
   }
 
   onLeave() {
+    this.hoverRating.set(null);
+  }
+
+  // --- A finger drawn along the stars (a phone, a pen - not the mouse,
+  // which hovers and clicks as before) ---
+  // The stars fill up to the finger and the number beside them follows
+  // it; lifting it saves that many, as tapping that star would. A tap
+  // that never left its star is left to the star's own click.
+  private swipe: { from: number; moved: boolean } | null = null;
+
+  // The star under the finger, by where it is along the row - beyond
+  // either end it is the first or the last.
+  private starAt(event: PointerEvent): number {
+    const row = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const share = (event.clientX - row.left) / (row.width || 1);
+    return Math.min(this.stars.length, Math.max(1, Math.ceil(share * this.stars.length)));
+  }
+
+  onSwipeStart(event: PointerEvent) {
+    if (event.pointerType === 'mouse' || this.submitting()) return;
+    const value = this.starAt(event);
+    this.swipe = { from: value, moved: false };
+    this.hoverRating.set(value);
+  }
+
+  onSwipeMove(event: PointerEvent) {
+    if (!this.swipe) return;
+    const value = this.starAt(event);
+    if (value !== this.swipe.from) this.swipe.moved = true;
+    this.hoverRating.set(value);
+  }
+
+  onSwipeEnd(event: PointerEvent) {
+    const swipe = this.swipe;
+    this.swipe = null;
+    if (swipe?.moved) this.onClick(this.starAt(event));
+  }
+
+  // The page took the gesture over (a scroll up or down): nothing saved.
+  onSwipeCancel() {
+    if (!this.swipe) return;
+    this.swipe = null;
     this.hoverRating.set(null);
   }
 
