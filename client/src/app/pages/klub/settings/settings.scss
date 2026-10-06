@@ -1,3 +1,5 @@
+@use './shared';
+
 // Same shared Klub look as documents.scss/finance.scss/members.scss.
 :host {
   display: block;
@@ -11,14 +13,7 @@
   color: #23354a;
 }
 
-button,
-input {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-}
+@include shared.cards;
 
 .content {
   max-width: 1390px;
@@ -59,53 +54,10 @@ button {
   margin: 0 0 1.4rem;
 }
 
-// The pages that aren't open: .cards and .info-cards set their own
-// display, which would win over the hidden attribute's.
-[hidden] {
-  display: none !important;
-}
-
 // The third page: Értesítések, and Szoftver verziók under it, full width.
 .info-cards {
   display: grid;
   gap: 18px;
-}
-
-// Masonry: the cards flow down in as many columns as fit (at least
-// 480px wide each), a card never split between two - so the right side
-// isn't left empty on a wide screen.
-.cards {
-  columns: 2 480px;
-  column-gap: 18px;
-
-  > * {
-    display: block;
-    break-inside: avoid;
-    margin: 0 0 18px;
-  }
-}
-
-.panel {
-  background: #fff;
-  border: 1px solid #e7edea;
-  border-radius: 17px;
-  box-shadow: 0 5px 19px #213b4110;
-  padding: 24px;
-}
-
-.panel-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 18px;
-
-  h2 {
-    font-size: 17px;
-    letter-spacing: -0.025em;
-    margin: 0 0 5px;
-    color: #203747;
-  }
 }
 
 .current-fee {
@@ -147,11 +99,6 @@ button {
     color: #56666e;
     font-size: 0.8rem;
   }
-}
-
-.empty-note {
-  color: #56666e;
-  font-size: 14px;
 }
 
 .fee-table {
@@ -236,63 +183,6 @@ button {
 
   &:hover {
     background: #fbe7e3;
-  }
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.spacer {
-  flex: 1;
-}
-
-.primary-btn {
-  background: #1a796c;
-  color: white;
-  border: 1px solid #1a796c;
-  padding: 10px 18px;
-  border-radius: 11px;
-  font-size: 13px;
-  font-weight: 750;
-  min-height: 42px;
-
-  &:hover:not(:disabled) {
-    background: #16675d;
-  }
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-}
-
-.outline-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: white;
-  color: #254257;
-  border: 1px solid #dce6e3;
-  padding: 10px 14px;
-  border-radius: 11px;
-  font-size: 13px;
-  font-weight: 650;
-  min-height: 42px;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
   }
 }
 
@@ -448,226 +338,6 @@ button {
   }
 }
 
-// --- OIDC szolgáltató: where everybody logs in (the role manager only) ---
-
-// Big and red on purpose: a wrong value here locks everyone out.
-.danger-zone {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin: 0 0 1.25rem;
-  padding: 1.25rem 1.5rem;
-  border: 0.1875rem solid #c8102e;
-  border-radius: 1rem;
-  background: #fdecee;
-  color: #7a0c1e;
-
-  mat-icon {
-    flex: none;
-    width: 3rem;
-    height: 3rem;
-    font-size: 3rem;
-    color: #c8102e;
-  }
-
-  strong {
-    display: block;
-    font-size: clamp(1.6rem, 5vw, 2.4rem);
-    line-height: 1.1;
-    font-weight: 900;
-    letter-spacing: 0.02em;
-    color: #c8102e;
-  }
-
-  p {
-    margin: 0.5rem 0 0;
-    font-size: 1rem;
-    line-height: 1.5;
-  }
-
-  code {
-    font-size: 0.85em;
-    word-break: break-all;
-  }
-}
-
-.danger-zone-way-back {
-  font-size: 0.85rem !important;
-}
-
-.oidc-note {
-  margin: 0 0 1.125rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  background: #eef4f8;
-  color: #2f414b;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.oidc-note--warn {
-  background: #fff4dc;
-  color: #6b4a00;
-}
-
-// The providers: a radio button (the active one) and a name (opens it).
-.oidc-providers,
-.oidc-other {
-  margin-bottom: 1.125rem;
-}
-
-.oidc-provider-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.5rem;
-
-  li {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.25rem 0.75rem;
-    border: 1px solid #e7edea;
-    border-radius: 0.75rem;
-  }
-
-  input[type='radio'] {
-    flex: none;
-    width: 1.25rem;
-    height: 1.25rem;
-    accent-color: #c8102e;
-    cursor: pointer;
-  }
-}
-
-.oidc-provider--open {
-  border-color: #1a796c !important;
-  background: #f7fbf9;
-}
-
-.oidc-provider-name {
-  flex: 1;
-  min-height: 2.625rem;
-  border: 0;
-  background: none;
-  text-align: left;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #203747;
-}
-
-.oidc-hint {
-  margin-top: -0.5rem;
-}
-
-.oidc-logo {
-  display: block;
-  height: 1.75rem;
-  width: auto;
-  margin: 0 0 0.75rem;
-}
-
-// One field per row, as wide as its card.
-.oidc-fields {
-  display: grid;
-  gap: 0.875rem;
-
-  label:not(.reminder-switch) {
-    display: grid;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #2f414b;
-  }
-
-  input:not([type='checkbox']) {
-    width: 100%;
-    box-sizing: border-box;
-    min-height: 2.625rem;
-    padding: 0.5rem 0.625rem;
-    border: 1px solid #dce5e1;
-    border-radius: 0.5625rem;
-    color: #1c2d38;
-    // 16px: a phone doesn't zoom in on focus.
-    font-size: 1rem;
-
-    &:disabled {
-      background: #f1f5f3;
-    }
-  }
-
-  small {
-    color: #6b7780;
-    font-weight: 500;
-  }
-}
-
-.oidc-remove {
-  font-size: 0.875rem;
-}
-
-.oidc-info {
-  margin: 1.125rem 0 0;
-  padding-top: 1rem;
-  border-top: 1px solid #e7edea;
-  display: grid;
-  gap: 0.75rem;
-  font-size: 0.8rem;
-
-  dt {
-    color: #56666e;
-    font-weight: 700;
-  }
-
-  dd {
-    margin: 0.125rem 0 0;
-    display: grid;
-    gap: 0.125rem;
-  }
-
-  code {
-    word-break: break-all;
-    color: #203747;
-  }
-
-  small {
-    color: #6b7780;
-  }
-}
-
-// One redirect URI (information): the address, and what it is for under it.
-.oidc-uri {
-  display: grid;
-  gap: 0.0625rem;
-  padding: 0.375rem 0;
-  border-top: 1px solid #f0f2f0;
-}
-
-.oidc-actions {
-  margin-top: 0;
-}
-
-.danger-btn {
-  background: #c8102e;
-  color: #fff;
-  border: 1px solid #c8102e;
-  padding: 0.625rem 1.125rem;
-  border-radius: 0.6875rem;
-  font-size: 0.8125rem;
-  font-weight: 750;
-  min-height: 2.625rem;
-
-  &:hover:not(:disabled) {
-    background: #a80d26;
-  }
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-}
-
 // --- Értesítések: every e-mail and push (info), on its own page ---
 
 // E-mails | pushes, side by side - each list as tall as it is.
@@ -730,15 +400,6 @@ button {
   }
 }
 
-.notif-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #e5f5ec;
-  color: #267b66;
-  font-size: 11px;
-  font-weight: 700;
-}
-
 .notif-label {
   font-weight: 700;
   color: #56666e;
@@ -771,21 +432,6 @@ button {
 
   .reminder-day {
     width: 64px;
-  }
-}
-
-.reminder-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-
-  input {
-    width: 17px;
-    height: 17px;
-    accent-color: #1a796c;
   }
 }
 
@@ -834,10 +480,6 @@ button {
 }
 
 @media (max-width: 580px) {
-  .panel {
-    padding: 16px;
-  }
-
   .year-cell input,
   .amount-cell input {
     width: 76px;

@@ -1,0 +1,438 @@
+<div class="danger-zone" role="alert">
+  <mat-icon>warning</mat-icon>
+  <div>
+    <strong>VESZÉLYES ZÓNA!!!</strong>
+    <p>
+      Itt dől el, hol lép be <b>mindenki</b>. Egyetlen hibás érték után
+      <b>senki nem tud belépni – te sem</b>. Csak akkor nyúlj hozzá, ha pontosan tudod, mit
+      csinálsz.
+    </p>
+    <p class="danger-zone-way-back">
+      Ha mégis kizártad magad: vészhelyzeti belépés. A szerver <code>.env</code> fájljában
+      <code>LOCAL_LOGIN=true</code>, majd újraindítás – ekkor az
+      <code>INITIAL_ADMIN_USER</code> e-mail címével és az
+      <code>INITIAL_ADMIN_PASSWORD</code> jelszavával tudsz belépni (csak te), és itt kijavíthatod.
+      Utána <code>LOCAL_LOGIN=false</code> és újraindítás.
+    </p>
+  </div>
+</div>
+
+@if (oidc(); as o) {
+  @if (o.localLogin) {
+    <p class="oidc-note oidc-note--warn">
+      <b>Vészhelyzeti belépés van bekapcsolva</b> (a szerveren <code>LOCAL_LOGIN=true</code>): most
+      csak te tudsz belépni, a <code>.env</code> jelszavával. Állítsd be itt a szolgáltatót, mentsd
+      el, majd a szerveren <code>LOCAL_LOGIN=false</code> és újraindítás – utána mindenki újra a
+      szolgáltatón keresztül lép be.
+    </p>
+  }
+  @if (o.unreadable) {
+    <p class="oidc-note oidc-note--warn">
+      Az itt mentett titkok ezzel a szerverrel nem olvashatók (más az
+      <code>APP_SECRET_KEY</code>, mint amivel mentve lettek) – most a <code>.env</code>
+      értékei érvényesek. Mentsd el újra a secretet és a tokent, és innentől megint az itteniek
+      számítanak.
+    </p>
+  } @else if (!o.canSave) {
+    <p class="oidc-note oidc-note--warn">
+      A szerver <code>.env</code> fájljából hiányzik az <code>APP_SECRET_KEY</code> – enélkül a
+      titkok nem menthetők, a <code>.env</code> értékei érvényesek.
+    </p>
+  } @else if (oidcNotSavedYet()) {
+    <p class="oidc-note">
+      Ezek még a szerver <code>.env</code> fájljának értékei – az első mentéssel ide kerülnek.
+    </p>
+  } @else {
+    <p class="oidc-note">
+      Az Authentik beállításai itt vannak elmentve (a titkok titkosítva). Ha a belépés így működik,
+      a szerver <code>.env</code> fájljából az <code>AUTHENTIK_*</code> sorok törölhetők.
+    </p>
+  }
+
+  <!-- The providers: Authentik (always there) and any others added
+       next to it. The radio button says which one everybody logs in
+       through; a name opens that provider's settings below. -->
+  <section class="panel oidc-providers">
+    <div class="panel-title">
+      <div>
+        <h2>Szolgáltatók</h2>
+        <p class="subtext">
+          A bejelölt szolgáltatón keresztül lép be mindenki. A nevére kattintva a beállításai
+          nyílnak meg alatta. Az Authentik mindig megmarad.
+        </p>
+      </div>
+    </div>
+
+    <ul class="oidc-provider-list">
+      @for (p of providerRows(); track p.id) {
+        <li [class.oidc-provider--open]="oidcOpen() === p.id">
+          <input
+            type="radio"
+            name="oidcActive"
+            [attr.aria-label]="p.name + ' legyen az aktív szolgáltató'"
+            [checked]="o.active === p.id"
+            [disabled]="!o.canSave || activatingOidc()"
+            (click)="$event.preventDefault(); activateProvider(p.id)"
+          />
+          <button type="button" class="oidc-provider-name" (click)="openProvider(p.id)">
+            {{ p.name }}
+          </button>
+          @if (o.active === p.id) {
+            <span class="notif-badge">aktív</span>
+          }
+        </li>
+      }
+    </ul>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="outline-btn"
+        (click)="openProvider('new')"
+        [disabled]="!o.canSave || oidcOpen() === 'new'"
+      >
+        <mat-icon>add</mat-icon> Új szolgáltató
+      </button>
+    </div>
+  </section>
+
+  @if (oidcOpen() !== 'authentik') {
+    <section class="panel oidc-other">
+      <div class="panel-title">
+        <div>
+          <h2>{{ openedProvider()?.name ?? 'Új szolgáltató' }}</h2>
+          <p class="subtext">
+            Bármilyen OIDC szolgáltató, amelyik az Issuer URL-jén leírja magát
+            (<code>/.well-known/openid-configuration</code>). Meghívót csak az Authentik tud
+            küldeni: itt a felhasználókat a szolgáltatóban kell felvenni, ugyanazzal az e-mail
+            címmel, amivel a klubban szerepelnek.
+          </p>
+        </div>
+      </div>
+
+      @if (openedProvider()?.unreadable) {
+        <p class="oidc-note oidc-note--warn">
+          Ennek a szolgáltatónak a mentett secretje ezzel a szerverrel nem olvasható (más az
+          <code>APP_SECRET_KEY</code>) – add meg újra.
+        </p>
+      }
+
+      <div class="oidc-fields">
+        <label>
+          Name
+          <input
+            type="text"
+            maxlength="50"
+            [ngModel]="pName()"
+            (ngModelChange)="pName.set($event)"
+            [disabled]="!o.canSave"
+          />
+        </label>
+        <label>
+          Issuer URL
+          <input
+            type="url"
+            inputmode="url"
+            placeholder="https://id.example.org/realms/klub"
+            [ngModel]="pIssuerUrl()"
+            (ngModelChange)="pIssuerUrl.set($event)"
+            [disabled]="!o.canSave"
+          />
+        </label>
+        <label>
+          Client ID
+          <input
+            type="text"
+            autocapitalize="off"
+            spellcheck="false"
+            autocomplete="off"
+            [ngModel]="pClientId()"
+            (ngModelChange)="pClientId.set($event)"
+            [disabled]="!o.canSave"
+          />
+        </label>
+        <label>
+          Client secret
+          <input
+            type="password"
+            autocomplete="new-password"
+            [placeholder]="openedProvider()?.hasClientSecret ? '••••••••••••' : 'nincs megadva'"
+            [ngModel]="pClientSecret()"
+            (ngModelChange)="pClientSecret.set($event)"
+            [disabled]="!o.canSave"
+          />
+          <small>
+            @if (openedProvider()?.hasClientSecret) {
+              Van mentve – soha nem jelenik meg. Üresen hagyva a mostani marad.
+            } @else {
+              Még nincs megadva.
+            }
+          </small>
+        </label>
+        <label>
+          Logout URI
+          <input
+            type="url"
+            inputmode="url"
+            placeholder="https://bodorgo.hu"
+            [ngModel]="pPostLogout()"
+            (ngModelChange)="pPostLogout.set($event)"
+            [disabled]="!o.canSave"
+          />
+          <small>Post-logout redirect URI: ide érkezik, aki kilépett.</small>
+        </label>
+        <label class="reminder-switch oidc-remove">
+          <input
+            type="checkbox"
+            [ngModel]="pVerifiedOnly()"
+            (ngModelChange)="pVerifiedOnly.set($event)"
+            [disabled]="!o.canSave"
+          />
+          Csak megerősített e-mail címet fogad el (email_verified)
+        </label>
+        <small class="oidc-hint">
+          Mindenkit az e-mail címe azonosít, ezért csak az léphet be, akinek a címét a szolgáltató
+          megerősítettnek mondja. Csak akkor kapcsold ki, ha a szolgáltató nem küld ilyen jelzést,
+          és ott senki nem regisztrálhat más címével.
+        </small>
+      </div>
+
+      <dl class="oidc-info">
+        <div>
+          <dt>Redirect URIs</dt>
+          <dd>
+            <small>
+              Tájékoztatás: a szolgáltatóban ezeket kell felvenni a Redirect URIs közé.
+            </small>
+            @for (r of redirectUris(); track r.uri) {
+              <span class="oidc-uri">
+                <code>{{ r.uri }}</code>
+                <small>{{ r.note }}</small>
+              </span>
+            }
+          </dd>
+        </div>
+      </dl>
+
+      <div class="actions">
+        @if (openedProvider(); as saved) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="deleteProvider(saved.id)"
+            [disabled]="!o.canSave || savingProvider() || o.active === saved.id"
+            [title]="o.active === saved.id ? 'Az aktív szolgáltató nem törölhető' : ''"
+          >
+            <mat-icon>delete</mat-icon> Törlés
+          </button>
+        }
+        <span class="spacer"></span>
+        <button
+          type="button"
+          class="outline-btn"
+          (click)="openProvider(openedProvider()?.id ?? 'authentik')"
+          [disabled]="savingProvider()"
+        >
+          Mégse
+        </button>
+        <button
+          type="button"
+          class="danger-btn"
+          (click)="saveProvider()"
+          [disabled]="!o.canSave || savingProvider() || !providerDirty()"
+        >
+          {{ savingProvider() ? 'Ellenőrzés és mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  <div class="oidc-authentik" [hidden]="oidcOpen() !== 'authentik'">
+    <div class="cards">
+      <section class="panel">
+        <div class="panel-title">
+          <div>
+            <!-- Authentik's own logo (its press kit, unchanged). -->
+            <img
+              class="oidc-logo"
+              src="assets/images/providers/authentik-lockup-horizontal-color.svg"
+              alt="authentik"
+            />
+            <h2>Authentik szolgáltató</h2>
+            <p class="subtext">
+              Az OAuth2/OpenID provider, amin keresztül a klub alkalmazásába be lehet lépni.
+            </p>
+          </div>
+        </div>
+
+        <div class="oidc-fields">
+          <label>
+            Server URL
+            <input
+              type="url"
+              inputmode="url"
+              placeholder="https://auth.example.org"
+              [ngModel]="oidcServerUrl()"
+              (ngModelChange)="oidcServerUrl.set($event)"
+              [disabled]="!o.canSave"
+            />
+          </label>
+          <label>
+            Provider slug
+            <input
+              type="text"
+              autocapitalize="off"
+              spellcheck="false"
+              [ngModel]="oidcProviderSlug()"
+              (ngModelChange)="oidcProviderSlug.set($event)"
+              [disabled]="!o.canSave"
+            />
+          </label>
+          <label>
+            Client ID
+            <input
+              type="text"
+              autocapitalize="off"
+              spellcheck="false"
+              autocomplete="off"
+              [ngModel]="oidcClientId()"
+              (ngModelChange)="oidcClientId.set($event)"
+              [disabled]="!o.canSave"
+            />
+          </label>
+          <label>
+            Client secret
+            <input
+              type="password"
+              autocomplete="new-password"
+              [placeholder]="o.hasClientSecret ? '••••••••••••' : 'nincs megadva'"
+              [ngModel]="oidcClientSecret()"
+              (ngModelChange)="oidcClientSecret.set($event)"
+              [disabled]="!o.canSave"
+            />
+            <small>
+              @if (o.hasClientSecret) {
+                Van mentve – soha nem jelenik meg. Üresen hagyva a mostani marad; csak akkor írj
+                ide, ha újat adsz meg.
+              } @else {
+                Még nincs megadva.
+              }
+            </small>
+          </label>
+          <label>
+            Logout URI
+            <input
+              type="url"
+              inputmode="url"
+              placeholder="https://bodorgo.hu"
+              [ngModel]="oidcPostLogout()"
+              (ngModelChange)="oidcPostLogout.set($event)"
+              [disabled]="!o.canSave"
+            />
+            <small>Post-logout redirect URI: ide érkezik, aki kilépett.</small>
+          </label>
+        </div>
+
+        <dl class="oidc-info">
+          <div>
+            <dt>Redirect URIs</dt>
+            <dd>
+              <small>
+                Tájékoztatás az Authentik beállításához: a provider Redirect URIs listájában ezeknek
+                kell szerepelniük.
+              </small>
+              @for (r of redirectUris(); track r.uri) {
+                <span class="oidc-uri">
+                  <code>{{ r.uri }}</code>
+                  <small>{{ r.note }}</small>
+                </span>
+              }
+            </dd>
+          </div>
+          @if (o.issuer) {
+            <div>
+              <dt>Issuer</dt>
+              <dd>
+                <code>{{ o.issuer }}</code>
+              </dd>
+            </div>
+          }
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div>
+            <h2>Meghívók (Authentik API)</h2>
+            <p class="subtext">
+              A Felhasználók → Meghívók ezzel a tokennel készíti a meghívó linkeket az Authentikben.
+              Token nélkül nem lehet meghívót küldeni.
+            </p>
+          </div>
+        </div>
+
+        <div class="oidc-fields">
+          <label>
+            API token
+            <input
+              type="password"
+              autocomplete="new-password"
+              [placeholder]="o.hasApiToken ? '••••••••••••' : 'nincs megadva'"
+              [ngModel]="oidcApiToken()"
+              (ngModelChange)="oidcApiToken.set($event)"
+              [disabled]="!o.canSave || oidcRemoveApiToken()"
+            />
+            <small>
+              @if (o.hasApiToken) {
+                Van mentve – soha nem jelenik meg. Üresen hagyva a mostani marad.
+              } @else {
+                Nincs megadva – a meghívók ki vannak kapcsolva.
+              }
+            </small>
+          </label>
+          @if (o.hasApiToken) {
+            <label class="reminder-switch oidc-remove">
+              <input
+                type="checkbox"
+                [ngModel]="oidcRemoveApiToken()"
+                (ngModelChange)="oidcRemoveApiToken.set($event)"
+                [disabled]="!o.canSave"
+              />
+              Token törlése (meghívók kikapcsolása)
+            </label>
+          }
+          <label>
+            Invitation flow slug
+            <input
+              type="text"
+              autocapitalize="off"
+              spellcheck="false"
+              [ngModel]="oidcInvitationFlow()"
+              (ngModelChange)="oidcInvitationFlow.set($event)"
+              [disabled]="!o.canSave"
+            />
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <div class="actions oidc-actions">
+      <span class="spacer"></span>
+      @if (oidcDirty()) {
+        <button type="button" class="outline-btn" (click)="resetOidc()" [disabled]="savingOidc()">
+          Mégse
+        </button>
+      }
+      <button
+        type="button"
+        class="danger-btn"
+        (click)="saveOidc()"
+        [disabled]="!o.canSave || savingOidc() || (!oidcDirty() && !oidcNotSavedYet())"
+      >
+        {{ savingOidc() ? 'Ellenőrzés és mentés…' : 'Mentés' }}
+      </button>
+    </div>
+  </div>
+} @else {
+  <p class="empty-note">Betöltés...</p>
+}

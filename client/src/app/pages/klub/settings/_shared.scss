@@ -1,0 +1,168 @@
+// What the settings page's cards look like - the page's own (settings.scss)
+// and its OIDC tab's (oidc-settings), a component of its own: each takes
+// these in, as a component's styles don't reach into another.
+@mixin cards {
+  button,
+  input {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  // The pages that aren't open: .cards and .info-cards set their own
+  // display, which would win over the hidden attribute's.
+  [hidden] {
+    display: none !important;
+  }
+
+  // Masonry: the cards flow down in as many columns as fit (at least
+  // 480px wide each), a card never split between two - so the right side
+  // isn't left empty on a wide screen.
+  .cards {
+    columns: 2 480px;
+    column-gap: 18px;
+
+    > * {
+      display: block;
+      break-inside: avoid;
+      margin: 0 0 18px;
+    }
+  }
+
+  .panel {
+    background: #fff;
+    border: 1px solid #e7edea;
+    border-radius: 17px;
+    box-shadow: 0 5px 19px #213b4110;
+    padding: 24px;
+  }
+
+  .panel-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+
+    h2 {
+      font-size: 17px;
+      letter-spacing: -0.025em;
+      margin: 0 0 5px;
+      color: #203747;
+    }
+  }
+
+  .empty-note {
+    color: #56666e;
+    font-size: 14px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .primary-btn {
+    background: #1a796c;
+    color: white;
+    border: 1px solid #1a796c;
+    padding: 10px 18px;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: 750;
+    min-height: 42px;
+
+    &:hover:not(:disabled) {
+      background: #16675d;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+  }
+
+  .outline-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: white;
+    color: #254257;
+    border: 1px solid #dce6e3;
+    padding: 10px 14px;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: 650;
+    min-height: 42px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+  }
+
+  .danger-btn {
+    background: #c8102e;
+    color: #fff;
+    border: 1px solid #c8102e;
+    padding: 0.625rem 1.125rem;
+    border-radius: 0.6875rem;
+    font-size: 0.8125rem;
+    font-weight: 750;
+    min-height: 2.625rem;
+
+    &:hover:not(:disabled) {
+      background: #a80d26;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+  }
+
+  .notif-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e5f5ec;
+    color: #267b66;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .reminder-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    input {
+      width: 17px;
+      height: 17px;
+      accent-color: #1a796c;
+    }
+  }
+
+  @media (max-width: 580px) {
+    .panel {
+      padding: 16px;
+    }
+  }
+}
