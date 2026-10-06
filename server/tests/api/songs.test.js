@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember } from '../helpers/factories.js';
 import Song from '../../src/models/songModel.js';
+import User from '../../src/models/userModel.js';
 import { songsByArtist } from '../../src/songs/songBook.js';
 
 // Daloskönyv: the songbook (songController.js).
@@ -211,6 +212,42 @@ describe('Daloskönyv: the songs', () => {
     const one = await request(app).get('/songs/elso').set(asUser(owner));
     expect(one.body.data.song.chordpro).toBe('[C]la');
     expect((await request(app).get('/songs/nincs-ilyen').set(asUser(owner))).status).toBe(404);
+  });
+
+  it('marks what others added since one’s visit before this one', async () => {
+    const owner = await createOwner();
+    const member = await createMember();
+    const list = async (user) =>
+      Object.fromEntries(
+        (await request(app).get('/songs').set(asUser(user))).body.data.songs.map((s) => [
+          s.title,
+          s.isNew,
+        ]),
+      );
+    await add(owner, { title: 'Régi dal', chordpro: '[C]Egy' });
+
+    // The first visit ever: nothing is new - and it is remembered.
+    expect(await list(member)).toEqual({ 'Régi dal': false });
+    const first = (await User.findById(member._id)).songsSeenAt;
+    expect(first).toBeInstanceOf(Date);
+
+    // Added while they are there: new at once.
+    await add(owner, { title: 'Friss dal', chordpro: '[C]Kettő' });
+    expect(await list(member)).toEqual({ 'Friss dal': true, 'Régi dal': false });
+
+    // A day later: a new visit - what came since the one before is new,
+    // and stays so for the whole visit.
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await User.updateOne({ _id: member._id }, { songsSeenAt: dayAgo, songsSeenBefore: dayAgo });
+    expect(await list(member)).toEqual({ 'Friss dal': true, 'Régi dal': true });
+    expect(await list(member)).toEqual({ 'Friss dal': true, 'Régi dal': true });
+    const after = await User.findById(member._id);
+    expect(after.songsSeenBefore.getTime()).toBe(dayAgo.getTime());
+    expect(after.songsSeenAt.getTime()).toBeGreaterThan(dayAgo.getTime());
+
+    // One's own song is no news.
+    await User.updateOne({ _id: owner._id }, { songsSeenAt: dayAgo, songsSeenBefore: dayAgo });
+    expect(await list(owner)).toEqual({ 'Friss dal': false, 'Régi dal': false });
   });
 
   it('refuses a song without a title', async () => {

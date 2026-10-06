@@ -37,6 +37,8 @@ const FONT_BOLD = path.join(rootDir, 'assets', 'fonts', 'Mulish-Bold.ttf');
 const FONT_ITALIC = path.join(rootDir, 'assets', 'fonts', 'Mulish-Italic.ttf');
 // The club's own letters (the site's "Bódorgó") - for the cover.
 const FONT_LOGO = path.join(rootDir, 'assets', 'fonts', 'PotLand.ttf');
+// The site's menu letters (Marhey) - for the cover's title.
+const FONT_TITLE = path.join(rootDir, 'assets', 'fonts', 'Marhey-Bold.ttf');
 
 const INK = '#1f2d3a';
 const GREY = '#56666e';
@@ -96,6 +98,7 @@ function newBook(size, resolve, reject) {
   doc.registerFont('Heading', FONT_BOLD);
   doc.registerFont('Italic', FONT_ITALIC);
   doc.registerFont('Logo', FONT_LOGO);
+  doc.registerFont('Title', FONT_TITLE);
   return doc;
 }
 

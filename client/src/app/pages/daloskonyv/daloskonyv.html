@@ -406,9 +406,13 @@
                     >
                   }
                 </span>
-                <!-- At the row's end: whose song it is, where it isn't the
-                     book's own, and the song's key. -->
+                <!-- At the row's end: "Új" on a song added since one's last
+                     visit, whose song it is, where it isn't the book's
+                     own, and the song's key. -->
                 <span class="row-tags">
+                  @if (song.isNew) {
+                    <span class="new-tag" title="Új dal a legutóbbi látogatásod óta">Új</span>
+                  }
                   @if (song.ownerName) {
                     <span
                       class="owner-tag"

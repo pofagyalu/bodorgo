@@ -21,6 +21,9 @@ export interface SongListItem {
   // without chords). pages/daloskonyv/song-key.ts names them ("a-moll").
   key: string;
   detectedKey: string;
+  // New to the one looking: someone else added it since their visit to the
+  // songbook before this one (the server keeps the visits).
+  isNew?: boolean;
   // The Daloskönyv's own song (its PDF, its count, its index) - or one
   // another user added beside the book.
   inBook: boolean;

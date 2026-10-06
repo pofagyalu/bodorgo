@@ -1302,7 +1302,14 @@ describe('Daloskonyv', () => {
     page = fixture.componentInstance;
     fixture.detectChanges();
     // Not the keeper; one song was added by someone else, beside the book.
-    const theirs = { ...LIST[2], inBook: false, ownerName: 'Melinda', canEdit: false };
+    // It came since the last visit here: the server says it is new.
+    const theirs = {
+      ...LIST[2],
+      inBook: false,
+      ownerName: 'Melinda',
+      canEdit: false,
+      isNew: true,
+    };
     respond({
       'GET /songs': {
         data: { songs: [LIST[0], LIST[1], theirs], canEdit: false, lastChanged: 'x' },
@@ -1315,6 +1322,13 @@ describe('Daloskonyv', () => {
     expect(el.querySelector('.new-song-btn')).toBeTruthy();
     const tags = [...el.querySelectorAll('.owner-tag')].map((t) => t.textContent?.trim());
     expect(tags).toEqual(['Melinda']);
+    // "Új" on that row alone.
+    const fresh = [...el.querySelectorAll('.song-list li')].filter((li) =>
+      li.querySelector('.new-tag'),
+    );
+    expect(fresh.map((li) => li.querySelector('strong')?.textContent?.trim())).toEqual([
+      LIST[2].title,
+    ]);
     // The book counts its own songs only.
     expect(TestBed.inject(SongService).bookSongs()).toHaveLength(2);
   });

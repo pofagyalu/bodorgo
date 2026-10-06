@@ -3,6 +3,7 @@ import path from 'path';
 import mongoose from 'mongoose';
 import Song from '../models/songModel.js';
 import SongList from '../models/songListModel.js';
+import User from '../models/userModel.js';
 import AppError from '../utils/appError.js';
 import {
   BOOK_DIAGRAMS,
@@ -54,7 +55,7 @@ const OWNER_FIELDS = 'name firstName lastName';
 
 // The table of contents needs no lyrics - but the songs' keys are worked
 // out from their chords (detectedKey below), so the text is read too.
-const LIST_FIELDS = 'title artist slug key chordpro updatedAt owner inBook';
+const LIST_FIELDS = 'title artist slug key chordpro createdAt updatedAt owner inBook';
 
 // A song's key as its chords say (songs/songText.js's detectKey: "C",
 // "am"; '' without chords) - remembered per song until the song changes.
@@ -140,11 +141,33 @@ async function findSong(id) {
 // the book's keeper (every song is theirs to change). lastChanged: when a
 // song was last added or changed (null without songs) - the book's date
 // on the Dokumentumok card.
+// One visit to the songbook: the list asked for again within this long is
+// the same visit (an evening of singing) - after it, a new one begins.
+const VISIT_MS = 12 * 60 * 60 * 1000;
+
+// Since when a song is new to this user: since their visit before this one
+// began. The list being asked for is the visit: the first time after a
+// break begins a new one, and the one until then becomes "the one before".
+// Someone's first visit ever has nothing new - not the whole book.
+async function newSongsSince(user) {
+  const now = new Date();
+  if (user.songsSeenAt && now - user.songsSeenAt <= VISIT_MS) {
+    return user.songsSeenBefore ?? user.songsSeenAt;
+  }
+  const before = user.songsSeenAt ?? now;
+  await User.updateOne({ _id: user._id }, { songsSeenAt: now, songsSeenBefore: before });
+  return before;
+}
+
 export const getSongs = async (req, res) => {
-  const [songs, last] = await Promise.all([
+  const [songs, last, since] = await Promise.all([
     inBookOrder(Song.find().select(LIST_FIELDS).populate('owner', OWNER_FIELDS)),
     Song.findOne().sort('-updatedAt').select('updatedAt'),
+    newSongsSince(req.user),
   ]);
+  // Someone else's song, added since: one's own is no news.
+  const isNew = (song) =>
+    song.createdAt > since && String(song.owner?._id ?? song.owner ?? '') !== String(req.user._id);
   res.status(200).json({
     status: 'success',
     data: {
@@ -155,6 +178,7 @@ export const getSongs = async (req, res) => {
         slug: song.slug,
         key: song.key ?? '',
         detectedKey: detectedKey(song),
+        isNew: isNew(song),
         ...ownership(song, req.user),
       })),
       canEdit: canEditSongs(req.user),
@@ -267,13 +291,16 @@ export const getSongPdf = async (req, res) => {
 
 // The cover's small pictures already read from the disk, by file name.
 const coverPreviews = new Map();
+// The cover's look (songs/songBookCover.js), counted: one more whenever it
+// is drawn another way, so the pictures kept of the old one are made anew.
+const COVER_LOOK = 2;
 
 // GET /songs/book.webp - the book's cover as a small picture, for its card
 // on Klub → Dokumentumok (made like a club document's preview, and kept
 // beside those). Only the cover is drawn for it, not the book - and only
 // when what the cover says has changed: the number of songs, whose
-// diagrams, or the day the newest song came in. Correcting a song's
-// chords doesn't touch it.
+// diagrams, the day the newest song came in - or the cover's own look
+// (COVER_LOOK). Correcting a song's chords doesn't touch it.
 export const getSongBookPreview = async (req, res) => {
   const diagrams = BOOK_DIAGRAMS.includes(req.query.diagrams) ? req.query.diagrams : null;
   const [count, newest] = await Promise.all([
@@ -283,7 +310,7 @@ export const getSongBookPreview = async (req, res) => {
   if (!count) throw new AppError('Még nincs dal a daloskönyvben.', 404);
 
   const kind = `daloskonyv-${diagrams ?? 'none'}`;
-  const name = `${kind}-${count}-${budapestYmd(newest.createdAt)}.webp`;
+  const name = `${kind}-${COVER_LOOK}-${count}-${budapestYmd(newest.createdAt)}.webp`;
   let preview = coverPreviews.get(name);
   if (!preview) {
     const file = path.join(DOCUMENT_PREVIEWS_DIR, name);
