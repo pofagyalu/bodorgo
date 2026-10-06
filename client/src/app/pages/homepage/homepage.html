@@ -111,7 +111,17 @@
 
   <section class="map-section">
     <h2>Táboraink térképen</h2>
-    <app-tours-map></app-tours-map>
+    <!-- The map and its library (Leaflet, some 150 kB) are fetched only
+         when the page is scrolled down to it - not with the first load. -->
+    <!-- The frame keeps the map's place and its quiet ground: the map
+         fades in over it, without a flicker. -->
+    <div class="map-frame">
+      @defer (on viewport) {
+        <app-tours-map></app-tours-map>
+      } @placeholder {
+        <div class="map-placeholder"></div>
+      }
+    </div>
   </section>
 </div>
 
