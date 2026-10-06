@@ -165,4 +165,32 @@
       padding: 16px;
     }
   }
+
+  .subtext {
+    margin: 0;
+    color: #56666e;
+    font-size: 14px;
+  }
+
+  .chat-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #2f414b;
+    }
+
+    input {
+      width: 150px;
+      padding: 8px 10px;
+      border: 1px solid #dce5e1;
+      border-radius: 9px;
+      color: #1c2d38;
+    }
+  }
 }

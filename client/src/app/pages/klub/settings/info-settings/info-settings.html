@@ -1,0 +1,92 @@
+<div class="info-cards">
+  <!-- Info only: every e-mail and push the app sends - what triggers it and
+     who gets it. (Their settings are on the other two pages.) -->
+  <section class="panel notifications">
+    <div class="panel-title">
+      <div>
+        <h2>Értesítések</h2>
+        <p class="subtext">
+          Minden e-mail és telefonos értesítés, amit az alkalmazás küld – mikor és kinek.
+        </p>
+      </div>
+    </div>
+
+    <!-- E-mails on the left, pushes on the right (one column on a phone). -->
+    <div class="notif-columns">
+      <div>
+        <h3 class="notif-group">E-mailek</h3>
+        <ul class="notif-list">
+          @for (e of emails; track e.name) {
+            <li class="notif" [class.notif--settings]="e.settings">
+              <div class="notif-head">
+                <strong>{{ e.name }}</strong>
+                @if (e.settings) {
+                  <span class="notif-badge">beállítható</span>
+                }
+              </div>
+              <p><span class="notif-label">Mikor:</span> {{ e.when }}</p>
+              <p><span class="notif-label">Kinek:</span> {{ e.who }}</p>
+              @if (e.note) {
+                <p class="notif-note">{{ e.note }}</p>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+      <div>
+        <h3 class="notif-group">Telefonos értesítések (push)</h3>
+        <p class="notif-note">
+          Csak akinek a böngészőjében / telefonján be vannak kapcsolva az értesítések (Profilom).
+        </p>
+        <ul class="notif-list">
+          @for (p of pushes; track p.name) {
+            <li class="notif">
+              <div class="notif-head">
+                <strong>{{ p.name }}</strong>
+              </div>
+              <p><span class="notif-label">Mikor:</span> {{ p.when }}</p>
+              <p><span class="notif-label">Kinek:</span> {{ p.who }}</p>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Verzió: which client and server are running - each is stamped at
+     its deploy with its commit and that commit's date. -->
+  <section class="panel version-panel">
+    <div class="panel-title">
+      <div>
+        <h2>Szoftver verziók</h2>
+        <p class="subtext">
+          A futó kliens és szerver – a telepített változat dátuma és azonosítója.
+        </p>
+      </div>
+    </div>
+    <dl class="version-list">
+      <div>
+        <dt>Kliens</dt>
+        <dd>
+          {{ clientVersion }}
+          @if (clientBuiltAt) {
+            <small>telepítve: {{ clientBuiltAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Szerver</dt>
+        <dd>
+          @if (serverBuild(); as server) {
+            {{ server.version }}
+            @if (server.builtAt) {
+              <small>telepítve: {{ server.builtAt | date: 'yyyy. MM. dd. HH:mm' }}</small>
+            }
+          } @else {
+            …
+          }
+        </dd>
+      </div>
+    </dl>
+  </section>
+</div>
