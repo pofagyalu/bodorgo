@@ -9,6 +9,7 @@ import sendResendEmail from '../utils/resendEmail.js';
 import { partitionAttendeesByEmailEligibility } from './tourPdfController.js';
 import logger from '../logger.js';
 import { findSubtitlePath, resolveVideoPath, srtToVtt } from '../utils/videoFiles.js';
+import { removeSmallCopy, requestSmallCopy, videoFileFor } from '../utils/videoCopies.js';
 import {
   decodeVideoId,
   findVideoThumb,
@@ -43,13 +44,28 @@ async function tourVideoPath(req) {
   const root = tourVideosRoot();
   const fullPath = resolveVideoPath(root, relPath);
   if (!fs.existsSync(fullPath)) throw new AppError('A videó nem található a lemezen.', 404);
-  return { root, relPath, fullPath };
+  return { root, relPath, fullPath, area: path.basename(root) };
 }
 
 // GET /tours/:tourId/videos/:videoId/video - res.sendFile handles Range
-// requests itself, so seeking in the <video> element just works.
+// requests itself, so seeking in the <video> element just works. The small
+// copy (utils/videoCopies.js) when there is one, unless ?quality=original.
 export const getTourVideo = async (req, res) => {
-  res.sendFile((await tourVideoPath(req)).fullPath);
+  res.sendFile(videoFileFor(await tourVideoPath(req), req.query.quality));
+};
+
+// POST /tours/:tourId/videos/:videoId/small - an admin: make its small
+// copy. Queued; GET /media/videos/small-copies tells how it's going.
+export const startTourVideoSmall = async (req, res) => {
+  const video = await tourVideoPath(req);
+  const ref = `tour:${req.params.tourId}:${req.params.videoId}`;
+  res.status(202).json({ status: 'success', data: { job: requestSmallCopy(video, ref) } });
+};
+
+// DELETE /tours/:tourId/videos/:videoId/small - an admin: the copy goes.
+export const removeTourVideoSmall = async (req, res) => {
+  removeSmallCopy(await tourVideoPath(req));
+  res.status(204).end();
 };
 
 // GET /tours/:tourId/videos/:videoId/cover - the video's "-thumb" image.

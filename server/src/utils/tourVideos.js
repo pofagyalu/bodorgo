@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
-import { VIDEO_EXTENSIONS, findSubtitlePath } from './videoFiles.js';
+import { VIDEO_EXTENSIONS, findSubtitlePath, resolveVideoPath } from './videoFiles.js';
+import { smallCopyState } from './videoCopies.js';
 
 const THUMB_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
@@ -101,8 +102,16 @@ export function clearTourVideoCache() {
   cache = { at: 0, root: null, byOrder: new Map() };
 }
 
-// What the tour page gets for a tour: each version's id and name, and
-// whether it has a cover / subtitles.
+// A tour video as its small copy knows it (utils/videoCopies.js).
+export const tourVideoFile = (root, relPath) => ({
+  area: path.basename(root),
+  root,
+  fullPath: resolveVideoPath(root, relPath),
+});
+
+// What the tour page gets for a tour: each version's id and name, whether
+// it has a cover / subtitles, and its small copy ('ready' is what plays
+// unless the original is asked for).
 export function tourVideoList(order) {
   const root = tourVideosRoot();
   return (scanTourVideos().get(order) ?? []).map(({ relPath, label }) => ({
@@ -110,5 +119,14 @@ export function tourVideoList(order) {
     label: displayVersionLabel(label),
     hasCover: !!findVideoThumb(root, relPath),
     hasSubtitles: !!findSubtitlePath(root, relPath),
+    small: smallCopyState(tourVideoFile(root, relPath)),
   }));
+}
+
+// Every tour video file - for "Új média felfedezése" to count the ones
+// without a small copy.
+export function tourVideoFiles() {
+  const root = tourVideosRoot();
+  if (!root) return [];
+  return [...scanTourVideos().values()].flat().map((v) => tourVideoFile(root, v.relPath));
 }

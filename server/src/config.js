@@ -124,6 +124,12 @@ const config = {
     process.env.VIDEOS_ROOT ||
     (process.env.MEDIA_ROOT ? path.join(process.env.MEDIA_ROOT, 'a-bodorgo-klan') : undefined),
   mediaVideosRoot: process.env.MEDIA_VIDEOS_ROOT || process.env.MEDIA_ROOT,
+  // The videos' small copies (utils/videoCopies.js): the ffmpeg that makes
+  // them - one with libx264; on the NAS the SynoCommunity package, not
+  // Synology's own - and where they are kept (by default
+  // THUMBNAILS_ROOT/_videos).
+  ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
+  videoCopiesRoot: process.env.VIDEO_COPIES_ROOT,
   // The 12-hourly "your tour's video is ready" e-mails (see server.js) -
   // switched on in the live server's .env only.
   tourVideoEmails: process.env.TOUR_VIDEO_EMAILS === 'on',

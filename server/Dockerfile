@@ -24,6 +24,8 @@ ENV NODE_ENV=production \
     TZ=Europe/Budapest \
     PORT=8235
 WORKDIR /app
+# ffmpeg (with libx264) makes the videos' small copies (utils/videoCopies.js).
+RUN apt-get update  && apt-get install -y --no-install-recommends ffmpeg  && rm -rf /var/lib/apt/lists/*
 COPY --from=packages /app/node_modules ./node_modules
 COPY --from=packages /app/apiDocs ./apiDocs
 COPY server/package.json ./

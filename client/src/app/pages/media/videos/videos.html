@@ -77,6 +77,14 @@
                   <mat-icon>edit</mat-icon>
                 </button>
               }
+              <!-- The admins: its small copy - made, going, or to be made. -->
+              @if (isAdmin()) {
+                <app-video-small-copy
+                  [job]="smallCopy(c, v)"
+                  (convert)="makeSmallCopy(c, v)"
+                  (remove)="removeSmallCopy(c, v)"
+                />
+              }
             </div>
           }
         </div>
@@ -90,6 +98,7 @@
     [title]="p.video.title"
     [subtitle]="p.category.title + (p.video.year ? ' · ' + p.video.year : '')"
     [src]="videoUrl(p)"
+    [smallSrc]="smallVideoUrl(p)"
     [subtitlesSrc]="p.video.hasSubtitles ? subtitlesUrl(p) : null"
     (closed)="close()"
   />

@@ -43,6 +43,42 @@
   }
 }
 
+.player-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+// Kis / Eredeti - both always in sight, the one playing filled in.
+.player-quality {
+  display: flex;
+  flex: none;
+  padding: 0.125rem;
+  border-radius: 0.625rem;
+  background: #ffffff14;
+
+  button {
+    min-height: 2rem;
+    padding: 0 0.75rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: none;
+    color: #9eb5bf;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.active {
+      background: #e7f0ee;
+      color: #0f2229;
+    }
+
+    &:not(.active):hover {
+      color: #e7f0ee;
+    }
+  }
+}
+
 .player-close {
   display: grid;
   place-items: center;

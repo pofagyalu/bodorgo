@@ -34,6 +34,8 @@ import { TourSchedule } from './tour-schedule/tour-schedule';
 import { ReviewStars } from './review-stars/review-stars';
 import { VideoCard } from '../../shared/video-card/video-card';
 import { VideoPlayer } from '../../shared/video-player/video-player';
+import { VideoSmallCopy } from '../../shared/video-small-copy/video-small-copy';
+import { SmallCopyJob, VideoCopiesService } from '../../services/video-copies';
 import { PickerOption, TourSignup } from './tour-signup/tour-signup';
 import { TourExtras } from './tour-extras/tour-extras';
 import {
@@ -53,6 +55,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
     AttendeeList,
     VideoCard,
     VideoPlayer,
+    VideoSmallCopy,
     TourSignup,
     TourExtras,
   ],
@@ -409,6 +412,8 @@ export class TourDetails {
         this.paymentTotals.set(res.data.paymentTotals);
         this.distanceInfo.set(res.data.distanceInfo);
         this.videos.set(res.data.videos ?? []);
+        // An admin's small-copy line: conversions already going are followed.
+        if (this.isAdmin() && res.data.videos?.length) this.copies.refresh();
         this.userPhotos.set(res.data.userPhotos ?? {});
         this.usernames.set(res.data.usernames ?? {});
       },
@@ -513,7 +518,31 @@ export class TourDetails {
   }
 
   tourVideoUrl(t: Tour, v: TourVideo): string {
-    return this.tourService.videoUrl(t._id, v.id);
+    return this.tourService.videoUrl(t._id, v.id, 'original');
+  }
+
+  // Its small copy, if it has one - what the player then starts with.
+  tourSmallVideoUrl(t: Tour, v: TourVideo): string | null {
+    return this.smallCopy(t, v).state === 'ready'
+      ? this.tourService.videoUrl(t._id, v.id, 'small')
+      : null;
+  }
+
+  // The admins: a video's small copy (services/video-copies.ts) - the line
+  // under its card.
+  private copies = inject(VideoCopiesService);
+  isAdmin = computed(() => this.auth.user()?.role === 'admin');
+
+  smallCopy(t: Tour, v: TourVideo): SmallCopyJob {
+    return this.copies.stateOf(this.copies.tour(t._id, v.id).ref, v.small);
+  }
+
+  makeSmallCopy(t: Tour, v: TourVideo) {
+    this.copies.convert(this.copies.tour(t._id, v.id));
+  }
+
+  removeSmallCopy(t: Tour, v: TourVideo) {
+    this.copies.remove(this.copies.tour(t._id, v.id));
   }
 
   tourVideoCoverUrl(t: Tour, v: TourVideo): string {

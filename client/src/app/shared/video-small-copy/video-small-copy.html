@@ -1,0 +1,55 @@
+@let j = job();
+<div class="small-copy" [class]="'small-copy--' + j.state">
+  @switch (j.state) {
+    @case ('ready') {
+      <span class="small-copy-text"><mat-icon>check_circle</mat-icon>Kis méret kész</span>
+      <button
+        type="button"
+        class="small-copy-btn"
+        title="Kis méretű változat törlése"
+        aria-label="Kis méretű változat törlése"
+        (click)="askRemove()"
+      >
+        <mat-icon>delete</mat-icon>
+      </button>
+    }
+    @case ('queued') {
+      <span class="small-copy-text"><mat-icon>schedule</mat-icon>Sorban áll</span>
+      <button
+        type="button"
+        class="small-copy-btn"
+        title="Megszakítás"
+        aria-label="Megszakítás"
+        (click)="askRemove()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+    @case ('converting') {
+      <span class="small-copy-text">
+        <mat-icon class="small-copy-spin">autorenew</mat-icon>Átalakítás: {{ j.percent ?? 0 }}%
+      </span>
+      <button
+        type="button"
+        class="small-copy-btn"
+        title="Megszakítás"
+        aria-label="Megszakítás"
+        (click)="askRemove()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+    @case ('failed') {
+      <span class="small-copy-text" [title]="j.error ?? ''">
+        <mat-icon>error</mat-icon>Nem sikerült
+      </span>
+      <button type="button" class="small-copy-make" (click)="convert.emit()">Újra</button>
+    }
+    @default {
+      <span class="small-copy-text"><mat-icon>hd</mat-icon>Csak eredeti</span>
+      <button type="button" class="small-copy-make" (click)="convert.emit()">
+        Kis méret készítése
+      </button>
+    }
+  }
+</div>

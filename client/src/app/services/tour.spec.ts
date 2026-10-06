@@ -221,7 +221,7 @@ describe('TourService', () => {
     expect(service.reportPdfUrl('t1')).toBe(`${tours}/t1/report/pdf`);
     expect(service.reportPdfUrl('t1', true)).toBe(`${tours}/t1/report/pdf?draft=1`);
     expect(service.tourImagesZipUrl('t1')).toBe(`${tours}/t1/images/download-zip`);
-    expect(service.videoUrl('t1', 'v1')).toBe(`${tours}/t1/videos/v1/video`);
+    expect(service.videoUrl('t1', 'v1', 'small')).toBe(`${tours}/t1/videos/v1/video?quality=small`);
     expect(service.videoCoverUrl('t1', 'v1')).toBe(`${tours}/t1/videos/v1/cover`);
     expect(service.subtitlesUrl('t1', 'v1')).toBe(`${tours}/t1/videos/v1/subtitles.vtt`);
   });

@@ -337,6 +337,10 @@
   gap: 16px;
 }
 
+.video-item {
+  min-width: 0;
+}
+
 @media (max-width: 768px) {
   .video-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

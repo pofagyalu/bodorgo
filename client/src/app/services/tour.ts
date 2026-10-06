@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { CurrentUser } from '../auth/auth.service';
+import { SmallCopyState } from './video-copies';
 
 // A tour's accommodation (see tourModel.js's houseSchema/roomSchema).
 // _id is absent only for a house/room just added in the editor and not
@@ -323,6 +324,9 @@ export interface TourVideo {
   label: string;
   hasCover: boolean;
   hasSubtitles: boolean;
+  // Its small copy (see services/video-copies.ts) - 'ready': that one
+  // plays unless the original is picked.
+  small?: SmallCopyState;
 }
 
 // A tour's Extrák document - one of the club's documents with this tour
@@ -975,9 +979,10 @@ export class TourService {
 
   // Same plain-URL-with-cookie-auth pattern as the image URLs above - a
   // <video src>/<img src>/<track src> straight to the requireAuth-gated
-  // routes (see tourVideoController.js), one video version each.
-  videoUrl(tourId: string, videoId: string): string {
-    return `${this.apiUrl}/${tourId}/videos/${videoId}/video`;
+  // routes (see tourVideoController.js), one video version each - in the
+  // quality asked for: the original, or its small copy.
+  videoUrl(tourId: string, videoId: string, quality: 'small' | 'original'): string {
+    return `${this.apiUrl}/${tourId}/videos/${videoId}/video?quality=${quality}`;
   }
 
   videoCoverUrl(tourId: string, videoId: string): string {

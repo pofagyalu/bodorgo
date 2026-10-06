@@ -443,6 +443,7 @@ Uploaded files stay on the disk of the machine that received them. **Copying a d
 | Tour photos | on the NAS: `PHOTOS_ROOT/<tour's folder>/`; thumbnails in `THUMBNAILS_ROOT` |
 | Média photos | on the NAS: `MEDIA_PHOTOS_ROOT/<category>/` |
 | Videos | on the NAS, in the Jellyfin library, streamed from there |
+| Videos' small copies | `THUMBNAILS_ROOT/_videos/<series folder>/…/<name>.<original's size>.mp4`, made by ffmpeg (`FFMPEG_PATH`) when an admin asks for one; found by their place alone, nothing in the database |
 | Music | in Jellyfin; song pictures cached in `THUMBNAILS_ROOT/_music/` |
 
 `documents/` and `chat-images/` are never in git and never copied by a deploy. `server/public/` is no longer served.
@@ -540,7 +541,7 @@ The NAS setup in section 7 is how the live site runs today. This section is the 
 
 - [ ] **The code**: this repository.
 - [ ] **The database copy**: one `mongodump --archive --gzip` file. The NAS's hourly backup file (`bodorgo-db/hourly/mongo-NN.archive.gz`) is exactly that.
-- [ ] **The uploaded files** from the old server's folder: `documents/` and `chat-images/`. The database only holds their names. (`thumbnails/` need not be copied: "Új média felfedezése" makes them again.)
+- [ ] **The uploaded files** from the old server's folder: `documents/` and `chat-images/`. The database only holds their names. (`thumbnails/` is worth copying too, into `THUMBNAILS_DIR`: the photos' thumbnails are made again by "Új média felfedezése" in minutes, but the videos' small copies in `thumbnails/_videos/` take hours each.)
 - [ ] **The photo and video folders**: tour photos, Média photos, videos.
 - [ ] **The settings**: the old `server/.env`. Three values must stay exactly as they were:
   - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — or every phone has to switch notifications on again;

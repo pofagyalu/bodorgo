@@ -10,6 +10,8 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { MediaEdit, MediaEditDialog } from '../../../shared/media-edit-dialog/media-edit-dialog';
 import { VideoCard } from '../../../shared/video-card/video-card';
 import { VideoPlayer } from '../../../shared/video-player/video-player';
+import { VideoSmallCopy } from '../../../shared/video-small-copy/video-small-copy';
+import { SmallCopyJob, VideoCopiesService } from '../../../services/video-copies';
 
 interface Playing {
   category: MediaVideoCategory;
@@ -28,7 +30,7 @@ const EDGE_GAP = 8;
 
 @Component({
   selector: 'app-media-videos',
-  imports: [MatIconModule, MediaEditDialog, TabStrip, VideoCard, VideoPlayer],
+  imports: [MatIconModule, MediaEditDialog, TabStrip, VideoCard, VideoPlayer, VideoSmallCopy],
   templateUrl: './videos.html',
   styleUrl: './videos.scss',
 })
@@ -114,7 +116,14 @@ export class Videos {
   }
 
   videoUrl(p: Playing): string {
-    return this.media.videoUrl(p.category.key, p.video.id);
+    return this.media.videoUrl(p.category.key, p.video.id, 'original');
+  }
+
+  // Its small copy, if it has one - what the player then starts with.
+  smallVideoUrl(p: Playing): string | null {
+    return this.smallCopy(p.category, p.video).state === 'ready'
+      ? this.media.videoUrl(p.category.key, p.video.id, 'small')
+      : null;
   }
 
   subtitlesUrl(p: Playing): string {
@@ -154,6 +163,29 @@ export class Videos {
         this.editError.set(err?.error?.message ?? 'Hiba történt a mentés során.');
       },
     });
+  }
+
+  // --- The admins: a video's small copy (services/video-copies.ts) - the
+  // line under its card ---
+
+  private copies = inject(VideoCopiesService);
+  isAdmin = computed(() => this.auth.user()?.role === 'admin');
+
+  constructor() {
+    // Conversions already going are followed from the start.
+    if (this.isAdmin()) this.copies.refresh();
+  }
+
+  smallCopy(category: MediaVideoCategory, video: MediaVideo): SmallCopyJob {
+    return this.copies.stateOf(this.copies.media(category.key, video.id).ref, video.small);
+  }
+
+  makeSmallCopy(category: MediaVideoCategory, video: MediaVideo) {
+    this.copies.convert(this.copies.media(category.key, video.id));
+  }
+
+  removeSmallCopy(category: MediaVideoCategory, video: MediaVideo) {
+    this.copies.remove(this.copies.media(category.key, video.id));
   }
 
   play(category: MediaVideoCategory, video: MediaVideo) {

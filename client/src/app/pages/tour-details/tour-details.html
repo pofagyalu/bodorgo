@@ -199,12 +199,22 @@
         <h2 class="section-heading">Tábori {{ videos().length > 1 ? 'videók' : 'videó' }}</h2>
         <div class="video-grid">
           @for (v of videos(); track v.id) {
-            <app-video-card
-              [title]="v.label || 'Tábori videó'"
-              [coverUrl]="v.hasCover ? tourVideoCoverUrl(t, v) : null"
-              prompt="Nyomd azt a gombot, te Béla!"
-              (playClicked)="playingVideo.set(v)"
-            />
+            <div class="video-item">
+              <app-video-card
+                [title]="v.label || 'Tábori videó'"
+                [coverUrl]="v.hasCover ? tourVideoCoverUrl(t, v) : null"
+                prompt="Nyomd azt a gombot, te Béla!"
+                (playClicked)="playingVideo.set(v)"
+              />
+              <!-- The admins: its small copy - made, going, or to be made. -->
+              @if (isAdmin()) {
+                <app-video-small-copy
+                  [job]="smallCopy(t, v)"
+                  (convert)="makeSmallCopy(t, v)"
+                  (remove)="removeSmallCopy(t, v)"
+                />
+              }
+            </div>
           }
         </div>
       </section>
@@ -214,6 +224,7 @@
           [title]="v.label || 'Tábori videó'"
           [subtitle]="t.order + '. ' + t.title"
           [src]="tourVideoUrl(t, v)"
+          [smallSrc]="tourSmallVideoUrl(t, v)"
           [subtitlesSrc]="v.hasSubtitles ? tourVideoSubtitlesUrl(t, v) : null"
           (closed)="playingVideo.set(null)"
         />

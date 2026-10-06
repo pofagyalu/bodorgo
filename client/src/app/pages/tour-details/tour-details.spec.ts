@@ -205,7 +205,12 @@ describe('TourDetails', () => {
     const video = { id: 'v1', label: 'Film', hasCover: true, hasSubtitles: true };
     expect(page.coverUrl(t)).toBe(`${API}/tours/t1/cover?v=v1`);
     expect(page.coverUrl(makeTour())).toBe('');
-    expect(page.tourVideoUrl(t, video)).toBe(`${API}/tours/t1/videos/v1/video`);
+    expect(page.tourVideoUrl(t, video)).toBe(`${API}/tours/t1/videos/v1/video?quality=original`);
+    // The small copy only once the video has one.
+    expect(page.tourSmallVideoUrl(t, video)).toBeNull();
+    expect(page.tourSmallVideoUrl(t, { ...video, small: 'ready' })).toBe(
+      `${API}/tours/t1/videos/v1/video?quality=small`,
+    );
     expect(page.tourVideoCoverUrl(t, video)).toBe(`${API}/tours/t1/videos/v1/cover`);
     expect(page.tourVideoSubtitlesUrl(t, video)).toBe(`${API}/tours/t1/videos/v1/subtitles.vtt`);
     expect(page.attendeesExcelUrl('t1')).toBe(`${API}/tours/t1/attendees/export.xlsx`);

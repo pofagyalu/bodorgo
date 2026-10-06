@@ -165,6 +165,20 @@ const schemas = {
     ['status', 'message'],
   ),
 
+  SmallCopyJob: obj(
+    {
+      ref: str(
+        'Which video: `media:<category>:<id>` or `tour:<tourId>:<videoId>` - the ids as the lists give them.',
+      ),
+      state: str('Where its small copy is.', {
+        enum: ['queued', 'converting', 'ready', 'failed'],
+      }),
+      percent: int('While `converting`: 0-99, over the two passes together.'),
+      error: str('When `failed`: why.'),
+    },
+    ['ref', 'state'],
+  ),
+
   Tour: obj({
     _id: id(),
     order: int('Sorszám - the tour number (1, 2, … 32).'),
@@ -1642,10 +1656,41 @@ const paths = {
     get: op({
       tag: T.gallery,
       summary: 'A recap video',
-      description: 'Supports `Range` - seeking works.',
-      params: [tourIdT, path('videoId', 'From the tour.')],
+      description:
+        "Supports `Range` - seeking works. The video's small copy when it has one (`small: 'ready'` in the tour's `videos`), unless `quality=original`; a video without one is always the original.",
+      params: [
+        tourIdT,
+        path('videoId', 'From the tour.'),
+        query(
+          'quality',
+          '`original` for the original file; otherwise the small copy, if there is one.',
+        ),
+      ],
       response: file(['video/mp4'], 'The video.'),
       errors: [404],
+    }),
+  },
+  '/tours/{tourId}/videos/{videoId}/small': {
+    post: op({
+      tag: T.gallery,
+      role: 'admin',
+      summary: "Make a video's small copy",
+      description:
+        "A 720p, about 1.9 Mbps version of the video, made by ffmpeg (two passes, one video at a time, at low priority - hours for a long video). Queued and made in the background; GET /media/videos/small-copies tells how it is going (the job's `ref` is `tour:<tourId>:<videoId>`). Once made it is what GET .../video sends by default. Asked again while it waits or runs, or when the copy is there: nothing new happens. The copy is kept under THUMBNAILS_ROOT/_videos by the original's folder, name and size - nothing is stored in the database, and a replaced original has none again.",
+      params: [tourIdT, path('videoId', 'The video.')],
+      ok: 202,
+      data: obj({ job: ref('SmallCopyJob') }),
+      errors: [403, 404],
+    }),
+    delete: op({
+      tag: T.gallery,
+      role: 'admin',
+      summary: "Remove a video's small copy",
+      description:
+        'The copy is deleted (a conversion still waiting or running is stopped); the original plays again. The original is never touched.',
+      params: [tourIdT, path('videoId', 'The video.')],
+      ok: 204,
+      errors: [403, 404],
     }),
   },
   '/tours/{tourId}/videos/{videoId}/cover': {
@@ -2546,7 +2591,7 @@ const paths = {
       role: 'member',
       summary: 'All video categories and videos',
       description:
-        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. A video an admin kept for chosen members is left out for everyone else (an admin gets every video). The role manager only: `viewers` - the ids of the users who may see the video; empty when every member may.",
+        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, `small` - its small copy: `none`, `queued`, `converting`, `ready` (then that is what plays unless the original is asked for) or `failed` - and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. A video an admin kept for chosen members is left out for everyone else (an admin gets every video). The role manager only: `viewers` - the ids of the users who may see the video; empty when every member may.",
       data: obj({ categories: arrayOf({ type: 'object' }) }),
     }),
   },
@@ -2589,10 +2634,51 @@ const paths = {
       role: 'member',
       summary: 'A video',
       description:
-        'Supports `Range`. 404 for a video kept for other members (see PATCH /media/videos/{category}/{id}) - the same goes for its cover and subtitles.',
-      params: [path('category', 'The category.'), path('id', 'The video.')],
+        "Supports `Range`. The video's small copy when it has one (`small: 'ready'` in the list), unless `quality=original`; a video without one is always the original. 404 for a video kept for other members (see PATCH /media/videos/{category}/{id}) - the same goes for its cover and subtitles.",
+      params: [
+        path('category', 'The category.'),
+        path('id', 'The video.'),
+        query(
+          'quality',
+          '`original` for the original file; otherwise the small copy, if there is one.',
+        ),
+      ],
       response: file(['video/mp4'], 'The video.'),
       errors: [404],
+    }),
+  },
+  '/media/videos/{category}/{id}/small': {
+    post: op({
+      tag: T.media,
+      role: 'admin',
+      summary: "Make a video's small copy",
+      description:
+        "A 720p, about 1.9 Mbps version of the video, made by ffmpeg (two passes, one video at a time, at low priority - hours for a long video). Queued and made in the background; GET /media/videos/small-copies tells how it is going (the job's `ref` is `media:<category>:<id>`). Once made it is what GET .../video sends by default. Asked again while it waits or runs, or when the copy is there: nothing new happens. The copy is kept under THUMBNAILS_ROOT/_videos by the original's folder, name and size - nothing is stored in the database, and a replaced original has none again.",
+      params: [path('category', 'The category.'), path('id', 'The video.')],
+      ok: 202,
+      data: obj({ job: ref('SmallCopyJob') }),
+      errors: [403, 404],
+    }),
+    delete: op({
+      tag: T.media,
+      role: 'admin',
+      summary: "Remove a video's small copy",
+      description:
+        'The copy is deleted (a conversion still waiting or running is stopped); the original plays again. The original is never touched.',
+      params: [path('category', 'The category.'), path('id', 'The video.')],
+      ok: 204,
+      errors: [403, 404],
+    }),
+  },
+  '/media/videos/small-copies': {
+    get: op({
+      tag: T.media,
+      role: 'admin',
+      summary: "The videos' small copies being made",
+      description:
+        "Every conversion asked for since the server started - Média videos' and tour videos' alike - waiting, running (with `percent`), done or failed (with `error`). Kept in memory only: a restart empties the list and drops what was waiting or running.",
+      data: obj({ jobs: arrayOf(ref('SmallCopyJob')) }),
+      errors: [403],
     }),
   },
   '/media/videos/{category}/{id}/cover': {
@@ -2694,7 +2780,7 @@ const paths = {
       role: 'admin',
       summary: 'Új média felfedezése - start',
       description:
-        'Looks through the NAS for new tour photos/videos and Média photos, makes thumbnails, e-mails attendees about new tour videos. Runs in the background.',
+        'Looks through the NAS for new tour photos/videos and Média photos, makes thumbnails, e-mails attendees about new tour videos. Runs in the background. Its report also says how many videos have no small copy yet (`videosWithoutSmall`) - a reminder only, none is made by it.',
     }),
   },
 

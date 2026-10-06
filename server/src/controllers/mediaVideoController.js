@@ -11,6 +11,13 @@ import {
   resolveVideoPath,
   srtToVtt,
 } from '../utils/videoFiles.js';
+import {
+  removeSmallCopy,
+  requestSmallCopy,
+  smallCopyJobs,
+  smallCopyState,
+  videoFileFor,
+} from '../utils/videoCopies.js';
 
 // The club's own videos that don't belong to any one tour - Média → Videók.
 // The videos aren't stored in the database: each category is a
@@ -171,6 +178,13 @@ export const listMediaVideos = async (req, res) => {
           episode: parsed.episode,
           hasCover: !!findThumb(root, relPath),
           hasSubtitles: !!findSubtitlePath(root, relPath),
+          // Its small copy (utils/videoCopies.js): 'ready' is what plays
+          // unless the original is asked for.
+          small: smallCopyState({
+            area: category.folder,
+            root,
+            fullPath: resolveVideoPath(root, relPath),
+          }),
           // How long it is - read from the file itself (null if it can't
           // be: not an MP4/MOV, or unreadable).
           durationSeconds: mp4DurationSeconds(path.join(root, relPath)),
@@ -211,7 +225,8 @@ function canonicalPath(fullPath) {
 // Resolves :category/:id to a real video file inside that category folder -
 // one this user may see: a video kept for others is, to them, not there.
 async function videoPath(req) {
-  const root = categoryRoot(categoryOf(req.params.category));
+  const category = categoryOf(req.params.category);
+  const root = categoryRoot(category);
   let relPath;
   try {
     relPath = decodeId(req.params.id);
@@ -236,7 +251,21 @@ async function videoPath(req) {
       throw new AppError('Nincs ilyen videó.', 404);
     }
   }
-  return { root, relPath, fullPath };
+  return { root, relPath, fullPath, area: category.folder };
+}
+
+// Every Média video file, as the small copies know them - for "Új média
+// felfedezése" to count the ones without a copy.
+export function mediaVideoFiles() {
+  if (!config.mediaVideosRoot) return [];
+  return MEDIA_VIDEO_CATEGORIES.flatMap((category) => {
+    const root = categoryRoot(category);
+    return findVideoFiles(root).map((relPath) => ({
+      area: category.folder,
+      root,
+      fullPath: resolveVideoPath(root, relPath),
+    }));
+  });
 }
 
 // PATCH /media/videos/:category/:id - the role manager: the video's own title, shown
@@ -260,9 +289,38 @@ export const updateMediaVideo = async (req, res) => {
 };
 
 // GET /media/videos/:category/:id/video - res.sendFile handles Range
-// requests itself, so seeking just works (same as the tour videos).
+// requests itself, so seeking just works (same as the tour videos). The
+// small copy when there is one, unless ?quality=original.
 export const getMediaVideo = async (req, res) => {
-  res.sendFile((await videoPath(req)).fullPath);
+  res.sendFile(videoFileFor(await videoPath(req), req.query.quality));
+};
+
+// How the page knows a video's conversion again among the jobs.
+const smallCopyRef = (req, video) =>
+  `media:${req.params.category}:${encodeId(path.relative(video.root, video.fullPath))}`;
+
+// POST /media/videos/:category/:id/small - an admin: make its small copy.
+// Queued (one is made at a time); GET /media/videos/small-copies tells how
+// it's going.
+export const startMediaVideoSmall = async (req, res) => {
+  const video = await videoPath(req);
+  res.status(202).json({
+    status: 'success',
+    data: { job: requestSmallCopy(video, smallCopyRef(req, video)) },
+  });
+};
+
+// DELETE /media/videos/:category/:id/small - an admin: the copy goes (its
+// conversion is stopped, if still going); the original plays again.
+export const removeMediaVideoSmall = async (req, res) => {
+  removeSmallCopy(await videoPath(req));
+  res.status(204).end();
+};
+
+// GET /media/videos/small-copies - an admin: every conversion asked for
+// since the server started, the tour videos' too.
+export const listSmallCopyJobs = (req, res) => {
+  res.status(200).json({ status: 'success', data: { jobs: smallCopyJobs() } });
 };
 
 // GET /media/videos/:category/:id/cover

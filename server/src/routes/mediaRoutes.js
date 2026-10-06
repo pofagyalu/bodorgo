@@ -5,6 +5,9 @@ import {
   getMediaVideoCover,
   getMediaVideoSubtitles,
   listMediaVideos,
+  listSmallCopyJobs,
+  removeMediaVideoSmall,
+  startMediaVideoSmall,
   updateMediaVideo,
 } from '../controllers/mediaVideoController.js';
 import {
@@ -29,6 +32,10 @@ router.patch('/videos/:category/:id', mediaEditorOnly, updateMediaVideo);
 router.get('/videos/:category/:id/video', getMediaVideo);
 router.get('/videos/:category/:id/cover', getMediaVideoCover);
 router.get('/videos/:category/:id/subtitles.vtt', getMediaVideoSubtitles);
+// The small copies (utils/videoCopies.js) - made and removed by admins.
+router.get('/videos/small-copies', restrictTo('admin'), listSmallCopyJobs);
+router.post('/videos/:category/:id/small', restrictTo('admin'), startMediaVideoSmall);
+router.delete('/videos/:category/:id/small', restrictTo('admin'), removeMediaVideoSmall);
 
 router.get('/photos', listMediaPhotos);
 router.get('/photos/:category/:filename/thumb', getMediaPhotoThumb);
