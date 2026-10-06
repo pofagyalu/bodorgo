@@ -22,7 +22,82 @@
   </button>
 </ng-template>
 
-<div class="book" [class.book--open]="isOpen()">
+<!-- The playlists' selector: a round button (filled, with the number of
+     its songs, while a list is chosen) that opens a panel with every list
+     of mine. In the list's first row, and beside an open song among the
+     tuner's and the annexes' icons. -->
+<ng-template #listPicker>
+  <div class="list-picker">
+    <button
+      type="button"
+      class="list-btn"
+      [class.list-btn--on]="playlist()"
+      [attr.aria-expanded]="listsOpen()"
+      (click)="toggleLists()"
+      [title]="playlist() ? 'Lejátszási lista: ' + playlist()!.name : 'Lejátszási listák'"
+      aria-label="Lejátszási lista választása"
+    >
+      <mat-icon>queue_music</mat-icon>
+      @if (playlist(); as chosen) {
+        <span class="list-count">{{ chosen.songs.length }}</span>
+      }
+    </button>
+
+    <!-- Every choice at once: the whole book on top, the lists under
+         it, and a new list's name at the foot. -->
+    @if (listsOpen()) {
+      <div class="list-panel" role="listbox" aria-label="Lejátszási listák">
+        <button
+          type="button"
+          class="list-option"
+          [class.list-option--current]="!playlist()"
+          (click)="chooseList('')"
+        >
+          <span>Minden dal</span>
+        </button>
+        @for (l of lists() ?? []; track l._id) {
+          <button
+            type="button"
+            class="list-option"
+            [class.list-option--current]="l._id === playlist()?._id"
+            (click)="chooseList(l._id)"
+          >
+            <span>{{ l.name }}</span>
+            <small>{{ l.songs.length }}</small>
+          </button>
+        }
+        <form class="list-new" (submit)="$event.preventDefault(); createList()">
+          <input
+            type="text"
+            maxlength="60"
+            placeholder="Új lista neve"
+            aria-label="Új lista neve"
+            [value]="newListName()"
+            (input)="newListName.set($any($event.target).value)"
+          />
+          <button type="submit" [disabled]="!newListName().trim()" title="Lista létrehozása">
+            <mat-icon>add</mat-icon>
+          </button>
+        </form>
+        <!-- What is rarely done with the chosen list - here, so its name
+             has the row to itself beside the two buttons used all the
+             time. -->
+        @if (playlist(); as chosen) {
+          <div class="list-manage">
+            <button type="button" (click)="startRenaming()">
+              <mat-icon>edit</mat-icon>Átnevezés
+            </button>
+            <button type="button" class="list-delete" (click)="deleteList()">
+              <mat-icon>delete</mat-icon>„{{ chosen.name }}” törlése
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ng-template>
+
+<div class="book" [class.book--open]="isOpen()" [class.book--in-media]="inMedia()">
   <!-- The table of contents: the whole page until a song is chosen, then
        the left column (hidden on a phone, where the song takes its place). -->
   <aside class="toc" aria-label="Tartalomjegyzék">
@@ -32,76 +107,176 @@
       <p>A klub dalai szöveggel és akkordokkal – tábortűzhöz, gitárhoz, ukulelére.</p>
     </div>
 
-    <!-- The first row: whose chord diagrams the songs show, the book as a
+    <!-- Everything over the songs. On a phone it stays on the screen while
+         the songs scroll under it (the search, the controls when they are
+         out, the chosen list's line, what the list is for just now); on a
+         wide screen it is no box at all - its parts stand as they did. -->
+    <div class="toc-top">
+      <!-- The first row: whose chord diagrams the songs show, the book as a
          PDF, and the played marks wiped. The second: the search, and "+ Dal". -->
-    <div class="tools-row">
-      <div class="instrument" role="group" aria-label="Hangszer az akkordokhoz">
-        <button
-          type="button"
-          [class.on]="instrument() === 'guitar'"
-          [attr.aria-pressed]="instrument() === 'guitar'"
-          (click)="chooseInstrument('guitar')"
+      <div class="tools-row" [class.tools-row--open]="controlsOpen()">
+        <div class="instrument" role="group" aria-label="Hangszer az akkordokhoz">
+          <button
+            type="button"
+            [class.on]="instrument() === 'guitar'"
+            [attr.aria-pressed]="instrument() === 'guitar'"
+            (click)="chooseInstrument('guitar')"
+          >
+            Gitár
+          </button>
+          <button
+            type="button"
+            [class.on]="instrument() === 'ukulele'"
+            [attr.aria-pressed]="instrument() === 'ukulele'"
+            (click)="chooseInstrument('ukulele')"
+          >
+            Ukulele
+          </button>
+        </div>
+        <!-- The whole book as a PDF, with the chosen instrument's diagrams. -->
+        <a
+          class="book-btn"
+          [href]="bookUrl()"
+          title="A daloskönyv letöltése PDF-ben"
+          aria-label="A daloskönyv letöltése PDF-ben"
         >
-          Gitár
-        </button>
-        <button
-          type="button"
-          [class.on]="instrument() === 'ukulele'"
-          [attr.aria-pressed]="instrument() === 'ukulele'"
-          (click)="chooseInstrument('ukulele')"
-        >
-          Ukulele
-        </button>
-      </div>
-      <!-- The whole book as a PDF, with the chosen instrument's diagrams. -->
-      <a
-        class="book-btn"
-        [href]="bookUrl()"
-        title="A daloskönyv letöltése PDF-ben"
-        aria-label="A daloskönyv letöltése PDF-ben"
-      >
-        <mat-icon>picture_as_pdf</mat-icon>
-      </a>
-      <!-- The songs played tonight carry a tick; one tap here wipes them
-           all (the button itself: the template at the top). -->
-      <ng-container [ngTemplateOutlet]="clearButton" />
-    </div>
-
-    <div class="top-row">
-      <label class="search">
-        <mat-icon>search</mat-icon>
-        <input
-          type="search"
-          placeholder="Keresés cím, előadó vagy szöveg szerint"
-          aria-label="Keresés a dalok között"
-          [value]="search()"
-          (input)="search.set($any($event.target).value)"
-        />
-      </label>
-      <!-- Anyone may add a song of their own. On a phone: the floating +
-           in the bottom right corner. -->
-      @if (songs() !== null) {
-        <a [routerLink]="[base(), 'uj']" class="new-song-btn" title="Új dal" aria-label="Új dal">
-          <mat-icon>add</mat-icon><span class="new-song-text">Dal</span>
+          <mat-icon>picture_as_pdf</mat-icon>
         </a>
+        <!-- The songs played tonight carry a tick; one tap here wipes them
+           all (the button itself: the template at the top). -->
+        <ng-container [ngTemplateOutlet]="clearButton" />
+        <!-- My playlists (the selector: the template at the top). -->
+        <ng-container [ngTemplateOutlet]="listPicker" />
+      </div>
+
+      <div class="top-row">
+        <label class="search">
+          <mat-icon>search</mat-icon>
+          <input
+            type="search"
+            placeholder="Keresés cím, előadó vagy szöveg szerint"
+            aria-label="Keresés a dalok között"
+            [value]="search()"
+            (input)="search.set($any($event.target).value)"
+          />
+        </label>
+        <!-- A phone only: the playlists' selector - always at hand, it is the
+           way to picking songs -, and the button that slides the first
+           row's controls in under the search, and away again. -->
+        <div class="top-row-phone">
+          <ng-container [ngTemplateOutlet]="listPicker" />
+          <button
+            type="button"
+            class="controls-btn"
+            [class.on]="controlsOpen()"
+            [attr.aria-expanded]="controlsOpen()"
+            (click)="toggleControls()"
+            title="Vezérlők: hangszer, PDF, játszottak jelölése"
+            aria-label="Vezérlők"
+          >
+            <mat-icon>tune</mat-icon>
+          </button>
+        </div>
+        <!-- Anyone may add a song of their own. On a phone: the floating +
+           in the bottom right corner. -->
+        @if (songs() !== null) {
+          <a [routerLink]="[base(), 'uj']" class="new-song-btn" title="Új dal" aria-label="Új dal">
+            <mat-icon>add</mat-icon><span class="new-song-text">Dal</span>
+          </a>
+        }
+      </div>
+
+      <!-- A playlist is chosen: its name (a tap goes back to the whole
+         book), and what is done with it all the time - picking songs into
+         it, putting them in order. Only while one is chosen: the whole book
+         takes no line for this. -->
+      @if (playlist(); as chosen) {
+        <div class="list-active">
+          <button
+            type="button"
+            class="list-tag"
+            (click)="chooseList('')"
+            title="Vissza az összes dalhoz"
+          >
+            <mat-icon>queue_music</mat-icon>
+            <span
+              ><strong>{{ chosen.name }}</strong></span
+            >
+            <mat-icon>close</mat-icon>
+          </button>
+          <div class="list-actions">
+            <button
+              type="button"
+              [class.on]="picking()"
+              [attr.aria-pressed]="picking()"
+              (click)="togglePicking()"
+              title="Dalok válogatása: a teljes könyvből egy koppintással be a listába vagy ki belőle"
+              aria-label="Dalok válogatása a listába"
+            >
+              <mat-icon>checklist</mat-icon>
+            </button>
+            <button
+              type="button"
+              [class.on]="ordering()"
+              [attr.aria-pressed]="ordering()"
+              (click)="toggleOrdering()"
+              title="Sorrend: a dalok húzással rendezhetők"
+              aria-label="A lista sorrendjének rendezése"
+            >
+              <mat-icon>swap_vert</mat-icon>
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- The chosen list's new name. -->
+      @if (renaming() !== null) {
+        <form class="list-rename" (submit)="$event.preventDefault(); rename()">
+          <input
+            type="text"
+            maxlength="60"
+            aria-label="A lista új neve"
+            [value]="renaming()"
+            (input)="renaming.set($any($event.target).value)"
+          />
+          <button type="submit" class="list-rename-save" [disabled]="!renaming()?.trim()">
+            Mentés
+          </button>
+          <button type="button" (click)="renaming.set(null)">Mégse</button>
+        </form>
+      }
+
+      <!-- What the list of songs is for just now, while it isn't for playing. -->
+      @if (picking()) {
+        <p class="list-hint">
+          <mat-icon>checklist</mat-icon>
+          Koppints egy dalra: bekerül a listába, vagy kikerül belőle.
+          <button type="button" (click)="togglePicking()">Kész</button>
+        </p>
+      } @else if (ordering()) {
+        <p class="list-hint">
+          <mat-icon>swap_vert</mat-icon>
+          Fogd meg a dalt a fogantyújánál, és húzd a helyére.
+          <button type="button" (click)="toggleOrdering()">Kész</button>
+        </p>
+      }
+
+      <!-- The list narrowed to one artist (a tap on the name on a song's
+         page): whose songs these are, and the way back to all of them. -->
+      @if (artist(); as name) {
+        <button
+          type="button"
+          class="artist-filter"
+          (click)="clearArtist()"
+          title="Vissza az összes dalhoz"
+        >
+          <span
+            >Előadó: <strong>{{ name }}</strong></span
+          >
+          <mat-icon>close</mat-icon>
+        </button>
       }
     </div>
-
-    <!-- The list narrowed to one artist (a tap on the name on a song's
-         page): whose songs these are, and the way back to all of them. -->
-    @if (artist(); as name) {
-      <button
-        type="button"
-        class="artist-filter"
-        (click)="clearArtist()"
-        title="Vissza az összes dalhoz"
-      >
-        <span
-          >Előadó: <strong>{{ name }}</strong></span
-        >
-        <mat-icon>close</mat-icon>
-      </button>
-    }
 
     <!-- Not songs, but found like one: the tuner and the two annexes - one
          row of icons, each saying what it is under the pointer. -->
@@ -125,6 +300,9 @@
         <li class="annex-row-clear">
           <ng-container [ngTemplateOutlet]="clearButton" />
         </li>
+        <li class="annex-row-clear">
+          <ng-container [ngTemplateOutlet]="listPicker" />
+        </li>
       </ul>
     }
 
@@ -133,7 +311,13 @@
     } @else if (!songs()!.length) {
       <p class="list-note">Még nincs dal a daloskönyvben.</p>
     } @else if (!filtered().length) {
-      @if (!annexes().length) {
+      <!-- An empty list says how to fill it. -->
+      @if (playlist() && !picking() && !search().trim() && !artist()) {
+        <p class="list-note">
+          Ebben a listában még nincs dal. A
+          <mat-icon class="list-note-icon">checklist</mat-icon> gombbal válogathatsz bele.
+        </p>
+      } @else if (!annexes().length) {
         <p class="list-note">Nincs ilyen dal.</p>
       }
     } @else {
@@ -141,7 +325,17 @@
            narrow column - the alphabet down its side: a tap on a letter
            brings its first song to the top. -->
       <div class="songs">
-        <ol class="song-list" #list>
+        <!-- While a list is being ordered its rows can be dragged (by their
+             handles) to a new place. -->
+        <ol
+          class="song-list"
+          [class.song-list--picking]="picking()"
+          [class.song-list--ordering]="ordering()"
+          #list
+          cdkDropList
+          [cdkDropListDisabled]="!ordering()"
+          (cdkDropListDropped)="moveSong($event)"
+        >
           @for (hit of found(); track hit.song._id) {
             @let song = hit.song;
             <!-- A new letter of the alphabet starts here: its capital over
@@ -149,12 +343,36 @@
             @if (letterHeads().get(song._id); as letter) {
               <li class="letter-head" aria-hidden="true">{{ letter }}</li>
             }
-            <li [attr.data-letter]="firstOfLetter().get(song._id)">
+            <li
+              [attr.data-letter]="firstOfLetter().get(song._id)"
+              cdkDrag
+              [cdkDragDisabled]="!ordering()"
+            >
+              <!-- While picking, a tap on the row ticks the song into the
+                   list or out of it instead of opening it: the row leads
+                   nowhere then (a link navigates whatever its click
+                   handler says). -->
               <a
-                [routerLink]="[base(), song.slug]"
+                [routerLink]="picking() ? null : [base(), song.slug]"
+                [attr.role]="picking() ? 'checkbox' : null"
+                [attr.aria-checked]="picking() ? isInPlaylist(song) : null"
+                [attr.tabindex]="picking() ? 0 : null"
+                (keydown.enter)="onRowClick($event, song)"
+                (keydown.space)="onRowClick($event, song)"
                 [class.active]="song.slug === openSlug()"
                 [class.played]="played().has(song._id)"
+                [class.picked]="picking() && isInPlaylist(song)"
+                (click)="onRowClick($event, song)"
               >
+                @if (picking()) {
+                  <mat-icon class="pick-box" aria-hidden="true">{{
+                    isInPlaylist(song) ? 'check_box' : 'check_box_outline_blank'
+                  }}</mat-icon>
+                } @else if (ordering()) {
+                  <mat-icon class="drag-handle" cdkDragHandle aria-label="A dal áthelyezése"
+                    >drag_indicator</mat-icon
+                  >
+                }
                 @if (played().has(song._id)) {
                   <mat-icon class="played-tick" aria-label="Már játszottuk">task_alt</mat-icon>
                 }

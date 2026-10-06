@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
 import Song from '../models/songModel.js';
+import SongList from '../models/songListModel.js';
 import AppError from '../utils/appError.js';
 import {
   BOOK_DIAGRAMS,
@@ -371,5 +372,7 @@ export const deleteSong = async (req, res) => {
   const song = await findSong(req.params.id);
   assertMayEdit(req.user, song);
   await song.deleteOne();
+  // Out of every playlist it stood in, whoever's.
+  await SongList.updateMany({ songs: song._id }, { $pull: { songs: song._id } });
   res.status(204).send();
 };

@@ -93,11 +93,50 @@ $line: #e4eae7;
   }
 }
 
+// Everything over the songs is one box in the page - but only a phone
+// uses it as one (it keeps the box on the screen); elsewhere its parts
+// stand in the page as if the box weren't there.
+.toc-top {
+  display: contents;
+}
+
 .top-row {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   margin-bottom: 1.25rem;
+}
+
+// At the search's end on a phone only (its rules show it): the playlists'
+// selector, and the button that calls the first row's controls.
+.top-row-phone {
+  display: none;
+}
+
+// "Vezérlők": a round button like the selector beside it - filled while
+// the controls are out.
+.controls-btn {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid #cfd9d5;
+  border-radius: 50%;
+  background: #fff;
+  color: $teal;
+  cursor: pointer;
+
+  &.on {
+    border-color: $teal;
+    background: $teal;
+    color: #fff;
+  }
+
+  mat-icon {
+    font-size: 1.35rem;
+    width: 1.35rem;
+    height: 1.35rem;
+  }
 }
 
 // "+Dal": the owner's own action, after the search - the same look as
@@ -192,6 +231,408 @@ $line: #e4eae7;
 }
 
 // "Játszottak jelölésének törlése": wipes tonight's ticks.
+// --- Playlists ---
+
+// The selector's wrap: what the panel of lists hangs from.
+.list-picker {
+  position: relative;
+  flex: none;
+}
+
+// The selector: a round button like the played marks' beside it - filled
+// while a list is chosen, with the number of its songs on its corner.
+.list-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid #cfd9d5;
+  border-radius: 50%;
+  background: #fff;
+  color: $teal;
+  cursor: pointer;
+
+  &:hover {
+    background: #e8f3ee;
+  }
+
+  mat-icon {
+    font-size: 1.35rem;
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  // A list is chosen: filled, so it is seen that not the whole book is.
+  &.list-btn--on,
+  &.list-btn--on:hover {
+    border-color: $teal;
+    background: $teal;
+    color: #fff;
+  }
+}
+
+// How many songs the chosen list has: a small number on the corner.
+.list-count {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.3rem;
+  min-width: 1.15rem;
+  padding: 0 0.3rem;
+  border: 1px solid #fff;
+  border-radius: 10rem;
+  background: $ink;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.05rem;
+  text-align: center;
+}
+
+// The chosen list's line: its name (a tap goes back to the whole book),
+// and beside it what is done with it all the time.
+.list-active {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.list-tag {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.45rem 0.6rem 0.45rem 0.7rem;
+  border: 1px solid #b9d8cb;
+  border-radius: 10rem;
+  background: #e8f3ee;
+  color: #1b6548;
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #d9ebe3;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  mat-icon {
+    flex: none;
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+// Every list at once, under the button - over whatever comes below.
+.list-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  display: grid;
+  // One column as wide as the panel: a long name is cut short, it doesn't
+  // push the count out of sight.
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.15rem;
+  width: 17rem;
+  max-width: calc(100vw - 2rem);
+  max-height: min(60vh, 26rem);
+  padding: 0.4rem;
+  overflow-y: auto;
+  border: 1px solid $line;
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 0.6rem 1.8rem #213b4133;
+}
+
+.list-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: none;
+  color: $ink;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #e8f3ee;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    flex: none;
+    color: $muted;
+    font-size: 0.8125rem;
+  }
+
+  &.list-option--current {
+    background: #e8f3ee;
+    color: $teal;
+    font-weight: 700;
+  }
+}
+
+// "Új lista neve": at the panel's foot, parted from the lists.
+.list-new,
+.list-rename {
+  display: flex;
+  gap: 0.4rem;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #cfd9d5;
+    border-radius: 0.6rem;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+
+    &:focus {
+      outline: 0;
+      border-color: $teal;
+      box-shadow: 0 0 0 0.2rem #1a796c26;
+    }
+  }
+
+  button {
+    flex: none;
+    display: grid;
+    place-items: center;
+    min-width: 2.5rem;
+    padding: 0 0.7rem;
+    border: 0;
+    border-radius: 0.6rem;
+    background: #eef1f2;
+    color: $ink;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  button[type='submit'] {
+    background: $teal;
+    color: #fff;
+  }
+}
+
+.list-new {
+  margin-top: 0.3rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid $line;
+}
+
+.list-rename {
+  margin-bottom: 0.9rem;
+}
+
+// What can be done with the chosen list: round icon buttons - the one that
+// is on (picking, ordering) filled.
+.list-actions {
+  flex: none;
+  display: flex;
+  gap: 0.3rem;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid $line;
+    border-radius: 50%;
+    background: #fff;
+    color: $teal;
+    cursor: pointer;
+
+    &:hover {
+      background: #e8f3ee;
+    }
+
+    &.on {
+      border-color: $teal;
+      background: $teal;
+      color: #fff;
+    }
+
+    mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+}
+
+// At the panel's foot: what is rarely done with the chosen list - a new
+// name for it, or the end of it.
+.list-manage {
+  display: grid;
+  gap: 0.15rem;
+  margin-top: 0.3rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid $line;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.55rem 0.75rem;
+    border: 0;
+    border-radius: 0.6rem;
+    background: none;
+    color: $ink;
+    font: inherit;
+    font-size: 0.875rem;
+    text-align: left;
+    cursor: pointer;
+    // A long name in "… törlése" is cut short.
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      background: #e8f3ee;
+    }
+
+    mat-icon {
+      flex: none;
+      font-size: 1.15rem;
+      width: 1.15rem;
+      height: 1.15rem;
+      color: $teal;
+    }
+  }
+
+  .list-delete {
+    color: #b3261e;
+
+    &:hover {
+      background: #fdecea;
+    }
+
+    mat-icon {
+      color: #b3261e;
+    }
+  }
+}
+
+// "Koppints egy dalra…": what the song list is for while it isn't for
+// playing, and the way out of it.
+.list-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.9rem;
+  padding: 0.5rem 0.6rem 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  background: #e8f3ee;
+  color: #1b6548;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+
+  mat-icon {
+    flex: none;
+    font-size: 1.15rem;
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  button {
+    flex: none;
+    margin-left: auto;
+    padding: 0.35rem 0.8rem;
+    border: 0;
+    border-radius: 10rem;
+    background: $teal;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+.list-note-icon {
+  font-size: 1.1rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  vertical-align: -0.2em;
+  color: $teal;
+}
+
+// Picking: a tick box before every song; the ones in the list stand out.
+.song-list .pick-box {
+  flex: none;
+  align-self: center;
+  color: #9aa7ab;
+}
+
+// A row leads nowhere while picking (it ticks the song): a hand over it
+// all the same.
+.song-list--picking a {
+  cursor: pointer;
+}
+
+.song-list a.picked {
+  background: #e8f3ee;
+
+  .pick-box {
+    color: $teal;
+  }
+}
+
+// Ordering: a handle before every song, to drag it by.
+.song-list .drag-handle {
+  flex: none;
+  align-self: center;
+  color: #9aa7ab;
+  cursor: grab;
+  touch-action: none;
+}
+
+// While a row is dragged: the row under the finger, the gap it leaves,
+// and the others making room.
+.cdk-drag-preview {
+  list-style: none;
+  border-radius: 0.6rem;
+  background: #fff;
+  box-shadow: 0 0.5rem 1.4rem #213b4140;
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+.cdk-drag-animating,
+.song-list.cdk-drop-list-dragging li:not(.cdk-drag-placeholder) {
+  transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
+
 // "Előadó: Edda ✕": the list shows one artist's songs - a tap brings
 // back everyone's.
 .artist-filter {
@@ -583,7 +1024,8 @@ $line: #e4eae7;
     }
 
     // As big as the three beside it.
-    .annex-row .clear-played {
+    .annex-row .clear-played,
+    .annex-row .list-btn {
       width: 2.6rem;
       height: 2.6rem;
     }
@@ -600,7 +1042,8 @@ $line: #e4eae7;
       border-left: 1px solid $line;
     }
 
-    .toc > * {
+    .toc > *,
+    .toc-top > * {
       flex: none;
     }
 
@@ -652,18 +1095,202 @@ $line: #e4eae7;
 }
 
 @media (max-width: 580px) {
+  // A phone's screen is for the songs: the search alone on top (with the
+  // playlists' selector and the controls' button at its end), the first
+  // row's controls behind that button, the tuner and the annexes after the
+  // last song. In a column, so each part can be put in its place.
   .toc {
-    padding: 1.5rem 1rem 3rem;
+    display: flex;
+    flex-direction: column;
+    // Room at the foot for the floating +, clear of the last row.
+    padding: 1rem 1rem 6rem;
   }
 
-  // The first row's three spread evenly from edge to edge.
-  .tools-row {
-    justify-content: space-between;
-    gap: 0.5rem;
+  // Inside Média its own menu (Videók, Fotók, Zene) says where one is: no
+  // heading. Guests, who have the page on its own, keep it.
+  .book--in-media .heading {
+    display: none;
+  }
+
+  .heading {
+    order: -2;
+  }
+
+  // The box over the songs stays on the screen while they scroll under
+  // it: right under Média's own menu, which stays too (media.scss says
+  // how tall that is; a guest's page has none). On the page's own ground,
+  // edge to edge, so no song shows through or beside it.
+  .toc-top {
+    order: -1;
+    position: sticky;
+    top: var(--media-nav-height, 0px);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    margin: -1rem -1rem 0;
+    padding: 1rem 1rem 0;
+    background: #f5f7f5;
+  }
+
+  .top-row {
+    order: -1;
+    // The two panels below hang from this row.
+    position: relative;
+    gap: 0.4rem;
+    margin-bottom: 0.9rem;
   }
 
   .search {
     max-width: none;
+  }
+
+  .top-row-phone {
+    flex: none;
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  // The two buttons at the search's end open a panel each the same way:
+  // down from the row, from the screen's one side to the other, as tall as
+  // what is in it, over the songs - see-through, and nothing is pushed
+  // lower. Closed, the songs have the whole screen again.
+  %phone-panel {
+    position: absolute;
+    z-index: 30;
+    // Under the search's row: the box's padding, the row, a gap.
+    top: calc(1rem + 3.125rem + 0.4rem);
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+    max-width: none;
+    padding: 0.6rem;
+    border: 0;
+    border-radius: 0.9rem;
+    // Dark, and a little see-through: the songs show faintly under it.
+    background: #193346bf;
+    backdrop-filter: blur(1px);
+    box-shadow: 0 0.6rem 1.8rem #213b4155;
+    color: #fff;
+    transform-origin: top right;
+  }
+
+  // The PDF on the dark ground: on a white circle like its neighbour's,
+  // the icon smaller to fit in it.
+  .tools-row .book-btn {
+    border-radius: 50%;
+    background: #fff;
+
+    mat-icon {
+      font-size: 1.6rem;
+      width: 1.6rem;
+      height: 1.6rem;
+    }
+  }
+
+  // The playlists' panel in light letters on that ground.
+  .top-row-phone .list-panel {
+    .list-option,
+    .list-manage button {
+      color: #fff;
+
+      &:hover {
+        background: #ffffff1f;
+      }
+    }
+
+    .list-option small {
+      color: #ffffffb3;
+    }
+
+    .list-option--current {
+      background: #ffffff26;
+      color: #a5e6d6;
+    }
+
+    .list-new,
+    .list-manage {
+      border-top-color: #ffffff33;
+    }
+
+    .list-new input {
+      border-color: transparent;
+      color: $ink;
+    }
+
+    .list-manage mat-icon {
+      color: #a5e6d6;
+    }
+
+    .list-manage .list-delete,
+    .list-manage .list-delete mat-icon {
+      color: #ffb4ab;
+    }
+  }
+
+  // The first row's controls: away until their button calls them.
+  .tools-row {
+    @extend %phone-panel;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-0.5rem) scaleY(0.9);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease,
+      visibility 0s 0.2s;
+
+    // The playlists' selector is in the search's row here, always at hand.
+    .list-picker {
+      display: none;
+    }
+  }
+
+  .tools-row--open {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  // The playlists' panel hangs from the row, not from its own button.
+  .top-row-phone .list-picker {
+    position: static;
+  }
+
+  .top-row-phone .list-panel {
+    @extend %phone-panel;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    left: 0;
+    padding: 0.4rem;
+    animation: phone-panel-in 0.2s ease;
+  }
+
+  @keyframes phone-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(-0.5rem) scaleY(0.9);
+    }
+  }
+
+  // The tags keep their own width in the column.
+  .artist-filter {
+    align-self: flex-start;
+  }
+
+  // The tuner and the two annexes: after the last song, parted from the
+  // songs by the thin line above them now.
+  .annex-row {
+    order: 99;
+    margin: 0.9rem 0 0;
+    padding: 0.9rem 0 0;
+    border-top: 1px solid $line;
+    border-bottom: 0;
   }
 
   // "+Dal" out of the search's line: the floating + of a phone

@@ -111,23 +111,28 @@ export class SongPage implements OnDestroy {
     return t > 0 ? `+${t}` : `${t}`;
   });
 
-  // The neighbours in the book.
-  private index = computed(() => {
-    const songs = this.songService.songs() ?? [];
-    return songs.findIndex((s) => s.slug === this.slug());
+  // The songs in the order they are played: the chosen playlist's, or the
+  // whole book's. An open song that isn't in the playlist has no
+  // neighbours there - the book's own order serves it then.
+  private order = computed(() => {
+    const played = this.songService.playOrder() ?? [];
+    return played.some((s) => s.slug === this.slug()) ? played : (this.songService.songs() ?? []);
   });
-  previous = computed(() => (this.songService.songs() ?? [])[this.index() - 1] ?? null);
+  // The neighbours in that order.
+  private index = computed(() => this.order().findIndex((s) => s.slug === this.slug()));
+  previous = computed(() => this.order()[this.index() - 1] ?? null);
   next = computed(() => {
     const i = this.index();
-    return i < 0 ? null : ((this.songService.songs() ?? [])[i + 1] ?? null);
+    return i < 0 ? null : (this.order()[i + 1] ?? null);
   });
 
   // A song picked by chance, for when nobody knows what to play next: any
-  // song of the list but this one and the ones played tonight (their
-  // ticks) - so an evening doesn't land on the same song twice.
+  // song of the chosen playlist (of the whole book without one) but this
+  // one and the ones played tonight (their ticks) - so an evening doesn't
+  // land on the same song twice.
   private randomPool = computed(() => {
     const played = this.songService.played();
-    return (this.songService.songs() ?? []).filter(
+    return (this.songService.playOrder() ?? []).filter(
       (s) => s.slug !== this.slug() && !played.has(s._id),
     );
   });
@@ -137,8 +142,9 @@ export class SongPage implements OnDestroy {
     const pool = this.randomPool();
     if (!pool.length) return;
     const pick = pool[Math.floor(Math.random() * pool.length)];
-    // Any song of the book: whatever the list was narrowed to (a search,
-    // one artist) is let go, so the pick is seen in the list as well.
+    // Any song of the play order: whatever else the list was narrowed to
+    // (a search, one artist) is let go, so the pick is seen in the list as
+    // well. The chosen playlist stays.
     this.songService.search.set('');
     this.songService.artist.set('');
     void this.router.navigate([this.base(), pick.slug]);
@@ -355,6 +361,28 @@ export class SongPage implements OnDestroy {
   // song's chords are rewritten as they show now and the song is saved -
   // from then on this is its key, for everyone and in the PDF.
   savingKey = signal(false);
+
+  // --- My playlists: this song into one, or out of it ---
+
+  lists = this.songService.lists;
+  // The panel with every list, each ticked if this song is in it.
+  listsOpen = signal(false);
+  // A phone keeps the song's tools behind one button: open, they drop down
+  // over the song. One panel at a time: theirs or the playlists'.
+  controlsOpen = signal(false);
+  toggleControls() {
+    this.listsOpen.set(false);
+    this.controlsOpen.set(!this.controlsOpen());
+  }
+  toggleLists() {
+    this.controlsOpen.set(false);
+    this.listsOpen.set(!this.listsOpen());
+  }
+
+  toggleInList(listId: string) {
+    const song = this.song();
+    if (song) this.songService.toggleInList(listId, song._id);
+  }
 
   // The keeper takes a song someone added beside the book into the
   // Daloskönyv: part of the book from then on (its PDF, its count), and
