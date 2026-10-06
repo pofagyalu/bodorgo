@@ -233,62 +233,6 @@ $line: #e4eae7;
 // "Játszottak jelölésének törlése": wipes tonight's ticks.
 // --- Playlists ---
 
-// The selector's wrap: what the panel of lists hangs from.
-.list-picker {
-  position: relative;
-  flex: none;
-}
-
-// The selector: a round button like the played marks' beside it - filled
-// while a list is chosen, with the number of its songs on its corner.
-.list-btn {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border: 1px solid #cfd9d5;
-  border-radius: 50%;
-  background: #fff;
-  color: $teal;
-  cursor: pointer;
-
-  &:hover {
-    background: #e8f3ee;
-  }
-
-  mat-icon {
-    font-size: 1.35rem;
-    width: 1.35rem;
-    height: 1.35rem;
-  }
-
-  // A list is chosen: filled, so it is seen that not the whole book is.
-  &.list-btn--on,
-  &.list-btn--on:hover {
-    border-color: $teal;
-    background: $teal;
-    color: #fff;
-  }
-}
-
-// How many songs the chosen list has: a small number on the corner.
-.list-count {
-  position: absolute;
-  top: -0.3rem;
-  right: -0.3rem;
-  min-width: 1.15rem;
-  padding: 0 0.3rem;
-  border: 1px solid #fff;
-  border-radius: 10rem;
-  background: $ink;
-  color: #fff;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  line-height: 1.05rem;
-  text-align: center;
-}
-
 // The chosen list's line: its name (a tap goes back to the whole book),
 // and beside it what is done with it all the time.
 .list-active {
@@ -333,68 +277,7 @@ $line: #e4eae7;
   }
 }
 
-// Every list at once, under the button - over whatever comes below.
-.list-panel {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.4rem);
-  right: 0;
-  display: grid;
-  // One column as wide as the panel: a long name is cut short, it doesn't
-  // push the count out of sight.
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.15rem;
-  width: 17rem;
-  max-width: calc(100vw - 2rem);
-  max-height: min(60vh, 26rem);
-  padding: 0.4rem;
-  overflow-y: auto;
-  border: 1px solid $line;
-  border-radius: 0.9rem;
-  background: #fff;
-  box-shadow: 0 0.6rem 1.8rem #213b4133;
-}
-
-.list-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
-  border: 0;
-  border-radius: 0.6rem;
-  background: none;
-  color: $ink;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover {
-    background: #e8f3ee;
-  }
-
-  span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  small {
-    flex: none;
-    color: $muted;
-    font-size: 0.8125rem;
-  }
-
-  &.list-option--current {
-    background: #e8f3ee;
-    color: $teal;
-    font-weight: 700;
-  }
-}
-
-// "Új lista neve": at the panel's foot, parted from the lists.
-.list-new,
+// The chosen list's new name: a line of its own over the songs.
 .list-rename {
   display: flex;
   gap: 0.4rem;
@@ -442,12 +325,6 @@ $line: #e4eae7;
   }
 }
 
-.list-new {
-  margin-top: 0.3rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid $line;
-}
-
 .list-rename {
   margin-bottom: 0.9rem;
 }
@@ -484,60 +361,6 @@ $line: #e4eae7;
       font-size: 1.25rem;
       width: 1.25rem;
       height: 1.25rem;
-    }
-  }
-}
-
-// At the panel's foot: what is rarely done with the chosen list - a new
-// name for it, or the end of it.
-.list-manage {
-  display: grid;
-  gap: 0.15rem;
-  margin-top: 0.3rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid $line;
-
-  button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-    padding: 0.55rem 0.75rem;
-    border: 0;
-    border-radius: 0.6rem;
-    background: none;
-    color: $ink;
-    font: inherit;
-    font-size: 0.875rem;
-    text-align: left;
-    cursor: pointer;
-    // A long name in "… törlése" is cut short.
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    &:hover {
-      background: #e8f3ee;
-    }
-
-    mat-icon {
-      flex: none;
-      font-size: 1.15rem;
-      width: 1.15rem;
-      height: 1.15rem;
-      color: $teal;
-    }
-  }
-
-  .list-delete {
-    color: #b3261e;
-
-    &:hover {
-      background: #fdecea;
-    }
-
-    mat-icon {
-      color: #b3261e;
     }
   }
 }
@@ -1047,9 +870,9 @@ $line: #e4eae7;
 
     // As big as the three beside it - but not round: the three before
     // them lead to a page of their own, these three do something here, and
-    // the shape says which is which.
+    // the shape says which is which. (The playlists' selector says the same
+    // of its own button: playlist-picker.)
     .annex-row .clear-played,
-    .annex-row .list-btn,
     .annex-row .annex-row-new {
       width: 2.6rem;
       height: 2.6rem;
@@ -1227,46 +1050,6 @@ $line: #e4eae7;
     }
   }
 
-  // The playlists' panel in light letters on that ground.
-  .top-row-phone .list-panel {
-    .list-option,
-    .list-manage button {
-      color: #fff;
-
-      &:hover {
-        background: #ffffff1f;
-      }
-    }
-
-    .list-option small {
-      color: #ffffffb3;
-    }
-
-    .list-option--current {
-      background: #ffffff26;
-      color: #a5e6d6;
-    }
-
-    .list-new,
-    .list-manage {
-      border-top-color: #ffffff33;
-    }
-
-    .list-new input {
-      border-color: transparent;
-      color: $ink;
-    }
-
-    .list-manage mat-icon {
-      color: #a5e6d6;
-    }
-
-    .list-manage .list-delete,
-    .list-manage .list-delete mat-icon {
-      color: #ffb4ab;
-    }
-  }
-
   // The first row's controls: away until their button calls them.
   .tools-row {
     @extend %phone-panel;
@@ -1283,7 +1066,7 @@ $line: #e4eae7;
       visibility 0s 0.2s;
 
     // The playlists' selector is in the search's row here, always at hand.
-    .list-picker {
+    app-playlist-picker {
       display: none;
     }
   }
@@ -1295,27 +1078,6 @@ $line: #e4eae7;
     transition:
       opacity 0.2s ease,
       transform 0.2s ease;
-  }
-
-  // The playlists' panel hangs from the row, not from its own button.
-  .top-row-phone .list-picker {
-    position: static;
-  }
-
-  .top-row-phone .list-panel {
-    @extend %phone-panel;
-    top: calc(100% + 0.4rem);
-    right: 0;
-    left: 0;
-    padding: 0.4rem;
-    animation: phone-panel-in 0.2s ease;
-  }
-
-  @keyframes phone-panel-in {
-    from {
-      opacity: 0;
-      transform: translateY(-0.5rem) scaleY(0.9);
-    }
   }
 
   // The tags keep their own width in the column.
