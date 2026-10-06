@@ -1,0 +1,116 @@
+@use '../shared';
+
+:host {
+  display: block;
+}
+
+@include shared.cards;
+
+// The third page: Értesítések, and Szoftver verziók under it, full width.
+.info-cards {
+  display: grid;
+  gap: 18px;
+}
+
+// Verzió: the client's and the server's, one under the other.
+.version-list {
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+
+  > div {
+    display: grid;
+    grid-template-columns: 5rem 1fr;
+    gap: 0.75rem;
+  }
+
+  dt {
+    color: #56666e;
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    color: #203747;
+    font-variant-numeric: tabular-nums;
+  }
+
+  small {
+    display: block;
+    color: #56666e;
+    font-size: 0.8rem;
+  }
+}
+
+// E-mails | pushes, side by side - each list as tall as it is.
+.notif-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0 24px;
+  align-items: start;
+
+  // Both lists start level (no extra gap above the first heading).
+  > div > .notif-group:first-child {
+    margin-top: 0;
+  }
+}
+
+.notif-group {
+  margin: 20px 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4c9184;
+}
+
+.notif-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notif {
+  padding: 12px 14px;
+  border: 1px solid #eef2f0;
+  border-radius: 12px;
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #2f414b;
+    line-height: 1.5;
+  }
+}
+
+// The one with settings stands out a little.
+.notif--settings {
+  border-color: #cfe6dc;
+  background: #f7fbf9;
+}
+
+.notif-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  strong {
+    font-size: 14px;
+    color: #1c2d38;
+  }
+}
+
+.notif-label {
+  font-weight: 700;
+  color: #56666e;
+}
+
+.notif-note {
+  margin: 4px 0 0;
+  font-size: 12px !important;
+  color: #6b7780 !important;
+  font-style: italic;
+}

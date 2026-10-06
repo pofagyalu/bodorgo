@@ -1,0 +1,243 @@
+@use '../shared';
+
+:host {
+  display: block;
+}
+
+@include shared.cards;
+
+.current-fee {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #e7f5ed;
+  color: #267c68;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.fee-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    padding: 0 10px 8px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #56666e;
+  }
+
+  td {
+    padding: 8px 10px;
+    border-top: 1px solid #f0f2f0;
+    font-size: 14px;
+    color: #2f414b;
+  }
+
+  tr.locked td {
+    background: #fafbfa;
+  }
+}
+
+.year-cell,
+.amount-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  input {
+    width: 96px;
+    padding: 8px 10px;
+    border: 1px solid #dce5e1;
+    border-radius: 9px;
+    color: #1c2d38;
+
+    &:disabled {
+      background: #f1f5f3;
+      color: #2f414b;
+      -webkit-text-fill-color: #2f414b;
+      opacity: 1;
+    }
+  }
+}
+
+.suffix {
+  color: #56666e;
+  font-size: 13px;
+}
+
+.range {
+  color: #4a5b63;
+  white-space: nowrap;
+}
+
+.row-end {
+  width: 44px;
+  text-align: right;
+}
+
+.lock {
+  color: #90a4ae;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: #a3402a;
+
+  &:hover {
+    background: #fbe7e3;
+  }
+}
+
+.history {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e7edea;
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: #203747;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    gap: 2px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f0f2f0;
+    font-size: 13px;
+    color: #2f414b;
+  }
+}
+
+.history-when {
+  font-size: 12px;
+  color: #56666e;
+}
+
+// Fizetési módok: one block per gateway.
+.pay-method {
+  padding-top: 1rem;
+
+  & + & {
+    margin-top: 1rem;
+    border-top: 1px solid #edf1ee;
+  }
+}
+
+.pay-method-fields {
+  margin-top: 0.75rem;
+
+  input {
+    width: 6.5rem;
+  }
+}
+
+.pay-method-example {
+  margin: 0.75rem 0 0;
+  color: #56666e;
+  font-size: 0.8rem;
+}
+
+// Elnök: the seal beside the name.
+.president-row {
+  flex-wrap: nowrap;
+  align-items: center;
+
+  label {
+    flex: 1;
+  }
+
+  input {
+    width: 100%;
+  }
+}
+
+.president-seal {
+  width: 6rem;
+  height: 6rem;
+  flex: none;
+  transform: rotate(-9deg);
+  // It grows from its left edge, over the name field beside it.
+  transform-origin: left center;
+  transition: transform 0.25s ease;
+  position: relative;
+  cursor: zoom-in;
+}
+
+// Three times the size under the pointer (or a finger), to read what is on
+// it.
+.president-seal:hover {
+  transform: rotate(-9deg) scale(3);
+  z-index: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .president-seal {
+    transition: none;
+  }
+}
+
+@media (max-width: 580px) {
+  .year-cell input,
+  .amount-cell input {
+    width: 76px;
+  }
+}
+
+@media (max-width: 580px) {
+  .fee-table th,
+  .fee-table td {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
+
+.chat-usage {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  small {
+    color: #56666e;
+    font-size: 12px;
+  }
+}
+
+// How full the folder is - green, turning orange past 80%.
+.chat-usage-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: #edf3f0;
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #2fa583;
+    transition: width 0.3s ease;
+  }
+}
+
+.chat-usage-bar--full span {
+  background: #e08e0b;
+}

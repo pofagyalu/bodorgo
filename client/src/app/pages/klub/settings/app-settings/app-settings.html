@@ -1,0 +1,271 @@
+<div class="cards">
+  <!-- Tagdíj emlékeztető: e-mails to members who haven't paid this year's
+     dues - its settings (the Értesítések list below describes it too). -->
+  <section class="panel reminder-card">
+    <div class="panel-title">
+      <div>
+        <h2>Tagdíj emlékeztető</h2>
+        <p class="subtext">
+          E-mail azoknak a tagoknak, akik még nem fizették be az idei tagdíjat – az első napon,
+          aztán havonta vagy negyedévente.
+        </p>
+      </div>
+    </div>
+    <div class="reminder">
+      @if (reminderLoading()) {
+        <p class="empty-note">Betöltés...</p>
+      } @else {
+        <label class="reminder-switch">
+          <input
+            type="checkbox"
+            [ngModel]="reminderEnabled()"
+            (ngModelChange)="reminderEnabled.set($event)"
+          />
+          Bekapcsolva
+        </label>
+
+        <div class="reminder-row">
+          <span class="reminder-label">Első emlékeztető (befizetési határidő):</span>
+          <select
+            [ngModel]="reminderMonth()"
+            (ngModelChange)="reminderMonth.set(+$event)"
+            aria-label="Hónap"
+          >
+            @for (m of months; track m; let i = $index) {
+              <option [ngValue]="i + 1">{{ m }}</option>
+            }
+          </select>
+          <input
+            type="number"
+            min="1"
+            max="28"
+            class="reminder-day"
+            [ngModel]="reminderDay()"
+            (ngModelChange)="reminderDay.set(+$event)"
+            aria-label="Nap"
+          />
+          <span>.</span>
+        </div>
+
+        <div class="reminder-row">
+          <span class="reminder-label">Utána:</span>
+          <label class="reminder-choice">
+            <input
+              type="radio"
+              name="reminderFrequency"
+              value="quarterly"
+              [ngModel]="reminderFrequency()"
+              (ngModelChange)="reminderFrequency.set($event)"
+            />
+            negyedévente
+          </label>
+          <label class="reminder-choice">
+            <input
+              type="radio"
+              name="reminderFrequency"
+              value="monthly"
+              [ngModel]="reminderFrequency()"
+              (ngModelChange)="reminderFrequency.set($event)"
+            />
+            havonta
+          </label>
+        </div>
+
+        <p class="reminder-dates">
+          <span class="reminder-label">Idei körök:</span> {{ previewDates().join(', ') }}
+          <small>(reggel 9 után, amíg ki nem fizeti)</small>
+        </p>
+
+        @if (reminder()?.nextRound; as next) {
+          <p class="reminder-next">
+            Következő kör: <strong>{{ roundLabel(next) }}</strong>
+          </p>
+        }
+
+        <details class="reminder-who">
+          <summary>Most {{ reminderRecipients().length }} tag kapna emlékeztetőt</summary>
+          @if (reminderRecipients().length) {
+            <p>{{ reminderRecipients().join(', ') }}</p>
+          } @else {
+            <p>Senki – mindenki befizette az idei tagdíjat.</p>
+          }
+        </details>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="sendTestReminder()"
+            [disabled]="sendingTest()"
+          >
+            <mat-icon>forward_to_inbox</mat-icon>
+            {{ sendingTest() ? 'Küldés…' : 'Próba e-mail magamnak' }}
+          </button>
+          <span class="spacer"></span>
+          @if (reminderDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="resetReminder()"
+              [disabled]="savingReminder()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="saveReminder()"
+            [disabled]="!reminderDirty() || savingReminder()"
+          >
+            {{ savingReminder() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Születésnap: confetti and a greeting for whoever logs in on their
+       birthday - once a year (shared/birthday). -->
+  <section class="panel birthday-card">
+    <div class="panel-title">
+      <div>
+        <h2>Születésnap</h2>
+        <p class="subtext">
+          Aki a születésnapján belép, konfettit és köszöntést kap – évente egyszer, az első
+          eszközén.
+        </p>
+      </div>
+    </div>
+
+    @if (birthdaySaved()) {
+      <label class="reminder-switch">
+        <input type="checkbox" [ngModel]="bdEnabled()" (ngModelChange)="bdEnabled.set($event)" />
+        Bekapcsolva
+      </label>
+
+      <div class="chat-fields birthday-fields">
+        <label>
+          Effekt
+          <select [ngModel]="bdEffect()" (ngModelChange)="bdEffect.set($event)">
+            @for (e of birthdayEffects; track e.key) {
+              <option [value]="e.key">{{ e.name }}</option>
+            }
+          </select>
+        </label>
+        <label class="birthday-message">
+          Üzenet
+          <input
+            type="text"
+            maxlength="200"
+            [ngModel]="bdMessage()"
+            (ngModelChange)="bdMessage.set($event)"
+          />
+          <small
+            >A <code>{{ '{' }}név{{ '}' }}</code> helyére az ünnepelt keresztneve kerül.</small
+          >
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="outline-btn" (click)="previewBirthday()">
+          <mat-icon>celebration</mat-icon>
+          Előnézet
+        </button>
+        <span class="spacer"></span>
+        @if (birthdayDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="resetBirthday()"
+            [disabled]="savingBirthday()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="saveBirthday()"
+          [disabled]="!birthdayDirty() || savingBirthday()"
+        >
+          {{ savingBirthday() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+
+  <!-- Rangok ünneplése: the first login after reaching a new rank (10, 20,
+       ... tours) - an effect and a message; the admins get an e-mail
+       about it either way (server utils/ranks.js). -->
+  <section class="panel birthday-card">
+    <div class="panel-title">
+      <div>
+        <h2>Rangok ünneplése</h2>
+        <p class="subtext">
+          Aki új rangot ér el (10, 20, 30, 40, 50 tábor: bronz, ezüst, arany, platina, gyémánt), az
+          utána első belépésekor effektet és gratulációt kap. Az adminok erről mindig e-mailt kapnak
+          – akkor is, ha ez ki van kapcsolva.
+        </p>
+      </div>
+    </div>
+
+    @if (rankSaved()) {
+      <label class="reminder-switch">
+        <input type="checkbox" [ngModel]="rkEnabled()" (ngModelChange)="rkEnabled.set($event)" />
+        Bekapcsolva
+      </label>
+
+      <div class="chat-fields birthday-fields">
+        <label>
+          Effekt
+          <select [ngModel]="rkEffect()" (ngModelChange)="rkEffect.set($event)">
+            @for (e of birthdayEffects; track e.key) {
+              <option [value]="e.key">{{ e.name }}</option>
+            }
+          </select>
+        </label>
+        <label class="birthday-message">
+          Üzenet
+          <input
+            type="text"
+            maxlength="200"
+            [ngModel]="rkMessage()"
+            (ngModelChange)="rkMessage.set($event)"
+          />
+          <small
+            ><code>{{ '{' }}név{{ '}' }}</code
+            >: a keresztneve · <code>{{ '{' }}szám{{ '}' }}</code
+            >: a rang táborszáma (10, vagy 10+, ha azóta több) · <code>{{ '{' }}rang{{ '}' }}</code
+            >: bronz, ezüst…</small
+          >
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="outline-btn" (click)="previewRank()">
+          <mat-icon>celebration</mat-icon>
+          Előnézet
+        </button>
+        <span class="spacer"></span>
+        @if (rankDirty()) {
+          <button type="button" class="outline-btn" (click)="resetRank()" [disabled]="savingRank()">
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="saveRank()"
+          [disabled]="!rankDirty() || savingRank()"
+        >
+          {{ savingRank() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+</div>

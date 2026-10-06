@@ -1,0 +1,416 @@
+<div class="cards">
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Tagdíj</h2>
+        <p class="subtext">
+          Éves összeg, attól az évtől, amikor életbe lép. Egy emelés a korábbi, még ki nem fizetett
+          éveket nem érinti - azok a régi díjjal maradnak.
+        </p>
+      </div>
+      @if (currentFee(); as fee) {
+        <span class="current-fee"
+          >{{ currentYear }}: <strong>{{ fee }} Ft</strong></span
+        >
+      }
+    </div>
+
+    @if (loading()) {
+      <p class="empty-note">Betöltés...</p>
+    } @else {
+      <table class="fee-table">
+        <thead>
+          <tr>
+            <th>Életbe lép</th>
+            <th>Összeg</th>
+            <th>Érvényes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track $index) {
+            <tr [class.locked]="isLocked(row)">
+              <td>
+                <span class="year-cell">
+                  <input
+                    type="number"
+                    [min]="foundingYear()"
+                    [ngModel]="row.fromYear"
+                    (ngModelChange)="update(row, 'fromYear', $event)"
+                    [disabled]="isLocked(row) || isFounding(row)"
+                  />
+                  <span class="suffix">-től</span>
+                </span>
+              </td>
+              <td>
+                <span class="amount-cell">
+                  <input
+                    type="number"
+                    min="1"
+                    step="100"
+                    [ngModel]="row.amount"
+                    (ngModelChange)="update(row, 'amount', $event)"
+                    [disabled]="isLocked(row)"
+                  />
+                  <span class="suffix">Ft</span>
+                </span>
+              </td>
+              <td class="range">{{ rangeLabel(row) }}</td>
+              <td class="row-end">
+                @if (isLocked(row)) {
+                  <mat-icon
+                    class="lock"
+                    title="Erre az időszakra már van befizetett tagdíj - nem módosítható"
+                    >lock</mat-icon
+                  >
+                } @else if (!isFounding(row)) {
+                  <button
+                    type="button"
+                    class="icon-btn"
+                    title="Sor törlése"
+                    (click)="removeRow(row)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="actions">
+        <button type="button" class="outline-btn" (click)="addRow()" [disabled]="saving()">
+          <mat-icon>add</mat-icon> Új díj egy évtől
+        </button>
+        <span class="spacer"></span>
+        @if (dirty()) {
+          <button type="button" class="outline-btn" (click)="reset()" [disabled]="saving()">
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="save()"
+          [disabled]="!dirty() || saving()"
+        >
+          {{ saving() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+
+      @if (history().length) {
+        <div class="history">
+          <h3>Napló</h3>
+          <ul>
+            @for (h of history(); track $index) {
+              <li>
+                <span class="history-when"
+                  >{{ h.at | date: 'yyyy. MM. dd. HH:mm' }} · {{ h.byName }}</span
+                >
+                <span>{{ h.change }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+  </section>
+
+  <!-- Fizetési módok: the online gateways (Stripe, Barion) - each on or
+       off, and the fee the payer pays on top. -->
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Fizetési módok</h2>
+        <p class="subtext">
+          Az online kártyás fizetés szolgáltatói. A szolgáltató díját a fizető állja: a végösszeg
+          úgy számolódik, hogy a díj levonása után a teljes tagdíj vagy előleg megérkezzen. A
+          kikapcsolt szolgáltató a fizetésnél szürkén, „hamarosan” felirattal látszik.
+        </p>
+      </div>
+    </div>
+
+    @if (payForm(); as form) {
+      @for (key of payMethodKeys; track key) {
+        <div class="pay-method">
+          <label class="reminder-switch">
+            <input
+              type="checkbox"
+              [ngModel]="form[key].enabled"
+              (ngModelChange)="setPayField(key, 'enabled', $event)"
+            />
+            {{ payMethodNames[key] }}
+          </label>
+
+          <div class="chat-fields pay-method-fields">
+            <label>
+              Díj (%)
+              <input
+                type="number"
+                min="0"
+                max="20"
+                step="0.1"
+                [ngModel]="form[key].feePercent"
+                (ngModelChange)="setPayField(key, 'feePercent', $event)"
+              />
+            </label>
+            <label>
+              Fix díj (Ft)
+              <input
+                type="number"
+                min="0"
+                step="1"
+                [ngModel]="form[key].feeFixed"
+                (ngModelChange)="setPayField(key, 'feeFixed', $event)"
+              />
+            </label>
+            <label>
+              Legalább (Ft)
+              <input
+                type="number"
+                min="0"
+                step="1"
+                [ngModel]="form[key].feeMin"
+                (ngModelChange)="setPayField(key, 'feeMin', $event)"
+              />
+            </label>
+          </div>
+
+          <p class="pay-method-example">
+            Példa: 1 000 Ft helyett {{ payExample(key, 1000) }} Ft, 20 000 Ft helyett
+            {{ payExample(key, 20000) }} Ft.
+          </p>
+
+          <div class="actions">
+            <span class="spacer"></span>
+            @if (payMethodDirty(key)) {
+              <button
+                type="button"
+                class="outline-btn"
+                (click)="resetPayMethod(key)"
+                [disabled]="savingPayMethod() === key"
+              >
+                Mégse
+              </button>
+            }
+            <button
+              type="button"
+              class="primary-btn"
+              (click)="savePayMethod(key)"
+              [disabled]="!payMethodDirty(key) || savingPayMethod() !== null"
+            >
+              {{ savingPayMethod() === key ? 'Mentés…' : 'Mentés' }}
+            </button>
+          </div>
+        </div>
+      }
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+
+  <!-- The two Barion wallets: settings + withdrawing, one card each. -->
+  <app-barion-withdraw wallet="membership" />
+  <app-barion-withdraw wallet="tour" />
+
+  <!-- Elnök: named at the end of a tour's beszámoló, with the wax seal
+       (server utils/waxSeal.js) - which carries this name too. -->
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Elnök</h2>
+        <p class="subtext">
+          A táborok beszámolójának végén szerepel („Elnök: …”), és a viaszpecsét peremén is ez a név
+          áll.
+        </p>
+      </div>
+    </div>
+
+    @if (presidentSaved() !== null) {
+      <div class="chat-fields president-row">
+        <img class="president-seal" [src]="sealUrl()" alt="A beszámoló viaszpecsétje" />
+        <label>
+          Név
+          <input
+            type="text"
+            maxlength="100"
+            [ngModel]="presidentName()"
+            (ngModelChange)="presidentName.set($event)"
+          />
+        </label>
+      </div>
+
+      <div class="actions">
+        <span class="spacer"></span>
+        @if (presidentDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="presidentName.set(presidentSaved() ?? '')"
+            [disabled]="savingPresident()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="savePresident()"
+          [disabled]="!presidentDirty() || !presidentName().trim() || savingPresident()"
+        >
+          {{ savingPresident() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+
+  <!-- Chat photos: how much room they may take and how many a person may
+     send a day. Over the limit the oldest go - their messages stay. -->
+  <section class="panel chat-images">
+    <div class="panel-title">
+      <div>
+        <h2>Kotyogó fotók</h2>
+        <p class="subtext">
+          A táborok Kotyogójában küldött fotók. Ha betelik a keret, a legrégebbiek törlődnek – az
+          üzenet megmarad, „A fotó már nem érhető el” jelzéssel.
+        </p>
+      </div>
+    </div>
+
+    @if (chatImages(); as c) {
+      <div class="chat-usage">
+        <div class="chat-usage-bar" [class.chat-usage-bar--full]="chatUsagePercent() >= 80">
+          <span [style.width.%]="chatUsagePercent()"></span>
+        </div>
+        <small>
+          {{ chatUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} fotó ({{
+            chatUsagePercent()
+          }}%)
+        </small>
+      </div>
+
+      <div class="chat-fields">
+        <label>
+          Tárhely keret (MB)
+          <input
+            type="number"
+            min="50"
+            step="50"
+            [ngModel]="chatQuotaMB()"
+            (ngModelChange)="chatQuotaMB.set(+$event)"
+          />
+        </label>
+        <label>
+          Fotó naponta, személyenként
+          <input
+            type="number"
+            min="1"
+            [ngModel]="chatDailyLimit()"
+            (ngModelChange)="chatDailyLimit.set(+$event)"
+          />
+        </label>
+      </div>
+
+      <div class="actions">
+        <span class="spacer"></span>
+        @if (chatImagesDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="applyChatImages(c)"
+            [disabled]="savingChatImages()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="saveChatImages()"
+          [disabled]="!chatImagesDirty() || savingChatImages()"
+        >
+          {{ savingChatImages() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+
+  <!-- Kép gyorsítótár: the smaller versions of the album photos the viewer
+     shows (server photos/imageSizes.js). Over the limit the least
+     recently viewed go - they're made again when needed. -->
+  <section class="panel image-cache">
+    <div class="panel-title">
+      <div>
+        <h2>Kép gyorsítótár</h2>
+        <p class="subtext">
+          A táborok és a Média fotóinak kisebb változatai, amiket a képnézegető mutat – így mobilon
+          is gyorsan betöltenek. Az első megnézéskor készülnek. Ha betelik a keret, a legrégebben
+          nézettek törlődnek, és legközelebb újra elkészülnek. Az eredeti fotókat nem érinti.
+        </p>
+      </div>
+    </div>
+
+    @if (imageCache(); as c) {
+      <div class="chat-usage">
+        <div class="chat-usage-bar" [class.chat-usage-bar--full]="imageCachePercent() >= 80">
+          <span [style.width.%]="imageCachePercent()"></span>
+        </div>
+        <small>
+          {{ imageCacheUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} kép ({{
+            imageCachePercent()
+          }}%)
+        </small>
+      </div>
+
+      <div class="chat-fields">
+        <label>
+          Tárhely keret (MB)
+          <input
+            type="number"
+            min="100"
+            step="512"
+            [ngModel]="imageCacheQuotaMB()"
+            (ngModelChange)="imageCacheQuotaMB.set(+$event)"
+          />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="outline-btn"
+          (click)="clearImageCache()"
+          [disabled]="savingImageCache() || !c.usage.count"
+        >
+          Gyorsítótár ürítése
+        </button>
+        <span class="spacer"></span>
+        @if (imageCacheDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="applyImageCache(c)"
+            [disabled]="savingImageCache()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="saveImageCache()"
+          [disabled]="!imageCacheDirty() || savingImageCache()"
+        >
+          {{ savingImageCache() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+</div>
