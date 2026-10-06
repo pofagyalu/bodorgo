@@ -1,6 +1,6 @@
 // Makes the small copy (utils/videoCopies.js) of every video that has none
 // yet - the tours' and Média's alike - one after the other, with the same
-// settings and into the same place as the admin's "Kis méret készítése"
+// settings and into the same place as the admin's "Tömörítés"
 // button. For the first round, on a machine stronger than the NAS:
 //
 //   node --env-file=.env scripts/makeVideoCopies.mjs          make them
@@ -18,7 +18,7 @@ const nameOf = (v) => `${v.area}/${path.relative(v.root, v.fullPath).split(path.
 const all = [...tourVideoFiles(), ...mediaVideoFiles()];
 const missing = all.filter((v) => smallCopyState(v) !== 'ready');
 
-console.log(`${all.length} videó, ebből ${missing.length} kis méretű változat nélkül.`);
+console.log(`${all.length} videó, ebből ${missing.length} tömörített változat nélkül.`);
 for (const v of missing) console.log(`  ${nameOf(v)}`);
 if (process.argv.includes('--list') || !missing.length) process.exit(0);
 

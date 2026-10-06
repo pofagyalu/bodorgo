@@ -24,6 +24,10 @@ export interface MediaVideo {
   // Its small copy (see services/video-copies.ts) - 'ready': that one
   // plays unless the original is picked.
   small?: SmallCopyState;
+  // The lines of the original's picture and of the small copy's (1080,
+  // 720...) - the player's quality switch is labelled with them.
+  height?: number | null;
+  smallHeight?: number | null;
   // The role manager only: the only members who see it - empty: every
   // member does.
   viewers?: string[];
@@ -272,7 +276,7 @@ export class MediaService {
       }),
       // A reminder: they are made one by one, on the video's own card.
       report.videosWithoutSmall
-        ? `${report.videosWithoutSmall} videónak nincs kis méretű változata`
+        ? `${report.videosWithoutSmall} videónak nincs tömörített változata`
         : null,
     ].filter((l): l is string => !!l);
   });

@@ -28,9 +28,12 @@ function storedQuality(): VideoQuality {
 // from an app-video-card; used on Média → Videók and the tour page.
 //
 // A video with a small copy (`smallSrc` - see services/video-copies.ts)
-// plays that one, and has a Kis / Eredeti switch on top: the original is
-// several times heavier, the small one plays on a weak connection too.
-// Switching goes on from where the video was.
+// plays that one, and has a Tömörített / Eredeti switch on top: the
+// original is several times heavier, the compressed one plays on a weak
+// connection too (an old 576p video's copy is 576p as well - only
+// lighter). Next to the switch, the resolution of the one playing
+// ("720p", "1080p"). Switching goes on from where the video was; the
+// subtitles go with either.
 @Component({
   selector: 'app-video-player',
   imports: [MatIconModule],
@@ -45,11 +48,20 @@ export class VideoPlayer {
   // Its small copy, if it has one.
   smallSrc = input<string | null>(null);
   subtitlesSrc = input<string | null>(null);
+  // The lines of the two pictures, when known.
+  height = input<number | null | undefined>(null);
+  smallHeight = input<number | null | undefined>(null);
 
   closed = output<void>();
 
   quality = signal<VideoQuality>(storedQuality());
-  playingSrc = computed(() => (this.quality() === 'small' && this.smallSrc()) || this.src());
+  private playingSmall = computed(() => this.quality() === 'small' && !!this.smallSrc());
+  playingSrc = computed(() => (this.playingSmall() ? this.smallSrc()! : this.src()));
+  // The resolution of the one playing, the usual way: "720p", "1080p".
+  resolution = computed(() => {
+    const lines = this.playingSmall() ? this.smallHeight() : this.height();
+    return lines ? `${lines}p` : null;
+  });
 
   private video = viewChild<ElementRef<HTMLVideoElement>>('video');
   // Where the other quality goes on from, once it has loaded.

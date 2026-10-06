@@ -327,6 +327,10 @@ export interface TourVideo {
   // Its small copy (see services/video-copies.ts) - 'ready': that one
   // plays unless the original is picked.
   small?: SmallCopyState;
+  // The lines of the original's picture and of the small copy's (1080,
+  // 720...) - the player's quality switch is labelled with them.
+  height?: number | null;
+  smallHeight?: number | null;
 }
 
 // A tour's Extrák document - one of the club's documents with this tour

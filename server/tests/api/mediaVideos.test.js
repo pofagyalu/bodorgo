@@ -16,7 +16,9 @@ const put = (rel, content = 'x') => {
 
 // The smallest file an MP4 length can be read from: "ftyp", then "moov"
 // holding an "mvhd" that says duration / timescale seconds.
-function tinyMp4(seconds, timescale = 1000) {
+// With a height: also a picture track whose "tkhd" ends in its width and
+// height (16.16 fixed-point), and a sound track (0 x 0) after it.
+function tinyMp4(seconds, timescale = 1000, height = 0) {
   const box = (type, body) => {
     const head = Buffer.alloc(8);
     head.writeUInt32BE(8 + body.length, 0);
@@ -26,14 +28,24 @@ function tinyMp4(seconds, timescale = 1000) {
   const mvhd = Buffer.alloc(100);
   mvhd.writeUInt32BE(timescale, 12);
   mvhd.writeUInt32BE(seconds * timescale, 16);
-  return Buffer.concat([box('ftyp', Buffer.from('isom0000isom')), box('moov', box('mvhd', mvhd))]);
+  const trak = (lines) => {
+    const tkhd = Buffer.alloc(84);
+    tkhd.writeUInt32BE(Math.round((lines * 16) / 9) * 65536, 76);
+    tkhd.writeUInt32BE(lines * 65536, 80);
+    return box('trak', box('tkhd', tkhd));
+  };
+  const tracks = height ? [trak(height), trak(0)] : [];
+  return Buffer.concat([
+    box('ftyp', Buffer.from('isom0000isom')),
+    box('moov', Buffer.concat([box('mvhd', mvhd), ...tracks])),
+  ]);
 }
 
 beforeAll(() => {
   put('farsang/folder.jpg');
   put('farsang/Season 01/Farsang (2024) S01E01.mp4', 'video-2024');
   put('farsang/Season 01/Farsang (2024) S01E01-thumb.jpg', 'thumb-2024');
-  put('farsang/Season 01/Farsang (2025) S01E02.mp4', tinyMp4(754));
+  put('farsang/Season 01/Farsang (2025) S01E02.mp4', tinyMp4(754, 1000, 1080));
   put(
     'farsang/Season 01/Farsang (2025) S01E02.hun.srt',
     '1\n00:00:01,000 --> 00:00:02,500\nHelló\n',
@@ -59,6 +71,12 @@ describe('Média videos', () => {
     // The length comes from the file itself - null where it can't be read
     // (the 2024 one here isn't a real video).
     expect(farsang.videos.map((v) => v.durationSeconds)).toEqual([754, null]);
+    // So do the picture's lines, and with them the small copy's: 720 at
+    // most (what the player's quality switch is labelled with).
+    expect(farsang.videos.map((v) => [v.height, v.smallHeight])).toEqual([
+      [1080, 720],
+      [null, null],
+    ]);
     // The stray space before "-thumb" still finds the cover.
     expect(reklam.videos[0]).toMatchObject({
       title: 'A magyar igazság',

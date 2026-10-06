@@ -24,10 +24,10 @@ export class VideoSmallCopy {
   async askRemove() {
     const going = this.job().state !== 'ready';
     const ok = await this.confirm.ask({
-      message: going ? 'Megszakítod az átalakítást?' : 'Törlöd a kis méretű változatot?',
+      message: going ? 'Megszakítod a tömörítést?' : 'Törlöd a tömörített változatot?',
       detail: going
         ? undefined
-        : 'Az eredeti videó megmarad, és újra az indul el. A kis méretű változat bármikor újra elkészíthető.',
+        : 'Az eredeti videó megmarad, és újra az indul el. A tömörített változat bármikor újra elkészíthető.',
       confirmText: going ? 'Megszakítás' : 'Törlés',
     });
     if (ok) this.remove.emit();

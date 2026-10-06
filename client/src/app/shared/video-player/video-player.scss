@@ -48,7 +48,7 @@
   min-width: 0;
 }
 
-// Kis / Eredeti - both always in sight, the one playing filled in.
+// Tömörített / Eredeti - both always in sight, the one playing filled in.
 .player-quality {
   display: flex;
   flex: none;
@@ -77,6 +77,17 @@
       color: #e7f0ee;
     }
   }
+}
+
+// The resolution of the one playing, right of the switch.
+.player-head .player-resolution {
+  flex: none;
+  min-width: 3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: #e7f0ee;
 }
 
 .player-close {
@@ -110,5 +121,34 @@
 
   .player {
     border-radius: 0;
+  }
+
+  // A phone has no room for the switch beside the title: the title and ✕
+  // keep the first line, the switch and the resolution go under them.
+  .player-head {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .player-titles {
+    flex: 1 1 calc(100% - 3.5rem);
+  }
+
+  // Smaller than the title above them.
+  .player-quality {
+    order: 1;
+
+    button {
+      min-height: 1.625rem;
+      padding: 0 0.6rem;
+      border-radius: 0.4rem;
+      font-size: 0.7rem;
+    }
+  }
+
+  .player-head .player-resolution {
+    order: 2;
+    min-width: 0;
+    font-size: 0.7rem;
   }
 }

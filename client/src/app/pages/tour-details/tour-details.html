@@ -225,6 +225,8 @@
           [subtitle]="t.order + '. ' + t.title"
           [src]="tourVideoUrl(t, v)"
           [smallSrc]="tourSmallVideoUrl(t, v)"
+          [height]="v.height"
+          [smallHeight]="v.smallHeight"
           [subtitlesSrc]="v.hasSubtitles ? tourVideoSubtitlesUrl(t, v) : null"
           (closed)="playingVideo.set(null)"
         />

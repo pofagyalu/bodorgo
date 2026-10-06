@@ -20,10 +20,10 @@
             type="button"
             [class.active]="quality() === 'small'"
             [attr.aria-pressed]="quality() === 'small'"
-            title="Kisebb felbontás – gyenge kapcsolaton is megy"
+            title="Tömörített változat – gyenge kapcsolaton is megy"
             (click)="setQuality('small')"
           >
-            Kis
+            Tömörített
           </button>
           <button
             type="button"
@@ -35,6 +35,10 @@
             Eredeti
           </button>
         </div>
+      }
+      <!-- The resolution of the one playing. -->
+      @if (resolution(); as res) {
+        <span class="player-resolution" title="Felbontás">{{ res }}</span>
       }
       <button type="button" class="player-close" (click)="close()" title="Bezárás">
         <mat-icon>close</mat-icon>

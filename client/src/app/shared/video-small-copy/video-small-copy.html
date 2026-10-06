@@ -2,12 +2,12 @@
 <div class="small-copy" [class]="'small-copy--' + j.state">
   @switch (j.state) {
     @case ('ready') {
-      <span class="small-copy-text"><mat-icon>check_circle</mat-icon>Kis méret kész</span>
+      <span class="small-copy-text"><mat-icon>check_circle</mat-icon>Tömörített változat kész</span>
       <button
         type="button"
         class="small-copy-btn"
-        title="Kis méretű változat törlése"
-        aria-label="Kis méretű változat törlése"
+        title="Tömörített változat törlése"
+        aria-label="Tömörített változat törlése"
         (click)="askRemove()"
       >
         <mat-icon>delete</mat-icon>
@@ -27,7 +27,7 @@
     }
     @case ('converting') {
       <span class="small-copy-text">
-        <mat-icon class="small-copy-spin">autorenew</mat-icon>Átalakítás: {{ j.percent ?? 0 }}%
+        <mat-icon class="small-copy-spin">autorenew</mat-icon>Tömörítés: {{ j.percent ?? 0 }}%
       </span>
       <button
         type="button"
@@ -47,9 +47,7 @@
     }
     @default {
       <span class="small-copy-text"><mat-icon>hd</mat-icon>Csak eredeti</span>
-      <button type="button" class="small-copy-make" (click)="convert.emit()">
-        Kis méret készítése
-      </button>
+      <button type="button" class="small-copy-make" (click)="convert.emit()">Tömörítés</button>
     }
   }
 </div>

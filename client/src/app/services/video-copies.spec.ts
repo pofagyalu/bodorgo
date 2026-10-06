@@ -94,7 +94,7 @@ describe('VideoCopiesService', () => {
 
     service.remove(target);
     http.expectOne(target.url).flush('', { status: 500, statusText: 'Error' });
-    expect(error).toHaveBeenCalledWith('Nem sikerült törölni a kis méretű változatot.');
+    expect(error).toHaveBeenCalledWith('Nem sikerült törölni a tömörített változatot.');
     expect(service.stateOf(target.ref, 'ready').state).toBe('ready');
   });
 });
