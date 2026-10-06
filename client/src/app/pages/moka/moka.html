@@ -9,7 +9,7 @@
       <a routerLink="darts" routerLinkActive="active" class="nav-item" title="Darts">
         <mat-icon>track_changes</mat-icon><span>Darts</span>
       </a>
-      <!-- Futókörök: still only for whoever auth/futokor.guard.ts lets in. -->
+      <!-- Futókörök: for whoever auth/futokor.guard.ts lets in. -->
       @if (seesRace()) {
         <a routerLink="futokor" routerLinkActive="active" class="nav-item" title="Futókörök">
           <mat-icon>directions_run</mat-icon><span>Futókörök</span>

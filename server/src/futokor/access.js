@@ -1,11 +1,12 @@
 import AppError from '../utils/appError.js';
 
-// Who may use Futókör (the running race - Futókörök, a part of Móka). While it's
-// being built: only the one initial admin (the role manager, see
-// utils/roleManager.js) - not the other admins. Once it's ready, this is
-// the line that opens it to everyone logged in (the client's twin:
-// auth/futokor.guard.ts's canSeeFutokor).
-export const canUseFutokor = (user) => !!user?.canManageRoles;
+// Who may use Futókör (the running race - Futókörök, a part of Móka):
+// everyone logged in - guests too - since 2026-10-06 (while it was being
+// built, only the role manager got in). The client's twin:
+// auth/futokor.guard.ts's canSeeFutokor. What is the admins' alone (the
+// club's cards, a tour's course) is said where it's done: the routes and
+// futokorController.js.
+export const canUseFutokor = (user) => !!user;
 
 // After requireAuth.
 export function requireFutokor(req, res, next) {

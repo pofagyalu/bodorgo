@@ -53,8 +53,8 @@ export class Moka {
     { link: 'kviz/szerkeszto', label: 'Alkotóműhely', icon: 'handyman' },
   ];
 
-  // Futókörök is still only for whoever futokor.guard.ts lets in - and for
-  // someone running a race already on their phone.
+  // Futókörök is for whoever futokor.guard.ts lets in (everyone logged
+  // in) - and for someone running a race already on their phone.
   seesRace = computed(() => canSeeFutokor(this.auth.user()) || this.inFutokor());
 
   // During a game the phone's tabs go away: the whole screen is the game's.
