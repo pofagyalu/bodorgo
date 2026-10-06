@@ -267,6 +267,7 @@ const schemas = {
     ),
     weightUpdatedAt: date('When the weight last changed - set by the server, admins only.'),
     lastLoginAt: date(),
+    previousLoginAt: date('The login before the last one - absent until the second login.'),
     photoUpdatedAt: date('Profile photo version - `/users/{id}/photo?v=`.'),
     retired: bool('Archived ("deleted") user.'),
     wantsEmailNotifications: bool('Gets e-mails from the app.'),
@@ -3119,7 +3120,7 @@ const paths = {
       tag: T.songs,
       summary: 'The table of contents',
       description:
-        'Every song in the book’s order - by title, the Hungarian alphabet’s way - without the lyrics. Every song there is: the book’s own, and the ones other users added beside it - each says which it is (`inBook`), whose (`ownerName`) and whether the caller may change it (`canEdit`). The top-level `canEdit`: the caller is the book’s keeper (the role manager), who may change every song. Adding a song is open to everyone logged in.',
+        'Every song in the book’s order - by title, the Hungarian alphabet’s way - without the lyrics. Asking for it is a visit to the songbook: the first time after 12 hours without one begins a new visit, and each song says whether it is new to the caller since the visit before (`isNew`) - on someone’s first visit nothing is. Every song there is: the book’s own, and the ones other users added beside it - each says which it is (`inBook`), whose (`ownerName`) and whether the caller may change it (`canEdit`). The top-level `canEdit`: the caller is the book’s keeper (the role manager), who may change every song. Adding a song is open to everyone logged in.',
       data: obj({
         songs: arrayOf(
           obj({
@@ -3129,6 +3130,9 @@ const paths = {
             slug: str('The song’s address - see GET /songs/{slug}.'),
             key: str('The key set by hand ("C", "am") - empty if none. See Song.'),
             detectedKey: str('The key the song’s chords say - see Song.'),
+            isNew: bool(
+              'New to the caller: someone else added it since the caller’s visit to the songbook before this one began.',
+            ),
           }),
         ),
         canEdit: bool(

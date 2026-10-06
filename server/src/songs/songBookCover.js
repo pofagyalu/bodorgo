@@ -130,11 +130,11 @@ export function drawCover(doc, { count, diagrams, lastAdded }) {
   });
 
   const titleY = height * 0.3;
-  centred(doc, 'DALOSKÖNYV', titleY, {
-    font: 'Heading',
-    size: 46 * unit,
+  // The title in the site's menu letters (the 'Title' font).
+  centred(doc, 'Daloskönyv', titleY - 12 * unit, {
+    font: 'Title',
+    size: 52 * unit,
     color: LOGO.darkGreen,
-    characterSpacing: 4 * unit,
   });
   // A short rule with a dot in its middle.
   const ruleY = titleY + 68 * unit;

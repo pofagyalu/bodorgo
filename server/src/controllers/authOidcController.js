@@ -132,6 +132,7 @@ export const callback = async (req, res, next) => {
     user.email = claims.email;
     user.name = claims.name || claims.preferred_username || claims.email;
     user.emailVerified = !!claims.email_verified;
+    user.previousLoginAt = user.lastLoginAt;
     user.lastLoginAt = new Date();
     if (owner) {
       user.role = 'admin';
@@ -281,6 +282,7 @@ export const localLogin = async (req, res, next) => {
   if (user.isNew) logger.info(`Created the role manager's account (${user.email})`);
   user.role = 'admin';
   user.canManageRoles = true;
+  user.previousLoginAt = user.lastLoginAt;
   user.lastLoginAt = new Date();
   await user.save({ validateModifiedOnly: true });
 

@@ -102,6 +102,20 @@ const userSchema = new Schema(
     lastLoginAt: {
       type: Date,
     },
+    // The login before the last one (lastLoginAt as it was until then) -
+    // so it is known how long someone stayed away.
+    previousLoginAt: {
+      type: Date,
+    },
+    // The songbook's visits (songController.js's newSongsSince): when this
+    // one began, and when the one before it did - a song added since that
+    // one is new to them.
+    songsSeenAt: {
+      type: Date,
+    },
+    songsSeenBefore: {
+      type: Date,
+    },
     // Self-service opt-out (see profile's toggle) - defaults to true ("yes,
     // send me email notifications") so this only matters for someone who's
     // actively turned it off. Also gates the admin's letters to a tour's

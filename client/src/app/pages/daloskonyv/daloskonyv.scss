@@ -919,6 +919,22 @@ $line: #e4eae7;
   margin-left: auto;
 }
 
+// "Új": a song someone added since one's visit before this one.
+.new-tag {
+  padding: 0.1rem 0.5rem;
+  border-radius: 10rem;
+  background: #f40e0d;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.song-list a.active .new-tag {
+  background: #fff;
+  color: #f40e0d;
+}
+
 // "Melinda": a song someone added beside the book - theirs, not the
 // Daloskönyv's own.
 .owner-tag {
