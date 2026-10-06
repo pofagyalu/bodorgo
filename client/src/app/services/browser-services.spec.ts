@@ -346,6 +346,21 @@ describe('MusicPlayerService', () => {
     expect(TestBed.inject(MusicPlayerService).volume()).toBe(0.6);
   });
 
+  it('where the page cannot set the volume (iPhone, iPad): full, and no slider', () => {
+    expect(service.canSetVolume).toBe(true);
+
+    // An iPhone's <audio>: whatever is set, it stays 1.
+    localStorage.setItem('bodorgo-music-volume', '0.3');
+    vi.spyOn(HTMLMediaElement.prototype, 'volume', 'get').mockReturnValue(1);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [httpTesting()] });
+    const onIphone = TestBed.inject(MusicPlayerService);
+    expect(onIphone.canSetVolume).toBe(false);
+    expect(onIphone.volume()).toBe(1);
+    onIphone.toggleMute();
+    expect(onIphone.muted()).toBe(true);
+  });
+
   it('keeps the volume between 0 and 1, and zero counts as muted', () => {
     service.setVolume(3);
     expect(service.volume()).toBe(1);

@@ -100,19 +100,32 @@
   }
 }
 
-<!-- 🔊 in the pill: a small slider drops down under it. -->
+<!-- 🔊 in the pill: a small slider drops down under it. Where the page
+     can't set the volume (iPhone, iPad) the button mutes instead. -->
 <ng-template #volumeButton>
   <span class="vol">
-    <button
-      type="button"
-      class="skip"
-      [title]="'Hangerő'"
-      aria-label="Hangerő"
-      [attr.aria-expanded]="volumeOpen()"
-      (click)="volumeOpen.set(!volumeOpen())"
-    >
-      <mat-icon>{{ volumeIcon() }}</mat-icon>
-    </button>
+    @if (music.canSetVolume) {
+      <button
+        type="button"
+        class="skip"
+        [title]="'Hangerő'"
+        aria-label="Hangerő"
+        [attr.aria-expanded]="volumeOpen()"
+        (click)="volumeOpen.set(!volumeOpen())"
+      >
+        <mat-icon>{{ volumeIcon() }}</mat-icon>
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="skip"
+        [title]="music.muted() ? 'Hang be' : 'Némítás'"
+        [attr.aria-label]="music.muted() ? 'Hang be' : 'Némítás'"
+        (click)="music.toggleMute()"
+      >
+        <mat-icon>{{ volumeIcon() }}</mat-icon>
+      </button>
+    }
     @if (volumeOpen()) {
       <span class="vol-pop">
         <ng-container *ngTemplateOutlet="volumeRow" />
@@ -121,7 +134,8 @@
   </span>
 </ng-template>
 
-<!-- Mute + the slider - in the pill's pop-up and in the phone's panel. -->
+<!-- Mute + the slider - in the pill's pop-up and in the phone's panel. No
+     slider where the page can't set the volume (iPhone, iPad). -->
 <ng-template #volumeRow>
   <button
     type="button"
@@ -132,13 +146,15 @@
   >
     <mat-icon>{{ volumeIcon() }}</mat-icon>
   </button>
-  <input
-    type="range"
-    min="0"
-    max="1"
-    step="0.01"
-    [value]="music.muted() ? 0 : music.volume()"
-    (input)="onVolume($event)"
-    aria-label="Hangerő"
-  />
+  @if (music.canSetVolume) {
+    <input
+      type="range"
+      min="0"
+      max="1"
+      step="0.01"
+      [value]="music.muted() ? 0 : music.volume()"
+      (input)="onVolume($event)"
+      aria-label="Hangerő"
+    />
+  }
 </ng-template>

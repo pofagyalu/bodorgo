@@ -142,16 +142,19 @@
               : 'volume_up'
         }}</mat-icon>
       </button>
-      <input
-        type="range"
-        min="0"
-        max="1"
-        step="0.01"
-        [value]="music.muted() ? 0 : music.volume()"
-        (input)="onVolume($event)"
-        aria-label="Hangerő"
-        [style.--fill.%]="(music.muted() ? 0 : music.volume()) * 100"
-      />
+      <!-- Not on an iPhone or iPad: there only the device's buttons set it. -->
+      @if (music.canSetVolume) {
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          [value]="music.muted() ? 0 : music.volume()"
+          (input)="onVolume($event)"
+          aria-label="Hangerő"
+          [style.--fill.%]="(music.muted() ? 0 : music.volume()) * 100"
+        />
+      }
     </div>
   </section>
 
