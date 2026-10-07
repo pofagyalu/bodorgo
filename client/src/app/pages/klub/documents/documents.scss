@@ -141,6 +141,11 @@ button {
   display: none;
 }
 
+// The categories as tabs: a phone's only (below).
+.category-tabs {
+  display: none;
+}
+
 // Wide enough that the year has its place between the two round buttons
 // at a card's foot. A phone has two in a row (below).
 .document-grid {
@@ -157,6 +162,28 @@ button {
 
   .panel {
     padding: 1rem;
+  }
+
+  // No heading on a phone: the page starts with the categories' tabs. Only
+  // its text goes - the admin's + is in there too (the floating button).
+  .heading {
+    margin: 0;
+  }
+
+  .heading > div {
+    display: none;
+  }
+
+  // One category at a time, picked on the tabs - which say its name and
+  // how many it has, so the panel's own title line is left out.
+  .category-tabs {
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .document-group--other,
+  .panel-title {
+    display: none;
   }
 
   // Two in a row, each half the screen.

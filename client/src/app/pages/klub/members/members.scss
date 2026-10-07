@@ -654,13 +654,8 @@ button {
     flex-direction: column;
   }
 
-  // The tabs come right under the title - the describing sentence is left
-  // out, so the list starts sooner.
+  // No heading on a phone: the page starts with the tabs.
   .heading {
-    margin-bottom: 0.25rem;
-  }
-
-  .heading-text {
     display: none;
   }
 

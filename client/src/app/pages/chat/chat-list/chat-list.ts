@@ -25,7 +25,7 @@ const fullDate = new Intl.DateTimeFormat('hu-HU', {
   day: '2-digit',
 });
 
-// The phone's first Kotyogó screen: every chat as a list - "Dumák", a
+// The phone's first Kotyogó screen: every chat as a list - "Kotyogó", a
 // search, then three groups under each other: the club's own room
 // (Bódorgók), the tours whose chat is open (upcoming, or over for no more
 // than two weeks), and the archives - the past tours that were chatted in. Each line: the tour's

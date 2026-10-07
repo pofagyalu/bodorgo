@@ -120,8 +120,17 @@
 }
 
 @media (max-width: 768px) {
+  // Leaflet's popup sits in a zero-width pane, so a row that is merely
+  // allowed to wrap shrinks to its longest word and breaks at every space.
+  // max-content keeps each tour on one line, and only a title longer than
+  // the cap (the map's own width, roughly) wraps.
+  ::ng-deep .tour-popup-list {
+    width: max-content;
+    max-width: min(20rem, calc(100vw - 4rem));
+  }
+
   ::ng-deep .tour-popup-link {
-    // Bigger tap targets on a phone, and long titles may wrap.
+    // Bigger tap targets on a phone.
     padding: 0.55rem 0.6rem;
     white-space: normal;
   }

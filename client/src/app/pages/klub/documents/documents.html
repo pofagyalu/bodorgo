@@ -24,8 +24,21 @@
   } @else if (!groupedDocuments().length) {
     <p class="empty-note">Még nincs feltöltött dokumentum.</p>
   } @else {
+    <!-- Phone only: the categories as tabs (components/tab-strip), one
+         category on the screen at a time. A wide screen has them all under
+         each other. -->
+    <app-tab-strip
+      class="category-tabs"
+      label="Kategória"
+      [options]="categoryTabs()"
+      [value]="shownCategory()"
+      (valueChange)="activeCategory.set($event)"
+    />
     @for (group of groupedDocuments(); track group.category) {
-      <section class="panel document-group">
+      <section
+        class="panel document-group"
+        [class.document-group--other]="group.category !== shownCategory()"
+      >
         <div class="panel-title">
           <h2>{{ group.category }}</h2>
           <span>{{ group.documents.length + (group.songbook ? 1 : 0) }} dokumentum</span>

@@ -9,10 +9,11 @@ import {
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { BookDiagrams, SongService } from '../../../services/song';
+import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
 
 @Component({
   selector: 'app-klub-documents',
-  imports: [MatIconModule],
+  imports: [MatIconModule, TabStrip],
   templateUrl: './documents.html',
   styleUrl: './documents.scss',
 })
@@ -45,6 +46,24 @@ export class Documents implements OnInit {
       }))
       .filter((g) => g.documents.length > 0 || g.songbook);
   });
+
+  // A phone shows one category at a time, picked on its tabs (a wide
+  // screen all of them, without tabs - documents.scss). The first one until
+  // another is picked, and again if the picked one's last document is gone.
+  activeCategory = signal<string>(DOCUMENT_CATEGORIES[0]);
+  shownCategory = computed(() => {
+    const groups = this.groupedDocuments();
+    return groups.some((g) => g.category === this.activeCategory())
+      ? this.activeCategory()
+      : (groups[0]?.category ?? '');
+  });
+  categoryTabs = computed<TabOption[]>(() =>
+    this.groupedDocuments().map((g) => ({
+      value: g.category,
+      label: g.category,
+      count: g.documents.length + (g.songbook ? 1 : 0),
+    })),
+  );
 
   // The Daloskönyv (pages/daloskonyv) as a PDF - not an uploaded file: the
   // server draws it from the songs as they are now. With whose chord
@@ -157,6 +176,8 @@ export class Documents implements OnInit {
     this.documentService.upload(name, this.formCategory(), year, file).subscribe({
       next: (res) => {
         this.documents.update((docs) => [...docs, res.data.document]);
+        // On a phone: to the tab the new document is on.
+        this.activeCategory.set(res.data.document.category);
         this.uploading.set(false);
         this.showUpload.set(false);
       },
