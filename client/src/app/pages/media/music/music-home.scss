@@ -295,6 +295,12 @@
     padding: 1.5rem 1rem 3rem;
   }
 
+  // No heading on a phone: the page starts with the playlists (the Média
+  // menu above them says where we are).
+  .heading {
+    display: none;
+  }
+
   .cover {
     width: 5rem;
     height: 5rem;

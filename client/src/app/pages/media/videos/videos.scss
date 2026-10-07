@@ -33,13 +33,9 @@ button {
 }
 
 @media (max-width: 580px) and (hover: none) {
-  // The tabs come right under the title, so the describing sentence is
-  // left out here.
-  .heading {
-    margin-bottom: 0.25rem;
-  }
-
-  .heading-text {
+  // No heading on a phone: the page starts with the category tabs (the
+  // Média menu above them says where we are).
+  .content > .heading {
     display: none;
   }
 

@@ -2432,7 +2432,7 @@ const paths = {
       role: 'admin',
       summary: 'Send invitations',
       description:
-        'Each person gets a new single-use Authentik invitation (their e-mail and name pre-filled; valid for 30 days) and an e-mail with their own link; a previous link of theirs stops working. Either `userIds` (one person - a test, a resend) or `group`: `members` (club members and admins) / `others` (guests) - a batch only takes those not invited yet. Someone who has logged in is never invited. One failure does not stop the others; it is listed by name.',
+        'Each person gets a new single-use Authentik invitation (their e-mail and name pre-filled; valid for 30 days) and an e-mail with their own link; a previous link of theirs stops working. Either `userIds` (one person - a test, a resend) or `group`: `members` (club members and admins) / `others` (guests) - a batch only takes those not invited yet. Someone who has logged in is never invited. One failure does not stop the others; it is listed by name. While the server has the install guide (`assets/guides/bodorgo-telepites.pdf`: the app on a phone’s home screen, Android and iPhone), it is attached and the e-mail mentions it.',
       body: obj({
         userIds: arrayOf(id()),
         group: str('A batch.', { enum: ['members', 'others'] }),
@@ -2462,7 +2462,7 @@ const paths = {
       role: 'admin',
       summary: 'Send me a test invitation e-mail',
       description:
-        'The invitation e-mail as it will look - with the given (unsaved) intro, or the saved one - to the admin themselves, with a sample link that does not work. No invitation is created.',
+        'The invitation e-mail as it will look - with the given (unsaved) intro, or the saved one - to the admin themselves, with a sample link that does not work, and the install guide attached like a real one. No invitation is created.',
       body: obj({ intro: str('Optional: the text being edited.') }),
       data: obj({ sentTo: str() }),
       errors: [400],
