@@ -341,10 +341,51 @@ const tourSchema = new Schema(
         tempDayC: Number,
         tempNightC: Number,
         windSpeedKmh: Number,
+        // 0-100, only while it's a forecast (the archive has no such
+        // figure) and only where the provider gives one.
+        rainChance: Number,
         isFinal: { type: Boolean, default: false },
         fetchedAt: Date,
       },
     ],
+    // "Hogy készüljünk az időjárásra?" - one mood for the whole tour and what to pack
+    // for it (see utils/weatherOutlook.js), with its texts, so the tour
+    // page, the tour list's pill and the Programfüzet all show the same.
+    // Only exists once every day of the tour has a forecast; rebuilt with
+    // the forecast until the start date, then frozen for good - while
+    // dailyWeather above moves on to what the weather really was, this
+    // keeps what was promised. Never made up for a tour that started
+    // without one.
+    weatherOutlook: {
+      type: new mongoose.Schema(
+        {
+          score: Number,
+          tier: { type: String, enum: ['perfect', 'great', 'mixed', 'gloomy', 'rough'] },
+          tag: String,
+          word: String,
+          headline: String,
+          lines: [String],
+          note: String,
+          pack: [{ _id: false, icon: String, name: String, why: String }],
+          days: [
+            {
+              _id: false,
+              day: Number,
+              condition: String,
+              tempDayC: Number,
+              tempNightC: Number,
+              windSpeedKmh: Number,
+              rainChance: Number,
+              score: Number,
+            },
+          ],
+          frozen: { type: Boolean, default: false },
+          updatedAt: Date,
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     attachments: [String],
     // No longer required at creation time - a brand new tour is created
     // first (needs a real _id/order before a cover can be named after
@@ -466,6 +507,12 @@ tourSchema.pre('save', function () {
     this.isModified('location.coordinates')
   ) {
     this.dailyWeather = [];
+  }
+  // The outlook (weatherOutlook) of a tour that hasn't started is rebuilt
+  // from the fresh forecast anyway; a frozen one only goes when the tour
+  // itself moves to other days.
+  if (this.isModified('startDate') || this.isModified('duration')) {
+    this.weatherOutlook = undefined;
   }
 });
 

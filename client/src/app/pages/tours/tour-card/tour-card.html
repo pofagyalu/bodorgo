@@ -16,6 +16,15 @@
       }
     </div>
 
+    <!-- The weather outlook's mood, once the whole tour has a forecast -
+         until the tour is over. -->
+    @if (outlookPill(); as pill) {
+      <div class="card__weather" [class.card__weather--early]="pill.early" [title]="pill.tag">
+        <img class="card__weather-badge" [src]="pill.badge" alt="" />
+        <span>{{ pill.word }}</span>
+      </div>
+    }
+
     <div class="card__badge">
       {{ tour().order === 1 ? 'ELSŐ' : tour().order + '.' }}
     </div>

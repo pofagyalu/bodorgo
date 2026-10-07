@@ -224,13 +224,47 @@ const schemas = {
       houses: arrayOf(ref('House')),
       finalized: bool('Szobabeosztás véglegesítve.'),
     }),
-    dailyWeather: arrayOf({ type: 'object', description: 'Forecast per day (Open-Meteo).' }),
+    dailyWeather: arrayOf({
+      type: 'object',
+      description:
+        'Weather per day (Open-Meteo): `day`, `condition`, `tempDayC`, `tempNightC`, `windSpeedKmh`, `rainChance` (0-100, forecast only), `isFinal`. A forecast from at most 15 days before the day, asked for again at most every 6 hours; once the day is over, the recorded weather (`isFinal: true`), never changed again.',
+    }),
+    weatherOutlook: ref('WeatherOutlook'),
     extraDocuments: arrayOf(ref('TourDocument')),
     coverUpdatedAt: date('When the cover was uploaded - the cover URL carries it (`?v=`).'),
     secretTour: bool('Titkos túra - its details are hidden until it starts.'),
     createdAt: date(),
     updatedAt: date(),
   }),
+
+  WeatherOutlook: {
+    ...obj({
+      score: num('0-100: 70% the average of the days, 30% the worst day.'),
+      tier: str('The mood: `perfect`, `great`, `mixed`, `gloomy` or `rough`.'),
+      tag: str('The mood in words, e.g. "Napszemüveges idő".'),
+      word: str('The mood in one word (the tour card\'s pill, beside the index), e.g. "Álomszép".'),
+      headline: str('A headline for the mood - a different one each day.'),
+      lines: arrayOf(str('The weakest day, and the best day for the big outing.')),
+      note: str('Set while it is still an early guess (the start is more than 5 days off).'),
+      pack: arrayOf(
+        obj({
+          icon: str(
+            '`tshirt`, `sweater`, `jacket`, `beanie`, `umbrella`, `wind`, `sun` or `layers`.',
+          ),
+          name: str('What to pack.'),
+          why: str('The reason, from the extremes of the tour.'),
+        }),
+      ),
+      days: arrayOf({
+        type: 'object',
+        description: 'The forecast it was worked out from, per day, each with its own `score`.',
+      }),
+      frozen: bool('True from the start date: it no longer changes.'),
+      updatedAt: date(),
+    }),
+    description:
+      '"Hogy készüljünk az időjárásra?" - one mood for the whole tour and what to pack, texts included (Hungarian, not too serious). Absent until every day of the tour has a forecast (so from 15 days before its last day); follows the forecast until the start date, then stays as it was for good. A tour that started without one never gets one. The numbers behind it: `server/src/utils/weatherOutlookSettings.js`.',
+  },
 
   ScheduleEvent: obj({
     _id: id(),
@@ -1114,7 +1148,7 @@ const paths = {
       tag: T.tours,
       summary: 'All tours',
       description:
-        'With attendee counts. Supports filtering/sorting/paging with query parameters (`sort`, `fields`, `page`, `limit`, `field[gte]=`…).',
+        "With attendee counts. Supports filtering/sorting/paging with query parameters (`sort`, `fields`, `page`, `limit`, `field[gte]=`…). Each tour carries its `weatherOutlook` once it has one (the tour card's pill) - the forecast of the tours starting within 15 days is brought up to date first, at most every 6 hours.",
       params: [
         query('sort', 'e.g. `-startDate`'),
         query('fields', 'Only these fields, comma-separated.'),
@@ -1209,7 +1243,7 @@ const paths = {
       tag: T.tours,
       summary: 'One tour',
       description:
-        "Everything the tour page shows - schedule, accommodation, weather, Extrák, attendees with their payment rows. Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
+        "Everything the tour page shows - schedule, accommodation, weather (`dailyWeather`, and `weatherOutlook` once every day has a forecast), Extrák, attendees with their payment rows. Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
       params: [tourId],
       data: obj({ tour: ref('Tour') }),
       errors: [404],
@@ -1488,7 +1522,8 @@ const paths = {
     get: op({
       tag: T.tourFiles,
       summary: 'Programfüzet PDF',
-      description: 'Generated fresh from the tour every time.',
+      description:
+        'Generated fresh from the tour every time. Carries the weather outlook (`weatherOutlook`) above the Programterv once the tour has one - as stored, the PDF asks for no forecast itself.',
       params: [tourId],
       response: file(['application/pdf'], 'The PDF.'),
       errors: [404],

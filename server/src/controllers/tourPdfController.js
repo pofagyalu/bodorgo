@@ -119,6 +119,100 @@ function weatherIconPath(condition) {
   return path.join(WEATHER_ICON_DIR, `${condition}.png`);
 }
 
+// The weather outlook's round mood badges, converted the same way (see
+// scripts/convertOutlookBadges.mjs).
+const OUTLOOK_BADGE_DIR = path.join(rootDir, 'assets', 'img', 'weather-outlook');
+
+// "Hogy készüljünk az időjárásra?" - the tour's weather outlook (tourModel.js's
+// weatherOutlook, the same texts as the tour page's panel): its mood and
+// headline, then what to pack. Nothing at all while the tour has none.
+function drawWeatherOutlook(doc, outlook, contentWidth) {
+  if (!outlook?.tier) return;
+
+  const BADGE = 30;
+  const textX = PAGE_MARGIN + BADGE + 10;
+  const textWidth = contentWidth - BADGE - 10;
+  const packWidth = contentWidth - 15;
+  const paragraphs = [...(outlook.lines || []), ...(outlook.note ? [outlook.note] : [])];
+  const packLine = (item) => `${item.name} – ${item.why}`;
+  const pack = outlook.pack || [];
+
+  // Measured up front, like a Programterv day: the box is drawn first.
+  doc.font('Heading').fontSize(13);
+  const headlineHeight = doc.heightOfString(outlook.headline, { width: textWidth });
+  doc.font('Body').fontSize(10);
+  const headHeight = Math.max(BADGE, 12 + headlineHeight);
+  const paragraphsHeight = paragraphs.reduce(
+    (sum, text) => sum + doc.heightOfString(text, { width: contentWidth }),
+    0,
+  );
+  const packHeight = pack.length
+    ? 20 +
+      pack.reduce((sum, item) => sum + doc.heightOfString(packLine(item), { width: packWidth }), 0)
+    : 0;
+  const blockHeight = headHeight + 6 + paragraphsHeight + packHeight;
+
+  const pageBottom = Math.min(doc.page.height - PAGE_MARGIN - 40, doc.page.maxY() - 10);
+  if (doc.y + 30 + blockHeight + 14 > pageBottom) doc.addPage();
+
+  doc
+    .font('Heading')
+    .fontSize(16)
+    .fillColor(COLORS.darkGreen)
+    .text(outlook.frozen ? 'Ezt ígérték' : 'Hogy készüljünk az időjárásra?', PAGE_MARGIN, doc.y, {
+      width: contentWidth,
+    });
+  doc.x = PAGE_MARGIN;
+  doc.moveDown(0.5);
+
+  const top = doc.y;
+  doc
+    .roundedRect(PAGE_MARGIN - 8, top - 8, contentWidth + 16, blockHeight + 14, 6)
+    .fillAndStroke('#f4f8f5', '#dde6e0');
+
+  const badgePath = path.join(OUTLOOK_BADGE_DIR, `${outlook.tier}.png`);
+  if (fs.existsSync(badgePath)) {
+    doc.image(badgePath, PAGE_MARGIN, top, { width: BADGE, height: BADGE });
+  }
+  doc.font('Body').fontSize(9).fillColor('#666').text(outlook.tag, textX, top, {
+    width: textWidth,
+  });
+  doc
+    .font('Heading')
+    .fontSize(13)
+    .fillColor('#333')
+    .text(outlook.headline, textX, top + 12, {
+      width: textWidth,
+    });
+
+  doc.y = top + headHeight + 6;
+  paragraphs.forEach((text, i) => {
+    const isNote = outlook.note && i === paragraphs.length - 1;
+    doc
+      .font(isNote ? 'Italic' : 'Body')
+      .fontSize(10)
+      .fillColor(isNote ? '#666' : '#000')
+      .text(text, PAGE_MARGIN, doc.y, { width: contentWidth });
+  });
+
+  if (pack.length) {
+    doc.y += 6;
+    doc.font('Heading').fontSize(11).fillColor('#333').text('Mit pakoljunk?', PAGE_MARGIN, doc.y, {
+      width: contentWidth,
+    });
+    doc.y = top + headHeight + 6 + paragraphsHeight + 20;
+    for (const item of pack) {
+      const y = doc.y;
+      doc.font('Heading').fontSize(10).fillColor('#000');
+      doc.text(item.name, PAGE_MARGIN + 15, y, { width: packWidth, continued: true });
+      doc.font('Body').fillColor('#444').text(` – ${item.why}`);
+    }
+  }
+
+  doc.x = PAGE_MARGIN;
+  doc.y = top + blockHeight + 14 + 12;
+}
+
 // The 14pt icon glyph's middle in line with the 11pt text's (measured on a
 // rendered page - it used to sit 2pt higher).
 const ICON_NUDGE = 0;
@@ -613,6 +707,8 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
   });
   doc.x = PAGE_MARGIN;
   doc.moveDown();
+
+  drawWeatherOutlook(doc, tour.weatherOutlook, contentWidth);
 
   // Programterv - same day-by-day grouping (and per-day weather, with its
   // condition icon) as tour-details.ts's dayGroups, reimplemented here

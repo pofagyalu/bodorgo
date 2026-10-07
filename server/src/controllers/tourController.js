@@ -13,6 +13,7 @@ import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import logger from '../logger.js';
 import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
+import { buildWeatherOutlook } from '../utils/weatherOutlook.js';
 import { resolveDistanceInfo } from '../utils/distance.js';
 import { tourDocuments } from './documentController.js';
 import { cleanOnSitePayment } from '../utils/onSitePayment.js';
@@ -37,23 +38,55 @@ function upsertDailyWeather(tour, day, data) {
   }
 }
 
+// The tour's weatherOutlook kept in step with its forecast - until the
+// start date. From that day on it is frozen as it last stood, and a tour
+// that reached its start without one never gets one. True if it changed.
+function refreshWeatherOutlook(tour, today) {
+  const start = new Date(tour.startDate);
+  start.setHours(0, 0, 0, 0);
+  const stored = tour.weatherOutlook;
+
+  if (today >= start) {
+    if (!stored || stored.frozen) return false;
+    stored.frozen = true;
+    stored.note = undefined; // no longer a guess that may still change
+    return true;
+  }
+
+  const fresh = buildWeatherOutlook(tour, today);
+  if (!fresh) {
+    if (!stored) return false;
+    tour.weatherOutlook = undefined;
+    return true;
+  }
+  if (stored) {
+    // What's stored, in the shape (and key order) of a fresh one.
+    const kept = stored.toObject();
+    const before = Object.fromEntries(Object.keys(fresh).map((key) => [key, kept[key] ?? null]));
+    if (JSON.stringify(before) === JSON.stringify(fresh)) return false;
+  }
+  tour.weatherOutlook = { ...fresh, frozen: false, updatedAt: new Date() };
+  return true;
+}
+
 // Called on every getTour - forecasts a tour's still-upcoming days
 // (throttled so repeat page views don't re-hit the API every time), and
 // once a day has passed, fetches the real recorded weather for it exactly
 // once and freezes it (isFinal) forever after. Never blocks the tour from
 // loading if Open-Meteo is unreachable - fetchForecast/fetchHistorical
-// already swallow their own errors and return null.
+// already swallow their own errors and return null. Then the tour's
+// outlook from those forecasts (refreshWeatherOutlook).
 async function refreshTourWeather(tour) {
-  const coords = tour.location?.coordinates;
-  if (coords?.length !== 2 || coords[0] == null || coords[1] == null) return;
-  const [lng, lat] = coords;
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const coords = tour.location?.coordinates;
+  const hasCoords = coords?.length === 2 && coords[0] != null && coords[1] != null;
+  const [lng, lat] = hasCoords ? coords : [];
+
   const tasks = [];
 
-  for (let day = 1; day <= tour.duration; day++) {
+  for (let day = 1; hasCoords && day <= tour.duration; day++) {
     const existing = tour.dailyWeather.find((w) => w.day === day);
     if (existing?.isFinal) continue; // frozen, never touch again
 
@@ -61,12 +94,20 @@ async function refreshTourWeather(tour) {
     date.setDate(date.getDate() + (day - 1));
     date.setHours(0, 0, 0, 0);
 
-    if (date <= today) {
+    // Only once the day is over - on the day itself the archive already
+    // answers, but with figures that are still partly a prediction, and
+    // freezing those would keep them forever.
+    if (date < today) {
       // One last fetch of what actually happened, then freeze forever.
       tasks.push(
         fetchHistorical(lat, lng, toDateStr(date)).then((result) => {
           if (result)
-            upsertDailyWeather(tour, day, { ...result, isFinal: true, fetchedAt: new Date() });
+            upsertDailyWeather(tour, day, {
+              ...result,
+              rainChance: undefined, // the forecast's, no part of what happened
+              isFinal: true,
+              fetchedAt: new Date(),
+            });
         }),
       );
       continue;
@@ -88,10 +129,28 @@ async function refreshTourWeather(tour) {
     );
   }
 
-  if (tasks.length) {
-    await Promise.all(tasks);
-    await tour.save();
-  }
+  await Promise.all(tasks);
+  const outlookChanged = refreshWeatherOutlook(tour, today);
+  if (tasks.length || outlookChanged) await tour.save();
+}
+
+// The tour list shows each coming tour's outlook too (the card's pill), so
+// the tours close enough to have a forecast are brought up to date before
+// it is read - the same refresh a visit to the tour's own page does, with
+// the same limit on how often the forecast is asked for.
+async function refreshUpcomingToursWeather() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const horizon = new Date(today);
+  horizon.setDate(horizon.getDate() + MAX_FORECAST_DAYS_AHEAD + 1);
+  const tours = await Tour.find({ startDate: { $gt: today, $lt: horizon } });
+  await Promise.all(
+    tours.map((tour) =>
+      refreshTourWeather(tour).catch((err) =>
+        logger.error(`Weather refresh failed for tour ${tour.order}: ${err.message}`),
+      ),
+    ),
+  );
 }
 
 // GET /tours/ticker - the only tour data a logged-out visitor ever gets:
@@ -156,6 +215,8 @@ export const getAlltours = async (req, res) => {
     ...req.query,
     ...(res.locals.queryOverride || {}),
   };
+
+  await refreshUpcomingToursWeather();
 
   // EXECUTE QUERY
   const features = new APIFeatures(Tour.find(), customQuery)

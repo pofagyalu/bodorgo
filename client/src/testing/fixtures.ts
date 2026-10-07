@@ -1,4 +1,23 @@
-import { AttendeePayment, Tour, TourResponse } from '../app/services/tour';
+import { AttendeePayment, Tour, TourResponse, WeatherOutlook } from '../app/services/tour';
+
+// A tour's weather outlook as the server sends it (mixed, two days out).
+export function makeWeatherOutlook(over: Partial<WeatherOutlook> = {}): WeatherOutlook {
+  return {
+    score: 63,
+    tier: 'mixed',
+    tag: 'Vegyesfelvágott',
+    word: 'Vegyes',
+    headline: 'Lesz itt minden, mint a búcsúban',
+    lines: ['A leggyengébb napnak a szombat ígérkezik: eső, 6 és 15 °C között.'],
+    note: null,
+    pack: [
+      { icon: 'sweater', name: 'Meleg pulóver', why: 'Estére 6 °C-ra hűl a levegő' },
+      { icon: 'umbrella', name: 'Esőkabát vagy esernyő', why: 'Egy napon várható csapadék' },
+    ],
+    frozen: false,
+    ...over,
+  };
+}
 
 /** A three-day camp next summer, with two programme items. */
 export function makeTour(over: Partial<Tour> = {}): Tour {

@@ -134,6 +134,29 @@ export interface DailyWeather {
   isFinal: boolean;
 }
 
+export type OutlookTier = 'perfect' | 'great' | 'mixed' | 'gloomy' | 'rough';
+
+export type OutlookPackIcon =
+  'tshirt' | 'sweater' | 'jacket' | 'beanie' | 'umbrella' | 'wind' | 'sun' | 'layers';
+
+// "Hogy készüljünk az időjárásra?" - one mood for the whole tour and what to pack for
+// it, worked out (texts included) by the server from the days' forecast
+// (utils/weatherOutlook.js). Only exists once every day has a forecast;
+// follows the forecast until the start date, then stays as it was
+// (frozen) for good.
+export interface WeatherOutlook {
+  score: number; // 0-100
+  tier: OutlookTier;
+  tag: string; // "Napszemüveges idő"
+  word: string; // the mood in one word (the card's pill, the index): "Álomszép"
+  headline: string;
+  lines: string[];
+  // Set while it's still an early guess.
+  note?: string | null;
+  pack: { icon: OutlookPackIcon; name: string; why: string }[];
+  frozen: boolean;
+}
+
 export interface Attendee {
   // A bare id fresh off signUp()'s own response (Reservation.create()
   // doesn't populate anything), but a populated object once loaded via
@@ -225,6 +248,8 @@ export interface Tour {
   // Only populated on the single-tour endpoint (getTour), not the list one.
   schedule?: ScheduleEntry[];
   dailyWeather?: DailyWeather[];
+  // Also on the list endpoint (the tour card's pill).
+  weatherOutlook?: WeatherOutlook;
   reservations?: Reservation[];
   // The inputs behind each attendee's accommodation breakdown (see
   // AttendeePayment below) - all optional, a tour with none of these set

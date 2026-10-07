@@ -1,0 +1,69 @@
+<!-- Hogy készüljünk az időjárásra?: the tour's weather outlook and what to pack -->
+@if (outlook(); as o) {
+  <section class="outlook-section">
+    <h2 class="section-heading">
+      {{ o.frozen ? 'Ezt ígérték' : 'Hogy készüljünk az időjárásra?' }}
+    </h2>
+
+    <div class="outlook" [class]="'outlook--' + o.tier">
+      <img class="outlook-scene" [src]="scenePath(o.tier)" [alt]="o.tag" />
+
+      <div class="outlook-summary">
+        <p class="outlook-tag">
+          <img class="outlook-badge" [src]="badgePath(o.tier)" alt="" />
+          {{ o.tag }}
+        </p>
+        <h3 class="outlook-headline">{{ o.headline }}</h3>
+        @for (line of o.lines; track line) {
+          <p class="outlook-line">{{ line }}</p>
+        }
+        @if (o.frozen) {
+          <p class="outlook-note">
+            Ez volt az indulás előtti utolsó jóslat. Hogy mi lett belőle, azt a Programterv mutatja.
+          </p>
+        } @else if (o.note) {
+          <p class="outlook-note">{{ o.note }}</p>
+        }
+
+        <div
+          class="meter"
+          [attr.aria-label]="'Bódorgó-index: ' + roundedScore() + ' a 100-ból, ' + o.word"
+        >
+          <p class="meter-score">
+            Bódorgó-index: {{ roundedScore() }} / 100 – <strong>{{ o.word }}</strong>
+          </p>
+          <div class="meter-bar">
+            @for (part of meter; track part.tier) {
+              <span [class]="'meter-part meter-part--' + part.tier" [style.width.%]="part.width">
+              </span>
+            }
+            <i class="meter-mark" [style.left.%]="o.score"></i>
+          </div>
+          <div class="meter-legend">
+            <span>Durva</span>
+            <span>Álomszép</span>
+          </div>
+        </div>
+      </div>
+
+      @if (o.pack.length) {
+        <div class="outlook-pack">
+          <h3 class="pack-heading">Mit pakoljunk?</h3>
+          <ul class="pack-list">
+            @for (item of o.pack; track item.icon) {
+              <li class="pack-item">
+                <span class="pack-icon">
+                  <i [style.mask-image]="packIconMask(item.icon)"></i>
+                </span>
+                <span class="pack-text">
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ item.why }}</small>
+                </span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  </section>
+}
