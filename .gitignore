@@ -27,3 +27,5 @@ chat-images/
 /COURSE_*.gpx
 /COURSE_*.html
 /server/erste_szerződés/
+# Screenshots the install guide is built from (server/scripts/buildInstallGuide.mjs).
+/install-screens/
