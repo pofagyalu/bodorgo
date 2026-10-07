@@ -77,7 +77,7 @@
         [disabled]="!canAnswer()"
         (click)="answered.emit(i)"
       >
-        <span class="shape" aria-hidden="true">{{ shapes[i] }}</span>
+        <app-quiz-shape class="shape" [shape]="shapes[i]" aria-hidden="true" />
         <span class="text">{{ a }}</span>
         @if (!open()) {
           <span class="count">

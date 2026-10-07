@@ -54,7 +54,13 @@
         <div class="q-head">
           <strong>{{ i + 1 }}. kérdés</strong>
           <span class="q-tools">
-            <button type="button" class="preview-btn" (click)="previewOpen.set(true)">
+            <button
+              type="button"
+              class="preview-btn"
+              [disabled]="!!previewWaitsFor()"
+              [title]="previewWaitsFor() ? 'Előbb töltsd ki a kérdést' : 'Előnézet'"
+              (click)="previewOpen.set(true)"
+            >
               <mat-icon>play_circle</mat-icon> Előnézet
             </button>
             <button
@@ -255,7 +261,9 @@
               <div class="answers">
                 @for (a of q.answers; track $index; let j = $index) {
                   <div class="answer a{{ j }}" [class.right]="q.correct === j">
-                    <span class="shape" aria-hidden="true">{{ shapes[j] }}</span>
+                    <span class="shape" aria-hidden="true"
+                      ><app-quiz-shape [shape]="shapes[j]"
+                    /></span>
                     <input
                       type="text"
                       maxlength="120"
@@ -312,16 +320,25 @@
       </div>
 
       <!-- The question as the players will get it - to be tried right here. -->
-      <aside class="preview-pane" [class.preview-pane--open]="previewOpen()">
-        <button
-          type="button"
-          class="preview-close"
-          aria-label="Előnézet bezárása"
-          (click)="previewOpen.set(false)"
-        >
-          <mat-icon>close</mat-icon>
+      <!-- (On a phone it's laid over the form: a tap on its dark ground, or
+           the button under it, leads back.) -->
+      <aside
+        class="preview-pane"
+        [class.preview-pane--open]="previewOpen()"
+        (click)="$event.target === $event.currentTarget && previewOpen.set(false)"
+      >
+        <!-- Only a whole question is worth trying. -->
+        @if (previewWaitsFor(); as waitsFor) {
+          <p class="preview-wait">
+            <mat-icon>visibility_off</mat-icon>
+            Az előnézet akkor jelenik meg, ha a kérdés kész. Most még: {{ waitsFor }}
+          </p>
+        } @else {
+          <app-quiz-preview [question]="q" [label]="i + 1 + ' / ' + questions().length" />
+        }
+        <button type="button" class="preview-back" (click)="previewOpen.set(false)">
+          <mat-icon>arrow_back</mat-icon> Vissza a szerkesztéshez
         </button>
-        <app-quiz-preview [question]="q" [label]="i + 1 + ' / ' + questions().length" />
       </aside>
     </div>
 

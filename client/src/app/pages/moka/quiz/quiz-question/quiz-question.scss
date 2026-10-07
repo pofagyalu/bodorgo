@@ -167,12 +167,9 @@
   --answer-edge: #1b6548;
 }
 
+// The answer's shape (quiz-shape: sized by its font-size).
 .shape {
-  flex: none;
-  width: 1.5rem;
-  font-size: 1.375rem;
-  line-height: 1;
-  text-align: center;
+  font-size: 1.5625rem;
 }
 
 .text {
@@ -303,6 +300,10 @@
     min-height: 6rem;
     font-size: 1.375rem;
     padding: 1rem 1.25rem;
+  }
+
+  .shape {
+    font-size: 2rem;
   }
 
   .answers--compact .answer {

@@ -906,6 +906,20 @@ describe('QuizEdit: the kinds of question', () => {
     page.select(1);
     void page.removeQuestion(1);
     expect(page.questions()).toHaveLength(2); // asked first: it has a text
+
+    // The preview is there only for a question that is whole: until then
+    // the phone's button is off, and its place says what is missing.
+    fixture.detectChanges();
+    const previewBtn = el.querySelector<HTMLButtonElement>('.preview-btn')!;
+    expect(page.previewWaitsFor()).toContain('legalább két válasz');
+    expect(previewBtn.disabled).toBe(true);
+    expect(el.querySelector('app-quiz-preview')).toBeNull();
+    expect(el.querySelector('.preview-wait')?.textContent).toContain('legalább két válasz');
+    page.setAnswer(1, 0, 'Igen');
+    page.setAnswer(1, 1, 'Nem');
+    fixture.detectChanges();
+    expect(page.previewWaitsFor()).toBeNull();
+    expect(previewBtn.disabled).toBe(false);
     expect(el.querySelector('app-quiz-preview')).not.toBeNull();
   });
 

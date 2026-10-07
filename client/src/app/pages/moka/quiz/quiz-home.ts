@@ -7,6 +7,7 @@ import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { errorMessage } from '../../../shared/errors';
 import { ANSWER_SHAPES, QuizGameSummary, QuizResult, QuizService } from '../../../services/quiz';
+import { QuizShape } from './quiz-shape/quiz-shape';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 const PIN_LENGTH = 6;
@@ -16,7 +17,7 @@ const PIN_LENGTH = 6;
 // who scored how much in which game) and every game played so far, the newest first, with its winners.
 @Component({
   selector: 'app-quiz-home',
-  imports: [RouterLink, DatePipe, MatIconModule, Avatar],
+  imports: [RouterLink, DatePipe, MatIconModule, Avatar, QuizShape],
   templateUrl: './quiz-home.html',
   styleUrl: './quiz-home.scss',
 })
