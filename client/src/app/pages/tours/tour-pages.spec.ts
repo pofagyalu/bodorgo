@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { API } from '../../../testing/http';
 import { fail, logIn, pageTesting, respond, settle } from '../../../testing/component';
-import { makeTour, tourResponse } from '../../../testing/fixtures';
+import { makeTour, makeWeatherOutlook, tourResponse } from '../../../testing/fixtures';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { AccommodationHouse, Tour, TourService } from '../../services/tour';
@@ -164,6 +164,34 @@ describe('TourCard', () => {
     expect(fixture.componentInstance.formattedStartDate()).toBe('2026. júl. 05.');
     expect(fixture.componentInstance.coverUrl()).toBe(`${API}/tours/t1/cover?v=v1`);
     expect(fixture.nativeElement.textContent).toContain('Mátra');
+    expect(fixture.nativeElement.querySelector('.card__weather')).toBeNull();
+  });
+
+  it('wears the weather outlook as a pill until the tour is over', () => {
+    setUp();
+    const fixture = TestBed.createComponent(TourCard);
+    const show = (tour: Tour) => {
+      fixture.componentRef.setInput('tour', tour);
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('.card__weather') as HTMLElement | null;
+    };
+
+    const pill = show(makeTour({ weatherOutlook: makeWeatherOutlook() }))!;
+    expect(pill.textContent).toContain('Vegyes');
+    expect(pill.title).toBe('Vegyesfelvágott');
+    expect(pill.querySelector('img')!.getAttribute('src')).toContain('badges/badge-mixed.svg');
+    expect(pill.classList).not.toContain('card__weather--early');
+
+    // Still an early guess: marked.
+    const early = show(makeTour({ weatherOutlook: makeWeatherOutlook({ note: 'Korai jóslat' }) }))!;
+    expect(early.classList).toContain('card__weather--early');
+
+    // A tour that has ended keeps its outlook on its own page only.
+    const past = makeTour({
+      startDate: '2023-05-01T08:00:00',
+      weatherOutlook: makeWeatherOutlook({ frozen: true }),
+    });
+    expect(show(past)).toBeNull();
   });
 });
 

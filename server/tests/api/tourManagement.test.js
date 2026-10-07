@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import {
   createAdmin,
@@ -74,6 +74,152 @@ describe('reading tours', () => {
     vi.mocked(fetchHistorical).mockClear();
     await request(app).get(`/tours/${past._id}`).set(asUser(member));
     expect(fetchHistorical).not.toHaveBeenCalled();
+  });
+
+  it('keeps the forecast on the day itself, freezes it the day after, asks nothing beyond 15 days', async () => {
+    vi.mocked(fetchForecast).mockClear().mockResolvedValue({
+      condition: 'clear',
+      tempDayC: 25,
+      tempNightC: 12,
+    });
+    vi.mocked(fetchHistorical).mockClear().mockResolvedValue({
+      condition: 'rain',
+      tempDayC: 15,
+      tempNightC: 8,
+    });
+    const midnight = (daysFromToday) => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + daysFromToday);
+      return d;
+    };
+    // Yesterday + today.
+    const running = await createTour({ startDate: midnight(-1), duration: 2 });
+    // The 15th and the 16th day ahead.
+    const far = await createTour({ startDate: midnight(15), duration: 2 });
+    const member = await createMember();
+    await request(app).get(`/tours/${running._id}`).set(asUser(member));
+    await request(app).get(`/tours/${far._id}`).set(asUser(member));
+
+    const byDay = (tour) => [...tour.dailyWeather].sort((a, b) => a.day - b.day);
+    const savedRunning = byDay(await Tour.findById(running._id));
+    expect(savedRunning).toHaveLength(2);
+    expect(savedRunning[0]).toMatchObject({ day: 1, condition: 'rain', isFinal: true });
+    expect(savedRunning[1]).toMatchObject({ day: 2, condition: 'clear', isFinal: false });
+    expect(fetchHistorical).toHaveBeenCalledTimes(1);
+
+    const savedFar = byDay(await Tour.findById(far._id));
+    expect(savedFar).toHaveLength(1);
+    expect(savedFar[0]).toMatchObject({ day: 1, isFinal: false });
+  });
+
+  describe('the weather outlook', () => {
+    const midnight = (daysFromToday) => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + daysFromToday);
+      return d;
+    };
+    const sunny = { condition: 'clear', tempDayC: 21, tempNightC: 13, windSpeedKmh: 8 };
+
+    beforeEach(() => {
+      vi.mocked(fetchForecast)
+        .mockClear()
+        .mockResolvedValue({ ...sunny, rainChance: 10 });
+      vi.mocked(fetchHistorical)
+        .mockClear()
+        .mockResolvedValue({ ...sunny, condition: 'rain' });
+    });
+
+    it('appears once every day has a forecast - on the tour and in the list', async () => {
+      const near = await createTour({ startDate: midnight(3), duration: 2 });
+      // Its last day is still beyond the forecast.
+      const far = await createTour({ startDate: midnight(14), duration: 3 });
+      const member = await createMember();
+
+      const list = await request(app).get('/tours').set(asUser(member));
+      const listed = (id) => list.body.data.tours.find((t) => t._id === String(id));
+      expect(listed(near._id).weatherOutlook).toMatchObject({
+        tier: 'perfect',
+        word: 'Álomszép',
+        frozen: false,
+      });
+      expect(listed(far._id).weatherOutlook).toBeUndefined();
+      expect((await Tour.findById(near._id)).dailyWeather[0].rainChance).toBe(10);
+
+      const res = await request(app).get(`/tours/${near._id}`).set(asUser(member));
+      expect(res.body.data.tour.weatherOutlook.pack.map((p) => p.icon)).toEqual(['tshirt']);
+      expect(res.body.data.tour.weatherOutlook.days).toHaveLength(2);
+      // Asked for once by the list, not again by the page.
+      expect(fetchForecast).toHaveBeenCalledTimes(2 + 2);
+
+      const farPage = await request(app).get(`/tours/${far._id}`).set(asUser(member));
+      expect(farPage.body.data.tour.weatherOutlook).toBeUndefined();
+    });
+
+    it('follows the forecast until the start date', async () => {
+      const tour = await createTour({ startDate: midnight(2), duration: 1 });
+      const member = await createMember();
+      await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      expect((await Tour.findById(tour._id)).weatherOutlook.tier).toBe('perfect');
+
+      // The next refresh brings a storm.
+      await Tour.updateOne(
+        { _id: tour._id },
+        { $set: { 'dailyWeather.0.fetchedAt': new Date(0) } },
+      );
+      vi.mocked(fetchForecast).mockResolvedValue({
+        condition: 'thunderstorm',
+        tempDayC: 6,
+        tempNightC: 1,
+        windSpeedKmh: 50,
+        rainChance: 100,
+      });
+      const res = await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      expect(res.body.data.tour.weatherOutlook).toMatchObject({ tier: 'rough', frozen: false });
+    });
+
+    it('freezes on the start date and never changes again', async () => {
+      const tour = await createTour({ startDate: midnight(1), duration: 2 });
+      const member = await createMember();
+      await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      const promised = (await Tour.findById(tour._id)).weatherOutlook.toObject();
+      expect(promised.frozen).toBe(false);
+
+      // The tour is now in its second day: day 1 gets its recorded weather.
+      await Tour.updateOne({ _id: tour._id }, { $set: { startDate: midnight(-1) } });
+      const res = await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      expect(res.body.data.tour.dailyWeather.find((w) => w.day === 1)).toMatchObject({
+        condition: 'rain',
+        isFinal: true,
+      });
+      expect(res.body.data.tour.weatherOutlook).toMatchObject({
+        frozen: true,
+        tier: promised.tier,
+        headline: promised.headline,
+        score: promised.score,
+      });
+      expect(res.body.data.tour.weatherOutlook.days[0].condition).toBe('clear');
+    });
+
+    it('is never made up for a tour that started without one', async () => {
+      const tour = await createTour({ startDate: midnight(0), duration: 2 });
+      const member = await createMember();
+      const res = await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      expect(res.body.data.tour.dailyWeather).toHaveLength(2);
+      expect(res.body.data.tour.weatherOutlook).toBeUndefined();
+    });
+
+    it('goes when the tour moves to other days', async () => {
+      const tour = await createTour({ startDate: midnight(1), duration: 1 });
+      const member = await createMember();
+      await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      const saved = await Tour.findById(tour._id);
+      expect(saved.weatherOutlook).toBeDefined();
+      saved.startDate = midnight(40);
+      await saved.save();
+      expect((await Tour.findById(tour._id)).weatherOutlook).toBeUndefined();
+    });
   });
 
   it('serves the last 3 tours, stats and the monthly plan to logged-in users', async () => {

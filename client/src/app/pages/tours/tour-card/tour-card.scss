@@ -64,6 +64,38 @@
   box-shadow: 0 0.3rem 0.7rem rgba(0, 0, 0, 0.3);
 }
 
+// The weather outlook's pill, in the cover's top right corner - the tour
+// number has the left one, the title the lower part.
+.card__weather {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.2rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #18262b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 0.15rem 0.5rem rgba(15, 30, 35, 0.25);
+}
+
+.card__weather--early {
+  background: rgba(255, 255, 255, 0.86);
+  outline: 1.5px dashed #6e7b88;
+  outline-offset: -1.5px;
+}
+
+.card__weather-badge {
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: none;
+}
+
 .heading {
   font-size: 1.6rem;
   font-weight: 300;

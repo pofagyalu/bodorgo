@@ -33,6 +33,7 @@ import { shuffledLogoColors } from '../../shared/logo-colors';
 import { formatDrivingDuration } from '../../shared/format';
 import { CalendarEvent, downloadIcs, googleCalendarUrl } from '../../shared/calendar-event';
 import { TourSchedule } from './tour-schedule/tour-schedule';
+import { TourWeatherOutlook } from './tour-weather-outlook/tour-weather-outlook';
 import { ReviewStars } from './review-stars/review-stars';
 import { VideoCard } from '../../shared/video-card/video-card';
 import { VideoPlayer } from '../../shared/video-player/video-player';
@@ -53,6 +54,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
     MatIconModule,
     RouterLink,
     TourSchedule,
+    TourWeatherOutlook,
     ReviewStars,
     AttendeeList,
     VideoCard,

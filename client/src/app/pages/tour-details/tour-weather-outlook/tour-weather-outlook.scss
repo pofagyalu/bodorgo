@@ -1,0 +1,238 @@
+// A tour's "Hogy készüljünk az időjárásra?" (tour-weather-outlook).
+:host {
+  display: block;
+}
+
+// One colour per mood - the score bar's stretches, and the panel's own
+// accent (--mood).
+$moods: (
+  perfect: #f2b33d,
+  great: #57a8db,
+  mixed: #8fa3af,
+  gloomy: #6e7b88,
+  rough: #44607e,
+);
+
+.outlook-section {
+  margin-bottom: 3rem;
+}
+
+// The same section heading as the tour page's other sections
+// (tour-details.scss's .section-heading) - each component styles its own.
+.section-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #eee;
+}
+
+// On a phone: the scene, the summary, the packing list, one under the
+// other.
+.outlook {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  background: #f7f7f7;
+  border-radius: 0.65rem;
+  overflow: hidden;
+}
+
+@each $tier, $color in $moods {
+  .outlook--#{$tier} {
+    --mood: #{$color};
+  }
+
+  .meter-part--#{$tier} {
+    background: $color;
+  }
+}
+
+.outlook-scene {
+  display: block;
+  width: 100%;
+  aspect-ratio: 640 / 280;
+  object-fit: cover;
+}
+
+.outlook-summary,
+.outlook-pack {
+  padding: 1.2rem 1.5rem;
+  min-width: 0;
+}
+
+.outlook-pack {
+  padding-top: 0.3rem;
+}
+
+.outlook-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #445a67;
+}
+
+.outlook-badge {
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: none;
+}
+
+.outlook-headline {
+  margin: 0 0 0.6rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #2e7d32;
+}
+
+.outlook-line {
+  margin: 0 0 0.25rem;
+  color: #555;
+}
+
+.outlook-note {
+  margin: 0.8rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-left: 3px dashed var(--mood);
+  border-radius: 0.5rem;
+  background: #fff;
+  font-size: 0.88rem;
+  color: #555;
+}
+
+// The score bar: the five moods side by side, a marker where the tour is.
+.meter {
+  margin-top: 1.2rem;
+}
+
+.meter-bar {
+  position: relative;
+  display: flex;
+  height: 0.6rem;
+}
+
+.meter-part:first-child {
+  border-radius: 0.4rem 0 0 0.4rem;
+}
+
+.meter-part:last-of-type {
+  border-radius: 0 0.4rem 0.4rem 0;
+}
+
+.meter-mark {
+  position: absolute;
+  top: -0.3rem;
+  width: 0.4rem;
+  height: 1.2rem;
+  margin-left: -0.2rem;
+  border-radius: 0.2rem;
+  background: #333;
+  box-shadow: 0 0 0 2px #f7f7f7;
+}
+
+.meter-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #777;
+}
+
+// Above the bar: the index and the word of the stretch it landed in.
+.meter-score {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #445a67;
+
+  strong {
+    font-weight: 800;
+    color: #333;
+  }
+}
+
+.pack-heading {
+  margin: 0 0 0.8rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.pack-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.pack-item {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.pack-icon {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.7rem;
+  background: #445a67;
+
+  // The line drawing itself, in white (see packIconMask).
+  i {
+    width: 1.4rem;
+    height: 1.4rem;
+    background: #fff;
+    mask: center / contain no-repeat;
+  }
+}
+
+.pack-text strong {
+  display: block;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #333;
+}
+
+.pack-text small {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+// Wider: the summary and the packing list side by side under the scene.
+@media (min-width: 640px) {
+  .outlook {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+
+  .outlook-scene {
+    grid-column: 1 / -1;
+  }
+
+  .outlook-pack {
+    padding-top: 1.2rem;
+  }
+}
+
+// Desktop: its own wide layout - the scene on the left at the panel's
+// full height, the summary and the packing list beside it.
+@media (min-width: 1024px) {
+  .outlook {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .outlook-scene {
+    grid-column: auto;
+    height: 100%;
+    min-height: 16rem;
+    aspect-ratio: auto;
+  }
+}

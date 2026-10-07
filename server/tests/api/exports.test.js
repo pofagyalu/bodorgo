@@ -1,3 +1,4 @@
+import fs from 'fs';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
@@ -91,6 +92,56 @@ describe('Programfüzet (tour PDF)', () => {
     expect(res.headers['content-disposition']).toContain(`${tour.order}-`);
     expect(res.body.subarray(0, 5).toString()).toBe('%PDF-');
     expect((await request(app).get(`/tours/${tour._id}/pdf`)).status).toBe(401);
+  });
+
+  it('carries the weather outlook once the tour has one', async () => {
+    const { tour, guest } = await richTour();
+    const pdf = async () => {
+      const res = await request(app)
+        .get(`/tours/${tour._id}/pdf`)
+        .set(asUser(guest))
+        .buffer(true)
+        .parse((r, cb) => {
+          const chunks = [];
+          r.on('data', (c) => chunks.push(c));
+          r.on('end', () => cb(null, Buffer.concat(chunks)));
+        });
+      expect(res.status).toBe(200);
+      return res.body;
+    };
+    const without = await pdf();
+
+    await Tour.updateOne(
+      { _id: tour._id },
+      {
+        weatherOutlook: {
+          score: 63,
+          tier: 'mixed',
+          tag: 'Vegyesfelvágott',
+          word: 'Vegyes',
+          headline: 'Lesz itt minden, mint a búcsúban',
+          lines: [
+            'A leggyengébb napnak a szombat ígérkezik: eső, 6 és 15 °C között.',
+            'A nagy túrát péntekre érdemes időzíteni.',
+          ],
+          note: 'Ez még korai jóslat: ilyenkor a meteorológusok is csak találgatnak, úgyhogy változhat.',
+          pack: [
+            { icon: 'sweater', name: 'Meleg pulóver', why: 'Estére 6 °C-ra hűl a levegő' },
+            {
+              icon: 'umbrella',
+              name: 'Esőkabát vagy esernyő',
+              why: 'Egy napon várható csapadék – nem vagyunk cukorból',
+            },
+          ],
+          frozen: false,
+        },
+      },
+    );
+    const withOutlook = await pdf();
+    // The badge picture and the texts make it a good deal bigger.
+    expect(withOutlook.length).toBeGreaterThan(without.length + 2000);
+    // To look at the result: OUTLOOK_PDF_OUT=some/file.pdf npx vitest run tests/api/exports.test.js
+    if (process.env.OUTLOOK_PDF_OUT) fs.writeFileSync(process.env.OUTLOOK_PDF_OUT, withOutlook);
   });
 
   it('adds a Szobabeosztás page only once the room allocation is finalized', async () => {

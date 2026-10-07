@@ -1,15 +1,16 @@
 import logger from '../logger.js';
 
 // Free, no API key needed, two endpoints from the same provider covering
-// both halves of what we need: a forecast (up to 16 days ahead - a real
-// meteorological limit, not a tier restriction, so nothing further out
-// than that is fetchable from any free service) and a historical archive
+// both halves of what we need: a forecast (16 days counting today, so up
+// to 15 days ahead - a real meteorological limit, not a tier restriction,
+// so nothing further out than that is fetchable from any free service -
+// asking for the 16th day ahead is refused) and a historical archive
 // of what actually happened (ERA5 reanalysis data, not just an old
 // forecast) for anything already in the past.
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HISTORICAL_URL = 'https://archive-api.open-meteo.com/v1/archive';
 
-export const MAX_FORECAST_DAYS_AHEAD = 16;
+export const MAX_FORECAST_DAYS_AHEAD = 15;
 
 // Thresholds for classifyDay below.
 const RAIN_MM = 3; // this much rain in a day is a rainy day, however sunny
@@ -55,7 +56,11 @@ export function classifyDay({ code, sunshineS, daylightS, precipitationMm, snowf
   return 'cloudy';
 }
 
-async function fetchDailyWeather(baseUrl, lat, lng, dateStr) {
+// The chance of rain only exists in a forecast - the archive records what
+// fell, and refuses the request outright if asked for it.
+const FORECAST_ONLY = ',precipitation_probability_max';
+
+async function fetchDailyWeather(baseUrl, lat, lng, dateStr, extraDaily = '') {
   const url = new URL(baseUrl);
   url.searchParams.set('latitude', lat);
   url.searchParams.set('longitude', lng);
@@ -64,7 +69,8 @@ async function fetchDailyWeather(baseUrl, lat, lng, dateStr) {
   url.searchParams.set(
     'daily',
     'weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max,' +
-      'sunshine_duration,daylight_duration,precipitation_sum,snowfall_sum',
+      'sunshine_duration,daylight_duration,precipitation_sum,snowfall_sum' +
+      extraDaily,
   );
   url.searchParams.set('timezone', 'auto');
 
@@ -90,12 +96,15 @@ async function fetchDailyWeather(baseUrl, lat, lng, dateStr) {
     tempDayC: Math.round(daily.temperature_2m_max[0]),
     tempNightC: Math.round(daily.temperature_2m_min[0]),
     windSpeedKmh: Math.round(daily.windspeed_10m_max[0]),
+    // 0-100, forecast only (see FORECAST_ONLY) - null in the last days of
+    // the 15, where the provider has no figure yet.
+    ...(extraDaily && { rainChance: daily.precipitation_probability_max?.[0] ?? null }),
   };
 }
 
 export async function fetchForecast(lat, lng, dateStr) {
   try {
-    return await fetchDailyWeather(FORECAST_URL, lat, lng, dateStr);
+    return await fetchDailyWeather(FORECAST_URL, lat, lng, dateStr, FORECAST_ONLY);
   } catch (err) {
     logger.error(`Weather forecast fetch failed for ${dateStr}: ${err.message}`);
     return null;
