@@ -26,6 +26,7 @@ import {
 } from '../../../../services/quiz';
 import { Tour, TourService } from '../../../../services/tour';
 import { QuizMap } from '../quiz-map/quiz-map';
+import { QuizShape } from '../quiz-shape/quiz-shape';
 import { PickedTourPhoto, QuizPhotoPicker } from './photo-picker/photo-picker';
 import { QuizPreview } from './quiz-preview/quiz-preview';
 import { PickedSong, QuizSongPicker } from './song-picker/song-picker';
@@ -93,6 +94,21 @@ const TYPES: { value: QuizQuestionType; label: string; icon: string; hint: strin
     },
   ];
 
+// What a question still lacks to be whole, in words - null: nothing.
+function missingOf(q: QuizQuestion): string | null {
+  if (hasPicture(q.type) && !q.image) return 'válassz hozzá képet.';
+  if (q.type === 'song' && !q.song) return 'válassz hozzá dalt.';
+  if (!q.text.trim()) return 'írd be a kérdést.';
+  if (q.type === 'map') {
+    if (!q.place) return 'koppints a térképen a helyes helyre.';
+    if (!onMap(q.place, q.bounds ?? DEFAULT_BOUNDS)) return 'a hely nincs a térkép látható részén.';
+  } else if (hasAnswers(q.type)) {
+    if (filled(q.answers) < MIN_ANSWERS) return 'legalább két válasz kell.';
+    if (!q.answers[q.correct].trim()) return 'a helyesnek jelölt válasz üres.';
+  }
+  return null;
+}
+
 // Which kinds are answered by picking one of up to four written answers.
 const hasAnswers = (type: QuizQuestionType) => type !== 'truefalse' && type !== 'map';
 
@@ -115,6 +131,7 @@ const hasAnswers = (type: QuizQuestionType) => type !== 'truefalse' && type !== 
     QuizSongPicker,
     QuizMap,
     QuizPreview,
+    QuizShape,
   ],
   templateUrl: './quiz-edit.html',
   styleUrl: './quiz-edit.scss',
@@ -161,22 +178,15 @@ export class QuizEdit {
   problem = computed<string | null>(() => {
     if (!this.title().trim()) return 'Adj címet a kvíznek.';
     for (const [i, q] of this.questions().entries()) {
-      const nr = `${i + 1}. kérdés`;
-      if (hasPicture(q.type) && !q.image) return `${nr}: válassz hozzá képet.`;
-      if (q.type === 'song' && !q.song) return `${nr}: válassz hozzá dalt.`;
-      if (!q.text.trim()) return `${nr}: írd be a kérdést.`;
-      if (q.type === 'map') {
-        if (!q.place) return `${nr}: koppints a térképen a helyes helyre.`;
-        if (!onMap(q.place, q.bounds ?? DEFAULT_BOUNDS)) {
-          return `${nr}: a hely nincs a térkép látható részén.`;
-        }
-      } else if (hasAnswers(q.type)) {
-        if (filled(q.answers) < MIN_ANSWERS) return `${nr}: legalább két válasz kell.`;
-        if (!q.answers[q.correct].trim()) return `${nr}: a helyesnek jelölt válasz üres.`;
-      }
+      const missing = missingOf(q);
+      if (missing) return `${i + 1}. kérdés: ${missing}`;
     }
     return null;
   });
+
+  // What the open question still lacks - until then there's nothing worth
+  // trying in its preview.
+  previewWaitsFor = computed(() => missingOf(this.questions()[this.selected()]));
 
   constructor() {
     if (!this.id) return;

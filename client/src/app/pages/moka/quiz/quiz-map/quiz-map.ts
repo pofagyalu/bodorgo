@@ -90,7 +90,9 @@ export class QuizMap implements OnDestroy {
   // said it shows: only a change from outside moves it.
   private shown = '';
   private fitting = false;
-  private onResize = () => this.fit(this.bounds());
+  // Watches the map's own box: Leaflet draws for the size it was last told.
+  private sizeWatch: ResizeObserver | null = null;
+  private hasSize = false;
 
   constructor() {
     // (After the render: the container must be on the page before Leaflet
@@ -99,8 +101,26 @@ export class QuizMap implements OnDestroy {
   }
 
   ngOnDestroy() {
-    window.removeEventListener('resize', this.onResize);
+    this.sizeWatch?.disconnect();
     this.map?.remove();
+  }
+
+  // The map's box changed: it came into view (the editor's preview on a
+  // phone is made while still hidden - with no size at all), the phone was
+  // turned, the window resized. In a game the chosen part is fitted again;
+  // in the editor the view stays, only redrawn for the new size - unless
+  // it had no size before, then it's fitted for the first time.
+  private resized() {
+    const box = this.container().nativeElement;
+    if (!this.map || !box.offsetWidth || !box.offsetHeight) return;
+    if (this.locked() || !this.hasSize) {
+      this.fit(this.bounds());
+    } else {
+      this.fitting = true;
+      this.map.invalidateSize();
+      this.fitting = false;
+    }
+    this.hasSize = true;
   }
 
   private create() {
@@ -162,10 +182,11 @@ export class QuizMap implements OnDestroy {
     map.on('click', (e: L.LeafletMouseEvent) => {
       if (this.pickable()) this.picked.emit({ lat: e.latlng.lat, lng: e.latlng.lng });
     });
-    if (locked) {
-      // Another size of screen (a phone turned): the same part again.
-      window.addEventListener('resize', this.onResize);
-    } else {
+    if (typeof ResizeObserver !== 'undefined') {
+      this.sizeWatch = new ResizeObserver(() => this.resized());
+      this.sizeWatch.observe(this.container().nativeElement);
+    }
+    if (!locked) {
       // The author moved or zoomed it: that's what the players will see.
       map.on('moveend', () => {
         if (this.fitting) return;

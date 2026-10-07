@@ -14,9 +14,10 @@ export const MAX_QUESTIONS = 50;
 export const TIME_LIMITS = [10, 20, 30, 60];
 export const DEFAULT_TIME_LIMIT = 20;
 
-// Each answer has its own colour and shape, wherever it's shown (the
-// pages' .a0 - .a3).
-export const ANSWER_SHAPES = ['▲', '◆', '●', '■'];
+// Each answer has its own colour (the pages' .a0 - .a3) and shape (drawn
+// by pages/moka/quiz/quiz-shape), wherever it's shown.
+export const ANSWER_SHAPES = ['triangle', 'diamond', 'circle', 'square'] as const;
+export type AnswerShape = (typeof ANSWER_SHAPES)[number];
 
 // The kinds of question (the server's jatekok/quiz/scoring.js):
 // - choice: a plain one;

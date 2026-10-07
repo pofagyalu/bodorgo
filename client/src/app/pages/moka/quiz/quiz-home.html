@@ -33,7 +33,7 @@
     <!-- The four answers, as on the game's screen. -->
     <div class="hero-art" aria-hidden="true">
       @for (s of shapes; track s; let i = $index) {
-        <span class="tile a{{ i }}">{{ s }}</span>
+        <span class="tile a{{ i }}"><app-quiz-shape [shape]="s" /></span>
       }
     </div>
   </div>
