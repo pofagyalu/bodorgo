@@ -320,6 +320,27 @@ describe('Documents', () => {
     expect(page.previewUrl(DOCS[0])).toBe(`${API}/documents/d1/preview`);
   });
 
+  it("has a tab for each category with documents (a phone's one at a time)", () => {
+    open();
+    expect(page.categoryTabs()).toEqual([
+      { value: 'Alapdokumentumok', label: 'Alapdokumentumok', count: 1 },
+      { value: 'Számlák', label: 'Számlák', count: 1 },
+      { value: 'Egyéb', label: 'Egyéb', count: 1 },
+    ]);
+    expect(page.shownCategory()).toBe('Alapdokumentumok');
+
+    page.activeCategory.set('Egyéb');
+    fixture.detectChanges();
+    const others = [...fixture.nativeElement.querySelectorAll('.document-group')].map(
+      (g: HTMLElement) => g.classList.contains('document-group--other'),
+    );
+    expect(others).toEqual([true, true, false]);
+
+    // Its last document gone: back to the first category.
+    page.documents.set([DOCS[0]]);
+    expect(page.shownCategory()).toBe('Alapdokumentumok');
+  });
+
   it('offers the songbook with the chosen chord diagrams', () => {
     open();
     expect(page.bookYear()).toBe(2025);

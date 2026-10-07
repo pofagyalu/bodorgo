@@ -23,6 +23,13 @@
   // margins flank the panel there at every scroll position, while
   // top/bottom just blend into the surrounding page flow.
   box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
+
+  // The panel's own side padding and the room above/below the filter bar
+  // while it stays on the screen - .top-grid's strip is sized from these.
+  --page-pad-x: 1.5rem;
+  --grid-pad-x: 1.8rem;
+  --bar-pad-y: 1rem;
+  --bar-gap: 1rem;
 }
 
 @media (max-width: 768px) {
@@ -37,6 +44,8 @@
   .tours-page {
     padding: 1.2rem 1rem 3rem;
     box-shadow: none;
+    --page-pad-x: 1rem;
+    --bar-pad-y: 0.7rem;
   }
 }
 
@@ -49,8 +58,31 @@
   grid-template-columns: repeat(auto-fill, 20rem);
   justify-content: center;
   column-gap: 1.8rem;
-  padding: 0 1.8rem;
-  margin: 0 0 2rem;
+
+  // Stays on the screen while the cards scroll under it (the page scrolls
+  // in the app's own frame, under the header - hence top: 0). A white
+  // strip across the whole panel, so no card shows beside or above the
+  // bar: the negative margins take it out to the panel's edges, the
+  // padding puts the bar back where it was.
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: calc(-1 * var(--bar-pad-y)) calc(-1 * var(--page-pad-x)) var(--bar-gap);
+  padding: var(--bar-pad-y) calc(var(--page-pad-x) + var(--grid-pad-x));
+  background: #fff;
+
+  // The strip's lower edge fades out over the cards instead of cutting
+  // them with a hard line.
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 0.9rem;
+    background: linear-gradient(#fff, rgba(255, 255, 255, 0));
+    pointer-events: none;
+  }
 }
 
 // One card to a row: that's too narrow for the bar and the button, the
@@ -276,9 +308,9 @@
 }
 
 @media (max-width: 600px) {
-  .top-grid {
-    padding: 0;
-    margin: 0 0 1.2rem;
+  .tours-page {
+    --grid-pad-x: 0rem;
+    --bar-gap: 0.5rem;
   }
 
   // The bar alone, across the whole width.

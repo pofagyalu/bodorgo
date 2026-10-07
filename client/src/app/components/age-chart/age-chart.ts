@@ -32,6 +32,10 @@ const YEAR_GAP = 0.15;
 const MAX_SPREAD = 0.42;
 const DOT_STEP = 0.12;
 
+// How far around a dot (in px, beyond its own radius) a tap or the pointer
+// still counts as on it.
+const HIT_RADIUS = 8;
+
 const oneDecimal = new Intl.NumberFormat('hu-HU', {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
@@ -92,6 +96,8 @@ export class AgeChart {
         // tours' dots.
         pointRadius: 5,
         pointHoverRadius: 7,
+        // A finger's worth of room around the dot still counts as on it.
+        pointHitRadius: HIT_RADIUS,
         pointBorderColor: '#f7f7f7',
         pointBorderWidth: 1.5,
         pointHoverBorderColor: '#f7f7f7',
@@ -108,6 +114,8 @@ export class AgeChart {
         borderWidth: 1.5,
         pointRadius: 5,
         pointHoverRadius: 7,
+        // A finger's worth of room around the dot still counts as on it.
+        pointHitRadius: HIT_RADIUS,
         hoverBorderColor: '#f7f7f7',
       },
     ],
@@ -122,8 +130,9 @@ export class AgeChart {
       // Every point starts on the bottom of the chart (Chart.js's own
       // starting point for a first draw) and rises to its place.
       animation: prefersReducedMotion() ? false : { duration: 1600, easing: 'easeOutQuart' },
-      // The nearest point answers, wherever the pointer (or finger) is.
-      interaction: { mode: 'nearest', intersect: false },
+      // Only a dot itself answers (the nearest one, where several are
+      // under the finger) - a tap on an empty spot puts the tooltip away.
+      interaction: { mode: 'nearest', intersect: true },
       scales: {
         x: {
           type: 'linear',
