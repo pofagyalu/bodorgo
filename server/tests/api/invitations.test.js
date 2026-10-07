@@ -1,3 +1,6 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
@@ -9,6 +12,7 @@ import {
   deleteInvitation,
   invitationsEnabled,
 } from '../../src/utils/authentikInvitations.js';
+import { installGuideAttachment } from '../../src/utils/installGuide.js';
 
 // Authentik's API replaced: each invitation gets a made-up id and link.
 vi.mock('../../src/utils/authentikInvitations.js', () => ({
@@ -22,6 +26,9 @@ vi.mock('../../src/utils/authentikInvitations.js', () => ({
   })),
   deleteInvitation: vi.fn(async () => {}),
 }));
+
+// The install guide's PDF: not there, unless a test says so.
+vi.mock('../../src/utils/installGuide.js', () => ({ installGuideAttachment: vi.fn(() => null) }));
 
 beforeEach(() => {
   vi.mocked(createInvitation).mockClear();
@@ -219,5 +226,54 @@ describe('the invitation e-mail intro', () => {
     expect(mail.text).toContain('Próba szöveg');
     expect(mail.text).toContain('itoken=PROBA');
     expect(createInvitation).not.toHaveBeenCalled();
+  });
+
+  it('attaches the install guide and says so - when the server has it', async () => {
+    const admin = await createAdmin({ email: 'admin@test.local', sub: 'sub-admin' });
+    const eva = await newcomer({ name: 'Nagy Éva', email: 'eva@test.local' });
+    const send = () =>
+      request(app)
+        .post('/users/invitations')
+        .set(asUser(admin))
+        .send({ userIds: [String(eva._id)] });
+
+    // Without the file: the e-mail as it was.
+    await send();
+    const plain = vi.mocked(sendResendEmail).mock.calls.at(-1)[0];
+    expect(plain.attachments).toBeUndefined();
+    expect(plain.text).not.toContain('útmutató');
+    expect(plain.html).not.toContain('útmutató');
+
+    const guide = { filename: 'Bodorgo-a-telefonodon.pdf', content: Buffer.from('%PDF') };
+    vi.mocked(installGuideAttachment).mockReturnValue(guide);
+    try {
+      await send();
+      const mail = vi.mocked(sendResendEmail).mock.calls.at(-1)[0];
+      expect(mail.attachments).toEqual([guide]);
+      expect(mail.text).toContain('A csatolt egyoldalas útmutató');
+      expect(mail.html).toContain('A csatolt egyoldalas útmutató');
+
+      // The admin's own test e-mail has it too.
+      await request(app).post('/users/invitations/test').set(asUser(admin)).send({});
+      const test = vi.mocked(sendResendEmail).mock.calls.at(-1)[0];
+      expect(test.attachments).toEqual([guide]);
+      expect(test.text).toContain('A csatolt egyoldalas útmutató');
+    } finally {
+      vi.mocked(installGuideAttachment).mockReturnValue(null);
+    }
+  });
+
+  it('reads the guide from its file - nothing while the file is not there', async () => {
+    const real = await vi.importActual('../../src/utils/installGuide.js');
+    const file = path.join(os.tmpdir(), `bodorgo-guide-${process.pid}.pdf`);
+    expect(real.installGuideAttachment(file)).toBeNull();
+    fs.writeFileSync(file, '%PDF-proba');
+    try {
+      const guide = real.installGuideAttachment(file);
+      expect(guide.filename).toBe('Bodorgo-a-telefonodon.pdf');
+      expect(guide.content.toString()).toBe('%PDF-proba');
+    } finally {
+      fs.unlinkSync(file);
+    }
   });
 });

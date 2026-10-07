@@ -13,6 +13,7 @@ import {
 } from '../utils/authentikInvitations.js';
 import { getOidcSettings } from '../utils/oidcSettings.js';
 import { huDate } from '../utils/huDate.js';
+import { installGuideAttachment } from '../utils/installGuide.js';
 
 // Felhasználók → Meghívók (admins): everyone an admin added who has an
 // e-mail but has never logged in gets their own Authentik invitation link
@@ -42,8 +43,19 @@ const paragraphs = (text) =>
     .map((p) => p.trim())
     .filter(Boolean);
 
+// What the e-mail says about the attached guide (utils/installGuide.js).
+const GUIDE_NOTE =
+  'Tipp: a Bódorgót a telefonod kezdőképernyőjére is kiteheted, és onnantól úgy működik, mint egy alkalmazás. A csatolt egyoldalas útmutató megmutatja, hogyan - Androidon és iPhone-on.';
+
 // The e-mail with the person's own link, under the club's intro text.
-export function invitationEmail(user, link, expiresAt, intro = DEFAULT_INVITATION_INTRO) {
+// `guide`: the install guide is attached, so the e-mail mentions it.
+export function invitationEmail(
+  user,
+  link,
+  expiresAt,
+  intro = DEFAULT_INVITATION_INTRO,
+  { guide = false } = {},
+) {
   const first = String(user.name ?? '')
     .trim()
     .split(/\s+/)
@@ -64,6 +76,7 @@ export function invitationEmail(user, link, expiresAt, intro = DEFAULT_INVITATIO
     '',
     `A link ${dateHu(expiresAt)}-ig érvényes. Ha lejárt vagy elakadtál, szólj egy adminnak, és küld újat.`,
     '',
+    ...(guide ? [GUIDE_NOTE, ''] : []),
     'Üdvözlettel:',
     'a Bódorgó klub',
   ].join('\n');
@@ -109,7 +122,12 @@ export function invitationEmail(user, link, expiresAt, intro = DEFAULT_INVITATIO
                 </ol>
                 <p style="${P}">A link <strong>${dateHu(expiresAt)}</strong>-ig érvényes. Ha lejárt vagy elakadtál, szólj egy adminnak, és küld újat.</p>
                 <p style="margin:0 0 8px;${SMALL}">Ha a gomb nem működik, másold be ezt a linket a böngésződbe:</p>
-                <p style="margin:0 0 18px;font-size:12px;line-height:1.5;word-break:break-all;"><a href="${link}" style="color:#1a796c;">${escapeHtml(link)}</a></p>
+                <p style="margin:0 0 18px;font-size:12px;line-height:1.5;word-break:break-all;"><a href="${link}" style="color:#1a796c;">${escapeHtml(link)}</a></p>${
+                  guide
+                    ? `
+                <p style="margin:0 0 18px;padding:12px 14px;border-radius:10px;background:#edf4f1;font-size:14px;line-height:1.55;">${escapeHtml(GUIDE_NOTE)}</p>`
+                    : ''
+                }
                 <p style="margin:0;font-size:15px;line-height:1.6;">Üdvözlettel:<br>a Bódorgó klub</p>
               </td>
             </tr>
@@ -125,6 +143,16 @@ export function invitationEmail(user, link, expiresAt, intro = DEFAULT_INVITATIO
 
 const currentIntro = async () =>
   (await getClubSettings()).invitationIntro ?? DEFAULT_INVITATION_INTRO;
+
+// The invitation as sendResendEmail takes it - with the install guide
+// attached (and mentioned) when the server has it.
+function invitationMessage(user, link, expiresAt, intro) {
+  const guide = installGuideAttachment();
+  return {
+    ...invitationEmail(user, link, expiresAt, intro, { guide: Boolean(guide) }),
+    ...(guide ? { attachments: [guide] } : {}),
+  };
+}
 
 // Who can be invited: has an e-mail, never logged in, not suspended.
 const CANDIDATES = {
@@ -181,7 +209,7 @@ async function invite(user, byName, intro) {
     );
   }
   const { id, link, expiresAt } = await createInvitation({ email: user.email, name: user.name });
-  await sendResendEmail({ to: user.email, ...invitationEmail(user, link, expiresAt, intro) });
+  await sendResendEmail({ to: user.email, ...invitationMessage(user, link, expiresAt, intro) });
   user.invitation = { id, sentAt: new Date(), expiresAt, sentByName: byName };
   await user.save({ validateModifiedOnly: true });
 }
@@ -269,7 +297,7 @@ export const sendTestInvitation = async (req, res) => {
   const intro = draft || (await currentIntro());
   const link = invitationLink(await getOidcSettings(), 'PROBA');
   const expiresAt = new Date(Date.now() + INVITATION_DAYS * 24 * 60 * 60 * 1000);
-  const email = invitationEmail(req.user, link, expiresAt, intro);
+  const email = invitationMessage(req.user, link, expiresAt, intro);
   await sendResendEmail({ to: req.user.email, ...email, subject: `[Próba] ${email.subject}` });
   res.status(200).json({ status: 'success', data: { sentTo: req.user.email } });
 };

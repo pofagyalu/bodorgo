@@ -339,13 +339,9 @@ function planSong(doc, blocks, shapes, top, m) {
   const left = MARGIN;
   let y = top;
   let column = diagramColumn(doc, shapes, top);
-  if (column) {
-    const widest = widestLine(doc, blocks, left, m);
-    // Beside the words - and as large as the room left of them allows.
-    column =
-      widest <= column.left - DIAGRAM_GUTTER - left
-        ? largestColumn(doc, shapes, top, column, widest)
-        : null;
+  // Beside the words only where the longest line leaves it room.
+  if (column && widestLine(doc, blocks, left, m) > column.left - DIAGRAM_GUTTER - left) {
+    column = null;
   }
   if (!column) y = top + diagramStripHeight(doc, shapes);
 
@@ -469,64 +465,54 @@ const DIAGRAM_COLUMN_SHARE = 0.4;
 const diagramShapes = (chords, instrument) =>
   chords.map((name) => ({ name, shape: chordShape(name, instrument) })).filter((c) => c.shape);
 
-// In the column beside the words the diagrams are drawn as much larger as
-// there is room for, up to this - the largest first.
-const DIAGRAM_SCALES = [1.5, 1.4, 1.3, 1.2, 1.1];
+// How many times the measures above the diagrams are drawn: one size all
+// through the book - in the column and in the strip, on every page.
+const DIAGRAM_SCALE = 1.3;
 
-// A diagram's place: the neck's width, the cell it stands in (with room on
-// its left for a fret number, "5."), and a row's height - `scale` times
-// their own size.
-function diagramCell(shapes, scale = 1) {
+// A diagram's place: the neck's width (at its own size - see placeDiagram),
+// the cell it stands in (with room on its left for a fret number, "5."),
+// and a row's height.
+function diagramCell(shapes) {
   const neck = (shapes[0].shape.frets.length - 1) * STRING_GAP;
   return {
     neck,
-    cell: (neck + 12) * scale + DIAGRAM_GAP,
-    rowHeight: (NAME_HEIGHT + MARKS_HEIGHT + (DIAGRAM_FRETS + 1) * FRET_GAP + 8) * scale,
+    cell: (neck + 12) * DIAGRAM_SCALE + DIAGRAM_GAP,
+    rowHeight: (NAME_HEIGHT + MARKS_HEIGHT + (DIAGRAM_FRETS + 1) * FRET_GAP + 8) * DIAGRAM_SCALE,
   };
 }
 
+// A diagram with its cell's top left corner at (x, y): drawn at its own
+// size on a sheet stretched DIAGRAM_SCALE times.
+function placeDiagram(doc, name, shape, x, y, neck) {
+  doc.save();
+  doc.translate(x, y).scale(DIAGRAM_SCALE);
+  drawDiagram(doc, name, shape, 12, 0, neck);
+  doc.restore();
+}
+
 // The column the diagrams would stand in down the right of the page, from
-// `top` to the page's foot, drawn `scale` times their size: how many per
-// column, how many columns side by side, and where the column starts. null
-// where there are no diagrams, or too many for a column that leaves the
-// words their room.
-function diagramColumn(doc, shapes, top, scale = 1) {
+// `top` to the page's foot: how many per column, how many columns side by
+// side, and where the column starts. null where there are no diagrams, or
+// too many for a column that leaves the words their room.
+function diagramColumn(doc, shapes, top) {
   if (!shapes.length) return null;
-  const { cell, rowHeight } = diagramCell(shapes, scale);
+  const { cell, rowHeight } = diagramCell(shapes);
   const perColumn = Math.floor((contentBottom(doc) - top) / rowHeight);
   if (perColumn < 1) return null;
   const columns = Math.ceil(shapes.length / perColumn);
   const width = columns * cell - DIAGRAM_GAP;
   if (width > (contentRight(doc) - MARGIN) * DIAGRAM_COLUMN_SHARE) return null;
-  return { scale, perColumn, columns, left: contentRight(doc) - width };
-}
-
-// The column at the largest size the diagrams have room for beside words
-// that reach `widest` from the left margin: no more columns side by side
-// than at their own size, and clear of the longest line. `column`: the
-// column at their own size, which fits.
-function largestColumn(doc, shapes, top, column, widest) {
-  for (const scale of DIAGRAM_SCALES) {
-    const larger = diagramColumn(doc, shapes, top, scale);
-    const fits =
-      larger && larger.columns <= column.columns && widest <= larger.left - DIAGRAM_GUTTER - MARGIN;
-    if (fits) return larger;
-  }
-  return column;
+  return { perColumn, columns, left: contentRight(doc) - width };
 }
 
 // The diagrams one under the other, in the order the chords come in the
 // song; a column that is full is followed by one on its right.
 function drawDiagramColumn(doc, shapes, column, top) {
-  const { neck, cell, rowHeight } = diagramCell(shapes, column.scale);
+  const { neck, cell, rowHeight } = diagramCell(shapes);
   shapes.forEach(({ name, shape }, i) => {
     const x = column.left + Math.floor(i / column.perColumn) * cell;
     const y = top + (i % column.perColumn) * rowHeight;
-    // Drawn at its own size on a sheet stretched to the column's.
-    doc.save();
-    doc.translate(x, y).scale(column.scale);
-    drawDiagram(doc, name, shape, 12, 0, neck);
-    doc.restore();
+    placeDiagram(doc, name, shape, x, y, neck);
   });
 }
 
@@ -570,7 +556,7 @@ function drawDiagrams(doc, shapes, top) {
       x = MARGIN;
       y += rowHeight;
     }
-    drawDiagram(doc, name, shape, x + 12, y, neck);
+    placeDiagram(doc, name, shape, x, y, neck);
     x += cell;
   }
   return y + rowHeight + 6;
