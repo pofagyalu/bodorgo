@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import type { BirthdayEffect } from '../shared/birthday/birthday.service';
+import type { OutlookPackIcon, OutlookTier, WeatherCondition } from './tour';
 
 // The yearly membership fee, by the year each amount takes effect (see
 // server/src/utils/clubSettings.js) - set on Klub → Beállítások.
@@ -186,6 +187,43 @@ export interface OidcSettingsUpdate {
   invitationFlow: string;
 }
 
+// Everything a tour's weather outlook (Életviteli tanácsok) is worked out
+// from, as it stands in the server's code (utils/weatherOutlookSettings.js)
+// - read only, for Beállítások → Infó to explain the formula with.
+export interface WeatherOutlookRules {
+  forecast: { daysAhead: number; refetchHours: number };
+  settings: {
+    conditionScore: Record<WeatherCondition, number>;
+    wetConditions: WeatherCondition[];
+    sunnyConditions: WeatherCondition[];
+    rainChanceSoftening: number;
+    defaultRainChance: number;
+    wetRainChance: number;
+    comfortByMonth: [number, number][]; // January first: [low, high] °C
+    comfortFadeBelow: number;
+    comfortFadeAbove: number;
+    weights: { condition: number; temperature: number; average: number; worstDay: number };
+    tiers: { perfect: number; great: number; mixed: number; gloomy: number };
+    uncertainAfterDays: number;
+    allGoodFrom: number;
+    bestDayLead: number;
+    packing: {
+      tshirtFromMaxC: number;
+      sweaterBelowMinC: number;
+      jacketBelowMinC: number;
+      beanieFromMinC: number;
+      sunFromMaxC: number;
+      sunnyDayFromMaxC: number;
+      layersFromSpreadC: number;
+      windFromKmh: number;
+    };
+  };
+  // The moods, worst first, each with its stretch of the index.
+  tiers: { tier: OutlookTier; from: number; to: number; tag: string; word: string }[];
+  conditionNames: Record<WeatherCondition, string>;
+  packNames: Record<OutlookPackIcon, string>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private http = inject(HttpClient);
@@ -264,6 +302,12 @@ export class SettingsService {
 
   updateBarionWallet(key: BarionWalletKey, wallet: BarionWallet) {
     return this.http.put<{ data: BarionWallet }>(`${this.apiUrl}/barion/${key}`, wallet);
+  }
+
+  // --- Életviteli tanácsok: the weather outlook's rules, to read (Infó) ---
+
+  getWeatherOutlookRules() {
+    return this.http.get<{ data: WeatherOutlookRules }>(`${this.apiUrl}/weather-outlook`);
   }
 
   // --- Fizetési módok: anyone logged in reads them, admins set them ---

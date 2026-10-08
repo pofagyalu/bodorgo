@@ -29,6 +29,7 @@ import {
   setActiveOidcProvider,
 } from '../controllers/settingsController.js';
 import requireAuth, { restrictTo, roleManagerOnly } from '../auth/requireAuth.js';
+import { weatherOutlookRules } from '../utils/weatherOutlook.js';
 
 // Klub → Beállítások (see settingsController.js).
 const router = express.Router();
@@ -66,6 +67,13 @@ router.put('/barion/:wallet', requireAuth, restrictTo('admin'), updateBarionWall
 
 // Fizetési módok: which gateways are on and their fees - anyone logged in
 // reads them (the pay dialogs), admins set them.
+// Életviteli tanácsok: the numbers the tours' weather outlook is worked
+// out from, straight from the code (utils/weatherOutlookSettings.js) - to
+// read on Beállítások → Infó. Nothing to set here.
+router.get('/weather-outlook', requireAuth, (req, res) => {
+  res.status(200).json({ status: 'success', data: weatherOutlookRules() });
+});
+
 router.get('/payment-methods', requireAuth, getPaymentMethods);
 router.put('/payment-methods/:method', requireAuth, restrictTo('admin'), updatePaymentMethod);
 

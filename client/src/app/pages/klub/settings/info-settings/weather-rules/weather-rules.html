@@ -1,0 +1,137 @@
+<!-- Életviteli tanácsok: how the tours' weather outlook comes about - to
+     read only. Every number is the server's own (see weather-rules.ts). -->
+<section class="panel weather-rules">
+  <div class="panel-title">
+    <div>
+      <h2>Életviteli tanácsok</h2>
+      <p class="subtext">
+        A táborok időjárás-jóslata és a Bódorgó-index: mi alapján számol az alkalmazás. A számok
+        egyenesen a programból jönnek.
+      </p>
+    </div>
+  </div>
+
+  @if (rules(); as r) {
+    <div class="rules-columns">
+      <div>
+        <h3 class="rules-group">Az előrejelzés</h3>
+        <ul class="rules-list">
+          <li>
+            Egy napra legkorábban <strong>{{ r.forecast.daysAhead }} nappal</strong> előtte van
+            előrejelzés – a tábor napjai így egyenként kapják meg a magukét.
+          </li>
+          <li>
+            Akkor frissül, amikor valaki megnyitja a tábor oldalát vagy a táborok listáját, de
+            legfeljebb <strong>{{ r.forecast.refetchHours }} óránként</strong>.
+          </li>
+          <li>
+            Amint egy nap véget ért, a tényleges időjárás kerül a helyére, és többé nem változik.
+          </li>
+          <li>
+            Az Életviteli tanácsok csak akkor jelenik meg, amikor a tábor
+            <strong>minden napjára</strong> van előrejelzés. Az indulás napjáig követi a jóslatot,
+            onnantól úgy marad, ahogy volt. A Programfüzetbe az kerül, ami éppen el van tárolva.
+          </li>
+          <li>
+            Ha az indulásig több mint <strong>{{ r.settings.uncertainAfterDays }} nap</strong> van
+            hátra, korai jóslatnak számít, és ezt ki is írja.
+          </li>
+        </ul>
+
+        <h3 class="rules-group">Egy nap pontszáma</h3>
+        @if (shares(); as s) {
+          <p class="rules-formula">
+            {{ s.condition }}% az időjárás fajtája + {{ s.temperature }}% a hőmérséklet
+          </p>
+        }
+        <table class="rules-table">
+          <caption>
+            Az időjárás fajtája
+          </caption>
+          <tbody>
+            @for (c of conditions(); track c.name) {
+              <tr>
+                <th scope="row">{{ c.name }}{{ c.wet ? ' *' : '' }}</th>
+                <td>{{ c.score }} pont</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="rules-note">
+          * Csapadékos nap: ha az eső nem biztos, enyhül a büntetés – pont = alap + (100 − alap) ×
+          (1 − esély) × {{ r.settings.rainChanceSoftening }}. Ha a jóslat nem ad esélyt,
+          {{ r.settings.defaultRainChance }}%-kal számol.
+        </p>
+
+        <table class="rules-table rules-table--months">
+          <caption>
+            A hőmérséklet: a nappali csúcs, az évszakhoz mérve
+          </caption>
+          <tbody>
+            @for (m of months(); track m.name) {
+              <tr>
+                <th scope="row">{{ m.name }}</th>
+                <td>{{ m.low }}–{{ m.high }} °C</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="rules-note">
+          A hónap kellemes tartományában 100 pont jár. Alatta
+          {{ r.settings.comfortFadeBelow }} fokon, fölötte {{ r.settings.comfortFadeAbove }} fokon
+          át egyenletesen fogy el nulláig.
+        </p>
+      </div>
+
+      <div>
+        <h3 class="rules-group">A Bódorgó-index</h3>
+        @if (shares(); as s) {
+          <p class="rules-formula">
+            {{ s.average }}% a napok átlaga + {{ s.worstDay }}% a leggyengébb nap
+          </p>
+        }
+        <table class="rules-table">
+          <caption>
+            Melyik sávba esik
+          </caption>
+          <tbody>
+            @for (t of r.tiers; track t.tier) {
+              <tr>
+                <th scope="row">
+                  <span [class]="'rules-dot rules-dot--' + t.tier"></span>{{ t.word }}
+                </th>
+                <td>{{ t.from }} ponttól</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <ul class="rules-list">
+          <li>
+            Ha a leggyengébb nap is legalább <strong>{{ r.settings.allGoodFrom }} pontos</strong>,
+            minden nap jónak számít.
+          </li>
+          <li>
+            A nagy túrát soha nem az érkezés vagy a hazaindulás napjára javasolja – csak teljes
+            napra, és csak akkor, ha az több mint
+            <strong>{{ r.settings.bestDayLead }} ponttal</strong> jobb a leggyengébb napnál.
+          </li>
+        </ul>
+
+        <h3 class="rules-group">Mit pakoljunk?</h3>
+        <p class="rules-note rules-note--lead">
+          A tábor szélső értékei döntenek, nem az átlagok. A listára kerül:
+        </p>
+        <ul class="rules-list">
+          @for (p of packing(); track p.name) {
+            <li>
+              <strong>{{ p.name }}</strong
+              >, ha {{ p.when }}.
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  } @else {
+    <p class="empty-note">Betöltés…</p>
+  }
+</section>

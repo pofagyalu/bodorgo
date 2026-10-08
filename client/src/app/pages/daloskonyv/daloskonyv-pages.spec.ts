@@ -1231,10 +1231,14 @@ describe('Daloskonyv', () => {
     open();
     const el: HTMLElement = fixture.nativeElement;
     const row = el.querySelector('.annex-row')!;
-    // The three icons, then the played marks' button and the playlists'
-    // selector (the styles show those two there only beside an open song).
-    expect(row.querySelectorAll(':scope > li')).toHaveLength(5);
+    // The three icons, then the played marks' button, the playlists'
+    // selector and "+ Dal" (the styles show those three there only beside
+    // an open song).
+    expect(row.querySelectorAll(':scope > li')).toHaveLength(6);
     expect(row.querySelector('.annex-row-clear .list-btn')).toBeTruthy();
+    const add = row.querySelector('.annex-row-clear a.annex-row-new') as HTMLAnchorElement;
+    expect(add.getAttribute('href')).toBe('/daloskonyv/uj');
+    expect(add.title).toBe('Új dal');
     const inRow = row.querySelector('.annex-row-clear button.clear-played') as HTMLButtonElement;
     expect(inRow.disabled).toBe(true);
 

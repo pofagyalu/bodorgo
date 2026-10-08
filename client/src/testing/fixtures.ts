@@ -1,3 +1,4 @@
+import { WeatherOutlookRules } from '../app/services/settings';
 import { AttendeePayment, Tour, TourResponse, WeatherOutlook } from '../app/services/tour';
 
 // A tour's weather outlook as the server sends it (mixed, two days out).
@@ -16,6 +17,87 @@ export function makeWeatherOutlook(over: Partial<WeatherOutlook> = {}): WeatherO
     ],
     frozen: false,
     ...over,
+  };
+}
+
+// The weather outlook's rules as the server hands them out (its settings
+// file as it stood when the outlook was built).
+export function makeWeatherRules(): WeatherOutlookRules {
+  return {
+    forecast: { daysAhead: 15, refetchHours: 6 },
+    settings: {
+      conditionScore: {
+        clear: 100,
+        'partly-cloudy': 85,
+        cloudy: 65,
+        fog: 50,
+        snow: 35,
+        rain: 25,
+        thunderstorm: 10,
+      },
+      wetConditions: ['rain', 'snow', 'thunderstorm'],
+      sunnyConditions: ['clear', 'partly-cloudy'],
+      rainChanceSoftening: 0.5,
+      defaultRainChance: 80,
+      wetRainChance: 40,
+      comfortByMonth: [
+        [3, 12],
+        [5, 14],
+        [10, 20],
+        [15, 24],
+        [18, 25],
+        [20, 27],
+        [21, 28],
+        [21, 28],
+        [18, 25],
+        [14, 23],
+        [8, 18],
+        [3, 12],
+      ],
+      comfortFadeBelow: 13,
+      comfortFadeAbove: 8,
+      weights: { condition: 0.6, temperature: 0.4, average: 0.7, worstDay: 0.3 },
+      tiers: { perfect: 85, great: 70, mixed: 50, gloomy: 30 },
+      uncertainAfterDays: 5,
+      allGoodFrom: 85,
+      bestDayLead: 10,
+      packing: {
+        tshirtFromMaxC: 20,
+        sweaterBelowMinC: 12,
+        jacketBelowMinC: 6,
+        beanieFromMinC: 0,
+        sunFromMaxC: 22,
+        sunnyDayFromMaxC: 20,
+        layersFromSpreadC: 12,
+        windFromKmh: 30,
+      },
+    },
+    tiers: [
+      { tier: 'rough', from: 0, to: 30, tag: 'Durva idő', word: 'Durva' },
+      { tier: 'gloomy', from: 30, to: 50, tag: 'Szürke idő', word: 'Borongós' },
+      { tier: 'mixed', from: 50, to: 70, tag: 'Vegyesfelvágott', word: 'Vegyes' },
+      { tier: 'great', from: 70, to: 85, tag: 'Kirándulóidő', word: 'Kellemes' },
+      { tier: 'perfect', from: 85, to: 100, tag: 'Napszemüveges idő', word: 'Álomszép' },
+    ],
+    conditionNames: {
+      clear: 'napsütés',
+      'partly-cloudy': 'változó felhőzet',
+      cloudy: 'felhős ég',
+      fog: 'köd',
+      rain: 'eső',
+      snow: 'havazás',
+      thunderstorm: 'zivatar',
+    },
+    packNames: {
+      tshirt: 'Póló',
+      sweater: 'Meleg pulóver',
+      jacket: 'Meleg kabát',
+      beanie: 'Sapka, kesztyű',
+      umbrella: 'Esőkabát vagy esernyő',
+      wind: 'Széldzseki',
+      sun: 'Napszemüveg, naptej',
+      layers: 'Réteges öltözet',
+    },
   };
 }
 

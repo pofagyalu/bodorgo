@@ -348,7 +348,7 @@ const tourSchema = new Schema(
         fetchedAt: Date,
       },
     ],
-    // "Hogy készüljünk az időjárásra?" - one mood for the whole tour and what to pack
+    // "Életviteli tanácsok" - one mood for the whole tour and what to pack
     // for it (see utils/weatherOutlook.js), with its texts, so the tour
     // page, the tour list's pill and the Programfüzet all show the same.
     // Only exists once every day of the tour has a forecast; rebuilt with

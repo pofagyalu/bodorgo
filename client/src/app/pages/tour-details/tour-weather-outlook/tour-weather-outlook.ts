@@ -13,7 +13,7 @@ const METER: { tier: OutlookTier; width: number }[] = [
   { tier: 'perfect', width: 15 },
 ];
 
-// A tour's "Hogy készüljünk az időjárásra?" (tour-details, above the Programterv): the
+// A tour's "Életviteli tanácsok" (tour-details, above the Programterv): the
 // mood of the whole tour's weather as a little scene, a headline not to be
 // taken too seriously, and what to pack. Everything shown comes ready from
 // the server (tour.weatherOutlook) - it exists only once every day of the

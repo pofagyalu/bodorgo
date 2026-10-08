@@ -263,7 +263,7 @@ const schemas = {
       updatedAt: date(),
     }),
     description:
-      '"Hogy készüljünk az időjárásra?" - one mood for the whole tour and what to pack, texts included (Hungarian, not too serious). Absent until every day of the tour has a forecast (so from 15 days before its last day); follows the forecast until the start date, then stays as it was for good. A tour that started without one never gets one. The numbers behind it: `server/src/utils/weatherOutlookSettings.js`.',
+      '"Életviteli tanácsok" - one mood for the whole tour and what to pack, texts included (Hungarian, not too serious). Absent until every day of the tour has a forecast (so from 15 days before its last day); follows the forecast until the start date, then stays as it was for good. A tour that started without one never gets one. The numbers behind it: `server/src/utils/weatherOutlookSettings.js`.',
   },
 
   ScheduleEvent: obj({
@@ -2967,6 +2967,21 @@ const paths = {
       body: ref('BarionWallet'),
       data: ref('BarionWallet'),
       errors: [400, 404],
+    }),
+  },
+  '/settings/weather-outlook': {
+    get: op({
+      tag: T.settings,
+      summary: "The rules behind the tours' weather outlook",
+      description:
+        'Read only: every number the weather outlook (Életviteli tanácsok, see `WeatherOutlook`) is worked out from, as it stands in the code - `forecast` (`daysAhead`, `refetchHours`), `settings` (the whole of `weatherOutlookSettings.js`: condition scores, comfort temperature by month, weights, tier limits, packing thresholds), `tiers` (worst first, each with `from`/`to` on the index, its `tag` and `word`), `conditionNames` and `packNames` (Hungarian). Beállítások → Infó explains the formula with these.',
+      data: obj({
+        forecast: obj({ daysAhead: int('Days.'), refetchHours: int('Hours.') }),
+        settings: { type: 'object' },
+        tiers: arrayOf({ type: 'object' }),
+        conditionNames: { type: 'object' },
+        packNames: { type: 'object' },
+      }),
     }),
   },
   '/settings/payment-methods': {

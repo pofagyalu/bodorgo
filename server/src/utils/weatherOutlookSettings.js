@@ -1,4 +1,4 @@
-// Every number behind a tour's weather outlook ("Hogy készüljünk az időjárásra?" - see
+// Every number behind a tour's weather outlook ("Életviteli tanácsok" - see
 // weatherOutlook.js) in one place, so the formula can be retuned without
 // touching the logic. Nothing here is serious science.
 

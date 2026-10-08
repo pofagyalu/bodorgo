@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 
 import { API } from '../../../../testing/http';
 import { fail, logIn, pageTesting, respond, settle } from '../../../../testing/component';
+import { makeWeatherRules } from '../../../../testing/fixtures';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { BirthdayService } from '../../../shared/birthday/birthday.service';
@@ -58,6 +59,7 @@ const loaded = () => ({
   'GET /settings/rank': { data: { enabled: false, effect: 'stars', message: '{név}: {rang}' } },
   'GET /settings/president': { data: { presidentName: 'Elnök Elek' } },
   'GET /health/version': { data: { version: '1.2.3', commit: 'abc', date: null, builtAt: null } },
+  'GET /settings/weather-outlook': { data: makeWeatherRules() },
   'GET /settings/barion': {
     data: {
       membership: { payeeEmail: 'tag@klub.hu', withdrawName: 'Klub', withdrawIban: 'HU11' },

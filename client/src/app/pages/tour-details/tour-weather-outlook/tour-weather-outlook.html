@@ -1,9 +1,7 @@
-<!-- Hogy készüljünk az időjárásra?: the tour's weather outlook and what to pack -->
+<!-- Életviteli tanácsok: the tour's weather outlook and what to pack -->
 @if (outlook(); as o) {
   <section class="outlook-section">
-    <h2 class="section-heading">
-      {{ o.frozen ? 'Ezt ígérték' : 'Hogy készüljünk az időjárásra?' }}
-    </h2>
+    <h2 class="section-heading">Életviteli tanácsok</h2>
 
     <div class="outlook" [class]="'outlook--' + o.tier">
       <img class="outlook-scene" [src]="scenePath(o.tier)" [alt]="o.tag" />

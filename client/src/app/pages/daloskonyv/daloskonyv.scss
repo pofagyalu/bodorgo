@@ -994,7 +994,8 @@ $line: #e4eae7;
 @media (min-width: 901px) {
   .book--open {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 21rem;
+    // Wide enough for the six round buttons over the list in one row.
+    grid-template-columns: minmax(0, 1fr) 23rem;
     height: calc(100dvh - var(--header-height));
     overflow: hidden;
 
@@ -1014,9 +1015,9 @@ $line: #e4eae7;
       grid-column: 2;
     }
 
-    // Beside a song the column is the list alone: the search, the
-    // instrument switch and the owner's "+" are in the song's own bar,
-    // above the song (song.html).
+    // Beside a song the column is the list alone: the search and the
+    // instrument switch are in the song's own bar, above the song
+    // (song.html); "+ Dal" is the last of the round buttons below.
     .top-row {
       display: none;
     }
@@ -1031,11 +1032,42 @@ $line: #e4eae7;
       display: block;
     }
 
-    // As big as the three beside it.
+    // "+ Dal" as the row's last round button - dark, like the "+ Dal" of
+    // the whole book's page.
+    .annex-row .annex-row-new {
+      border-color: #445a67;
+      background: #445a67;
+      color: #fff;
+
+      &:hover,
+      &:focus-visible {
+        background: #37474f;
+      }
+    }
+
+    // As big as the three beside it - but not round: the three before
+    // them lead to a page of their own, these three do something here, and
+    // the shape says which is which.
     .annex-row .clear-played,
-    .annex-row .list-btn {
+    .annex-row .list-btn,
+    .annex-row .annex-row-new {
       width: 2.6rem;
       height: 2.6rem;
+      border-radius: 0.75rem;
+    }
+
+    // A short line parts the two groups.
+    .annex-row li:not(.annex-row-clear) + .annex-row-clear {
+      display: flex;
+      align-items: center;
+
+      &::before {
+        content: '';
+        width: 1px;
+        height: 1.6rem;
+        margin-right: 0.7rem;
+        background: #cfd9d5;
+      }
     }
 
     // The column's top stays put - "Játszottak jelölésének törlése", the

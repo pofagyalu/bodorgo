@@ -291,3 +291,42 @@ describe('Klub → Beállítások: Fizetési módok', () => {
     expect((await put(await createMember(), 'stripe', ok)).status).toBe(403);
   });
 });
+
+describe("Klub → Beállítások → Infó: the weather outlook's rules", () => {
+  it('hands out the numbers as they stand in the code', async () => {
+    const { OUTLOOK_SETTINGS } = await import('../../src/utils/weatherOutlookSettings.js');
+    const { MAX_FORECAST_DAYS_AHEAD, WEATHER_REFETCH_HOURS } = await vi.importActual(
+      '../../src/utils/weather.js',
+    );
+    const res = await request(app)
+      .get('/settings/weather-outlook')
+      .set(asUser(await createGuest()));
+    expect(res.status).toBe(200);
+    const { forecast, settings, tiers, conditionNames, packNames } = res.body.data;
+    expect(forecast).toEqual({
+      daysAhead: MAX_FORECAST_DAYS_AHEAD,
+      refetchHours: WEATHER_REFETCH_HOURS,
+    });
+    expect(settings).toEqual(OUTLOOK_SETTINGS);
+    // The index from end to end, worst first, without a gap.
+    expect(tiers.map((t) => t.tier)).toEqual(['rough', 'gloomy', 'mixed', 'great', 'perfect']);
+    expect(tiers[0].from).toBe(0);
+    expect(tiers.at(-1).to).toBe(100);
+    tiers.slice(1).forEach((t, i) => expect(t.from).toBe(tiers[i].to));
+    expect(tiers.map((t) => t.word)).toEqual([
+      'Durva',
+      'Borongós',
+      'Vegyes',
+      'Kellemes',
+      'Álomszép',
+    ]);
+    expect(Object.keys(conditionNames).sort()).toEqual(
+      Object.keys(OUTLOOK_SETTINGS.conditionScore).sort(),
+    );
+    expect(packNames.wind).toBe('Széldzseki');
+  });
+
+  it('is for logged-in users only', async () => {
+    expect((await request(app).get('/settings/weather-outlook')).status).toBe(401);
+  });
+});
