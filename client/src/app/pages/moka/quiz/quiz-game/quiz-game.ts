@@ -22,6 +22,8 @@ const OVERDUE_MS = 1500;
 const REFETCH_GAP_MS = 3000;
 // How many are shown of the standings between two questions.
 const TOP = 5;
+// On <html> while a game is open: the page can't be zoomed (styles.scss).
+const NO_PINCH_ZOOM = 'no-pinch-zoom';
 // Móka → Kvíz: a game, live - the same page for the host (who leads: the
 // code to join with, then one button from question to question) and for
 // the players (who answer on their own phones). The question (shown by
@@ -154,9 +156,14 @@ export class QuizGamePage implements OnDestroy {
       this.socket.on('connect', () => this.load()),
     ];
     document.addEventListener('visibilitychange', this.onVisible);
+    // No two-finger zoom anywhere on the screen while a game is open (see
+    // styles.scss): a zoomed-in picture or map would give the answer away,
+    // and a stray pinch loses the buttons in the middle of a question.
+    document.documentElement.classList.add(NO_PINCH_ZOOM);
   }
 
   ngOnDestroy() {
+    document.documentElement.classList.remove(NO_PINCH_ZOOM);
     clearInterval(this.ticker);
     this.stopListening.forEach((stop) => stop());
     this.socket.leaveQuiz(this.id);

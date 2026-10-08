@@ -59,14 +59,14 @@ const TYPES: { value: QuizQuestionType; label: string; icon: string; hint: strin
     },
     {
       value: 'truefalse',
-      label: 'Igaz–hamis',
+      label: 'Igaz?',
       icon: 'rule',
       hint: 'Egy állítás – igaz vagy hamis?',
       ask: 'Az állítás – pl. A Kékes Magyarország legmagasabb pontja.',
     },
     {
       value: 'picture',
-      label: 'Képfelfedő',
+      label: 'Mozaik',
       icon: 'image_search',
       hint: 'Egy kép játék közben csempénként tárul fel – aki hamarabb rájön, több pontot kap.',
       ask: 'A kérdés – pl. Hol készült ez a kép?',
