@@ -73,6 +73,28 @@ export function wrapChorus(text: string, start: number, end: number): TextEdit {
   };
 }
 
+// An empty six-string tab to type into: the strings from the thinnest
+// down, as tabs are written.
+const EMPTY_TAB = ['e', 'B', 'G', 'D', 'A', 'E'].map((s) => `${s}|${'-'.repeat(32)}|`).join('\n');
+
+// A guitar tab ({start_of_tab} … {end_of_tab} - chordpro.ts): the selected
+// lines (or the cursor's line) marked as one - a tab pasted in from
+// elsewhere -, or, on an empty line with nothing selected, six empty
+// strings to type on. The selection is left on the tab's lines.
+export function wrapTab(text: string, start: number, end: number): TextEdit {
+  const from = text.lastIndexOf('\n', start - 1) + 1;
+  const nextBreak = text.indexOf('\n', Math.max(end, start));
+  const to = nextBreak < 0 ? text.length : nextBreak;
+  const chosen = text.slice(from, to);
+  const lines = chosen.trim() ? chosen : EMPTY_TAB;
+  const open = '{start_of_tab}\n';
+  return {
+    text: `${text.slice(0, from)}${open}${lines}\n{end_of_tab}${text.slice(to)}`,
+    start: from + open.length,
+    end: from + open.length + lines.length,
+  };
+}
+
 const SCREEN_MARK = '{screen}';
 const isScreenMark = (line: string | undefined) =>
   line !== undefined && /^\{\s*screen\s*\}$/i.test(line.trim());

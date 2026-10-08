@@ -8,8 +8,22 @@
 //   {comment: 2x}
 //
 // Known directives: title/t, artist, comment/c, start_of_chorus/soc,
-// end_of_chorus/eoc, start_of_verse/sov, end_of_verse/eov, screen, print.
-// Anything else in {braces} is skipped. An empty line parts the verses.
+// end_of_chorus/eoc, start_of_verse/sov, end_of_verse/eov, start_of_tab/sot,
+// end_of_tab/eot, screen, print. Anything else in {braces} is skipped. An
+// empty line parts the verses.
+//
+// A guitar tab - an intro, an ending - stands between {start_of_tab} and
+// {end_of_tab}, as ChordPro has it:
+//
+//   {start_of_tab: Intro}
+//   e|--0---3---0------|
+//   B|----1---1---1----|
+//   {end_of_tab}
+//
+// Its lines are kept letter for letter (nothing in them is read as a chord
+// or a directive, and an empty line doesn't end it) and drawn in letters of
+// one width, so the strings stay under each other. What stands after the
+// colon is its label, a comment line over it.
 //
 // {screen} and {print} - the songbook's own. From a {screen} line to the
 // end of the song (or to a {print} line) the chords are for the screen
@@ -31,6 +45,9 @@ export type SongLine =
   // screenOnly: the line stands after a {screen} - its chords aren't
   // printed.
   | { type: 'lyrics' | 'chords-only'; segments: Segment[]; screenOnly?: true }
+  // A line of a guitar tab, as it was typed. screenOnly: after a {screen}
+  // - not printed at all.
+  | { type: 'tab'; text: string; screenOnly?: true }
   | { type: 'comment'; text: string }
   | { type: 'empty' }
   | { type: 'section-start' | 'section-end'; section: Section };
@@ -42,6 +59,8 @@ export interface ParsedSong {
 }
 
 const DIRECTIVE = /^\{\s*([^:}]+?)\s*(?::\s*(.*?)\s*)?\}$/;
+
+const TAB_END = /^\{\s*(end_of_tab|eot)\s*\}$/i;
 
 const SECTION_MARKS: Record<string, SongLine> = {
   start_of_chorus: { type: 'section-start', section: 'chorus' },
@@ -58,8 +77,15 @@ export function parseChordPro(source: string): ParsedSong {
   const song: ParsedSong = { lines: [] };
   // After a {screen}, until a {print}: chords for the screen only.
   let screenOnly = false;
+  // Between {start_of_tab} and {end_of_tab}: every line is the tab's.
+  let inTab = false;
   for (const raw of source.replace(/\r\n?/g, '\n').split('\n')) {
     const line = raw.trimEnd();
+    if (inTab) {
+      if (TAB_END.test(line.trim())) inTab = false;
+      else song.lines.push({ type: 'tab', text: line, ...(screenOnly && { screenOnly: true }) });
+      continue;
+    }
     if (!line.trim()) {
       song.lines.push({ type: 'empty' });
       continue;
@@ -73,7 +99,12 @@ export function parseChordPro(source: string): ParsedSong {
       else if (name === 'comment' || name === 'c')
         song.lines.push({ type: 'comment', text: value });
       else if (SECTION_MARKS[name]) song.lines.push(SECTION_MARKS[name]);
-      else if (name === 'screen') screenOnly = true;
+      else if (name === 'start_of_tab' || name === 'sot') {
+        inTab = true;
+        // "Intro", or ChordPro's own label="Intro".
+        const label = value.replace(/^label\s*=\s*/i, '').replace(/^"(.*)"$/, '$1');
+        if (label) song.lines.push({ type: 'comment', text: label });
+      } else if (name === 'screen') screenOnly = true;
       else if (name === 'print') screenOnly = false;
       continue;
     }
@@ -108,7 +139,7 @@ function parseLine(line: string): Segment[] {
 
 // --- For the page ---
 
-export type BlockLine = Extract<SongLine, { type: 'lyrics' | 'chords-only' | 'comment' }>;
+export type BlockLine = Extract<SongLine, { type: 'lyrics' | 'chords-only' | 'tab' | 'comment' }>;
 
 // A verse or a chorus: the lines between two empty lines (or two marks).
 export interface Block {

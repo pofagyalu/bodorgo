@@ -13,6 +13,16 @@
       @for (line of block.lines; track $index) {
         @if (line.type === 'comment') {
           <p class="comment">{{ line.text }}</p>
+        } @else if (line.type === 'tab') {
+          <div class="tab">
+            @for (row of line.rows; track $index) {
+              <div class="tab-row">
+                @for (letter of row; track $index) {
+                  <span class="tab-cell">{{ letter }}</span>
+                }
+              </div>
+            }
+          </div>
         } @else {
           <p
             class="line"

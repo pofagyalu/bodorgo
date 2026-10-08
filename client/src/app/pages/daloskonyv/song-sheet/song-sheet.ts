@@ -11,6 +11,10 @@ interface ViewLine {
   text: string;
   hasChords: boolean;
   words: Segment[][];
+  // A tab: its rows, each letter by letter - every letter gets a cell of
+  // the same width, so the strings stay under each other whatever font
+  // the device draws them in (some phones have no fixed-width one).
+  rows?: string[][];
 }
 
 // The diagram shown at a chord under the pointer (or the finger).
@@ -73,17 +77,26 @@ export class SongSheet {
   blocks = computed(() =>
     toBlocks(this.lines()).map((block) => ({
       chorus: block.chorus,
-      lines: block.lines.map((line): ViewLine => {
+      lines: block.lines.reduce<ViewLine[]>((all, line) => {
         if (line.type === 'comment') {
-          return { type: line.type, text: line.text, hasChords: false, words: [] };
+          all.push({ type: line.type, text: line.text, hasChords: false, words: [] });
+        } else if (line.type === 'tab') {
+          // A tab's lines are one piece on the page: they scroll sideways
+          // together where the screen is too narrow for them.
+          const row = [...line.text.replace(/\t/g, '    ')];
+          const last = all[all.length - 1];
+          if (last?.type === 'tab') last.rows!.push(row);
+          else all.push({ type: line.type, text: '', hasChords: false, words: [], rows: [row] });
+        } else {
+          all.push({
+            type: line.type,
+            text: '',
+            hasChords: line.segments.some((s) => s.chord),
+            words: toWords(line.segments),
+          });
         }
-        return {
-          type: line.type,
-          text: '',
-          hasChords: line.segments.some((s) => s.chord),
-          words: toWords(line.segments),
-        };
-      }),
+        return all;
+      }, []),
     })),
   );
 

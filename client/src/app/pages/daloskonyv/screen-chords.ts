@@ -6,12 +6,15 @@ import { parseChord } from './chords';
 // chords - their words alone, as if they had been written without them.
 // What isn't a chord stays ("[Verse 2]", "[2x]": labels); a line that was
 // chords and nothing else (an interlude) is left out, and so is a verse
-// that has nothing left. The other lines are untouched.
+// that has nothing left. A tab there is left out whole. The other lines
+// are untouched.
 export function withoutScreenChords(blocks: Block[]): Block[] {
   return blocks.flatMap((block) => {
     if (!block.lines.some((line) => line.type !== 'comment' && line.screenOnly)) return [block];
     const lines = block.lines.flatMap((line): BlockLine[] => {
       if (line.type === 'comment' || !line.screenOnly) return [line];
+      // A tab has no words to keep: it is for the screen whole.
+      if (line.type === 'tab') return [];
       const segments = line.segments
         .map((s) => (s.chord !== undefined && parseChord(s.chord) ? { text: s.text } : s))
         // A chord that stood over nothing leaves nothing behind.
