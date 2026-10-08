@@ -476,7 +476,8 @@
   }
 }
 
-// Voks: how many polls are waiting for my vote.
+// Voks: how many polls are waiting for my vote; Kotyogó: how many
+// messages are unread.
 .menu-badge {
   display: inline-grid;
   place-items: center;
@@ -492,6 +493,31 @@
   font-weight: 800;
   line-height: 1;
   vertical-align: 2px;
+}
+
+// The same count on the phone's menu button, on its top right corner -
+// what waits behind the folded menu.
+.hamburger {
+  position: relative;
+}
+
+.hamburger-badge {
+  position: absolute;
+  top: -0.15rem;
+  right: -0.55rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #e0442b;
+  color: #fff;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 2px #fff;
 }
 
 // PC: three columns - the logo on the left, the menu exactly in the

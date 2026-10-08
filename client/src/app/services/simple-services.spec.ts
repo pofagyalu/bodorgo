@@ -28,8 +28,8 @@ describe('ChatService', () => {
   const service = () => TestBed.inject(ChatService);
   const rooms = `${API}/chat-rooms`;
 
+  // getOverview: see new-content.spec.ts - it also keeps the unread count.
   itSendsRequests([
-    ['getOverview', () => service().getOverview(), 'GET', `${rooms}/overview`],
     ['getTourChatRoom', () => service().getTourChatRoom('t1'), 'GET', `${API}/tours/t1/chat-room`],
     ['getGeneralChatRoom', () => service().getGeneralChatRoom(), 'GET', `${rooms}/general`],
     ['getGeneralGame', () => service().getGeneralGame(), 'GET', `${rooms}/general/game`],

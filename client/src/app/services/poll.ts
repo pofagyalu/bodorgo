@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { PushService } from './push';
 
 export interface PollOption {
   _id: string;
@@ -87,10 +88,16 @@ export class PollService {
   // Voks menu's badge. Refreshed on page changes (see header.ts) and
   // after anything that changes it here.
   readonly pendingCount = signal(0);
+  private push = inject(PushService);
 
   refreshPending() {
     this.http.get<{ data: { count: number } }>(`${this.apiUrl}/pending`).subscribe({
-      next: (res) => this.pendingCount.set(res.data.count),
+      next: (res) => {
+        this.pendingCount.set(res.data.count);
+        // No poll waits for me: none needs a notification on the phone
+        // either (their tags: server controllers/pollController.js).
+        if (!res.data.count) this.push.closeNotifications((tag) => tag.startsWith('poll-'));
+      },
       error: () => {},
     });
   }

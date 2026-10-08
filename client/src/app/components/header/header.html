@@ -16,6 +16,13 @@
       (click)="isMobileMenuOpen = true"
     >
       ☰
+      <!-- Something waits behind the folded menu: unread chat messages
+           and polls to vote on, together. -->
+      @if (waitingInMenu()) {
+        <span class="hamburger-badge" aria-label="Új tartalom a menüben">{{
+          waitingInMenu()
+        }}</span>
+      }
     </button>
 
     <div class="logo-container">
@@ -63,8 +70,13 @@
         routerLinkActive="active"
         (mouseenter)="hoverItem($event.currentTarget)"
         class="menu-item blue"
-        >Kotyogó</a
-      >
+        >Kotyogó
+        @if (unreadChat()) {
+          <span class="menu-badge" [title]="unreadChat() + ' olvasatlan üzenet'">{{
+            unreadChat()
+          }}</span>
+        }
+      </a>
       <a
         routerLink="/szavazasok"
         routerLinkActive="active"
@@ -193,8 +205,11 @@
         routerLinkActive="active"
         (click)="closeMobileMenu()"
         class="menu-item blue"
-        >Kotyogó</a
-      >
+        >Kotyogó
+        @if (unreadChat()) {
+          <span class="menu-badge">{{ unreadChat() }}</span>
+        }
+      </a>
       <a
         routerLink="/szavazasok"
         routerLinkActive="active"

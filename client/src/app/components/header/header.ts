@@ -15,6 +15,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { MusicPlayer } from '../../shared/music-player/music-player';
 import { filter } from 'rxjs';
 import { PollService } from '../../services/poll';
+import { ChatService } from '../../services/chat';
 import { AuthService } from '../../auth/auth.service';
 import { UserService } from '../../services/user';
 import { canSeeMoka } from '../../auth/moka.guard';
@@ -52,16 +53,27 @@ export class Header implements OnDestroy {
   // itself after a vote or a new poll).
   private pollService = inject(PollService);
   pendingPolls = this.pollService.pendingCount;
+  // Kotyogó badge: messages waiting unread in my chats - refreshed along
+  // with the polls (and by the Kotyogó page itself as chats are read).
+  private chatService = inject(ChatService);
+  unreadChat = this.chatService.unreadCount;
+  // On a phone the menu is folded away: the two together on its button.
+  waitingInMenu = computed(() => this.pendingPolls() + this.unreadChat());
   private refreshPolls = () => {
-    if (this.auth.isLoggedIn()) this.pollService.refreshPending();
+    if (!this.auth.isLoggedIn()) return;
+    this.pollService.refreshPending();
+    this.chatService.refreshUnread();
   };
   private pollTimer = setInterval(this.refreshPolls, 2 * 60 * 1000);
   private navSub = inject(Router)
     .events.pipe(filter((e) => e instanceof NavigationEnd))
     .subscribe(this.refreshPolls);
   private loginWatch = effect(() => {
-    if (this.auth.isLoggedIn()) this.pollService.refreshPending();
-    else this.pollService.pendingCount.set(0);
+    if (this.auth.isLoggedIn()) this.refreshPolls();
+    else {
+      this.pollService.pendingCount.set(0);
+      this.chatService.unreadCount.set(0);
+    }
   });
 
   // The soap bubble behind the logo and the menu: it sits on the selected
