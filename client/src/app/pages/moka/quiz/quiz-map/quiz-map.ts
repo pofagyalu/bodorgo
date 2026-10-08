@@ -56,12 +56,17 @@ const drawing = () =>
     .then((res) => (res.ok ? (res.json() as Promise<Drawing>) : null))
     .catch(() => null));
 
+// In a game: how many times closer than the chosen picture a player may
+// look at the map.
+const GAME_ZOOM = 2;
+
 // Móka → Kvíz: a map question's map - Leaflet showing the app's own drawing
 // of Hungary and its neighbours (where the tours are): borders, rivers and lakes,
 // and no names at all - they'd give the answer away. No map provider is
 // asked for anything.
 // - In the game it's `locked`: exactly the part its author chose, on every
-//   screen - no moving, no zooming. While the question is open a tap puts
+//   screen - a player can look closer at it (up to GAME_ZOOM times) and
+//   move about in it, never beyond it. While the question is open a tap puts
 //   my pin down, or moves it (`pickable`, `picked`); once it's closed the
 //   place itself and everyone's pins are on it (`place`, `guesses`).
 // - In the editor it isn't: the author moves and zooms it to the part the
@@ -126,16 +131,17 @@ export class QuizMap implements OnDestroy {
   private create() {
     const locked = this.locked();
     const map = L.map(this.container().nativeElement, {
-      // In the game the map stays put: the same picture for everyone.
-      dragging: !locked,
-      touchZoom: !locked,
-      scrollWheelZoom: !locked,
+      // In the game the picture is the same for everyone - a player may
+      // only look closer at it (two fingers, or the mouse's wheel) and
+      // move about in what was shown: fit() sets how close, and where the
+      // edges are. No double-tap zoom: a second tap moves the pin.
       doubleClickZoom: !locked,
       boxZoom: !locked,
       keyboard: !locked,
       zoomControl: !locked,
       // Any zoom in between, so the chosen part fits exactly.
       zoomSnap: locked ? 0 : 1,
+      ...(locked && { maxBoundsViscosity: 1, bounceAtZoomLimits: false }),
       // The editor stays on what there is a drawing of, and no closer than
       // the drawing is good for.
       ...(!locked && {
@@ -207,8 +213,23 @@ export class QuizMap implements OnDestroy {
   private fit(bounds: QuizBounds) {
     if (!this.map) return;
     this.fitting = true;
+    const locked = this.locked();
+    if (locked) {
+      // The last picture's limits would hold this one back.
+      this.map.setMaxBounds(undefined as never);
+      this.map.setMinZoom(0);
+      this.map.setMaxZoom(Infinity);
+    }
     this.map.invalidateSize();
     this.map.fitBounds(latLngBounds(bounds), { animate: false });
+    if (locked) {
+      // In the game: no further out than the picture as it was chosen, no
+      // closer than GAME_ZOOM times that, and never past its edges.
+      const fitted = this.map.getZoom();
+      this.map.setMinZoom(fitted);
+      this.map.setMaxZoom(fitted + Math.log2(GAME_ZOOM));
+      this.map.setMaxBounds(this.map.getBounds());
+    }
     this.fitting = false;
     this.shown = key(bounds);
   }

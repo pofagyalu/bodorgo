@@ -34,6 +34,15 @@ body {
   overflow: hidden;
 }
 
+/* While a Kvíz game is open (pages/moka/quiz/quiz-game sets the class): no
+   zooming the page with two fingers, nor with a double tap - only moving
+   it up and down, left and right. On the root, so it holds wherever the
+   fingers land. */
+html.no-pinch-zoom,
+html.no-pinch-zoom body {
+  touch-action: pan-x pan-y;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -136,6 +136,15 @@ describe('QuizGamePage', () => {
   const dataOf = (g: QuizGame) => ({ data: { game: g } });
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
 
+  it('lets nobody zoom the page while a game is open - and gives it back on leaving', () => {
+    const root = document.documentElement.classList;
+    expect(root.contains('no-pinch-zoom')).toBe(false);
+    open(game());
+    expect(root.contains('no-pinch-zoom')).toBe(true);
+    fixture.destroy();
+    expect(root.contains('no-pinch-zoom')).toBe(false);
+  });
+
   it('steps a player into a game still on, and follows it live', () => {
     open(game());
     expect(socket.joinQuiz).toHaveBeenCalledWith('g1');
