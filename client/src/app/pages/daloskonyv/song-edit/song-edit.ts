@@ -14,6 +14,7 @@ import {
   toggleRepeat,
   toggleScreenOnly,
   wrapChorus,
+  wrapTab,
 } from '../chord-text';
 import { chordsOverLyrics } from '../paste-chords';
 import { allKeys, chordSignature, detectKey, keyName } from '../song-key';
@@ -153,6 +154,13 @@ export class SongEdit implements OnInit {
   markChorus() {
     const el = this.textarea()?.nativeElement;
     if (el) this.apply(wrapChorus(el.value, el.selectionStart, el.selectionEnd));
+  }
+
+  // A guitar tab: the selected lines marked as one, or - on an empty line -
+  // six empty strings to type on.
+  markTab() {
+    const el = this.textarea()?.nativeElement;
+    if (el) this.apply(wrapTab(el.value, el.selectionStart, el.selectionEnd));
   }
 
   // The selected lines (or the cursor's) between repeat signs: ||: … :|| -

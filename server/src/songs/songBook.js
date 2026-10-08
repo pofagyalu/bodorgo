@@ -71,8 +71,30 @@ const sizes = (text) => {
     textRow: 14.5 * scale,
     chordRow: 10.5 * scale,
     verseGap: 9 * scale,
+    tab: TAB_SIZE * scale,
   };
 };
+
+// A guitar tab's lines ({start_of_tab} - see the client's chordpro.ts): in
+// letters of one width, so the strings stay under each other. pdfkit's own
+// Courier - every letter 0.6 of its size wide - which knows no ő and ű:
+// those are written as ö and ü in a tab's rare word.
+const TAB_FONT = 'Courier';
+const TAB_SIZE = 8.5;
+const TAB_ROW = 1.18; // a row's height, in sizes
+const TAB_LETTER = 0.6;
+const TAB_SIZE_MIN = 5;
+const tabText = (text) =>
+  text.replace(/[őŐűŰ]/g, (c) => ({ ő: 'ö', Ő: 'Ö', ű: 'ü', Ű: 'Ü' })[c]).replace(/\t/g, '    ');
+// One line of a tab as a row: at the tab's size, or as much smaller as it
+// takes for the line to end before `right` (never wrapped - its place
+// under the other strings is all it says).
+function tabRow(text, left, m, right) {
+  const line = tabText(text);
+  const fits = (right - left) / (Math.max(line.length, 1) * TAB_LETTER);
+  const size = Math.max(TAB_SIZE_MIN, Math.min(m.tab, fits));
+  return { tab: line, size, left, height: size * TAB_ROW, pieces: [] };
+}
 const CHORUS_INDENT = 12;
 const TOC_ROW = 15.5;
 
@@ -390,6 +412,7 @@ function layoutLine(doc, line, left, m, right = contentRight(doc)) {
   if (line.type === 'comment') {
     return [{ comment: line.text, left, height: m.textRow, pieces: [] }];
   }
+  if (line.type === 'tab') return [tabRow(line.text, left, m, right)];
   const rows = [];
   let row = null;
   let x = left;
@@ -430,6 +453,10 @@ const commentSize = (m) => (10 * m.text) / TEXT_SIZE;
 function drawRow(doc, row, y, m) {
   if (row.comment !== undefined) {
     put(doc, row.comment, row.left, y, { font: 'Italic', size: commentSize(m), color: GREY });
+    return;
+  }
+  if (row.tab !== undefined) {
+    if (row.tab.trim()) put(doc, row.tab, row.left, y, { font: TAB_FONT, size: row.size });
     return;
   }
   const textY = row.hasChords ? y + m.chordRow : y;
@@ -525,6 +552,11 @@ function widestLine(doc, blocks, left, m) {
     for (const line of block.lines) {
       if (line.type === 'comment') {
         const width = widthOf(doc, line.text, 'Italic', commentSize(m));
+        widest = Math.max(widest, start - left + width);
+        continue;
+      }
+      if (line.type === 'tab') {
+        const width = tabText(line.text).length * TAB_LETTER * m.tab;
         widest = Math.max(widest, start - left + width);
         continue;
       }

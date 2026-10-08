@@ -8,7 +8,11 @@ const show = (blocks: Block[]) =>
     block.lines.map((line) =>
       line.type === 'comment'
         ? `{${line.text}}`
-        : line.segments.map((s) => (s.chord === undefined ? '' : `[${s.chord}]`) + s.text).join(''),
+        : line.type === 'tab'
+          ? line.text
+          : line.segments
+              .map((s) => (s.chord === undefined ? '' : `[${s.chord}]`) + s.text)
+              .join(''),
     ),
   );
 

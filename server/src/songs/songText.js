@@ -5,6 +5,7 @@
 
 // ../client/src/app/pages/daloskonyv/chordpro.ts
 var DIRECTIVE = /^\{\s*([^:}]+?)\s*(?::\s*(.*?)\s*)?\}$/;
+var TAB_END = /^\{\s*(end_of_tab|eot)\s*\}$/i;
 var SECTION_MARKS = {
   start_of_chorus: { type: 'section-start', section: 'chorus' },
   soc: { type: 'section-start', section: 'chorus' },
@@ -18,8 +19,14 @@ var SECTION_MARKS = {
 function parseChordPro(source) {
   const song = { lines: [] };
   let screenOnly = false;
+  let inTab = false;
   for (const raw of source.replace(/\r\n?/g, '\n').split('\n')) {
     const line = raw.trimEnd();
+    if (inTab) {
+      if (TAB_END.test(line.trim())) inTab = false;
+      else song.lines.push({ type: 'tab', text: line, ...(screenOnly && { screenOnly: true }) });
+      continue;
+    }
     if (!line.trim()) {
       song.lines.push({ type: 'empty' });
       continue;
@@ -33,7 +40,11 @@ function parseChordPro(source) {
       else if (name === 'comment' || name === 'c')
         song.lines.push({ type: 'comment', text: value });
       else if (SECTION_MARKS[name]) song.lines.push(SECTION_MARKS[name]);
-      else if (name === 'screen') screenOnly = true;
+      else if (name === 'start_of_tab' || name === 'sot') {
+        inTab = true;
+        const label = value.replace(/^label\s*=\s*/i, '').replace(/^"(.*)"$/, '$1');
+        if (label) song.lines.push({ type: 'comment', text: label });
+      } else if (name === 'screen') screenOnly = true;
       else if (name === 'print') screenOnly = false;
       continue;
     }
@@ -531,6 +542,7 @@ function withoutScreenChords(blocks) {
     if (!block.lines.some((line) => line.type !== 'comment' && line.screenOnly)) return [block];
     const lines = block.lines.flatMap((line) => {
       if (line.type === 'comment' || !line.screenOnly) return [line];
+      if (line.type === 'tab') return [];
       const segments = line.segments
         .map((s) => (s.chord !== void 0 && parseChord(s.chord) ? { text: s.text } : s))
         .filter((s) => s.chord !== void 0 || s.text);

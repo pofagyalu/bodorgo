@@ -592,6 +592,46 @@ describe('Daloskönyv: the book as a PDF', () => {
     expect(await pagesOf('rovid-sorok', '')).toBe(1);
   });
 
+  it('prints a guitar tab line by line, never as chords - and not after a {screen}', async () => {
+    const owner = await createOwner();
+    await add(owner, {
+      title: 'Tabos dal',
+      chordpro: [
+        '{start_of_tab: Intro}',
+        'e|--0---3---0---|',
+        'B|----1---1-----|',
+        '{end_of_tab}',
+        '[C]Első sor',
+        '',
+        '{screen}',
+        '{sot}',
+        'G|--7--9--7--|',
+        '{eot}',
+        '[G]Második sor',
+      ].join('\n'),
+    });
+    const res = await request(app)
+      .get('/songs/tabos-dal/pdf?diagrams=guitar')
+      .set(asUser(owner))
+      .buffer()
+      .parse((r, done) => {
+        const chunks = [];
+        r.on('data', (c) => chunks.push(c));
+        r.on('end', () => done(null, Buffer.concat(chunks)));
+      });
+    expect(res.status).toBe(200);
+    const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const doc = await getDocument({ data: new Uint8Array(res.body), verbosity: 0 }).promise;
+    const items = (await (await doc.getPage(1)).getTextContent()).items.map((i) => i.str);
+    expect(doc.numPages).toBe(1);
+    expect(items).toContain('Intro');
+    expect(items).toContain('e|--0---3---0---|');
+    expect(items).toContain('B|----1---1-----|');
+    expect(items.join(' ')).toContain('Második sor');
+    // The tab after the mark is for the screen only.
+    expect(items.join(' ')).not.toContain('7--9');
+  });
+
   it('gives one song alone as a PDF - moved to another key if asked', async () => {
     const owner = await createOwner();
     await add(owner, {
