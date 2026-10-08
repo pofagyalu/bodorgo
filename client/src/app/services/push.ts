@@ -99,6 +99,24 @@ export class PushService {
     this.state.set('off');
   }
 
+  // Takes this device's notifications whose tag matches off the phone's
+  // notification list - and with the last one goes the number on the app's
+  // icon, which the phone shows for as long as one is still listed. For
+  // what has since been read in the app itself (tapping a notification
+  // closes it anyway - see sw.js). Never registers anything: no service
+  // worker here means no notifications to close.
+  async closeNotifications(matches: (tag: string) => boolean): Promise<void> {
+    if (!this.supported) return;
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/');
+      for (const shown of (await reg?.getNotifications()) ?? []) {
+        if (matches(shown.tag)) shown.close();
+      }
+    } catch {
+      // Not worth a word to anyone - the notification just stays.
+    }
+  }
+
   sendTest() {
     return this.http.post<{ data: { sent: number } }>(`${this.apiUrl}/test`, {});
   }

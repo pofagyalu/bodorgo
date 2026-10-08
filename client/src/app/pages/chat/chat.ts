@@ -18,7 +18,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Feed } from '../../components/feed/feed';
 import { RoomBoard } from './room-board/room-board';
 import { TourService, Tour } from '../../services/tour';
-import { ChatGame, ChatOverview, ChatService } from '../../services/chat';
+import { ChatGame, ChatOverview, ChatService, chatTag } from '../../services/chat';
 import { Podium, PodiumWinner } from '../../shared/podium/podium';
 import { ChatList } from './chat-list/chat-list';
 import { TourCountdown } from '../../shared/tour-countdown/tour-countdown';
@@ -294,6 +294,9 @@ export class Chat implements OnInit, OnDestroy {
     this.selected.set(key);
     this.activePane.set('chat');
     this.listOnPhone.set(false);
+    // Now being read here: its notification can leave the phone's list.
+    const chatRoomId = this.summaryOf(key)?.chatRoomId;
+    if (chatRoomId) this.push.closeNotifications((tag) => tag === chatTag(chatRoomId));
     if (this.isPhone() && !this.roomInHistory) {
       history.pushState({ kotyogo: key }, '');
       this.roomInHistory = true;

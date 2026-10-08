@@ -1,6 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { PushService } from './push';
 
 // A Kotyogó chat room (see server models/chatRoomModel.js): the one general
 // room, or a tour's own. Every message belongs to a room; its _id is what
@@ -51,14 +53,42 @@ export interface ChatGame {
   }[];
 }
 
+// The tag of a chat's notification (server chat/chatNotifications.js).
+export const chatTag = (chatRoomId: string) => `chat-${chatRoomId}`;
+
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/chat-rooms`;
 
+  private push = inject(PushService);
+
+  // How many messages wait unread in all my chats together - the Kotyogó
+  // menu's badge. Refreshed on page changes (see header.ts), and by every
+  // look at the list of chats.
+  readonly unreadCount = signal(0);
+
+  refreshUnread() {
+    this.getOverview().subscribe({ error: () => {} });
+  }
+
   // Every room for the list: last message, unread count, people.
   getOverview() {
-    return this.http.get<{ data: ChatOverview }>(`${this.apiUrl}/overview`);
+    return this.http
+      .get<{ data: ChatOverview }>(`${this.apiUrl}/overview`)
+      .pipe(tap((res) => this.noteOverview(res.data)));
+  }
+
+  private noteOverview(overview: ChatOverview) {
+    const rooms = [overview.general, ...overview.tours];
+    this.unreadCount.set(rooms.reduce((sum, room) => sum + room.unread, 0));
+    // A chat with nothing unread needs no notification on the phone either.
+    const read = new Set(
+      rooms
+        .filter((room) => room.chatRoomId && !room.unread)
+        .map((room) => chatTag(room.chatRoomId!)),
+    );
+    if (read.size) this.push.closeNotifications((tag) => read.has(tag));
   }
 
   // A tour's own room - made on first use.
