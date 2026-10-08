@@ -26,7 +26,7 @@ describe('TourWeatherOutlook', () => {
 
   it('shows the mood, the headline and the day lines', () => {
     show(makeTour({ weatherOutlook: makeWeatherOutlook() }));
-    expect(text('.section-heading')).toEqual(['Hogy készüljünk az időjárásra?']);
+    expect(text('.section-heading')).toEqual(['Életviteli tanácsok']);
     expect(text('.outlook-tag')).toEqual(['Vegyesfelvágott']);
     expect(text('.outlook-headline')).toEqual(['Lesz itt minden, mint a búcsúban']);
     expect(text('.outlook-line')).toEqual([
@@ -72,7 +72,8 @@ describe('TourWeatherOutlook', () => {
 
   it('becomes what was promised once the tour has started', () => {
     show(makeTour({ weatherOutlook: makeWeatherOutlook({ frozen: true }) }));
-    expect(text('.section-heading')).toEqual(['Ezt ígérték']);
+    // The heading is the same before and after.
+    expect(text('.section-heading')).toEqual(['Életviteli tanácsok']);
     expect(text('.outlook-note')[0]).toContain('az indulás előtti utolsó jóslat');
   });
 });

@@ -1,0 +1,130 @@
+@use '../../shared';
+
+// Beállítások → Infó: the weather outlook's rules (weather-rules).
+:host {
+  display: block;
+}
+
+@include shared.cards;
+
+// Two columns on a wide screen - the forecast and a day's points, then the
+// index and the packing list -, one under the other on a phone.
+.rules-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 0 1.5rem;
+  align-items: start;
+
+  // Both start level (no extra gap above the first heading).
+  > div > .rules-group:first-child {
+    margin-top: 0;
+  }
+}
+
+// The same small green heading as the notifications' groups beside it.
+.rules-group {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4c9184;
+}
+
+.rules-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #2f414b;
+
+  strong {
+    color: #1c2d38;
+  }
+}
+
+// A sum in words, set apart.
+.rules-formula {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #cfe6dc;
+  border-radius: 0.75rem;
+  background: #f7fbf9;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1c2d38;
+}
+
+.rules-table {
+  width: 100%;
+  margin: 0 0 0.5rem;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  color: #2f414b;
+
+  caption {
+    padding-bottom: 0.3rem;
+    text-align: left;
+    font-weight: 700;
+    color: #56666e;
+  }
+
+  th,
+  td {
+    padding: 0.3rem 0;
+    border-top: 1px solid #eef2f0;
+  }
+
+  th {
+    text-align: left;
+    font-weight: 400;
+  }
+
+  td {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}
+
+.rules-table--months {
+  margin-top: 1rem;
+}
+
+.rules-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #6b7780;
+}
+
+.rules-note--lead {
+  font-size: 0.8125rem;
+  color: #2f414b;
+}
+
+// The mood's colour before its word - the same five as the index bar on
+// the tour's page (tour-weather-outlook.scss).
+.rules-dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+}
+
+$moods: (
+  perfect: #f2b33d,
+  great: #57a8db,
+  mixed: #8fa3af,
+  gloomy: #6e7b88,
+  rough: #44607e,
+);
+
+@each $tier, $color in $moods {
+  .rules-dot--#{$tier} {
+    background: $color;
+  }
+}

@@ -11,6 +11,9 @@ const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const HISTORICAL_URL = 'https://archive-api.open-meteo.com/v1/archive';
 
 export const MAX_FORECAST_DAYS_AHEAD = 15;
+// A day's forecast is asked for again at most this often (see
+// tourController.js's refreshTourWeather).
+export const WEATHER_REFETCH_HOURS = 6;
 
 // Thresholds for classifyDay below.
 const RAIN_MM = 3; // this much rain in a day is a rainy day, however sunny

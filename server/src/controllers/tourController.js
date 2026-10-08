@@ -12,13 +12,16 @@ import { newVideoKeys } from '../utils/newMedia.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
 import logger from '../logger.js';
-import { fetchForecast, fetchHistorical, MAX_FORECAST_DAYS_AHEAD } from '../utils/weather.js';
+import {
+  fetchForecast,
+  fetchHistorical,
+  MAX_FORECAST_DAYS_AHEAD,
+  WEATHER_REFETCH_HOURS,
+} from '../utils/weather.js';
 import { buildWeatherOutlook } from '../utils/weatherOutlook.js';
 import { resolveDistanceInfo } from '../utils/distance.js';
 import { tourDocuments } from './documentController.js';
 import { cleanOnSitePayment } from '../utils/onSitePayment.js';
-
-const WEATHER_REFETCH_HOURS = 6;
 
 // YYYY-MM-DD of the date's own calendar day (server local time). Not
 // toISOString(): the tour days are local midnights, which in Hungary are

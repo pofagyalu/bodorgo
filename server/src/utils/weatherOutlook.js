@@ -1,7 +1,31 @@
+import { MAX_FORECAST_DAYS_AHEAD, WEATHER_REFETCH_HOURS } from './weather.js';
 import { OUTLOOK_SETTINGS as S } from './weatherOutlookSettings.js';
-import { LINE_TEXTS, PACK_TEXTS, TIER_TEXTS } from './weatherOutlookTexts.js';
+import { CONDITION_TEXTS, LINE_TEXTS, PACK_TEXTS, TIER_TEXTS } from './weatherOutlookTexts.js';
 
-// A tour's weather outlook ("Hogy készüljünk az időjárásra?" on the tour page, the
+// Everything the outlook is worked out from, as it stands in the code -
+// for Klub → Beállítások → Infó, which explains the formula with these
+// very numbers (GET /settings/weather-outlook), so the page can never say
+// something else than what the app does.
+export function weatherOutlookRules() {
+  const order = ['rough', 'gloomy', 'mixed', 'great', 'perfect'];
+  const from = { rough: 0, ...S.tiers };
+  return {
+    forecast: { daysAhead: MAX_FORECAST_DAYS_AHEAD, refetchHours: WEATHER_REFETCH_HOURS },
+    settings: S,
+    // The moods, worst first, each with the stretch of the index it covers.
+    tiers: order.map((tier, i) => ({
+      tier,
+      from: from[tier],
+      to: i < order.length - 1 ? from[order[i + 1]] : 100,
+      tag: TIER_TEXTS[tier].tag,
+      word: TIER_TEXTS[tier].word,
+    })),
+    conditionNames: CONDITION_TEXTS,
+    packNames: Object.fromEntries(Object.entries(PACK_TEXTS).map(([icon, t]) => [icon, t.name])),
+  };
+}
+
+// A tour's weather outlook ("Életviteli tanácsok" on the tour page, the
 // pill on the tour list, a block in the Programfüzet): one mood for the
 // whole tour and what to pack for it, worked out from the forecast of its
 // days. The numbers live in weatherOutlookSettings.js, the words in

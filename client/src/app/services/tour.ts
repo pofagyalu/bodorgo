@@ -139,7 +139,7 @@ export type OutlookTier = 'perfect' | 'great' | 'mixed' | 'gloomy' | 'rough';
 export type OutlookPackIcon =
   'tshirt' | 'sweater' | 'jacket' | 'beanie' | 'umbrella' | 'wind' | 'sun' | 'layers';
 
-// "Hogy készüljünk az időjárásra?" - one mood for the whole tour and what to pack for
+// "Életviteli tanácsok" - one mood for the whole tour and what to pack for
 // it, worked out (texts included) by the server from the days' forecast
 // (utils/weatherOutlook.js). Only exists once every day has a forecast;
 // follows the forecast until the start date, then stays as it was

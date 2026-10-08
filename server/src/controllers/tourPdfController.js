@@ -123,7 +123,7 @@ function weatherIconPath(condition) {
 // scripts/convertOutlookBadges.mjs).
 const OUTLOOK_BADGE_DIR = path.join(rootDir, 'assets', 'img', 'weather-outlook');
 
-// "Hogy készüljünk az időjárásra?" - the tour's weather outlook (tourModel.js's
+// "Életviteli tanácsok" - the tour's weather outlook (tourModel.js's
 // weatherOutlook, the same texts as the tour page's panel): its mood and
 // headline, then what to pack. Nothing at all while the tour has none.
 function drawWeatherOutlook(doc, outlook, contentWidth) {
@@ -159,7 +159,7 @@ function drawWeatherOutlook(doc, outlook, contentWidth) {
     .font('Heading')
     .fontSize(16)
     .fillColor(COLORS.darkGreen)
-    .text(outlook.frozen ? 'Ezt ígérték' : 'Hogy készüljünk az időjárásra?', PAGE_MARGIN, doc.y, {
+    .text('Életviteli tanácsok', PAGE_MARGIN, doc.y, {
       width: contentWidth,
     });
   doc.x = PAGE_MARGIN;

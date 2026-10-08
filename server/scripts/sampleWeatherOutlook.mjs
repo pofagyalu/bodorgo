@@ -1,5 +1,5 @@
-// Try-out helper: gives a tour a made-up weather outlook ("Milyen időnk
-// lesz?"), to see how the panel, the tour card's pill and the Programfüzet
+// Try-out helper: gives a tour a made-up weather outlook ("Életviteli
+// tanácsok"), to see how the panel, the tour card's pill and the Programfüzet
 // block look before a real forecast covers a whole tour. For the local
 // (dev) database only - never run it against live.
 //
@@ -8,8 +8,8 @@
 //
 // mood: perfect | great | mixed (default) | gloomy | rough
 //
-// A tour that already started gets the outlook as "what was promised"
-// (frozen). A tour still ahead gets made-up forecast days instead, and the
+// A tour that already started gets the outlook frozen, as after its
+// start. A tour still ahead gets made-up forecast days instead, and the
 // app builds the outlook from them itself - they are dated far ahead so no
 // real forecast replaces them until --remove.
 
@@ -115,7 +115,7 @@ await tour.save();
 
 console.log(
   started
-    ? `"${tour.title}" (order ${tour.order}) now has a made-up outlook (${tour.weatherOutlook.tier}, ${tour.weatherOutlook.score}), frozen as "Ezt ígérték".`
+    ? `"${tour.title}" (order ${tour.order}) now has a made-up outlook (${tour.weatherOutlook.tier}, ${tour.weatherOutlook.score}), frozen.`
     : `"${tour.title}" (order ${tour.order}) now has made-up ${option} forecast days; its outlook appears at the next visit.`,
 );
 await mongoose.disconnect();

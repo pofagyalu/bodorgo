@@ -7,6 +7,7 @@ import {
   CLIENT_VERSION,
   VersionService,
 } from '../../../../services/version';
+import { WeatherRules } from './weather-rules/weather-rules';
 
 // Every notification the app sends - listed on the Értesítések card so an
 // admin can see what goes to whom, and when. Kept in step with the server
@@ -104,11 +105,11 @@ const PUSHES: NotificationInfo[] = [
   },
 ];
 
-// Klub → Beállítások → Infó: every e-mail and push the app sends (a list to read), and which versions are running. One of the settings page's tabs
+// Klub → Beállítások → Infó: every e-mail and push the app sends (a list to read), how the tours' weather outlook is worked out (weather-rules), and which versions are running. One of the settings page's tabs
 // (settings.ts shows them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-info-settings',
-  imports: [MatIconModule, DatePipe],
+  imports: [MatIconModule, DatePipe, WeatherRules],
   templateUrl: './info-settings.html',
   styleUrl: './info-settings.scss',
 })

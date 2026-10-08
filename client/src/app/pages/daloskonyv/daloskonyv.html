@@ -280,9 +280,10 @@
 
     <!-- Not songs, but found like one: the tuner and the two annexes - one
          row of icons, each saying what it is under the pointer. -->
-    <!-- Beside an open song the played marks' button is the row's fourth
-         icon (the first row above is the song's own bar there) - so the row
-         is drawn there even when a search has left none of the three. -->
+    <!-- Beside an open song the played marks' button, the playlists' and
+         "+ Dal" follow the three in the row (the two rows above are not
+         drawn there) - so the row is drawn there even when a search has
+         left none of the three. -->
     @if (annexes().length || isOpen()) {
       <ul class="annex-row">
         @for (annex of annexes(); track annex.id) {
@@ -303,6 +304,19 @@
         <li class="annex-row-clear">
           <ng-container [ngTemplateOutlet]="listPicker" />
         </li>
+        <!-- A new song without leaving the open one's page first. -->
+        @if (songs() !== null) {
+          <li class="annex-row-clear">
+            <a
+              [routerLink]="[base(), 'uj']"
+              class="annex-row-new"
+              title="Új dal"
+              aria-label="Új dal"
+            >
+              <mat-icon>add</mat-icon>
+            </a>
+          </li>
+        }
       </ul>
     }
 
