@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, ElementRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { NotificationsService } from '../../../../notifications/notifications.service';
@@ -29,6 +29,7 @@ import { QuizMap } from '../quiz-map/quiz-map';
 import { QuizShape } from '../quiz-shape/quiz-shape';
 import { PickedTourPhoto, QuizPhotoPicker } from './photo-picker/photo-picker';
 import { QuizPreview } from './quiz-preview/quiz-preview';
+import { blockPageZoom } from '../../../../shared/page-zoom';
 import { PickedSong, QuizSongPicker } from './song-picker/song-picker';
 
 // A question in the editor always has all four answer slots: one left
@@ -160,6 +161,16 @@ export class QuizEdit {
   selected = signal(0);
   // On a phone: the preview is over the form.
   previewOpen = signal(false);
+  // While it is - the question as in a game -, the page can't be zoomed,
+  // just as in a game (shared/page-zoom; a Térkép question's map still
+  // zooms in itself). The form under it is zoomed as any page.
+  private allowPageZoom: (() => void) | null = null;
+  private previewZoom = effect(() => {
+    const open = this.previewOpen();
+    this.allowPageZoom?.();
+    this.allowPageZoom = open ? blockPageZoom() : null;
+  });
+  private onLeave = inject(DestroyRef).onDestroy(() => this.allowPageZoom?.());
   saving = signal(false);
   // The question a tour's photo / a song is being picked for (its picker
   // is open).
