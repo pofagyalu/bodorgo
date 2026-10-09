@@ -1,0 +1,133 @@
+// A tour's Résztvevők: the heading row and the attendee list under it.
+:host {
+  display: block;
+}
+
+.participants-section {
+  margin-bottom: 3rem;
+}
+
+// The same section heading as the tour page's other sections - each
+// component styles its own.
+.section-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #eee;
+}
+
+// The whole row is the open/close control.
+.participants-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+// Pushes the admin-only Excel export button to the row's right edge,
+// regardless of whether it's even rendered - the expand/collapse toggle
+// itself sits at the opposite end, right before "Résztvevők".
+.participants-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: auto;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #777;
+  padding: 0.2rem;
+  border-radius: 50%;
+}
+
+.toggle-btn:hover,
+.participants-heading:hover .toggle-btn {
+  background: #f0f0f0;
+}
+
+// Résztvevők (36/40): never broken in two - the heading stays one row.
+.participants-title {
+  white-space: nowrap;
+}
+
+.full-badge {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  color: #fff;
+  background: #e53935;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  margin-left: 0.7rem;
+}
+
+// Admin-only, at the row's right edge - the classic Excel green (distinct
+// from this app's own brand green) makes it instantly recognizable as
+// "spreadsheet export" at a glance.
+.excel-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: #1d6f42;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 1.3rem;
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  &:hover {
+    background: #16542f;
+  }
+}
+
+.empty-note {
+  color: #999;
+  font-style: italic;
+}
+
+// On a phone the row gets tight (the toggle, the text, "Megtelt", and an
+// admin's Excel button): smaller text and badge, and the Excel button is
+// just its icon.
+@media (max-width: 600px) {
+  .participants-heading {
+    font-size: 1.15rem;
+    gap: 0.25rem;
+  }
+
+  .full-badge {
+    margin-left: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .excel-export-btn {
+    padding: 0.4rem;
+  }
+
+  .excel-text {
+    display: none;
+  }
+}
