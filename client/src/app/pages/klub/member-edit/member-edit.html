@@ -150,7 +150,7 @@
               id="mRole"
               [value]="role()"
               [disabled]="!canEditRole()"
-              (change)="role.set($any($event.target).value)"
+              (change)="changeRole($any($event.target))"
             >
               <option value="admin">Admin</option>
               <option value="member">Klubtag</option>

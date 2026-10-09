@@ -1079,6 +1079,10 @@ const tags = [
   [T.system, 'Health check.'],
 ].map(([name, description]) => ({ name, description }));
 
+// On every operation that moves money or rights (auth/freshLogin.js).
+const FRESH_LOGIN =
+  ' **Sensitive:** only for someone who identified themselves at the provider in the last 10 minutes - otherwise 403 with `code: "fresh-login-required"`, nothing changed; the app then sends them through `/auth/login?stepup=1` and tries again.';
+
 const paths = {
   // --- Bejelentkezés ---
   '/auth/login': {
@@ -1087,7 +1091,17 @@ const paths = {
       role: 'public',
       summary: 'Start login',
       description:
-        'Redirects to the active OIDC provider (Authentik, unless another was chosen on Beállítások → OIDC szolgáltató); comes back to `/auth/callback`. With `LOCAL_LOGIN=true` it redirects to the app’s own login page instead, which asks for the e-mail and password (`/auth/local-login`).',
+        'Redirects to the active OIDC provider (Authentik, unless another was chosen on Beállítások → OIDC szolgáltató); comes back to `/auth/callback`. With `LOCAL_LOGIN=true` it redirects to the app’s own login page instead, which asks for the e-mail and password (`/auth/local-login`). With `stepup=1` the provider is told to ask again unless they logged in there in the last 5 minutes (`max_age=300`; not `prompt=login`, which Authentik obeys only once in a session of its own) - the way a sensitive operation gets a fresh identification (see `freshLoginSecondsLeft` on `/auth/me`).',
+      params: [
+        query(
+          'stepup',
+          '`1`: the provider must ask who they are again, unless it did in the last 5 minutes.',
+        ),
+        query(
+          'returnTo',
+          'A path of the client (starting with one `/`) to land on afterwards instead of the home page; anything else is ignored.',
+        ),
+      ],
       response: { description: 'Redirect to Authentik.' },
       ok: 302,
     }),
@@ -1113,7 +1127,7 @@ const paths = {
       role: 'public',
       summary: 'Log in with e-mail and password',
       description:
-        'The emergency way in, only with `LOCAL_LOGIN=true` in the server’s `.env` (404 otherwise) - for when there is no working OIDC provider. One person only: the e-mail must be `INITIAL_ADMIN_USER` and the password `INITIAL_ADMIN_PASSWORD` (at least 12 characters), both read from `.env`; the app stores and changes no password. Their account is created if it does not exist, and gets the admin role and the role-manager flag. Starts the session. Meant to be temporary: set the provider up on Beállítások → OIDC szolgáltató, then switch `LOCAL_LOGIN` off. Ten wrong tries from an address in 15 minutes, then 429.',
+        'The emergency way in, only with `LOCAL_LOGIN=true` in the server’s `.env` (404 otherwise) - for when there is no working OIDC provider. One person only: the e-mail must be `INITIAL_ADMIN_USER` and the password `INITIAL_ADMIN_PASSWORD` (at least 12 characters), both read from `.env`; the app stores and changes no password. Their account is created if it does not exist, and gets the admin role and the role-manager flag. Starts the session; sensitive operations are open for 10 minutes from it, and typing the password here again opens them for another 10. Meant to be temporary: set the provider up on Beállítások → OIDC szolgáltató, then switch `LOCAL_LOGIN` off. Ten wrong tries from an address in 15 minutes, then 429.',
       body: obj({ email: str(), password: str() }, ['email', 'password']),
       errors: [401, 404, 429],
     }),
@@ -1124,7 +1138,7 @@ const paths = {
       role: 'public',
       summary: 'Login callback',
       description:
-        'Authentik returns here. Finds the user an admin added by their e-mail (any case) - the e-mail alone says who someone is; the Authentik id is only noted on the account (as `sub`, and among the user’s `identities` under the provider’s issuer address - one line per provider they have logged in through), so an Authentik user deleted and made again with the same address is the same person, and an id arriving with another address is whoever that address belongs to - and refreshes their name - never their role - then starts the session and redirects to the app. Someone not added is sent back with `login?error=not-invited`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
+        'Authentik returns here. Finds the user an admin added by their e-mail (any case) - the e-mail alone says who someone is; the Authentik id is only noted on the account (as `sub`, and among the user’s `identities` under the provider’s issuer address - one line per provider they have logged in through), so an Authentik user deleted and made again with the same address is the same person, and an id arriving with another address is whoever that address belongs to - and refreshes their name - never their role - then starts the session and redirects to the app (to the `returnTo` path given to `/auth/login`, if any). The session keeps when they really identified themselves at the provider (the ID token’s `auth_time`) - days ago, if the provider’s own session let this login through; a provider that sends none leaves sensitive operations closed. Someone not added is sent back with `login?error=not-invited`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
       response: { description: 'Redirect to the app.' },
       ok: 302,
     }),
@@ -1161,6 +1175,9 @@ const paths = {
                 role: str('', { enum: ['admin', 'member', 'guest'] }),
                 familyId: id(),
                 photoUpdatedAt: { type: ['string', 'null'] },
+                freshLoginSecondsLeft: int(
+                  'For how many more seconds sensitive operations (a role, a cash payment, a payout, a wallet’s bank account) go without identifying again - 10 minutes from the real login at the provider. 0: they answer 403 `fresh-login-required` until `/auth/login?stepup=1`.',
+                ),
               },
               ['loggedIn'],
             ),
@@ -2197,10 +2214,11 @@ const paths = {
       role: 'admin',
       summary: 'Undo a cash payment',
       description:
-        'Only `method: cash` - an online payment can never be undone here. The payment’s record is removed; the Napló (`/settings/audit-log`) keeps what it was and who had recorded it.',
+        'Only `method: cash` - an online payment can never be undone here. The payment’s record is removed; the Napló (`/settings/audit-log`) keeps what it was and who had recorded it.' +
+        FRESH_LOGIN,
       params: [path('id', 'The payment.')],
       ok: 204,
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
   },
   '/payments/barion/callback': {
@@ -2233,11 +2251,12 @@ const paths = {
       role: 'admin',
       summary: 'Record a cash tour advance',
       description:
-        'Someone paid an admin in cash: marked paid at once, no e-mail. Recorded in the Napló (`/settings/audit-log`).',
+        'Someone paid an admin in cash: marked paid at once, no e-mail. Recorded in the Napló (`/settings/audit-log`).' +
+        FRESH_LOGIN,
       body: obj({ tourId: id(), attendeeIds: arrayOf(id()) }, ['tourId', 'attendeeIds']),
       ok: 201,
       data: obj({ payment: ref('Payment') }),
-      errors: [400],
+      errors: [400, 403],
     }),
   },
   '/payments/cash-membership': {
@@ -2246,11 +2265,12 @@ const paths = {
       role: 'admin',
       summary: "Record a member's dues paid in cash",
       description:
-        'One year’s dues handed over in cash: a payment and its Tagdíj income, no e-mail. Recorded in the Napló (`/settings/audit-log`).',
+        'One year’s dues handed over in cash: a payment and its Tagdíj income, no e-mail. Recorded in the Napló (`/settings/audit-log`).' +
+        FRESH_LOGIN,
       body: obj({ userId: id(), year: int() }, ['userId', 'year']),
       ok: 201,
       data: obj({ payment: ref('Payment') }),
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
   },
   '/payments/withdraw/{purpose}': {
@@ -2269,13 +2289,14 @@ const paths = {
       role: 'admin',
       summary: 'Withdraw from a Barion wallet',
       description:
-        "To that wallet's bank account from Beállítások - never to an account given in the request. Barion's fee: 0.1%, at least 70 Ft. A started payout is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin** (who, how much, to which account).",
+        "To that wallet's bank account from Beállítások - never to an account given in the request. Barion's fee: 0.1%, at least 70 Ft. A started payout is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin** (who, how much, to which account)." +
+        FRESH_LOGIN,
       body: obj(
         { purpose: str('', { enum: ['membershipFee', 'tourAdvance'] }), amount: int('Forints.') },
         ['purpose', 'amount'],
       ),
       data: obj({ fee: int(), net: int() }),
-      errors: [400, 502],
+      errors: [400, 403, 502],
     }),
   },
 
@@ -2323,10 +2344,11 @@ const paths = {
       role: 'admin',
       summary: 'Add a person',
       description:
-        'Someone who may then log in with this e-mail, or a child without a login. Other admins add a `guest`; only the role manager may give another role (403 otherwise). `canManageRoles` cannot be set. A role other than `guest` given here is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin**.',
+        'Someone who may then log in with this e-mail, or a child without a login. Other admins add a `guest`; only the role manager may give another role (403 otherwise). `canManageRoles` cannot be set. A role other than `guest` given here is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin**.' +
+        FRESH_LOGIN,
       body: ref('User'),
       ok: 201,
-      errors: [400],
+      errors: [400, 403],
     }),
   },
   '/users/me': {
@@ -2426,7 +2448,8 @@ const paths = {
       role: 'admin',
       summary: 'Edit a person',
       description:
-        'Any admin edits the details. Changing `role` is for the role manager only (403 otherwise), and not their own (400). Sending the current role back unchanged is fine. A changed role is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin** (old → new, who).',
+        'Any admin edits the details. Changing `role` is for the role manager only (403 otherwise), and not their own (400). Sending the current role back unchanged is fine. A changed role is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin** (old → new, who).' +
+        FRESH_LOGIN,
       params: [userIdP],
       body: ref('User'),
       errors: [400, 403, 404],
@@ -3104,12 +3127,11 @@ const paths = {
       tag: T.settings,
       role: 'admin',
       summary: "Set a Barion wallet's e-mail and bank account",
-      description:
-        'The IBAN must be Hungarian with valid check digits. Every change goes into the history and is **e-mailed to every admin**.',
+      description: `The IBAN must be Hungarian with valid check digits. Every change goes into the history and is **e-mailed to every admin**.${FRESH_LOGIN}`,
       params: [path('wallet', '`membership` (Tagdíjak) or `tour` (Előlegek).')],
       body: ref('BarionWallet'),
       data: ref('BarionWallet'),
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
   },
   '/settings/audit-log': {

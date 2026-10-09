@@ -4,6 +4,7 @@ import { RouterOutlet, ChildrenOutletContexts } from '@angular/router';
 import { Header } from './components/header/header';
 import { routeFadeAnimation } from './animations';
 import { AuthService } from './auth/auth.service';
+import { FreshLoginService } from './auth/fresh-login.service';
 import { VersionService } from './services/version';
 import { OfflineService } from './services/offline';
 import { SongService } from './services/song';
@@ -23,6 +24,7 @@ import { BirthdayCelebration } from './shared/birthday/birthday-celebration';
 export class AppComponent implements OnInit {
   private contexts = inject(ChildrenOutletContexts);
   private authService = inject(AuthService);
+  private freshLogin = inject(FreshLoginService);
   private versionService = inject(VersionService);
   private offline = inject(OfflineService);
   private songService = inject(SongService);
@@ -64,7 +66,8 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     // The service worker keeps the app itself on the device (src/sw.js).
     this.offline.start();
-    this.authService.checkAuth().subscribe();
+    // Back from identifying again for a sensitive operation: says so.
+    this.authService.checkAuth().subscribe(() => this.freshLogin.announceReturn());
     // A newer deploy: the open app refreshes itself (services/version.ts).
     this.versionService.watchForNewVersion();
   }

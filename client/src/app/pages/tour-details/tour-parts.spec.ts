@@ -179,24 +179,28 @@ describe('AttendeeList', () => {
     expect(list.savingNights()).toBe(false);
   });
 
-  it('marks an advance as paid in cash, and takes that back', () => {
+  it('marks an advance as paid in cash, and takes that back', async () => {
     open('admin');
-    list.toggleCashPaid(ROWS[0]);
-    list.toggleCashPaid(ROWS[1]); // one at a time
+    void list.toggleCashPaid(ROWS[0]);
+    void list.toggleCashPaid(ROWS[1]); // one at a time
+    await settle();
     const req = http.expectOne(`${API}/payments/cash`);
     expect(req.request.body).toEqual({ tourId: 't1', attendeeIds: ['a1'] });
     req.flush({ status: 'success' });
     expect(success).toHaveBeenCalledWith('Teszt Elek előlege készpénzesen kifizetettnek jelölve.');
 
-    list.toggleCashPaid(row({ name: 'Teszt Elek', paymentMethod: 'cash', paymentId: 'p1' }));
+    void list.toggleCashPaid(row({ name: 'Teszt Elek', paymentMethod: 'cash', paymentId: 'p1' }));
+    await settle();
     respond({ 'DELETE /payments/p1': {} });
     expect(success).toHaveBeenCalledWith('Teszt Elek készpénzes befizetése visszavonva.');
     expect(updated).toBe(2);
 
-    list.toggleCashPaid(ROWS[0]);
+    void list.toggleCashPaid(ROWS[0]);
+    await settle();
     respond({ 'POST /payments/cash': fail() });
     expect(error).toHaveBeenCalledWith('Hiba történt a rögzítés során.');
-    list.toggleCashPaid(row({ paymentMethod: 'cash', paymentId: 'p1' }));
+    void list.toggleCashPaid(row({ paymentMethod: 'cash', paymentId: 'p1' }));
+    await settle();
     respond({ 'DELETE /payments/p1': fail() });
     expect(error).toHaveBeenCalledWith('Hiba történt a visszavonás során.');
     expect(list.markingCashPaidId()).toBeNull();

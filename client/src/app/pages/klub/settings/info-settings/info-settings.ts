@@ -90,7 +90,7 @@ const EMAILS: (NotificationInfo & { note?: string })[] = [
     name: 'Érzékeny művelet',
     when: 'Valaki szerepkört ad vagy módosít, kiutalást indít a számlára, vagy megváltoztatja egy Barion-számla vagy a bejelentkezés (OIDC szolgáltató) beállításait.',
     who: 'Az adminok.',
-    note: 'Ezek és a készpénzes befizetések a Klub → Napló oldalon is megvannak.',
+    note: 'Ezek és a készpénzes befizetések a Klub → Napló oldalon is megvannak; mindegyikhez 10 percen belüli azonosítás kell.',
   },
 ];
 

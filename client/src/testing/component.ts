@@ -53,12 +53,18 @@ export function waiting(): string[] {
   return open.map((req) => `${req.request.method} ${pathOf(req.request.url)}`);
 }
 
-/** Logs a user in for the test (through the same request the app uses). */
-export function logIn(user: Partial<CurrentUser> & { role: string }) {
+/**
+ * Logs a user in for the test (through the same request the app uses) - one
+ * who identified themselves just now, so sensitive operations go without
+ * asking again; `freshLoginSecondsLeft: 0` for one who logged in long ago.
+ */
+export function logIn(
+  user: Partial<CurrentUser> & { role: string; freshLoginSecondsLeft?: number },
+) {
   TestBed.inject(AuthService).checkAuth().subscribe();
   TestBed.inject(HttpTestingController)
     .expectOne(`${API}/auth/me`)
-    .flush({ loggedIn: true, id: 'me', name: 'Teszt Elek', ...user });
+    .flush({ loggedIn: true, id: 'me', name: 'Teszt Elek', freshLoginSecondsLeft: 600, ...user });
 }
 
 /** A socket that connects nowhere; `fire` plays an incoming event. */

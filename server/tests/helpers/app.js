@@ -17,9 +17,16 @@ function fakeSession(req, res, next) {
 
 export const app = createApp(fakeSession);
 
-// Headers that make a request come from this (already created) user.
-export function asUser(user) {
+// Headers that make a request come from this (already created) user - who
+// identified themselves just now (auth/freshLogin.js), unless minutesAgo
+// says how long ago; null: the provider never said when.
+export function asUser(user, { minutesAgo = 0 } = {}) {
   return {
-    'x-test-user': JSON.stringify({ id: String(user._id), role: user.role, name: user.name }),
+    'x-test-user': JSON.stringify({
+      id: String(user._id),
+      role: user.role,
+      name: user.name,
+      authAt: minutesAgo === null ? null : Date.now() - minutesAgo * 60000,
+    }),
   };
 }

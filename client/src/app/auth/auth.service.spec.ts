@@ -107,6 +107,32 @@ describe('AuthService', () => {
     req.flush({ status: 'success' });
   });
 
+  it('knows for how long sensitive operations go without identifying again', () => {
+    expect(service.hasFreshLogin()).toBe(false);
+    answerMe({ loggedIn: true, id: 'u1', role: 'admin' }); // logged in long ago
+    expect(service.hasFreshLogin()).toBe(false);
+
+    vi.useFakeTimers();
+    try {
+      answerMe({ loggedIn: true, id: 'u1', role: 'admin', freshLoginSecondsLeft: 120 });
+      expect(service.hasFreshLogin()).toBe(true);
+      vi.advanceTimersByTime(119_000);
+      expect(service.hasFreshLogin()).toBe(true);
+      vi.advanceTimersByTime(2_000);
+      expect(service.hasFreshLogin()).toBe(false);
+
+      // Nothing of it is left after a logout, or once the server refused one.
+      answerMe({ loggedIn: true, id: 'u1', role: 'admin', freshLoginSecondsLeft: 120 });
+      answerMe({ loggedIn: false });
+      expect(service.hasFreshLogin()).toBe(false);
+      answerMe({ loggedIn: true, id: 'u1', role: 'admin', freshLoginSecondsLeft: 120 });
+      service.freshLoginGone();
+      expect(service.hasFreshLogin()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('patches the current user, but only when there is one', () => {
     service.patchCurrentUser({ name: 'Senki' });
     expect(service.user()).toBeNull();

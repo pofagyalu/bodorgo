@@ -31,6 +31,7 @@ interface MeResponse {
   wantsEmailNotifications?: boolean;
   address?: UserAddress;
   photoUpdatedAt?: string | null;
+  freshLoginSecondsLeft?: number;
 }
 
 @Injectable({
@@ -50,6 +51,25 @@ export class AuthService {
   // (the songbook's offline copy) goes then.
   private saidLoggedOut = signal(false);
   loggedOut = this.saidLoggedOut.asReadonly();
+
+  // Until when sensitive operations go without identifying again (see
+  // fresh-login.service.ts) - on this device's clock, from the seconds the
+  // server said were left. 0: they ask first.
+  private freshLoginUntil = signal(0);
+  hasFreshLogin() {
+    return Date.now() < this.freshLoginUntil();
+  }
+  // The server refused one after all (the ten minutes ran out meanwhile).
+  freshLoginGone() {
+    this.freshLoginUntil.set(0);
+  }
+
+  // Full-page navigation, like login(): the provider asks who they are even
+  // if its own session is still alive, then the server brings them back to
+  // this page of the app (its path, as the router has it).
+  identifyAgain(returnTo: string) {
+    window.location.href = `${environment.apiBaseUrl}/auth/login?stepup=1&returnTo=${encodeURIComponent(returnTo)}`;
+  }
 
   // Lets a component (e.g. the profile page's notification toggle) reflect
   // a just-saved change immediately, without a full /auth/me round trip.
@@ -99,6 +119,8 @@ export class AuthService {
         tap((res) => {
           this.loggedIn.set(!!res.loggedIn);
           this.saidLoggedOut.set(!res.loggedIn);
+          const freshSeconds = res.loggedIn ? (res.freshLoginSecondsLeft ?? 0) : 0;
+          this.freshLoginUntil.set(freshSeconds > 0 ? Date.now() + freshSeconds * 1000 : 0);
           this.currentUser.set(
             res.loggedIn
               ? {
@@ -123,6 +145,7 @@ export class AuthService {
         catchError(() => {
           this.loggedIn.set(false);
           this.currentUser.set(null);
+          this.freshLoginUntil.set(0);
           return of({ loggedIn: false } as MeResponse);
         }),
       );

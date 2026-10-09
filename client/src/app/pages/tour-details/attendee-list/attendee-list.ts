@@ -14,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TourService, PaymentTotals, Cancellation, OnSitePayment } from '../../../services/tour';
 import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
+import { FreshLoginService } from '../../../auth/fresh-login.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { formatForint } from '../../../shared/format';
 import { Avatar } from '../../../components/avatar/avatar';
@@ -95,6 +96,7 @@ export class AttendeeList implements OnInit {
   private paymentService = inject(PaymentService);
   private notifications = inject(NotificationsService);
   auth = inject(AuthService);
+  private freshLogin = inject(FreshLoginService);
 
   @Input({ required: true }) tourId!: string;
   @Input({ required: true }) attendees!: AttendeeListRow[];
@@ -302,7 +304,11 @@ export class AttendeeList implements OnInit {
   // button while the request is in flight.
   markingCashPaidId = signal<string | null>(null);
 
-  toggleCashPaid(row: AttendeeListRow) {
+  async toggleCashPaid(row: AttendeeListRow) {
+    if (this.markingCashPaidId()) return;
+    // Money: only for someone who identified themselves in the last minutes.
+    if (!(await this.freshLogin.ensure('Készpénzes előleg rögzítése'))) return;
+    // A second click got this far meanwhile: one request only.
     if (this.markingCashPaidId()) return;
     this.markingCashPaidId.set(row.attendeeId);
 

@@ -12,6 +12,7 @@ import {
   withdrawFunds,
 } from '../controllers/paymentController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
+import { requireFreshLogin } from '../auth/freshLogin.js';
 
 const router = express.Router();
 
@@ -26,12 +27,20 @@ router.post('/membership/start', requireAuth, startMembershipPayment);
 // Barion calls this server-to-server, unlike the Stripe webhook it needs
 // no special raw-body handling since there's no payload to verify.
 router.get('/barion/callback', barionCallback);
-router.post('/cash', requireAuth, restrictTo('admin'), recordCashPayment);
+// The four below move money: only for someone who identified themselves in
+// the last minutes (auth/freshLogin.js).
+router.post('/cash', requireAuth, restrictTo('admin'), requireFreshLogin, recordCashPayment);
 // A member's yearly dues handed over in cash (Klub → Felhasználók).
-router.post('/cash-membership', requireAuth, restrictTo('admin'), recordCashMembershipPayment);
+router.post(
+  '/cash-membership',
+  requireAuth,
+  restrictTo('admin'),
+  requireFreshLogin,
+  recordCashMembershipPayment,
+);
 router.get('/withdraw/:purpose', requireAuth, restrictTo('admin'), getWithdrawalStatus);
-router.post('/withdraw', requireAuth, restrictTo('admin'), withdrawFunds);
-router.delete('/:id', requireAuth, restrictTo('admin'), deleteCashPayment);
+router.post('/withdraw', requireAuth, restrictTo('admin'), requireFreshLogin, withdrawFunds);
+router.delete('/:id', requireAuth, restrictTo('admin'), requireFreshLogin, deleteCashPayment);
 router.get('/:id/status', requireAuth, getPaymentStatus);
 router.get('/:id/receipt', requireAuth, downloadReceipt);
 

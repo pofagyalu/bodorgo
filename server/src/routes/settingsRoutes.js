@@ -33,6 +33,7 @@ import {
 } from '../controllers/settingsController.js';
 import { getAuditLog } from '../controllers/auditLogController.js';
 import requireAuth, { restrictTo, roleManagerOnly } from '../auth/requireAuth.js';
+import { requireFreshLogin } from '../auth/freshLogin.js';
 import { weatherOutlookRules } from '../utils/weatherOutlook.js';
 
 // Klub → Beállítások (see settingsController.js).
@@ -73,7 +74,15 @@ router
 
 // Barion wallets: payees, API keys, bank accounts - admins only.
 router.get('/barion', requireAuth, restrictTo('admin'), getBarionSettings);
-router.put('/barion/:wallet', requireAuth, restrictTo('admin'), updateBarionWallet);
+// Where a payout goes: only for someone who identified themselves in the
+// last minutes (auth/freshLogin.js).
+router.put(
+  '/barion/:wallet',
+  requireAuth,
+  restrictTo('admin'),
+  requireFreshLogin,
+  updateBarionWallet,
+);
 
 // Napló: who did what and when, of what moves money, rights or the club's
 // settings - admins only.

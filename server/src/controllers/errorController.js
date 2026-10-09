@@ -29,6 +29,7 @@ const sendErrorDev = (err, res) => {
     status: err.status,
     error: err,
     message: err.message,
+    ...(typeof err.code === 'string' ? { code: err.code } : {}),
     stack: err.stack,
   });
 };
@@ -40,6 +41,7 @@ const sendErrorProd = (err, res) => {
     res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
+      ...(typeof err.code === 'string' ? { code: err.code } : {}),
     });
   } else {
     logger.error('ERROR 💣', err);

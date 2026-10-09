@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { UserService, AdminUser } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { AuthService } from '../../../auth/auth.service';
+import { FreshLoginService } from '../../../auth/fresh-login.service';
 import { Avatar } from '../../../components/avatar/avatar';
 import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 import { HuDateInput } from '../../../shared/hu-date-input/hu-date-input';
@@ -42,6 +43,7 @@ export class MemberEdit implements OnInit {
   private userService = inject(UserService);
   private notifications = inject(NotificationsService);
   private auth = inject(AuthService);
+  private freshLogin = inject(FreshLoginService);
 
   readonly minBirthday = '1900-01-01';
   readonly maxBirthday = new Date().toISOString().slice(0, 10);
@@ -75,6 +77,19 @@ export class MemberEdit implements OnInit {
     const me = this.auth.user();
     return !!me?.canManageRoles && this.user()?._id !== me.id;
   });
+
+  // A role is given only by someone who identified themselves in the last
+  // minutes - asked as soon as another one is picked, not at Mentés; until
+  // then the list shows the role as it was.
+  async changeRole(select: HTMLSelectElement) {
+    const picked = select.value;
+    const saved = this.user()?.role ?? 'guest';
+    if (picked !== saved && !(await this.freshLogin.ensure('Szerepkör módosítása'))) {
+      select.value = this.role();
+      return;
+    }
+    this.role.set(picked);
+  }
   roleHint = computed(() => {
     const me = this.auth.user();
     if (me?.canManageRoles) {
