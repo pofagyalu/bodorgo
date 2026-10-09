@@ -53,6 +53,8 @@
       autoplay
       preload="metadata"
       crossorigin="use-credentials"
+      (loadstart)="applyVolume(video)"
+      (volumechange)="onVolumeChange(video)"
       (loadedmetadata)="onLoaded(video)"
     >
       <source [src]="key" type="video/mp4" />

@@ -21,6 +21,13 @@ import { chatImagesUsage, enforceChatImageQuota } from '../chat/chatImages.js';
 import { clearImageCache, enforceImageCacheQuota, imageCacheUsage } from '../photos/imageSizes.js';
 import { BIRTHDAY_EFFECTS, DEFAULT_BIRTHDAY_MESSAGE } from '../utils/birthday.js';
 import { DEFAULT_RANK_MESSAGE } from '../utils/ranks.js';
+import { yearlyReportPdf } from '../utils/yearlyReport.js';
+import {
+  reportYearToSend,
+  yearlyReportEmail,
+  yearlyReportFilename,
+  yearlyReportRecipients,
+} from '../utils/yearlyReportMail.js';
 import { waxSealPng } from '../utils/waxSeal.js';
 import { stripeAccountReady } from '../utils/stripe.js';
 import config from '../config.js';
@@ -229,6 +236,55 @@ export const testMembershipReminder = async (req, res) => {
   const fee = await membershipFeeForYear(year);
   await sendResendEmail({ to: req.user.email, ...reminderEmail(req.user.name, year, fee) });
   res.status(200).json({ status: 'success', data: { sentTo: req.user.email } });
+};
+
+// --- Éves jelentés (see utils/yearlyReport.js, utils/yearlyReportMail.js) ---
+
+// GET /settings/yearly-report (admin) - the year the next automatic
+// e-mail is about, the 1 January it goes out on, who would get it now, and
+// the last year already sent.
+export const getYearlyReport = async (req, res) => {
+  const settings = await getClubSettings();
+  const year = reportYearToSend();
+  const recipients = await yearlyReportRecipients();
+  res.status(200).json({
+    status: 'success',
+    data: {
+      year,
+      sendsOn: `${year + 1}-01-01`,
+      recipients: recipients.map((m) => m.name),
+      lastSentYear: settings.yearlyReportSentYear ?? null,
+    },
+  });
+};
+
+// GET /settings/yearly-report/preview.pdf (admin) - that report as it
+// stands today.
+export const getYearlyReportPdf = async (req, res) => {
+  const year = reportYearToSend();
+  const { pdf } = await yearlyReportPdf(year);
+  res
+    .status(200)
+    .set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${yearlyReportFilename(year)}"`,
+      'Cache-Control': 'no-store',
+    })
+    .send(pdf);
+};
+
+// POST /settings/yearly-report/test (admin) - the e-mail as a member would
+// get it, with the report as it stands today, to the admin themselves.
+export const testYearlyReport = async (req, res) => {
+  if (!req.user.email) throw new AppError('Nincs e-mail címed a fiókodban.', 400);
+  const year = reportYearToSend();
+  const { pdf } = await yearlyReportPdf(year);
+  await sendResendEmail({
+    to: req.user.email,
+    ...yearlyReportEmail(req.user.name, year),
+    attachments: [{ filename: yearlyReportFilename(year), content: pdf }],
+  });
+  res.status(200).json({ status: 'success', data: { sentTo: req.user.email, year } });
 };
 
 // --- Chat photos (see chat/chatImages.js) ---

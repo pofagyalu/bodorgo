@@ -2924,6 +2924,41 @@ const paths = {
       errors: [400],
     }),
   },
+  '/settings/yearly-report': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Éves jelentés: when it goes and to whom',
+      description:
+        "The club's year on one PDF page (members and dues, the year's money, the year's tours), e-mailed by itself to the club members on 1 January from 9 a.m. Budapest time, once (a server that was down that day sends it until 7 January). `year` is the year the next e-mail is about, `sendsOn` the 1 January it goes out on, `recipients` the names of who would get it now: every admin and member, not suspended, with an e-mail address, except those who switched e-mails off on Profilom.",
+      data: obj({
+        year: int(),
+        sendsOn: str('YYYY-MM-DD'),
+        recipients: arrayOf(str()),
+        lastSentYear: int('null until the first one has gone out'),
+      }),
+    }),
+  },
+  '/settings/yearly-report/preview.pdf': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Éves jelentés: the PDF as it stands today',
+      description: "The report of the year the next e-mail is about, with today's figures.",
+      response: file(['application/pdf'], 'The report, one A4 page.'),
+    }),
+  },
+  '/settings/yearly-report/test': {
+    post: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Send me the Éves jelentés as a test',
+      description:
+        "The e-mail as a member would get it, with the report as it stands today attached - to the admin's own address only.",
+      data: obj({ sentTo: str(), year: int() }),
+      errors: [400],
+    }),
+  },
   '/settings/chat-images': {
     get: op({
       tag: T.settings,

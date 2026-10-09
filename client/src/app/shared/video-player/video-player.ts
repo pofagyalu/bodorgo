@@ -24,6 +24,30 @@ function storedQuality(): VideoQuality {
   }
 }
 
+// How loud, and whether muted - kept the same way. A video starts at half
+// volume until the viewer sets it.
+const VOLUME_KEY = 'video-volume';
+const MUTED_KEY = 'video-muted';
+const DEFAULT_VOLUME = 0.5;
+
+function storedVolume(): number {
+  try {
+    const stored = localStorage.getItem(VOLUME_KEY);
+    const volume = stored === null ? NaN : Number(stored);
+    return volume >= 0 && volume <= 1 ? volume : DEFAULT_VOLUME;
+  } catch {
+    return DEFAULT_VOLUME;
+  }
+}
+
+function storedMuted(): boolean {
+  try {
+    return localStorage.getItem(MUTED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 // A video playing in a dialog over the page - the title (and a smaller
 // line under it) on top, closed with ✕, Esc or a click beside it. Opened
 // from an app-video-card; used on Média → Videók and the tour page.
@@ -33,8 +57,8 @@ function storedQuality(): VideoQuality {
 // original is several times heavier, the compressed one plays on a weak
 // connection too (an old 576p video's copy is 576p as well - only
 // lighter). Next to the switch, the resolution of the one playing
-// ("720p", "1080p"). Switching goes on from where the video was; the
-// subtitles go with either.
+// ("720p", "1080p"). Switching goes on from where the video was, as loud
+// as it was; the subtitles go with either.
 @Component({
   selector: 'app-video-player',
   imports: [MatIconModule, RecreateOn],
@@ -76,6 +100,35 @@ export class VideoPlayer {
       localStorage.setItem(QUALITY_KEY, quality);
     } catch {
       // No storage here - the choice lasts for this video only.
+    }
+  }
+
+  // The sound as the viewer left it: each video (and each quality - a new
+  // <video> every time) starts with it, instead of the browser's full volume.
+  private volume = storedVolume();
+  private muted = storedMuted();
+
+  // While the kept sound is being put on a new <video> - its own
+  // "volumechange" in between is not the viewer's doing.
+  private applying = false;
+
+  applyVolume(video: HTMLVideoElement) {
+    this.applying = true;
+    video.volume = this.volume;
+    video.muted = this.muted;
+    this.applying = false;
+  }
+
+  onVolumeChange(video: HTMLVideoElement) {
+    if (this.applying) return;
+    if (video.volume === this.volume && video.muted === this.muted) return;
+    this.volume = video.volume;
+    this.muted = video.muted;
+    try {
+      localStorage.setItem(VOLUME_KEY, String(this.volume));
+      localStorage.setItem(MUTED_KEY, this.muted ? '1' : '0');
+    } catch {
+      // No storage here - the sound lasts while this player is open.
     }
   }
 

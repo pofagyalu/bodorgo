@@ -29,6 +29,9 @@ const clubSettingsSchema = new Schema(
     // to the admins - so it's sent once a year (see
     // utils/membershipReminders.js's notifyAdminsIfAllMembersPaid).
     allPaidNotifiedYear: Number,
+    // Éves jelentés: the year whose report has gone out to the club members
+    // (utils/yearlyReportMail.js) - so it's sent once.
+    yearlyReportSentYear: Number,
     // Chat photos (see chat/chatImages.js): the folder's size limit (the
     // oldest go first when it's exceeded) and how many one person may send
     // a day.

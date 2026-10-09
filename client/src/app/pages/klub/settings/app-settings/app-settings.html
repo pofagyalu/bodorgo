@@ -125,6 +125,55 @@
     </div>
   </section>
 
+  <!-- Éves jelentés: the club's year on one PDF page, e-mailed to every
+       club member on 1 January - when it goes, to whom, and a try-out. -->
+  <section class="panel reminder-card">
+    <div class="panel-title">
+      <div>
+        <h2>Éves jelentés</h2>
+        <p class="subtext">
+          A klub éve egy oldalon – tagság, kassza, táborok, pontos számokkal és viccekkel. Január
+          1-jén reggel 9 után magától kimegy e-mailben, PDF-ként, minden klubtagnak.
+        </p>
+      </div>
+    </div>
+    <div class="reminder">
+      @if (yearlyReport(); as report) {
+        <p class="reminder-next">
+          Következő küldés: <strong>{{ report.year + 1 }}. január 1.</strong> – a {{ report.year }}.
+          évről
+        </p>
+        @if (report.lastSentYear) {
+          <p>Legutóbb kiküldve: a {{ report.lastSentYear }}. évről.</p>
+        }
+
+        <details class="reminder-who">
+          <summary>Most {{ report.recipients.length }} klubtag kapná meg</summary>
+          <p>{{ report.recipients.join(', ') }}</p>
+          <p>Aki a Profilom oldalon kikapcsolta az e-maileket, nem kapja meg.</p>
+        </details>
+
+        <div class="actions">
+          <a class="outline-btn" [href]="yearlyReportPdfUrl" target="_blank" rel="noopener">
+            <mat-icon>picture_as_pdf</mat-icon>
+            Megnézem, ahogy most áll
+          </a>
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="sendTestYearlyReport()"
+            [disabled]="sendingYearlyTest()"
+          >
+            <mat-icon>forward_to_inbox</mat-icon>
+            {{ sendingYearlyTest() ? 'Küldés…' : 'Próba e-mail magamnak' }}
+          </button>
+        </div>
+      } @else {
+        <p class="empty-note">Betöltés...</p>
+      }
+    </div>
+  </section>
+
   <!-- Születésnap: confetti and a greeting for whoever logs in on their
        birthday - once a year (shared/birthday). -->
   <section class="panel birthday-card">
