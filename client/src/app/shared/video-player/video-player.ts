@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { RecreateOn } from '../recreate-on';
 
 export type VideoQuality = 'small' | 'original';
 
@@ -36,7 +37,7 @@ function storedQuality(): VideoQuality {
 // subtitles go with either.
 @Component({
   selector: 'app-video-player',
-  imports: [MatIconModule],
+  imports: [MatIconModule, RecreateOn],
   templateUrl: './video-player.html',
   styleUrl: './video-player.scss',
 })

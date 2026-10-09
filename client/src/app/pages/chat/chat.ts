@@ -277,9 +277,12 @@ export class Chat implements OnInit, OnDestroy {
     this.refreshOverviewSoon(); // what I've just read is no longer unread
   }
 
-  // After leaving a chat: once the server has noted it as read.
+  // After leaving a chat: once the server has noted it as read. (Not after
+  // the page itself is gone - there is nobody left to ask then.)
+  private overviewSoon?: ReturnType<typeof setTimeout>;
   private refreshOverviewSoon() {
-    setTimeout(() => this.loadOverview(), OVERVIEW_AFTER_LEAVING_MS);
+    clearTimeout(this.overviewSoon);
+    this.overviewSoon = setTimeout(() => this.loadOverview(), OVERVIEW_AFTER_LEAVING_MS);
   }
 
   backToList() {
@@ -381,6 +384,7 @@ export class Chat implements OnInit, OnDestroy {
     document.removeEventListener('visibilitychange', this.onVisible);
     this.phoneQuery.removeEventListener('change', this.onPhoneChange);
     clearInterval(this.overviewTimer);
+    clearTimeout(this.overviewSoon);
     this.offGame?.();
   }
 
