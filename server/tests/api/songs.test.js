@@ -330,6 +330,50 @@ describe('Daloskönyv: the songs', () => {
     expect(again.body.data.lyrics.find((l) => l._id === one._id).lines).toEqual(['Új sor']);
   });
 
+  it('hands the whole book over for the device to keep - the songs only when they changed', async () => {
+    const owner = await createOwner();
+    const guest = await createGuest();
+    const first = (await add(owner, { title: 'Első', chordpro: '[C]Egy [G]sor' })).body.data.song;
+    await add(guest, { title: 'Második', chordpro: '[am]Másik' });
+    await request(app).post('/songs/lists').set(asUser(guest)).send({ name: 'Tábortűz' });
+    const offline = (user, have) =>
+      request(app)
+        .get('/songs/offline')
+        .query(have ? { have } : {})
+        .set(asUser(user));
+
+    expect((await request(app).get('/songs/offline')).status).toBe(401);
+    const res = await offline(guest);
+    expect(res.status).toBe(200);
+    const book = res.body.data;
+    // Every song whole, in the book's order, with its words for the search.
+    expect(book.songs.map((s) => [s.title, s.chordpro, s.lines, s.canEdit])).toEqual([
+      ['Első', '[C]Egy [G]sor', ['Egy sor'], false],
+      ['Második', '[am]Másik', ['Másik'], true],
+    ]);
+    expect(book.songs[0].owner).toBeUndefined();
+    expect(book.lists.map((l) => l.name)).toEqual(['Tábortűz']);
+    expect(book.canEdit).toBe(false);
+    expect(book.lastChanged).toBeTruthy();
+    // The owner has no lists - and asking was no visit to the songbook.
+    expect((await offline(owner)).body.data).toMatchObject({ lists: [], canEdit: true });
+    expect((await User.findById(guest._id)).songsSeenAt).toBeUndefined();
+
+    // The same state: no songs sent again, the lists still are.
+    const same = (await offline(guest, book.version)).body.data;
+    expect(same).toMatchObject({ version: book.version, songs: null });
+    expect(same.lists).toHaveLength(1);
+
+    // A changed song, or one gone: another state.
+    await request(app).patch(`/songs/${first._id}`).set(asUser(owner)).send({ chordpro: '[C]Új' });
+    const changed = (await offline(guest, book.version)).body.data;
+    expect(changed.version).not.toBe(book.version);
+    expect(changed.songs).toHaveLength(2);
+    await request(app).delete(`/songs/${first._id}`).set(asUser(owner));
+    const gone = (await offline(guest, changed.version)).body.data;
+    expect(gone.songs.map((s) => s.title)).toEqual(['Második']);
+  });
+
   it('says the key the chords are in - in the list and with the song', async () => {
     const owner = await createOwner();
     await add(owner, { title: 'Dúr', chordpro: '[C]la [F]la [G]la [C]la' });

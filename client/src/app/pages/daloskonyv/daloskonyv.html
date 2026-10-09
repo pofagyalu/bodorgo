@@ -427,6 +427,17 @@
                   @if (song.isNew) {
                     <span class="new-tag" title="Új dal a legutóbbi látogatásod óta">Új</span>
                   }
+                  @if (song.waiting) {
+                    <span
+                      class="owner-tag"
+                      [title]="
+                        song.refused
+                          ? 'A szerver nem fogadta el: ' + song.refused
+                          : 'Csak ezen az eszközön van meg – feltöltődik, amint lesz internet'
+                      "
+                      >{{ song.refused ? 'Javításra vár' : 'Feltöltésre vár' }}</span
+                    >
+                  }
                   @if (song.ownerName) {
                     <span
                       class="owner-tag"

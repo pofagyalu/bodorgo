@@ -273,7 +273,12 @@ export class SongEdit implements OnInit {
       : this.songService.createSong(input)
     ).subscribe({
       next: (saved) => {
-        this.notifications.addSuccess('A dal elmentve.');
+        // Without a connection it is kept on the device, and sent later.
+        this.notifications.addSuccess(
+          saved.waiting
+            ? 'Nincs kapcsolat: a dal ezen az eszközön van elmentve, és magától feltöltődik, amint lesz internet.'
+            : 'A dal elmentve.',
+        );
         this.songService.loadSongs();
         void this.router.navigate([this.songService.base(), saved.slug]);
       },

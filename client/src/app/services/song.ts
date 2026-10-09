@@ -1,9 +1,11 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, catchError, firstValueFrom, from, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from '../auth/auth.service';
 import { Instrument } from '../pages/daloskonyv/chord-shapes';
+import { detectKey } from '../pages/daloskonyv/song-key';
+import { KeptBook, KeptSong, SongStore, WaitingSong } from './song-store';
 
 const INSTRUMENT_KEY = 'daloskonyv-instrument';
 const PLAYED_KEY = 'daloskonyv-played';
@@ -33,6 +35,11 @@ export interface SongListItem {
   // The one looking may change and delete it: its owner, or the book's
   // keeper.
   canEdit: boolean;
+  // Added without a connection: on this device only, until it can be sent
+  // to the server. `refused`: the server wouldn't take it (why) - it waits
+  // to be corrected.
+  waiting?: boolean;
+  refused?: string;
 }
 
 export interface Song extends SongListItem {
@@ -80,6 +87,7 @@ export class SongService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/songs`;
   private auth = inject(AuthService);
+  private store = inject(SongStore);
 
   // Where the songbook is: inside Média → Zene (with Média's side menu
   // around it) for everyone logged in - guests too. Every link to the
@@ -158,12 +166,212 @@ export class SongService {
       }>(this.apiUrl)
       .subscribe({
         next: (res) => {
-          this.songs.set(res.data.songs);
+          this.showSongs(res.data.songs);
           this.canEdit.set(res.data.canEdit);
           this.lastChanged.set(res.data.lastChanged);
+          // The copy kept on the device follows a changed book.
+          void this.keepForOffline(res.data.songs.length, res.data.lastChanged);
+          // The server answers: what was added without it can go now.
+          void this.sendWaiting();
         },
-        error: () => this.songs.update((songs) => songs ?? []),
+        // No answer: the list already here stays; without one, the book
+        // kept on the device - or nothing.
+        error: () => {
+          if (this.songs()) return;
+          if (!this.store.available) return this.songs.set([]);
+          void this.kept().then((book) => {
+            if (this.songs()) return;
+            this.showSongs(book?.songs.map(listItem) ?? []);
+            if (!book) return;
+            this.canEdit.set(book.canEdit);
+            this.lastChanged.set(book.lastChanged);
+          });
+        },
       });
+  }
+
+  // --- The songbook without a connection: the whole book is kept on the
+  // device (song-store.ts), and read from there whenever the server gives
+  // no answer - the list, the songs, their words for the search and one's
+  // playlists. Reading only: nothing changed offline is sent later. ---
+
+  // When the copy on this device was last brought up to date - null while
+  // there is none (or it isn't known yet).
+  readonly keptAt = signal<string | null>(null);
+
+  // The copy as last read or written - undefined until it has been read.
+  private keptBook: KeptBook | null | undefined;
+  private keeping: Promise<void> | null = null;
+
+  // The copy on this device, if it is the logged-in user's - or, with
+  // nobody known to be logged in (no connection, nothing remembered of the
+  // login), whoever's it is: it was kept on this device by its owner.
+  private async kept(): Promise<KeptBook | null> {
+    if (this.keptBook === undefined) this.keptBook = await this.store.read();
+    const book = this.keptBook;
+    const userId = this.auth.user()?.id;
+    if (!book || (userId && book.userId !== userId)) return null;
+    this.keptAt.set(book.savedAt);
+    return book;
+  }
+
+  // Brings the copy on this device up to date: the app calls it by itself
+  // once someone is logged in, and the songbook when its list shows another
+  // state than the copy's (how many songs, last changed when). The songs
+  // travel only when they have changed since.
+  keepForOffline(count?: number, lastChanged?: string | null): Promise<void> {
+    if (!this.store.available) return Promise.resolve();
+    this.keeping ??= this.bringUpToDate(count, lastChanged).finally(() => (this.keeping = null));
+    return this.keeping;
+  }
+
+  private async bringUpToDate(count?: number, lastChanged?: string | null) {
+    const userId = this.auth.user()?.id;
+    if (!userId) return;
+    const have = await this.kept();
+    if (have && count === have.songs.length && lastChanged === have.lastChanged) return;
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{
+          data: {
+            version: string;
+            songs: KeptSong[] | null;
+            lists: SongPlaylist[];
+            canEdit: boolean;
+            lastChanged: string | null;
+          };
+        }>(`${this.apiUrl}/offline`, { params: have ? { have: have.version } : {} }),
+      );
+      const songs = res.data.songs ?? have?.songs;
+      if (!songs) return;
+      const book: KeptBook = {
+        userId,
+        version: res.data.version,
+        savedAt: new Date().toISOString(),
+        songs,
+        lists: res.data.lists,
+        canEdit: res.data.canEdit,
+        lastChanged: res.data.lastChanged,
+      };
+      if (await this.store.write(book)) {
+        this.keptBook = book;
+        this.keptAt.set(book.savedAt);
+      }
+    } catch {
+      // No connection, or no room: the copy stays as it is.
+    }
+  }
+
+  // Logged out (the server said so - auth.service.ts): the copy goes with
+  // the login.
+  private forgetWhenLoggedOut = effect(() => {
+    if (!this.auth.loggedOut()) return;
+    this.keptBook = null;
+    this.keptAt.set(null);
+    void this.store.clear();
+  });
+
+  // --- A song added without a connection: kept on the device (the
+  // store's waiting songs), shown in the list and opened like any other,
+  // and sent to the server as soon as it answers again. Until then it can
+  // be changed and deleted, here on the device. Only adding works this
+  // way: a change to a song the server already has needs the server. ---
+
+  // Everyone's waiting songs on this device - [] until they have been read.
+  private waiting = signal<WaitingSong[]>([]);
+  private waitingRead = this.store.readWaiting().then((songs) => this.waiting.set(songs));
+
+  // The logged-in user's own.
+  private myWaiting = computed(() => {
+    const userId = this.auth.user()?.id;
+    return userId ? this.waiting().filter((song) => song.userId === userId) : [];
+  });
+  // How many of one's songs are still to be sent.
+  readonly waitingCount = computed(() => this.myWaiting().length);
+
+  // What the last sending did - the app says so (app.component.ts).
+  readonly lastSent = signal<{ sent: number; refused: number } | null>(null);
+
+  // The addresses of the songs sent since the app was opened: the one each
+  // had on the device → the one the server gave it.
+  private sentAs = new Map<string, string>();
+  private sending: Promise<void> | null = null;
+
+  // The list with one's waiting songs in it, in the book's order.
+  private showSongs(songs: SongListItem[]) {
+    const mine = this.myWaiting();
+    const fromServer = songs.filter((song) => !song.waiting);
+    this.songs.set(
+      mine.length
+        ? [...fromServer, ...mine.map(waitingSong)].sort((a, b) =>
+            byHungarian.compare(a.title, b.title),
+          )
+        : fromServer,
+    );
+  }
+
+  // The waiting songs changed (read, added, sent), or who is logged in:
+  // the list on the screen follows.
+  private followWaiting = effect(() => {
+    this.myWaiting();
+    const songs = untracked(() => this.songs());
+    if (songs) untracked(() => this.showSongs(songs));
+  });
+
+  private async saveWaiting(songs: WaitingSong[]): Promise<boolean> {
+    if (!(await this.store.writeWaiting(songs))) return false;
+    this.waiting.set(songs);
+    return true;
+  }
+
+  // Sends one's waiting songs, the oldest first. Stops at the first one the
+  // server can't be reached for; one it refuses (a title gone missing)
+  // stays on the device with the reason, until it is corrected.
+  sendWaiting(): Promise<void> {
+    if (!this.store.available) return Promise.resolve();
+    this.sending ??= this.send().finally(() => (this.sending = null));
+    return this.sending;
+  }
+
+  private async send() {
+    await this.waitingRead;
+    let sent = 0;
+    let refused = 0;
+    for (const { localId } of this.myWaiting()) {
+      // As it is now: it may have been changed, or deleted, meanwhile.
+      const song = this.myWaiting().find((s) => s.localId === localId);
+      if (!song || song.error) continue;
+      try {
+        const res = await firstValueFrom(
+          this.http.post<{ data: { song: Song } }>(this.apiUrl, song.input),
+        );
+        this.sentAs.set(localId, res.data.song.slug);
+        await this.saveWaiting(this.waiting().filter((s) => s.localId !== localId));
+        sent += 1;
+      } catch (err) {
+        const failed = err as { status?: number; error?: { message?: string } };
+        if (!failed?.status) break;
+        const error = failed.error?.message ?? 'A szerver nem fogadta el a dalt.';
+        await this.saveWaiting(
+          this.waiting().map((s) => (s.localId === localId ? { ...s, error } : s)),
+        );
+        refused += 1;
+      }
+    }
+    if (!sent && !refused) return;
+    this.lastSent.set({ sent, refused });
+    // The list with the songs as the server has them now.
+    if (sent && this.songs()) this.loadSongs();
+  }
+
+  // One's playlists as they are now, into the copy on the device - they
+  // change without the songs changing.
+  private keepLists() {
+    const lists = this.lists();
+    const book = this.keptBook;
+    if (!lists || !book || book.userId !== this.auth.user()?.id) return;
+    this.keptBook = { ...book, lists };
+    void this.store.write(this.keptBook);
   }
 
   // Every song's words line by line, by the song's id - what the search
@@ -185,15 +393,50 @@ export class SongService {
       .subscribe({
         next: (res) => this.lyrics.set(new Map(res.data.lyrics.map((l) => [l._id, l.lines]))),
         // The titles are still searched; the next change of the book (or
-        // the next visit) tries again.
-        error: () => (this.lyricsOf = null),
+        // the next visit) tries again. Meanwhile the words kept on the
+        // device serve, if none are here.
+        error: () => {
+          this.lyricsOf = null;
+          if (this.lyrics() || !this.store.available) return;
+          void this.kept().then((book) => {
+            if (book && !this.lyrics()) {
+              this.lyrics.set(new Map(book.songs.map((song) => [song._id, song.lines])));
+            }
+          });
+        },
       });
   }
 
+  // One song, whole. When the server can't be reached at all, the one kept
+  // on the device - an answer that is an error (no such song) stays one.
   getSong(slug: string): Observable<Song> {
+    // A song still waiting on the device - or one sent since, under the
+    // address the server gave it.
+    if (isLocal(slug) && !this.sentAs.has(slug)) {
+      return from(this.waitingRead).pipe(
+        map(() => {
+          const song = this.myWaiting().find((s) => s.localId === slug);
+          if (!song) throw { status: 404 };
+          return waitingSong(song);
+        }),
+      );
+    }
+    slug = this.sentAs.get(slug) ?? slug;
     return this.http
       .get<{ data: { song: Song } }>(`${this.apiUrl}/${encodeURIComponent(slug)}`)
-      .pipe(map((res) => res.data.song));
+      .pipe(
+        map((res) => res.data.song),
+        catchError((err) => {
+          if (err?.status !== 0 || !this.store.available) throw err;
+          return from(this.kept()).pipe(
+            map((book) => {
+              const song = book?.songs.find((kept) => kept.slug === slug);
+              if (!song) throw err;
+              return song;
+            }),
+          );
+        }),
+      );
   }
 
   // The whole songbook as a PDF (the server draws it: songs/songBook.js) -
@@ -232,20 +475,65 @@ export class SongService {
 
   // Adding: anyone logged in. Changing and deleting: the song's owner and
   // the book's keeper (the server says 403 to anyone else).
+  // When the server can't be reached at all, the song is kept on the
+  // device and sent later (sendWaiting) - it comes back marked `waiting`.
   createSong(input: SongInput): Observable<Song> {
-    return this.http
-      .post<{ data: { song: Song } }>(this.apiUrl, input)
-      .pipe(map((res) => res.data.song));
+    return this.http.post<{ data: { song: Song } }>(this.apiUrl, input).pipe(
+      map((res) => res.data.song),
+      catchError((err) => {
+        const userId = this.auth.user()?.id;
+        if (err?.status !== 0 || !this.store.available || !userId) throw err;
+        const { inBook: _inBook, ...kept } = input;
+        const song: WaitingSong = {
+          localId: `${LOCAL}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+          userId,
+          input: kept,
+          savedAt: new Date().toISOString(),
+        };
+        return from(this.keepWaiting(song)).pipe(
+          map((ok) => {
+            if (!ok) throw err;
+            return waitingSong(song);
+          }),
+        );
+      }),
+    );
+  }
+
+  private async keepWaiting(song: WaitingSong): Promise<boolean> {
+    await this.waitingRead;
+    return this.saveWaiting([...this.waiting(), song]);
+  }
+
+  // A waiting song changed on the device (changed: null deletes it). A
+  // change takes the server's refusal off it: it is tried again.
+  private changeWaiting(id: string, changed: Partial<SongInput> | null): Observable<Song | null> {
+    const change = async () => {
+      await this.waitingRead;
+      const song = this.myWaiting().find((s) => s.localId === id);
+      if (!song) throw { status: 404 };
+      const { inBook: _inBook, ...fields } = changed ?? {};
+      const next: WaitingSong | null = changed
+        ? { ...song, input: { ...song.input, ...fields }, error: undefined }
+        : null;
+      const all = this.waiting().flatMap((s) => (s.localId === id ? (next ?? []) : s));
+      if (!(await this.saveWaiting(all))) throw { status: 0 };
+      if (next) void this.sendWaiting();
+      return next ? waitingSong(next) : null;
+    };
+    return from(change());
   }
 
   // Only what is sent changes.
   updateSong(id: string, input: Partial<SongInput>): Observable<Song> {
+    if (isLocal(id)) return this.changeWaiting(id, input).pipe(map((song) => song!));
     return this.http
       .patch<{ data: { song: Song } }>(`${this.apiUrl}/${id}`, input)
       .pipe(map((res) => res.data.song));
   }
 
   deleteSong(id: string): Observable<void> {
+    if (isLocal(id)) return this.changeWaiting(id, null).pipe(map(() => undefined));
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
@@ -285,8 +573,17 @@ export class SongService {
 
   loadLists() {
     this.http.get<{ data: { lists: SongPlaylist[] } }>(`${this.apiUrl}/lists`).subscribe({
-      next: (res) => this.lists.set(res.data.lists),
-      error: () => this.lists.update((lists) => lists ?? []),
+      next: (res) => {
+        this.lists.set(res.data.lists);
+        this.keepLists();
+      },
+      // No answer: the lists already here stay; without them, the ones kept
+      // on the device.
+      error: () => {
+        if (this.lists()) return;
+        if (!this.store.available) return this.lists.set([]);
+        void this.kept().then((book) => this.lists.update((lists) => lists ?? book?.lists ?? []));
+      },
     });
   }
 
@@ -296,6 +593,7 @@ export class SongService {
       map((res) => res.data.list),
       tap((list) => {
         this.lists.update((lists) => sortedLists([...(lists ?? []), list]));
+        this.keepLists();
         this.chooseList(list._id);
       }),
     );
@@ -330,6 +628,7 @@ export class SongService {
     return this.http.delete<void>(`${this.apiUrl}/lists/${id}`).pipe(
       tap(() => {
         this.lists.update((lists) => lists?.filter((list) => list._id !== id) ?? null);
+        this.keepLists();
         if (this.listId() === id) this.chooseList('');
       }),
     );
@@ -340,13 +639,59 @@ export class SongService {
       .patch<{ data: { list: SongPlaylist } }>(`${this.apiUrl}/lists/${id}`, change)
       .pipe(
         map((res) => res.data.list),
-        tap((saved) =>
+        tap((saved) => {
           this.lists.update((lists) =>
             lists ? sortedLists(lists.map((list) => (list._id === id ? saved : list))) : lists,
-          ),
-        ),
+          );
+          this.keepLists();
+        }),
       );
   }
+}
+
+// How a waiting song's id and address begin - no song of the server's has
+// such an id, and its addresses are made of its titles' letters.
+const LOCAL = 'local-';
+const isLocal = (id: string) => id.startsWith(LOCAL);
+
+// A waiting song as the app shows it: one's own, to change and delete.
+function waitingSong(song: WaitingSong): Song {
+  const { input } = song;
+  return {
+    _id: song.localId,
+    slug: song.localId,
+    title: input.title,
+    artist: input.artist,
+    key: input.key ?? '',
+    detectedKey: detectKey(input.chordpro),
+    // Whether it is the book's is the server's to say once it has it; no
+    // owner's name stands on one's own song.
+    inBook: true,
+    ownerName: '',
+    canEdit: true,
+    waiting: true,
+    refused: song.error,
+    chordpro: input.chordpro,
+    tags: [],
+    originalKey: input.originalKey ?? '',
+    tempo: input.tempo ?? null,
+    updatedAt: song.savedAt,
+  };
+}
+
+// A kept song as the table of contents has it - nothing is new offline.
+function listItem(song: KeptSong): SongListItem {
+  return {
+    _id: song._id,
+    title: song.title,
+    artist: song.artist,
+    slug: song.slug,
+    key: song.key,
+    detectedKey: song.detectedKey,
+    inBook: song.inBook,
+    ownerName: song.ownerName,
+    canEdit: song.canEdit,
+  };
 }
 
 const byHungarian = new Intl.Collator('hu', { sensitivity: 'base' });

@@ -177,8 +177,8 @@ export class SongPage implements OnDestroy {
   });
 
   // Turning the page - by a finger drawn sideways across the song (to the
-  // left the next one, to the right the one before), or by the two links
-  // at the song's foot. The other song's sheet (the peek) stands beside the
+  // left the next one, to the right the one before); the two links at the
+  // song's foot and the list just show the song. The other song's sheet (the peek) stands beside the
   // open one, on the side it comes from, and the two move together like
   // pages in a row: under the finger while it pulls, then on by themselves
   // until the other song is where the open one was - there it becomes the
@@ -320,7 +320,7 @@ export class SongPage implements OnDestroy {
 
   // The page being turned: the two sheets on their way, until the other
   // song's stands where the open one was (the promise). From where a
-  // finger left them, or from their place (a link).
+  // finger left them.
   private arriving: Promise<void> | null = null;
 
   private turnPage(track: HTMLElement, to: SongListItem, side: 1 | -1): Promise<void> {
@@ -462,11 +462,14 @@ export class SongPage implements OnDestroy {
 
       // Turned like a page when it is known which way (the song's place in
       // the order) and nothing else is on its way; otherwise the new song
-      // simply takes the open one's place.
+      // simply takes the open one's place. Only after a finger's stroke: a
+      // click or a tap (the list, the links at the song's foot) just shows
+      // the song.
       const to = untracked(() => this.order())[index];
       const midTurn = !!this.arriving;
+      const paged = !!this.pulled;
       let arrived: Promise<void> | null = null;
-      if (track && to && side && !midTurn && canAnimate(track)) {
+      if (track && to && side && !midTurn && paged && canAnimate(track)) {
         arrived = this.turnPage(track, to, side > 0 ? 1 : -1);
       } else if (track) {
         this.pulled = 0;

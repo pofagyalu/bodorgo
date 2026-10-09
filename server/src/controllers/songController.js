@@ -16,6 +16,7 @@ import { chordSignature, detectKey, parseChord, plainLyrics } from '../songs/son
 import { DOCUMENT_PREVIEWS_DIR, pdfFirstPagePreview } from '../utils/documentPreviews.js';
 import { budapestYmd } from '../utils/huDate.js';
 import { givenName } from '../utils/birthday.js';
+import { listsOf } from './songListController.js';
 
 // Daloskönyv: the club's songbook. Reading is for everyone logged in, and
 // so is adding a song: whoever adds one owns it, and may change and delete
@@ -211,6 +212,39 @@ export const getLyrics = async (req, res) => {
   res.status(200).json({
     status: 'success',
     data: { lyrics: songs.map((song) => ({ _id: song._id, lines: wordsOf(song) })) },
+  });
+};
+
+// GET /songs/offline?have=<version> - the whole songbook in one answer,
+// for the app to keep on the device and open without a connection: every
+// song whole (as GET /songs/:slug sends it) with its words for the search
+// (`lines`), and the caller's playlists. `version` names the state of the
+// songs - how many there are, and when one was last changed: sent back as
+// `have`, the songs are left out (null) while they are the same. Unlike
+// GET /songs it is no visit to the songbook: the app asks by itself.
+export const getOfflineBook = async (req, res) => {
+  const [count, last, lists] = await Promise.all([
+    Song.countDocuments(),
+    Song.findOne().sort('-updatedAt').select('updatedAt'),
+    listsOf(req.user),
+  ]);
+  const version = `${count}|${last?.updatedAt.getTime() ?? 0}`;
+  const songs =
+    req.query.have === version
+      ? null
+      : (await inBookOrder(Song.find().populate('owner', OWNER_FIELDS))).map((song) => ({
+          ...songView(song, req.user),
+          lines: wordsOf(song),
+        }));
+  res.status(200).json({
+    status: 'success',
+    data: {
+      version,
+      songs,
+      lists,
+      canEdit: canEditSongs(req.user),
+      lastChanged: last?.updatedAt ?? null,
+    },
   });
 };
 

@@ -55,11 +55,17 @@ async function songsOf(body) {
   return ids.filter((id) => known.has(id));
 }
 
+// A user's lists as they are sent, by name (the songbook's offline copy
+// carries them too - songController.js's getOfflineBook).
+export async function listsOf(user) {
+  const lists = await SongList.find({ owner: user._id });
+  lists.sort((a, b) => byHungarian.compare(a.name, b.name));
+  return lists.map(view);
+}
+
 // GET /songs/lists - the caller's lists, by name.
 export const getSongLists = async (req, res) => {
-  const lists = await SongList.find({ owner: req.user._id });
-  lists.sort((a, b) => byHungarian.compare(a.name, b.name));
-  res.status(200).json({ status: 'success', data: { lists: lists.map(view) } });
+  res.status(200).json({ status: 'success', data: { lists: await listsOf(req.user) } });
 };
 
 // POST /songs/lists - a new, empty list (or with songs, if sent).
