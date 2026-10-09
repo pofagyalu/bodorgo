@@ -1,7 +1,7 @@
 import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { BlockLine, Segment, parseChordPro, toBlocks, toWords } from '../chordpro';
 import { parseChord, transposer } from '../chords';
-import { ChordShape, Instrument, chordShape, uniqueChords } from '../chord-shapes';
+import { ChordShape, Instrument, shapeFinder, uniqueChords } from '../chord-shapes';
 import { songKey } from '../song-key';
 import { ChordDiagram } from '../chord-diagram/chord-diagram';
 import { ChordName } from '../chord-name/chord-name';
@@ -57,9 +57,20 @@ export class SongSheet {
 
   popup = signal<Popup | null>(null);
 
+  private parsed = computed(() => parseChordPro(this.chordpro()));
+
+  // How a chord of the song is held: the song's own shapes ({define})
+  // first - while it is in the key it was written in. Moved to another
+  // key they are other chords' shapes, so the songbook's own are shown.
+  private shapeOf = computed(() => {
+    const instrument = this.instrument();
+    if (!instrument) return () => null;
+    return shapeFinder(this.transpose() % 12 ? [] : this.parsed().defines, instrument);
+  });
+
   // The song's lines with the chords moved to the key on the screen.
   private lines = computed(() => {
-    const lines = parseChordPro(this.chordpro()).lines;
+    const lines = this.parsed().lines;
     const key = songKey({ key: this.songKey(), chordpro: this.chordpro() });
     const move = transposer(key, this.transpose());
     return lines.map((line) =>
@@ -107,7 +118,8 @@ export class SongSheet {
     const chords = this.lines().flatMap((l) =>
       l.type === 'lyrics' || l.type === 'chords-only' ? l.segments.map((s) => s.chord ?? '') : [],
     );
-    return uniqueChords(chords).map((name) => ({ name, shape: chordShape(name, instrument) }));
+    const shapeOf = this.shapeOf();
+    return uniqueChords(chords).map((name) => ({ name, shape: shapeOf(name) }));
   });
 
   constructor() {
@@ -150,7 +162,7 @@ export class SongSheet {
 
   private open(anchor: HTMLElement, name: string, pinned: boolean) {
     const instrument = this.instrument();
-    const shape = instrument ? chordShape(name, instrument) : null;
+    const shape = this.shapeOf()(name);
     // Not a chord: nothing pops up (and what was open closes).
     if (!instrument || !shape) {
       this.popup.set(null);

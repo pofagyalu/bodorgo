@@ -41,6 +41,13 @@ svg {
   fill: currentColor;
 }
 
+// The finger's number in its dot.
+.finger {
+  fill: #fff;
+  font-size: 7.5px;
+  font-weight: 700;
+}
+
 .open {
   fill: none;
   stroke: currentColor;

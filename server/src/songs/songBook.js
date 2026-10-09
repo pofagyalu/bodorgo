@@ -5,10 +5,10 @@ import { ANNEXES } from './songBookAnnexes.js';
 import {
   NOTATION,
   chordNamePieces,
-  chordShape,
   keyName,
   parseChord,
   parseChordPro,
+  shapeFinder,
   songKey,
   toBlocks,
   toWords,
@@ -154,7 +154,9 @@ export function renderSongPdf(song, { diagrams = null, size = 'A4', transpose = 
         }
       : song;
     doc.addPage();
-    drawSong(doc, moved, diagrams);
+    // Moved to another key, the song's own shapes ({define}) are other
+    // chords' - the songbook's are drawn, as on the song page.
+    drawSong(doc, moved, diagrams, { ownShapes: !transpose });
 
     const { count } = doc.bufferedPageRange();
     for (let i = 0; count > 1 && i < count; i += 1) {
@@ -275,7 +277,7 @@ function putChordName(doc, name, x, y, { size, color }) {
 
 // --- A song ---
 
-function drawSong(doc, song, diagrams) {
+function drawSong(doc, song, diagrams, { ownShapes = true } = {}) {
   const left = MARGIN;
   let y = MARGIN;
 
@@ -318,7 +320,7 @@ function drawSong(doc, song, diagrams) {
   }
   y += 9;
 
-  const { lines } = parseChordPro(song.chordpro);
+  const { lines, defines } = parseChordPro(song.chordpro);
   // From a {screen} mark on (to the song's end, or to a {print}) the lines
   // are printed with their words alone: those chords are for the song
   // page, where the first verse scrolls out of sight.
@@ -326,7 +328,9 @@ function drawSong(doc, song, diagrams) {
   const chords = lines.flatMap((l) =>
     l.type === 'lyrics' || l.type === 'chords-only' ? l.segments.map((s) => s.chord ?? '') : [],
   );
-  const shapes = diagrams ? diagramShapes(uniqueChords(chords), diagrams) : [];
+  const shapes = diagrams
+    ? diagramShapes(uniqueChords(chords), diagrams, ownShapes ? defines : [])
+    : [];
 
   const plan = fitSong(doc, blocks, shapes, y);
   // How the chords are held: down the right side of the page beside the
@@ -480,6 +484,9 @@ const FRET_GAP = 8.2;
 const DIAGRAM_FRETS = 4;
 const DIAGRAM_GAP = 13;
 const NAME_HEIGHT = 11;
+// A dot's radius: room for a finger's number in it.
+const DOT = 3;
+const FINGER_SIZE = 4.6;
 const MARKS_HEIGHT = 8;
 
 // Between the words and the column of diagrams beside them.
@@ -488,9 +495,12 @@ const DIAGRAM_GUTTER = 14;
 // than that go above the words.
 const DIAGRAM_COLUMN_SHARE = 0.4;
 
-// The chords that have a diagram on this instrument, with how each is held.
-const diagramShapes = (chords, instrument) =>
-  chords.map((name) => ({ name, shape: chordShape(name, instrument) })).filter((c) => c.shape);
+// The chords that have a diagram on this instrument, with how each is
+// held - the song's own way ({define}) for the ones it gives.
+const diagramShapes = (chords, instrument, defines) => {
+  const shapeOf = shapeFinder(defines, instrument);
+  return chords.map((name) => ({ name, shape: shapeOf(name) })).filter((c) => c.shape);
+};
 
 // How many times the measures above the diagrams are drawn: one size all
 // through the book - in the column and in the strip, on every page.
@@ -595,13 +605,15 @@ function drawDiagrams(doc, shapes, top) {
 }
 
 // The neck from above: strings down, frets across, a dot where a finger
-// goes, ○ over an open string, × over one not played, a bar for a finger
-// across several strings (the page's twin of chord-diagram.ts).
+// goes (the finger's number in it, where the song says which), ○ over an
+// open string, × over one not played, a bar for a finger across several
+// strings (the page's twin of chord-diagram.ts).
 function drawDiagram(doc, name, shape, left, top, neck) {
   const held = shape.frets.filter((f) => f > 0);
   const highest = Math.max(0, ...held);
-  // From the nut while it fits; otherwise from the lowest held fret.
-  const base = highest <= DIAGRAM_FRETS ? 1 : Math.min(...held);
+  // From the nut while it fits; otherwise from the lowest held fret -
+  // unless the shape says where itself.
+  const base = shape.base ?? (highest <= DIAGRAM_FRETS ? 1 : Math.min(...held));
   const rows = Math.max(DIAGRAM_FRETS, highest - base + 1);
   const gridTop = top + NAME_HEIGHT + MARKS_HEIGHT;
   const x = (i) => left + i * STRING_GAP;
@@ -632,7 +644,7 @@ function drawDiagram(doc, name, shape, left, top, neck) {
       .strokeColor(INK)
       .stroke();
   } else {
-    put(doc, `${base}.`, left - 12, y(base) - 3.5, {
+    put(doc, `${base}.`, left - 13, y(base) - 3.5, {
       font: 'Heading',
       size: 6.5,
       color: GREY,
@@ -656,8 +668,20 @@ function drawDiagram(doc, name, shape, left, top, neck) {
   shape.frets.forEach((fret, i) => {
     const marksY = gridTop - 4;
     if (fret > 0) {
+      // Under the bar there is no dot of its own - except where the
+      // fingers are told: there every held string has its numbered dot.
       const underBar = barre && fret === barre.fret && i >= barre.from && i <= barre.to;
-      if (!underBar) doc.circle(x(i), y(fret), 2.4).fill(INK);
+      if (!underBar || shape.fingers) doc.circle(x(i), y(fret), DOT).fill(INK);
+      const finger = shape.fingers?.[i];
+      if (finger) {
+        put(doc, finger, x(i) - DOT, y(fret) - FINGER_SIZE * 0.66, {
+          font: 'Heading',
+          size: FINGER_SIZE,
+          color: '#fff',
+          width: DOT * 2,
+          align: 'center',
+        });
+      }
     } else if (fret === 0) {
       doc.circle(x(i), marksY, 1.6).lineWidth(0.6).strokeColor(INK).stroke();
     } else {

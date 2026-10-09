@@ -23,7 +23,7 @@ await esbuild.build({
         transposer,
         NOTATION,
       } from './chords';
-      export { chordShape, uniqueChords } from './chord-shapes';
+      export { chordShape, shapeFinder, uniqueChords } from './chord-shapes';
       export { CIRCLE, DEGREES, keyChords } from './keys';
       export { chordSignature, detectKey, keyName, songKey, transposeKey } from './song-key';
       export { withoutScreenChords } from './screen-chords';

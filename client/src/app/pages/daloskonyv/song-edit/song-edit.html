@@ -113,6 +113,13 @@
               >
                 <mat-icon>chevron_right</mat-icon>
               </button>
+              <button
+                type="button"
+                (click)="defineChord()"
+                title="Saját fogás a kurzor akkordjához: a dal elejére egy &#123;define&#125; sort tesz a daloskönyv fogásával – írd át a bundokat és az ujjakat"
+              >
+                Fogás
+              </button>
               <button type="button" (click)="markChorus()" title="A kijelölt sorok: refrén">
                 Refrén
               </button>
@@ -157,6 +164,19 @@
             gombokkal (vagy Alt + ← →) betűnként arrébb teheted. Üres sor: új versszak. Megjegyzés:
             <code>&#123;comment: 2x&#125;</code>. Weboldalról másolt dalt (akkordsor a szövegsor
             fölött) csak illessz be: az akkordok maguktól a szövegbe kerülnek.
+          </p>
+          <!-- A chord's own shape for the song: how a {define} line is read. -->
+          <p class="hint hint--rule">
+            <strong>Saját akkordfogás:</strong> a dal elejére írt
+            <code>&#123;define: D7 base-fret 3 frets x 3 2 3 1 x fingers 0 3 2 4 1 0&#125;</code>
+            sor megadja, hogyan fogd ebben a dalban a <code>[D7]</code> akkordot – ez látszik az
+            akkordra mutatva, a dal akkordjai között és a PDF-ben is. <code>frets</code>: húronként
+            egy szám a legmélyebb húrtól (<code>x</code> = nem szól, <code>0</code> = üres húr, a
+            többi a bund sorszáma); <code>base-fret</code>: hányadik bundtól számolnak ezek a számok
+            (<code>1</code> = a nyeregtől). <code>fingers</code>: elhagyható – húronként az ujj
+            száma, ami a pöttybe kerül (<code>0</code> = nincs szám). Hat szám gitárfogás, négy
+            ukulelefogás. A „Fogás” gomb a kurzor akkordjához a daloskönyv fogásával írja be a sort.
+            Transzponálva a dal a daloskönyv saját fogásait mutatja.
           </p>
           <!-- The agreement about {screen}, where it can't be forgotten. -->
           <p class="hint hint--rule">

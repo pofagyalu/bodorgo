@@ -9,8 +9,12 @@
 //
 // Known directives: title/t, artist, comment/c, start_of_chorus/soc,
 // end_of_chorus/eoc, start_of_verse/sov, end_of_verse/eov, start_of_tab/sot,
-// end_of_tab/eot, screen, print. Anything else in {braces} is skipped. An
-// empty line parts the verses.
+// end_of_tab/eot, define, screen, print. Anything else in {braces} is
+// skipped. An empty line parts the verses.
+//
+// {define: …} says how one of the song's chords is held - its own shape
+// instead of the songbook's (chord-shapes.ts has how it is written). It
+// draws nothing where it stands; by habit it is at the song's top.
 //
 // A guitar tab - an intro, an ending - stands between {start_of_tab} and
 // {end_of_tab}, as ChordPro has it:
@@ -31,6 +35,8 @@
 // lines with their words alone (screen-chords.ts). So a song keeps to its
 // one printed page, and still has its chords under the fingers when its
 // first verse has scrolled away.
+
+import { ChordDefine, parseDefine } from './chord-shapes';
 
 // A piece of a line: a chord (or none) and the text sung from it on.
 export interface Segment {
@@ -56,6 +62,8 @@ export interface ParsedSong {
   title?: string;
   artist?: string;
   lines: SongLine[];
+  // The chords the song gives its own shape for ({define}).
+  defines: ChordDefine[];
 }
 
 const DIRECTIVE = /^\{\s*([^:}]+?)\s*(?::\s*(.*?)\s*)?\}$/;
@@ -74,7 +82,7 @@ const SECTION_MARKS: Record<string, SongLine> = {
 };
 
 export function parseChordPro(source: string): ParsedSong {
-  const song: ParsedSong = { lines: [] };
+  const song: ParsedSong = { lines: [], defines: [] };
   // After a {screen}, until a {print}: chords for the screen only.
   let screenOnly = false;
   // Between {start_of_tab} and {end_of_tab}: every line is the tab's.
@@ -104,6 +112,9 @@ export function parseChordPro(source: string): ParsedSong {
         // "Intro", or ChordPro's own label="Intro".
         const label = value.replace(/^label\s*=\s*/i, '').replace(/^"(.*)"$/, '$1');
         if (label) song.lines.push({ type: 'comment', text: label });
+      } else if (name === 'define') {
+        const define = parseDefine(value);
+        if (define) song.defines.push(define);
       } else if (name === 'screen') screenOnly = true;
       else if (name === 'print') screenOnly = false;
       continue;

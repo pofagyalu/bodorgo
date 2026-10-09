@@ -3,131 +3,6 @@
 // song-key.ts and screen-chords.ts -
 // the comments are there. Do not edit: change those and run the script.
 
-// ../client/src/app/pages/daloskonyv/chordpro.ts
-var DIRECTIVE = /^\{\s*([^:}]+?)\s*(?::\s*(.*?)\s*)?\}$/;
-var TAB_END = /^\{\s*(end_of_tab|eot)\s*\}$/i;
-var SECTION_MARKS = {
-  start_of_chorus: { type: 'section-start', section: 'chorus' },
-  soc: { type: 'section-start', section: 'chorus' },
-  end_of_chorus: { type: 'section-end', section: 'chorus' },
-  eoc: { type: 'section-end', section: 'chorus' },
-  start_of_verse: { type: 'section-start', section: 'verse' },
-  sov: { type: 'section-start', section: 'verse' },
-  end_of_verse: { type: 'section-end', section: 'verse' },
-  eov: { type: 'section-end', section: 'verse' },
-};
-function parseChordPro(source) {
-  const song = { lines: [] };
-  let screenOnly = false;
-  let inTab = false;
-  for (const raw of source.replace(/\r\n?/g, '\n').split('\n')) {
-    const line = raw.trimEnd();
-    if (inTab) {
-      if (TAB_END.test(line.trim())) inTab = false;
-      else song.lines.push({ type: 'tab', text: line, ...(screenOnly && { screenOnly: true }) });
-      continue;
-    }
-    if (!line.trim()) {
-      song.lines.push({ type: 'empty' });
-      continue;
-    }
-    const directive = DIRECTIVE.exec(line.trim());
-    if (directive) {
-      const name = directive[1].toLowerCase();
-      const value = directive[2] ?? '';
-      if (name === 'title' || name === 't') song.title = value;
-      else if (name === 'artist') song.artist = value;
-      else if (name === 'comment' || name === 'c')
-        song.lines.push({ type: 'comment', text: value });
-      else if (SECTION_MARKS[name]) song.lines.push(SECTION_MARKS[name]);
-      else if (name === 'start_of_tab' || name === 'sot') {
-        inTab = true;
-        const label = value.replace(/^label\s*=\s*/i, '').replace(/^"(.*)"$/, '$1');
-        if (label) song.lines.push({ type: 'comment', text: label });
-      } else if (name === 'screen') screenOnly = true;
-      else if (name === 'print') screenOnly = false;
-      continue;
-    }
-    const segments = parseLine(line);
-    const chordsOnly = segments.every((s) => !s.text.trim()) && segments.some((s) => s.chord);
-    song.lines.push({
-      type: chordsOnly ? 'chords-only' : 'lyrics',
-      segments,
-      ...(screenOnly && { screenOnly: true }),
-    });
-  }
-  return song;
-}
-function parseLine(line) {
-  const segments = [];
-  const chord = /\[([^\]]*)\]/g;
-  let from = 0;
-  let current = { text: '' };
-  for (let m = chord.exec(line); m; m = chord.exec(line)) {
-    current.text = line.slice(from, m.index);
-    if (current.chord !== void 0 || current.text) segments.push(current);
-    current = { chord: m[1].trim(), text: '' };
-    from = m.index + m[0].length;
-  }
-  current.text = line.slice(from);
-  if (current.chord !== void 0 || current.text) segments.push(current);
-  return segments;
-}
-function toBlocks(lines) {
-  const blocks = [];
-  let inChorus = false;
-  let current = null;
-  const close = () => {
-    if (current?.lines.length) blocks.push(current);
-    current = null;
-  };
-  for (const line of lines) {
-    if (line.type === 'empty') close();
-    else if ('section' in line) {
-      close();
-      if (line.section === 'chorus') inChorus = line.type === 'section-start';
-    } else {
-      current ??= { chorus: inChorus, lines: [] };
-      current.lines.push(line);
-    }
-  }
-  close();
-  return blocks;
-}
-function toWords(segments) {
-  const words = [];
-  let open2 = false;
-  const add = (piece) => {
-    if (open2) words[words.length - 1].push(piece);
-    else words.push([piece]);
-    open2 = piece.text !== '' && !/\s$/.test(piece.text);
-  };
-  for (const segment of segments) {
-    const tokens = segment.text.match(/\S+\s*|\s+/g) ?? [];
-    if (segment.chord !== void 0) {
-      const first = tokens[0] && /\S/.test(tokens[0]) ? tokens.shift() : '';
-      add({ chord: segment.chord, text: first });
-    }
-    for (const token of tokens) add({ text: token });
-  }
-  return words;
-}
-function plainLyrics(source) {
-  return parseChordPro(source)
-    .lines.flatMap((line) =>
-      line.type === 'lyrics'
-        ? [
-            line.segments
-              .map((s) => s.text)
-              .join('')
-              .replace(/\s+/g, ' ')
-              .trim(),
-          ]
-        : [],
-    )
-    .filter(Boolean);
-}
-
 // ../client/src/app/pages/daloskonyv/chords.ts
 var NOTATION = 'hungarian';
 var SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -206,6 +81,7 @@ function firstChord(source) {
 }
 
 // ../client/src/app/pages/daloskonyv/chord-shapes.ts
+var STRINGS = { guitar: 6, ukulele: 4 };
 var open = (root, frets) => ({ root, frets });
 var movable = (root, frets, period) => ({
   root,
@@ -391,6 +267,59 @@ function chordShape(name, instrument, notation = NOTATION) {
   if (best && chord.bass !== null && instrument === 'guitar') return withBass(best, chord.bass);
   return best;
 }
+var DEFINE_WORDS = /* @__PURE__ */ new Set([
+  'base-fret',
+  'frets',
+  'fingers',
+  'keys',
+  'copy',
+  'copyall',
+  'display',
+  'format',
+  'diagram',
+]);
+function fingerBarre(frets, fingers) {
+  let barre = null;
+  for (const finger of new Set(fingers.filter(Boolean))) {
+    const at = fingers.flatMap((f, i) => (f === finger ? [i] : []));
+    const fret = frets[at[0]];
+    const [from, to] = [at[0], at[at.length - 1]];
+    if (at.length < 2 || at.some((i) => frets[i] !== fret)) continue;
+    if (frets.slice(from, to + 1).some((f) => f < fret)) continue;
+    if (!barre || fret < barre.fret) barre = { fret, from, to };
+  }
+  return barre;
+}
+function parseDefine(value) {
+  const [name, ...words] = value.trim().split(/\s+/);
+  const parts = {};
+  let part = null;
+  for (const word of words) {
+    if (DEFINE_WORDS.has(word.toLowerCase())) part = parts[word.toLowerCase()] = [];
+    else part?.push(word);
+  }
+  const given = parts['frets'] ?? [];
+  if (!name || !Object.values(STRINGS).includes(given.length)) return null;
+  if (!given.every((f) => /^(x|n|-1|\d+)$/i.test(f))) return null;
+  const base = Math.max(1, Number.parseInt(parts['base-fret']?.[0] ?? '', 10) || 1);
+  const frets = given.map((f) => (/^\d+$/.test(f) ? (Number(f) ? Number(f) + base - 1 : 0) : -1));
+  const said = parts['fingers'] ?? [];
+  const fingers = frets.map((f, i) => (f > 0 && /^[1-9A-Z]$/.test(said[i] ?? '') ? said[i] : ''));
+  const shape = { frets, barre: null, base };
+  if (fingers.some(Boolean)) {
+    shape.fingers = fingers;
+    shape.barre = fingerBarre(frets, fingers);
+  }
+  return { name, shape };
+}
+function shapeFinder(defines, instrument, notation = NOTATION) {
+  const own = /* @__PURE__ */ new Map();
+  for (const { name, shape } of defines) {
+    if (shape.frets.length === STRINGS[instrument]) own.set(name, shape);
+  }
+  return (name) =>
+    parseChord(name, notation) ? (own.get(name) ?? chordShape(name, instrument, notation)) : null;
+}
 function uniqueChords(chords, notation = NOTATION) {
   const seen = /* @__PURE__ */ new Set();
   return chords.filter((name) => {
@@ -398,6 +327,134 @@ function uniqueChords(chords, notation = NOTATION) {
     seen.add(name);
     return true;
   });
+}
+
+// ../client/src/app/pages/daloskonyv/chordpro.ts
+var DIRECTIVE = /^\{\s*([^:}]+?)\s*(?::\s*(.*?)\s*)?\}$/;
+var TAB_END = /^\{\s*(end_of_tab|eot)\s*\}$/i;
+var SECTION_MARKS = {
+  start_of_chorus: { type: 'section-start', section: 'chorus' },
+  soc: { type: 'section-start', section: 'chorus' },
+  end_of_chorus: { type: 'section-end', section: 'chorus' },
+  eoc: { type: 'section-end', section: 'chorus' },
+  start_of_verse: { type: 'section-start', section: 'verse' },
+  sov: { type: 'section-start', section: 'verse' },
+  end_of_verse: { type: 'section-end', section: 'verse' },
+  eov: { type: 'section-end', section: 'verse' },
+};
+function parseChordPro(source) {
+  const song = { lines: [], defines: [] };
+  let screenOnly = false;
+  let inTab = false;
+  for (const raw of source.replace(/\r\n?/g, '\n').split('\n')) {
+    const line = raw.trimEnd();
+    if (inTab) {
+      if (TAB_END.test(line.trim())) inTab = false;
+      else song.lines.push({ type: 'tab', text: line, ...(screenOnly && { screenOnly: true }) });
+      continue;
+    }
+    if (!line.trim()) {
+      song.lines.push({ type: 'empty' });
+      continue;
+    }
+    const directive = DIRECTIVE.exec(line.trim());
+    if (directive) {
+      const name = directive[1].toLowerCase();
+      const value = directive[2] ?? '';
+      if (name === 'title' || name === 't') song.title = value;
+      else if (name === 'artist') song.artist = value;
+      else if (name === 'comment' || name === 'c')
+        song.lines.push({ type: 'comment', text: value });
+      else if (SECTION_MARKS[name]) song.lines.push(SECTION_MARKS[name]);
+      else if (name === 'start_of_tab' || name === 'sot') {
+        inTab = true;
+        const label = value.replace(/^label\s*=\s*/i, '').replace(/^"(.*)"$/, '$1');
+        if (label) song.lines.push({ type: 'comment', text: label });
+      } else if (name === 'define') {
+        const define = parseDefine(value);
+        if (define) song.defines.push(define);
+      } else if (name === 'screen') screenOnly = true;
+      else if (name === 'print') screenOnly = false;
+      continue;
+    }
+    const segments = parseLine(line);
+    const chordsOnly = segments.every((s) => !s.text.trim()) && segments.some((s) => s.chord);
+    song.lines.push({
+      type: chordsOnly ? 'chords-only' : 'lyrics',
+      segments,
+      ...(screenOnly && { screenOnly: true }),
+    });
+  }
+  return song;
+}
+function parseLine(line) {
+  const segments = [];
+  const chord = /\[([^\]]*)\]/g;
+  let from = 0;
+  let current = { text: '' };
+  for (let m = chord.exec(line); m; m = chord.exec(line)) {
+    current.text = line.slice(from, m.index);
+    if (current.chord !== void 0 || current.text) segments.push(current);
+    current = { chord: m[1].trim(), text: '' };
+    from = m.index + m[0].length;
+  }
+  current.text = line.slice(from);
+  if (current.chord !== void 0 || current.text) segments.push(current);
+  return segments;
+}
+function toBlocks(lines) {
+  const blocks = [];
+  let inChorus = false;
+  let current = null;
+  const close = () => {
+    if (current?.lines.length) blocks.push(current);
+    current = null;
+  };
+  for (const line of lines) {
+    if (line.type === 'empty') close();
+    else if ('section' in line) {
+      close();
+      if (line.section === 'chorus') inChorus = line.type === 'section-start';
+    } else {
+      current ??= { chorus: inChorus, lines: [] };
+      current.lines.push(line);
+    }
+  }
+  close();
+  return blocks;
+}
+function toWords(segments) {
+  const words = [];
+  let open2 = false;
+  const add = (piece) => {
+    if (open2) words[words.length - 1].push(piece);
+    else words.push([piece]);
+    open2 = piece.text !== '' && !/\s$/.test(piece.text);
+  };
+  for (const segment of segments) {
+    const tokens = segment.text.match(/\S+\s*|\s+/g) ?? [];
+    if (segment.chord !== void 0) {
+      const first = tokens[0] && /\S/.test(tokens[0]) ? tokens.shift() : '';
+      add({ chord: segment.chord, text: first });
+    }
+    for (const token of tokens) add({ text: token });
+  }
+  return words;
+}
+function plainLyrics(source) {
+  return parseChordPro(source)
+    .lines.flatMap((line) =>
+      line.type === 'lyrics'
+        ? [
+            line.segments
+              .map((s) => s.text)
+              .join('')
+              .replace(/\s+/g, ' ')
+              .trim(),
+          ]
+        : [],
+    )
+    .filter(Boolean);
 }
 
 // ../client/src/app/pages/daloskonyv/keys.ts
@@ -572,6 +629,7 @@ export {
   parseChord,
   parseChordPro,
   plainLyrics,
+  shapeFinder,
   songKey,
   toBlocks,
   toWords,

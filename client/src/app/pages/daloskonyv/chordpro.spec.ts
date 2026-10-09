@@ -70,6 +70,17 @@ describe('parseChordPro', () => {
       'lyrics',
     ]);
   });
+
+  it('keeps the song’s own chord shapes, and draws nothing for them', () => {
+    const song = parseChordPro(
+      '{define: D7 base-fret 3 frets x 3 2 3 1 x}\n{define: nonsense}\n[D7]egy',
+    );
+    expect(song.defines).toEqual([
+      { name: 'D7', shape: { frets: [-1, 5, 4, 5, 3, -1], barre: null, base: 3 } },
+    ]);
+    expect(song.lines.map((l) => l.type)).toEqual(['lyrics']);
+    expect(parseChordPro('[C]egy').defines).toEqual([]);
+  });
 });
 
 describe('toBlocks', () => {
