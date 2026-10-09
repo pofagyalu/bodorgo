@@ -28,6 +28,98 @@
     <p class="empty-note">Még nincs fotó.</p>
   } @else if (unknownCategory()) {
     <p class="empty-note">Nincs ilyen fotókategória.</p>
+  } @else if (albumKey()) {
+    <!-- One album of a category: only its photos. -->
+    @if (category(); as c) {
+      @if (album(); as a) {
+        <div #groups>
+          <section class="panel photo-group">
+            <div class="group-head">
+              <a
+                class="back-btn"
+                [routerLink]="['/media/fotok', c.key]"
+                [title]="'Vissza: ' + c.title"
+                [attr.aria-label]="'Vissza: ' + c.title"
+              >
+                <mat-icon>arrow_back</mat-icon>
+              </a>
+              <div class="group-text">
+                <h2>{{ c.title }}</h2>
+                <p>{{ a.count }} fotó</p>
+              </div>
+              @if (a.newCount; as fresh) {
+                <span class="new-tag">{{ fresh }} új</span>
+              }
+              <!-- The role manager: the album's name and who may see it. -->
+              @if (canEdit()) {
+                @if (a.viewers?.length; as count) {
+                  <span class="folder-lock" [title]="'Csak ' + count + ' tag láthatja'">
+                    <mat-icon>lock</mat-icon>{{ count }}
+                  </span>
+                }
+                <button
+                  type="button"
+                  class="folder-edit"
+                  title="Album szerkesztése"
+                  aria-label="Album szerkesztése"
+                  (click)="startFolderEdit(c, a)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+              <!-- Which album: its name, and every album of the category in a
+                   panel under it. -->
+              <button
+                type="button"
+                class="album-btn"
+                [class.album-btn--open]="albumsOpen()"
+                title="Másik album"
+                aria-label="Másik album"
+                aria-haspopup="listbox"
+                [attr.aria-expanded]="albumsOpen()"
+                (click)="toggleAlbums($event)"
+              >
+                <span>{{ a.title }}</span>
+                <mat-icon aria-hidden="true">expand_more</mat-icon>
+              </button>
+              @if (albumsOpen()) {
+                <div
+                  class="album-panel"
+                  role="listbox"
+                  aria-label="Másik album"
+                  (click)="$event.stopPropagation()"
+                >
+                  @for (o of c.albums; track o.key) {
+                    <button
+                      type="button"
+                      role="option"
+                      class="album-option"
+                      [class.album-option--current]="o.key === a.key"
+                      [attr.aria-selected]="o.key === a.key"
+                      (click)="pickAlbum(c, o)"
+                    >
+                      {{ o.title }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            @if (albumPhotos(); as photos) {
+              <ng-container
+                *ngTemplateOutlet="tiles; context: { key: c.key, photos: photos, album: a }"
+              />
+            } @else if (albumFailed()) {
+              <p class="empty-note">Nem sikerült betölteni az album fotóit.</p>
+            } @else {
+              <p class="empty-note">Betöltés...</p>
+            }
+          </section>
+        </div>
+      } @else {
+        <p class="empty-note">Nincs ilyen album.</p>
+      }
+    }
   } @else {
     <!-- Fades in when another category is picked (shared/fade-in). -->
     <div #groups>
@@ -39,62 +131,136 @@
               <h2>{{ c.title }}</h2>
             </div>
             <!-- Admins: how many of them a discovery has just brought. -->
-            @if (newCount(c.photos); as fresh) {
+            @if (photoNewCount(c); as fresh) {
               <span class="new-tag">{{ fresh }} új</span>
             }
-            <span class="group-count">{{ c.photos.length }} fotó</span>
-          </div>
-
-          <div class="photo-grid">
-            @for (p of c.photos; track p.filename; let i = $index) {
-              <div class="photo-item">
-                <!-- Its name, if it was given one - never the file's. -->
-                <button
-                  type="button"
-                  class="photo-tile"
-                  (click)="open(c, i)"
-                  [attr.title]="p.title || null"
-                >
-                  <img [src]="thumbUrl(c, p.filename)" [alt]="p.title ?? ''" loading="lazy" />
-                  @if (p.title) {
-                    <span class="photo-name">{{ p.title }}</span>
-                  }
-                </button>
-                <!-- Admins: new since a discovery in the last two weeks. -->
-                @if (p.isNew) {
-                  <span
-                    class="new-tag new-tag--corner"
-                    [class.new-tag--below]="canEdit() && !!p.viewers?.length"
-                    title="Új: a legutóbbi felfedezés hozta"
-                    >Új</span
-                  >
-                }
-                <!-- The role manager: its name and who may see it - and a lock on one
-                     that isn't every member's. -->
-                @if (canEdit()) {
-                  @if (p.viewers?.length; as count) {
-                    <span class="restricted-badge" [title]="'Csak ' + count + ' tag láthatja'">
-                      <mat-icon>lock</mat-icon>{{ count }}
-                    </span>
-                  }
-                  <button
-                    type="button"
-                    class="edit-btn"
-                    title="Szerkesztés"
-                    aria-label="Szerkesztés"
-                    (click)="startEdit(c, p)"
-                  >
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                }
-              </div>
+            <span class="group-count">{{ c.count }} fotó</span>
+            <!-- The role manager: the category's name and who may see it. -->
+            @if (canEdit()) {
+              @if (c.viewers?.length; as count) {
+                <span class="folder-lock" [title]="'Csak ' + count + ' tag láthatja'">
+                  <mat-icon>lock</mat-icon>{{ count }}
+                </span>
+              }
+              <button
+                type="button"
+                class="folder-edit"
+                title="Kategória szerkesztése"
+                aria-label="Kategória szerkesztése"
+                (click)="startFolderEdit(c)"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
             }
           </div>
+
+          <!-- Its albums (the folders inside its folder), newest first: a card
+               each - the photos are on the album's own page. -->
+          @if (c.albums.length) {
+            <div class="album-grid" [class.album-grid--above]="c.photos.length">
+              @for (a of c.albums; track a.key) {
+                <a class="album-card" [routerLink]="['/media/fotok', c.key, a.key]">
+                  <img [src]="thumbUrl(c.key, a.cover)" alt="" loading="lazy" />
+                  <span class="album-info">
+                    <strong>{{ a.title }}</strong>
+                    <small>{{ a.count }} fotó</small>
+                  </span>
+                  @if (a.newCount; as fresh) {
+                    <span
+                      class="new-tag new-tag--corner"
+                      [class.new-tag--below]="canEdit() && !!a.viewers?.length"
+                      >{{ fresh }} új</span
+                    >
+                  }
+                  @if (canEdit()) {
+                    @if (a.viewers?.length; as count) {
+                      <span class="restricted-badge" [title]="'Csak ' + count + ' tag láthatja'">
+                        <mat-icon>lock</mat-icon>{{ count }}
+                      </span>
+                    }
+                  }
+                </a>
+              }
+            </div>
+          }
+
+          @if (c.photos.length) {
+            <ng-container
+              *ngTemplateOutlet="tiles; context: { key: c.key, photos: c.photos, album: null }"
+            />
+          }
         </section>
       }
     </div>
   }
 </div>
+
+<!-- The photos shown together - a category's own, or one album's (album: it,
+     for the role manager's cover button). -->
+<ng-template #tiles let-key="key" let-photos="photos" let-album="album">
+  <div class="photo-grid">
+    @for (p of photos; track p.filename; let i = $index) {
+      <div class="photo-item">
+        <!-- Its name, if it was given one - never the file's. -->
+        <button
+          type="button"
+          class="photo-tile"
+          (click)="open(key, photos, i)"
+          [attr.title]="p.title || null"
+        >
+          <img [src]="thumbUrl(key, p.filename)" [alt]="p.title ?? ''" loading="lazy" />
+          @if (p.title) {
+            <span class="photo-name">{{ p.title }}</span>
+          }
+        </button>
+        <!-- Admins: new since a discovery in the last two weeks. -->
+        @if (p.isNew) {
+          <span
+            class="new-tag new-tag--corner"
+            [class.new-tag--below]="canEdit() && !!p.viewers?.length"
+            title="Új: a legutóbbi felfedezés hozta"
+            >Új</span
+          >
+        }
+        <!-- The role manager: its name and who may see it - and a lock on one
+             that isn't every member's. -->
+        @if (canEdit()) {
+          @if (p.viewers?.length; as count) {
+            <span class="restricted-badge" [title]="'Csak ' + count + ' tag láthatja'">
+              <mat-icon>lock</mat-icon>{{ count }}
+            </span>
+          }
+          <button
+            type="button"
+            class="edit-btn"
+            title="Szerkesztés"
+            aria-label="Szerkesztés"
+            (click)="startEdit(key, p)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+          <!-- In an album: this photo on the album's card - lit on the one
+               that is there now. -->
+          @if (album) {
+            <button
+              type="button"
+              class="cover-btn"
+              [class.cover-btn--current]="album.cover === p.filename"
+              [title]="album.cover === p.filename ? 'Ez az album borítója' : 'Legyen ez a borító'"
+              [attr.aria-label]="
+                album.cover === p.filename ? 'Ez az album borítója' : 'Legyen ez a borító'
+              "
+              [attr.aria-pressed]="album.cover === p.filename"
+              (click)="setCover(key, album, p)"
+            >
+              <mat-icon>wallpaper</mat-icon>
+            </button>
+          }
+        }
+      </div>
+    }
+  </div>
+</ng-template>
 
 <!-- The role manager: a photo's name and who may see it. -->
 @if (editing(); as e) {
@@ -107,5 +273,21 @@
     [error]="editError()"
     (saved)="saveEdit($event)"
     (cancelled)="editing.set(null)"
+  />
+}
+
+<!-- The role manager: a category's or an album's name and who may see it. -->
+@if (editingFolder(); as e) {
+  <app-media-edit-dialog
+    [heading]="e.album ? 'Album szerkesztése' : 'Kategória szerkesztése'"
+    titleLabel="Név"
+    [title]="(e.album ?? e.category).title"
+    [discoveredTitle]="(e.album ?? e.category).discoveredTitle"
+    discoveredLabel="A mappa neve szerint"
+    [viewers]="(e.album ?? e.category).viewers ?? []"
+    [saving]="savingEdit()"
+    [error]="editError()"
+    (saved)="saveFolderEdit($event)"
+    (cancelled)="editingFolder.set(null)"
   />
 }

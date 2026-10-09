@@ -15,9 +15,12 @@ import {
   downloadMediaPhoto,
   getMediaPhoto,
   getMediaPhotoThumb,
+  listMediaAlbumPhotos,
   listMediaPhotos,
   startMediaDiscovery,
   updateMediaPhoto,
+  updateMediaPhotoAlbum,
+  updateMediaPhotoCategory,
 } from '../controllers/mediaPhotoController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 import { mediaEditorOnly } from '../utils/mediaAccess.js';
@@ -42,6 +45,10 @@ router.get('/photos/:category/:filename/thumb', getMediaPhotoThumb);
 router.get('/photos/:category/:filename/download', downloadMediaPhoto);
 router.get('/photos/:category/:filename', getMediaPhoto);
 router.patch('/photos/:category/:filename', mediaEditorOnly, updateMediaPhoto);
+router.patch('/photos/:category', mediaEditorOnly, updateMediaPhotoCategory);
+// A category's albums: the folders inside its folder.
+router.get('/photo-albums/:category/:album', listMediaAlbumPhotos);
+router.patch('/photo-albums/:category/:album', mediaEditorOnly, updateMediaPhotoAlbum);
 
 // "Új média felfedezése" - admins only (tour albums and Média photos).
 router.get('/discover', restrictTo('admin'), getMediaDiscovery);

@@ -3,7 +3,14 @@ import { HttpTestingController } from '@angular/common/http/testing';
 
 import { API, httpTesting } from '../../testing/http';
 import { NotificationsService } from '../notifications/notifications.service';
-import { DiscoveryStatus, MediaService, MediaVideoCategory } from './media';
+import {
+  DiscoveryStatus,
+  MediaPhoto,
+  MediaPhotoCategory,
+  MediaService,
+  MediaVideoCategory,
+  photoNewCount,
+} from './media';
 
 const videos = `${API}/media/videos`;
 const media = `${API}/media`;
@@ -23,6 +30,17 @@ const category = (key: string, ids: string[]): MediaVideoCategory => ({
     hasCover: false,
     hasSubtitles: false,
   })),
+});
+
+const photo = (filename: string): MediaPhoto => ({ filename, width: 1, height: 1, takenAt: null });
+
+const photoCategory = (key: string, photos: MediaPhoto[]): MediaPhotoCategory => ({
+  key,
+  title: key,
+  discoveredTitle: key,
+  photos,
+  albums: [],
+  count: photos.length,
 });
 
 describe('MediaService', () => {
@@ -111,10 +129,9 @@ describe('MediaService', () => {
     });
 
     it('names a photo and sets its viewers in the loaded list, leaving the others alone', () => {
-      const photo = (filename: string) => ({ filename, width: 1, height: 1, takenAt: null });
       service.photoCategories.set([
-        { key: 'régi képek', title: 'Régi képek', photos: [photo('a b.jpg'), photo('c.jpg')] },
-        { key: 'más', title: 'Más', photos: [photo('a b.jpg')] },
+        photoCategory('régi képek', [photo('a b.jpg'), photo('c.jpg')]),
+        photoCategory('más', [photo('a b.jpg')]),
       ]);
       service
         .updatePhoto('régi képek', 'a b.jpg', { title: 'Nagyapa', viewers: ['u1'] })
@@ -130,6 +147,71 @@ describe('MediaService', () => {
         photo('c.jpg'),
       ]);
       expect(mas.photos).toEqual([photo('a b.jpg')]);
+    });
+
+    it("fetches an album's photos once, when it is opened", () => {
+      const url = `${media}/photo-albums/farsangok/2019%20b%C3%A1l`;
+      service.loadAlbum('farsangok', '2019 bál');
+      service.loadAlbum('farsangok', '2019 bál'); // already under way
+      http.expectOne(url).flush({ data: { photos: [photo('2019 bál/a.jpg')] } });
+      expect(service.albumPhotos()).toEqual({ 'farsangok/2019 bál': [photo('2019 bál/a.jpg')] });
+
+      service.loadAlbum('farsangok', '2019 bál');
+      http.expectNone(url);
+    });
+
+    it('flags the album that could not be loaded, and tries again the next time', () => {
+      service.loadAlbum('farsangok', '2019');
+      http
+        .expectOne(`${media}/photo-albums/farsangok/2019`)
+        .flush('', { status: 404, statusText: 'Not Found' });
+      expect(service.albumError()).toBe('farsangok/2019');
+
+      service.loadAlbum('farsangok', '2019');
+      expect(service.albumError()).toBeNull();
+      http.expectOne(`${media}/photo-albums/farsangok/2019`).flush({ data: { photos: [] } });
+    });
+
+    it("names a photo in an opened album's list", () => {
+      service.albumPhotos.set({
+        'farsangok/2019': [photo('2019/a.jpg'), photo('2019/b.jpg')],
+        'farsangok/2020': [photo('2020/a.jpg')],
+      });
+      service.updatePhoto('farsangok', '2019/a.jpg', { title: 'Bohóc', viewers: [] }).subscribe();
+      http
+        .expectOne(`${media}/photos/farsangok/2019%2Fa.jpg`)
+        .flush({ data: { photo: { filename: '2019/a.jpg', title: 'Bohóc', viewers: [] } } });
+
+      expect(service.albumPhotos()['farsangok/2019']).toEqual([
+        { ...photo('2019/a.jpg'), title: 'Bohóc', viewers: [] },
+        photo('2019/b.jpg'),
+      ]);
+      expect(service.albumPhotos()['farsangok/2020']).toEqual([photo('2020/a.jpg')]);
+    });
+
+    it('saves a category or an album, and reads the list again', () => {
+      service.updateCategory('régi képek', { title: 'Régiek', viewers: ['u1'] }).subscribe();
+      const category = http.expectOne(`${media}/photos/r%C3%A9gi%20k%C3%A9pek`);
+      expect(category.request.method).toBe('PATCH');
+      expect(category.request.body).toEqual({ title: 'Régiek', viewers: ['u1'] });
+      category.flush({ data: {} });
+      http.expectOne(`${media}/photos`).flush({ data: { categories: [] } });
+
+      service.updateAlbum('farsangok', '2019', { cover: '2019/a.jpg' }).subscribe();
+      const album = http.expectOne(`${media}/photo-albums/farsangok/2019`);
+      expect(album.request.method).toBe('PATCH');
+      expect(album.request.body).toEqual({ cover: '2019/a.jpg' });
+      album.flush({ data: {} });
+      http.expectOne(`${media}/photos`).flush({ data: { categories: [] } });
+    });
+
+    it('counts the new photos of a category with its albums', () => {
+      const category = photoCategory('farsangok', [{ ...photo('a.jpg'), isNew: true }]);
+      category.albums = [
+        { key: '2020', title: '2020', discoveredTitle: '2020', count: 3, cover: 'x', newCount: 2 },
+        { key: '2019', title: '2019', discoveredTitle: '2019', count: 1, cover: 'y' },
+      ];
+      expect(photoNewCount(category)).toBe(3);
     });
 
     it('flags an error', () => {
