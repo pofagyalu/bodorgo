@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import * as L from 'leaflet';
+import { lazyStyleReady } from '../../../../shared/lazy-style';
 import { FutokorCourse } from '../../../../services/futokor';
 
 // A numbered pin for a checkpoint - "R" in orange for the START/FINISH.
@@ -103,12 +104,20 @@ export class CourseMap implements OnDestroy {
   // not every time a point does.
   private fittedTo = '';
 
+  private styled = lazyStyleReady('leaflet');
+
   constructor() {
     // (After the render: the container must be on the page before Leaflet
     // touches it - see components/tours-map.)
-    afterRenderEffect(() => this.draw(this.course(), this.editable(), this.lit()));
+    // And Leaflet's stylesheet must be in: it comes with the map
+    // (shared/lazy-style).
+    afterRenderEffect(() => {
+      if (this.styled()) this.draw(this.course(), this.editable(), this.lit());
+    });
     // (On their own layer: they move every few seconds, the rest stays.)
-    afterRenderEffect(() => this.drawRunners(this.course(), this.runners()));
+    afterRenderEffect(() => {
+      if (this.styled()) this.drawRunners(this.course(), this.runners());
+    });
   }
 
   private drawRunners(course: FutokorCourse, runners: MapRunner[]) {

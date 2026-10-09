@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import * as L from 'leaflet';
+import { lazyStyleReady } from '../../../../shared/lazy-style';
 import { QuizBounds, QuizPlace } from '../../../../services/quiz';
 
 // Someone's pin, shown once the question is closed.
@@ -99,10 +100,16 @@ export class QuizMap implements OnDestroy {
   private sizeWatch: ResizeObserver | null = null;
   private hasSize = false;
 
+  private styled = lazyStyleReady('leaflet');
+
   constructor() {
     // (After the render: the container must be on the page before Leaflet
     // touches it - see components/tours-map.)
-    afterRenderEffect(() => this.draw(this.bounds(), this.pin(), this.place(), this.guesses()));
+    // And Leaflet's stylesheet must be in: it comes with the map
+    // (shared/lazy-style).
+    afterRenderEffect(() => {
+      if (this.styled()) this.draw(this.bounds(), this.pin(), this.place(), this.guesses());
+    });
   }
 
   ngOnDestroy() {

@@ -19,6 +19,7 @@ import { firstValueFrom } from 'rxjs';
 import { MailingsResponse, SentMailing, TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { errorMessage } from '../../../shared/errors';
+import { lazyStyle } from '../../../shared/lazy-style';
 
 const SAVE_DELAY_MS = 1500;
 
@@ -80,6 +81,9 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
       this.pageBody.style.overflow = 'hidden';
     }
 
+    // The editor's stylesheet comes with it (shared/lazy-style) - asked for
+    // already when the tour page showed an admin the button (tour-extras).
+    void lazyStyle('quill');
     this.quill = new Quill(this.editorEl.nativeElement, {
       theme: 'snow',
       placeholder:

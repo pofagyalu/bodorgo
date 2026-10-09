@@ -30,8 +30,11 @@ let http: HttpTestingController;
 let success: ReturnType<typeof vi.spyOn>;
 let error: ReturnType<typeof vi.spyOn>;
 
-beforeEach(() => {
-  TestBed.configureTestingModule({ providers: [pageTesting()] });
+beforeEach(async () => {
+  // (TourExtras's two dialogs are fetched apart from it: that has to be
+  // worked out before one is made.)
+  TestBed.configureTestingModule({ imports: [TourExtras], providers: [pageTesting()] });
+  await TestBed.compileComponents();
   http = TestBed.inject(HttpTestingController);
   const notifications = TestBed.inject(NotificationsService);
   success = vi.spyOn(notifications, 'addSuccess').mockImplementation(() => {});
@@ -967,6 +970,19 @@ describe('TourExtras', () => {
     respond({ 'POST /tours/t1/close': fail(400, 'Még tart a tábor.') });
     expect(error).toHaveBeenCalledWith('Még tart a tábor.');
     expect(extras.closing()).toBe(false);
+  });
+
+  it('brings in the letter dialog of an admin only when it is opened', async () => {
+    open(makeTour());
+    expect(fixture.debugElement.query(By.directive(TourMailPanel))).toBeNull();
+    extras.showMailPanel.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.directive(TourMailPanel))).not.toBeNull();
+    extras.showMailPanel.set(false);
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.directive(TourMailPanel))).toBeNull();
   });
 
   it('sends the programme booklet by e-mail', () => {

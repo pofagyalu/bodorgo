@@ -162,17 +162,26 @@
   </div>
 </section>
 
-<!-- Admin's letter to every attendee (see tour-mail-panel). -->
-@if (showMailPanel()) {
-  <app-tour-mail-panel [tourId]="tour()._id" (closed)="showMailPanel.set(false)" />
-}
+<!-- The admin's two dialogs. Their code - with the editor (Quill), which is
+     big - is not part of the tour page's: it is fetched apart, ahead of
+     time once the page is idle, and only for an admin. -->
+@if (isAdmin()) {
+  <!-- Admin's letter to every attendee (see tour-mail-panel). -->
+  @defer (when showMailPanel(); prefetch on idle) {
+    @if (showMailPanel()) {
+      <app-tour-mail-panel [tourId]="tour()._id" (closed)="showMailPanel.set(false)" />
+    }
+  }
 
-<!-- Admin's beszámoló, day by day (see tour-report-panel). -->
-@if (showReportPanel()) {
-  <app-tour-report-panel
-    [tourId]="tour()._id"
-    [images]="images()"
-    (changed)="loadReportInfo()"
-    (closed)="showReportPanel.set(false)"
-  />
+  <!-- Admin's beszámoló, day by day (see tour-report-panel). -->
+  @defer (when showReportPanel(); prefetch on idle) {
+    @if (showReportPanel()) {
+      <app-tour-report-panel
+        [tourId]="tour()._id"
+        [images]="images()"
+        (changed)="loadReportInfo()"
+        (closed)="showReportPanel.set(false)"
+      />
+    }
+  }
 }

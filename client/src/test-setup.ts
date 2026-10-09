@@ -63,3 +63,13 @@ URL.revokeObjectURL ??= () => {};
 const noBox = { x: 0, y: 0, top: 0, left: 0, bottom: 0, right: 0, width: 0, height: 0 };
 window.Range.prototype.getBoundingClientRect ??= () => ({ ...noBox, toJSON: () => noBox });
 window.Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
+
+// jsdom fetches no stylesheets, so a <link> added by shared/lazy-style would
+// never say it has loaded - and what waits for it (a map, the photo viewer)
+// would never start. Here every added stylesheet link "loads" at once.
+new MutationObserver((records) => {
+  for (const record of records)
+    for (const node of record.addedNodes)
+      if (node instanceof HTMLLinkElement && node.rel === 'stylesheet')
+        node.dispatchEvent(new Event('load'));
+}).observe(document.head, { childList: true });

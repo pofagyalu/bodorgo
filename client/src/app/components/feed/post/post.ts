@@ -13,6 +13,7 @@ import {
 import { MatIconModule } from '@angular/material/icon';
 import { usernameKey } from '../../../shared/usernames';
 import { PollCard } from '../../poll-card/poll-card';
+import { lazyStyle } from '../../../shared/lazy-style';
 
 // Fixed, brand-matched colors instead of per-user hashing: orange for your
 // own name, blue for everyone else's (see post.scss for the bubble
@@ -122,7 +123,10 @@ export class Post {
   async openPhoto(event: Event) {
     event.stopPropagation();
     if (!this.image || !this.imageFullUrl) return;
-    const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
+    const [{ default: PhotoSwipeLightbox }] = await Promise.all([
+      import('photoswipe/lightbox'),
+      lazyStyle('photoswipe'),
+    ]);
     const lightbox = new PhotoSwipeLightbox({ pswpModule: () => import('photoswipe') });
     // Cleaned up once it has closed - not inside its own 'destroy' event:
     // that would destroy it again, endlessly, and leave its invisible layer
