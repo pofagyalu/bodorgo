@@ -253,15 +253,9 @@
   } @else if (!song()) {
     <p class="note">Betöltés…</p>
   } @else {
-    <!-- A finger drawn sideways across the song: the next one (to the
-         left) or the one before (to the right) - song.ts's swipe. -->
-    <article
-      class="sheet"
-      #sheet
-      (touchstart)="swipeStart($event)"
-      (touchend)="swipeEnd($event)"
-      (touchcancel)="swipeFrom = null"
-    >
+    <!-- A finger drawn sideways across the song turns to the next one (to
+         the left) or the one before (to the right) - song.ts's swipe*. -->
+    <article class="sheet" #sheet>
       <header class="song-head">
         <h2>{{ song()!.title }}</h2>
         <!-- The artist, and after it the song's key in a quiet tag: the one

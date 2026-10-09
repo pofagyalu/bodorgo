@@ -125,33 +125,73 @@ describe('SongPage', () => {
     open();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const sheet: HTMLElement = fixture.nativeElement.querySelector('.sheet');
-    /** A finger put down at one point and lifted at another, this much later. */
+    Object.defineProperty(sheet, 'offsetWidth', { value: 360 });
+    const at = (p: [number, number]) => ({ clientX: p[0], clientY: p[1] });
+    const event = (touches: object[], timeStamp: number) =>
+      ({ touches, timeStamp, target: sheet, currentTarget: sheet }) as never;
+    /** A finger put down at one point, moved to another and lifted, this much later. */
     const stroke = (from: [number, number], to: [number, number], ms = 200, fingers = 1) => {
-      const at = (p: [number, number]) => ({ clientX: p[0], clientY: p[1] });
-      const event = (touches: object[], changed: object[], timeStamp: number) =>
-        ({
-          touches,
-          changedTouches: changed,
-          timeStamp,
-          target: sheet,
-          currentTarget: sheet,
-        }) as never;
-      page.swipeStart(event(Array(fingers).fill(at(from)), [at(from)], 1000));
-      page.swipeEnd(event([], [at(to)], 1000 + ms));
+      page.swipeStart(event(Array(fingers).fill(at(from)), 1000));
+      page.swipeMove(event(Array(fingers).fill(at(to)), 1000 + ms / 2));
+      const pulled = sheet.style.transform;
+      page.swipeEnd(event([], 1000 + ms));
+      return pulled;
     };
 
-    stroke([300, 400], [150, 410]); // to the left
+    // The sheet follows the finger; let go far enough, the page turns.
+    expect(stroke([300, 400], [150, 410], 600)).toBe('translateX(-150px)'); // to the left
     expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'zold-erdoben']);
-    stroke([100, 400], [260, 380]); // to the right
+    stroke([100, 400], [260, 380], 600); // to the right
     expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'almodj']);
-
-    // Not a page turn: too short, scrolling down, too slow, two fingers.
+    // A quick flick does too, short as it is.
     navigate.mockClear();
-    stroke([300, 400], [260, 400]);
-    stroke([300, 400], [200, 600]);
-    stroke([300, 400], [100, 400], 1500);
-    stroke([300, 400], [100, 400], 200, 2);
+    stroke([300, 400], [250, 400], 150);
+    expect(navigate).toHaveBeenCalledTimes(1);
+
+    // Not a page turn: too short and slow, scrolling down, two fingers -
+    // the sheet is back in its place.
+    navigate.mockClear();
+    stroke([300, 400], [250, 400], 600);
+    expect(sheet.style.transform).toBe('');
+    expect(stroke([300, 400], [280, 600])).toBe('');
+    expect(stroke([300, 400], [100, 400], 200, 2)).toBe('');
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('pulled towards a side with no song, the sheet barely follows and stays', () => {
+    open();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const service = TestBed.inject(SongService);
+    // The open song is the last of the list.
+    service.songs.set(LIST.slice(0, 2));
+    const sheet: HTMLElement = fixture.nativeElement.querySelector('.sheet');
+    const event = (touches: object[], timeStamp: number) =>
+      ({ touches, timeStamp, target: sheet, currentTarget: sheet }) as never;
+    page.swipeStart(event([{ clientX: 300, clientY: 400 }], 1000));
+    page.swipeMove(event([{ clientX: 100, clientY: 400 }], 1100));
+    expect(sheet.style.transform).toBe('translateX(-60px)');
+    page.swipeEnd(event([], 1200));
+    expect(navigate).not.toHaveBeenCalled();
+    expect(sheet.style.transform).toBe('');
+    service.songs.set(LIST);
+  });
+
+  it('fetches the neighbours ahead, so turning to one shows it at once', () => {
+    open();
+    const ahead = http.match((r) => /\/songs\/(almodj|zold-erdoben)$/.test(r.url));
+    expect(ahead).toHaveLength(2);
+    ahead
+      .find((r) => r.request.url.endsWith('zold-erdoben'))!
+      .flush({ data: { song: song({ _id: 's3', slug: 'zold-erdoben', title: 'Zöld erdőben' }) } });
+
+    slug.next(convertToParamMap({ slug: 'zold-erdoben' }));
+    fixture.detectChanges();
+    // Shown without waiting - and asked for again, in case it has changed.
+    expect(page.song()?._id).toBe('s3');
+    http
+      .expectOne((r) => r.url.endsWith('/songs/zold-erdoben'))
+      .flush({ data: { song: song({ _id: 's3', slug: 'zold-erdoben', title: 'Zöld erdő' }) } });
+    expect(page.song()?.title).toBe('Zöld erdő');
   });
 
   it('jumps to a song picked by chance - never this one, never one played tonight', () => {
@@ -386,7 +426,8 @@ describe('SongPage', () => {
     page.changeTranspose(2);
     slug.next(convertToParamMap({ slug: 'zold-erdoben' }));
     fixture.detectChanges();
-    expect(page.song()).toBeNull();
+    // The open song stays until the other one is here - no empty page.
+    expect(page.song()?._id).toBe('s2');
     expect(page.transpose()).toBe(0);
     respond({
       'GET /songs/zold-erdoben': { data: { song: song({ _id: 's3', slug: 'zold-erdoben' }) } },

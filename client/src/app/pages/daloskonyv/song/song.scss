@@ -322,6 +322,9 @@ button {
   background: #fff;
   box-shadow: 0 0.3rem 1.2rem #213b411a;
   color: #1f2d3a;
+  // Up and down (and a pinch) are the browser's - scrolling the song; a
+  // sideways stroke is left to song.ts, which turns the page with it.
+  touch-action: pan-y pinch-zoom;
 }
 
 .song-head {

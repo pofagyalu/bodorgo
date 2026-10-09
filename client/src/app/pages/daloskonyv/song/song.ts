@@ -16,7 +16,6 @@ import { map } from 'rxjs';
 import { Song, SongService } from '../../../services/song';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
-import { slideIn } from '../../../shared/fade-in';
 import { SongSheet } from '../song-sheet/song-sheet';
 import { Instrument } from '../chord-shapes';
 import { NOTATION, firstChord, stepsBetween, transposeChordPro } from '../chords';
@@ -60,10 +59,20 @@ function store(key: string, value: unknown) {
 // One song of the Daloskönyv: the lyrics with each chord over its
 // syllable, the letter size, transposing (on the screen only), and the
 // play button that scrolls the page for whoever's hands are on a guitar.
-// A sideways stroke that turns the page (swipeEnd): at least this long,
-// and no slower than this.
-const SWIPE_MIN_PX = 70;
-const SWIPE_MAX_MS = 700;
+// A finger's sideways stroke across the song (the swipe* methods). It is
+// one once it has gone this far, clearly more sideways than up or down...
+const SWIPE_START_PX = 12;
+// ...and on letting go it turns the page if the sheet was pulled this far
+// (or a third of its width, if that is less), or flicked: this far at
+// least, within this time.
+const SWIPE_FAR_PX = 110;
+const SWIPE_FLICK_PX = 40;
+const SWIPE_FLICK_MS = 300;
+// Pulled towards a side where there is no song, the sheet follows only
+// this much of the finger's way.
+const SWIPE_RESIST = 0.3;
+
+const noMotion = () => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // Whether the touched element, or one around it up to the song's sheet,
 // scrolls sideways by itself.
@@ -147,37 +156,146 @@ export class SongPage implements OnDestroy {
 
   // A finger drawn sideways across the song turns the page: to the left the
   // next song, to the right the one before - the same as the two links at
-  // the song's foot. Only a clear, quick, one-finger sideways stroke counts,
-  // so scrolling the song, pinching it bigger or pressing a word doesn't.
-  swipeFrom: { x: number; y: number; at: number } | null = null;
+  // the song's foot. The sheet follows the finger; let go far enough (or
+  // flicked), it leaves that way and the other song comes in after it -
+  // otherwise it goes back to its place. Scrolling the song, pinching it
+  // bigger or pressing a word is none of this (song.scss leaves the up and
+  // down strokes to the browser: touch-action).
+  private swipe: {
+    x: number;
+    y: number;
+    at: number;
+    mode: '' | 'drag' | 'scroll';
+    dx: number;
+  } | null = null;
+  // How far the sheet was pulled when the page was turned - it leaves from
+  // there.
+  private pulled = 0;
 
   swipeStart(e: TouchEvent) {
     const touch = e.touches[0];
     // Two fingers are a pinch; something that scrolls sideways itself (a
     // wide chord line) keeps its own stroke.
-    this.swipeFrom =
+    this.swipe =
       e.touches.length === 1 && !scrollsSideways(e.target as HTMLElement, e.currentTarget)
-        ? { x: touch.clientX, y: touch.clientY, at: e.timeStamp }
+        ? { x: touch.clientX, y: touch.clientY, at: e.timeStamp, mode: '', dx: 0 }
         : null;
   }
 
-  swipeEnd(e: TouchEvent) {
-    const from = this.swipeFrom;
-    this.swipeFrom = null;
-    const touch = e.changedTouches[0];
-    if (!from || !touch || e.touches.length) return;
-    const dx = touch.clientX - from.x;
-    const dy = touch.clientY - from.y;
-    if (
-      Math.abs(dx) < SWIPE_MIN_PX ||
-      Math.abs(dx) < 2 * Math.abs(dy) ||
-      e.timeStamp - from.at > SWIPE_MAX_MS
-    ) {
-      return;
+  swipeMove(e: TouchEvent) {
+    const swipe = this.swipe;
+    if (!swipe || swipe.mode === 'scroll') return;
+    if (e.touches.length !== 1) return this.swipeCancel();
+    const dx = e.touches[0].clientX - swipe.x;
+    const dy = e.touches[0].clientY - swipe.y;
+    if (!swipe.mode) {
+      if (Math.abs(dx) > SWIPE_START_PX && Math.abs(dx) > 1.5 * Math.abs(dy)) swipe.mode = 'drag';
+      else if (Math.abs(dy) > SWIPE_START_PX) swipe.mode = 'scroll';
+      if (swipe.mode !== 'drag') return;
     }
     const to = dx < 0 ? this.next() : this.previous();
-    if (to) void this.router.navigate([this.base(), to.slug]);
+    swipe.dx = to ? dx : dx * SWIPE_RESIST;
+    const sheet = this.sheet()?.nativeElement;
+    if (!sheet) return;
+    this.clipSides(true);
+    sheet.style.transform = `translateX(${swipe.dx}px)`;
   }
+
+  swipeEnd(e: TouchEvent) {
+    const swipe = this.swipe;
+    this.swipe = null;
+    if (swipe?.mode !== 'drag') return;
+    const sheet = this.sheet()?.nativeElement;
+    const to = swipe.dx < 0 ? this.next() : this.previous();
+    const far = Math.abs(swipe.dx) > Math.min(SWIPE_FAR_PX, (sheet?.offsetWidth || 400) / 3);
+    const flicked = Math.abs(swipe.dx) > SWIPE_FLICK_PX && e.timeStamp - swipe.at < SWIPE_FLICK_MS;
+    if (to && (far || flicked)) {
+      this.pulled = swipe.dx;
+      void this.router.navigate([this.base(), to.slug]);
+    } else {
+      this.settle(swipe.dx);
+    }
+  }
+
+  swipeCancel() {
+    const swipe = this.swipe;
+    this.swipe = null;
+    if (swipe?.mode === 'drag') this.settle(swipe.dx);
+  }
+
+  // Let go too early: the sheet goes back to its place.
+  private settle(from: number) {
+    const sheet = this.sheet()?.nativeElement;
+    if (!sheet) return;
+    sheet.style.transform = '';
+    const done = () => this.clipSides(false);
+    if (noMotion() || !sheet.animate) return done();
+    sheet
+      .animate([{ transform: `translateX(${from}px)` }, { transform: 'none' }], {
+        duration: 180,
+        easing: 'ease-out',
+      })
+      .finished.then(done, done);
+  }
+
+  // While the sheet is off its place nothing may stick out sideways (and
+  // bring a scrollbar).
+  private clipSides(on: boolean) {
+    this.host.nativeElement.style.overflowX = on ? 'clip' : '';
+  }
+
+  // The open song's sheet leaves: to the left for the next song (turning
+  // 1), to the right for the one before (-1), from where a finger left it;
+  // just fading where the order doesn't say which way. Null where nothing
+  // is animated - the other song is shown at once.
+  private leaving: Animation | null = null;
+
+  private slideOut(sheet: HTMLElement, turning: number): Promise<unknown> | null {
+    const from = this.pulled;
+    this.pulled = 0;
+    this.leaving?.cancel();
+    this.leaving = null;
+    if (noMotion() || !sheet.animate) {
+      sheet.style.transform = '';
+      return null;
+    }
+    this.clipSides(true);
+    this.leaving = sheet.animate(
+      [
+        { transform: `translateX(${from}px)`, opacity: 1 },
+        { transform: turning ? `translateX(${-turning * 100}%)` : 'none', opacity: 0 },
+      ],
+      // Kept there (unseen) until the other song is in it.
+      { duration: 150, easing: 'ease-in', fill: 'forwards' },
+    );
+    sheet.style.transform = '';
+    return this.leaving.finished.catch(() => undefined);
+  }
+
+  // ...and with the other song in it, comes in from the other side.
+  private slideIn(sheet: HTMLElement, turning: number) {
+    this.leaving?.cancel();
+    this.leaving = null;
+    const done = () => this.clipSides(false);
+    if (noMotion() || !sheet.animate) return done();
+    sheet
+      .animate(
+        [
+          { transform: turning ? `translateX(${turning * 100}%)` : 'none', opacity: 0 },
+          { transform: 'none', opacity: 1 },
+        ],
+        { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+      )
+      .finished.then(done, done);
+  }
+
+  // The songs already fetched while this page is open - the open one's
+  // neighbours ahead of time (see the constructor), so turning to one
+  // doesn't wait for the server.
+  private fetched = new Map<string, Song>();
+  private fetching = new Set<string>();
+  // Counts the turns: an answer that arrives for an earlier one is dropped.
+  private turn = 0;
 
   // A song picked by chance, for when nobody knows what to play next: any
   // song of the chosen playlist (of the whole book without one) but this
@@ -223,10 +341,9 @@ export class SongPage implements OnDestroy {
   // Where the page should be - scrollTop itself may round.
   private position = 0;
   private touching = false;
-  // The open song's place in the order, and which way the page is turning
-  // to it (1: forward, -1: back, 0: not at all - the first song opened).
+  // The open song's place in the order: where the next one is from it says
+  // which way the page turns.
   private shownIndex = -1;
-  private turning = 0;
   private holdUntil = 0;
   private wakeLock: WakeLockSentinel | null = null;
   private resizeObserver = new ResizeObserver(() => this.measure());
@@ -248,28 +365,75 @@ export class SongPage implements OnDestroy {
   };
 
   constructor() {
-    // A new address: that song, from its top, stopped.
+    // A new address: that song, from its top, stopped. From another song
+    // the page is turned: the open one stays until the new one is here (no
+    // empty page in between), leaves to one side and the new one comes in
+    // from the other - towards the song's place in the order.
     effect(() => {
       const slug = this.slug();
-      // Which way the page turns (see the sheet's effect below): towards
-      // the song's place in the order, from the one that was open.
       const index = untracked(() => this.index());
-      this.turning = this.shownIndex >= 0 && index >= 0 ? Math.sign(index - this.shownIndex) : 0;
+      const turning = this.shownIndex >= 0 && index >= 0 ? Math.sign(index - this.shownIndex) : 0;
       this.shownIndex = index;
       this.stop();
       this.stopMetronome();
       this.transpose.set(0);
-      this.song.set(null);
       this.notFound.set(false);
+      const turn = ++this.turn;
+      const sheet = untracked(() => (this.song() ? this.sheet()?.nativeElement : undefined));
+      if (!sheet || !slug) this.song.set(null);
       if (!slug) return;
+
+      // The open sheet leaves only once the new song is here - until then
+      // it stays as it is (where a finger left it).
+      let gone: Promise<unknown> | null | undefined;
+      const show = (song: Song) => {
+        if (turn !== this.turn) return;
+        if (gone === undefined) gone = sheet ? this.slideOut(sheet, turning) : null;
+        const put = () => {
+          if (turn !== this.turn) return;
+          const same = untracked(() => this.song())?._id === song._id;
+          this.song.set(song);
+          if (same) return;
+          this.scrollerElement()?.scrollTo({ top: 0 });
+          if (sheet) this.slideIn(sheet, turning);
+        };
+        if (gone) void gone.then(put);
+        else put();
+      };
+      // Fetched ahead: shown at once - and asked for again all the same, in
+      // case it has changed since.
+      const ready = this.fetched.get(slug);
+      if (ready) show(ready);
       this.songService.getSong(slug).subscribe({
         next: (song) => {
-          if (slug !== this.slug()) return;
-          this.song.set(song);
-          this.scrollerElement()?.scrollTo({ top: 0 });
+          this.fetched.set(slug, song);
+          show(song);
         },
-        error: () => this.notFound.set(true),
+        error: () => {
+          if (turn !== this.turn || ready) return;
+          this.leaving?.cancel();
+          if (sheet) sheet.style.transform = '';
+          this.clipSides(false);
+          this.song.set(null);
+          this.notFound.set(true);
+        },
       });
+    });
+
+    // The open song's neighbours are fetched ahead, so turning to one is
+    // immediate.
+    effect(() => {
+      if (!this.song()) return;
+      for (const near of [this.next(), this.previous()]) {
+        const slug = near?.slug;
+        if (!slug || this.fetched.has(slug) || this.fetching.has(slug)) continue;
+        this.fetching.add(slug);
+        this.songService.getSong(slug).subscribe({
+          next: (song) => this.fetched.set(slug, song),
+          error: () => this.fetching.delete(slug),
+          complete: () => this.fetching.delete(slug),
+        });
+      }
     });
 
     // The sheet's height changes with the song, the letters, the chords.
@@ -277,19 +441,27 @@ export class SongPage implements OnDestroy {
       const sheet = this.sheet()?.nativeElement;
       this.resizeObserver.disconnect();
       if (sheet) this.resizeObserver.observe(sheet);
-      // Another song's sheet: it slides in from the side it comes from
-      // (the next one from the right) - by the links at the song's foot
-      // and by a finger's stroke alike. Nothing sticks out sideways (and
-      // brings a scrollbar) meanwhile.
-      if (sheet && this.turning) {
-        const host = this.host.nativeElement;
-        host.style.overflowX = 'clip';
-        const done = () => (host.style.overflowX = '');
-        const sliding = slideIn(sheet, this.turning > 0 ? 1 : -1);
-        if (sliding) sliding.finished.then(done, done);
-        else done();
-        this.turning = 0;
+    });
+
+    // A finger on the sheet (the swipe* methods above) - listened to
+    // directly, and without holding the page's own scrolling back.
+    effect((onCleanup) => {
+      const sheet = this.sheet()?.nativeElement;
+      if (!sheet) return;
+      const listeners: [string, (e: TouchEvent) => void][] = [
+        ['touchstart', (e) => this.swipeStart(e)],
+        ['touchmove', (e) => this.swipeMove(e)],
+        ['touchend', (e) => this.swipeEnd(e)],
+        ['touchcancel', () => this.swipeCancel()],
+      ];
+      for (const [type, listener] of listeners) {
+        sheet.addEventListener(type, listener as EventListener, { passive: true });
       }
+      onCleanup(() => {
+        for (const [type, listener] of listeners) {
+          sheet.removeEventListener(type, listener as EventListener);
+        }
+      });
     });
 
     document.addEventListener('visibilitychange', this.onVisible);
