@@ -642,6 +642,27 @@ describe('QuizEdit', () => {
     return fixture;
   }
 
+  it('lets nobody zoom the page while the phone preview of a question is open', () => {
+    const root = document.documentElement.classList;
+    const fixture = open();
+    const page = fixture.componentInstance;
+    // The form itself is zoomed as any page.
+    expect(root.contains('no-pinch-zoom')).toBe(false);
+
+    page.previewOpen.set(true);
+    fixture.detectChanges();
+    expect(root.contains('no-pinch-zoom')).toBe(true);
+    page.previewOpen.set(false);
+    fixture.detectChanges();
+    expect(root.contains('no-pinch-zoom')).toBe(false);
+
+    // Left with the preview open: the zoom comes back all the same.
+    page.previewOpen.set(true);
+    fixture.detectChanges();
+    fixture.destroy();
+    expect(root.contains('no-pinch-zoom')).toBe(false);
+  });
+
   it('says what a new quiz still needs, and saves it without the empty answers', () => {
     const fixture = open();
     const page = fixture.componentInstance;
