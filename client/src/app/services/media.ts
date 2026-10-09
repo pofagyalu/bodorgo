@@ -64,11 +64,42 @@ export interface MediaPhoto {
 // How many of them carry "Új" - the count beside a category's name.
 export const newCount = (items: { isNew?: boolean }[]) => items.filter((i) => i.isNew).length;
 
+// A folder inside a category's folder (the carnivals' years): a card in
+// the list - its photos are fetched when it is opened (loadAlbum).
+export interface MediaPhotoAlbum {
+  key: string; // the folder's name
+  // The name it was given, otherwise the folder's.
+  title: string;
+  discoveredTitle: string;
+  count: number;
+  // The photo on its card: the chosen one, or its first.
+  cover: string;
+  // Admins only: how many of its photos carry "Új".
+  newCount?: number;
+  // The role manager only - empty: every member sees it.
+  viewers?: string[];
+}
+
 export interface MediaPhotoCategory {
   key: string; // the folder's name
+  // The name it was given, otherwise the folder's.
   title: string;
+  discoveredTitle: string;
+  // The photos in the category's own folder - not its albums'.
   photos: MediaPhoto[];
+  albums: MediaPhotoAlbum[];
+  // All of its photos, the albums' too.
+  count: number;
+  // The role manager only - empty: every member sees it.
+  viewers?: string[];
 }
+
+// How many of a category's photos carry "Új", its albums' too.
+export const photoNewCount = (c: MediaPhotoCategory) =>
+  newCount(c.photos) + c.albums.reduce((sum, a) => sum + (a.newCount ?? 0), 0);
+
+// An opened album's place among MediaService.albumPhotos.
+export const albumKey = (category: string, album: string) => `${category}/${album}`;
 
 // What the role manager sets for a video or a photo.
 export interface MediaSettings {
@@ -222,23 +253,73 @@ export class MediaService {
         data: { photo: { filename: string; title: string | null; viewers: string[] } };
       }>(this.photoUrl(categoryKey, filename), settings)
       .pipe(
-        tap((res) =>
+        tap((res) => {
+          const renamed = (photos: MediaPhoto[]) =>
+            photos.map((p) =>
+              p.filename === filename
+                ? { ...p, title: res.data.photo.title, viewers: res.data.photo.viewers }
+                : p,
+            );
           this.photoCategories.update((categories) =>
             categories.map((c) =>
-              c.key !== categoryKey
-                ? c
-                : {
-                    ...c,
-                    photos: c.photos.map((p) =>
-                      p.filename === filename
-                        ? { ...p, title: res.data.photo.title, viewers: res.data.photo.viewers }
-                        : p,
-                    ),
-                  },
+              c.key !== categoryKey ? c : { ...c, photos: renamed(c.photos) },
             ),
-          ),
-        ),
+          );
+          // In an album ("2019/IMG_1.jpg"): the opened album's list.
+          const album = albumKey(categoryKey, filename.split('/')[0]);
+          this.albumPhotos.update((albums) =>
+            albums[album] ? { ...albums, [album]: renamed(albums[album]) } : albums,
+          );
+        }),
       );
+  }
+
+  // --- A category's albums ---
+
+  // The opened albums' photos, by "category/album" - each fetched once.
+  readonly albumPhotos = signal<Record<string, MediaPhoto[]>>({});
+  // The album ("category/album") that couldn't be loaded.
+  readonly albumError = signal<string | null>(null);
+  private albumsLoading = new Set<string>();
+
+  loadAlbum(category: string, album: string) {
+    const key = albumKey(category, album);
+    if (this.albumPhotos()[key] || this.albumsLoading.has(key)) return;
+    this.albumsLoading.add(key);
+    this.albumError.set(null);
+    this.http.get<{ data: { photos: MediaPhoto[] } }>(this.albumUrl(category, album)).subscribe({
+      next: (res) => {
+        this.albumsLoading.delete(key);
+        this.albumPhotos.update((albums) => ({ ...albums, [key]: res.data.photos }));
+      },
+      error: () => {
+        this.albumsLoading.delete(key);
+        this.albumError.set(key);
+      },
+    });
+  }
+
+  // The role manager: a category's name (an empty one: its folder's) and who may
+  // see all of it. The list is read again - its order and counts follow.
+  updateCategory(category: string, settings: MediaSettings) {
+    return this.http
+      .patch(`${this.mediaUrl}/photos/${encodeURIComponent(category)}`, settings)
+      .pipe(tap(() => this.loadPhotos(true)));
+  }
+
+  // The role manager: an album's name, who may see it, and the photo on its card.
+  updateAlbum(
+    category: string,
+    album: string,
+    settings: Partial<MediaSettings & { cover: string }>,
+  ) {
+    return this.http
+      .patch(this.albumUrl(category, album), settings)
+      .pipe(tap(() => this.loadPhotos(true)));
+  }
+
+  private albumUrl(category: string, album: string): string {
+    return `${this.mediaUrl}/photo-albums/${encodeURIComponent(category)}/${encodeURIComponent(album)}`;
   }
 
   photoUrl(category: string, filename: string): string {
@@ -338,7 +419,9 @@ export class MediaService {
           } else {
             this.notifications.addSuccess('Új média felfedezése kész');
           }
-          // What it brought carries "Új" from now - both lists anew.
+          // What it brought carries "Új" from now - both lists anew, and
+          // the opened albums.
+          this.albumPhotos.set({});
           this.loadPhotos(true);
           this.loadVideos(true);
         },

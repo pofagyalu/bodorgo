@@ -11,11 +11,14 @@ import { songEditGuard } from './auth/song-edit.guard';
 // same one while its category is changed (its tabs' underline can slide,
 // the row keeps where it was scrolled) - Angular builds the page anew
 // between two routes.
-function withCategory(base: string): UrlMatcher {
+function withCategory(base: string, albums = false): UrlMatcher {
   return (segments) => {
-    if (!segments.length || segments.length > 2 || segments[0].path !== base) return null;
+    if (!segments.length || segments.length > (albums ? 3 : 2) || segments[0].path !== base) {
+      return null;
+    }
     const posParams: Record<string, UrlSegment> = {};
     if (segments[1]) posParams['category'] = segments[1];
+    if (segments[2]) posParams['album'] = segments[2];
     return { consumed: segments, posParams };
   };
 }
@@ -115,7 +118,8 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/media/videos/videos').then((m) => m.Videos),
       },
       {
-        matcher: withCategory('fotok'),
+        // A photo category may have albums: fotok/<category>/<album>.
+        matcher: withCategory('fotok', true),
         canActivate: [mediaMemberGuard],
         title: 'Média – Fotók',
         loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),

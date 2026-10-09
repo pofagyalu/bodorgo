@@ -82,10 +82,10 @@
                 >
                   <mat-icon [style.color]="'#8fd3b8'">photo_camera</mat-icon>
                   <span class="sub-title">{{ c.title }}</span>
-                  @if (newCount(c.photos); as fresh) {
+                  @if (photoNewCount(c); as fresh) {
                     <span class="new-tag sub-new">{{ fresh }} új</span>
                   }
-                  <span class="sub-count">{{ c.photos.length }}</span>
+                  <span class="sub-count">{{ c.count }}</span>
                 </a>
               }
             </div>

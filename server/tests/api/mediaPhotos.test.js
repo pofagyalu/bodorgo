@@ -8,6 +8,7 @@ import { createAdmin, createMember, createReservation, createTour } from '../hel
 import Tour from '../../src/models/tourModel.js';
 import MediaPhoto from '../../src/models/mediaPhotoModel.js';
 import MediaPhotoSettings from '../../src/models/mediaPhotoSettingsModel.js';
+import MediaPhotoFolder from '../../src/models/mediaPhotoFolderModel.js';
 import config from '../../src/config.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
 import { romanToInt, findFolderForOrder } from '../../src/photos/tourFolders.js';
@@ -39,6 +40,12 @@ beforeAll(async () => {
   fs.writeFileSync(path.join(photosRoot, TOUR_FOLDER, 'Thumbs.db'), 'x');
   await putJpeg(path.join(mediaRoot, 'sinners', 'agnes.jpg'));
   await putJpeg(path.join(mediaRoot, 'sinners', 'beni.jpg'));
+  // A category with albums: the folders inside it - one level only.
+  await putJpeg(path.join(mediaRoot, 'farsangok', '2019', 'a.jpg'));
+  await putJpeg(path.join(mediaRoot, 'farsangok', '2020', 'b.jpg'));
+  await putJpeg(path.join(mediaRoot, 'farsangok', '2020', 'c.jpg'));
+  await putJpeg(path.join(mediaRoot, 'farsangok', '2020', 'mely', 'd.jpg'));
+  await putJpeg(path.join(mediaRoot, 'farsangok', '@eaDir', 'x.jpg'));
 });
 
 // Starts discovery and waits for it to finish.
@@ -262,6 +269,146 @@ describe('Média photos: a name and viewers', () => {
     await patch(admin, { viewers: [] });
     expect((await get(other)).status).toBe(200);
     expect(await MediaPhotoSettings.countDocuments()).toBe(0);
+  });
+});
+
+describe('Média photos: albums', () => {
+  const farsangok = async (user) =>
+    (await request(app).get('/media/photos').set(asUser(user))).body.data.categories.find(
+      (c) => c.key === 'farsangok',
+    );
+  const album = (user, key = '2020') =>
+    request(app).get(`/media/photo-albums/farsangok/${key}`).set(asUser(user));
+  const patchAlbum = (user, body, key = '2020') =>
+    request(app).patch(`/media/photo-albums/farsangok/${key}`).set(asUser(user)).send(body);
+  const patchCategory = (user, body, key = 'farsangok') =>
+    request(app).patch(`/media/photos/${key}`).set(asUser(user)).send(body);
+  const photo = (user, tail = '', filename = '2020/b.jpg') =>
+    request(app)
+      .get(`/media/photos/farsangok/${encodeURIComponent(filename)}${tail}`)
+      .set(asUser(user));
+
+  it('a folder inside a category is an album: a card in the list, its photos on their own', async () => {
+    const admin = await createAdmin();
+    const member = await createMember();
+    await discover(admin);
+
+    const category = await farsangok(member);
+    expect(category).toMatchObject({ title: 'Farsangok', photos: [], count: 3 });
+    // Newest first; the NAS's own folder and anything deeper are left alone.
+    expect(category.albums).toEqual([
+      { key: '2020', title: '2020', discoveredTitle: '2020', count: 2, cover: '2020/b.jpg' },
+      { key: '2019', title: '2019', discoveredTitle: '2019', count: 1, cover: '2019/a.jpg' },
+    ]);
+    // An admin: how many of them the discovery has just brought.
+    expect((await farsangok(admin)).albums.map((a) => a.newCount)).toEqual([2, 1]);
+
+    const photos = (await album(member)).body.data.photos;
+    expect(photos.map((p) => p.filename)).toEqual(['2020/b.jpg', '2020/c.jpg']);
+    expect((await album(member, '2018')).status).toBe(404);
+
+    const thumb = await photo(member, '/thumb');
+    expect(thumb.headers['content-type']).toContain('image/webp');
+    expect(fs.existsSync(path.join(thumbsRoot, '_media', 'farsangok', '2020', 'b.webp'))).toBe(
+      true,
+    );
+    expect((await photo(member)).status).toBe(200);
+    const download = await photo(member, '/download');
+    expect(download.headers['content-disposition']).toContain('b.jpg');
+    expect(download.headers['content-disposition']).not.toContain('2020');
+    expect((await photo(member, '', '2020/mely/d.jpg')).status).toBe(404);
+  });
+
+  it('the role manager renames an album, picks its cover, and says who may see it', async () => {
+    const admin = await createAdmin({ canManageRoles: true });
+    const otherAdmin = await createAdmin();
+    const chosen = await createMember();
+    const other = await createMember();
+    await discover(admin);
+    const the2020 = async (user) => (await farsangok(user))?.albums.find((a) => a.key === '2020');
+
+    expect((await patchAlbum(other, { title: 'x' })).status).toBe(403);
+    expect((await patchAlbum(otherAdmin, { title: 'x' })).status).toBe(403);
+    expect((await patchAlbum(admin, { title: 'x' }, '2018')).status).toBe(404);
+    expect((await patchAlbum(admin, { cover: '2019/a.jpg' })).status).toBe(400);
+    expect((await patchAlbum(admin, { cover: 5 })).status).toBe(400);
+
+    const res = await patchAlbum(admin, { title: 'Hawaii', cover: '2020/c.jpg' });
+    expect(res.body.data.album).toEqual({
+      key: '2020',
+      title: 'Hawaii',
+      discoveredTitle: '2020',
+      viewers: [],
+      cover: '2020/c.jpg',
+    });
+    expect(await the2020(other)).toMatchObject({ title: 'Hawaii', cover: '2020/c.jpg' });
+    expect((await the2020(other)).viewers).toBeUndefined();
+
+    // Only the chosen (and the admins) see it, and anything in it.
+    await patchAlbum(admin, { viewers: [String(chosen._id)] });
+    expect((await the2020(admin)).viewers).toEqual([String(chosen._id)]);
+    expect((await the2020(otherAdmin)).viewers).toBeUndefined();
+    expect(await the2020(chosen)).toMatchObject({ title: 'Hawaii', count: 2 });
+    expect(await the2020(other)).toBeUndefined();
+    expect((await farsangok(other)).count).toBe(1);
+    expect((await album(other)).status).toBe(404);
+    expect((await album(chosen)).status).toBe(200);
+    for (const tail of ['', '/thumb', '/download']) {
+      expect((await photo(chosen, tail)).status).toBe(200);
+      expect((await photo(otherAdmin, tail)).status).toBe(200);
+      expect((await photo(other, tail)).status).toBe(404);
+    }
+    expect((await photo(other, '', '2019/a.jpg')).status).toBe(200);
+
+    // A cover this user may not see: the first of what they may.
+    await patchAlbum(admin, { viewers: [] });
+    await request(app)
+      .patch(`/media/photos/farsangok/${encodeURIComponent('2020/c.jpg')}`)
+      .set(asUser(admin))
+      .send({ viewers: [String(chosen._id)] });
+    expect(await the2020(other)).toMatchObject({ count: 1, cover: '2020/b.jpg' });
+    expect((await the2020(chosen)).cover).toBe('2020/c.jpg');
+
+    // Back to the folder's name and the first photo: nothing left to keep.
+    const back = await patchAlbum(admin, { title: '2020', cover: '' });
+    expect(back.body.data.album).toMatchObject({ title: '2020', cover: null });
+    expect(await MediaPhotoFolder.countDocuments()).toBe(0);
+  });
+
+  it('the role manager renames a category, and says who may see all of it', async () => {
+    const admin = await createAdmin({ canManageRoles: true });
+    const otherAdmin = await createAdmin();
+    const chosen = await createMember();
+    const other = await createMember();
+    await discover(admin);
+
+    expect((await patchCategory(other, { title: 'x' })).status).toBe(403);
+    expect((await patchCategory(otherAdmin, { title: 'x' })).status).toBe(403);
+    expect((await patchCategory(admin, { title: 'x' }, 'nincs')).status).toBe(404);
+
+    const res = await patchCategory(admin, { title: 'Jelmezbálok', viewers: [String(chosen._id)] });
+    expect(res.body.data.category).toEqual({
+      key: 'farsangok',
+      title: 'Jelmezbálok',
+      discoveredTitle: 'Farsangok',
+      viewers: [String(chosen._id)],
+    });
+    expect(await farsangok(admin)).toMatchObject({ viewers: [String(chosen._id)] });
+    expect(await farsangok(chosen)).toMatchObject({ title: 'Jelmezbálok', count: 3 });
+    expect((await farsangok(chosen)).viewers).toBeUndefined();
+    expect((await farsangok(otherAdmin)).count).toBe(3);
+    expect(await farsangok(other)).toBeUndefined();
+    expect((await album(other)).status).toBe(404);
+    expect((await photo(other, '/thumb')).status).toBe(404);
+    expect((await photo(chosen, '/thumb')).status).toBe(200);
+    // The other categories stay everyone's.
+    expect(
+      (await request(app).get('/media/photos/sinners/agnes.jpg').set(asUser(other))).status,
+    ).toBe(200);
+
+    await patchCategory(admin, { title: '', viewers: [] });
+    expect(await farsangok(other)).toMatchObject({ title: 'Farsangok', count: 3 });
+    expect(await MediaPhotoFolder.countDocuments()).toBe(0);
   });
 });
 

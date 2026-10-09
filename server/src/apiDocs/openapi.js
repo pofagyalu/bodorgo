@@ -2791,10 +2791,77 @@ const paths = {
       role: 'member',
       summary: 'All photo folders and photos',
       description:
-        "Each folder with its photos, in the order taken. A photo's `title` is the name an admin gave it (see PATCH /media/photos/{category}/{filename}) - null when it has none; the file name is not a name to show. A photo an admin kept for chosen members is left out for everyone else (an admin gets every photo), and so is a folder with nothing left to show. The role manager only: `viewers` on each photo - the ids of the users who may see it; empty when every member may. On a photo, `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
+        "A folder inside a category folder is an album of it: `albums` lists them, newest first, each with its `key` (the folder), `title` (the name it was given, or the folder's - `discoveredTitle`), `count`, and `cover` (a photo's filename, for its thumbnail) - but not its photos: those come from GET /media/photo-albums/{category}/{album}. `photos` are only the ones in the category folder itself; `count` is all of them, the albums' too. A category has `title` and `discoveredTitle` the same way. A category or album kept for chosen members (see the two PATCHes) is left out for everyone else, with all its photos. The role manager only: `viewers` on each category and album. Admins only: `newCount` on an album with photos added in the last 14 days. Each folder with its photos, in the order taken. A photo's `title` is the name an admin gave it (see PATCH /media/photos/{category}/{filename}) - null when it has none; the file name is not a name to show. A photo an admin kept for chosen members is left out for everyone else (an admin gets every photo), and so is a folder with nothing left to show. The role manager only: `viewers` on each photo - the ids of the users who may see it; empty when every member may. On a photo, `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
       data: obj({
-        categories: arrayOf(obj({ key: str(), title: str(), photos: arrayOf({ type: 'object' }) })),
+        categories: arrayOf(
+          obj({
+            key: str(),
+            title: str(),
+            discoveredTitle: str(),
+            photos: arrayOf({ type: 'object' }),
+            albums: arrayOf({ type: 'object' }),
+            count: { type: 'integer' },
+          }),
+        ),
       }),
+    }),
+  },
+  '/media/photos/{category}': {
+    patch: op({
+      tag: T.media,
+      role: 'admin',
+      summary: 'Rename a photo category, and say who may see it',
+      description:
+        "The role manager only (403 for any other admin). Only the fields sent change. `title` is shown instead of the folder's name; an empty one (or the folder's name itself) goes back to that. At most 200 characters. `viewers` are the only members who see the category from then on - it, its albums and every photo in it (404 for anyone else); admins always see it. An empty list gives it back to every member. 400 when an id is not a user's.",
+      params: [path('category', 'The folder.')],
+      body: obj({
+        title: str("The name; empty for the folder's."),
+        viewers: arrayOf(str('A user id.')),
+      }),
+      data: obj({
+        category: obj({
+          key: str('The folder.'),
+          title: str('The name now shown.'),
+          discoveredTitle: str("The folder's name."),
+          viewers: arrayOf(str('A user id.')),
+        }),
+      }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/media/photo-albums/{category}/{album}': {
+    get: op({
+      tag: T.media,
+      role: 'member',
+      summary: "An album's photos",
+      description:
+        'The photos of one album (a folder inside a category folder), in the order taken - the same fields as the photos of GET /media/photos; a filename here starts with the album\'s folder ("2019/IMG_1.jpg") and is used as it is in the photo addresses. 404 when there is no such album, or this user may see nothing of it.',
+      params: [path('category', 'The folder.'), path('album', 'The folder inside it.')],
+      data: obj({ photos: arrayOf({ type: 'object' }) }),
+      errors: [404],
+    }),
+    patch: op({
+      tag: T.media,
+      role: 'admin',
+      summary: 'Rename an album, pick its cover, and say who may see it',
+      description:
+        "The role manager only (403 for any other admin). Only the fields sent change. `title` is shown instead of the folder's name; an empty one (or the folder's name itself) goes back to that. At most 200 characters. `cover` is the filename of one of the album's photos, shown on its card; an empty one goes back to the album's first photo; 400 when it is not a photo of this album. `viewers` are the only members who see the album and its photos from then on (404 for anyone else); admins always see it. An empty list gives it back to every member. 400 when an id is not a user's.",
+      params: [path('category', 'The folder.'), path('album', 'The folder inside it.')],
+      body: obj({
+        title: str("The name; empty for the folder's."),
+        cover: str("A photo's filename; empty for the first photo."),
+        viewers: arrayOf(str('A user id.')),
+      }),
+      data: obj({
+        album: obj({
+          key: str('The folder.'),
+          title: str('The name now shown.'),
+          discoveredTitle: str("The folder's name."),
+          viewers: arrayOf(str('A user id.')),
+          cover: str('The chosen cover - null when none is.'),
+        }),
+      }),
+      errors: [400, 403, 404],
     }),
   },
   '/media/photos/{category}/{filename}': {
