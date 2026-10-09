@@ -86,6 +86,7 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "runner": "vitest",
+            "runnerConfig": "vitest.config.ts",
             "buildTarget": "::development",
             "setupFiles": ["src/test-setup.ts"],
             "coverageInclude": ["src/app/**/*.ts"],

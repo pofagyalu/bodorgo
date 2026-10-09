@@ -18,6 +18,7 @@ import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.servic
 import { playCelebration } from '../../../../shared/celebration-effects';
 import { errorMessage } from '../../../../shared/errors';
 import { Podium, PodiumWinner } from '../../../../shared/podium/podium';
+import { RecreateOn } from '../../../../shared/recreate-on';
 import {
   CRICKET_TARGETS,
   DartThrow,
@@ -64,7 +65,7 @@ const MARKS = ['', '╱', '✕', '⊗'];
 // and celebrates.
 @Component({
   selector: 'app-darts-game',
-  imports: [RouterLink, MatIconModule, Avatar, Podium],
+  imports: [RouterLink, MatIconModule, Avatar, Podium, RecreateOn],
   templateUrl: './darts-game.html',
   styleUrl: './darts-game.scss',
 })

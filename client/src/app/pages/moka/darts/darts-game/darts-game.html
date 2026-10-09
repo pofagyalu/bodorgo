@@ -52,13 +52,15 @@
                 </td>
                 @for (t of targets; track t) {
                   <!-- A new element for every new mark, so it pops in. -->
-                  @for (m of [mark(p.marks?.[t])]; track m) {
-                    <td class="mark" [class.closed]="(p.marks?.[t] ?? 0) >= 3">{{ m }}</td>
-                  }
+                  <td
+                    *appRecreateOn="mark(p.marks?.[t]); let m"
+                    class="mark"
+                    [class.closed]="(p.marks?.[t] ?? 0) >= 3"
+                  >
+                    {{ m }}
+                  </td>
                 }
-                @for (score of [p.points]; track score) {
-                  <td class="points">{{ score }}</td>
-                }
+                <td *appRecreateOn="p.points; let score" class="points">{{ score }}</td>
               </tr>
             }
           </tbody>
@@ -94,9 +96,7 @@
             />
             <span class="pname">{{ p.name }}</span>
             <!-- A new element for every new score, so it pops in each time. -->
-            @for (score of [p.remaining]; track score) {
-              <span class="remaining">{{ score }}</span>
-            }
+            <span *appRecreateOn="p.remaining; let score" class="remaining">{{ score }}</span>
             <span class="avg">⌀ {{ p.average ?? '–' }}</span>
           </div>
         }
@@ -189,15 +189,14 @@
         </div>
         <div class="slots">
           @for (slot of slots(); track i; let i = $index) {
-            @for (text of [slot]; track text) {
-              <span
-                class="slot"
-                [class.filled]="text !== null"
-                [class.selected]="editing()?.selected === i"
-                (click)="selectSlot(i)"
-                >{{ text ?? '·' }}</span
-              >
-            }
+            <span
+              *appRecreateOn="slot; let text"
+              class="slot"
+              [class.filled]="text !== null"
+              [class.selected]="editing()?.selected === i"
+              (click)="selectSlot(i)"
+              >{{ text ?? '·' }}</span
+            >
           }
           <span class="turn-total">{{ turnTotal() }}</span>
         </div>

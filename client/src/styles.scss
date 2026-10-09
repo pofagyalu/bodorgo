@@ -34,12 +34,14 @@ body {
   overflow: hidden;
 }
 
-/* While a Kvíz game is open (pages/moka/quiz/quiz-game sets the class): no
-   zooming the page with two fingers, nor with a double tap - only moving
-   it up and down, left and right. On the root, so it holds wherever the
-   fingers land. */
+/* While the page's zoom is blocked (shared/page-zoom.ts sets the class - a
+   Kvíz game): no zooming with two fingers, nor with a double tap - only
+   moving up and down, left and right. On the root and on everything in
+   it, so it holds wherever the fingers land - but for a Leaflet map,
+   which takes the fingers on it as its own. */
 html.no-pinch-zoom,
-html.no-pinch-zoom body {
+html.no-pinch-zoom body,
+html.no-pinch-zoom body *:not(.leaflet-container, .leaflet-container *) {
   touch-action: pan-x pan-y;
 }
 

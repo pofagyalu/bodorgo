@@ -45,22 +45,21 @@
       </button>
     </div>
     <!-- Keyed by the source, so another video (or quality) starts fresh. -->
-    @for (key of [playingSrc()]; track key) {
-      <video
-        #video
-        class="player-video"
-        controls
-        autoplay
-        preload="metadata"
-        crossorigin="use-credentials"
-        (loadedmetadata)="onLoaded(video)"
-      >
-        <source [src]="key" type="video/mp4" />
-        @if (subtitlesSrc(); as subs) {
-          <!-- default: shown right away, not only when picked in the player's menu. -->
-          <track kind="subtitles" srclang="hu" label="Magyar" [src]="subs" default />
-        }
-      </video>
-    }
+    <video
+      *appRecreateOn="playingSrc(); let key"
+      #video
+      class="player-video"
+      controls
+      autoplay
+      preload="metadata"
+      crossorigin="use-credentials"
+      (loadedmetadata)="onLoaded(video)"
+    >
+      <source [src]="key" type="video/mp4" />
+      @if (subtitlesSrc(); as subs) {
+        <!-- default: shown right away, not only when picked in the player's menu. -->
+        <track kind="subtitles" srclang="hu" label="Magyar" [src]="subs" default />
+      }
+    </video>
   </div>
 </div>
