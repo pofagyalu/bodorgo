@@ -5,6 +5,7 @@ import {
   BirthdaySettings,
   MembershipReminder,
   SettingsService,
+  YearlyReportInfo,
 } from '../../../../services/settings';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import {
@@ -30,7 +31,7 @@ const MONTHS = [
 ];
 
 // Klub → Beállítások → Értesítések: what the app sends by itself - the fee
-// reminder, the birthday and rank greetings. One of the settings page's tabs
+// reminder, the yearly report, the birthday and rank greetings. One of the settings page's tabs
 // (settings.ts shows them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-app-settings',
@@ -45,6 +46,7 @@ export class AppSettingsTab implements OnInit {
 
   ngOnInit() {
     this.loadReminder();
+    this.loadYearlyReport();
     this.loadBirthday();
     this.loadRank();
   }
@@ -153,6 +155,34 @@ export class AppSettingsTab implements OnInit {
   roundLabel(date: string): string {
     const [, m, d] = date.split('-').map(Number);
     return `${MONTHS[m - 1]} ${d}.`;
+  }
+
+  // --- Éves jelentés: the club's year on one page, e-mailed on 1 January ---
+
+  yearlyReport = signal<YearlyReportInfo | null>(null);
+  readonly yearlyReportPdfUrl = this.settingsService.yearlyReportPdfUrl();
+  sendingYearlyTest = signal(false);
+
+  private loadYearlyReport() {
+    this.settingsService.getYearlyReport().subscribe({
+      next: (res) => this.yearlyReport.set(res.data),
+      error: () => {},
+    });
+  }
+
+  sendTestYearlyReport() {
+    if (this.sendingYearlyTest()) return;
+    this.sendingYearlyTest.set(true);
+    this.settingsService.testYearlyReport().subscribe({
+      next: (res) => {
+        this.sendingYearlyTest.set(false);
+        this.notifications.addSuccess(`Próba e-mail elküldve: ${res.data.sentTo}`);
+      },
+      error: (err) => {
+        this.sendingYearlyTest.set(false);
+        this.notifications.addError(err?.error?.message ?? 'A próba e-mail nem ment el.');
+      },
+    });
   }
 
   // --- Születésnap: the birthday greeting (shared/birthday) ---

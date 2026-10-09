@@ -13,6 +13,9 @@ import {
   getMembershipFees,
   getMembershipReminder,
   testMembershipReminder,
+  getYearlyReport,
+  getYearlyReportPdf,
+  testYearlyReport,
   updateMembershipFees,
   updateBarionWallet,
   updateBirthdaySettings,
@@ -47,6 +50,12 @@ router
 router
   .route('/membership-reminder/test')
   .post(requireAuth, restrictTo('admin'), testMembershipReminder);
+
+// Éves jelentés: the club's year on one page, e-mailed on 1 January -
+// when it goes, to whom, how it looks now, and a try-out - admins only.
+router.get('/yearly-report', requireAuth, restrictTo('admin'), getYearlyReport);
+router.get('/yearly-report/preview.pdf', requireAuth, restrictTo('admin'), getYearlyReportPdf);
+router.post('/yearly-report/test', requireAuth, restrictTo('admin'), testYearlyReport);
 
 // Chat photos: quota and daily limit - admins only.
 router

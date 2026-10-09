@@ -15,6 +15,7 @@ import {
   checkMembershipReminders,
   notifyAdminsIfAllMembersPaid,
 } from './utils/membershipReminders.js';
+import { checkYearlyReport } from './utils/yearlyReportMail.js';
 import { syncRoleManager } from './utils/roleManager.js';
 import { importOidcSettingsFromEnv } from './utils/oidcSettings.js';
 import { migrateUserIdentities } from './utils/userIdentities.js';
@@ -115,6 +116,9 @@ mongoose
           notifyAdminsIfAllMembersPaid().catch((err) =>
             logger.error(`All-paid check failed: ${err.message}`),
           );
+          // "Éves jelentés": last year's report to the club members, on
+          // 1 January from 9 a.m. (see utils/yearlyReportMail.js) - once.
+          checkYearlyReport().catch((err) => logger.error(`Yearly report failed: ${err.message}`));
         },
         60 * 60 * 1000,
       );

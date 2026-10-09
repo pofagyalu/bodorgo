@@ -48,6 +48,14 @@ const loaded = () => ({
       recipients: ['Tag Tamás'],
     },
   },
+  'GET /settings/yearly-report': {
+    data: {
+      year: 2026,
+      sendsOn: '2027-01-01',
+      recipients: ['Admin Anna', 'Tag Tamás'],
+      lastSentYear: null,
+    },
+  },
   'GET /settings/payment-methods': { data: { stripe: method, barion: { ...method, feeMin: 100 } } },
   'GET /settings/chat-images': {
     data: { quotaMB: 100, dailyLimit: 10, usage: { bytes: 25 * MB, count: 4 } },
@@ -271,6 +279,33 @@ describe('KlubSettings', () => {
       app().sendTestReminder();
       respond({ 'POST /settings/membership-reminder/test': { data: { sentTo: 'a@b.hu' } } });
       expect(success).toHaveBeenCalledWith('Próba e-mail elküldve: a@b.hu');
+    });
+  });
+
+  describe('yearly report', () => {
+    beforeEach(() => open());
+
+    it('shows when it goes, to whom, and where the PDF is', () => {
+      expect(app().yearlyReport()?.year).toBe(2026);
+      expect(app().yearlyReportPdfUrl).toBe(`${API}/settings/yearly-report/preview.pdf`);
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('2027. január 1.');
+      expect(text).toContain('Most 2 klubtag kapná meg');
+    });
+
+    it('sends a test e-mail to the admin, once per press', () => {
+      app().sendTestYearlyReport();
+      app().sendTestYearlyReport();
+      respond({ 'POST /settings/yearly-report/test': { data: { sentTo: 'a@b.hu', year: 2026 } } });
+      expect(success).toHaveBeenCalledWith('Próba e-mail elküldve: a@b.hu');
+      expect(app().sendingYearlyTest()).toBe(false);
+    });
+
+    it('says so when the test e-mail fails', () => {
+      app().sendTestYearlyReport();
+      respond({ 'POST /settings/yearly-report/test': fail(500, 'Nincs SMTP.') });
+      expect(error).toHaveBeenCalledWith('Nincs SMTP.');
+      expect(app().sendingYearlyTest()).toBe(false);
     });
   });
 

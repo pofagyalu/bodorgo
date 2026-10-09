@@ -80,6 +80,12 @@ const EMAILS: (NotificationInfo & { note?: string })[] = [
     who: 'Aki még nem fizette be az idei tagdíjat, és már bejelentkezett. Az adminok összesítőt kapnak róla.',
     settings: 'membershipReminder',
   },
+  {
+    name: 'Éves jelentés',
+    when: 'Január 1-jén reggel 9 után, az előző évről (évente egyszer).',
+    who: 'Minden klubtag, PDF melléklettel (próbaküldés: csak az admin).',
+    note: 'Csak akinek van e-mail címe, és nem kapcsolta ki az e-maileket. A felfüggesztett tagok nem kapják.',
+  },
 ];
 
 const PUSHES: NotificationInfo[] = [

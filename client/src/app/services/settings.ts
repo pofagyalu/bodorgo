@@ -48,6 +48,16 @@ export interface MembershipReminder {
   nextRound: string | null; // null while it's off
 }
 
+// "Éves jelentés" (see server/src/utils/yearlyReportMail.js): the year the
+// next e-mail is about, the 1 January it goes out on, who would get it now,
+// and the last year already sent.
+export interface YearlyReportInfo {
+  year: number;
+  sendsOn: string;
+  recipients: string[];
+  lastSentYear: number | null;
+}
+
 export interface MembershipReminderResponse {
   status: string;
   data: { reminder: MembershipReminder; year: number; recipients: string[] };
@@ -388,6 +398,27 @@ export class SettingsService {
   // Which one everybody logs in through: 'authentik' or a provider's id.
   setActiveOidcProvider(provider: string) {
     return this.http.put<{ data: OidcSettings }>(`${this.apiUrl}/oidc/active`, { provider });
+  }
+
+  // --- Éves jelentés: the club's year on one PDF page, e-mailed on 1 January ---
+
+  getYearlyReport() {
+    return this.http.get<{ status: string; data: YearlyReportInfo }>(
+      `${this.apiUrl}/yearly-report`,
+    );
+  }
+
+  // The report as it stands today (a PDF, opened in its own tab).
+  yearlyReportPdfUrl() {
+    return `${this.apiUrl}/yearly-report/preview.pdf`;
+  }
+
+  // The e-mail as a member would get it, to the admin themselves.
+  testYearlyReport() {
+    return this.http.post<{ status: string; data: { sentTo: string; year: number } }>(
+      `${this.apiUrl}/yearly-report/test`,
+      {},
+    );
   }
 
   // The reminder as a member would get it, to the admin themselves.
