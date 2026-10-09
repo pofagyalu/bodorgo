@@ -327,6 +327,26 @@ button {
   touch-action: pan-y pinch-zoom;
 }
 
+// The open song's sheet and, while the page is turned, the other song's
+// beside it (song.ts's peek): a page's width and a gap away, on the side
+// it comes from - song.ts moves the track, and so the two together.
+.sheet-track {
+  position: relative;
+}
+
+.sheet--peek {
+  position: absolute;
+  left: calc(100% + 1.5rem);
+  width: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+
+  &.sheet--peek-before {
+    left: auto;
+    right: calc(100% + 1.5rem);
+  }
+}
+
 .song-head {
   margin-bottom: 1.5rem;
 

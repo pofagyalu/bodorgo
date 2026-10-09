@@ -125,7 +125,9 @@ describe('SongPage', () => {
     open();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const sheet: HTMLElement = fixture.nativeElement.querySelector('.sheet');
-    Object.defineProperty(sheet, 'offsetWidth', { value: 360 });
+    // What moves: the track - the sheet, and the other song's beside it.
+    const track: HTMLElement = fixture.nativeElement.querySelector('.sheet-track');
+    Object.defineProperty(track, 'offsetWidth', { value: 360 });
     const at = (p: [number, number]) => ({ clientX: p[0], clientY: p[1] });
     const event = (touches: object[], timeStamp: number) =>
       ({ touches, timeStamp, target: sheet, currentTarget: sheet }) as never;
@@ -133,15 +135,20 @@ describe('SongPage', () => {
     const stroke = (from: [number, number], to: [number, number], ms = 200, fingers = 1) => {
       page.swipeStart(event(Array(fingers).fill(at(from)), 1000));
       page.swipeMove(event(Array(fingers).fill(at(to)), 1000 + ms / 2));
-      const pulled = sheet.style.transform;
+      const pulled = track.style.transform;
+      const beside = page.peek() && [page.peek()!.slug, page.peek()!.side];
       page.swipeEnd(event([], 1000 + ms));
-      return pulled;
+      return [pulled, beside];
     };
 
-    // The sheet follows the finger; let go far enough, the page turns.
-    expect(stroke([300, 400], [150, 410], 600)).toBe('translateX(-150px)'); // to the left
+    // The sheet follows the finger, the other song beside it on the side it
+    // comes from; let go far enough, the page turns.
+    expect(stroke([300, 400], [150, 410], 600)).toEqual([
+      'translateX(-150px)',
+      ['zold-erdoben', 1],
+    ]); // to the left
     expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'zold-erdoben']);
-    stroke([100, 400], [260, 380], 600); // to the right
+    expect(stroke([100, 400], [260, 380], 600)[1]).toEqual(['almodj', -1]); // to the right
     expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'almodj']);
     // A quick flick does too, short as it is.
     navigate.mockClear();
@@ -152,9 +159,10 @@ describe('SongPage', () => {
     // the sheet is back in its place.
     navigate.mockClear();
     stroke([300, 400], [250, 400], 600);
-    expect(sheet.style.transform).toBe('');
-    expect(stroke([300, 400], [280, 600])).toBe('');
-    expect(stroke([300, 400], [100, 400], 200, 2)).toBe('');
+    expect(track.style.transform).toBe('');
+    expect(page.peek()).toBeNull();
+    expect(stroke([300, 400], [280, 600])).toEqual(['', null]);
+    expect(stroke([300, 400], [100, 400], 200, 2)).toEqual(['', null]);
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -169,10 +177,12 @@ describe('SongPage', () => {
       ({ touches, timeStamp, target: sheet, currentTarget: sheet }) as never;
     page.swipeStart(event([{ clientX: 300, clientY: 400 }], 1000));
     page.swipeMove(event([{ clientX: 100, clientY: 400 }], 1100));
-    expect(sheet.style.transform).toBe('translateX(-60px)');
+    const track: HTMLElement = fixture.nativeElement.querySelector('.sheet-track');
+    expect(track.style.transform).toBe('translateX(-60px)');
+    expect(page.peek()).toBeNull();
     page.swipeEnd(event([], 1200));
     expect(navigate).not.toHaveBeenCalled();
-    expect(sheet.style.transform).toBe('');
+    expect(track.style.transform).toBe('');
     service.songs.set(LIST);
   });
 
