@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
@@ -19,9 +19,6 @@ export class OidcSettingsTab implements OnInit {
   private settingsService = inject(SettingsService);
   private notifications = inject(NotificationsService);
   private confirm = inject(ConfirmService);
-
-  // Something was saved: the settings page reads its list of changes anew.
-  changed = output<void>();
 
   oidc = signal<OidcSettings | null>(null);
   // The form. The two secrets start empty every time: the server never
@@ -145,7 +142,6 @@ export class OidcSettingsTab implements OnInit {
         this.openProvider(saved?.id ?? (res.data as { created?: string }).created ?? 'authentik');
         this.savingProvider.set(false);
         this.notifications.addSuccess(`${input.name} mentve.`);
-        this.changed.emit();
       },
       error: (err) => {
         this.savingProvider.set(false);
@@ -169,7 +165,6 @@ export class OidcSettingsTab implements OnInit {
         this.openProvider('authentik');
         this.savingProvider.set(false);
         this.notifications.addSuccess(`${provider.name} törölve.`);
-        this.changed.emit();
       },
       error: (err) => {
         this.savingProvider.set(false);
@@ -197,7 +192,6 @@ export class OidcSettingsTab implements OnInit {
         this.oidc.set(res.data);
         this.activatingOidc.set(false);
         this.notifications.addSuccess(`Az aktív szolgáltató: ${row.name}.`);
-        this.changed.emit();
       },
       error: (err) => {
         this.activatingOidc.set(false);
@@ -256,7 +250,6 @@ export class OidcSettingsTab implements OnInit {
           this.applyOidc(res.data);
           this.savingOidc.set(false);
           this.notifications.addSuccess('OIDC szolgáltató mentve.');
-          this.changed.emit();
         },
         error: (err) => {
           this.savingOidc.set(false);

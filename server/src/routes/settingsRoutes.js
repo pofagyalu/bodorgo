@@ -31,6 +31,7 @@ import {
   deleteOidcProvider,
   setActiveOidcProvider,
 } from '../controllers/settingsController.js';
+import { getAuditLog } from '../controllers/auditLogController.js';
 import requireAuth, { restrictTo, roleManagerOnly } from '../auth/requireAuth.js';
 import { weatherOutlookRules } from '../utils/weatherOutlook.js';
 
@@ -73,6 +74,10 @@ router
 // Barion wallets: payees, API keys, bank accounts - admins only.
 router.get('/barion', requireAuth, restrictTo('admin'), getBarionSettings);
 router.put('/barion/:wallet', requireAuth, restrictTo('admin'), updateBarionWallet);
+
+// Napló: who did what and when, of what moves money, rights or the club's
+// settings - admins only.
+router.get('/audit-log', requireAuth, restrictTo('admin'), getAuditLog);
 
 // Fizetési módok: which gateways are on and their fees - anyone logged in
 // reads them (the pay dialogs), admins set them.

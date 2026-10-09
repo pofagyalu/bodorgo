@@ -101,38 +101,6 @@
   }
 }
 
-.history {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #e7edea;
-
-  h3 {
-    margin: 0 0 8px;
-    font-size: 14px;
-    color: #203747;
-  }
-
-  ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  li {
-    display: grid;
-    gap: 2px;
-    padding: 7px 0;
-    border-bottom: 1px solid #f0f2f0;
-    font-size: 13px;
-    color: #2f414b;
-  }
-}
-
-.history-when {
-  font-size: 12px;
-  color: #56666e;
-}
-
 // Fizetési módok: one block per gateway.
 .pay-method {
   padding-top: 1rem;

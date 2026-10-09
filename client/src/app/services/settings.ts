@@ -20,9 +20,8 @@ export interface MembershipFeesResponse {
     // emlékeztető (Klub → Beállítások).
     paymentDeadline?: { month: number; day: number };
     // Admin-only: years somebody already paid for (their fee can't
-    // change), and who changed the fees when.
+    // change).
     paidYears?: number[];
-    history?: { at: string; byName: string; change: string }[];
   };
 }
 
@@ -85,6 +84,26 @@ export interface BarionWallet {
 }
 
 export type BarionWalletKey = 'membership' | 'tour';
+
+// Napló (Klub → Napló): one line of it - who did what and when (server
+// controllers/auditLogController.js).
+export type AuditAction =
+  | 'role-change'
+  | 'cash-advance'
+  | 'cash-membership'
+  | 'cash-undo'
+  | 'withdrawal'
+  | 'barion-settings'
+  | 'settings';
+
+export interface AuditEntry {
+  _id: string;
+  at: string;
+  action: AuditAction;
+  actorName: string;
+  targetName?: string;
+  summary: string; // one line, as it is shown
+}
 
 // Fizetési módok (Beállítások): one online gateway - offered or not, and
 // the fee the payer pays on top.
@@ -312,6 +331,17 @@ export class SettingsService {
 
   updateBarionWallet(key: BarionWalletKey, wallet: BarionWallet) {
     return this.http.put<{ data: BarionWallet }>(`${this.apiUrl}/barion/${key}`, wallet);
+  }
+
+  // --- Napló (admin-only) ---
+
+  // Newest first, fifty at a time; `before`: the ones before that moment
+  // (the last shown entry's `at`).
+  getAuditLog(before?: string) {
+    return this.http.get<{ data: { entries: AuditEntry[]; hasMore: boolean } }>(
+      `${this.apiUrl}/audit-log`,
+      { params: before ? { before } : {} },
+    );
   }
 
   // --- Életviteli tanácsok: the weather outlook's rules, to read (Infó) ---

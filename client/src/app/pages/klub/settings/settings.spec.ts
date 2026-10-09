@@ -30,7 +30,6 @@ const loaded = () => ({
       ],
       foundingYear: 2019,
       paidYears: [2020],
-      history: [{ at: '2026-01-01', byName: 'Gazda', change: 'Tagdíj 2024-től 5000 Ft' }],
     },
   },
   'GET /settings/membership-reminder': {
@@ -192,7 +191,7 @@ describe('KlubSettings', () => {
       expect(club().rows()).toHaveLength(2);
     });
 
-    it('saves the rows sorted by year and reloads the history', () => {
+    it('saves the rows sorted by year and reloads the paid years', () => {
       club().addRow();
       club().update(club().rows().at(-1)!, 'amount', 7000);
       club().save();
@@ -208,11 +207,10 @@ describe('KlubSettings', () => {
 
       respond({
         'GET /settings/membership-fees': {
-          data: { fees: [], foundingYear: 2019, history: [], paidYears: [2020, 2021] },
+          data: { fees: [], foundingYear: 2019, paidYears: [2020, 2021] },
         },
       });
       expect(club().paidYears()).toEqual([2020, 2021]);
-      expect(club().history()).toEqual([]);
     });
 
     it("shows the server's reason when the save is refused", () => {
@@ -415,8 +413,6 @@ describe('KlubSettings', () => {
       req.flush({ data: req.request.body });
       expect(success).toHaveBeenCalledWith('Barion beállítás mentve.');
       expect(club().payMethodDirty('barion')).toBe(false);
-      respond({ 'GET /settings/membership-fees': { data: { fees: [], foundingYear: 2019 } } });
-      expect(club().history()).toEqual([]);
 
       club().savePayMethod('stripe');
       respond({ 'PUT /settings/payment-methods/stripe': fail(400, 'Túl nagy díj.') });

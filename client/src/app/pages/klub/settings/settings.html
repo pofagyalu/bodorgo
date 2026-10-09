@@ -39,7 +39,7 @@
        never shown: the server doesn't send them. -->
   @if (canManageOidc()) {
     <div class="oidc-page" role="tabpanel" [hidden]="activeTab() !== 'oidc'">
-      <app-oidc-settings (changed)="refreshHistory()" />
+      <app-oidc-settings />
     </div>
   }
 </div>

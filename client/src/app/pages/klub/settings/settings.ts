@@ -1,4 +1,4 @@
-import { Component, viewChild, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
 import { AuthService } from '../../../auth/auth.service';
@@ -67,12 +67,5 @@ export class KlubSettings {
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
-  }
-
-  // Something was saved on the OIDC tab: it is in the list of changes, which
-  // the Klub és fizetés tab shows.
-  private clubTab = viewChild(ClubSettingsTab);
-  refreshHistory() {
-    this.clubTab()?.refreshHistory();
   }
 }

@@ -405,6 +405,13 @@ describe('SettingsService', () => {
       `${settings}/barion/tour`,
       wallet,
     ],
+    ['getAuditLog', () => service().getAuditLog(), 'GET', `${settings}/audit-log`],
+    [
+      'getAuditLog (the older ones)',
+      () => service().getAuditLog('2026-10-09T12:00:00.000Z'),
+      'GET',
+      `${settings}/audit-log?before=2026-10-09T12:00:00.000Z`,
+    ],
     [
       'getPaymentMethods',
       () => service().getPaymentMethods(),
