@@ -24,14 +24,120 @@ export const MAX_ANSWER_TEXT = 120;
 export const TIME_LIMITS = [10, 20, 30, 60];
 export const DEFAULT_TIME_LIMIT = 20;
 
-// A right answer at once is worth this much; at the last moment, half.
+// A right answer at once - and a pin right on the place - is worth this
+// much, always.
 export const BASE_POINTS = 1000;
 
+// The rest of the scoring is set on Móka → Kvíz → Pontozás (by the role
+// manager). A game takes it as it stands when its first question opens,
+// and keeps it to its end - a game played before there was any such
+// setting was scored with these:
+// - minPoints: what a right answer is worth at the last moment;
+// - orderBonus: on top, for the fastest, 2nd and 3rd fastest right answer
+//   to a question;
+// - mapReachPct: how far a pin may be to be worth anything, in % of the
+//   shown map's diagonal;
+// - streakBonus: on top, for each right answer in a row after the first
+//   (the 2nd in a row gets it once, the 3rd twice... at most
+//   MAX_STREAK_STEPS times).
+export const DEFAULT_SCORING = {
+  minPoints: 500,
+  orderBonus: [0, 0, 0],
+  mapReachPct: 50,
+  streakBonus: 0,
+};
+// What the next games get until the role manager sets something else: as
+// above, with a bonus for the three fastest.
+export const INITIAL_SCORING = { ...DEFAULT_SCORING, orderBonus: [300, 200, 100] };
+export const MAX_STREAK_STEPS = 5;
+export const MIN_MAP_REACH = 5;
+export const MAX_MAP_REACH = 100;
+
+const isWhole = (n, min, max) => Number.isInteger(n) && n >= min && n <= max;
+
+// The scoring as sent in, cleaned - or the reason (in Hungarian) why it
+// won't do.
+export function cleanScoring(body) {
+  const { minPoints, orderBonus, mapReachPct, streakBonus } = body ?? {};
+  if (!isWhole(minPoints, 1, BASE_POINTS)) {
+    return { error: `Az utolsó pillanat pontja 1 és ${BASE_POINTS} közötti egész szám lehet.` };
+  }
+  if (
+    !Array.isArray(orderBonus) ||
+    orderBonus.length !== 3 ||
+    !orderBonus.every((b) => isWhole(b, 0, BASE_POINTS))
+  ) {
+    return { error: `A leggyorsabbak bónusza 0 és ${BASE_POINTS} közötti egész szám lehet.` };
+  }
+  if (!isWhole(mapReachPct, MIN_MAP_REACH, MAX_MAP_REACH)) {
+    return {
+      error: `A térképes távolság ${MIN_MAP_REACH} és ${MAX_MAP_REACH} százalék között lehet.`,
+    };
+  }
+  if (!isWhole(streakBonus, 0, BASE_POINTS)) {
+    return { error: `A sorozatbónusz 0 és ${BASE_POINTS} közötti egész szám lehet.` };
+  }
+  return { scoring: { minPoints, orderBonus: [...orderBonus], mapReachPct, streakBonus } };
+}
+
 // What a right answer is worth after `ms` of a question open for `limitMs`:
-// the faster, the more - from BASE_POINTS down to half of it.
-export function pointsFor(ms, limitMs) {
+// the faster, the more - from BASE_POINTS down to `minPoints`.
+export function pointsFor(ms, limitMs, minPoints = DEFAULT_SCORING.minPoints) {
   const used = Math.min(Math.max(ms, 0), limitMs) / limitMs;
-  return Math.round(BASE_POINTS * (1 - used / 2));
+  return Math.round(BASE_POINTS - (BASE_POINTS - minPoints) * used);
+}
+
+// The answers with what they are worth in the end: each one's own points
+// (as stored) and the bonuses of the game's scoring on top - `bonus` says
+// how much of `points` those are. Worked out from the answers each time,
+// never stored: who was the fastest is only certain once a question is
+// closed. A map question is not about speed: no bonus on it, and it
+// neither breaks nor lengthens a row of right answers.
+export function withBonuses(answers, questions, scoring = DEFAULT_SCORING) {
+  const rows = answers.map((a) => ({
+    user: String(a.user),
+    questionIdx: a.questionIdx,
+    answer: a.answer,
+    lat: a.lat,
+    lng: a.lng,
+    ms: a.ms,
+    points: a.points,
+    bonus: 0,
+  }));
+  const bySpeed = (idx) => questions[idx] && questions[idx].type !== 'map';
+  const right = rows.filter((r) => r.points > 0 && bySpeed(r.questionIdx));
+
+  // The fastest three of each question (of two just as fast, whoever's
+  // answer got here first).
+  const perQuestion = new Map();
+  for (const row of right) {
+    perQuestion.set(row.questionIdx, [...(perQuestion.get(row.questionIdx) ?? []), row]);
+  }
+  for (const list of perQuestion.values()) {
+    list.sort((a, b) => a.ms - b.ms);
+    list.slice(0, 3).forEach((row, i) => (row.bonus += scoring.orderBonus[i] ?? 0));
+  }
+
+  // Each player's rows of right answers: a wrong or a missing one ends it.
+  if (scoring.streakBonus) {
+    const perUser = new Map();
+    for (const row of right) {
+      if (!perUser.has(row.user)) perUser.set(row.user, new Map());
+      perUser.get(row.user).set(row.questionIdx, row);
+    }
+    for (const mine of perUser.values()) {
+      let run = 0;
+      for (let idx = 0; idx < questions.length; idx++) {
+        if (!bySpeed(idx)) continue;
+        const row = mine.get(idx);
+        run = row ? run + 1 : 0;
+        if (row) row.bonus += scoring.streakBonus * Math.min(run - 1, MAX_STREAK_STEPS);
+      }
+    }
+  }
+
+  for (const row of rows) row.points += row.bonus;
+  return rows;
 }
 
 // --- The map ---
@@ -49,14 +155,14 @@ export function distanceKm(a, b) {
 }
 
 // What a pin is worth: BASE_POINTS right on the place, less and less with
-// the distance - nothing from half the shown map's diagonal away. Not by
-// speed: a pin may be moved until the time is up.
-export function mapPoints(place, guess, bounds) {
+// the distance - nothing from `reachPct` % of the shown map's diagonal
+// away. Not by speed: a pin may be moved until the time is up.
+export function mapPoints(place, guess, bounds, reachPct = DEFAULT_SCORING.mapReachPct) {
   const diagonal = distanceKm(
     { lat: bounds.south, lng: bounds.west },
     { lat: bounds.north, lng: bounds.east },
   );
-  const off = distanceKm(place, guess) / (diagonal / 2);
+  const off = distanceKm(place, guess) / ((diagonal * reachPct) / 100);
   return Math.round(BASE_POINTS * Math.max(0, 1 - off));
 }
 

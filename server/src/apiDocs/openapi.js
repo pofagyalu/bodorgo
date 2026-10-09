@@ -580,6 +580,38 @@ const schemas = {
     },
   }),
 
+  QuizScoring: obj(
+    {
+      minPoints: int(
+        'What a right answer is worth at the last moment (1-1000); an instant one is always worth 1000, and it falls evenly between the two. 1000 switches speed off.',
+      ),
+      orderBonus: {
+        ...arrayOf(int()),
+        description:
+          'Three numbers (0-1000 each): the bonus of the fastest, the 2nd and the 3rd fastest right answer to a question. Not on a map question.',
+      },
+      mapReachPct: int(
+        'A map question: how far a pin may be from the place to be worth anything, in % of the shown map’s diagonal (5-100).',
+      ),
+      streakBonus: int(
+        'The bonus for each right answer in a row after the first (0-1000): the 2nd in a row gets it once, the 3rd twice... at most `maxStreakSteps` times. A wrong or a missed answer ends the row; a map question neither ends nor lengthens it. 0: none.',
+      ),
+    },
+    ['minPoints', 'orderBonus', 'mapReachPct', 'streakBonus'],
+  ),
+
+  QuizScoringView: obj({
+    scoring: ref('QuizScoring'),
+    maxPoints: int('1000 - not to be set.'),
+    maxStreakSteps: int('How many times over the streak bonus can grow (5).'),
+    updatedAt: {
+      type: ['string', 'null'],
+      format: 'date-time',
+      description: 'When it was last set - null: never yet.',
+    },
+    canEdit: bool('I am the role manager: I may set it.'),
+  }),
+
   QuizGame: obj({
     _id: id(),
     title: str('The quiz’s title when the game was started.'),
@@ -614,7 +646,12 @@ const schemas = {
             type: ['integer', 'null'],
             description: 'Only in `reveal` and `standings`: what they tapped - null: nothing.',
           },
-          points: int('Only in `reveal` and `standings`: what that answer was worth.'),
+          points: int(
+            'Only in `reveal` and `standings`: what that answer was worth, bonuses included.',
+          ),
+          bonus: int(
+            'Only in `reveal` and `standings`: how much of `points` is bonus - for being among the three fastest right answers, or for a row of right answers (see `GET /jatekok/quiz/scoring`).',
+          ),
           guess: {
             type: ['object', 'null'],
             description: 'A map question, once closed: where their pin was ({ lat, lng }).',
@@ -3730,6 +3767,24 @@ const paths = {
       errors: [404],
     }),
   },
+  '/jatekok/quiz/scoring': {
+    get: op({
+      tag: T.games,
+      summary: 'The quiz scoring',
+      description:
+        'What an answer is worth in the games still to start (Móka → Kvíz → Pontozás) - for everyone logged in. `maxPoints` (an instant right answer, a pin right on the place) is fixed; the rest is set by the role manager. Until it is set for the first time: 500 at the last moment, 300 / 200 / 100 for the three fastest, 50 %, no streak bonus.',
+      data: ref('QuizScoringView'),
+    }),
+    put: op({
+      tag: T.games,
+      summary: 'Set the quiz scoring',
+      description:
+        'The role manager’s only (403 for everyone else, other admins included). All four values are sent. It counts from the next game on whose first question has not opened yet (one waiting in its lobby included): a game already on keeps the scoring it started with, and the games played - the leaderboard with them - are never worked out again. The 400 says in Hungarian which value is wrong.',
+      body: ref('QuizScoring'),
+      data: ref('QuizScoringView'),
+      errors: [400, 403],
+    }),
+  },
   '/jatekok/quiz/games': {
     get: op({
       tag: T.games,
@@ -3847,7 +3902,7 @@ const paths = {
       tag: T.games,
       summary: 'The host’s next step',
       description:
-        'One call for every step: from the lobby the first question (needs at least one player); an open question is closed early; from the answer shown the standings, and from those the next question - after the last question’s answer the game is finished instead. A question also closes by itself when its time is up, or (except a map question) once every player has answered.',
+        'One call for every step: from the lobby the first question (needs at least one player) - with it the game takes the scoring set at that moment and keeps it to its end; an open question is closed early; from the answer shown the standings, and from those the next question - after the last question’s answer the game is finished instead. A question also closes by itself when its time is up, or (except a map question) once every player has answered.',
       params: [path('id', 'The game.')],
       data: obj({ game: ref('QuizGame') }),
       errors: [400, 403, 404],
@@ -3858,7 +3913,7 @@ const paths = {
       tag: T.games,
       summary: 'Answer the open question',
       description:
-        'A player’s one answer (`answer`), timed by when it gets here: a right one is worth 1000 points at once, falling evenly to 500 by the end of the time; a wrong one nothing. On a map question the answer is a pin (`lat`, `lng`) that may be sent again and again while the question is open - the last one counts: 1000 points right on the place, falling evenly to nothing at half the shown map’s diagonal away, whenever it was put down.',
+        'A player’s one answer (`answer`), timed by when it gets here: a right one is worth 1000 points at once, falling evenly to the game’s `minPoints` (500 unless set otherwise) by the end of the time; a wrong one nothing. On a map question the answer is a pin (`lat`, `lng`) that may be sent again and again while the question is open - the last one counts: 1000 points right on the place, falling evenly to nothing at the game’s `mapReachPct` % (50 unless set otherwise) of the shown map’s diagonal away, whenever it was put down. The numbers are the game’s own scoring (`GET /jatekok/quiz/scoring`), as it stood when its first question opened; its bonuses come on top once the question is closed.',
       params: [path('id', 'The game.')],
       body: obj({
         answer: int('The answer’s place in the question’s `answers` (from 0).'),

@@ -206,8 +206,10 @@ describe('a quiz game', () => {
       ['Cili', 2, 1, true],
       ['Béla', 3, 0, false],
     ]);
-    expect(now.players[0].score).toBeGreaterThan(500);
-    expect(now.players[0].score).toBeLessThanOrEqual(1000);
+    // Her own points, and the fastest right answer's bonus on top.
+    expect(now.players[0].score).toBeGreaterThan(800);
+    expect(now.players[0].score).toBeLessThanOrEqual(1300);
+    expect(now.players.map((p) => p.bonus)).toEqual([300, 200, 0]);
     expect((await answer(bela, game, 1)).status).toBe(400);
 
     // The standings, for everyone to read: no question on the screen, but
@@ -283,6 +285,93 @@ describe('a quiz game', () => {
     await as(anna).post(`${GAMES}/${game._id}/join`);
     await as(host).delete(`${QUIZZES}/${quiz._id}`);
     expect((await next(host, game)).question.text).toBe('Hol volt az első tábor?');
+  });
+});
+
+describe('the scoring', () => {
+  const SCORING = '/jatekok/quiz/scoring';
+  const before = { minPoints: 500, orderBonus: [0, 0, 0], mapReachPct: 50, streakBonus: 0 };
+  const set = { minPoints: 1000, orderBonus: [300, 200, 100], mapReachPct: 30, streakBonus: 50 };
+  const one = { questions: [{ text: 'Mi?', answers: ['a', 'b'], correct: 0 }] };
+  const scores = (game) => game.players.map((p) => [p.name, p.score, p.bonus]);
+
+  it('is read by everyone logged in, set by the role manager alone', async () => {
+    const owner = await createAdmin({ canManageRoles: true });
+    const admin = await createAdmin();
+    expect((await request(app).get(SCORING)).status).toBe(401);
+
+    const first = (await as(await createGuest()).get(SCORING)).body.data;
+    // Until it is set: as it always was, with a bonus for the three fastest.
+    expect(first).toEqual({
+      scoring: { ...before, orderBonus: [300, 200, 100] },
+      maxPoints: 1000,
+      maxStreakSteps: 5,
+      updatedAt: null,
+      canEdit: false,
+    });
+
+    expect((await as(admin).put(SCORING, set)).status).toBe(403);
+    const bad = await as(owner).put(SCORING, { ...set, minPoints: 0 });
+    expect(bad.status).toBe(400);
+    expect(bad.body.message).toContain('utolsó pillanat');
+
+    const saved = await as(owner).put(SCORING, set);
+    expect(saved.status, saved.body.message).toBe(200);
+    expect(saved.body.data).toMatchObject({ scoring: set, canEdit: true });
+    expect(saved.body.data.updatedAt).toBeTruthy();
+    // Again: the one document changed.
+    await as(owner).put(SCORING, { ...set, streakBonus: 0 });
+    expect((await as(admin).get(SCORING)).body.data.scoring.streakBonus).toBe(0);
+  });
+
+  it('counts from the next game on to open its first question - not in one on, not in one played', async () => {
+    const owner = await createAdmin({ canManageRoles: true });
+    const host = await createMember();
+    const anna = await createMember({ name: 'Anna' });
+    const bela = await createMember({ name: 'Béla' });
+
+    // Played, and one on, with what there was: no bonus at all.
+    await as(owner).put(SCORING, before);
+    const played = await startGame(host, [anna, bela], one);
+    await next(host, played);
+    await answer(anna, played, 0);
+    await answer(bela, played, 0);
+    await next(host, played);
+    const on = await startGame(host, [anna, bela]);
+    await next(host, on);
+    // Still in its lobby when the scoring changes: the new one is its own.
+    const waiting = await startGame(host, [anna, bela], one);
+
+    expect((await as(owner).put(SCORING, set)).status).toBe(200);
+
+    await answer(anna, on, 1);
+    const old = (await answer(bela, on, 1)).body.data.game;
+    expect(old.players.map((p) => p.bonus)).toEqual([0, 0]);
+    const { results } = (await as(anna).get('/jatekok/quiz/leaderboard')).body.data;
+    expect(results.every((r) => r.points <= 1000)).toBe(true);
+
+    await next(host, waiting);
+    await answer(bela, waiting, 0);
+    const now = (await answer(anna, waiting, 0)).body.data.game;
+    // 1000 each whenever they answered, and the fastest two's bonus on top.
+    expect(scores(now)).toEqual([
+      ['Béla', 1300, 300],
+      ['Anna', 1200, 200],
+    ]);
+    const done = await next(host, waiting);
+    expect(done.status).toBe('finished');
+
+    // Changed again: what was played stays as it was.
+    await as(owner).put(SCORING, before);
+    const { games } = (await as(anna).get(GAMES)).body.data;
+    expect(games.find((g) => g._id === waiting._id).winners.map((w) => w.score)).toEqual([
+      1300, 1200,
+    ]);
+    const top = (await as(anna).get('/jatekok/quiz/leaderboard')).body.data.results;
+    expect(top.slice(0, 2).map((r) => [r.name, r.points])).toEqual([
+      ['Béla', 1300],
+      ['Anna', 1200],
+    ]);
   });
 });
 

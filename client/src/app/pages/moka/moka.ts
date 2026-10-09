@@ -47,11 +47,12 @@ export class Moka {
   inFutokor = computed(() => this.url().startsWith('/moka/futokor'));
   inQuiz = computed(() => this.url().startsWith('/moka/kviz'));
 
-  // Kvíz's own pages: the games (to join, and the ones played) and the
-  // quizzes themselves, with their editor.
+  // Kvíz's own pages: the games (to join, and the ones played), the
+  // quizzes themselves with their editor, and what an answer is worth.
   readonly quizPages = [
     { link: 'kviz/jatekok', label: 'Játékszoba', icon: 'meeting_room' },
     { link: 'kviz/szerkeszto', label: 'Alkotóműhely', icon: 'handyman' },
+    { link: 'kviz/pontozas', label: 'Pontozás', icon: 'calculate' },
   ];
 
   // The phone's second row of tabs: the pages of the game one is in - a

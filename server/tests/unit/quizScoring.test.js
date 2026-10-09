@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { cleanQuiz, pointsFor, standings } from '../../src/jatekok/quiz/scoring.js';
+import {
+  DEFAULT_SCORING,
+  cleanQuiz,
+  cleanScoring,
+  mapPoints,
+  pointsFor,
+  standings,
+  withBonuses,
+} from '../../src/jatekok/quiz/scoring.js';
 
 // Móka → Kvíz: the rules (over HTTP: tests/api/quiz.test.js).
 
@@ -20,6 +28,121 @@ describe('pointsFor', () => {
   it('never goes outside that, whatever the clock says', () => {
     expect(pointsFor(-50, 20000)).toBe(1000);
     expect(pointsFor(20400, 20000)).toBe(500);
+  });
+
+  it('falls to what the scoring sets for the last moment', () => {
+    expect(pointsFor(0, 20000, 200)).toBe(1000);
+    expect(pointsFor(10000, 20000, 200)).toBe(600);
+    expect(pointsFor(20000, 20000, 200)).toBe(200);
+    // Speed switched off.
+    expect(pointsFor(15000, 20000, 1000)).toBe(1000);
+  });
+});
+
+describe('mapPoints', () => {
+  const bounds = { south: 45.5, west: 15.8, north: 48.8, east: 23.2 };
+  const place = { lat: 47.5, lng: 19 };
+  // About 150 km east of it; the map's diagonal is about 670 km.
+  const guess = { lat: 47.5, lng: 21 };
+
+  it('is worth nothing from the set part of the map’s diagonal away', () => {
+    expect(mapPoints(place, place, bounds)).toBe(1000);
+    const half = mapPoints(place, guess, bounds);
+    expect(half).toBeGreaterThan(500);
+    expect(mapPoints(place, guess, bounds, 50)).toBe(half);
+    expect(mapPoints(place, guess, bounds, 100)).toBeGreaterThan(half);
+    expect(mapPoints(place, guess, bounds, 10)).toBe(0);
+  });
+});
+
+describe('cleanScoring', () => {
+  const scoring = (over = {}) => ({ ...DEFAULT_SCORING, ...over });
+
+  it('takes whole numbers within their limits', () => {
+    const sent = scoring({ minPoints: 300, orderBonus: [300, 200, 100], streakBonus: 100 });
+    expect(cleanScoring({ ...sent, maxPoints: 5000 })).toEqual({ scoring: sent });
+  });
+
+  it('says what is wrong', () => {
+    const bad = [
+      [undefined, 'utolsó pillanat'],
+      [scoring({ minPoints: 0 }), 'utolsó pillanat'],
+      [scoring({ minPoints: 1001 }), 'utolsó pillanat'],
+      [scoring({ minPoints: 499.5 }), 'utolsó pillanat'],
+      [scoring({ orderBonus: [100, 50] }), 'leggyorsabbak'],
+      [scoring({ orderBonus: [100, -1, 0] }), 'leggyorsabbak'],
+      [scoring({ orderBonus: '300' }), 'leggyorsabbak'],
+      [scoring({ mapReachPct: 4 }), 'térképes'],
+      [scoring({ mapReachPct: 101 }), 'térképes'],
+      [scoring({ streakBonus: '100' }), 'sorozatbónusz'],
+    ];
+    for (const [body, part] of bad) {
+      expect(cleanScoring(body).error, JSON.stringify(body)).toContain(part);
+    }
+  });
+});
+
+describe('withBonuses', () => {
+  const questions = [{ type: 'choice' }, { type: 'map' }, { type: 'choice' }, { type: 'choice' }];
+  const row = (user, questionIdx, points, ms) => ({ user, questionIdx, points, ms });
+  const worth = (rows) => rows.map((r) => `${r.user}${r.questionIdx}:${r.points}+${r.bonus}`);
+
+  it('adds nothing with the scoring a game had before there was any to set', () => {
+    const answers = [row('anna', 0, 900, 4000), row('bela', 0, 800, 8000)];
+    expect(worth(withBonuses(answers, questions))).toEqual(['anna0:900+0', 'bela0:800+0']);
+  });
+
+  it('gives the three fastest right answers of a question theirs - not on a map', () => {
+    const scoring = { ...DEFAULT_SCORING, orderBonus: [300, 200, 100] };
+    const answers = [
+      row('anna', 0, 800, 8000),
+      row('bela', 0, 0, 1000), // wrong, however fast
+      row('cili', 0, 900, 4000),
+      row('dani', 0, 700, 12000),
+      row('emil', 0, 600, 16000),
+      row('anna', 1, 950, 2000),
+    ];
+    expect(worth(withBonuses(answers, questions, scoring))).toEqual([
+      'anna0:1000+200',
+      'bela0:0+0',
+      'cili0:1200+300',
+      'dani0:800+100',
+      'emil0:600+0',
+      'anna1:950+0',
+    ]);
+  });
+
+  it('pays a row of right answers more and more - a wrong or a missed one ends it, a map does not', () => {
+    const scoring = { ...DEFAULT_SCORING, streakBonus: 100 };
+    const answers = [
+      row('anna', 0, 800, 1),
+      row('anna', 1, 0, 1), // a pin far off: not counted either way
+      row('anna', 2, 800, 1),
+      row('anna', 3, 800, 1),
+      row('bela', 0, 800, 2),
+      row('bela', 2, 0, 2),
+      row('bela', 3, 800, 2),
+      row('cili', 0, 800, 3),
+      row('cili', 3, 800, 3), // missed the one between
+    ];
+    expect(worth(withBonuses(answers, questions, scoring))).toEqual([
+      'anna0:800+0',
+      'anna1:0+0',
+      'anna2:900+100',
+      'anna3:1000+200',
+      'bela0:800+0',
+      'bela2:0+0',
+      'bela3:800+0',
+      'cili0:800+0',
+      'cili3:800+0',
+    ]);
+  });
+
+  it('stops growing after five steps', () => {
+    const many = Array.from({ length: 8 }, () => ({ type: 'choice' }));
+    const answers = many.map((_, i) => row('anna', i, 500, 1));
+    const scored = withBonuses(answers, many, { ...DEFAULT_SCORING, streakBonus: 100 });
+    expect(scored.map((r) => r.bonus)).toEqual([0, 100, 200, 300, 400, 500, 500, 500]);
   });
 });
 
