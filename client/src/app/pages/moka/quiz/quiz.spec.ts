@@ -1514,6 +1514,30 @@ describe('Moka with the quiz', () => {
     return fixture;
   }
 
+  it('has the race’s opening page as the first of its tabs on a phone', () => {
+    const page = open('/moka/futokor', { role: 'member' }).componentInstance;
+    expect(page.subTabs().map((t) => t.label)).toEqual([
+      'Bemelegítés',
+      'Futás',
+      'Eredmények',
+      'Útmutató',
+      'Pályaszerkesztő',
+    ]);
+    // On the opening page that one is open...
+    expect(page.subTab()).toBe('futokor');
+  });
+
+  it('marks the race’s own page, not the opening page above it', () => {
+    expect(open('/moka/futokor/futas', { role: 'member' }).componentInstance.subTab()).toBe(
+      'futokor/futas',
+    );
+    TestBed.resetTestingModule();
+    // ...a page under one of them too (a course's results).
+    expect(
+      open('/moka/futokor/eredmenyek/c1?x=1', { role: 'member' }).componentInstance.subTab(),
+    ).toBe('futokor/eredmenyek');
+  });
+
   it('shows Darts, the race and the quiz to everyone', () => {
     const fixture = open('/moka/kviz/jatekok', { role: 'member' });
     const page = fixture.componentInstance;

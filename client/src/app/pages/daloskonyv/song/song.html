@@ -43,22 +43,24 @@
           </button>
         </div>
 
-        <div class="tool" role="group" aria-label="Betűméret">
+        <!-- The letters' size: − A + (the A only says what the two are for). -->
+        <div class="tool tool--font" role="group" aria-label="Betűméret">
           <button
             type="button"
             (click)="changeFont(-1)"
             title="Kisebb betűk"
             aria-label="Kisebb betűk"
           >
-            <mat-icon>text_decrease</mat-icon>
+            <mat-icon>remove</mat-icon>
           </button>
+          <span class="font-letter" aria-hidden="true">A</span>
           <button
             type="button"
             (click)="changeFont(1)"
             title="Nagyobb betűk"
             aria-label="Nagyobb betűk"
           >
-            <mat-icon>text_increase</mat-icon>
+            <mat-icon>add</mat-icon>
           </button>
         </div>
 

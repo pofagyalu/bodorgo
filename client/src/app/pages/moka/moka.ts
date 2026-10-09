@@ -56,18 +56,26 @@ export class Moka {
   ];
 
   // The phone's second row of tabs: the pages of the game one is in - a
-  // tab's value is its page's link. None is open on a page above them
-  // (Futókörök's first one).
+  // tab's value is its page's link. Futókörök's opening page is the first
+  // of its tabs there (on a wide screen the menu's Futókörök itself leads to
+  // it), so one of them is always the open one.
   subTabs = computed<TabOption[]>(() => {
-    const pages = this.inFutokor() ? this.futokorPages() : this.inQuiz() ? this.quizPages : [];
-    return pages.map((p) => ({ value: p.link, label: p.label }));
+    if (this.inFutokor()) {
+      return [
+        { value: 'futokor', label: 'Bemelegítés' },
+        ...this.futokorPages().map((p) => ({ value: p.link, label: p.label })),
+      ];
+    }
+    return this.inQuiz() ? this.quizPages.map((p) => ({ value: p.link, label: p.label })) : [];
   });
+  // The open one: the tab whose page the address is, or is under - the
+  // deepest such (every page of Futókörök is under its opening page).
   subTab = computed(() => {
     const path = this.url().split(/[?#]/)[0];
     return (
-      this.subTabs().find(
-        (t) => path === `/moka/${t.value}` || path.startsWith(`/moka/${t.value}/`),
-      )?.value ?? ''
+      this.subTabs()
+        .filter((t) => path === `/moka/${t.value}` || path.startsWith(`/moka/${t.value}/`))
+        .sort((x, y) => y.value.length - x.value.length)[0]?.value ?? ''
     );
   });
 
