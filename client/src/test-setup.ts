@@ -63,3 +63,10 @@ URL.revokeObjectURL ??= () => {};
 const noBox = { x: 0, y: 0, top: 0, left: 0, bottom: 0, right: 0, width: 0, height: 0 };
 window.Range.prototype.getBoundingClientRect ??= () => ({ ...noBox, toJSON: () => noBox });
 window.Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
+
+// The heavier specs (a whole settings page, the rich text editor loading)
+// run in a second or two on a free machine - and past Vitest's limits (5 s
+// a test, 10 s a hook) when it is busy with something else: a second test
+// run, a build, a video being compressed. Room enough for that; a test
+// that really hangs still fails, only later.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
