@@ -1,7 +1,10 @@
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
+  Injector,
   OnDestroy,
+  afterNextRender,
   computed,
   effect,
   untracked,
@@ -13,10 +16,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { map } from 'rxjs';
-import { Song, SongService } from '../../../services/song';
+import { Song, SongListItem, SongService } from '../../../services/song';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
-import { slideIn } from '../../../shared/fade-in';
 import { SongSheet } from '../song-sheet/song-sheet';
 import { Instrument } from '../chord-shapes';
 import { NOTATION, firstChord, stepsBetween, transposeChordPro } from '../chords';
@@ -60,10 +62,33 @@ function store(key: string, value: unknown) {
 // One song of the Daloskönyv: the lyrics with each chord over its
 // syllable, the letter size, transposing (on the screen only), and the
 // play button that scrolls the page for whoever's hands are on a guitar.
-// A sideways stroke that turns the page (swipeEnd): at least this long,
-// and no slower than this.
-const SWIPE_MIN_PX = 70;
-const SWIPE_MAX_MS = 700;
+// A finger's sideways stroke across the song (the swipe* methods). It is
+// one once it has gone this far, clearly more sideways than up or down...
+const SWIPE_START_PX = 12;
+// ...and on letting go it turns the page if the sheet was pulled this far
+// (or a third of its width, if that is less), or flicked: this far at
+// least, within this time.
+const SWIPE_FAR_PX = 110;
+const SWIPE_FLICK_PX = 40;
+const SWIPE_FLICK_MS = 300;
+// Pulled towards a side where there is no song, the sheet follows only
+// this much of the finger's way.
+const SWIPE_RESIST = 0.3;
+
+// Saved in another key than it was first written in: that key, and how
+// many semitones it is from the one the song is in now - null otherwise.
+function originalKeyOf(song: Song | null) {
+  const now = song ? firstChord(song.chordpro) : undefined;
+  if (!song?.originalKey || !now) return null;
+  const steps = stepsBetween(now, song.originalKey);
+  return steps ? { chord: song.originalKey, steps } : null;
+}
+
+// Whether a page's turning can be shown: not where animations are turned
+// off on the device.
+const canAnimate = (el: HTMLElement) =>
+  typeof el.animate === 'function' &&
+  !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // Whether the touched element, or one around it up to the song's sheet,
 // scrolls sideways by itself.
@@ -94,6 +119,12 @@ export class SongPage implements OnDestroy {
   });
 
   private sheet = viewChild<ElementRef<HTMLElement>>('sheet');
+  // The sheet and, beside it while the page is turned, the other song's
+  // (the peek): the two move together.
+  private track = viewChild<ElementRef<HTMLElement>>('track');
+  private peekSheet = viewChild<ElementRef<HTMLElement>>('peekSheet');
+  private injector = inject(Injector);
+  private changes = inject(ChangeDetectorRef);
 
   song = signal<Song | null>(null);
   canEdit = this.songService.canEdit;
@@ -145,39 +176,203 @@ export class SongPage implements OnDestroy {
     return i < 0 ? null : (this.order()[i + 1] ?? null);
   });
 
-  // A finger drawn sideways across the song turns the page: to the left the
-  // next song, to the right the one before - the same as the two links at
-  // the song's foot. Only a clear, quick, one-finger sideways stroke counts,
-  // so scrolling the song, pinching it bigger or pressing a word doesn't.
-  swipeFrom: { x: number; y: number; at: number } | null = null;
+  // Turning the page - by a finger drawn sideways across the song (to the
+  // left the next one, to the right the one before), or by the two links
+  // at the song's foot. The other song's sheet (the peek) stands beside the
+  // open one, on the side it comes from, and the two move together like
+  // pages in a row: under the finger while it pulls, then on by themselves
+  // until the other song is where the open one was - there it becomes the
+  // open song. Let go too early, they go back. Scrolling the song, pinching
+  // it bigger or pressing a word is none of this (song.scss leaves the up
+  // and down strokes to the browser: touch-action).
+
+  // The other song's sheet while the page is turned: on which side (1: to
+  // the right - the next song), how far down (level with what is seen of
+  // the open one), and the song itself once it is here - its title and
+  // artist are known from the list before that.
+  peek = signal<{
+    slug: string;
+    side: 1 | -1;
+    top: number;
+    title: string;
+    artist: string;
+    song: Song | null;
+  } | null>(null);
+
+  private swipe: {
+    x: number;
+    y: number;
+    at: number;
+    mode: '' | 'drag' | 'scroll';
+    dx: number;
+  } | null = null;
+  // How far the sheets were pulled when the page was turned - they go on
+  // from there.
+  private pulled = 0;
 
   swipeStart(e: TouchEvent) {
     const touch = e.touches[0];
     // Two fingers are a pinch; something that scrolls sideways itself (a
-    // wide chord line) keeps its own stroke.
-    this.swipeFrom =
-      e.touches.length === 1 && !scrollsSideways(e.target as HTMLElement, e.currentTarget)
-        ? { x: touch.clientX, y: touch.clientY, at: e.timeStamp }
+    // wide chord line) keeps its own stroke. Not while a page is turning.
+    this.swipe =
+      e.touches.length === 1 &&
+      !this.arriving &&
+      !scrollsSideways(e.target as HTMLElement, e.currentTarget)
+        ? { x: touch.clientX, y: touch.clientY, at: e.timeStamp, mode: '', dx: 0 }
         : null;
   }
 
-  swipeEnd(e: TouchEvent) {
-    const from = this.swipeFrom;
-    this.swipeFrom = null;
-    const touch = e.changedTouches[0];
-    if (!from || !touch || e.touches.length) return;
-    const dx = touch.clientX - from.x;
-    const dy = touch.clientY - from.y;
-    if (
-      Math.abs(dx) < SWIPE_MIN_PX ||
-      Math.abs(dx) < 2 * Math.abs(dy) ||
-      e.timeStamp - from.at > SWIPE_MAX_MS
-    ) {
-      return;
+  swipeMove(e: TouchEvent) {
+    const swipe = this.swipe;
+    if (!swipe || swipe.mode === 'scroll') return;
+    if (e.touches.length !== 1) return this.swipeCancel();
+    const dx = e.touches[0].clientX - swipe.x;
+    const dy = e.touches[0].clientY - swipe.y;
+    if (!swipe.mode) {
+      if (Math.abs(dx) > SWIPE_START_PX && Math.abs(dx) > 1.5 * Math.abs(dy)) swipe.mode = 'drag';
+      else if (Math.abs(dy) > SWIPE_START_PX) swipe.mode = 'scroll';
+      if (swipe.mode !== 'drag') return;
     }
     const to = dx < 0 ? this.next() : this.previous();
-    if (to) void this.router.navigate([this.base(), to.slug]);
+    swipe.dx = to ? dx : dx * SWIPE_RESIST;
+    const track = this.track()?.nativeElement;
+    if (!track) return;
+    this.clipSides(true);
+    this.showPeek(to, dx < 0 ? 1 : -1);
+    track.style.transform = `translateX(${swipe.dx}px)`;
   }
+
+  swipeEnd(e: TouchEvent) {
+    const swipe = this.swipe;
+    this.swipe = null;
+    if (swipe?.mode !== 'drag') return;
+    const track = this.track()?.nativeElement;
+    const to = swipe.dx < 0 ? this.next() : this.previous();
+    const far = Math.abs(swipe.dx) > Math.min(SWIPE_FAR_PX, (track?.offsetWidth || 400) / 3);
+    const flicked = Math.abs(swipe.dx) > SWIPE_FLICK_PX && e.timeStamp - swipe.at < SWIPE_FLICK_MS;
+    if (to && (far || flicked)) {
+      this.pulled = swipe.dx;
+      void this.router.navigate([this.base(), to.slug]);
+    } else {
+      this.settle(swipe.dx);
+    }
+  }
+
+  swipeCancel() {
+    const swipe = this.swipe;
+    this.swipe = null;
+    if (swipe?.mode === 'drag') this.settle(swipe.dx);
+  }
+
+  // The other song's sheet beside the open one - none towards a side with
+  // no song.
+  private showPeek(to: SongListItem | null, side: 1 | -1) {
+    const now = this.peek();
+    if (!to) {
+      if (now) this.peek.set(null);
+      return;
+    }
+    if (now?.slug === to.slug && now.side === side) return;
+    this.peek.set({
+      slug: to.slug,
+      side,
+      // Level with the top of what is seen: where the open song's own top
+      // is once the page is at its top again.
+      top: this.scrollerElement()?.scrollTop ?? 0,
+      title: to.title,
+      artist: to.artist ?? '',
+      song: this.fetched.get(to.slug) ?? null,
+    });
+  }
+
+  // Let go too early: the sheets go back to their place.
+  private settle(from: number) {
+    const track = this.track()?.nativeElement;
+    if (!track) return;
+    track.style.transform = '';
+    const done = () => {
+      if (this.arriving || this.swipe) return;
+      this.peek.set(null);
+      this.clipSides(false);
+    };
+    if (!canAnimate(track)) return done();
+    track
+      .animate([{ transform: `translateX(${from}px)` }, { transform: 'none' }], {
+        duration: 200,
+        easing: 'ease-out',
+      })
+      .finished.then(done, done);
+  }
+
+  // While the sheets are off their place nothing may stick out sideways
+  // (and bring a scrollbar): what scrolls the song cuts it off.
+  private clipped: HTMLElement | null = null;
+
+  private clipSides(on: boolean) {
+    if (on && !this.clipped) {
+      this.clipped = this.scrollerElement() ?? this.host.nativeElement;
+      this.clipped.style.overflowX = 'hidden';
+    } else if (!on && this.clipped) {
+      this.clipped.style.overflowX = '';
+      this.clipped = null;
+    }
+  }
+
+  // The page being turned: the two sheets on their way, until the other
+  // song's stands where the open one was (the promise). From where a
+  // finger left them, or from their place (a link).
+  private arriving: Promise<void> | null = null;
+
+  private turnPage(track: HTMLElement, to: SongListItem, side: 1 | -1): Promise<void> {
+    const from = this.pulled;
+    this.pulled = 0;
+    this.clipSides(true);
+    this.showPeek(to, side);
+    const arriving = new Promise<void>((resolve) => {
+      // Once the peek is on the page: how far it is says how far to go.
+      afterNextRender(
+        () => {
+          const peek = this.peekSheet()?.nativeElement;
+          const to = peek ? -peek.offsetLeft : -side * track.offsetWidth;
+          // Kept there until the other song is the open one (endTurn).
+          track.style.transform = `translateX(${to}px)`;
+          track
+            .animate(
+              [{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }],
+              { duration: from ? 220 : 320, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+            )
+            .finished.then(
+              () => resolve(),
+              () => resolve(),
+            );
+        },
+        { injector: this.injector },
+      );
+    });
+    this.arriving = arriving;
+    return arriving;
+  }
+
+  // The other song is the open one now: the sheets are as they always
+  // stand, at the song's top - in the same instant, so nothing is seen of
+  // it but the song staying where it arrived.
+  private endTurn() {
+    this.arriving = null;
+    this.peek.set(null);
+    this.changes.detectChanges();
+    const track = this.track()?.nativeElement;
+    if (track) track.style.transform = '';
+    this.scrollerElement()?.scrollTo({ top: 0 });
+    if (!this.swipe) this.clipSides(false);
+  }
+
+  // The songs already fetched while this page is open - the open one's
+  // neighbours ahead of time (see the constructor), so turning to one
+  // doesn't wait for the server.
+  private fetched = new Map<string, Song>();
+  private fetching = new Set<string>();
+  // Counts the turns: an answer that arrives for an earlier one is dropped.
+  private turn = 0;
 
   // A song picked by chance, for when nobody knows what to play next: any
   // song of the chosen playlist (of the whole book without one) but this
@@ -223,10 +418,9 @@ export class SongPage implements OnDestroy {
   // Where the page should be - scrollTop itself may round.
   private position = 0;
   private touching = false;
-  // The open song's place in the order, and which way the page is turning
-  // to it (1: forward, -1: back, 0: not at all - the first song opened).
+  // The open song's place in the order: where the next one is from it says
+  // which way the page turns.
   private shownIndex = -1;
-  private turning = 0;
   private holdUntil = 0;
   private wakeLock: WakeLockSentinel | null = null;
   private resizeObserver = new ResizeObserver(() => this.measure());
@@ -248,28 +442,97 @@ export class SongPage implements OnDestroy {
   };
 
   constructor() {
-    // A new address: that song, from its top, stopped.
+    // A new address: that song, from its top, stopped. From another song
+    // the page is turned (turnPage): the open one stays until the new one
+    // is here - no empty page in between.
     effect(() => {
       const slug = this.slug();
-      // Which way the page turns (see the sheet's effect below): towards
-      // the song's place in the order, from the one that was open.
       const index = untracked(() => this.index());
-      this.turning = this.shownIndex >= 0 && index >= 0 ? Math.sign(index - this.shownIndex) : 0;
+      const side = this.shownIndex >= 0 && index >= 0 ? Math.sign(index - this.shownIndex) : 0;
       this.shownIndex = index;
       this.stop();
       this.stopMetronome();
       this.transpose.set(0);
-      this.song.set(null);
       this.notFound.set(false);
+      const turn = ++this.turn;
+      const open = untracked(() => this.song());
+      const track = open ? untracked(() => this.track())?.nativeElement : undefined;
+      if (!track || !slug) this.song.set(null);
       if (!slug) return;
+
+      // Turned like a page when it is known which way (the song's place in
+      // the order) and nothing else is on its way; otherwise the new song
+      // simply takes the open one's place.
+      const to = untracked(() => this.order())[index];
+      const midTurn = !!this.arriving;
+      let arrived: Promise<void> | null = null;
+      if (track && to && side && !midTurn && canAnimate(track)) {
+        arrived = this.turnPage(track, to, side > 0 ? 1 : -1);
+      } else if (track) {
+        this.pulled = 0;
+        for (const moving of track.getAnimations?.() ?? []) moving.cancel();
+        track.style.transform = '';
+        this.peek.set(null);
+        this.arriving = null;
+        this.clipSides(false);
+      }
+
+      const show = (song: Song) => {
+        if (turn !== this.turn) return;
+        // On its way already: seen in the peek as soon as it is here.
+        if (arrived && this.peek()?.slug === slug && !this.peek()?.song) {
+          this.peek.update((p) => p && { ...p, song });
+        }
+        const put = () => {
+          if (turn !== this.turn) return;
+          const same = untracked(() => this.song())?._id === song._id;
+          this.song.set(song);
+          if (same) return;
+          if (arrived) this.endTurn();
+          else this.scrollerElement()?.scrollTo({ top: 0 });
+        };
+        if (arrived) void arrived.then(put);
+        else put();
+      };
+      // Fetched ahead: shown at once - and asked for again all the same, in
+      // case it has changed since.
+      const ready = this.fetched.get(slug);
+      if (ready) show(ready);
       this.songService.getSong(slug).subscribe({
         next: (song) => {
-          if (slug !== this.slug()) return;
-          this.song.set(song);
-          this.scrollerElement()?.scrollTo({ top: 0 });
+          this.fetched.set(slug, song);
+          show(song);
         },
-        error: () => this.notFound.set(true),
+        error: () => {
+          if (turn !== this.turn || ready) return;
+          if (track) track.style.transform = '';
+          this.arriving = null;
+          this.peek.set(null);
+          this.clipSides(false);
+          this.song.set(null);
+          this.notFound.set(true);
+        },
       });
+    });
+
+    // The open song's neighbours are fetched ahead, so turning to one is
+    // immediate.
+    effect(() => {
+      if (!this.song()) return;
+      for (const near of [this.next(), this.previous()]) {
+        const slug = near?.slug;
+        if (!slug || this.fetched.has(slug) || this.fetching.has(slug)) continue;
+        this.fetching.add(slug);
+        this.songService.getSong(slug).subscribe({
+          next: (song) => {
+            this.fetched.set(slug, song);
+            // Pulled towards it already: seen in the peek from now.
+            if (this.peek()?.slug === slug) this.peek.update((p) => p && { ...p, song });
+          },
+          error: () => this.fetching.delete(slug),
+          complete: () => this.fetching.delete(slug),
+        });
+      }
     });
 
     // The sheet's height changes with the song, the letters, the chords.
@@ -277,19 +540,27 @@ export class SongPage implements OnDestroy {
       const sheet = this.sheet()?.nativeElement;
       this.resizeObserver.disconnect();
       if (sheet) this.resizeObserver.observe(sheet);
-      // Another song's sheet: it slides in from the side it comes from
-      // (the next one from the right) - by the links at the song's foot
-      // and by a finger's stroke alike. Nothing sticks out sideways (and
-      // brings a scrollbar) meanwhile.
-      if (sheet && this.turning) {
-        const host = this.host.nativeElement;
-        host.style.overflowX = 'clip';
-        const done = () => (host.style.overflowX = '');
-        const sliding = slideIn(sheet, this.turning > 0 ? 1 : -1);
-        if (sliding) sliding.finished.then(done, done);
-        else done();
-        this.turning = 0;
+    });
+
+    // A finger on the sheet (the swipe* methods above) - listened to
+    // directly, and without holding the page's own scrolling back.
+    effect((onCleanup) => {
+      const sheet = this.sheet()?.nativeElement;
+      if (!sheet) return;
+      const listeners: [string, (e: TouchEvent) => void][] = [
+        ['touchstart', (e) => this.swipeStart(e)],
+        ['touchmove', (e) => this.swipeMove(e)],
+        ['touchend', (e) => this.swipeEnd(e)],
+        ['touchcancel', () => this.swipeCancel()],
+      ];
+      for (const [type, listener] of listeners) {
+        sheet.addEventListener(type, listener as EventListener, { passive: true });
       }
+      onCleanup(() => {
+        for (const [type, listener] of listeners) {
+          sheet.removeEventListener(type, listener as EventListener);
+        }
+      });
     });
 
     document.addEventListener('visibilitychange', this.onVisible);
@@ -418,13 +689,18 @@ export class SongPage implements OnDestroy {
   // The key the song was first written in, while it is saved in another
   // one: its first chord then ("am"), and how many semitones from the
   // saved key lead back to it - null if it never moved (or is back).
-  originalKey = computed(() => {
-    const song = this.song();
-    const now = song ? firstChord(song.chordpro) : undefined;
-    if (!song?.originalKey || !now) return null;
-    const steps = stepsBetween(now, song.originalKey);
-    return steps ? { chord: song.originalKey, steps } : null;
-  });
+  originalKey = computed(() => originalKeyOf(this.song()));
+
+  // The other song's head while the page is turned (the peek): the same
+  // tags the open song's head has, so nothing moves when it becomes the
+  // open one - its key (untransposed, as every song starts), whether it
+  // was played tonight, the key it was first written in.
+  peekKey = (song: Song) => {
+    const home = songKey(song);
+    return home ? keyName(home) : '';
+  };
+  peekPlayed = (song: Song) => this.songService.played().has(song._id);
+  peekOriginalKey = originalKeyOf;
 
   // A look at the song in its old key - on the screen only.
   showOriginalKey() {

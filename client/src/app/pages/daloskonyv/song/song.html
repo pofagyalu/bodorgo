@@ -253,139 +253,199 @@
   } @else if (!song()) {
     <p class="note">Betöltés…</p>
   } @else {
-    <!-- A finger drawn sideways across the song: the next one (to the
-         left) or the one before (to the right) - song.ts's swipe. -->
-    <article
-      class="sheet"
-      #sheet
-      (touchstart)="swipeStart($event)"
-      (touchend)="swipeEnd($event)"
-      (touchcancel)="swipeFrom = null"
-    >
-      <header class="song-head">
-        <h2>{{ song()!.title }}</h2>
-        <!-- The artist, and after it the song's key in a quiet tag: the one
+    <!-- A finger drawn sideways across the song turns to the next one (to
+         the left) or the one before (to the right) - song.ts's swipe*. The
+         track holds the open song's sheet and, while the page is turned,
+         the other song's beside it (the peek): they move together. -->
+    <div class="sheet-track" #track>
+      <article class="sheet" #sheet>
+        <header class="song-head">
+          <h2>{{ song()!.title }}</h2>
+          <!-- The artist, and after it the song's key in a quiet tag: the one
              set by hand, or what the chords say - moved with the
              transposing on the screen. -->
-        @if (song()!.artist || keyLabel() || song()!.tempo || isPlayed()) {
-          <p class="artist">
-            <!-- A tap on the artist: the song list with this artist's songs
+          @if (song()!.artist || keyLabel() || song()!.tempo || isPlayed()) {
+            <p class="artist">
+              <!-- A tap on the artist: the song list with this artist's songs
                  alone. -->
-            @if (song()!.artist; as artist) {
-              <button
-                type="button"
-                class="artist-name"
-                (click)="showArtist(artist)"
-                title="Az előadó dalai a daloskönyvben"
-              >
-                {{ artist }}
-              </button>
-            }
-            @if (keyLabel(); as key) {
-              <span
-                class="song-key"
-                [title]="
-                  keySetByHand()
-                    ? 'A dal hangneme (kézzel megadva)'
-                    : 'A dal hangneme (az akkordjaiból)'
-                "
-                >{{ key }}</span
-              >
-            }
-            <!-- The tempo, where one was given: a tap makes the tag blink it
+              @if (song()!.artist; as artist) {
+                <button
+                  type="button"
+                  class="artist-name"
+                  (click)="showArtist(artist)"
+                  title="Az előadó dalai a daloskönyvben"
+                >
+                  {{ artist }}
+                </button>
+              }
+              @if (keyLabel(); as key) {
+                <span
+                  class="song-key"
+                  [title]="
+                    keySetByHand()
+                      ? 'A dal hangneme (kézzel megadva)'
+                      : 'A dal hangneme (az akkordjaiból)'
+                  "
+                  >{{ key }}</span
+                >
+              }
+              <!-- The tempo, where one was given: a tap makes the tag blink it
                  for a few bars (no sound), another tap stops it. The note is drawn:
                  as a letter it comes from another font, and makes the tag
                  tall. -->
-            @if (song()!.tempo; as tempo) {
-              <button
-                type="button"
-                class="song-tempo"
-                [class.song-tempo--on]="beating()"
-                [class.song-tempo--beat]="beatOn()"
-                [attr.aria-pressed]="beating()"
-                (click)="toggleMetronome()"
-                [title]="beating() ? 'A metronóm leállítása' : 'Metronóm a dal tempójában'"
-              >
-                <svg class="tempo-note" viewBox="0 0 8 14" aria-hidden="true">
-                  <ellipse cx="3.2" cy="11" rx="3" ry="2.2" transform="rotate(-20 3.2 11)" />
-                  <rect x="5.4" y="0.5" width="1" height="10.4" />
-                </svg>
-                = {{ tempo }}
-              </button>
-            }
-            <!-- Marked as played tonight: the list's tick, here too (a
+              @if (song()!.tempo; as tempo) {
+                <button
+                  type="button"
+                  class="song-tempo"
+                  [class.song-tempo--on]="beating()"
+                  [class.song-tempo--beat]="beatOn()"
+                  [attr.aria-pressed]="beating()"
+                  (click)="toggleMetronome()"
+                  [title]="beating() ? 'A metronóm leállítása' : 'Metronóm a dal tempójában'"
+                >
+                  <svg class="tempo-note" viewBox="0 0 8 14" aria-hidden="true">
+                    <ellipse cx="3.2" cy="11" rx="3" ry="2.2" transform="rotate(-20 3.2 11)" />
+                    <rect x="5.4" y="0.5" width="1" height="10.4" />
+                  </svg>
+                  = {{ tempo }}
+                </button>
+              }
+              <!-- Marked as played tonight: the list's tick, here too (a
                  phone has the mark's button behind the controls). -->
-            @if (isPlayed()) {
-              <span class="song-played" title="Már játszottuk" aria-label="Már játszottuk">
-                <mat-icon>task_alt</mat-icon>
-              </span>
-            }
-          </p>
-        }
-        <!-- Saved in another key than it was first written in: what that
+              @if (isPlayed()) {
+                <span class="song-played" title="Már játszottuk" aria-label="Már játszottuk">
+                  <mat-icon>task_alt</mat-icon>
+                </span>
+              }
+            </p>
+          }
+          <!-- Saved in another key than it was first written in: what that
              was - a tap shows the song in it again (on the screen only). -->
-        @if (originalKey(); as original) {
-          <button
-            type="button"
-            class="original-key"
-            (click)="showOriginalKey()"
-            title="A dal megmutatása az eredeti hangnemben"
-          >
-            <mat-icon>history</mat-icon>Eredeti hangnem: <strong>{{ original.chord }}</strong>
-          </button>
-        }
-      </header>
+          @if (originalKey(); as original) {
+            <button
+              type="button"
+              class="original-key"
+              (click)="showOriginalKey()"
+              title="A dal megmutatása az eredeti hangnemben"
+            >
+              <mat-icon>history</mat-icon>Eredeti hangnem: <strong>{{ original.chord }}</strong>
+            </button>
+          }
+        </header>
 
-      <app-song-sheet
-        [chordpro]="song()!.chordpro"
-        [transpose]="transpose()"
-        [songKey]="song()!.key"
-        [instrument]="instrument()"
-        [showDiagrams]="showDiagrams()"
-      />
+        <app-song-sheet
+          [chordpro]="song()!.chordpro"
+          [transpose]="transpose()"
+          [songKey]="song()!.key"
+          [instrument]="instrument()"
+          [showDiagrams]="showDiagrams()"
+        />
 
-      <!-- The song before and the song after, each with a player's skip
+        <!-- The song before and the song after, each with a player's skip
            icon beside its title - and between them a song picked by chance
            from the ones not played tonight. -->
-      <nav class="neighbours" aria-label="Előző, véletlen és következő dal">
-        @if (previous(); as p) {
-          <a
-            class="neighbour"
-            [routerLink]="[base(), p.slug]"
-            [title]="'Előző dal: ' + p.title"
-            [attr.aria-label]="'Előző dal: ' + p.title"
+        <nav class="neighbours" aria-label="Előző, véletlen és következő dal">
+          @if (previous(); as p) {
+            <a
+              class="neighbour"
+              [routerLink]="[base(), p.slug]"
+              [title]="'Előző dal: ' + p.title"
+              [attr.aria-label]="'Előző dal: ' + p.title"
+            >
+              <mat-icon>skip_previous</mat-icon>
+              <span>{{ p.title }}</span>
+            </a>
+          }
+          <button
+            type="button"
+            class="random-song"
+            (click)="randomSong()"
+            [disabled]="!canPickRandom()"
+            [title]="
+              canPickRandom()
+                ? 'Véletlen dal azok közül, amiket ma még nem játszottunk'
+                : 'Ma már minden dalt játszottunk'
+            "
+            aria-label="Véletlen dal"
           >
-            <mat-icon>skip_previous</mat-icon>
-            <span>{{ p.title }}</span>
-          </a>
-        }
-        <button
-          type="button"
-          class="random-song"
-          (click)="randomSong()"
-          [disabled]="!canPickRandom()"
-          [title]="
-            canPickRandom()
-              ? 'Véletlen dal azok közül, amiket ma még nem játszottunk'
-              : 'Ma már minden dalt játszottunk'
-          "
-          aria-label="Véletlen dal"
+            <mat-icon>shuffle</mat-icon>
+          </button>
+          @if (next(); as n) {
+            <a
+              class="neighbour neighbour--next"
+              [routerLink]="[base(), n.slug]"
+              [title]="'Következő dal: ' + n.title"
+              [attr.aria-label]="'Következő dal: ' + n.title"
+            >
+              <span>{{ n.title }}</span>
+              <mat-icon>skip_next</mat-icon>
+            </a>
+          }
+        </nav>
+      </article>
+
+      <!-- The other song, coming in beside the open one: the same head and
+           song it will have as the open one in a moment (only to look at -
+           nothing in it is a button yet, and screen readers leave it out).
+           Until it has arrived from the server: its title and artist. -->
+      @if (peek(); as p) {
+        <article
+          class="sheet sheet--peek"
+          [class.sheet--peek-before]="p.side < 0"
+          [style.top.px]="p.top"
+          #peekSheet
+          aria-hidden="true"
         >
-          <mat-icon>shuffle</mat-icon>
-        </button>
-        @if (next(); as n) {
-          <a
-            class="neighbour neighbour--next"
-            [routerLink]="[base(), n.slug]"
-            [title]="'Következő dal: ' + n.title"
-            [attr.aria-label]="'Következő dal: ' + n.title"
-          >
-            <span>{{ n.title }}</span>
-            <mat-icon>skip_next</mat-icon>
-          </a>
-        }
-      </nav>
-    </article>
+          <header class="song-head">
+            <h2>{{ p.title }}</h2>
+            @if (p.song; as other) {
+              @if (other.artist || peekKey(other) || other.tempo || peekPlayed(other)) {
+                <p class="artist">
+                  @if (other.artist) {
+                    <span class="artist-name">{{ other.artist }}</span>
+                  }
+                  @if (peekKey(other); as key) {
+                    <span class="song-key">{{ key }}</span>
+                  }
+                  @if (other.tempo; as tempo) {
+                    <span class="song-tempo">
+                      <svg class="tempo-note" viewBox="0 0 8 14" aria-hidden="true">
+                        <ellipse cx="3.2" cy="11" rx="3" ry="2.2" transform="rotate(-20 3.2 11)" />
+                        <rect x="5.4" y="0.5" width="1" height="10.4" />
+                      </svg>
+                      = {{ tempo }}
+                    </span>
+                  }
+                  @if (peekPlayed(other)) {
+                    <span class="song-played"><mat-icon>task_alt</mat-icon></span>
+                  }
+                </p>
+              }
+              @if (peekOriginalKey(other); as original) {
+                <span class="original-key">
+                  <mat-icon>history</mat-icon>Eredeti hangnem: <strong>{{ original.chord }}</strong>
+                </span>
+              }
+            } @else if (p.artist) {
+              <p class="artist">
+                <span class="artist-name">{{ p.artist }}</span>
+              </p>
+            }
+          </header>
+          @if (p.song; as other) {
+            <app-song-sheet
+              [chordpro]="other.chordpro"
+              [transpose]="0"
+              [songKey]="other.key"
+              [instrument]="instrument()"
+              [showDiagrams]="showDiagrams()"
+            />
+          } @else {
+            <p class="note">Betöltés…</p>
+          }
+        </article>
+      }
+    </div>
 
     <!-- Play: the page scrolls by itself. One tap starts it; while it runs,
          a tap is a pace faster (▶ ▶▶ ▶▶▶, then ▶ again) and the small
