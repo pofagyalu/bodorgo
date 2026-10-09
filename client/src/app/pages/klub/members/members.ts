@@ -4,6 +4,7 @@ import { DatePipe } from '@angular/common';
 import { Observable } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../auth/auth.service';
+import { FreshLoginService } from '../../../auth/fresh-login.service';
 import { MembershipService, MemberUser } from '../../../services/membership';
 import { FinanceService, Transaction, TransactionCurrency } from '../../../services/finance';
 import { PaymentService } from '../../../services/payment';
@@ -68,6 +69,7 @@ export class Members implements OnInit {
   private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private auth = inject(AuthService);
+  private freshLogin = inject(FreshLoginService);
   private settingsService = inject(SettingsService);
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
@@ -423,9 +425,13 @@ export class Members implements OnInit {
     return this.isAdmin() && (state === 'unpaid' || this.paidInCash(userId, year));
   }
 
-  toggleCashDues(m: MemberUser, year: number, event: Event) {
+  async toggleCashDues(m: MemberUser, year: number, event: Event) {
     event.stopPropagation(); // the row itself opens/closes the history
     const key = `${m._id}:${year}`;
+    if (this.cashBusy()) return;
+    // Money: only for someone who identified themselves in the last minutes.
+    if (!(await this.freshLogin.ensure('Készpénzes tagdíj rögzítése'))) return;
+    // A second click got this far meanwhile: one request only.
     if (this.cashBusy()) return;
     this.cashBusy.set(key);
     const cashTx = this.paidInCash(m._id, year) ? this.paymentFor(m._id, year) : undefined;

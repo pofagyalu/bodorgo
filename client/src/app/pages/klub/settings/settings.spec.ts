@@ -9,6 +9,7 @@ import { fail, logIn, pageTesting, respond, settle } from '../../../../testing/c
 import { makeWeatherRules } from '../../../../testing/fixtures';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { AuthService } from '../../../auth/auth.service';
 import { BirthdayService } from '../../../shared/birthday/birthday.service';
 import { BarionWithdraw } from './barion-withdraw/barion-withdraw';
 import { KlubSettings, TAB_KEYS } from './settings';
@@ -825,6 +826,8 @@ describe('BarionWithdraw', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [BarionWithdraw], providers: [pageTesting()] });
     http = TestBed.inject(HttpTestingController);
+    // An admin who identified themselves just now (see fresh-login.service.ts).
+    logIn({ role: 'admin' });
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -843,19 +846,19 @@ describe('BarionWithdraw', () => {
     expect(card.configured()).toBe(false);
   });
 
-  it('opens even when nothing could be loaded', () => {
+  it('opens even when nothing could be loaded', async () => {
     open('tour', {
       'GET /settings/barion': fail(),
       'GET /payments/withdraw/tourAdvance': fail(),
     });
     expect(card.account()).toBeNull();
-    card.startEdit();
+    await card.startEdit();
     expect(card.form).toEqual({ payeeEmail: '', withdrawName: '', withdrawIban: '' });
   });
 
-  it('edits the account and re-checks whether it can pay out', () => {
+  it('edits the account and re-checks whether it can pay out', async () => {
     open('membership');
-    card.startEdit();
+    await card.startEdit();
     expect(card.form.withdrawIban).toBe('HU11');
     card.form.withdrawIban = 'HU22';
     card.save();
@@ -869,9 +872,9 @@ describe('BarionWithdraw', () => {
     expect(card.configured()).toBe(false);
   });
 
-  it('keeps the form open with the reason when the save fails', () => {
+  it('keeps the form open with the reason when the save fails', async () => {
     open('membership');
-    card.startEdit();
+    await card.startEdit();
     card.save();
     respond({ 'PUT /settings/barion/membership': fail(400, 'Hibás IBAN.') });
     expect(card.formError()).toBe('Hibás IBAN.');
@@ -888,14 +891,15 @@ describe('BarionWithdraw', () => {
     expect(card.fee()).toBe(200);
   });
 
-  it('withdraws and reports what arrived', () => {
+  it('withdraws and reports what arrived', async () => {
     open('membership');
-    card.withdraw(); // no amount yet
+    await card.withdraw(); // no amount yet
     http.expectNone(`${API}/payments/withdraw`);
 
     card.amount.set(10000);
-    card.withdraw();
-    card.withdraw();
+    void card.withdraw();
+    void card.withdraw();
+    await settle();
     const req = http.expectOne(`${API}/payments/withdraw`);
     expect(req.request.body).toEqual({ purpose: 'membershipFee', amount: 10000 });
     req.flush({ data: { fee: 70, net: 9930 } });
@@ -905,12 +909,66 @@ describe('BarionWithdraw', () => {
     expect(card.amount()).toBeNull();
   });
 
-  it('reports a failed withdrawal', () => {
+  it('reports a failed withdrawal', async () => {
     open('membership');
     card.amount.set(500);
-    card.withdraw();
+    await card.withdraw();
     respond({ 'POST /payments/withdraw': fail(400, 'Nincs elég egyenleg.') });
     expect(card.notice()).toEqual({ kind: 'error', text: 'Nincs elég egyenleg.' });
     expect(card.withdrawing()).toBe(false);
+  });
+
+  describe('someone who logged in long ago', () => {
+    const confirm = () => TestBed.inject(ConfirmService);
+    const identify = () =>
+      vi.spyOn(TestBed.inject(AuthService), 'identifyAgain').mockImplementation(() => {});
+    // The server is asked once more whether they identified since.
+    const stillOld = () => respond({ 'GET /auth/me': { loggedIn: true, id: 'me', role: 'admin' } });
+
+    beforeEach(() => {
+      logIn({ role: 'admin', freshLoginSecondsLeft: 0 });
+      open('membership');
+    });
+    afterEach(() => sessionStorage.clear());
+
+    it('is asked to identify again before a payout - and nothing is sent', async () => {
+      const go = identify();
+      card.amount.set(10000);
+      void card.withdraw();
+      stillOld();
+      await settle();
+      expect(confirm().pending()).toMatchObject({
+        title: 'Azonosítás szükséges',
+        message: 'Kiutalás a számlára: ehhez újra azonosítanod kell magad.',
+        confirmText: 'Azonosítás',
+      });
+      confirm().answer(true);
+      await settle();
+      // On to the provider, and back to this same page.
+      expect(go).toHaveBeenCalledWith(TestBed.inject(Router).url);
+      http.expectNone(`${API}/payments/withdraw`);
+      expect(card.withdrawing()).toBe(false);
+    });
+
+    it('saying no leaves everything as it was', async () => {
+      const go = identify();
+      void card.startEdit();
+      stillOld();
+      await settle();
+      confirm().answer(false);
+      await settle();
+      expect(go).not.toHaveBeenCalled();
+      expect(card.editing()).toBe(false);
+    });
+
+    it('goes on without asking if they identified since (on another tab)', async () => {
+      void card.startEdit();
+      respond({
+        'GET /auth/me': { loggedIn: true, id: 'me', role: 'admin', freshLoginSecondsLeft: 400 },
+      });
+      await settle();
+      expect(confirm().pending()).toBeNull();
+      expect(card.editing()).toBe(true);
+    });
   });
 });

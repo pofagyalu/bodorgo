@@ -11,6 +11,7 @@ import { RANK_CELEBRATION_START, fillRankMessage, rankFor } from '../utils/ranks
 import sendResendEmail from '../utils/resendEmail.js';
 import logger from '../logger.js';
 import { recordAudit, roleName } from '../utils/auditLog.js';
+import { assertFreshLogin } from '../auth/freshLogin.js';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -427,9 +428,12 @@ export const createUser = async (req, res) => {
     throw new AppError('Érvénytelen szerepkör.', 400);
   }
   // Only the role manager gives a role; anyone else adds a 'guest'.
-  if (role && role !== 'guest' && !req.user.canManageRoles) {
+  const givesRole = !!role && role !== 'guest';
+  if (givesRole && !req.user.canManageRoles) {
     throw new AppError(ROLE_MANAGER_ONLY, 403);
   }
+  // Giving a role is a sensitive operation (auth/freshLogin.js).
+  if (givesRole) assertFreshLogin(req);
 
   const user = await User.create({
     name,
@@ -539,6 +543,9 @@ export const updateUser = async (req, res) => {
     if (String(user._id) === String(req.user._id)) {
       throw new AppError('A saját szerepköröd nem módosíthatod.', 400);
     }
+    // A sensitive operation (auth/freshLogin.js) - the rest of the edit
+    // isn't, so the check is here and not on the route.
+    assertFreshLogin(req);
     roleBefore = user.role;
     user.role = role;
   }

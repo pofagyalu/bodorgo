@@ -8,6 +8,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { PushService, PushState } from '../../services/push';
 import { AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { MemberEdit } from './member-edit/member-edit';
 import { KlubProfile } from './profile/profile';
 
@@ -119,6 +120,41 @@ describe('MemberEdit', () => {
     logIn({ id: 'u1', role: 'admin', canManageRoles: true });
     expect(page.canEditRole()).toBe(false);
     expect(page.roleHint()).toBe('A saját szerepköröd nem módosíthatod.');
+  });
+
+  it('takes another role only from someone who identified themselves in the last minutes', async () => {
+    open('u1');
+    respond({ 'GET /users/u1': { data: { user: USER } } });
+    const select = { value: 'admin' } as HTMLSelectElement;
+
+    logIn({ id: 'boss', role: 'admin', canManageRoles: true });
+    await page.changeRole(select);
+    expect(page.role()).toBe('admin');
+
+    // Logged in long ago: asked first - a no puts the list back.
+    logIn({ id: 'boss', role: 'admin', canManageRoles: true, freshLoginSecondsLeft: 0 });
+    const identify = vi.spyOn(TestBed.inject(AuthService), 'identifyAgain');
+    identify.mockImplementation(() => {});
+    select.value = 'guest';
+    const asked = page.changeRole(select);
+    respond({
+      'GET /auth/me': { loggedIn: true, id: 'boss', role: 'admin', canManageRoles: true },
+    });
+    await settle();
+    const confirm = TestBed.inject(ConfirmService);
+    expect(confirm.pending()?.message).toBe(
+      'Szerepkör módosítása: ehhez újra azonosítanod kell magad.',
+    );
+    confirm.answer(false);
+    await asked;
+    expect(select.value).toBe('admin');
+    expect(page.role()).toBe('admin');
+    expect(identify).not.toHaveBeenCalled();
+
+    // Back to the role they have: nothing to ask.
+    select.value = 'member';
+    await page.changeRole(select);
+    expect(page.role()).toBe('member');
   });
 
   it('does not let an admin replace a photo the user set themselves', () => {

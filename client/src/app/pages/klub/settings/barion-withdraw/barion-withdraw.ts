@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { FreshLoginService } from '../../../../auth/fresh-login.service';
 import { PaymentService } from '../../../../services/payment';
 import { BarionWallet, BarionWalletKey, SettingsService } from '../../../../services/settings';
 
@@ -28,6 +29,7 @@ function withdrawalFee(amount: number): number {
 export class BarionWithdraw implements OnInit {
   private paymentService = inject(PaymentService);
   private settingsService = inject(SettingsService);
+  private freshLogin = inject(FreshLoginService);
 
   wallet = input.required<BarionWalletKey>();
   title = computed(() => (this.wallet() === 'membership' ? 'Tagdíjak' : 'Előlegek'));
@@ -43,7 +45,11 @@ export class BarionWithdraw implements OnInit {
   formError = signal<string | null>(null);
   form = { payeeEmail: '', withdrawName: '', withdrawIban: '' };
 
-  startEdit() {
+  async startEdit() {
+    // Where a payout goes: only for someone who identified themselves in
+    // the last minutes - asked before the form opens, so nothing typed is
+    // lost on the way to the provider.
+    if (!(await this.freshLogin.ensure('Barion-számla adatainak módosítása'))) return;
     const a = this.account();
     this.form = {
       payeeEmail: a?.payeeEmail ?? '',
@@ -106,9 +112,12 @@ export class BarionWithdraw implements OnInit {
     return `${new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount)} Ft`;
   }
 
-  withdraw() {
+  async withdraw() {
     const amount = this.amount();
     if (!amount || amount <= 0 || this.withdrawing()) return;
+    if (!(await this.freshLogin.ensure('Kiutalás a számlára'))) return;
+    // A second click got this far meanwhile: one payout only.
+    if (this.withdrawing()) return;
 
     this.withdrawing.set(true);
     this.notice.set(null);

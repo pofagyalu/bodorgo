@@ -301,9 +301,10 @@ describe('Members', () => {
       expect(page.paidInCash('kid', Y)).toBe(false);
     });
 
-    it('records a cash payment', () => {
-      page.toggleCashDues(USERS[1], Y, click);
-      page.toggleCashDues(USERS[0], Y, click); // one at a time
+    it('records a cash payment', async () => {
+      void page.toggleCashDues(USERS[1], Y, click);
+      void page.toggleCashDues(USERS[0], Y, click); // one at a time
+      await settle();
       const req = http.expectOne(`${API}/payments/cash-membership`);
       expect(req.request.body).toEqual({ userId: 'kid', year: Y });
       req.flush({ status: 'success' });
@@ -312,16 +313,18 @@ describe('Members', () => {
       http.expectOne(`${API}/finance/transactions`);
     });
 
-    it('takes a cash payment back', () => {
-      page.toggleCashDues(USERS[0], Y, click);
+    it('takes a cash payment back', async () => {
+      void page.toggleCashDues(USERS[0], Y, click);
+      await settle();
       const req = http.expectOne(`${API}/payments/pay1`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
       expect(success).toHaveBeenCalledWith(`Teszt Elek ${Y}. évi készpénzes tagdíja visszavonva.`);
     });
 
-    it('reports a failure', () => {
-      page.toggleCashDues(USERS[1], Y, click);
+    it('reports a failure', async () => {
+      void page.toggleCashDues(USERS[1], Y, click);
+      await settle();
       respond({ 'POST /payments/cash-membership': fail(400, 'Már befizette.') });
       expect(error).toHaveBeenCalledWith('Már befizette.');
       expect(page.cashBusy()).toBeNull();

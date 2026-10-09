@@ -7,6 +7,7 @@ import AppError from '../utils/appError.js';
 import { emailMatch, isInitialAdmin } from '../utils/roleManager.js';
 import { AUTHENTIK, getOidcClient } from '../utils/oidcSettings.js';
 import { linkIdentity } from '../utils/userIdentities.js';
+import { STEP_UP_MAX_AGE_SECONDS, freshLoginSecondsLeft } from '../auth/freshLogin.js';
 
 // Authentik is only the identity provider: it says who someone is, not
 // their role - roles live in the app (see utils/roleManager.js). Only
@@ -22,6 +23,13 @@ import { linkIdentity } from '../utils/userIdentities.js';
 function getClientBaseUrl(req) {
   const isLocalRequest = ['localhost', '127.0.0.1'].includes(req.hostname);
   return isLocalRequest ? 'http://localhost:4200/' : config.clientBaseUrl || '/';
+}
+
+// Where a re-identification (?stepup=1) lands afterwards: a page of the
+// client, given as its path - never an address of somewhere else.
+export function safeReturnTo(value) {
+  const path = String(value ?? '');
+  return /^\/(?![/\\])[^\s\\]{0,300}$/.test(path) ? path : null;
 }
 
 export const login = async (req, res) => {
@@ -42,7 +50,7 @@ export const login = async (req, res) => {
   const state = openidClient.randomState();
   const nonce = openidClient.randomNonce();
 
-  req.session.oidc = { code_verifier, state, nonce };
+  req.session.oidc = { code_verifier, state, nonce, returnTo: safeReturnTo(req.query.returnTo) };
   await req.session.save(); // ensure it is written to Mongo before the redirect
 
   // Computed from the actual incoming request rather than a fixed env var,
@@ -59,6 +67,13 @@ export const login = async (req, res) => {
     state,
     nonce,
   };
+  // A sensitive operation asks who they are again (?stepup=1, see
+  // auth/freshLogin.js): the provider must not let its own still-living
+  // session through unless they logged in there within max_age seconds.
+  // Not prompt=login: Authentik obeys that only once in a session of its
+  // own (seen 2026-10-09; its authorize view remembers the login it asked
+  // again for), while max_age it compares with the login's age every time.
+  if (req.query.stepup === '1') parameters.max_age = STEP_UP_MAX_AGE_SECONDS;
 
   const redirectTo = openidClient.buildAuthorizationUrl(oidcConfig, parameters);
 
@@ -74,7 +89,7 @@ export const callback = async (req, res, next) => {
 
     const currentUrl = new URL(`${req.protocol}://${req.get('host')}${req.originalUrl}`);
 
-    const { code_verifier, state, nonce } = req.session.oidc || {};
+    const { code_verifier, state, nonce, returnTo } = req.session.oidc || {};
 
     const tokens = await openidClient.authorizationCodeGrant(oidcConfig, currentUrl, {
       pkceCodeVerifier: code_verifier,
@@ -85,6 +100,13 @@ export const callback = async (req, res, next) => {
 
     const claims = tokens.claims();
     logger.info(`ID Token Claims for sub=${claims.sub}`);
+    // When they really identified themselves at the provider - days ago, if
+    // its own session let this login through (auth/freshLogin.js). A provider
+    // that doesn't say counts as never.
+    const authAt = Number.isFinite(claims.auth_time) ? claims.auth_time * 1000 : null;
+    if (authAt === null) {
+      logger.warn(`"${provider.name}" sent no auth_time: sensitive operations stay closed`);
+    }
 
     // People are known by their e-mail (below), so at a provider set to
     // accept confirmed addresses only, one it doesn't vouch for is nobody's.
@@ -152,11 +174,12 @@ export const callback = async (req, res, next) => {
         id_token: tokens.id_token,
         // Which provider the token is from - the one to log out of.
         provider: provider.id,
+        authAt,
       };
 
       req.session.save(() => {
         logger.info('User session stored. Redirecting…');
-        return res.redirect(getClientBaseUrl(req));
+        return res.redirect(`${getClientBaseUrl(req)}${(returnTo ?? '/').slice(1)}`);
       });
     });
   } catch (err) {
@@ -198,6 +221,9 @@ export const me = async (req, res) => {
     address: user.address,
     // The header's own avatar (see header.html).
     photoUpdatedAt: user.photoUpdatedAt ?? null,
+    // For how long sensitive operations are still open without identifying
+    // again (auth/freshLogin.js); 0: they ask first.
+    freshLoginSecondsLeft: freshLoginSecondsLeft(req),
   });
 };
 
@@ -293,6 +319,9 @@ export const localLogin = async (req, res, next) => {
       email: user.email,
       name: user.name,
       role: user.role,
+      // The password was typed just now (auth/freshLogin.js) - and is typed
+      // again here, when a sensitive operation asks for it later.
+      authAt: Date.now(),
     };
     req.session.save(() => res.status(200).json({ status: 'success' }));
   });
