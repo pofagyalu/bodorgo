@@ -2,6 +2,7 @@ import { Component, inject, signal, ElementRef, viewChild, afterRenderEffect } f
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
+import { lazyStyleReady } from '../../shared/lazy-style';
 import { TourService, Tour } from '../../services/tour';
 
 // Tours closer together than this count as the same place (one pin) -
@@ -89,6 +90,8 @@ export class ToursMap {
 
   private mapContainer = viewChild<ElementRef<HTMLDivElement>>('mapContainer');
   private map: L.Map | null = null;
+  // Leaflet's stylesheet comes with the map (shared/lazy-style).
+  private styled = lazyStyleReady('leaflet');
 
   constructor() {
     this.tourService.getTours().subscribe({
@@ -103,7 +106,7 @@ export class ToursMap {
     afterRenderEffect(() => {
       const container = this.mapContainer()?.nativeElement;
       const toursList = this.tours();
-      if (container && toursList.length && !this.map) {
+      if (this.styled() && container && toursList.length && !this.map) {
         this.initMap(container, toursList);
       }
     });

@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Poll, PollPayload, PollService, PollVisibility } from '../../services/poll';
 import { Tour } from '../../services/tour';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { lazyStyle } from '../../shared/lazy-style';
 
 // datetime-local wants "YYYY-MM-DDTHH:mm" in local time.
 function toLocalInput(d: Date): string {
@@ -80,7 +81,7 @@ export class PollCreate implements OnInit, AfterViewInit {
   }
 
   private async openEditor() {
-    const { default: QuillEditor } = await import('quill');
+    const [{ default: QuillEditor }] = await Promise.all([import('quill'), lazyStyle('quill')]);
     this.quill = new QuillEditor(this.detailsEl().nativeElement, {
       theme: 'snow',
       placeholder: 'Részletek, linkek, felsorolás… (nem kötelező)',

@@ -70,6 +70,12 @@ ErrorDocument 404 /404.html
   <FilesMatch "^(index\.html|version\.json|manifest\.webmanifest|sw\.js)(\.br)?$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
+  # The libraries' stylesheets that load with their feature (an editor, a
+  # map, the photo viewer - shared/lazy-style.ts): their names carry no
+  # hash, so a browser asks each time whether its copy is still the one.
+  <FilesMatch "^(quill|leaflet|photoswipe)\.css(\.br)?$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
 </IfModule>
 
 # --- Brotli, from ready-made copies (added 2026-10-03) ---

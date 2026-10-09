@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type * as L from 'leaflet';
 
+import { lazyStyle } from '../../../../shared/lazy-style';
 import { QuizMap } from './quiz-map';
 
 // The map of a map question: what a player may do with it in a game.
@@ -24,7 +25,9 @@ describe('QuizMap', () => {
     return mapOf();
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // The map is drawn once Leaflet's stylesheet is in.
+    await lazyStyle('leaflet');
     // The test browser lays nothing out: give the map's box a size (and no
     // drawing to fetch - the pins work on the plain background).
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400);

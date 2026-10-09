@@ -7,6 +7,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { TourMailPanel } from '../tour-mail-panel/tour-mail-panel';
 import { TourReportPanel } from '../tour-report-panel/tour-report-panel';
+import { lazyStyle } from '../../../shared/lazy-style';
 
 // A tour's Extrák (tour-details): the always-present Programfüzet cards
 // (download, e-mail to myself), the finished beszámoló for the tour's
@@ -76,6 +77,12 @@ export class TourExtras {
   }
 
   constructor() {
+    // An admin may open the letter's or the beszámoló's editor from here:
+    // its stylesheet is fetched now, so it is in by the time it opens.
+    effect(() => {
+      if (this.isAdmin()) void lazyStyle('quill');
+    });
+
     // Once the tour and the login are both known - the beszámoló is only
     // ever for a logged-in viewer.
     effect(() => {

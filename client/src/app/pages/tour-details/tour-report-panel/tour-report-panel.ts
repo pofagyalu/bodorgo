@@ -20,6 +20,7 @@ import { firstValueFrom } from 'rxjs';
 import { ReportFacts, TourImage, TourReport, TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { errorMessage } from '../../../shared/errors';
+import { lazyStyle } from '../../../shared/lazy-style';
 
 const SAVE_DELAY_MS = 1500;
 
@@ -110,6 +111,10 @@ export class TourReportPanel implements OnInit, OnDestroy {
   }
 
   private createEditors(report: TourReport) {
+    // The editors' stylesheet comes with them (shared/lazy-style) - asked
+    // for already when the tour page showed an admin the button
+    // (tour-extras).
+    void lazyStyle('quill');
     this.quills = this.dayEls().map((el, i) => {
       const quill = new Quill(el.nativeElement, {
         theme: 'snow',

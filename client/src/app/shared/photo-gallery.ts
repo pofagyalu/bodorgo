@@ -3,6 +3,7 @@ import type PhotoSwipeLightbox from 'photoswipe/lightbox';
 import type PhotoSwipe from 'photoswipe';
 import { photoSlide } from './photo-sizes';
 import { checkerTransparentPngs } from './pswp-checker';
+import { lazyStyle } from './lazy-style';
 
 // One photo in the viewer. The addresses are the page's (tour album or Média
 // photo routes); the smaller sizes come from ?w= (see shared/photo-sizes).
@@ -56,7 +57,11 @@ export class PhotoGalleryService {
   async open(photos: GalleryPhoto[], index = 0, options: GalleryOptions = {}) {
     if (!photos.length) return;
     this.lightbox?.destroy();
-    const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
+    // The viewer's code and its stylesheet, both only now.
+    const [{ default: PhotoSwipeLightbox }] = await Promise.all([
+      import('photoswipe/lightbox'),
+      lazyStyle('photoswipe'),
+    ]);
     const lightbox = new PhotoSwipeLightbox({ pswpModule: () => import('photoswipe') });
     this.lightbox = lightbox;
     checkerTransparentPngs(lightbox);
