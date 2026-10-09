@@ -125,7 +125,8 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
       },
       // Zene: the playlists as cards, then each one's own page - Bódorgó
-      // FM, Buli and Duruzsoló (pages/media/music).
+      // FM, and Buli and Duruzsoló: one page in two looks, the playlist in
+      // data.list (pages/media/music).
       {
         path: 'zene',
         pathMatch: 'full',
@@ -140,12 +141,20 @@ export const routes: Routes = [
       {
         path: 'zene/buli',
         title: 'Média – Buli rádió',
-        loadComponent: () => import('./pages/media/music/party').then((m) => m.Party),
+        data: { list: 'buli' },
+        loadComponent: () =>
+          import('./pages/media/music/styled-playlist/styled-playlist').then(
+            (m) => m.StyledPlaylist,
+          ),
       },
       {
         path: 'zene/hatter',
         title: 'Média – Duruzsoló',
-        loadComponent: () => import('./pages/media/music/lounge').then((m) => m.Lounge),
+        data: { list: 'hatter' },
+        loadComponent: () =>
+          import('./pages/media/music/styled-playlist/styled-playlist').then(
+            (m) => m.StyledPlaylist,
+          ),
       },
       // Daloskönyv: the songbook (pages/daloskonyv). Its editor - for a
       // new song, or one's own - comes first, so "uj" isn't taken for a

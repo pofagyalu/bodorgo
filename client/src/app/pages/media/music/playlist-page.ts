@@ -1,30 +1,28 @@
-import {
-  Directive,
-  ElementRef,
-  OnInit,
-  computed,
-  effect,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Directive, OnInit, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { MusicPlayerService, PlaylistKey } from '../../../services/music-player';
 
-// What a playlist's own page (Bódorgó FM, Buli) needs, whatever it looks
-// like: this playlist's tracks, and - only while it's the one on - what's
-// playing and where. ▶ here starts this list (switching over from the other
-// one); picking a song plays it from this list. Admins can reload the list
-// from Jellyfin. The playing itself is MusicPlayerService.
+// "2:36" (or "1:02:05").
+export function playTime(seconds: number | null | undefined): string {
+  if (!seconds || !Number.isFinite(seconds)) return '0:00';
+  const s = Math.floor(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
+}
+
+// A playlist's player, whatever it looks like (a page's now-playing bar,
+// Bódorgó FM's radio): this playlist's tracks, and - only while it's the one
+// on - what's playing and where. ▶ here starts this list (switching over
+// from the other one); picking a song plays it from this list. The playing
+// itself is MusicPlayerService.
 @Directive()
-export abstract class PlaylistPage implements OnInit {
+export abstract class PlaylistControls {
   abstract readonly key: PlaylistKey;
 
   music = inject(MusicPlayerService);
-  private auth = inject(AuthService);
-  private notifications = inject(NotificationsService);
-  private list = viewChild<ElementRef<HTMLElement>>('list');
 
   tracks = computed(() => this.music.lists()[this.key] ?? []);
   // This list is the one on (playing or paused).
@@ -34,39 +32,8 @@ export abstract class PlaylistPage implements OnInit {
   currentIndex = computed(() => (this.active() ? this.music.index() : -1));
   position = computed(() => (this.active() ? this.music.currentTime() : 0));
   length = computed(() => (this.active() ? this.music.duration() : 0));
-  // "kb. 2 óra 10 perc" in all.
-  totalMinutes = computed(() =>
-    Math.round(this.tracks().reduce((sum, t) => sum + (t.durationMs ?? 0), 0) / 60000),
-  );
 
-  isAdmin = computed(() => this.auth.user()?.role === 'admin');
-  refreshing = signal(false);
-
-  constructor() {
-    // The playing song kept in view in the list - by scrolling the list
-    // itself only, never the page (scrollIntoView moved the page too).
-    effect(() => {
-      const i = this.currentIndex();
-      this.tracks();
-      if (i < 0) return;
-      queueMicrotask(() => {
-        const list = this.list()?.nativeElement;
-        const row = list?.querySelector<HTMLElement>(`[data-index="${i}"]`);
-        if (!list || !row) return;
-        const listBox = list.getBoundingClientRect();
-        const rowBox = row.getBoundingClientRect();
-        if (rowBox.top >= listBox.top && rowBox.bottom <= listBox.bottom) return;
-        // Out of sight: to the middle of the list's window.
-        const top =
-          list.scrollTop + (rowBox.top - listBox.top) - (list.clientHeight - row.clientHeight) / 2;
-        list.scrollTo({ top, behavior: 'smooth' });
-      });
-    });
-  }
-
-  ngOnInit() {
-    void this.music.loadPlaylist(this.key);
-  }
+  readonly time = playTime;
 
   playPause() {
     void this.music.playPlaylist(this.key);
@@ -92,6 +59,36 @@ export abstract class PlaylistPage implements OnInit {
     if (this.active()) this.music.stop();
   }
 
+  onSeek(event: Event) {
+    if (this.active()) this.music.seek(Number((event.target as HTMLInputElement).value));
+  }
+
+  onVolume(event: Event) {
+    this.music.setVolume(Number((event.target as HTMLInputElement).value));
+  }
+}
+
+// What a playlist's own page (Bódorgó FM, Buli, Duruzsoló) needs on top of
+// the player: the list is loaded when the page opens, how long it is in all,
+// and admins can reload it from Jellyfin. The song list itself is
+// track-list.
+@Directive()
+export abstract class PlaylistPage extends PlaylistControls implements OnInit {
+  private auth = inject(AuthService);
+  private notifications = inject(NotificationsService);
+
+  // "kb. 2 óra 10 perc" in all.
+  totalMinutes = computed(() =>
+    Math.round(this.tracks().reduce((sum, t) => sum + (t.durationMs ?? 0), 0) / 60000),
+  );
+
+  isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  refreshing = signal(false);
+
+  ngOnInit() {
+    void this.music.loadPlaylist(this.key);
+  }
+
   // Admins: reload the list from Jellyfin now (otherwise only a server
   // restart does).
   async refresh() {
@@ -103,29 +100,11 @@ export abstract class PlaylistPage implements OnInit {
     else this.notifications.addError('Nem sikerült frissíteni a listát.');
   }
 
-  // "2:36" (or "1:02:05").
-  time(seconds: number | null | undefined): string {
-    if (!seconds || !Number.isFinite(seconds)) return '0:00';
-    const s = Math.floor(seconds);
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = String(s % 60).padStart(2, '0');
-    return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
-  }
-
   // "kb. 2 óra 10 perc" / "kb. 45 perc"
   totalLabel(): string {
     const m = this.totalMinutes();
     if (!m) return '';
     const h = Math.floor(m / 60);
     return h ? `kb. ${h} óra ${m % 60} perc` : `kb. ${m} perc`;
-  }
-
-  onSeek(event: Event) {
-    if (this.active()) this.music.seek(Number((event.target as HTMLInputElement).value));
-  }
-
-  onVolume(event: Event) {
-    this.music.setVolume(Number((event.target as HTMLInputElement).value));
   }
 }

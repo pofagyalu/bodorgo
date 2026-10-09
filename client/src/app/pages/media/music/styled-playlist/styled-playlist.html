@@ -1,5 +1,5 @@
 <!-- Phone (no Média sidebar): the playlists to switch between. -->
-<nav class="list-chips" aria-label="Lejátszási listák">
+<nav class="list-chips look--{{ look.look }}" aria-label="Lejátszási listák">
   <a class="chip" routerLink="/media/zene/bodorgo-fm" routerLinkActive="active">
     <mat-icon>radio</mat-icon>Bódorgó FM
   </a>
@@ -11,65 +11,36 @@
   </a>
 </nav>
 
-<div class="party" [class.party--on]="playing()">
-  <!-- The header: the cover, "Lejátszási lista", Buli, and what's in it -->
+<div class="page look--{{ look.look }}" [class.page--on]="playing()">
+  <!-- The header: the cover, "Lejátszási lista", the name, and what's in it
+       - Duruzsoló: the play button's row at its right end. -->
   <header class="hero">
-    <img class="cover" src="assets/images/buli-cover.svg" alt="Buli rádió" />
+    <img class="cover" [src]="look.cover" [alt]="look.name" />
     <div class="hero-text">
       <span class="type">Lejátszási lista</span>
-      <h1>Buli rádió</h1>
+      <h1>{{ look.name }}</h1>
+      @if (look.tagline) {
+        <p class="tagline">{{ look.tagline }}</p>
+      }
       <span class="meta">
-        <strong>Bódorgó</strong> · {{ tracks().length }} dal
+        @if (look.owner) {
+          <strong>{{ look.owner }}</strong> ·
+        }
+        {{ tracks().length }} dal
         @if (totalLabel(); as total) {
           · {{ total }}
         }
       </span>
     </div>
+    @if (look.actionsInHero) {
+      <ng-container *ngTemplateOutlet="actions" />
+    }
   </header>
 
-  <!-- The action row: the big green play, shuffle, repeat one, refresh -->
-  <div class="actions">
-    <button
-      type="button"
-      class="play-big"
-      [title]="playing() ? 'Szünet' : 'Lejátszás'"
-      [disabled]="music.loading()"
-      (click)="playPause()"
-    >
-      <mat-icon>{{ playing() ? 'pause' : 'play_arrow' }}</mat-icon>
-    </button>
-    <button
-      type="button"
-      class="icon-btn"
-      [class.icon-btn--on]="music.shuffle()"
-      [attr.aria-pressed]="music.shuffle()"
-      title="Véletlen sorrend"
-      (click)="music.shuffle.set(!music.shuffle())"
-    >
-      <mat-icon>shuffle</mat-icon>
-    </button>
-    <button
-      type="button"
-      class="icon-btn"
-      [class.icon-btn--on]="music.repeatOne()"
-      [attr.aria-pressed]="music.repeatOne()"
-      title="Ez a dal ismétlődjön"
-      (click)="music.repeatOne.set(!music.repeatOne())"
-    >
-      <mat-icon>repeat_one</mat-icon>
-    </button>
-    @if (isAdmin()) {
-      <button
-        type="button"
-        class="icon-btn"
-        title="Lista frissítése a Jellyfinből"
-        [disabled]="refreshing()"
-        (click)="refresh()"
-      >
-        <mat-icon [class.spin]="refreshing()">refresh</mat-icon>
-      </button>
-    }
-  </div>
+  <!-- Buli: the play button's row under the header. -->
+  @if (!look.actionsInHero) {
+    <ng-container *ngTemplateOutlet="actions" />
+  }
 
   <!-- Now playing: picture, title, the controls, progress and volume -->
   <section class="now-bar" [class.now-bar--idle]="!now()">
@@ -84,8 +55,8 @@
         </div>
       } @else {
         <div class="now-text">
-          <strong>Indítsd el a bulit!</strong>
-          <span>Nyomd meg a zöld gombot, vagy válassz egy dalt.</span>
+          <strong>{{ look.idleTitle }}</strong>
+          <span>{{ look.idleText }}</span>
         </div>
       }
     </div>
@@ -159,48 +130,67 @@
   </section>
 
   <!-- The songs - tap one to play it -->
-  <section class="table">
-    <div class="table-head">
-      <span class="col-num">#</span>
-      <span>Cím</span>
-      <mat-icon class="col-len">schedule</mat-icon>
-    </div>
-    <ol class="tracks" #list>
-      @for (t of tracks(); track t.id; let i = $index) {
-        <li [attr.data-index]="i">
-          <button
-            type="button"
-            class="track"
-            [class.track--current]="i === currentIndex()"
-            (click)="pick(i)"
-          >
-            <span class="col-num">
-              @if (i === currentIndex() && playing()) {
-                <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
-              } @else {
-                <span class="num">{{ i + 1 }}</span>
-                <mat-icon class="num-play">play_arrow</mat-icon>
-              }
-            </span>
-            <span class="song">
-              @if (music.imageSrc(t); as src) {
-                <img class="thumb" [src]="src" [appHoverPreview]="src" alt="" loading="lazy" />
-              } @else {
-                <span class="thumb thumb--none"><mat-icon>music_note</mat-icon></span>
-              }
-              <span class="song-text">
-                <strong>{{ t.title }}</strong>
-                <span>{{ t.artist }}</span>
-              </span>
-            </span>
-            <span class="col-len">{{ t.durationMs ? time(t.durationMs / 1000) : '' }}</span>
-          </button>
-        </li>
-      } @empty {
-        <li class="empty-note">
-          {{ music.loading() ? 'Betöltés...' : (music.error() ?? 'Üres a lista.') }}
-        </li>
-      }
-    </ol>
-  </section>
+  <app-track-list
+    [look]="look.look"
+    [tracks]="tracks()"
+    [currentIndex]="currentIndex()"
+    [playing]="playing()"
+    (picked)="pick($event)"
+  />
 </div>
+
+<!-- The action row: the big play, shuffle, repeat one, refresh - Buli: ▶
+     first, Duruzsoló: ▶ between shuffle and repeat. -->
+<ng-template #actions>
+  <div class="actions">
+    @if (!look.actionsInHero) {
+      <ng-container *ngTemplateOutlet="playBig" />
+    }
+    <button
+      type="button"
+      class="icon-btn"
+      [class.icon-btn--on]="music.shuffle()"
+      [attr.aria-pressed]="music.shuffle()"
+      title="Véletlen sorrend"
+      (click)="music.shuffle.set(!music.shuffle())"
+    >
+      <mat-icon>shuffle</mat-icon>
+    </button>
+    @if (look.actionsInHero) {
+      <ng-container *ngTemplateOutlet="playBig" />
+    }
+    <button
+      type="button"
+      class="icon-btn"
+      [class.icon-btn--on]="music.repeatOne()"
+      [attr.aria-pressed]="music.repeatOne()"
+      title="Ez a dal ismétlődjön"
+      (click)="music.repeatOne.set(!music.repeatOne())"
+    >
+      <mat-icon>repeat_one</mat-icon>
+    </button>
+    @if (isAdmin()) {
+      <button
+        type="button"
+        class="icon-btn"
+        title="Lista frissítése"
+        [disabled]="refreshing()"
+        (click)="refresh()"
+      >
+        <mat-icon [class.spin]="refreshing()">refresh</mat-icon>
+      </button>
+    }
+  </div>
+</ng-template>
+
+<ng-template #playBig>
+  <button
+    type="button"
+    class="play-big"
+    [title]="playing() ? 'Szünet' : 'Lejátszás'"
+    [disabled]="music.loading()"
+    (click)="playPause()"
+  >
+    <mat-icon>{{ playing() ? 'pause' : 'play_arrow' }}</mat-icon>
+  </button>
+</ng-template>
