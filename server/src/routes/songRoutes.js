@@ -30,6 +30,8 @@ router
 
 // Every song's words, for the search - before /:slug as well.
 router.get('/lyrics', requireAuth, songController.getLyrics);
+// The whole book for the device to keep (offline) - before /:slug too.
+router.get('/offline', requireAuth, songController.getOfflineBook);
 
 router.get('/:slug', requireAuth, songController.getSong);
 // One song alone as a PDF - its page of the book.

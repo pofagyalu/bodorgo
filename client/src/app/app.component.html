@@ -1,5 +1,12 @@
 <app-header></app-header>
 
+<!-- No connection: what is on the screen is what the device last got. -->
+@if (isOffline()) {
+  <div class="offline-line" role="status">
+    Nincs internetkapcsolat – a legutóbb letöltött adatokat látod.
+  </div>
+}
+
 <!-- The page scrolls here, below the header - not the whole window - so
      its scrollbar starts under the main menu too. -->
 <main class="page-body">

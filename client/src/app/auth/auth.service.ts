@@ -45,6 +45,12 @@ export class AuthService {
   isLoggedIn = this.loggedIn.asReadonly();
   user = this.currentUser.asReadonly();
 
+  // The server itself said nobody is logged in - not merely that it
+  // couldn't be asked. What is kept on the device for the one logged in
+  // (the songbook's offline copy) goes then.
+  private saidLoggedOut = signal(false);
+  loggedOut = this.saidLoggedOut.asReadonly();
+
   // Lets a component (e.g. the profile page's notification toggle) reflect
   // a just-saved change immediately, without a full /auth/me round trip.
   patchCurrentUser(patch: Partial<CurrentUser>) {
@@ -92,6 +98,7 @@ export class AuthService {
       .pipe(
         tap((res) => {
           this.loggedIn.set(!!res.loggedIn);
+          this.saidLoggedOut.set(!res.loggedIn);
           this.currentUser.set(
             res.loggedIn
               ? {

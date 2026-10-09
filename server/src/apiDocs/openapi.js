@@ -3468,6 +3468,36 @@ const paths = {
       }),
     }),
   },
+  '/songs/offline': {
+    get: op({
+      tag: T.songs,
+      summary: 'The whole songbook, for the device to keep',
+      description:
+        'Everything the app needs to open the songbook without a connection, in one answer: every song whole (as GET /songs/{slug} sends it - the book’s own and the ones others added, in the book’s order), each with its words line by line for the search (`lines`, as in GET /songs/lyrics), and the caller’s own playlists. The app asks for it by itself once someone is logged in, and keeps the answer on the device (IndexedDB). `version` names the state of the songs - how many there are and when one was last changed; sent back as `have`, the songs come as `null` while they are still the same (the playlists are always sent). Unlike GET /songs, asking is no visit to the songbook: the `isNew` marks are left alone, and the songs carry none.',
+      params: [
+        query(
+          'have',
+          'The `version` of the copy the device already has - the songs are left out (`songs: null`) if it is still the current one.',
+        ),
+      ],
+      data: obj({
+        version: str('The state of the songs - opaque; send it back as `have`.'),
+        songs: {
+          type: ['array', 'null'],
+          description:
+            'Every song, whole, each with `lines`: its words line by line, without chords. null when `have` is the current version.',
+          items: ref('Song'),
+        },
+        lists: arrayOf(ref('SongList')),
+        canEdit: bool('The caller is the book’s keeper - as in GET /songs.'),
+        lastChanged: {
+          type: ['string', 'null'],
+          format: 'date-time',
+          description: 'When a song was last added or changed - as in GET /songs.',
+        },
+      }),
+    }),
+  },
   '/songs/{slug}': {
     get: op({
       tag: T.songs,

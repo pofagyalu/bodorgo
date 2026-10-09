@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const { execSync, spawnSync } = require('child_process');
+const { keepFiles } = require('./sw-files');
 
 // The build that gets deployed (npm run deploy): `ng build` with this
 // build's version written into it, and version.json beside the app - the
@@ -40,6 +41,11 @@ const ng = spawnSync(
   { stdio: 'inherit' },
 );
 if (ng.status !== 0) process.exit(ng.status ?? 1);
+
+// The service worker is told which files this build is made of - what it
+// keeps on the device for when there is no connection (sw-files.js). Before
+// the Brotli copies, so the worker's own copy is of the finished file.
+keepFiles();
 
 // A Brotli copy (.br) beside every script, stylesheet and SVG: the live
 // server has no Brotli module, so its .htaccess (live.htaccess here) hands
