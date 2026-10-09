@@ -1,0 +1,51 @@
+<div class="content">
+  <div class="heading">
+    <div class="kicker">Klub</div>
+    <h1>Napló</h1>
+    <p>
+      Ki, mit és mikor - minden, ami pénzt, jogosultságot vagy a klub beállításait érinti. Csak
+      adminoknak; a naplóból semmi nem törölhető.
+    </p>
+  </div>
+
+  <section class="panel">
+    <!-- What gets here at all, so nobody looks for what was never written. -->
+    <ul class="audit-kinds" aria-label="Amit a napló rögzít">
+      <li><span class="audit-kind" data-kind="role-change">Szerepkör</span> adása, módosítása</li>
+      <li><span class="audit-kind" data-kind="withdrawal">Kiutalás</span> a számlára</li>
+      <li><span class="audit-kind" data-kind="barion-settings">Barion-számla</span> adatai</li>
+      <li><span class="audit-kind" data-kind="cash-advance">Készpénzes</span> előleg, tagdíj</li>
+      <li><span class="audit-kind" data-kind="cash-undo">Visszavonás</span> (készpénz)</li>
+      <li><span class="audit-kind" data-kind="settings">Beállítás</span> módosítása</li>
+    </ul>
+
+    @if (entries().length) {
+      <div class="audit-head" aria-hidden="true">
+        <span>Mikor</span><span>Ki</span><span>Művelet</span><span>Mi változott</span>
+      </div>
+      <ul class="audit-list">
+        @for (e of entries(); track e._id) {
+          <li>
+            <span class="audit-when">{{ e.at | date: 'yyyy. MM. dd. HH:mm' }}</span>
+            <span class="audit-who">{{ e.actorName }}</span>
+            <span class="audit-kind" [attr.data-kind]="e.action">{{ label(e.action) }}</span>
+            <span class="audit-what">{{ e.summary }}</span>
+          </li>
+        }
+      </ul>
+    } @else if (!loading() && !failed()) {
+      <p class="empty-note">Még nincs bejegyzés.</p>
+    }
+
+    @if (failed()) {
+      <p class="empty-note" role="alert">A naplót nem sikerült betölteni.</p>
+    }
+    @if (loading()) {
+      <p class="empty-note">Betöltés…</p>
+    } @else if (hasMore() || failed()) {
+      <button type="button" class="audit-more" (click)="load()">
+        {{ failed() ? 'Újra' : 'Régebbiek' }}
+      </button>
+    }
+  </section>
+</div>

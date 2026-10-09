@@ -10,6 +10,7 @@ import { budapestToday, fillMessage, isBirthday } from '../utils/birthday.js';
 import { RANK_CELEBRATION_START, fillRankMessage, rankFor } from '../utils/ranks.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import logger from '../logger.js';
+import { recordAudit, roleName } from '../utils/auditLog.js';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -441,6 +442,16 @@ export const createUser = async (req, res) => {
     address: address || undefined,
     ...(weight ? { weightKg: weight, weightUpdatedAt: new Date() } : {}),
   });
+  // A role given at once goes into the Napló, as a changed one does.
+  if (user.role !== 'guest') {
+    await recordAudit(req, {
+      action: 'role-change',
+      target: user,
+      summary: `${user.name} új felhasználó szerepköre: ${roleName(user.role)}`,
+      details: { from: null, to: user.role },
+      mail: true,
+    });
+  }
 
   res.status(201).json({
     status: 'success',
@@ -519,6 +530,7 @@ export const updateUser = async (req, res) => {
       user.weightUpdatedAt = weight === undefined ? undefined : new Date();
     }
   }
+  let roleBefore = null;
   if (role !== undefined && role !== user.role) {
     if (!VALID_ROLES.includes(role)) {
       throw new AppError('Érvénytelen szerepkör.', 400);
@@ -527,10 +539,21 @@ export const updateUser = async (req, res) => {
     if (String(user._id) === String(req.user._id)) {
       throw new AppError('A saját szerepköröd nem módosíthatod.', 400);
     }
+    roleBefore = user.role;
     user.role = role;
   }
 
   await user.save({ validateModifiedOnly: true });
+  // A changed role: in the Napló, and e-mailed to every admin.
+  if (roleBefore !== null) {
+    await recordAudit(req, {
+      action: 'role-change',
+      target: user,
+      summary: `${user.name} szerepköre: ${roleName(roleBefore)} → ${roleName(user.role)}`,
+      details: { from: roleBefore, to: user.role },
+      mail: true,
+    });
+  }
 
   res.status(200).json({
     status: 'success',

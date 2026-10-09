@@ -7,6 +7,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ClubDocument } from '../../services/club-document';
 import { Transaction } from '../../services/finance';
+import { AuditLog } from './audit-log/audit-log';
 import { Documents } from './documents/documents';
 import { Finance } from './finance/finance';
 import { Klub } from './klub';
@@ -48,6 +49,107 @@ describe('Klub', () => {
 
     logIn({ role: 'admin' });
     expect(page.isAdmin()).toBe(true);
+  });
+
+  it('shows Napló and Beállítások to admins only', () => {
+    const fixture = TestBed.createComponent(Klub);
+    const links = () =>
+      [...fixture.nativeElement.querySelectorAll('.klub-mobile-nav a')].map((a: HTMLElement) =>
+        a.textContent?.trim(),
+      );
+    logIn({ role: 'member' });
+    fixture.detectChanges();
+    expect(links()).not.toContain('Napló');
+
+    logIn({ role: 'admin' });
+    fixture.detectChanges();
+    expect(links().slice(-2)).toEqual(['Napló', 'Beállítások']);
+  });
+});
+
+describe('AuditLog (Klub → Napló)', () => {
+  let fixture: ComponentFixture<AuditLog>;
+  let page: AuditLog;
+
+  const entry = (n: number, over: object = {}) => ({
+    _id: `e${n}`,
+    at: `2026-10-09T12:${String(59 - n).padStart(2, '0')}:00.000Z`,
+    action: 'cash-membership',
+    actorName: 'Pénztáros',
+    summary: `sor ${n}`,
+    ...over,
+  });
+  const rows = () => [...fixture.nativeElement.querySelectorAll('.audit-list li')] as HTMLElement[];
+
+  function open(reply: object | ReturnType<typeof fail>) {
+    fixture = TestBed.createComponent(AuditLog);
+    page = fixture.componentInstance;
+    fixture.detectChanges();
+    respond({ 'GET /settings/audit-log': reply });
+    fixture.detectChanges();
+  }
+
+  it('lists who did what and when, each with the label of its kind', () => {
+    open({
+      data: {
+        entries: [
+          entry(0, {
+            action: 'withdrawal',
+            actorName: 'Gazda',
+            summary: 'Kiutalás a számlára (Előlegek): 10 000 Ft → Teszt Klub, HU11',
+          }),
+          entry(1, { action: 'settings', summary: 'Tagdíj: 3000 → 5000' }),
+          entry(2),
+        ],
+        hasMore: false,
+      },
+    });
+    expect(rows()).toHaveLength(3);
+    expect(rows()[0].querySelector('.audit-who')?.textContent).toBe('Gazda');
+    expect(rows()[0].querySelector('.audit-what')?.textContent).toContain('10 000 Ft → Teszt Klub');
+    expect(rows().map((r) => r.querySelector('.audit-kind')?.textContent?.trim())).toEqual([
+      'Kiutalás',
+      'Beállítás',
+      'Készpénzes tagdíj',
+    ]);
+    expect(rows()[0].querySelector('.audit-when')?.textContent).toMatch(
+      /^2026\. 10\. 09\. \d\d:59$/,
+    );
+    expect(fixture.nativeElement.querySelector('.audit-more')).toBeNull();
+  });
+
+  it('asks for the older ones by the last one shown', () => {
+    open({ data: { entries: [entry(0), entry(1)], hasMore: true } });
+    (fixture.nativeElement.querySelector('.audit-more') as HTMLButtonElement).click();
+    const req = TestBed.inject(HttpTestingController).expectOne(
+      (r) => r.url === `${API}/settings/audit-log`,
+    );
+    expect(req.request.params.get('before')).toBe(entry(1).at);
+    req.flush({ data: { entries: [entry(2)], hasMore: false } });
+    fixture.detectChanges();
+    expect(rows().map((r) => r.querySelector('.audit-what')?.textContent)).toEqual([
+      'sor 0',
+      'sor 1',
+      'sor 2',
+    ]);
+    expect(page.hasMore()).toBe(false);
+  });
+
+  it('says so when there is nothing yet', () => {
+    open({ data: { entries: [], hasMore: false } });
+    expect(fixture.nativeElement.textContent).toContain('Még nincs bejegyzés.');
+  });
+
+  it('says so when it could not be loaded, and tries again', () => {
+    open(fail());
+    expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain(
+      'nem sikerült betölteni',
+    );
+    (fixture.nativeElement.querySelector('.audit-more') as HTMLButtonElement).click();
+    respond({ 'GET /settings/audit-log': { data: { entries: [entry(0)], hasMore: false } } });
+    fixture.detectChanges();
+    expect(rows()).toHaveLength(1);
+    expect(page.failed()).toBe(false);
   });
 });
 

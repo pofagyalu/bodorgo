@@ -66,8 +66,9 @@ const formatFees = (fees) =>
 // GET /settings/membership-fees - members see the fees (the Felhasználók
 // page's pay dialog uses them) and the payment deadline (Klub →
 // Áttekintés shows it): the day of the year's first Tagdíj emlékeztető.
-// Admins also get the change history and which years are already paid for
-// (locked).
+// Admins also get which years are already paid for (locked). Who changed
+// the fees when is on Klub → Napló (auditLogController.js), with every
+// other change of the settings.
 export const getMembershipFees = async (req, res) => {
   const settings = await getClubSettings();
   const isAdmin = req.user.role === 'admin';
@@ -80,9 +81,7 @@ export const getMembershipFees = async (req, res) => {
         month: settings.membershipReminder.startMonth,
         day: settings.membershipReminder.startDay,
       },
-      ...(isAdmin
-        ? { paidYears: await paidYears(), history: [...settings.history].reverse() }
-        : {}),
+      ...(isAdmin ? { paidYears: await paidYears() } : {}),
     },
   });
 };

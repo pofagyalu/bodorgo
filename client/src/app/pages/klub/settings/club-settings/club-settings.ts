@@ -1,5 +1,4 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import {
@@ -29,7 +28,7 @@ interface FeeRow {
 // (settings.ts shows them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-club-settings',
-  imports: [FormsModule, MatIconModule, DatePipe, BarionWithdraw],
+  imports: [FormsModule, MatIconModule, BarionWithdraw],
   templateUrl: './club-settings.html',
   styleUrl: './club-settings.scss',
 })
@@ -39,13 +38,12 @@ export class ClubSettingsTab implements OnInit {
 
   readonly currentYear = new Date().getFullYear();
 
-  // --- Tagdíj: the fee by year, and the list of what was changed ---
+  // --- Tagdíj: the fee by year ---
 
   loading = signal(true);
   saving = signal(false);
   foundingYear = signal(2019);
   paidYears = signal<number[]>([]);
-  history = signal<{ at: string; byName: string; change: string }[]>([]);
 
   // What's saved, and the table being edited.
   private saved = signal<MembershipFee[]>([]);
@@ -65,7 +63,6 @@ export class ClubSettingsTab implements OnInit {
       next: (res) => {
         this.foundingYear.set(res.data.foundingYear);
         this.paidYears.set(res.data.paidYears ?? []);
-        this.history.set(res.data.history ?? []);
         this.saved.set(res.data.fees);
         this.rows.set(res.data.fees.map((f) => ({ ...f })));
         this.loading.set(false);
@@ -137,25 +134,17 @@ export class ClubSettingsTab implements OnInit {
         this.rows.set(res.data.fees.map((f) => ({ ...f })));
         this.saving.set(false);
         this.notifications.addSuccess('Tagdíj mentve.');
-        // Fresh history (and paid years) from the server.
-        this.settingsService.getMembershipFees().subscribe((r) => {
-          this.history.set(r.data.history ?? []);
-          this.paidYears.set(r.data.paidYears ?? []);
-        });
+        // The paid years fresh from the server. (Who changed what is on
+        // Klub → Napló, as every other change of the settings.)
+        this.settingsService
+          .getMembershipFees()
+          .subscribe((r) => this.paidYears.set(r.data.paidYears ?? []));
       },
       error: (err) => {
         this.saving.set(false);
         this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
       },
     });
-  }
-
-  // What was changed, read anew - after a save here, and when the OIDC tab
-  // saved something (the settings page tells).
-  refreshHistory() {
-    this.settingsService
-      .getMembershipFees()
-      .subscribe((r) => this.history.set(r.data.history ?? []));
   }
 
   // --- Fizetési módok: Stripe and Barion - on or off, and the fee on top ---
@@ -213,9 +202,6 @@ export class ClubSettingsTab implements OnInit {
         this.payForm.update((form) => form && { ...form, [key]: res.data });
         this.savingPayMethod.set(null);
         this.notifications.addSuccess(`${PAYMENT_METHOD_NAMES[key]} beállítás mentve.`);
-        this.settingsService
-          .getMembershipFees()
-          .subscribe((r) => this.history.set(r.data.history ?? []));
       },
       error: (err) => {
         this.savingPayMethod.set(null);

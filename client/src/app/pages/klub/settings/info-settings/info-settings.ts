@@ -86,6 +86,12 @@ const EMAILS: (NotificationInfo & { note?: string })[] = [
     who: 'Minden klubtag, PDF melléklettel (próbaküldés: csak az admin).',
     note: 'Csak akinek van e-mail címe, és nem kapcsolta ki az e-maileket. A felfüggesztett tagok nem kapják.',
   },
+  {
+    name: 'Érzékeny művelet',
+    when: 'Valaki szerepkört ad vagy módosít, kiutalást indít a számlára, vagy megváltoztatja egy Barion-számla vagy a bejelentkezés (OIDC szolgáltató) beállításait.',
+    who: 'Az adminok.',
+    note: 'Ezek és a készpénzes befizetések a Klub → Napló oldalon is megvannak.',
+  },
 ];
 
 const PUSHES: NotificationInfo[] = [

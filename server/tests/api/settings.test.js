@@ -12,19 +12,21 @@ const url = '/settings/membership-fees';
 const thisYear = new Date().getFullYear();
 
 describe('Klub → Beállítások: membership fee by year', () => {
-  it('starts at 1000 Ft from 2019; members see it, only admins see history', async () => {
+  it('starts at 1000 Ft from 2019; members see it, only admins see the paid years', async () => {
     const member = await createMember();
     const res = await request(app).get(url).set(asUser(member));
     expect(res.status).toBe(200);
     expect(res.body.data.fees).toEqual([{ fromYear: 2019, amount: 1000 }]);
-    expect(res.body.data.history).toBeUndefined();
+    expect(res.body.data.paidYears).toBeUndefined();
     // The payment deadline: the first reminder's day (1 March by default).
     expect(res.body.data.paymentDeadline).toEqual({ month: 3, day: 1 });
 
     const admin = await request(app)
       .get(url)
       .set(asUser(await createAdmin()));
-    expect(admin.body.data).toMatchObject({ paidYears: [], history: [] });
+    expect(admin.body.data).toMatchObject({ paidYears: [] });
+    // Who changed what is in the Napló, not here.
+    expect(admin.body.data.history).toBeUndefined();
     expect(
       (
         await request(app)
@@ -45,9 +47,11 @@ describe('Klub → Beállítások: membership fee by year', () => {
 
     const back = await request(app).get(url).set(asUser(admin));
     expect(back.body.data.fees).toEqual(fees);
-    expect(back.body.data.history[0]).toMatchObject({
-      byName: 'Admin Anna',
-      change: `Tagdíj: 2019-től 1000 Ft → 2019-től 1000 Ft, ${thisYear}-től 1500 Ft`,
+    const log = await request(app).get('/settings/audit-log').set(asUser(admin));
+    expect(log.body.data.entries[0]).toMatchObject({
+      action: 'settings',
+      actorName: 'Admin Anna',
+      summary: `Tagdíj: 2019-től 1000 Ft → 2019-től 1000 Ft, ${thisYear}-től 1500 Ft`,
     });
 
     // The new fee is what a member is charged for this year, the old one

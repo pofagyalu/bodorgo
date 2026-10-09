@@ -2196,7 +2196,8 @@ const paths = {
       tag: T.payments,
       role: 'admin',
       summary: 'Undo a cash payment',
-      description: 'Only `method: cash` - an online payment can never be undone here.',
+      description:
+        'Only `method: cash` - an online payment can never be undone here. The payment’s record is removed; the Napló (`/settings/audit-log`) keeps what it was and who had recorded it.',
       params: [path('id', 'The payment.')],
       ok: 204,
       errors: [400, 404],
@@ -2231,7 +2232,8 @@ const paths = {
       tag: T.payments,
       role: 'admin',
       summary: 'Record a cash tour advance',
-      description: 'Someone paid an admin in cash: marked paid at once, no e-mail.',
+      description:
+        'Someone paid an admin in cash: marked paid at once, no e-mail. Recorded in the Napló (`/settings/audit-log`).',
       body: obj({ tourId: id(), attendeeIds: arrayOf(id()) }, ['tourId', 'attendeeIds']),
       ok: 201,
       data: obj({ payment: ref('Payment') }),
@@ -2243,6 +2245,8 @@ const paths = {
       tag: T.payments,
       role: 'admin',
       summary: "Record a member's dues paid in cash",
+      description:
+        'One year’s dues handed over in cash: a payment and its Tagdíj income, no e-mail. Recorded in the Napló (`/settings/audit-log`).',
       body: obj({ userId: id(), year: int() }, ['userId', 'year']),
       ok: 201,
       data: obj({ payment: ref('Payment') }),
@@ -2265,7 +2269,7 @@ const paths = {
       role: 'admin',
       summary: 'Withdraw from a Barion wallet',
       description:
-        "To that wallet's bank account from Beállítások - never to an account given in the request. Barion's fee: 0.1%, at least 70 Ft.",
+        "To that wallet's bank account from Beállítások - never to an account given in the request. Barion's fee: 0.1%, at least 70 Ft. A started payout is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin** (who, how much, to which account).",
       body: obj(
         { purpose: str('', { enum: ['membershipFee', 'tourAdvance'] }), amount: int('Forints.') },
         ['purpose', 'amount'],
@@ -2319,7 +2323,7 @@ const paths = {
       role: 'admin',
       summary: 'Add a person',
       description:
-        'Someone who may then log in with this e-mail, or a child without a login. Other admins add a `guest`; only the role manager may give another role (403 otherwise). `canManageRoles` cannot be set.',
+        'Someone who may then log in with this e-mail, or a child without a login. Other admins add a `guest`; only the role manager may give another role (403 otherwise). `canManageRoles` cannot be set. A role other than `guest` given here is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin**.',
       body: ref('User'),
       ok: 201,
       errors: [400],
@@ -2422,7 +2426,7 @@ const paths = {
       role: 'admin',
       summary: 'Edit a person',
       description:
-        'Any admin edits the details. Changing `role` is for the role manager only (403 otherwise), and not their own (400). Sending the current role back unchanged is fine.',
+        'Any admin edits the details. Changing `role` is for the role manager only (403 otherwise), and not their own (400). Sending the current role back unchanged is fine. A changed role is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin** (old → new, who).',
       params: [userIdP],
       body: ref('User'),
       errors: [400, 403, 404],
@@ -2942,7 +2946,7 @@ const paths = {
       role: 'member',
       summary: 'Membership fees by year',
       description:
-        "`paymentDeadline` is the day of the year the fee is due by - the first day of the Tagdíj emlékeztető (set with PUT /settings/membership-reminder's startMonth/startDay). Admins also get the change history and the years already paid for (locked).",
+        "`paymentDeadline` is the day of the year the fee is due by - the first day of the Tagdíj emlékeztető (set with PUT /settings/membership-reminder's startMonth/startDay). Admins also get the years already paid for (locked). Who changed the fees when is in the Napló (`/settings/audit-log`), with every other change of the settings.",
       data: obj({
         fees: arrayOf(obj({ fromYear: int(), amount: int() })),
         foundingYear: int(),
@@ -3106,6 +3110,44 @@ const paths = {
       body: ref('BarionWallet'),
       data: ref('BarionWallet'),
       errors: [400, 404],
+    }),
+  },
+  '/settings/audit-log': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Napló: who did what and when',
+      description:
+        'Everything that moves money, rights or the club’s settings, newest first, 50 at a time (Klub → Napló): a role given or changed (`role-change`), a cash advance (`cash-advance`) or cash dues (`cash-membership`) recorded, a cash payment undone (`cash-undo` - the payment’s record is removed, the entry keeps what it was), a payout started (`withdrawal`), and every change of the club’s settings from their own history (`settings`; a Barion wallet’s e-mail or bank account as `barion-settings`). Entries are only ever added - nothing edits or deletes one.',
+      params: [
+        query('before', 'The `at` of the last entry already shown: the ones before it.', {
+          type: 'string',
+          format: 'date-time',
+        }),
+      ],
+      data: obj({
+        entries: arrayOf(
+          obj({
+            _id: str('Unique in the list.'),
+            at: str('When.', { format: 'date-time' }),
+            action: str('', {
+              enum: [
+                'role-change',
+                'cash-advance',
+                'cash-membership',
+                'cash-undo',
+                'withdrawal',
+                'barion-settings',
+                'settings',
+              ],
+            }),
+            actorName: str('Who did it.'),
+            targetName: str('Whom it was done to, where that is one person.'),
+            summary: str('One Hungarian line: what happened, with old and new values or amounts.'),
+          }),
+        ),
+        hasMore: bool('There are older ones: ask with `before`.'),
+      }),
     }),
   },
   '/settings/weather-outlook': {

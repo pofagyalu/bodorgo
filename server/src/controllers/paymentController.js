@@ -24,6 +24,7 @@ import AppError from '../utils/appError.js';
 import { assertTourOpen, assertTourOpenById } from '../utils/tourClosed.js';
 import config from '../config.js';
 import logger from '../logger.js';
+import { recordAudit } from '../utils/auditLog.js';
 import {
   CLUB_FOUNDING_YEAR,
   PAYMENT_METHOD_NAMES,
@@ -390,6 +391,11 @@ export const recordCashPayment = async (req, res) => {
     status: 'Succeeded',
   });
   await markAttendeesPaid(payment);
+  await recordAudit(req, {
+    action: 'cash-advance',
+    summary: `Készpénzes előleg (${tour.title}): ${payable.map((p) => p.name).join(', ')} - ${formatForint(amount)} Ft`,
+    details: { paymentId: payment._id, tourId: tour._id, attendees: payment.attendees, amount },
+  });
 
   // Same "collection just completed" notification as the online-payment
   // path (markPaymentSucceeded) - a cash handover recorded by an admin can
@@ -442,9 +448,54 @@ export const recordCashMembershipPayment = async (req, res) => {
     status: 'Succeeded',
   });
   await recordMembershipTransactions(payment);
+  await recordAudit(req, {
+    action: 'cash-membership',
+    target: member,
+    summary: `Készpénzes tagdíj: ${member.name}, ${year}. év - ${formatForint(amount)} Ft`,
+    details: { paymentId: payment._id, year, amount },
+  });
 
   res.status(201).json({ status: 'success', data: { payment } });
 };
+
+// What an undone cash payment was, for the Napló - the record itself is
+// removed (deleteCashPayment below).
+async function describeCashPayment(payment) {
+  const amount = `${formatForint(payment.amount)} Ft`;
+  if (payment.purpose === 'membershipFee') {
+    const who = payment.members.map((m) => `${m.name}, ${m.membershipYear}. év`).join('; ');
+    return `tagdíj (${who}) - ${amount}`;
+  }
+  const tour = await Tour.findById(payment.tour).select('title');
+  const who = payment.attendees.map((a) => a.name).join(', ');
+  return `előleg (${tour?.title ?? 'törölt tábor'}): ${who} - ${amount}`;
+}
+
+async function recordCashUndo(req, payment) {
+  const recordedBy = payment.createdBy
+    ? await User.findById(payment.createdBy).select('name')
+    : null;
+  const member =
+    payment.members?.length === 1
+      ? await User.findById(payment.members[0].user).select('name')
+      : null;
+  await recordAudit(req, {
+    action: 'cash-undo',
+    target: member,
+    summary: `Készpénzes fizetés visszavonva: ${await describeCashPayment(payment)}`,
+    details: {
+      paymentId: payment._id,
+      purpose: payment.purpose,
+      tourId: payment.tour,
+      attendees: payment.attendees,
+      members: payment.members,
+      amount: payment.amount,
+      recordedAt: payment.createdAt,
+      recordedBy: payment.createdBy,
+      recordedByName: recordedBy?.name,
+    },
+  });
+}
 
 // DELETE /payments/:id - requireAuth, restrictTo('admin'). Undoes a cash
 // entry made by mistake (wrong row clicked) - reverts every attendee it
@@ -465,6 +516,7 @@ export const deleteCashPayment = async (req, res) => {
   if (payment.purpose === 'membershipFee') {
     await Transaction.deleteMany({ payment: payment._id });
     await Payment.deleteOne({ _id: payment._id });
+    await recordCashUndo(req, payment);
     return res.status(204).json({ status: 'success', data: null });
   }
 
@@ -477,6 +529,7 @@ export const deleteCashPayment = async (req, res) => {
     );
   }
   await Payment.deleteOne({ _id: payment._id });
+  await recordCashUndo(req, payment);
 
   res.status(204).json({ status: 'success', data: null });
 };
@@ -940,6 +993,22 @@ export const withdrawFunds = async (req, res) => {
   logger.info(
     `Withdrawal started by admin ${req.user._id} for ${purpose}: ${amount} HUF requested, ${fee} HUF fee, ${net} HUF net, Barion TransactionId ${result.TransactionId ?? 'n/a'}`,
   );
+  // In the Napló, and e-mailed to every admin: who, how much, where to.
+  const walletName = purpose === 'membershipFee' ? 'Tagdíjak' : 'Előlegek';
+  await recordAudit(req, {
+    action: 'withdrawal',
+    summary: `Kiutalás a számlára (${walletName}): ${formatForint(amount)} Ft → ${wallet.withdrawName}, ${wallet.withdrawIban}`,
+    details: {
+      purpose,
+      amount,
+      fee,
+      net,
+      recipientName: wallet.withdrawName,
+      iban: wallet.withdrawIban,
+      barionTransactionId: result.TransactionId ?? null,
+    },
+    mail: true,
+  });
 
   res.status(200).json({ status: 'success', data: { fee, net } });
 };

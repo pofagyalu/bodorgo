@@ -98,22 +98,6 @@
           {{ saving() ? 'Mentés…' : 'Mentés' }}
         </button>
       </div>
-
-      @if (history().length) {
-        <div class="history">
-          <h3>Napló</h3>
-          <ul>
-            @for (h of history(); track $index) {
-              <li>
-                <span class="history-when"
-                  >{{ h.at | date: 'yyyy. MM. dd. HH:mm' }} · {{ h.byName }}</span
-                >
-                <span>{{ h.change }}</span>
-              </li>
-            }
-          </ul>
-        </div>
-      }
     }
   </section>
 
