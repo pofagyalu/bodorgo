@@ -5,16 +5,22 @@ import multer from 'multer';
 import QRCode from 'qrcode';
 import config from '../config.js';
 import logger from '../logger.js';
-import { LIVE_STATUSES, Quiz, QuizGame } from '../models/quizModels.js';
+import { LIVE_STATUSES, Quiz, QuizGame, QuizScoring } from '../models/quizModels.js';
 import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
 import {
+  BASE_POINTS,
+  DEFAULT_SCORING,
+  INITIAL_SCORING,
+  MAX_STREAK_STEPS,
   cleanQuiz,
+  cleanScoring,
   distanceKm,
   isPlace,
   mapPoints,
   pointsFor,
   standings,
+  withBonuses,
 } from '../jatekok/quiz/scoring.js';
 import { emitToQuiz } from '../jatekok/quiz/quizSocket.js';
 import {
@@ -239,7 +245,55 @@ export const getImage = async (req, res) => {
   res.sendFile(quizImagePath(req.params.name));
 };
 
+// --- The scoring (Móka → Kvíz → Pontozás) ---
+
+// What is set now: the next games' scoring (and when it was last changed).
+async function currentScoring() {
+  const stored = await QuizScoring.findOne({ key: 'scoring' }).lean();
+  const scoring = Object.fromEntries(
+    Object.keys(INITIAL_SCORING).map((k) => [k, stored?.[k] ?? INITIAL_SCORING[k]]),
+  );
+  return { scoring, updatedAt: stored?.updatedAt ?? null };
+}
+
+const sendScoring = (res, { scoring, updatedAt }, user) =>
+  res.status(200).json({
+    status: 'success',
+    data: {
+      scoring,
+      // Not to be set: an instant right answer, a pin right on the place.
+      maxPoints: BASE_POINTS,
+      maxStreakSteps: MAX_STREAK_STEPS,
+      updatedAt,
+      canEdit: !!user.canManageRoles,
+    },
+  });
+
+// GET /jatekok/quiz/scoring - for everyone logged in: the rules are no
+// secret.
+export const getScoring = async (req, res) => {
+  sendScoring(res, await currentScoring(), req.user);
+};
+
+// PUT /jatekok/quiz/scoring - the role manager's. It counts from the next
+// game on whose first question hasn't opened yet: a game already on, and
+// every one played, keeps what it was started with.
+export const updateScoring = async (req, res) => {
+  const { scoring, error } = cleanScoring(req.body);
+  if (error) throw new AppError(error, 400);
+  await QuizScoring.findOneAndUpdate({ key: 'scoring' }, scoring, {
+    upsert: true,
+    setDefaultsOnInsert: true,
+  });
+  sendScoring(res, await currentScoring(), req.user);
+};
+
 // --- A game ---
+
+// The game's own scoring - of one older than the setting, what it was then.
+const scoringOf = (game) => game.scoring ?? DEFAULT_SCORING;
+// Its answers with the bonuses on top.
+const scoredAnswers = (game) => withBonuses(game.answers, game.questions, scoringOf(game));
 
 const isLive = (game) => LIVE_STATUSES.includes(game.status);
 const isHost = (game, user) => refId(game.host) === refId(user);
@@ -264,8 +318,9 @@ function gameView(game) {
   const reveal = game.status === 'reveal';
   // The last question is closed: what it brought each player may be seen.
   const closed = reveal || game.status === 'standings';
-  const current = game.answers.filter((a) => a.questionIdx === idx);
-  const counted = open ? game.answers.filter((a) => a.questionIdx !== idx) : game.answers;
+  const answers = scoredAnswers(game);
+  const current = answers.filter((a) => a.questionIdx === idx);
+  const counted = open ? answers.filter((a) => a.questionIdx !== idx) : answers;
   const people = new Map(playersOf(game).map((p) => [refId(p.user), p.user]));
   const table = standings([...people.keys()], counted);
 
@@ -293,7 +348,13 @@ function gameView(game) {
         rank: row.rank,
         // The open (or just closed) question.
         answered: !!mine,
-        ...(closed && { answer: mine?.answer ?? null, points: mine?.points ?? 0 }),
+        // `bonus`: how much of the points is for being among the fastest, or
+        // for a row of right answers.
+        ...(closed && {
+          answer: mine?.answer ?? null,
+          points: mine?.points ?? 0,
+          bonus: mine?.bonus ?? 0,
+        }),
         // A map question: where their pin was, and how far off.
         ...(closed &&
           question.type === 'map' && {
@@ -336,7 +397,7 @@ function gameView(game) {
 // The game in the list: who won it, not how.
 function gameSummary(game) {
   const people = new Map(playersOf(game).map((p) => [refId(p.user), p.user]));
-  const table = standings([...people.keys()], game.answers);
+  const table = standings([...people.keys()], scoredAnswers(game));
   return {
     _id: game._id,
     title: game.title,
@@ -400,10 +461,17 @@ async function closeQuestion(gameId, questionIdx) {
 }
 
 // The next question opens - only from where the game was seen to stand.
+// With the first one the game gets its scoring: what is set right now.
 async function openQuestion(game, questionIdx) {
+  const scoring = game.status === 'lobby' ? (await currentScoring()).scoring : null;
   const result = await QuizGame.updateOne(
     { _id: game._id, status: game.status, questionIdx: game.questionIdx },
-    { status: 'question', questionIdx, questionStartedAt: new Date() },
+    {
+      status: 'question',
+      questionIdx,
+      questionStartedAt: new Date(),
+      ...(scoring && { scoring }),
+    },
   );
   if (!result.modifiedCount) return;
   startClock(await QuizGame.findById(game._id));
@@ -493,13 +561,13 @@ export const getGames = async (req, res) => {
 const LEADERBOARD_SIZE = 50;
 export const getLeaderboard = async (req, res) => {
   const games = await QuizGame.find({ status: 'finished' })
-    .select('title finishedAt players answers')
+    .select('title finishedAt players answers scoring questions.type')
     .populate({ path: 'players.user', select: PLAYER_SELECT });
 
   const results = [];
   for (const game of games) {
     const people = new Map(playersOf(game).map((p) => [refId(p.user), p.user]));
-    for (const place of standings([...people.keys()], game.answers)) {
+    for (const place of standings([...people.keys()], scoredAnswers(game))) {
       const user = people.get(place.user);
       results.push({
         userId: place.user,
@@ -612,7 +680,8 @@ export const answerQuestion = async (req, res) => {
     throw new AppError('Ilyen válasz nincs.', 400);
   }
   const ms = Date.now() - game.questionStartedAt.getTime();
-  const points = answer === question.correct ? pointsFor(ms, limitMs(game)) : 0;
+  const points =
+    answer === question.correct ? pointsFor(ms, limitMs(game), scoringOf(game).minPoints) : 0;
 
   // In one step, so two taps (or two phones) can't both count.
   const result = await QuizGame.updateOne(
@@ -647,7 +716,7 @@ async function putPin(req, res, game) {
   const pin = {
     ...guess,
     ms: Date.now() - game.questionStartedAt.getTime(),
-    points: mapPoints(question.place, guess, question.bounds),
+    points: mapPoints(question.place, guess, question.bounds, scoringOf(game).mapReachPct),
   };
 
   const open = { _id: game._id, status: 'question', questionIdx, 'players.user': req.user._id };

@@ -293,6 +293,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/moka/quiz/quiz-edit/quiz-edit').then((m) => m.QuizEdit),
       },
+      {
+        // What an answer is worth: read by everyone, set by the role manager.
+        path: 'kviz/pontozas',
+        title: 'Kvíz – Pontozás',
+        loadComponent: () =>
+          import('./pages/moka/quiz/quiz-scoring/quiz-scoring').then((m) => m.QuizScoringPage),
+      },
     ],
   },
   {

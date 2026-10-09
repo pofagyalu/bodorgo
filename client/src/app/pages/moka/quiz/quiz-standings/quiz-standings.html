@@ -6,9 +6,9 @@
     <li
       class="row c{{ r.place % 5 }}"
       [class.me]="r.userId === myId()"
-      [style.transform]="'translateY(' + (moved() ? r.place : r.beforePlace) * rowHeight + 'rem)'"
+      [style.transform]="'translateY(' + (sorted() ? r.place : r.beforePlace) * rowHeight + 'rem)'"
     >
-      <span class="rank">{{ moved() ? r.rank : r.beforePlace + 1 }}.</span>
+      <span class="rank">{{ sorted() ? r.rank : r.beforePlace + 1 }}.</span>
       <app-avatar
         class="face"
         [name]="r.name"

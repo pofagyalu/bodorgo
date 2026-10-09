@@ -11,29 +11,24 @@ import {
 import { MatIconModule } from '@angular/material/icon';
 import {
   DEFAULT_BOUNDS,
+  DEFAULT_SCORING,
   QuizBounds,
   QuizPlace,
   QuizQuestion,
   QuizService,
+  diagonalKm,
+  distanceKm,
 } from '../../../../../services/quiz';
 import { QuizQuestionView, ShownQuestion } from '../../quiz-question/quiz-question';
 
 const TICK_MS = 200;
 const TRUE_FALSE = ['Igaz', 'Hamis'];
+const MAX_POINTS = 1000;
 
-// As the crow flies, in km - and what a pin that far off is worth (the
-// server's jatekok/quiz/scoring.js: nothing from half the shown map's
-// diagonal away).
-function distanceKm(a: QuizPlace, b: QuizPlace): number {
-  const rad = (deg: number) => (deg * Math.PI) / 180;
-  const h =
-    Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
-    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-function mapPoints(km: number, b: QuizBounds): number {
-  const diagonal = distanceKm({ lat: b.south, lng: b.west }, { lat: b.north, lng: b.east });
-  return Math.round(1000 * Math.max(0, 1 - km / (diagonal / 2)));
+// What a pin that far off is worth (the server's jatekok/quiz/scoring.js):
+// nothing from `reachPct` % of the shown map's diagonal away.
+function mapPoints(km: number, b: QuizBounds, reachPct: number): number {
+  return Math.round(MAX_POINTS * Math.max(0, 1 - km / ((diagonalKm(b) * reachPct) / 100)));
 }
 
 // What trying the question came to.
@@ -115,7 +110,16 @@ export class QuizPreview implements OnDestroy {
       this.phase() === 'running' && (this.question().type === 'map' || this.myAnswer() === null),
   );
 
+  // What a game started now would be scored with (Móka → Kvíz → Pontozás)
+  // - the bonuses aside: those take other players.
+  private scoring = signal(DEFAULT_SCORING);
+
   constructor() {
+    this.quiz.getScoring().subscribe({
+      next: (view) => this.scoring.set(view.scoring),
+      // Without it the original scoring shows.
+      error: () => {},
+    });
     // The question was changed (or another one opened): back to its start.
     effect(() => {
       this.question();
@@ -190,7 +194,7 @@ export class QuizPreview implements OnDestroy {
         this.outcome.set({
           kind: 'far',
           km: Math.round(km * 10) / 10,
-          points: mapPoints(km, q.bounds ?? DEFAULT_BOUNDS),
+          points: mapPoints(km, q.bounds ?? DEFAULT_BOUNDS, this.scoring().mapReachPct),
         });
       } else {
         this.outcome.set({ kind: 'none', points: 0 });
@@ -198,8 +202,12 @@ export class QuizPreview implements OnDestroy {
     } else if (this.myAnswer() === null) {
       this.outcome.set({ kind: 'none', points: 0 });
     } else if (this.myAnswer() === this.answers().correct) {
-      // The faster, the more: from 1000 down to half of it.
-      this.outcome.set({ kind: 'right', points: Math.round(1000 * (1 - used / 2)) });
+      // The faster, the more: from 1000 down to what the scoring sets.
+      const min = this.scoring().minPoints;
+      this.outcome.set({
+        kind: 'right',
+        points: Math.round(MAX_POINTS - (MAX_POINTS - min) * used),
+      });
     } else {
       this.outcome.set({ kind: 'wrong', points: 0 });
     }

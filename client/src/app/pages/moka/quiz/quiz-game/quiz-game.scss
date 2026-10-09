@@ -371,6 +371,13 @@
     background: #fde7e5;
     color: #b3261e;
   }
+
+  // How much of the points is bonus: under them, on a line of its own.
+  .bonus {
+    flex-basis: 100%;
+    font-size: 0.875rem;
+    text-align: center;
+  }
 }
 
 // --- How the game stands ---

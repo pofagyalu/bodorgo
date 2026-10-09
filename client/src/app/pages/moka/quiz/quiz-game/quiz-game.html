@@ -207,6 +207,10 @@
               @case ('right') {
                 <p class="result result--right">
                   <mat-icon>celebration</mat-icon> Talált! <strong>+{{ me()!.points }} pont</strong>
+                  <!-- Among the fastest, or a row of right answers. -->
+                  @if (me()!.bonus) {
+                    <small class="bonus">ebből {{ me()!.bonus }} bónusz</small>
+                  }
                 </p>
               }
               @case ('wrong') {

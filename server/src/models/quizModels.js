@@ -1,5 +1,10 @@
 import mongoose from 'mongoose';
-import { DEFAULT_TIME_LIMIT, QUESTION_TYPES, TIME_LIMITS } from '../jatekok/quiz/scoring.js';
+import {
+  DEFAULT_SCORING,
+  DEFAULT_TIME_LIMIT,
+  QUESTION_TYPES,
+  TIME_LIMITS,
+} from '../jatekok/quiz/scoring.js';
 
 const { Schema } = mongoose;
 
@@ -74,6 +79,22 @@ const answerSchema = new Schema(
   { _id: false },
 );
 
+// What an answer is worth beyond the fixed 1000 for an instant right one -
+// see DEFAULT_SCORING in jatekok/quiz/scoring.js for each of them.
+const scoringFields = {
+  minPoints: { type: Number, default: DEFAULT_SCORING.minPoints },
+  orderBonus: { type: [Number], default: undefined },
+  mapReachPct: { type: Number, default: DEFAULT_SCORING.mapReachPct },
+  streakBonus: { type: Number, default: DEFAULT_SCORING.streakBonus },
+};
+
+// Móka → Kvíz → Pontozás: the scoring the next games will be played with -
+// a single document, the role manager's to change.
+const quizScoringSchema = new Schema(
+  { key: { type: String, default: 'scoring', unique: true }, ...scoringFields },
+  { timestamps: true },
+);
+
 const playerSchema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -110,6 +131,10 @@ const quizGameSchema = new Schema(
     // In joining order.
     players: { type: [playerSchema], default: [] },
     answers: { type: [answerSchema], default: [] },
+    // The scoring as it stood when the first question opened - the game's
+    // own from then on, whatever is set later. None yet in the lobby, and
+    // none on a game older than the setting (DEFAULT_SCORING counts there).
+    scoring: { type: new Schema(scoringFields, { _id: false }), default: undefined },
     finishedAt: { type: Date, default: null },
   },
   { timestamps: true },
@@ -122,3 +147,4 @@ export const LIVE_STATUSES = ['lobby', 'question', 'reveal', 'standings'];
 
 export const Quiz = mongoose.model('Quiz', quizSchema);
 export const QuizGame = mongoose.model('QuizGame', quizGameSchema);
+export const QuizScoring = mongoose.model('QuizScoring', quizScoringSchema);

@@ -1,7 +1,7 @@
 import express from 'express';
 import * as dartsController from '../controllers/dartsController.js';
 import * as quizController from '../controllers/quizController.js';
-import requireAuth from '../auth/requireAuth.js';
+import requireAuth, { roleManagerOnly } from '../auth/requireAuth.js';
 import { requireMoka } from '../jatekok/access.js';
 
 const router = express.Router();
@@ -50,6 +50,13 @@ router.post(
 );
 router.post('/quiz/images/from-tour', requireAuth, quizController.imageFromTour);
 router.get('/quiz/images/:name', requireAuth, quizController.getImage);
+
+// Pontozás: everyone may read what an answer is worth - only the role
+// manager sets it.
+router
+  .route('/quiz/scoring')
+  .get(requireAuth, quizController.getScoring)
+  .put(requireAuth, roleManagerOnly, quizController.updateScoring);
 
 router.get('/quiz/games', requireAuth, quizController.getGames);
 router.get('/quiz/leaderboard', requireAuth, quizController.getLeaderboard);

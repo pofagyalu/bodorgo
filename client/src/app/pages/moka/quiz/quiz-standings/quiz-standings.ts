@@ -9,6 +9,8 @@ const TOP = 8;
 const ROW = 3.5;
 // How long the standings stand as they were before the last question.
 const BEFORE_MS = 900;
+// ...and how long the bars have to grow before the rows change places.
+const GROW_MS = 1400;
 
 interface Row extends QuizPlayer {
   // What they had before the last question, and where that put them
@@ -20,8 +22,8 @@ interface Row extends QuizPlayer {
 
 // Móka → Kvíz: how the game stands between two questions - everyone's
 // points as bars. It opens as things were before the last question, then
-// the bars grow by what that brought and the rows move to their new
-// places, so who overtook whom is seen happening.
+// the bars grow by what that brought, and only then do the rows move to
+// their new places - so who overtook whom is seen happening.
 @Component({
   selector: 'app-quiz-standings',
   imports: [MatIconModule, Avatar],
@@ -34,9 +36,15 @@ export class QuizStandings implements OnDestroy {
   myId = input<string | undefined>(undefined);
   readonly rowHeight = ROW;
 
-  // False: as it stood before the last question; true: as it stands now.
+  // False: the points as they were before the last question; true: as
+  // they are now.
   moved = signal(false);
-  private timer = setTimeout(() => this.moved.set(true), BEFORE_MS);
+  // False: everyone still in their place of before; true: in the new one.
+  sorted = signal(false);
+  private timers = [
+    setTimeout(() => this.moved.set(true), BEFORE_MS),
+    setTimeout(() => this.sorted.set(true), BEFORE_MS + GROW_MS),
+  ];
 
   rows = computed<Row[]>(() => {
     const all = this.players();
@@ -62,6 +70,6 @@ export class QuizStandings implements OnDestroy {
   }
 
   ngOnDestroy() {
-    clearTimeout(this.timer);
+    this.timers.forEach(clearTimeout);
   }
 }

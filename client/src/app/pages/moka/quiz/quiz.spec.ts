@@ -15,7 +15,16 @@ import {
 } from '../../../../testing/component';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
-import { Quiz, QuizGame, QuizGameSummary, QuizPlayer, QuizQuestion } from '../../../services/quiz';
+import {
+  DEFAULT_SCORING,
+  Quiz,
+  QuizGame,
+  QuizGameSummary,
+  QuizPlayer,
+  QuizQuestion,
+  QuizScoring,
+  QuizScoringView,
+} from '../../../services/quiz';
 import { TourSocketService } from '../../../services/tour-socket';
 import { Moka } from '../moka';
 import { QuizPhotoPicker } from './quiz-edit/photo-picker/photo-picker';
@@ -27,6 +36,7 @@ import { QuizStandings } from './quiz-standings/quiz-standings';
 import { QuizGamePage } from './quiz-game/quiz-game';
 import { QuizHome } from './quiz-home';
 import { QuizList } from './quiz-list/quiz-list';
+import { QuizScoringPage } from './quiz-scoring/quiz-scoring';
 
 const quizzes = `${API}/jatekok/quiz/quizzes`;
 const games = `${API}/jatekok/quiz/games`;
@@ -88,6 +98,18 @@ const quiz = (over: Partial<Quiz> = {}): Quiz => ({
   createdAt: '2026-01-01',
   updatedAt: '2026-01-02',
   mine: true,
+  ...over,
+});
+
+const scoringView = (
+  scoring: Partial<QuizScoring> = {},
+  over: Partial<QuizScoringView> = {},
+): QuizScoringView => ({
+  scoring: { ...DEFAULT_SCORING, ...scoring },
+  maxPoints: 1000,
+  maxStreakSteps: 5,
+  updatedAt: null,
+  canEdit: false,
   ...over,
 });
 
@@ -1204,7 +1226,7 @@ describe('QuizQuestionView', () => {
 });
 
 describe('QuizStandings', () => {
-  it('opens as it stood before the last question, then moves to how it stands now', () => {
+  it('opens as it stood before the last question, grows the bars, then changes the places', () => {
     vi.useFakeTimers();
     setUp();
     const fixture = TestBed.createComponent(QuizStandings);
@@ -1233,6 +1255,12 @@ describe('QuizStandings', () => {
     expect(view.moved()).toBe(true);
     expect(view.width(bela)).toBe(100);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('+900');
+    // The bars have grown - the rows are still where they were.
+    const rank = () => (fixture.nativeElement as HTMLElement).querySelector('.rank')?.textContent;
+    expect([view.sorted(), rank()]).toEqual([false, '2.']);
+    vi.advanceTimersByTime(1400);
+    fixture.detectChanges();
+    expect([view.sorted(), rank()]).toEqual([true, '1.']);
 
     // Someone further down still sees their own row.
     fixture.componentRef.setInput('myId', 'u9');
@@ -1342,7 +1370,141 @@ describe('QuizPreview', () => {
   });
 });
 
+describe('QuizPreview with a scoring of its own set', () => {
+  it('says what the answer would be worth in a game started now', () => {
+    vi.useFakeTimers();
+    setUp();
+    const fixture = TestBed.createComponent(QuizPreview);
+    fixture.componentRef.setInput('question', {
+      type: 'choice',
+      text: 'Hol?',
+      answers: ['Mátra', 'Bükk'],
+      correct: 0,
+      timeLimitSec: 20,
+    });
+    fixture.detectChanges();
+    respond({ 'GET /jatekok/quiz/scoring': { data: scoringView({ minPoints: 200 }) } });
+    const preview = fixture.componentInstance;
+    preview.start();
+    vi.advanceTimersByTime(5000);
+    preview.answer(0);
+    expect(preview.outcome()).toEqual({ kind: 'right', points: 800 });
+  });
+});
+
+describe('QuizScoringPage', () => {
+  function open(reply: QuizScoringView | Failure) {
+    setUp();
+    const fixture = TestBed.createComponent(QuizScoringPage);
+    fixture.detectChanges();
+    respond({ 'GET /jatekok/quiz/scoring': reply instanceof Failure ? reply : { data: reply } });
+    fixture.detectChanges();
+    return fixture;
+  }
+  const inputs = (fixture: ComponentFixture<QuizScoringPage>) => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll('input'),
+  ];
+
+  it('shows everyone what an answer is worth - to be read only', () => {
+    const fixture = open(scoringView({ orderBonus: [300, 200, 100] }));
+    const el = fixture.nativeElement as HTMLElement;
+    expect(inputs(fixture).map((i) => [i.value, i.disabled])).toEqual([
+      ['500', true],
+      ['300', true],
+      ['200', true],
+      ['100', true],
+      ['0', true],
+      ['50', true],
+    ]);
+    expect(el.textContent).toContain('1000 pont');
+    expect(el.textContent).toContain('csak a szerepkör-kezelő admin');
+    expect(el.textContent).toContain('ez az alapbeállítás');
+    expect(el.querySelector('.btn--save')).toBeNull();
+  });
+
+  it('lets the role manager set it: examples follow the fields, only a sound change is saved', () => {
+    const fixture = open(scoringView({}, { canEdit: true, updatedAt: '2026-10-09T08:00:00Z' }));
+    const page = fixture.componentInstance;
+    const save = () =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.btn--save')!;
+    expect(inputs(fixture).every((i) => !i.disabled)).toBe(true);
+    expect(page.speedExample()).toEqual({ quarter: 875, half: 750 });
+    expect(page.streakSteps()).toEqual([]);
+    expect(page.reachKm()).toBe(330);
+    expect(save().disabled).toBe(true); // nothing changed
+
+    page.set('minPoints', '200');
+    page.setBonus(0, '300');
+    page.set('streakBonus', '100');
+    page.set('mapReachPct', '25');
+    expect(page.speedExample()).toEqual({ quarter: 800, half: 600 });
+    expect(page.streakSteps().map((s) => [s.nth, s.bonus])).toEqual([
+      [2, 100],
+      [3, 200],
+      [4, 300],
+      [5, 400],
+      [6, 500],
+    ]);
+    expect(page.reachKm()).toBe(170);
+
+    // An empty field, a number out of bounds: not to be saved.
+    page.setBonus(1, '');
+    expect(page.valid()).toBe(false);
+    page.save();
+    expect(waiting()).toEqual([]);
+    page.setBonus(1, '0');
+    page.set('mapReachPct', '2');
+    expect([page.valid(), page.reachKm()]).toEqual([false, null]);
+    page.set('mapReachPct', '25');
+    page.set('minPoints', '12.5');
+    expect([page.valid(), page.speedExample()]).toEqual([false, null]);
+    page.set('minPoints', '200');
+    fixture.detectChanges();
+    expect(save().disabled).toBe(false);
+
+    const sent = { minPoints: 200, orderBonus: [300, 0, 0], mapReachPct: 25, streakBonus: 100 };
+    page.save();
+    page.save(); // once
+    const req = http.expectOne({ method: 'PUT', url: `${API}/jatekok/quiz/scoring` });
+    expect(req.request.body).toEqual(sent);
+    req.flush({ data: scoringView(sent, { canEdit: true, updatedAt: '2026-10-09T09:00:00Z' }) });
+    expect(page.saving()).toBe(false);
+    expect(page.changed()).toBe(false);
+
+    // Changed, then put back to what is stored.
+    page.set('streakBonus', '50');
+    expect(page.changed()).toBe(true);
+    page.reset();
+    expect(page.draft()).toEqual(sent);
+  });
+
+  it('reports what went wrong', () => {
+    expect(open(fail(500)).componentInstance.draft()).toBeNull();
+    expect(error).toHaveBeenCalledTimes(1);
+
+    TestBed.resetTestingModule();
+    const page = open(scoringView({}, { canEdit: true })).componentInstance;
+    page.set('minPoints', '300');
+    page.save();
+    http
+      .expectOne(`${API}/jatekok/quiz/scoring`)
+      .flush({ message: 'Nem jó.' }, { status: 400, statusText: 'x' });
+    expect(error).toHaveBeenLastCalledWith('Nem jó.');
+    expect(page.saving()).toBe(false);
+    expect(page.draft()?.minPoints).toBe(300);
+  });
+});
+
 describe('Moka with the quiz', () => {
+  it('has the quiz’s three pages under it', () => {
+    TestBed.configureTestingModule({ providers: [pageTesting()] });
+    vi.spyOn(TestBed.inject(Router), 'url', 'get').mockReturnValue('/moka/kviz/pontozas');
+    logIn({ role: 'guest' });
+    const page = TestBed.createComponent(Moka).componentInstance;
+    expect(page.subTabs().map((t) => t.label)).toEqual(['Játékszoba', 'Alkotóműhely', 'Pontozás']);
+    expect(page.subTab()).toBe('kviz/pontozas');
+  });
+
   function open(url: string, user: { role: string; canManageRoles?: boolean }) {
     TestBed.configureTestingModule({ providers: [pageTesting()] });
     vi.spyOn(TestBed.inject(Router), 'url', 'get').mockReturnValue(url);

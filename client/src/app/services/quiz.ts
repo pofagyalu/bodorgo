@@ -46,6 +46,48 @@ export interface QuizBounds {
 // What a new map question shows: Hungary and a little around it.
 export const DEFAULT_BOUNDS: QuizBounds = { south: 45.5, west: 15.8, north: 48.8, east: 23.2 };
 
+// As the crow flies, in km (as the server's jatekok/quiz/scoring.js).
+export function distanceKm(a: QuizPlace, b: QuizPlace): number {
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const h =
+    Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+export const diagonalKm = (b: QuizBounds) =>
+  distanceKm({ lat: b.south, lng: b.west }, { lat: b.north, lng: b.east });
+
+// Móka → Kvíz → Pontozás: what an answer is worth beyond the fixed 1000 of
+// an instant right one (the server's DEFAULT_SCORING says each in full) -
+// set by the role manager, for the games still to start.
+export interface QuizScoring {
+  // A right answer at the last moment.
+  minPoints: number;
+  // On top, for the fastest, 2nd and 3rd fastest right answer.
+  orderBonus: number[];
+  // A map question: how far a pin is still worth something, in % of the
+  // shown map's diagonal.
+  mapReachPct: number;
+  // On top, for each right answer in a row after the first.
+  streakBonus: number;
+}
+
+// What a game was scored with before there was anything to set.
+export const DEFAULT_SCORING: QuizScoring = {
+  minPoints: 500,
+  orderBonus: [0, 0, 0],
+  mapReachPct: 50,
+  streakBonus: 0,
+};
+
+export interface QuizScoringView {
+  scoring: QuizScoring;
+  maxPoints: number; // not to be set
+  maxStreakSteps: number;
+  updatedAt: string | null; // null: never set yet
+  canEdit: boolean;
+}
+
 // A song of one of the playlists (services/music-player.ts).
 export interface QuizSong {
   playlist: PlaylistKey;
@@ -105,9 +147,12 @@ export interface QuizPlayer {
   rank: number;
   // The open (or just closed) question.
   answered: boolean;
-  // Only once the question is closed: what they tapped, and what it was worth.
+  // Only once the question is closed: what they tapped, and what it was
+  // worth - `bonus`: how much of that is bonus (among the fastest, a row
+  // of right answers).
   answer?: number | null;
   points?: number;
+  bonus?: number;
   // ...and on a map question: where their pin was, and how far off.
   guess?: QuizPlace | null;
   km?: number | null;
@@ -253,6 +298,21 @@ export class QuizService {
     return this.http
       .post<GameResponse>(`${this.quizzesUrl}/${quizId}/games`, {})
       .pipe(map(this.game));
+  }
+
+  // --- The scoring ---
+
+  getScoring(): Observable<QuizScoringView> {
+    return this.http
+      .get<{ data: QuizScoringView }>(`${this.apiUrl}/scoring`)
+      .pipe(map((res) => res.data));
+  }
+
+  // The role manager's: it counts for the games still to start.
+  updateScoring(scoring: QuizScoring): Observable<QuizScoringView> {
+    return this.http
+      .put<{ data: QuizScoringView }>(`${this.apiUrl}/scoring`, scoring)
+      .pipe(map((res) => res.data));
   }
 
   // --- The games ---

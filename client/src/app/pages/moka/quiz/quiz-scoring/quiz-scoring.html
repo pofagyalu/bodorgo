@@ -1,0 +1,176 @@
+<section class="quiz-scoring">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Bódorgó Móka · Kvíz</p>
+      <h1>Pontozás</h1>
+    </div>
+  </div>
+  <p class="lead">
+    Ennyit ér egy válasz a kvízben. A változás csak a még el nem indított játékokra érvényes: ami
+    már fut, vagy amit már lejátszottunk, az a régi pontozásával marad – a ranglista sem változik.
+  </p>
+
+  @if (draft(); as d) {
+    <form class="cards" (submit)="$event.preventDefault(); save()">
+      <!-- Speed -->
+      <div class="card">
+        <h2><mat-icon>bolt</mat-icon> Gyorsaság</h2>
+        <p class="given">
+          <span>Azonnali jó válasz</span>
+          <strong>{{ max() }} pont</strong>
+          <small>Ez minden játékban ennyi, nem állítható.</small>
+        </p>
+        <label class="field">
+          <span>Jó válasz az utolsó pillanatban</span>
+          <span class="input">
+            <input
+              type="number"
+              inputmode="numeric"
+              min="1"
+              [max]="max()"
+              step="50"
+              [value]="d.minPoints"
+              [disabled]="!canEdit()"
+              (input)="set('minPoints', $any($event.target).value)"
+            />
+            pont
+          </span>
+        </label>
+        <p class="hint">
+          Közben egyenletesen csökken.
+          @if (speedExample(); as e) {
+            Az idő negyedénél <strong>{{ e.quarter }}</strong
+            >, a felénél <strong>{{ e.half }}</strong> pont.
+          }
+          Ha ide is {{ max() }} kerül, a gyorsaság nem számít.
+        </p>
+      </div>
+
+      <!-- The fastest three -->
+      <div class="card">
+        <h2><mat-icon>emoji_events</mat-icon> A leggyorsabbak bónusza</h2>
+        <p class="hint">
+          Kérdésenként a három leggyorsabb jó válasz kapja, a saját pontján felül. 0: nincs bónusz.
+        </p>
+        @for (place of places; track $index) {
+          <label class="field">
+            <span>{{ place }}</span>
+            <span class="input">
+              +
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                [max]="max()"
+                step="50"
+                [value]="d.orderBonus[$index]"
+                [disabled]="!canEdit()"
+                [attr.aria-label]="place + ' jó válasz bónusza'"
+                (input)="setBonus($index, $any($event.target).value)"
+              />
+              pont
+            </span>
+          </label>
+        }
+        <p class="hint">Térképes kérdésnél nincs: ott nem a gyorsaság számít.</p>
+      </div>
+
+      <!-- A row of right answers -->
+      <div class="card">
+        <h2><mat-icon>local_fire_department</mat-icon> Sorozatbónusz</h2>
+        <p class="hint">
+          Több jó válasz egymás után egyre többet ér. Egy rossz vagy kihagyott válasz megszakítja a
+          sorozatot. 0: nincs bónusz.
+        </p>
+        <label class="field">
+          <span>Lépésenként</span>
+          <span class="input">
+            +
+            <input
+              type="number"
+              inputmode="numeric"
+              min="0"
+              [max]="max()"
+              step="50"
+              [value]="d.streakBonus"
+              [disabled]="!canEdit()"
+              (input)="set('streakBonus', $any($event.target).value)"
+            />
+            pont
+          </span>
+        </label>
+        @if (streakSteps().length) {
+          <ul class="steps">
+            @for (s of streakSteps(); track s.nth) {
+              <li>
+                {{ s.nth }}. jó válasz egymás után{{ $last ? ' és onnantól' : '' }}:
+                <strong>+{{ s.bonus }}</strong>
+              </li>
+            }
+          </ul>
+        }
+        <p class="hint">A térképes kérdés nem számít bele: nem szakítja meg, és nem is növeli.</p>
+      </div>
+
+      <!-- The map -->
+      <div class="card">
+        <h2><mat-icon>location_on</mat-icon> Térkép</h2>
+        <p class="given">
+          <span>Pontos találat</span>
+          <strong>{{ max() }} pont</strong>
+          <small>Ez sem állítható.</small>
+        </p>
+        <label class="field">
+          <span>Eddig a távolságig ér pontot</span>
+          <span class="input">
+            <input
+              type="number"
+              inputmode="numeric"
+              [min]="minMapReach"
+              [max]="maxMapReach"
+              step="5"
+              [value]="d.mapReachPct"
+              [disabled]="!canEdit()"
+              (input)="set('mapReachPct', $any($event.target).value)"
+            />
+            %
+          </span>
+        </label>
+        <p class="hint">
+          A kérdés térképének átlójához mérve ({{ minMapReach }}–{{ maxMapReach }}%), mert minden
+          kérdés más kivágást mutat. Odáig a pont egyenletesen csökken, azon túl 0.
+          @if (reachKm(); as km) {
+            Az egész Magyarországot mutató térképen ez kb. <strong>{{ km }} km</strong>.
+          }
+        </p>
+      </div>
+
+      <div class="foot">
+        @if (view()?.updatedAt; as at) {
+          <small>Utoljára módosítva: {{ at | date: 'yyyy. MM. dd. HH:mm' }}</small>
+        } @else {
+          <small>Még senki sem állította át: ez az alapbeállítás.</small>
+        }
+        @if (canEdit()) {
+          @if (!valid()) {
+            <small class="bad">Valamelyik mezőben nem megfelelő szám áll.</small>
+          }
+          <div class="actions">
+            <button type="button" class="btn" [disabled]="!changed() || saving()" (click)="reset()">
+              <mat-icon>undo</mat-icon> Visszaállítás
+            </button>
+            <button
+              type="submit"
+              class="btn btn--save"
+              [disabled]="!valid() || !changed() || saving()"
+            >
+              <mat-icon>save</mat-icon> Mentés
+            </button>
+          </div>
+        } @else {
+          <small>A pontozást csak a szerepkör-kezelő admin állíthatja át.</small>
+        }
+      </div>
+    </form>
+  }
+</section>
