@@ -94,7 +94,9 @@
         @if (t.location.address) {
           <div class="info-line">
             <mat-icon [style.color]="addressIconColor">home</mat-icon>
-            <span>{{ t.location.address }}</span>
+            <!-- A character or two too long for the line: made a touch
+                 smaller instead (shared/fit-line) - the lines below too. -->
+            <span appFitLine>{{ t.location.address }}</span>
           </div>
         } @else {
           <div class="info-line">
@@ -105,7 +107,7 @@
         @if (distanceInfo()?.distanceKm != null) {
           <div class="info-line">
             <mat-icon [style.color]="distanceIconColor">directions_car</mat-icon>
-            <span
+            <span appFitLine
               >{{ distanceInfo()!.distanceKm }} km {{ distanceInfo()!.fromLabel }}
               @if (distanceInfo()!.durationMinutes != null) {
                 ({{ formatDrivingDuration(distanceInfo()!.durationMinutes) }})
@@ -150,7 +152,7 @@
               </div>
             }
           </span>
-          <span
+          <span appFitLine
             >{{ formattedStartDate() }} · {{ t.duration }} nap / {{ t.duration - 1 }} éjszaka</span
           >
         </div>

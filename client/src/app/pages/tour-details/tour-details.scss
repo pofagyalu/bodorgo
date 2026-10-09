@@ -197,6 +197,20 @@
     width: 2rem;
     height: 2rem;
   }
+
+  // A line of an icon and its text (the address, the distance, the date,
+  // the contact): text too long for a phone breaks beside the icon, not
+  // as a whole under it.
+  > :first-child {
+    flex: none;
+  }
+
+  > :first-child + span {
+    flex: 1 1 0;
+    min-width: 0;
+    // When it does break: not leaving one short word alone on the last line.
+    text-wrap: pretty;
+  }
 }
 
 // .map-link is a <button> (it opens the map modal, not a link), reset to
