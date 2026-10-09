@@ -289,6 +289,21 @@ button {
   }
 }
 
+// The letters' size: the A between its − and +, close to both - the two
+// narrower than the bar's other buttons, on a phone and in its panel too.
+.tools .tool.tool--font button {
+  min-width: 2.25rem;
+}
+
+.tool--font {
+  .font-letter {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1;
+    color: $ink;
+  }
+}
+
 .tool button.transpose-value {
   gap: 0.1rem;
   min-width: 3.6rem;
