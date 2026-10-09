@@ -49,15 +49,13 @@
         class="menu-item green"
         >Táborok</a
       >
-      @if (isMember()) {
-        <a
-          routerLink="/media"
-          routerLinkActive="active"
-          (mouseenter)="hoverItem($event.currentTarget)"
-          class="menu-item orange"
-          >Média</a
-        >
-      }
+      <a
+        routerLink="/media"
+        routerLinkActive="active"
+        (mouseenter)="hoverItem($event.currentTarget)"
+        class="menu-item orange"
+        >Média</a
+      >
       <a
         routerLink="/klub"
         routerLinkActive="active"
@@ -184,15 +182,13 @@
         class="menu-item green"
         >Táborok</a
       >
-      @if (isMember()) {
-        <a
-          routerLink="/media"
-          routerLinkActive="active"
-          (click)="closeMobileMenu()"
-          class="menu-item orange"
-          >Média</a
-        >
-      }
+      <a
+        routerLink="/media"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+        class="menu-item orange"
+        >Média</a
+      >
       <a
         routerLink="/klub"
         routerLinkActive="active"

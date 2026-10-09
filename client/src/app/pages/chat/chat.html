@@ -92,15 +92,24 @@
         <!-- A tour's Kotyogó has a Szobabeosztás too; the general one doesn't. -->
         @if (selectedTour()) {
           <div class="pane-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              [class.active]="activePane() === 'chat'"
-              [attr.aria-selected]="activePane() === 'chat'"
-              (click)="activePane.set('chat')"
-            >
-              <mat-icon>chat</mat-icon>Kotyogó
-            </button>
+            <!-- Phone: the chat's own buttons sit in its tab, at the right
+                 end - over the tab, which leaves them room (--tools: how
+                 many there are). -->
+            <span class="tab-slot" [style.--tools]="canSwitchBackground() ? 2 : 1">
+              <button
+                type="button"
+                role="tab"
+                class="tab--with-tools"
+                [class.active]="activePane() === 'chat'"
+                [attr.aria-selected]="activePane() === 'chat'"
+                (click)="activePane.set('chat')"
+              >
+                <mat-icon>chat</mat-icon>Kotyogó
+              </button>
+              <span class="tab-tools" [class.tab-tools--open]="activePane() === 'chat'">
+                <ng-container *ngTemplateOutlet="chatTools" />
+              </span>
+            </span>
             <button
               type="button"
               role="tab"
@@ -112,7 +121,8 @@
             </button>
           </div>
         }
-        <!-- Phone (no sidebar): the chat's buttons here, on the right. -->
+        <!-- Phone (no sidebar), the general Kotyogó - which has no tabs:
+             the chat's buttons here, on the right. -->
         <div class="header-tools">
           <ng-container *ngTemplateOutlet="chatTools" />
         </div>
@@ -166,7 +176,7 @@
 <!-- The open Kotyogó's own buttons: its notifications on/off (see
      PushService), and - admins, when it has a background photo - another
      background (see feed.ts). In the sidebar's bottom, or on a phone in the
-     tabs' row (chat.scss). -->
+     Kotyogó tab (the general one: at the right of its own row) - chat.scss. -->
 <ng-template #chatTools>
   @if (chatRoomId()) {
     <div class="chat-tools">

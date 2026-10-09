@@ -153,12 +153,6 @@ export class Header implements OnDestroy {
     this.navSub.unsubscribe();
   }
 
-  // Média is members only - guests don't get the menu item at all.
-  isMember = computed(() => {
-    const role = this.auth.user()?.role;
-    return role === 'admin' || role === 'member';
-  });
-
   seesMoka = computed(() => canSeeMoka(this.auth.user()));
 
   // The logged-in user's own photo in place of the colored initials, once

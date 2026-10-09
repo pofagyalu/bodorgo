@@ -121,6 +121,39 @@ describe('SongPage', () => {
     expect(fixture.nativeElement.textContent).toContain('vizet');
   });
 
+  it('turns to the next or the previous song with a sideways stroke of a finger', () => {
+    open();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const sheet: HTMLElement = fixture.nativeElement.querySelector('.sheet');
+    /** A finger put down at one point and lifted at another, this much later. */
+    const stroke = (from: [number, number], to: [number, number], ms = 200, fingers = 1) => {
+      const at = (p: [number, number]) => ({ clientX: p[0], clientY: p[1] });
+      const event = (touches: object[], changed: object[], timeStamp: number) =>
+        ({
+          touches,
+          changedTouches: changed,
+          timeStamp,
+          target: sheet,
+          currentTarget: sheet,
+        }) as never;
+      page.swipeStart(event(Array(fingers).fill(at(from)), [at(from)], 1000));
+      page.swipeEnd(event([], [at(to)], 1000 + ms));
+    };
+
+    stroke([300, 400], [150, 410]); // to the left
+    expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'zold-erdoben']);
+    stroke([100, 400], [260, 380]); // to the right
+    expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', 'almodj']);
+
+    // Not a page turn: too short, scrolling down, too slow, two fingers.
+    navigate.mockClear();
+    stroke([300, 400], [260, 400]);
+    stroke([300, 400], [200, 600]);
+    stroke([300, 400], [100, 400], 1500);
+    stroke([300, 400], [100, 400], 200, 2);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('jumps to a song picked by chance - never this one, never one played tonight', () => {
     open();
     const service = TestBed.inject(SongService);

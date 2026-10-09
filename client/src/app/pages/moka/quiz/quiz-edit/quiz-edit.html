@@ -207,6 +207,40 @@
                   }
                 </div>
               }
+              <!-- ...or given exactly, by its coordinates. They also show
+                   where the pin is now, however it got there. -->
+              <div class="coords" role="group" aria-label="Koordináták">
+                <span class="coords-title"><mat-icon>my_location</mat-icon> Koordináták</span>
+                <label>
+                  <span>Szélesség</span>
+                  <input
+                    #lat
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="47.497913"
+                    [value]="coord(q.place?.lat)"
+                    (change)="setCoords(i, lat.value, lng.value)"
+                    (paste)="pasteCoords(i, $event)"
+                  />
+                </label>
+                <label>
+                  <span>Hosszúság</span>
+                  <input
+                    #lng
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="19.040236"
+                    [value]="coord(q.place?.lng)"
+                    (change)="setCoords(i, lat.value, lng.value)"
+                    (paste)="pasteCoords(i, $event)"
+                  />
+                </label>
+              </div>
+              <p class="hint coords-hint">
+                A Google Térképről másolt párt („47.497913, 19.040236”) egyben is beillesztheted.
+              </p>
               <ng-container *ngTemplateOutlet="time" />
             }
           </div>

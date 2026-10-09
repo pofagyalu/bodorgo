@@ -239,11 +239,11 @@ describe('background music', () => {
     expect((await request(app).get('/music/nincs/playlist').set(asUser(guest))).status).toBe(404);
   });
 
-  it('Buli: members and admins only - its songs only through Buli', async () => {
+  it('Buli: for guests too - its songs only through Buli', async () => {
     const guest = await request(app)
       .get('/music/buli/playlist')
       .set(asUser(await createGuest()));
-    expect(guest.status).toBe(403);
+    expect(guest.status).toBe(200);
     const member = await createMember();
     const res = await request(app).get('/music/buli/playlist').set(asUser(member));
     expect(res.status).toBe(200);
@@ -255,11 +255,11 @@ describe('background music', () => {
     );
   });
 
-  it('Duruzsoló (hatter): members and admins only - a list of its own', async () => {
+  it('Duruzsoló (hatter): for guests too - a list of its own', async () => {
     const guest = await request(app)
       .get('/music/hatter/playlist')
       .set(asUser(await createGuest()));
-    expect(guest.status).toBe(403);
+    expect(guest.status).toBe(200);
     const member = await createMember();
     const res = await request(app).get('/music/hatter/playlist').set(asUser(member));
     expect(res.status).toBe(200);

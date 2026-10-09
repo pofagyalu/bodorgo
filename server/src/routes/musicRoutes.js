@@ -8,8 +8,8 @@ import {
 } from '../controllers/musicController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 
-// The music (see musicController.js), by playlist: Bódorgó FM for anyone
-// logged in, Buli and Duruzsoló for members and admins.
+// The music (see musicController.js), by playlist: Bódorgó FM, Buli and
+// Duruzsoló - each for anyone logged in, guests too.
 const router = express.Router();
 router.use(requireAuth);
 

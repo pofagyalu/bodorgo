@@ -16,7 +16,7 @@ const TRACKS = {
 };
 vi.mock('../../src/music/jellyfin.js', async (original) => ({
   ...(await original()),
-  playlistByKey: (key) => ({ membersOnly: key !== 'bodorgo-fm' }),
+  playlistByKey: () => ({}),
   playlistTracks: async (key) => TRACKS[key],
   fetchTrackAudio: async (itemId) =>
     new Response(`hang:${itemId}`, { headers: { 'content-type': 'audio/mpeg' } }),
@@ -77,15 +77,15 @@ describe('a song question', () => {
     correct: 0,
   });
 
-  it('needs a song of a playlist its author may hear', async () => {
+  it('needs a song of a playlist there is - any of them, for a guest too', async () => {
     const guest = await createGuest();
     const create = (song) =>
       as(guest).post(QUIZZES, { title: 'Dalok', questions: [songQuestion(song)] });
     expect((await create(undefined)).body.message).toContain('válassz hozzá dalt');
     expect((await create({ playlist: 'bodorgo-fm', id: 'nincs' })).status).toBe(400);
     expect((await create({ playlist: 'nincs', id: 'a1' })).status).toBe(400);
-    // The members' playlist isn't a guest's.
-    expect((await create({ playlist: 'buli', id: 'c3' })).status).toBe(400);
+    // Every playlist is a guest's too.
+    expect((await create({ playlist: 'buli', id: 'c3' })).status).toBe(201);
 
     // Stored with the title and artist the playlist has - not what was sent.
     const made = await create({ playlist: 'bodorgo-fm', id: 'a1', title: 'Hamis cím' });

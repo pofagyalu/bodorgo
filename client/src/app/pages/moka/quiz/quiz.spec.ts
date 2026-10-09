@@ -1078,6 +1078,45 @@ describe('QuizEdit: the kinds of question', () => {
       bounds: q.bounds,
     });
   });
+
+  it('a map: the place given by its coordinates, typed or pasted as a pair', () => {
+    const { fixture, page, el } = open();
+    page.setType(0, 'map');
+    fixture.detectChanges();
+    const fields = () => [...el.querySelectorAll('.coords input')] as HTMLInputElement[];
+    expect(fields().map((f) => f.value)).toEqual(['', '']);
+
+    // One of the two alone is not a place yet.
+    page.setCoords(0, '47.497913', '');
+    expect(page.questions()[0].place).toBeUndefined();
+    // Both (a decimal comma too): the pin exactly there, shown in the fields.
+    page.setCoords(0, '47,497913', ' 19.040236 ');
+    expect(page.questions()[0].place).toEqual({ lat: 47.497913, lng: 19.040236 });
+    expect(page.problem()).toBeNull();
+    fixture.detectChanges();
+    expect(fields().map((f) => f.value)).toEqual(['47.497913', '19.040236']);
+
+    // Not on the part shown: the map is moved over it, the same size.
+    page.setBounds(0, { south: 46, west: 16, north: 47, east: 18 });
+    page.setCoords(0, '48', '21');
+    expect(page.questions()[0].bounds).toEqual({ south: 47.5, north: 48.5, west: 20, east: 22 });
+
+    // No such place.
+    page.setCoords(0, '95', '21');
+    page.setCoords(0, 'itt', '21');
+    expect(error).toHaveBeenCalledTimes(2);
+    expect(page.questions()[0].place).toEqual({ lat: 48, lng: 21 });
+
+    // A pair pasted into a field fills both; anything else is pasted as usual.
+    const paste = (text: string) => {
+      const event = { clipboardData: { getData: () => text }, preventDefault: vi.fn() };
+      page.pasteCoords(0, event as unknown as ClipboardEvent);
+      return event.preventDefault;
+    };
+    expect(paste('47.87, 19.9')).toHaveBeenCalled();
+    expect(page.questions()[0].place).toEqual({ lat: 47.87, lng: 19.9 });
+    expect(paste('47.87')).not.toHaveBeenCalled();
+  });
 });
 
 describe('QuizSongPicker', () => {

@@ -4,6 +4,7 @@ import {
   OnDestroy,
   computed,
   effect,
+  untracked,
   inject,
   signal,
   viewChild,
@@ -15,6 +16,7 @@ import { map } from 'rxjs';
 import { Song, SongService } from '../../../services/song';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { slideIn } from '../../../shared/fade-in';
 import { SongSheet } from '../song-sheet/song-sheet';
 import { Instrument } from '../chord-shapes';
 import { NOTATION, firstChord, stepsBetween, transposeChordPro } from '../chords';
@@ -58,6 +60,23 @@ function store(key: string, value: unknown) {
 // One song of the Daloskönyv: the lyrics with each chord over its
 // syllable, the letter size, transposing (on the screen only), and the
 // play button that scrolls the page for whoever's hands are on a guitar.
+// A sideways stroke that turns the page (swipeEnd): at least this long,
+// and no slower than this.
+const SWIPE_MIN_PX = 70;
+const SWIPE_MAX_MS = 700;
+
+// Whether the touched element, or one around it up to the song's sheet,
+// scrolls sideways by itself.
+function scrollsSideways(el: HTMLElement | null, within: EventTarget | null) {
+  for (; el && el !== within; el = el.parentElement) {
+    if (el.scrollWidth > el.clientWidth + 1) {
+      const overflow = getComputedStyle(el).overflowX;
+      if (overflow === 'auto' || overflow === 'scroll') return true;
+    }
+  }
+  return false;
+}
+
 @Component({
   selector: 'app-song',
   imports: [RouterLink, MatIconModule, SongSheet],
@@ -126,6 +145,40 @@ export class SongPage implements OnDestroy {
     return i < 0 ? null : (this.order()[i + 1] ?? null);
   });
 
+  // A finger drawn sideways across the song turns the page: to the left the
+  // next song, to the right the one before - the same as the two links at
+  // the song's foot. Only a clear, quick, one-finger sideways stroke counts,
+  // so scrolling the song, pinching it bigger or pressing a word doesn't.
+  swipeFrom: { x: number; y: number; at: number } | null = null;
+
+  swipeStart(e: TouchEvent) {
+    const touch = e.touches[0];
+    // Two fingers are a pinch; something that scrolls sideways itself (a
+    // wide chord line) keeps its own stroke.
+    this.swipeFrom =
+      e.touches.length === 1 && !scrollsSideways(e.target as HTMLElement, e.currentTarget)
+        ? { x: touch.clientX, y: touch.clientY, at: e.timeStamp }
+        : null;
+  }
+
+  swipeEnd(e: TouchEvent) {
+    const from = this.swipeFrom;
+    this.swipeFrom = null;
+    const touch = e.changedTouches[0];
+    if (!from || !touch || e.touches.length) return;
+    const dx = touch.clientX - from.x;
+    const dy = touch.clientY - from.y;
+    if (
+      Math.abs(dx) < SWIPE_MIN_PX ||
+      Math.abs(dx) < 2 * Math.abs(dy) ||
+      e.timeStamp - from.at > SWIPE_MAX_MS
+    ) {
+      return;
+    }
+    const to = dx < 0 ? this.next() : this.previous();
+    if (to) void this.router.navigate([this.base(), to.slug]);
+  }
+
   // A song picked by chance, for when nobody knows what to play next: any
   // song of the chosen playlist (of the whole book without one) but this
   // one and the ones played tonight (their ticks) - so an evening doesn't
@@ -170,6 +223,10 @@ export class SongPage implements OnDestroy {
   // Where the page should be - scrollTop itself may round.
   private position = 0;
   private touching = false;
+  // The open song's place in the order, and which way the page is turning
+  // to it (1: forward, -1: back, 0: not at all - the first song opened).
+  private shownIndex = -1;
+  private turning = 0;
   private holdUntil = 0;
   private wakeLock: WakeLockSentinel | null = null;
   private resizeObserver = new ResizeObserver(() => this.measure());
@@ -194,6 +251,11 @@ export class SongPage implements OnDestroy {
     // A new address: that song, from its top, stopped.
     effect(() => {
       const slug = this.slug();
+      // Which way the page turns (see the sheet's effect below): towards
+      // the song's place in the order, from the one that was open.
+      const index = untracked(() => this.index());
+      this.turning = this.shownIndex >= 0 && index >= 0 ? Math.sign(index - this.shownIndex) : 0;
+      this.shownIndex = index;
       this.stop();
       this.stopMetronome();
       this.transpose.set(0);
@@ -215,6 +277,19 @@ export class SongPage implements OnDestroy {
       const sheet = this.sheet()?.nativeElement;
       this.resizeObserver.disconnect();
       if (sheet) this.resizeObserver.observe(sheet);
+      // Another song's sheet: it slides in from the side it comes from
+      // (the next one from the right) - by the links at the song's foot
+      // and by a finger's stroke alike. Nothing sticks out sideways (and
+      // brings a scrollbar) meanwhile.
+      if (sheet && this.turning) {
+        const host = this.host.nativeElement;
+        host.style.overflowX = 'clip';
+        const done = () => (host.style.overflowX = '');
+        const sliding = slideIn(sheet, this.turning > 0 ? 1 : -1);
+        if (sliding) sliding.finished.then(done, done);
+        else done();
+        this.turning = 0;
+      }
     });
 
     document.addEventListener('visibilitychange', this.onVisible);

@@ -72,11 +72,10 @@ const quizView = (quiz, user, full = false) => ({
   }),
 });
 
-// A playlist this user may hear (the members' ones aren't a guest's), with
-// its tracks - null otherwise.
-async function tracksFor(user, key) {
+// A playlist's tracks (each is for everyone logged in) - null if there is
+// no such playlist.
+async function tracksFor(key) {
   if (!Object.hasOwn(PLAYLISTS, key)) return null;
-  if (playlistByKey(key).membersOnly && user.role === 'guest') return null;
   return playlistTracks(key);
 }
 
@@ -91,7 +90,7 @@ async function quizFrom(req) {
       throw new AppError(`${i + 1}. kérdés: a képe nem található – válaszd ki újra.`, 400);
     }
     if (q.song) {
-      const track = (await tracksFor(req.user, q.song.playlist))?.find((t) => t.id === q.song.id);
+      const track = (await tracksFor(q.song.playlist))?.find((t) => t.id === q.song.id);
       if (!track) {
         throw new AppError(`${i + 1}. kérdés: a dala nem található – válaszd ki újra.`, 400);
       }

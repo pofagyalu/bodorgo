@@ -14,6 +14,23 @@ import { AuthService } from './auth.service';
 // guard runs before AppComponent's own ngOnInit has resolved /auth/me, so
 // reading the signal directly would see it still empty and wrongly bounce
 // a real member/admin back to the homepage.
+// Média's Videók and Fotók are the members'; a guest has Zene there - so
+// that is where a guest is taken instead (also from Média's own address,
+// which opens Videók).
+export const mediaMemberGuard = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  return auth.checkAuth().pipe(
+    map(() => {
+      const role = auth.user()?.role;
+      if (role === 'admin' || role === 'member') return true;
+      return router.parseUrl(auth.isLoggedIn() ? '/media/zene' : '/');
+    }),
+    catchError(() => of(router.parseUrl('/'))),
+  );
+};
+
 export const memberGuard = () => {
   const auth = inject(AuthService);
   const router = inject(Router);

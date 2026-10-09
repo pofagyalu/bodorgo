@@ -23,11 +23,11 @@ function logIn(http: HttpTestingController, role: string) {
 describe('SongService', () => {
   beforeEach(() => localStorage.clear());
 
-  it('lives under Média for members and on its own for everyone else', () => {
+  it('lives under Média for everyone logged in - guests too', () => {
     const { service, http } = setUp();
     expect(service.base()).toBe('/daloskonyv');
     logIn(http, 'guest');
-    expect(service.base()).toBe('/daloskonyv');
+    expect(service.base()).toBe('/media/zene/daloskonyv');
     logIn(http, 'member');
     expect(service.base()).toBe('/media/zene/daloskonyv');
     logIn(http, 'admin');

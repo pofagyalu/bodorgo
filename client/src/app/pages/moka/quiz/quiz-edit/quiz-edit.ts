@@ -375,13 +375,54 @@ export class QuizEdit {
       this.notifications.addError('Ennek a tábornak nincs megadva a helye.');
       return;
     }
-    const place = { lat, lng };
+    this.placeAt(idx, { lat, lng });
+  }
+
+  // The pin put there - and the map moved over it (as big a part as it
+  // showed) if the place isn't on the part shown.
+  private placeAt(idx: number, place: QuizPlace) {
     const b = this.questions()[idx].bounds ?? DEFAULT_BOUNDS;
     const [h, w] = [(b.north - b.south) / 2, (b.east - b.west) / 2];
     const bounds = onMap(place, b)
       ? b
-      : { south: lat - h, north: lat + h, west: lng - w, east: lng + w };
+      : {
+          south: place.lat - h,
+          north: place.lat + h,
+          west: place.lng - w,
+          east: place.lng + w,
+        };
     this.patch(idx, { place, bounds });
+  }
+
+  // A coordinate as the Koordináták fields show it: six decimals (about
+  // 10 cm) - empty while there is no pin.
+  coord = (value: number | undefined) =>
+    typeof value === 'number' ? String(Math.round(value * 1e6) / 1e6) : '';
+
+  // The Koordináták fields: the pin goes exactly there once both are
+  // given. A decimal comma is taken too ("47,4979").
+  setCoords(idx: number, latText: string, lngText: string) {
+    if (!latText.trim() || !lngText.trim()) return;
+    const lat = Number(latText.trim().replace(',', '.'));
+    const lng = Number(lngText.trim().replace(',', '.'));
+    if (!(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180)) {
+      this.notifications.addError(
+        'A szélesség -90 és 90, a hosszúság -180 és 180 közötti szám lehet.',
+      );
+      return;
+    }
+    this.placeAt(idx, { lat, lng });
+  }
+
+  // A pair pasted into either field ("47.497913, 19.040236", as Google
+  // Maps copies it): both at once. Anything else is pasted as usual.
+  pasteCoords(idx: number, event: ClipboardEvent) {
+    const pair = /^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/.exec(
+      event.clipboardData?.getData('text') ?? '',
+    );
+    if (!pair) return;
+    event.preventDefault();
+    this.setCoords(idx, pair[1], pair[2]);
   }
 
   // --- The questions ---
