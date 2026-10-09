@@ -101,6 +101,37 @@ describe('VideoPlayer', () => {
     expect(fixture.componentInstance.quality()).toBe('original');
   });
 
+  it('starts at half volume, and keeps the sound when the quality changes', () => {
+    const video = () => el().querySelector<HTMLVideoElement>('video')!;
+    open('/video?quality=small');
+    video().dispatchEvent(new Event('loadstart'));
+    expect(video().volume).toBe(0.5);
+    expect(video().muted).toBe(false);
+
+    // The viewer turns it up; the other quality is another <video>.
+    video().volume = 0.9;
+    video().dispatchEvent(new Event('volumechange'));
+    fixture.componentInstance.setQuality('original');
+    fixture.detectChanges();
+    video().dispatchEvent(new Event('loadstart'));
+    expect(video().volume).toBe(0.9);
+
+    // Muted, and back to the small one: still muted, as loud as it was.
+    video().muted = true;
+    video().dispatchEvent(new Event('volumechange'));
+    fixture.componentInstance.setQuality('small');
+    fixture.detectChanges();
+    video().dispatchEvent(new Event('loadstart'));
+    expect(video().muted).toBe(true);
+    expect(video().volume).toBe(0.9);
+
+    // The next video opens with it too.
+    open(null);
+    video().dispatchEvent(new Event('loadstart'));
+    expect(video().volume).toBe(0.9);
+    expect(video().muted).toBe(true);
+  });
+
   it('closes on Esc', () => {
     open(null);
     const closed = vi.fn();
