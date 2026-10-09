@@ -1,0 +1,42 @@
+@if (videos().length) {
+  <section class="video-section">
+    <h2 class="section-heading">Tábori {{ videos().length > 1 ? 'videók' : 'videó' }}</h2>
+    <div class="video-grid">
+      @for (v of videos(); track v.id) {
+        <div class="video-item">
+          <app-video-card
+            [title]="v.label || 'Tábori videó'"
+            [coverUrl]="v.hasCover ? coverUrl(v) : null"
+            prompt="Nyomd azt a gombot, te Béla!"
+            (playClicked)="playingVideo.set(v)"
+          />
+          <!-- Admins: new since a discovery in the last two weeks. -->
+          @if (v.isNew) {
+            <span class="new-tag new-tag--corner" title="Új: a legutóbbi felfedezés hozta">Új</span>
+          }
+          <!-- The admins: its small copy - made, going, or to be made. -->
+          @if (isAdmin()) {
+            <app-video-small-copy
+              [job]="smallCopy(v)"
+              (convert)="makeSmallCopy(v)"
+              (remove)="removeSmallCopy(v)"
+            />
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (playingVideo(); as v) {
+    <app-video-player
+      [title]="v.label || 'Tábori videó'"
+      [subtitle]="tour().order + '. ' + tour().title"
+      [src]="videoUrl(v)"
+      [smallSrc]="smallVideoUrl(v)"
+      [height]="v.height"
+      [smallHeight]="v.smallHeight"
+      [subtitlesSrc]="v.hasSubtitles ? subtitlesUrl(v) : null"
+      (closed)="playingVideo.set(null)"
+    />
+  }
+}

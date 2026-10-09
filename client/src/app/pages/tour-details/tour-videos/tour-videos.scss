@@ -1,0 +1,39 @@
+// A tour's Tábori videók: the heading and the video cards.
+:host {
+  display: block;
+}
+
+.video-section {
+  margin-bottom: 3rem;
+}
+
+// The same section heading as the tour page's other sections - each
+// component styles its own.
+.section-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #eee;
+}
+
+// The same card sizes as Média → Videók (videos.scss) - several cuts sit
+// side by side.
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.video-item {
+  position: relative; // the admins' "Új" tag sits in its corner
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .video-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+}

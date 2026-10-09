@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 
 import { API } from '../../../testing/http';
@@ -6,8 +7,9 @@ import { fail, logIn, pageTesting, respond } from '../../../testing/component';
 import { makePayment, makeTour, tourResponse } from '../../../testing/fixtures';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PhotoGalleryService } from '../../shared/photo-gallery';
-import { Tour, TourService } from '../../services/tour';
+import { Tour } from '../../services/tour';
 import { TourDetails } from './tour-details';
+import { TourParticipants } from './tour-participants/tour-participants';
 
 const IMAGES = [
   { filename: 'a.jpg', width: 1000, height: 750, size: 300, restricted: false },
@@ -202,18 +204,8 @@ describe('TourDetails', () => {
   it('builds the file links of the tour', () => {
     open(null, makeTour({ coverUpdatedAt: 'v1' }));
     const t = page.tour()!;
-    const video = { id: 'v1', label: 'Film', hasCover: true, hasSubtitles: true };
     expect(page.coverUrl(t)).toBe(`${API}/tours/t1/cover?v=v1`);
     expect(page.coverUrl(makeTour())).toBe('');
-    expect(page.tourVideoUrl(t, video)).toBe(`${API}/tours/t1/videos/v1/video?quality=original`);
-    // The small copy only once the video has one.
-    expect(page.tourSmallVideoUrl(t, video)).toBeNull();
-    expect(page.tourSmallVideoUrl(t, { ...video, small: 'ready' })).toBe(
-      `${API}/tours/t1/videos/v1/video?quality=small`,
-    );
-    expect(page.tourVideoCoverUrl(t, video)).toBe(`${API}/tours/t1/videos/v1/cover`);
-    expect(page.tourVideoSubtitlesUrl(t, video)).toBe(`${API}/tours/t1/videos/v1/subtitles.vtt`);
-    expect(page.attendeesExcelUrl('t1')).toBe(`${API}/tours/t1/attendees/export.xlsx`);
   });
 
   it('makes the phone numbers in the contact line callable', () => {
@@ -248,15 +240,15 @@ describe('TourDetails', () => {
     expect(page.showCalendarMenu()).toBe(false);
   });
 
-  it('remembers whether the participant list was open', () => {
+  it('shows the attendees in the participant list once it is opened', () => {
     open('member');
-    page.toggleParticipants();
+    const participants: TourParticipants = fixture.debugElement.query(
+      By.directive(TourParticipants),
+    ).componentInstance;
+    expect(fixture.nativeElement.textContent).toContain('Résztvevők (2/');
+    participants.toggleParticipants();
     fixture.detectChanges();
-    expect(page.showParticipants()).toBe(true);
-    expect(TestBed.inject(TourService).showParticipantsPreference).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Teszt Kata');
-    page.toggleParticipants();
-    expect(TestBed.inject(TourService).showParticipantsPreference).toBe(false);
   });
 
   it('reloads the tour after a sign-up or a changed attendee', () => {

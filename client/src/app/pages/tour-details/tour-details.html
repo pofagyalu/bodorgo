@@ -201,112 +201,21 @@
       (tourClosed)="onTourClosed($event)"
     />
 
-    <!-- Post-tour recap video(s) - found on the NAS by the tour number (see
-       server/src/utils/tourVideos.js). The same cards and player as Média →
-       Videók; several cuts (e.g. the director's) side by side. -->
-    @if (videos().length) {
-      <section class="video-section">
-        <h2 class="section-heading">Tábori {{ videos().length > 1 ? 'videók' : 'videó' }}</h2>
-        <div class="video-grid">
-          @for (v of videos(); track v.id) {
-            <div class="video-item">
-              <app-video-card
-                [title]="v.label || 'Tábori videó'"
-                [coverUrl]="v.hasCover ? tourVideoCoverUrl(t, v) : null"
-                prompt="Nyomd azt a gombot, te Béla!"
-                (playClicked)="playingVideo.set(v)"
-              />
-              <!-- Admins: new since a discovery in the last two weeks. -->
-              @if (v.isNew) {
-                <span class="new-tag new-tag--corner" title="Új: a legutóbbi felfedezés hozta"
-                  >Új</span
-                >
-              }
-              <!-- The admins: its small copy - made, going, or to be made. -->
-              @if (isAdmin()) {
-                <app-video-small-copy
-                  [job]="smallCopy(t, v)"
-                  (convert)="makeSmallCopy(t, v)"
-                  (remove)="removeSmallCopy(t, v)"
-                />
-              }
-            </div>
-          }
-        </div>
-      </section>
+    <!-- Tábori videók: the recap video(s), found on the NAS by the tour
+         number (server/src/utils/tourVideos.js) - see tour-videos. -->
+    <app-tour-videos [tour]="t" [videos]="videos()" />
 
-      @if (playingVideo(); as v) {
-        <app-video-player
-          [title]="v.label || 'Tábori videó'"
-          [subtitle]="t.order + '. ' + t.title"
-          [src]="tourVideoUrl(t, v)"
-          [smallSrc]="tourSmallVideoUrl(t, v)"
-          [height]="v.height"
-          [smallHeight]="v.smallHeight"
-          [subtitlesSrc]="v.hasSubtitles ? tourVideoSubtitlesUrl(t, v) : null"
-          (closed)="playingVideo.set(null)"
-        />
-      }
-    }
-
-    <!-- Row 3: participants -->
-    <section class="participants-section">
-      <!-- The whole heading row opens and closes the list - the arrow alone
-           is a small target. (The arrow button has no click of its own: its
-           click, and Enter on it, arrive here.) -->
-      <h2
-        class="section-heading participants-heading"
-        [title]="showParticipants() ? 'Lista elrejtése' : 'Lista megjelenítése'"
-        (click)="toggleParticipants()"
-      >
-        <button
-          type="button"
-          class="toggle-btn"
-          [attr.aria-expanded]="showParticipants()"
-          aria-label="Résztvevők listájának megjelenítése/elrejtése"
-        >
-          <mat-icon>{{ showParticipants() ? 'expand_less' : 'expand_more' }}</mat-icon>
-        </button>
-        <!-- Always one line (see .participants-title). -->
-        <span class="participants-title"
-          >Résztvevők ({{ participantCount() }}/{{ t.maxCapacity }})</span
-        >
-        @if (isFull()) {
-          <span class="full-badge">Megtelt</span>
-        }
-        <span class="participants-heading-actions">
-          @if (auth.user()?.role === 'admin') {
-            <a
-              [href]="attendeesExcelUrl(t._id)"
-              class="excel-export-btn"
-              (click)="$event.stopPropagation()"
-              title="A teljes résztvevő lista Excel fájlba mentése - ki mennyit fizetett, ki mennyivel tartozik még"
-            >
-              <mat-icon>download</mat-icon>
-              <span class="excel-text">Excel</span>
-            </a>
-          }
-        </span>
-      </h2>
-
-      @if (showParticipants()) {
-        @if (allAttendees().length) {
-          <app-attendee-list
-            [tourId]="t._id"
-            [attendees]="allAttendees()"
-            [totals]="paymentTotals()"
-            [advancePercent]="t.advancePaymentPercentage ?? null"
-            [currency]="t.accommodationCurrency ?? 'HUF'"
-            [userPhotos]="userPhotos()"
-            [paymentMethods]="t.onSitePayment"
-            [locked]="!!t.closed"
-            (nightsUpdated)="onAttendeeNightsUpdated()"
-          />
-        } @else {
-          <p class="empty-note">Még senki nem jelentkezett erre a táborra.</p>
-        }
-      }
-    </section>
+    <!-- Row 3: Résztvevők - the heading row and the attendee list (see
+         tour-participants). -->
+    <app-tour-participants
+      [tour]="t"
+      [attendees]="allAttendees()"
+      [participantCount]="participantCount()"
+      [isFull]="isFull()"
+      [totals]="paymentTotals()"
+      [userPhotos]="userPhotos()"
+      (nightsUpdated)="onAttendeeNightsUpdated()"
+    />
 
     <!-- Sign up: the bar and the "who" picker (tour-signup) - not on a
          closed tour. -->

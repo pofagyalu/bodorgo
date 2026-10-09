@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
 import type Quill from 'quill';
 
 import { API, formEntries } from '../../../testing/http';
@@ -7,7 +8,11 @@ import { fail, logIn, pageTesting, respond, settle } from '../../../testing/comp
 import { makePayment, makeTour } from '../../../testing/fixtures';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
-import { ScheduleEntry, Tour } from '../../services/tour';
+import { ScheduleEntry, Tour, TourService, TourVideo } from '../../services/tour';
+import { VideoCopiesService } from '../../services/video-copies';
+import { VideoCard } from '../../shared/video-card/video-card';
+import { VideoPlayer } from '../../shared/video-player/video-player';
+import { VideoSmallCopy } from '../../shared/video-small-copy/video-small-copy';
 import { AttendeeList, AttendeeListRow } from './attendee-list/attendee-list';
 import { PayMethods } from './attendee-list/pay-methods/pay-methods';
 import { EVENT_FORM_TIME_OPTIONS } from './event-form/event-form';
@@ -15,9 +20,11 @@ import { ReviewStars } from './review-stars/review-stars';
 import { TourEvent } from './tour-event/tour-event';
 import { TourExtras } from './tour-extras/tour-extras';
 import { TourMailPanel } from './tour-mail-panel/tour-mail-panel';
+import { TourParticipants } from './tour-participants/tour-participants';
 import { TourReportPanel } from './tour-report-panel/tour-report-panel';
 import { TourSchedule } from './tour-schedule/tour-schedule';
 import { TourSignup } from './tour-signup/tour-signup';
+import { TourVideos } from './tour-videos/tour-videos';
 
 let http: HttpTestingController;
 let success: ReturnType<typeof vi.spyOn>;
@@ -373,6 +380,150 @@ describe('TourSignup', () => {
     fixture.componentRef.setInput('options', []);
     signup.signUpSingle();
     http.expectNone(`${API}/tours/t1/signup`);
+  });
+});
+
+describe('TourParticipants', () => {
+  let fixture: ComponentFixture<TourParticipants>;
+  let participants: TourParticipants;
+
+  function open(role: string, attendees: AttendeeListRow[] = [row({ name: 'Teszt Kata' })]) {
+    logIn({ id: 'me', role });
+    fixture = TestBed.createComponent(TourParticipants);
+    participants = fixture.componentInstance;
+    fixture.componentRef.setInput('tour', makeTour());
+    fixture.componentRef.setInput('attendees', attendees);
+    fixture.componentRef.setInput('participantCount', attendees.length);
+    fixture.detectChanges();
+  }
+
+  const text = () => fixture.nativeElement.textContent as string;
+
+  it('shows the head count, and the list only once it is opened', () => {
+    open('member');
+    expect(text()).toContain(`Résztvevők (1/${makeTour().maxCapacity})`);
+    expect(text()).not.toContain('Teszt Kata');
+    fixture.nativeElement.querySelector('.participants-heading').click();
+    fixture.detectChanges();
+    expect(text()).toContain('Teszt Kata');
+  });
+
+  it('remembers whether the list was open', () => {
+    open('member');
+    participants.toggleParticipants();
+    expect(participants.showParticipants()).toBe(true);
+    expect(TestBed.inject(TourService).showParticipantsPreference).toBe(true);
+    participants.toggleParticipants();
+    expect(TestBed.inject(TourService).showParticipantsPreference).toBe(false);
+  });
+
+  it('says so when nobody has signed up, and marks a full tour', () => {
+    open('member', []);
+    expect(text()).not.toContain('Megtelt');
+    fixture.componentRef.setInput('isFull', true);
+    participants.toggleParticipants();
+    fixture.detectChanges();
+    expect(text()).toContain('Megtelt');
+    expect(text()).toContain('Még senki nem jelentkezett erre a táborra.');
+  });
+
+  it('offers the Excel export to an admin only', () => {
+    open('member');
+    expect(fixture.nativeElement.querySelector('.excel-export-btn')).toBeNull();
+    open('admin');
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('.excel-export-btn');
+    expect(link.getAttribute('href')).toBe(`${API}/tours/t1/attendees/export.xlsx`);
+    // The link's click doesn't open or close the list.
+    link.addEventListener('click', (e) => e.preventDefault());
+    link.click();
+    expect(participants.showParticipants()).toBe(false);
+  });
+
+  it('passes on that an attendee was changed', () => {
+    open('admin');
+    let updated = 0;
+    participants.nightsUpdated.subscribe(() => updated++);
+    participants.toggleParticipants();
+    fixture.detectChanges();
+    fixture.debugElement.query(By.directive(AttendeeList)).componentInstance.nightsUpdated.emit();
+    expect(updated).toBe(1);
+  });
+});
+
+describe('TourVideos', () => {
+  let fixture: ComponentFixture<TourVideos>;
+  let videos: TourVideos;
+  const video: TourVideo = { id: 'v1', label: 'Film', hasCover: true, hasSubtitles: true };
+
+  function open(role: string, list: TourVideo[] = [video]) {
+    logIn({ id: 'me', role });
+    fixture = TestBed.createComponent(TourVideos);
+    videos = fixture.componentInstance;
+    fixture.componentRef.setInput('tour', makeTour());
+    fixture.componentRef.setInput('videos', list);
+    fixture.detectChanges();
+  }
+
+  const text = () => fixture.nativeElement.textContent as string;
+
+  it('shows nothing for a tour without a video', () => {
+    open('member', []);
+    expect(fixture.nativeElement.querySelector('.video-section')).toBeNull();
+  });
+
+  it('names the section by how many videos there are', () => {
+    open('member');
+    expect(text()).toContain('Tábori videó');
+    expect(text()).not.toContain('Tábori videók');
+    fixture.componentRef.setInput('videos', [video, { ...video, id: 'v2', isNew: true }]);
+    fixture.detectChanges();
+    expect(text()).toContain('Tábori videók');
+    expect(fixture.nativeElement.querySelectorAll('.video-item').length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('.new-tag').length).toBe(1);
+  });
+
+  it('builds the file links of a video', () => {
+    open('member');
+    expect(videos.videoUrl(video)).toBe(`${API}/tours/t1/videos/v1/video?quality=original`);
+    // The small copy only once the video has one.
+    expect(videos.smallVideoUrl(video)).toBeNull();
+    expect(videos.smallVideoUrl({ ...video, small: 'ready' })).toBe(
+      `${API}/tours/t1/videos/v1/video?quality=small`,
+    );
+    expect(videos.coverUrl(video)).toBe(`${API}/tours/t1/videos/v1/cover`);
+    expect(videos.subtitlesUrl(video)).toBe(`${API}/tours/t1/videos/v1/subtitles.vtt`);
+  });
+
+  it('opens the player for the chosen video, and closes it', () => {
+    open('member');
+    expect(fixture.debugElement.query(By.directive(VideoPlayer))).toBeNull();
+    fixture.debugElement.query(By.directive(VideoCard)).componentInstance.playClicked.emit();
+    fixture.detectChanges();
+    expect(videos.playingVideo()).toEqual(video);
+    const player = fixture.debugElement.query(By.directive(VideoPlayer));
+    expect(player).not.toBeNull();
+    player.componentInstance.closed.emit();
+    expect(videos.playingVideo()).toBeNull();
+  });
+
+  it('shows the small-copy line to an admin only, and follows the conversions', () => {
+    const copies = TestBed.inject(VideoCopiesService);
+    const refresh = vi.spyOn(copies, 'refresh').mockImplementation(() => {});
+    const convert = vi.spyOn(copies, 'convert').mockImplementation(() => {});
+    const remove = vi.spyOn(copies, 'remove').mockImplementation(() => {});
+    open('member');
+    expect(fixture.debugElement.query(By.directive(VideoSmallCopy))).toBeNull();
+    expect(refresh).not.toHaveBeenCalled();
+    fixture.destroy();
+
+    open('admin');
+    expect(fixture.debugElement.query(By.directive(VideoSmallCopy))).not.toBeNull();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(videos.smallCopy(video)).toEqual({ ref: 'tour:t1:v1', state: 'none' });
+    videos.makeSmallCopy(video);
+    expect(convert).toHaveBeenCalledWith(copies.tour('t1', 'v1'));
+    videos.removeSmallCopy(video);
+    expect(remove).toHaveBeenCalledWith(copies.tour('t1', 'v1'));
   });
 });
 

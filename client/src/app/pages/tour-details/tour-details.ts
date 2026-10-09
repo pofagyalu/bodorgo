@@ -36,16 +36,11 @@ import { CalendarEvent, downloadIcs, googleCalendarUrl } from '../../shared/cale
 import { TourSchedule } from './tour-schedule/tour-schedule';
 import { TourWeatherOutlook } from './tour-weather-outlook/tour-weather-outlook';
 import { ReviewStars } from './review-stars/review-stars';
-import { VideoCard } from '../../shared/video-card/video-card';
-import { VideoPlayer } from '../../shared/video-player/video-player';
-import { VideoSmallCopy } from '../../shared/video-small-copy/video-small-copy';
-import { SmallCopyJob, VideoCopiesService } from '../../services/video-copies';
 import { PickerOption, TourSignup } from './tour-signup/tour-signup';
 import { TourExtras } from './tour-extras/tour-extras';
-import {
-  AttendeeList,
-  AttendeeListRow as AttendeeListPayment,
-} from './attendee-list/attendee-list';
+import { AttendeeListRow as AttendeeListPayment } from './attendee-list/attendee-list';
+import { TourParticipants } from './tour-participants/tour-participants';
+import { TourVideos } from './tour-videos/tour-videos';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 @Component({
@@ -57,10 +52,8 @@ import { NotificationsService } from '../../notifications/notifications.service'
     TourSchedule,
     TourWeatherOutlook,
     ReviewStars,
-    AttendeeList,
-    VideoCard,
-    VideoPlayer,
-    VideoSmallCopy,
+    TourParticipants,
+    TourVideos,
     TourSignup,
     TourExtras,
     FitLine,
@@ -114,16 +107,10 @@ export class TourDetails {
   userPhotos = signal<Record<string, string>>({});
   usernames = signal<Record<string, string>>({});
   // The recap video's versions, found on the NAS by the tour number (see
-  // tourController.js's getTour) - usually one. playingVideo is the one
-  // open in the player dialog.
+  // tourController.js's getTour) - usually one; shown by tour-videos.
   videos = signal<TourVideo[]>([]);
-  playingVideo = signal<TourVideo | null>(null);
   loadError = signal<string | null>(null);
   showMap = signal(false);
-  // Restores whatever expand/collapse choice was last made (see
-  // tour.ts's showParticipantsPreference), instead of always resetting to
-  // collapsed when navigating back to a tour.
-  showParticipants = signal(this.tourService.showParticipantsPreference);
   // Sign-up (tour-signup): who a 'member' or 'admin' can additionally choose to
   // register besides themselves - loaded once the role is known (see the
   // effect in the constructor, same pattern as profile.ts since
@@ -429,8 +416,6 @@ export class TourDetails {
         this.paymentTotals.set(res.data.paymentTotals);
         this.distanceInfo.set(res.data.distanceInfo);
         this.videos.set(res.data.videos ?? []);
-        // An admin's small-copy line: conversions already going are followed.
-        if (this.isAdmin() && res.data.videos?.length) this.copies.refresh();
         this.userPhotos.set(res.data.userPhotos ?? {});
         this.usernames.set(res.data.usernames ?? {});
       },
@@ -442,16 +427,6 @@ export class TourDetails {
 
   onAttendeeNightsUpdated() {
     this.loadTour(this.tourId);
-  }
-
-  toggleParticipants() {
-    const next = !this.showParticipants();
-    this.showParticipants.set(next);
-    this.tourService.showParticipantsPreference = next;
-  }
-
-  attendeesExcelUrl(tourId: string): string {
-    return this.tourService.attendeesExcelUrl(tourId);
   }
 
   // Same deep-link URLs as tourPdfController.js's Helyszín row - each
@@ -532,42 +507,6 @@ export class TourDetails {
   // The login-only cover image URL ('' for a tour with no cover yet).
   coverUrl(t: Tour): string {
     return this.tourService.coverUrl(t) ?? '';
-  }
-
-  tourVideoUrl(t: Tour, v: TourVideo): string {
-    return this.tourService.videoUrl(t._id, v.id, 'original');
-  }
-
-  // Its small copy, if it has one - what the player then starts with.
-  tourSmallVideoUrl(t: Tour, v: TourVideo): string | null {
-    return this.smallCopy(t, v).state === 'ready'
-      ? this.tourService.videoUrl(t._id, v.id, 'small')
-      : null;
-  }
-
-  // The admins: a video's small copy (services/video-copies.ts) - the line
-  // under its card.
-  private copies = inject(VideoCopiesService);
-  isAdmin = computed(() => this.auth.user()?.role === 'admin');
-
-  smallCopy(t: Tour, v: TourVideo): SmallCopyJob {
-    return this.copies.stateOf(this.copies.tour(t._id, v.id).ref, v.small);
-  }
-
-  makeSmallCopy(t: Tour, v: TourVideo) {
-    this.copies.convert(this.copies.tour(t._id, v.id));
-  }
-
-  removeSmallCopy(t: Tour, v: TourVideo) {
-    this.copies.remove(this.copies.tour(t._id, v.id));
-  }
-
-  tourVideoCoverUrl(t: Tour, v: TourVideo): string {
-    return this.tourService.videoCoverUrl(t._id, v.id);
-  }
-
-  tourVideoSubtitlesUrl(t: Tour, v: TourVideo): string {
-    return this.tourService.subtitlesUrl(t._id, v.id);
   }
 
   // Extrák (tour-extras) uploaded or deleted a document.
