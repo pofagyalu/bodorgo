@@ -22,81 +22,6 @@
   </button>
 </ng-template>
 
-<!-- The playlists' selector: a round button (filled, with the number of
-     its songs, while a list is chosen) that opens a panel with every list
-     of mine. In the list's first row, and beside an open song among the
-     tuner's and the annexes' icons. -->
-<ng-template #listPicker>
-  <div class="list-picker">
-    <button
-      type="button"
-      class="list-btn"
-      [class.list-btn--on]="playlist()"
-      [attr.aria-expanded]="listsOpen()"
-      (click)="toggleLists()"
-      [title]="playlist() ? 'Lejátszási lista: ' + playlist()!.name : 'Lejátszási listák'"
-      aria-label="Lejátszási lista választása"
-    >
-      <mat-icon>queue_music</mat-icon>
-      @if (playlist(); as chosen) {
-        <span class="list-count">{{ chosen.songs.length }}</span>
-      }
-    </button>
-
-    <!-- Every choice at once: the whole book on top, the lists under
-         it, and a new list's name at the foot. -->
-    @if (listsOpen()) {
-      <div class="list-panel" role="listbox" aria-label="Lejátszási listák">
-        <button
-          type="button"
-          class="list-option"
-          [class.list-option--current]="!playlist()"
-          (click)="chooseList('')"
-        >
-          <span>Minden dal</span>
-        </button>
-        @for (l of lists() ?? []; track l._id) {
-          <button
-            type="button"
-            class="list-option"
-            [class.list-option--current]="l._id === playlist()?._id"
-            (click)="chooseList(l._id)"
-          >
-            <span>{{ l.name }}</span>
-            <small>{{ l.songs.length }}</small>
-          </button>
-        }
-        <form class="list-new" (submit)="$event.preventDefault(); createList()">
-          <input
-            type="text"
-            maxlength="60"
-            placeholder="Új lista neve"
-            aria-label="Új lista neve"
-            [value]="newListName()"
-            (input)="newListName.set($any($event.target).value)"
-          />
-          <button type="submit" [disabled]="!newListName().trim()" title="Lista létrehozása">
-            <mat-icon>add</mat-icon>
-          </button>
-        </form>
-        <!-- What is rarely done with the chosen list - here, so its name
-             has the row to itself beside the two buttons used all the
-             time. -->
-        @if (playlist(); as chosen) {
-          <div class="list-manage">
-            <button type="button" (click)="startRenaming()">
-              <mat-icon>edit</mat-icon>Átnevezés
-            </button>
-            <button type="button" class="list-delete" (click)="deleteList()">
-              <mat-icon>delete</mat-icon>„{{ chosen.name }}” törlése
-            </button>
-          </div>
-        }
-      </div>
-    }
-  </div>
-</ng-template>
-
 <div class="book" [class.book--open]="isOpen()" [class.book--in-media]="inMedia()">
   <!-- The table of contents: the whole page until a song is chosen, then
        the left column (hidden on a phone, where the song takes its place). -->
@@ -145,8 +70,16 @@
         <!-- The songs played tonight carry a tick; one tap here wipes them
            all (the button itself: the template at the top). -->
         <ng-container [ngTemplateOutlet]="clearButton" />
-        <!-- My playlists (the selector: the template at the top). -->
-        <ng-container [ngTemplateOutlet]="listPicker" />
+        <!-- My playlists (the selector: playlist-picker). -->
+        <app-playlist-picker
+          place="row"
+          [open]="listsOpen()"
+          (toggled)="toggleLists()"
+          (chosen)="chooseList($event)"
+          (created)="createList($event)"
+          (renameAsked)="startRenaming()"
+          (deleteAsked)="deleteList()"
+        />
       </div>
 
       <div class="top-row">
@@ -164,7 +97,15 @@
            way to picking songs -, and the button that slides the first
            row's controls in under the search, and away again. -->
         <div class="top-row-phone">
-          <ng-container [ngTemplateOutlet]="listPicker" />
+          <app-playlist-picker
+            place="phone"
+            [open]="listsOpen()"
+            (toggled)="toggleLists()"
+            (chosen)="chooseList($event)"
+            (created)="createList($event)"
+            (renameAsked)="startRenaming()"
+            (deleteAsked)="deleteList()"
+          />
           <button
             type="button"
             class="controls-btn"
@@ -302,7 +243,15 @@
           <ng-container [ngTemplateOutlet]="clearButton" />
         </li>
         <li class="annex-row-clear">
-          <ng-container [ngTemplateOutlet]="listPicker" />
+          <app-playlist-picker
+            place="annex"
+            [open]="listsOpen()"
+            (toggled)="toggleLists()"
+            (chosen)="chooseList($event)"
+            (created)="createList($event)"
+            (renameAsked)="startRenaming()"
+            (deleteAsked)="deleteList()"
+          />
         </li>
         <!-- A new song without leaving the open one's page first. -->
         @if (songs() !== null) {

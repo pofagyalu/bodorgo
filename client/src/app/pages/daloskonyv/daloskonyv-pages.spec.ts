@@ -1132,8 +1132,13 @@ describe('Daloskonyv', () => {
       expect(el().querySelector('.list-note')?.textContent).toContain('még nincs dal');
 
       page.listsOpen.set(true);
-      page.newListName.set('  Tábortűz ');
-      page.createList();
+      fixture.detectChanges();
+      // A new list's name, typed into the selector's panel (playlist-picker).
+      const form = el().querySelector('.tools-row .list-new') as HTMLFormElement;
+      const name = form.querySelector('input') as HTMLInputElement;
+      name.value = '  Tábortűz ';
+      name.dispatchEvent(new Event('input'));
+      form.dispatchEvent(new Event('submit'));
       const created = http.expectOne((r) => r.method === 'POST' && r.url.endsWith('/songs/lists'));
       expect(created.request.body).toEqual({ name: 'Tábortűz' });
       created.flush({ data: { list: { _id: 'l3', name: 'Tábortűz', songs: [] } } });

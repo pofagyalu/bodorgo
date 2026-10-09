@@ -1,0 +1,68 @@
+<div class="list-picker">
+  <button
+    type="button"
+    class="list-btn"
+    [class.list-btn--on]="playlist()"
+    [attr.aria-expanded]="open()"
+    (click)="toggled.emit()"
+    [title]="playlist() ? 'Lejátszási lista: ' + playlist()!.name : 'Lejátszási listák'"
+    aria-label="Lejátszási lista választása"
+  >
+    <mat-icon>queue_music</mat-icon>
+    @if (playlist(); as chosen) {
+      <span class="list-count">{{ chosen.songs.length }}</span>
+    }
+  </button>
+
+  <!-- Every choice at once: the whole book on top, the lists under
+       it, and a new list's name at the foot. -->
+  @if (open()) {
+    <div class="list-panel" role="listbox" aria-label="Lejátszási listák">
+      <button
+        type="button"
+        class="list-option"
+        [class.list-option--current]="!playlist()"
+        (click)="chosen.emit('')"
+      >
+        <span>Minden dal</span>
+      </button>
+      @for (l of lists() ?? []; track l._id) {
+        <button
+          type="button"
+          class="list-option"
+          [class.list-option--current]="l._id === playlist()?._id"
+          (click)="chosen.emit(l._id)"
+        >
+          <span>{{ l.name }}</span>
+          <small>{{ l.songs.length }}</small>
+        </button>
+      }
+      <form class="list-new" (submit)="$event.preventDefault(); create()">
+        <input
+          type="text"
+          maxlength="60"
+          placeholder="Új lista neve"
+          aria-label="Új lista neve"
+          [value]="newListName()"
+          (input)="newListName.set($any($event.target).value)"
+        />
+        <button type="submit" [disabled]="!newListName().trim()" title="Lista létrehozása">
+          <mat-icon>add</mat-icon>
+        </button>
+      </form>
+      <!-- What is rarely done with the chosen list - here, so its name
+           has the row to itself beside the two buttons used all the
+           time. -->
+      @if (playlist(); as chosen) {
+        <div class="list-manage">
+          <button type="button" (click)="renameAsked.emit()">
+            <mat-icon>edit</mat-icon>Átnevezés
+          </button>
+          <button type="button" class="list-delete" (click)="deleteAsked.emit()">
+            <mat-icon>delete</mat-icon>„{{ chosen.name }}” törlése
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

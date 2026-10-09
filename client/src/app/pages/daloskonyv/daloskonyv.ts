@@ -21,6 +21,7 @@ import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from 
 import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
 import { SongListItem, SongService } from '../../services/song';
+import { PlaylistPicker } from './playlist-picker/playlist-picker';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { keyName } from './song-key';
@@ -35,6 +36,7 @@ import { LETTERS, fold, foundIn, hungarianLetter, letterOf, searchSongs, songsOf
 @Component({
   selector: 'app-daloskonyv',
   imports: [
+    PlaylistPicker,
     NgTemplateOutlet,
     RouterLink,
     RouterOutlet,
@@ -115,9 +117,9 @@ export class Daloskonyv implements OnInit {
   lists = this.songService.lists;
   // The list the songbook is on - null for the whole book.
   playlist = this.songService.list;
-  // The panel with every list to choose from, and the new list's name.
+  // The panel with every list to choose from is open (the selector itself:
+  // playlist-picker - in three places, all told the same).
   listsOpen = signal(false);
-  newListName = signal('');
   // Picking: the whole book is shown, each song with a tick box - a tap
   // puts it into the chosen list, or takes it out.
   picking = signal(false);
@@ -140,12 +142,9 @@ export class Daloskonyv implements OnInit {
     this.renaming.set(null);
   }
 
-  createList() {
-    const name = this.newListName().trim();
-    if (!name) return;
-    this.songService.createList(name).subscribe({
+  createList(name: string) {
+    this.songService.createList(name.trim()).subscribe({
       next: () => {
-        this.newListName.set('');
         this.listsOpen.set(false);
         this.renaming.set(null);
         this.ordering.set(false);
