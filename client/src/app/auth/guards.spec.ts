@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { HttpRequest, HttpResponse } from '@angular/common/http';
-import { Router, RouterStateSnapshot } from '@angular/router';
+import { Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
 import { API, httpTesting } from '../../testing/http';
@@ -10,7 +10,7 @@ import { authHttpInterceptor } from './auth-http-interceptor';
 import { authGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { canSeeFutokor, futokorAdminGuard } from './futokor.guard';
-import { memberGuard } from './member.guard';
+import { mediaMemberGuard, memberGuard } from './member.guard';
 import { canSeeMoka, mokaGuard } from './moka.guard';
 import { canEditSongs, songEditGuard } from './song-edit.guard';
 
@@ -41,7 +41,11 @@ describe('route guards', () => {
     localStorage.clear();
     navigate = vi.fn();
     TestBed.configureTestingModule({
-      providers: [httpTesting(), { provide: Router, useValue: { navigate } }],
+      providers: [
+        httpTesting(),
+        // parseUrl: the address itself stands for where a guard sends.
+        { provide: Router, useValue: { navigate, parseUrl: (url: string) => url } },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -66,6 +70,29 @@ describe('route guards', () => {
     it.each([guest, nobody, 'error' as const])('turns everyone else back', (me) => {
       expect(run(memberGuard, me)).toBe(false);
       expect(navigate).toHaveBeenCalledWith(['/']);
+    });
+  });
+
+  describe('mediaMemberGuard', () => {
+    /** Runs it; a refusal comes back as the address it sends to. */
+    function sentTo(me: Me): string | true {
+      let result: boolean | UrlTree | undefined;
+      TestBed.runInInjectionContext(mediaMemberGuard).subscribe((v) => (result = v));
+      const req = http.expectOne(`${API}/auth/me`);
+      if (me === 'error') req.flush('', { status: 500, statusText: 'Error' });
+      else req.flush({ id: 'u1', ...me });
+      return result === true ? true : String(result);
+    }
+
+    it('lets a member or an admin to Videók and Fotók', () => {
+      expect(sentTo(member)).toBe(true);
+      expect(sentTo(admin)).toBe(true);
+    });
+
+    it('takes a guest to Zene, anyone else to the front page', () => {
+      expect(sentTo(guest)).toBe('/media/zene');
+      expect(sentTo(nobody)).toBe('/');
+      expect(sentTo('error')).toBe('/');
     });
   });
 

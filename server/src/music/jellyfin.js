@@ -11,19 +11,18 @@ import logger from '../logger.js';
 // playlists themselves are managed in Jellyfin.
 //
 // Each by a short name used in the addresses:
-// - 'bodorgo-fm': the club radio - everyone logged in (the header player);
-// - 'buli': party music - members (and admins) only;
-// - 'hatter': quiet music behind a conversation - members (and admins)
-//   only. Most of its songs are tagged in Jellyfin with a collection's name
+// Every one of them is for everyone logged in - guests too.
+// - 'bodorgo-fm': the club radio (the header player);
+// - 'buli': party music;
+// - 'hatter': quiet music behind a conversation. Most of its songs are tagged in Jellyfin with a collection's name
 //   for an artist and "Artist - Title (Official Video)" for a title:
 //   `collections` names those, and the artist is read out of the title
 //   (titleAndArtist).
 export const PLAYLISTS = {
-  'bodorgo-fm': { id: () => config.jellyfin.playlistId, membersOnly: false },
-  buli: { id: () => config.jellyfin.buliPlaylistId, membersOnly: true },
+  'bodorgo-fm': { id: () => config.jellyfin.playlistId },
+  buli: { id: () => config.jellyfin.buliPlaylistId },
   hatter: {
     id: () => config.jellyfin.hatterPlaylistId,
-    membersOnly: true,
     collections: ['Házigazda kedvencei'],
   },
 };

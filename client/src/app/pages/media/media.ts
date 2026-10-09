@@ -6,9 +6,10 @@ import { filter, map, startWith } from 'rxjs';
 import { MediaService, newCount } from '../../services/media';
 import { AuthService } from '../../auth/auth.service';
 
-// Outer shell for media/* - the club's videos (and later event photos)
-// that don't belong to one tour. Same sidebar layout as the Klub shell,
-// with the video categories as an indented sub-menu under Videók.
+// Outer shell for media/* - the club's videos and photos that don't belong
+// to one tour (the members'), and Zene (everyone's who is logged in). Same
+// sidebar layout as the Klub shell, with the video categories as an
+// indented sub-menu under Videók.
 @Component({
   selector: 'app-media',
   imports: [RouterLink, RouterLinkActive, RouterOutlet, MatIconModule],
@@ -21,6 +22,11 @@ export class Media implements OnInit {
   private router = inject(Router);
   // "Új média felfedezése" - the button at the bottom of the sidebar.
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
+  // Videók and Fotók are the members' - a guest has Zene alone here.
+  isMember = computed(() => {
+    const role = this.auth.user()?.role;
+    return role === 'admin' || role === 'member';
+  });
   // Admins: how many of a category's photos or videos carry "Új".
   newCount = newCount;
 
@@ -61,8 +67,11 @@ export class Media implements OnInit {
   }
 
   ngOnInit() {
-    this.media.loadVideos();
-    this.media.loadPhotos();
+    // A guest has neither (the server wouldn't give them).
+    if (this.isMember()) {
+      this.media.loadVideos();
+      this.media.loadPhotos();
+    }
     if (this.isAdmin()) this.media.resumeDiscovery();
   }
 }

@@ -144,7 +144,7 @@ const tourId = path('id', 'The tour id.');
 const tourIdT = path('tourId', 'The tour id.');
 const musicKey = path(
   'key',
-  '`bodorgo-fm` (everyone), `buli` or `hatter` (members only - the party list and Duruzsoló, the quiet one).',
+  '`bodorgo-fm`, `buli` (the party list) or `hatter` (Duruzsoló, the quiet one) - each for everyone logged in, guests too.',
 );
 const chatRoomIdP = path('chatRoomId', 'The chat room id (the general one, or a tour’s).');
 // ?w= on a photo: a smaller version for the viewer (photos/imageSizes.js).
@@ -1023,7 +1023,7 @@ const tags = [
   [T.media, "Média → Videók and Fotók - the club's own videos and photo folders on the NAS."],
   [
     T.music,
-    'The music: Jellyfin playlists (Bódorgó FM for everyone, Buli rádió and Duruzsoló for members), streamed through this server - the Jellyfin key never reaches the browser.',
+    'The music: Jellyfin playlists (Bódorgó FM, Buli rádió and Duruzsoló - for everyone logged in, guests too), streamed through this server - the Jellyfin key never reaches the browser.',
   ],
   [
     T.songs,
@@ -3208,7 +3208,7 @@ const paths = {
       tag: T.music,
       summary: 'A music playlist',
       description:
-        'The Jellyfin playlist’s tracks, in order. `bodorgo-fm`: everyone logged in; `buli` and `hatter`: members and admins (403 for guests). `hatter`: where Jellyfin has a collection’s name for the artist, the artist and the title are read out of the song’s name ("Artist - Title (Official Video)"). Loaded at server start and answered from memory from then on - reloaded only by an admin (`POST .../refresh`) or a server restart, never by the clock (browsers may keep it 30 minutes). 503 if not set up (JELLYFIN_* settings), 502 if Jellyfin can’t be reached on the very first load.',
+        'The Jellyfin playlist’s tracks, in order. Every playlist is for everyone logged in, guests too. `hatter`: where Jellyfin has a collection’s name for the artist, the artist and the title are read out of the song’s name ("Artist - Title (Official Video)"). Loaded at server start and answered from memory from then on - reloaded only by an admin (`POST .../refresh`) or a server restart, never by the clock (browsers may keep it 30 minutes). 503 if not set up (JELLYFIN_* settings), 502 if Jellyfin can’t be reached on the very first load.',
       params: [musicKey],
       data: obj({
         tracks: arrayOf(

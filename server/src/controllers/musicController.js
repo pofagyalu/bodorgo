@@ -13,13 +13,10 @@ import {
 // pictures, by the playlist's name (/music/bodorgo-fm/..., /music/buli/...).
 // Jellyfin and its key stay on the server.
 
-// Every /music/:key route: the playlist must exist and be set up, and a
-// members-only one (Buli) isn't for guests.
+// Every /music/:key route: the playlist must exist and be set up. Each of
+// them is for everyone logged in (musicRoutes.js) - guests too.
 export const playlistAccess = (req, res, next) => {
-  const playlist = playlistByKey(req.params.key);
-  if (playlist.membersOnly && req.user.role === 'guest') {
-    throw new AppError('Ez a lejátszási lista csak klubtagoknak szól.', 403);
-  }
+  playlistByKey(req.params.key);
   next();
 };
 

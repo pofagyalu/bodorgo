@@ -81,13 +81,12 @@ export class SongService {
   private apiUrl = `${environment.apiBaseUrl}/songs`;
   private auth = inject(AuthService);
 
-  // Where the songbook is: for members inside Média → Zene (with Média's
-  // side menu around it); for guests, who have no Média, the page of its
-  // own. Every link to the list, a song or the editor starts from here.
-  readonly base = computed(() => {
-    const role = this.auth.user()?.role;
-    return role === 'admin' || role === 'member' ? '/media/zene/daloskonyv' : '/daloskonyv';
-  });
+  // Where the songbook is: inside Média → Zene (with Média's side menu
+  // around it) for everyone logged in - guests too. Every link to the
+  // list, a song or the editor starts from here.
+  readonly base = computed(() =>
+    this.auth.isLoggedIn() ? '/media/zene/daloskonyv' : '/daloskonyv',
+  );
 
   // Whose chord diagrams the songbook shows - chosen on its main page,
   // remembered on this device.

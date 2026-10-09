@@ -1,6 +1,6 @@
 import { Routes, UrlMatcher, UrlSegment } from '@angular/router';
 import { Home } from './pages/home/home';
-import { memberGuard } from './auth/member.guard';
+import { mediaMemberGuard, memberGuard } from './auth/member.guard';
 import { adminGuard } from './auth/admin.guard';
 import { authGuard } from './auth/auth.guard';
 import { mokaGuard } from './auth/moka.guard';
@@ -100,20 +100,23 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
-    // The club's videos (and later event photos) that don't belong to one
-    // tour - members only, the whole section.
+    // The club's videos and photos that don't belong to one tour - the
+    // members' (a guest is taken to Zene) - and Zene: the playlists and the
+    // songbook, for everyone logged in.
     path: 'media',
-    canActivate: [memberGuard],
+    canActivate: [authGuard],
     loadComponent: () => import('./pages/media/media').then((m) => m.Media),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'videok' },
       {
         matcher: withCategory('videok'),
+        canActivate: [mediaMemberGuard],
         title: 'Média – Videók',
         loadComponent: () => import('./pages/media/videos/videos').then((m) => m.Videos),
       },
       {
         matcher: withCategory('fotok'),
+        canActivate: [mediaMemberGuard],
         title: 'Média – Fotók',
         loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
       },
@@ -179,43 +182,10 @@ export const routes: Routes = [
       },
     ],
   },
-  // The guests' editor - like the members' one inside Média: before the
-  // songbook's own page, so "uj" isn't taken for a song's slug.
-  {
-    path: 'daloskonyv/uj',
-    title: 'Daloskönyv – Új dal',
-    canActivate: [songEditGuard],
-    loadComponent: () => import('./pages/daloskonyv/song-edit/song-edit').then((m) => m.SongEdit),
-  },
-  {
-    path: 'daloskonyv/:slug/szerkesztes',
-    title: 'Daloskönyv – Szerkesztés',
-    canActivate: [songEditGuard],
-    loadComponent: () => import('./pages/daloskonyv/song-edit/song-edit').then((m) => m.SongEdit),
-  },
-  {
-    // Daloskönyv: the club's songbook on a page of its own - the guests'
-    // way in (Klub's menu), since they have no Média. Members have the same
-    // pages inside Média → Zene (media/zene/daloskonyv);
-    // services/song.ts's base says which one the links use.
-    // The open song is the child, beside the list on a wide screen.
-    path: 'daloskonyv',
-    title: 'Bódorgó daloskönyv',
-    canActivate: [authGuard],
-    loadComponent: () => import('./pages/daloskonyv/daloskonyv').then((m) => m.Daloskonyv),
-    children: [
-      {
-        path: 'melleklet/:annex',
-        title: 'Bódorgó daloskönyv',
-        loadComponent: () => import('./pages/daloskonyv/annex/annex').then((m) => m.AnnexPage),
-      },
-      {
-        path: ':slug',
-        title: 'Bódorgó daloskönyv',
-        loadComponent: () => import('./pages/daloskonyv/song/song').then((m) => m.SongPage),
-      },
-    ],
-  },
+  // The songbook's address from when guests had it on a page of its own
+  // (they had no Média): now inside Média → Zene for everyone - the old
+  // links (a song's, the editor's) lead to the same page there.
+  { path: 'daloskonyv', redirectTo: 'media/zene/daloskonyv' },
   {
     // Móka: the games - Darts, Futókörök (the running race) and Kvíz (the
     // server's side: src/jatekok, src/futokor).

@@ -45,7 +45,6 @@ describe('Klub', () => {
     logIn({ role: 'member' });
     fixture.detectChanges();
     expect(page.isMember()).toBe(true);
-    expect(page.songbook()).toBe('/media/zene/daloskonyv');
 
     logIn({ role: 'admin' });
     expect(page.isAdmin()).toBe(true);
