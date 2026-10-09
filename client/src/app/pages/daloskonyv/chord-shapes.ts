@@ -11,7 +11,17 @@ export interface ChordShape {
   frets: number[];
   // One finger laid across several strings.
   barre: { fret: number; from: number; to: number } | null;
+  // Only on a shape the song itself gives ({define} - see parseDefine):
+  // which finger holds each string ('' where none is said), written in the
+  // dots.
+  fingers?: string[];
+  // And the fret its picture starts at - otherwise the diagram finds that
+  // for itself.
+  base?: number;
 }
+
+// How many strings each has - what tells whose a {define} is.
+const STRINGS: Record<Instrument, number> = { guitar: 6, ukulele: 4 };
 
 // The kinds of chord there are shapes for; anything else falls back to
 // the nearest plainer one (see quality()).
@@ -253,6 +263,109 @@ export function chordShape(
   }
   if (best && chord.bass !== null && instrument === 'guitar') return withBass(best, chord.bass);
   return best;
+}
+
+// --- A song's own shapes: ChordPro's {define} ---
+//
+//   {define: D7 base-fret 3 frets x 3 2 3 1 x fingers 0 3 2 4 1 0}
+//
+// The chord's name as it stands in the song's [brackets], then:
+// - base-fret: the fret the picture starts at (1 where it isn't given);
+// - frets: one per string from the lowest-sounding - 0 open, x (or N, -1)
+//   not played, else the fret counted from the base-fret (1 is the
+//   base-fret itself). Six of them are the guitar's, four the ukulele's;
+// - fingers (may be left out): which finger holds each string - 1-9 or
+//   A-Z; anything else (0, -) says none.
+// ChordPro's other words (copy, display, format, diagram, keys) are read
+// past.
+
+export interface ChordDefine {
+  name: string;
+  shape: ChordShape;
+}
+
+const DEFINE_WORDS = new Set([
+  'base-fret',
+  'frets',
+  'fingers',
+  'keys',
+  'copy',
+  'copyall',
+  'display',
+  'format',
+  'diagram',
+]);
+
+// One finger across several strings: the same finger on more than one
+// string of the same fret, with nothing lower between them. The one
+// nearest the nut where there are two.
+function fingerBarre(frets: number[], fingers: string[]): ChordShape['barre'] {
+  let barre: ChordShape['barre'] = null;
+  for (const finger of new Set(fingers.filter(Boolean))) {
+    const at = fingers.flatMap((f, i) => (f === finger ? [i] : []));
+    const fret = frets[at[0]];
+    const [from, to] = [at[0], at[at.length - 1]];
+    if (at.length < 2 || at.some((i) => frets[i] !== fret)) continue;
+    if (frets.slice(from, to + 1).some((f) => f < fret)) continue;
+    if (!barre || fret < barre.fret) barre = { fret, from, to };
+  }
+  return barre;
+}
+
+// What stands after "define:" → the chord's name and its shape. null for
+// what can't be read: no name, or not four or six frets.
+export function parseDefine(value: string): ChordDefine | null {
+  const [name, ...words] = value.trim().split(/\s+/);
+  const parts: Record<string, string[]> = {};
+  let part: string[] | null = null;
+  for (const word of words) {
+    if (DEFINE_WORDS.has(word.toLowerCase())) part = parts[word.toLowerCase()] = [];
+    else part?.push(word);
+  }
+  const given = parts['frets'] ?? [];
+  if (!name || !Object.values(STRINGS).includes(given.length)) return null;
+  if (!given.every((f) => /^(x|n|-1|\d+)$/i.test(f))) return null;
+
+  const base = Math.max(1, Number.parseInt(parts['base-fret']?.[0] ?? '', 10) || 1);
+  const frets = given.map((f) => (/^\d+$/.test(f) ? (Number(f) ? Number(f) + base - 1 : 0) : -1));
+  const said = parts['fingers'] ?? [];
+  // A finger only where a string is held down.
+  const fingers = frets.map((f, i) => (f > 0 && /^[1-9A-Z]$/.test(said[i] ?? '') ? said[i] : ''));
+  const shape: ChordShape = { frets, barre: null, base };
+  if (fingers.some(Boolean)) {
+    shape.fingers = fingers;
+    shape.barre = fingerBarre(frets, fingers);
+  }
+  return { name, shape };
+}
+
+// How a song's chords are held: the way the song itself says for a chord
+// it defines for this instrument (the last one, where a name is defined
+// twice), the songbook's own way for every other.
+export function shapeFinder(
+  defines: ChordDefine[],
+  instrument: Instrument,
+  notation: Notation = NOTATION,
+): (name: string) => ChordShape | null {
+  const own = new Map<string, ChordShape>();
+  for (const { name, shape } of defines) {
+    if (shape.frets.length === STRINGS[instrument]) own.set(name, shape);
+  }
+  return (name) =>
+    parseChord(name, notation) ? (own.get(name) ?? chordShape(name, instrument, notation)) : null;
+}
+
+// A {define} line to start from, for the editor: the chord as the songbook
+// holds it, to be changed into the way it is meant - and a 0 for every
+// finger, to be written over.
+export function defineLine(name: string, instrument: Instrument): string {
+  const frets =
+    chordShape(name, instrument)?.frets ?? Array.from({ length: STRINGS[instrument] }, () => -1);
+  const held = frets.filter((f) => f > 0);
+  const base = Math.max(0, ...held) <= 4 ? 1 : Math.min(...held);
+  const said = frets.map((f) => (f < 0 ? 'x' : f === 0 ? 0 : f - base + 1));
+  const fingers = frets.map(() => 0);
+  return `{define: ${name} base-fret ${base} frets ${said.join(' ')} fingers ${fingers.join(' ')}}`;
 }
 
 // The song's chords, each once, in the order they first come.

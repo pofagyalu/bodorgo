@@ -724,6 +724,7 @@ The server proxies Jellyfin, so its key never reaches the browser. The playlists
 
 - Songs are stored as **ChordPro** text. Notation is Hungarian (H = B, B = B♭), minors in lower case.
 - The parsing, chord, chord-shape and key logic is written once, in the client (TypeScript), and compiled for the server's PDF by `server/scripts/buildSongText.mjs` into `server/src/songs/songText.js` (generated, committed). **Change the client files, then rerun the script.**
+- A line `{define: D7 base-fret 3 frets x 3 2 3 1 x fingers 0 3 2 4 1 0}` (ChordPro's own) gives that chord its own shape in the song - on the song page and in both PDFs. Six frets are a guitar shape, four a ukulele one; `fingers` is optional and is drawn into the dots. A transposed song falls back to the songbook's shapes.
 - A line `{screen}` means: from here to the end of the song the chords are for the screen only and stay out of both PDFs; `{print}` switches them back on.
 - A song's key is worked out from its chords; the editor's Hangnem field overrides it until the chords next change.
 - "Played" ticks, letter size and scroll pace are remembered per device.

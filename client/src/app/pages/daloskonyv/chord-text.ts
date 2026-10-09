@@ -59,6 +59,36 @@ export function insertChord(text: string, start: number, end: number): TextEdit 
   };
 }
 
+const isDefine = (line: string | undefined) =>
+  line !== undefined && /^\{\s*define\s*:/i.test(line.trim());
+
+// A chord's own shape for this song ({define} - chord-shapes.ts): a line
+// for the chord the cursor stands in, at the song's top - under the ones
+// already there, an empty line after the first. `line` writes it for the
+// chord's name (the songbook's shape, to start from). Its frets are left
+// selected: what is typed next changes them. Without a chord under the
+// cursor the line is for a C, and its name is selected.
+export function insertDefine(
+  text: string,
+  cursor: number,
+  line: (name: string) => string,
+): TextEdit {
+  const at = chordAt(text, cursor);
+  const name = at ? text.slice(at.from + 1, at.to - 1).trim() : '';
+  const added = line(name || 'C');
+  const lines = text.split('\n');
+  let row = 0;
+  while (isDefine(lines[row])) row += 1;
+  const alone = row === 0 && lines[0]?.trim();
+  lines.splice(row, 0, ...(alone ? [added, ''] : [added]));
+
+  const start = lines.slice(0, row).reduce((sum, l) => sum + l.length + 1, 0);
+  const [from, to] = name
+    ? [added.indexOf(' frets ') + 7, added.indexOf(' fingers ')]
+    : [added.indexOf(':') + 2, added.indexOf(' base-fret ')];
+  return { text: lines.join('\n'), start: start + from, end: start + to };
+}
+
 // The selected lines (or the cursor's line) marked as the chorus.
 export function wrapChorus(text: string, start: number, end: number): TextEdit {
   const from = text.lastIndexOf('\n', start - 1) + 1;

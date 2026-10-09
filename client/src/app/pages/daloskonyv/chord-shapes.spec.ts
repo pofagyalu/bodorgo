@@ -1,4 +1,4 @@
-import { chordShape, uniqueChords } from './chord-shapes';
+import { chordShape, defineLine, parseDefine, shapeFinder, uniqueChords } from './chord-shapes';
 
 const frets = (name: string, instrument: 'guitar' | 'ukulele') =>
   chordShape(name, instrument, 'hungarian')
@@ -132,5 +132,105 @@ describe('uniqueChords', () => {
       'em',
       'C',
     ]);
+  });
+});
+
+describe('parseDefine', () => {
+  it('reads the frets from the base-fret on', () => {
+    expect(parseDefine('C7 base-fret 1 frets x 3 2 3 1 0')).toEqual({
+      name: 'C7',
+      shape: { frets: [-1, 3, 2, 3, 1, 0], barre: null, base: 1 },
+    });
+    expect(parseDefine('D7 base-fret 3 frets x 3 2 3 1 x')?.shape).toEqual({
+      frets: [-1, 5, 4, 5, 3, -1],
+      barre: null,
+      base: 3,
+    });
+    // No base-fret: from the nut. N and -1 are strings not played too.
+    expect(parseDefine('G frets 3 2 0 0 N -1')?.shape).toEqual({
+      frets: [3, 2, 0, 0, -1, -1],
+      barre: null,
+      base: 1,
+    });
+  });
+
+  it('keeps the fingers of the held strings, and joins one finger’s into a bar', () => {
+    const shape = parseDefine('B base-fret 1 frets 1 1 3 3 3 1 fingers 1 1 2 3 4 1')?.shape;
+    expect(shape?.fingers).toEqual(['1', '1', '2', '3', '4', '1']);
+    expect(shape?.barre).toEqual({ fret: 1, from: 0, to: 5 });
+    // 0 (or anything that is no finger) says none; so does an open string.
+    const g = parseDefine('G frets 3 2 0 0 3 3 fingers 2 1 5 0 - T')?.shape;
+    expect(g?.fingers).toEqual(['2', '1', '', '', '', 'T']);
+    expect(g?.barre).toBeNull();
+    // Fingers all left empty: as if none were given.
+    expect(parseDefine('C frets x 3 2 0 1 0 fingers 0 0 0 0 0 0')?.shape.fingers).toBeUndefined();
+  });
+
+  it('draws no bar over a string held lower', () => {
+    expect(parseDefine('X frets 2 0 2 2 2 2 fingers 1 0 1 1 1 1')?.shape.barre).toBeNull();
+  });
+
+  it('takes four frets for the ukulele, and reads past ChordPro’s other words', () => {
+    expect(parseDefine('C frets 0 0 0 3 fingers 0 0 0 3 display Do')?.shape).toEqual({
+      frets: [0, 0, 0, 3],
+      barre: null,
+      base: 1,
+      fingers: ['', '', '', '3'],
+    });
+  });
+
+  it('has nothing for what cannot be read', () => {
+    expect(parseDefine('')).toBeNull();
+    expect(parseDefine('C7')).toBeNull();
+    expect(parseDefine('C7 frets x 3 2')).toBeNull();
+    expect(parseDefine('C7 frets x 3 2 a 1 0')).toBeNull();
+    expect(parseDefine('C keys 0 4 7')).toBeNull();
+  });
+});
+
+describe('shapeFinder', () => {
+  const defines = [
+    parseDefine('D7 base-fret 3 frets x 3 2 3 1 x')!,
+    parseDefine('C frets 0 0 0 3 fingers 0 0 0 3')!,
+    parseDefine('Intro frets 0 0 0 0 0 0')!,
+  ];
+
+  it('holds a chord the song’s own way on the instrument it is defined for', () => {
+    const guitar = shapeFinder(defines, 'guitar', 'hungarian');
+    expect(guitar('D7')?.frets).toEqual([-1, 5, 4, 5, 3, -1]);
+    // The four-string C is the ukulele's: the guitar keeps its own.
+    expect(guitar('C')?.frets).toEqual([-1, 3, 2, 0, 1, 0]);
+    expect(guitar('am')?.frets).toEqual([-1, 0, 2, 2, 1, 0]);
+
+    const ukulele = shapeFinder(defines, 'ukulele', 'hungarian');
+    expect(ukulele('C')?.fingers).toEqual(['', '', '', '3']);
+    expect(ukulele('D7')?.frets).toEqual([2, 2, 2, 3]);
+  });
+
+  it('has nothing for what is not a chord, defined or not', () => {
+    expect(shapeFinder(defines, 'guitar', 'hungarian')('Intro')).toBeNull();
+  });
+});
+
+describe('defineLine', () => {
+  it('starts from the songbook’s shape, with a 0 for every finger', () => {
+    expect(defineLine('am', 'guitar')).toBe(
+      '{define: am base-fret 1 frets x 0 2 2 1 0 fingers 0 0 0 0 0 0}',
+    );
+    expect(defineLine('C', 'ukulele')).toBe(
+      '{define: C base-fret 1 frets 0 0 0 3 fingers 0 0 0 0}',
+    );
+    // High up the neck: counted from its lowest fret.
+    expect(defineLine('G#', 'guitar')).toBe(
+      '{define: G# base-fret 4 frets 1 3 3 2 1 1 fingers 0 0 0 0 0 0}',
+    );
+  });
+
+  it('reads back as the shape it was written from', () => {
+    for (const name of ['am', 'F', 'G#', 'cm', 'D/F#']) {
+      expect(parseDefine(defineLine(name, 'guitar').slice(9, -1))?.shape.frets).toEqual(
+        chordShape(name, 'guitar')?.frets,
+      );
+    }
   });
 });

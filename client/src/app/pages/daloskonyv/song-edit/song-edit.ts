@@ -10,12 +10,14 @@ import { SongSheet } from '../song-sheet/song-sheet';
 import {
   TextEdit,
   insertChord,
+  insertDefine,
   nudgeChord,
   toggleRepeat,
   toggleScreenOnly,
   wrapChorus,
   wrapTab,
 } from '../chord-text';
+import { defineLine } from '../chord-shapes';
 import { chordsOverLyrics } from '../paste-chords';
 import { allKeys, chordSignature, detectKey, keyName } from '../song-key';
 import { TEMPO_MAX, TEMPO_MIN, TapTempo, readTempo } from '../tempo';
@@ -154,6 +156,16 @@ export class SongEdit implements OnInit {
   markChorus() {
     const el = this.textarea()?.nativeElement;
     if (el) this.apply(wrapChorus(el.value, el.selectionStart, el.selectionEnd));
+  }
+
+  // The cursor's chord held its own way in this song: a {define} line at
+  // the song's top, with the songbook's shape to change.
+  defineChord() {
+    const el = this.textarea()?.nativeElement;
+    if (!el) return;
+    this.apply(
+      insertDefine(el.value, el.selectionStart, (name) => defineLine(name, this.instrument())),
+    );
   }
 
   // A guitar tab: the selected lines marked as one, or - on an empty line -

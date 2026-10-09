@@ -1,4 +1,11 @@
-import { insertChord, nudgeChord, toggleRepeat, toggleScreenOnly, wrapChorus } from './chord-text';
+import {
+  insertChord,
+  insertDefine,
+  nudgeChord,
+  toggleRepeat,
+  toggleScreenOnly,
+  wrapChorus,
+} from './chord-text';
 
 describe('nudgeChord', () => {
   // "|" marks the cursor.
@@ -144,5 +151,33 @@ describe('toggleRepeat', () => {
 
   it('does nothing on an empty line', () => {
     expect(toggle('egy\n^\nkettő')).toBeNull();
+  });
+});
+
+describe('insertDefine', () => {
+  const line = (name: string) => `{define: ${name} base-fret 1 frets x 0 2 fingers 0 0 0}`;
+  // "|" marks the cursor; the answer has the selection between two.
+  const define = (marked: string) => {
+    const edit = insertDefine(marked.replace('|', ''), marked.indexOf('|'), line);
+    return `${edit.text.slice(0, edit.start)}|${edit.text.slice(edit.start, edit.end)}|${edit.text.slice(edit.end)}`;
+  };
+
+  it('puts the cursor’s chord at the song’s top, its frets selected', () => {
+    expect(define('[C]Egy [a|m]kettő')).toBe(
+      '{define: am base-fret 1 frets |x 0 2| fingers 0 0 0}\n\n[C]Egy [am]kettő',
+    );
+  });
+
+  it('goes under the defines already there', () => {
+    expect(define('{define: C frets 0 0 0 3}\n\n[C]Egy [am|]kettő')).toBe(
+      '{define: C frets 0 0 0 3}\n{define: am base-fret 1 frets |x 0 2| fingers 0 0 0}\n\n[C]Egy [am]kettő',
+    );
+  });
+
+  it('without a chord under the cursor leaves the name to be typed', () => {
+    expect(define('Egy| kettő')).toBe(
+      '{define: |C| base-fret 1 frets x 0 2 fingers 0 0 0}\n\nEgy kettő',
+    );
+    expect(define('|')).toBe('{define: |C| base-fret 1 frets x 0 2 fingers 0 0 0}\n');
   });
 });

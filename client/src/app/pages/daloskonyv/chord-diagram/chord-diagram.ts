@@ -10,7 +10,8 @@ const TOP = 14;
 const MIN_FRETS = 4;
 
 // A chord's diagram: the neck from above - strings down, frets across, a
-// dot where a finger goes, ○ over an open string, × over one not played,
+// dot where a finger goes (with the finger's number in it, where the song
+// says which), ○ over an open string, × over one not played,
 // a bar for a finger across several strings, and the fret's number at the
 // side when the shape sits higher up the neck. As many strings as the
 // shape has: six for the guitar, four for the ukulele.
@@ -30,8 +31,9 @@ export class ChordDiagram {
     if (!shape) return null;
     const held = shape.frets.filter((f) => f > 0);
     const top = Math.max(0, ...held);
-    // From the nut while it fits; otherwise from the lowest held fret.
-    const base = top <= MIN_FRETS ? 1 : Math.min(...held);
+    // From the nut while it fits; otherwise from the lowest held fret -
+    // unless the shape says where itself.
+    const base = shape.base ?? (top <= MIN_FRETS ? 1 : Math.min(...held));
     const rows = Math.max(MIN_FRETS, top - base + 1);
     const strings = shape.frets.length;
     const x = (i: number) => LEFT + i * STRING_GAP;
@@ -53,9 +55,11 @@ export class ChordDiagram {
       stringLines: shape.frets.map((_, i) => x(i)),
       fretLines: Array.from({ length: rows + 1 }, (_, r) => TOP + r * FRET_GAP),
       dots: shape.frets.flatMap((f, i) =>
-        // Under the bar there is no dot of its own.
-        f > 0 && !(barre && f === barre.fret && i >= barre.from && i <= barre.to)
-          ? [{ x: x(i), y: y(f) }]
+        // Under the bar there is no dot of its own - except where the
+        // fingers are told: there every held string has its numbered dot,
+        // and the bar joins the ones of the same finger.
+        f > 0 && (shape.fingers || !(barre && f === barre.fret && i >= barre.from && i <= barre.to))
+          ? [{ x: x(i), y: y(f), finger: shape.fingers?.[i] ?? '' }]
           : [],
       ),
       barre: barre && {
