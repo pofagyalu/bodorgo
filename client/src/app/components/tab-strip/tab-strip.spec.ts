@@ -27,7 +27,7 @@ describe('TabStrip', () => {
     strip = fixture.componentInstance;
     fixture.componentRef.setInput('label', 'Kategória');
     fixture.componentRef.setInput('options', [
-      { value: 'all', label: 'Mind', count: 12 },
+      { value: 'all', label: 'Összes', count: 12 },
       { value: 'a', label: 'Szilveszter', count: 0 },
       { value: 'b', label: 'Farsang' },
     ]);
@@ -39,7 +39,7 @@ describe('TabStrip', () => {
   it('shows every tab, the open one marked, each with its count', () => {
     expect(row.getAttribute('aria-label')).toBe('Kategória');
     expect(tabs().map((t) => t.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'Mind 12',
+      'Összes 12',
       'Szilveszter 0',
       'Farsang',
     ]);
@@ -87,5 +87,24 @@ describe('TabStrip', () => {
     fixture.componentRef.setInput('value', 'b');
     fixture.detectChanges();
     expect(row.scrollTo).toHaveBeenCalledWith({ left: 300, behavior: 'auto' });
+  });
+
+  it('puts the underline under the open tab, sliding there from the second time on', () => {
+    const ink = fixture.nativeElement.querySelector('.ink') as HTMLElement;
+    layOut(300, 300);
+    Object.defineProperties(tabs()[1], { offsetLeft: { value: 80 }, offsetWidth: { value: 120 } });
+    Object.defineProperties(tabs()[2], { offsetLeft: { value: 200 }, offsetWidth: { value: 90 } });
+
+    fixture.componentRef.setInput('value', 'a');
+    fixture.detectChanges();
+    expect(ink.style.transform).toBe('translateX(80px)');
+    expect(ink.style.width).toBe('120px');
+    expect(ink.style.transition).toBe('none');
+
+    fixture.componentRef.setInput('value', 'b');
+    fixture.detectChanges();
+    expect(ink.style.transform).toBe('translateX(200px)');
+    expect(ink.style.width).toBe('90px');
+    expect(ink.style.transition).toBe('');
   });
 });

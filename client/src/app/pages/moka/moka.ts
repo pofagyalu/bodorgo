@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { canSeeFutokor } from '../../auth/futokor.guard';
+import { TabOption, TabStrip } from '../../components/tab-strip/tab-strip';
 
 // A game's own page: a darts game (moka/darts/<id> - not the list, not
 // "uj") or a quiz being played (moka/kviz/jatekok/<id>).
@@ -15,7 +16,7 @@ const isGameUrl = (url: string) => /^\/moka\/(darts\/(?!uj\b)|kviz\/jatekok\/)[^
 // sidebar layout as the Klub and Média shells.
 @Component({
   selector: 'app-moka',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, MatIconModule],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, MatIconModule, TabStrip],
   templateUrl: './moka.html',
   styleUrl: './moka.scss',
 })
@@ -52,6 +53,26 @@ export class Moka {
     { link: 'kviz/jatekok', label: 'Játékszoba', icon: 'meeting_room' },
     { link: 'kviz/szerkeszto', label: 'Alkotóműhely', icon: 'handyman' },
   ];
+
+  // The phone's second row of tabs: the pages of the game one is in - a
+  // tab's value is its page's link. None is open on a page above them
+  // (Futókörök's first one).
+  subTabs = computed<TabOption[]>(() => {
+    const pages = this.inFutokor() ? this.futokorPages() : this.inQuiz() ? this.quizPages : [];
+    return pages.map((p) => ({ value: p.link, label: p.label }));
+  });
+  subTab = computed(() => {
+    const path = this.url().split(/[?#]/)[0];
+    return (
+      this.subTabs().find(
+        (t) => path === `/moka/${t.value}` || path.startsWith(`/moka/${t.value}/`),
+      )?.value ?? ''
+    );
+  });
+
+  openSub(link: string) {
+    void this.router.navigateByUrl(`/moka/${link}`);
+  }
 
   // Futókörök is for whoever futokor.guard.ts lets in (everyone logged
   // in) - and for someone running a race already on their phone.

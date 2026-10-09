@@ -1,6 +1,10 @@
 // The line under the row is the host's (a page that draws its own, like
-// Felhasználók's bar, takes it off).
+// Felhasználók's bar, takes it off). The open tab's colours can be set
+// from outside (--tab-ink the underline, --tab-active its text): Móka has
+// its own orange.
 :host {
+  --tab-ink: #258e79;
+  --tab-active: #205a50;
   display: block;
   position: relative;
   min-width: 0;
@@ -57,9 +61,30 @@ button {
   font-weight: 750;
   white-space: nowrap;
 
+  transition: color 0.25s ease;
+
   &.active {
-    border-bottom-color: #258e79;
-    color: #205a50;
+    color: var(--tab-active);
+  }
+}
+
+// The open tab's underline, in the space of the tabs' own (see-through)
+// bottom border. Where it is and how wide comes from the script; it
+// scrolls with the tabs.
+.ink {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 0.1875rem;
+  background: var(--tab-ink);
+  pointer-events: none;
+  transition:
+    transform 0.3s ease,
+    width 0.3s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 }
 

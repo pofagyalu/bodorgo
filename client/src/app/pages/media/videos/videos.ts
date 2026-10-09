@@ -1,9 +1,18 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  afterRenderEffect,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
+import { fadeIn } from '../../../shared/fade-in';
 import { MediaService, MediaVideo, MediaVideoCategory, newCount } from '../../../services/media';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
@@ -44,9 +53,9 @@ export class Videos {
   });
 
   // A phone's category tabs under the title (a wide screen has the Média
-  // sidebar): "Mind", then the categories, each with its count.
+  // sidebar): "Összes", then the categories, each with its count.
   categoryOptions = computed<TabOption[]>(() => [
-    { value: 'all', label: 'Mind', count: this.totalCount() },
+    { value: 'all', label: 'Összes', count: this.totalCount() },
     ...this.media.categories().map((c) => ({
       value: c.key,
       label: c.title,
@@ -173,7 +182,14 @@ export class Videos {
   private copies = inject(VideoCopiesService);
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
 
+  // The categories' panels: fade in when another category is picked.
+  private groups = viewChild<ElementRef<HTMLElement>>('groups');
+
   constructor() {
+    afterRenderEffect(() => {
+      this.categoryKey();
+      fadeIn(this.groups()?.nativeElement);
+    });
     // Conversions already going are followed from the start.
     if (this.isAdmin()) this.copies.refresh();
   }

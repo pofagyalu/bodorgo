@@ -107,9 +107,9 @@ describe('Members', () => {
     expect(page.clubMembers().map((u) => u._id)).toEqual(['me', 'kid', 'boss']);
     expect(page.casualUsers().map((u) => u._id)).toEqual(['guest']);
     expect(page.tabOptions().map((t) => [t.value, t.count])).toEqual([
+      ['everyone', 4],
       ['club', 3],
       ['casual', 1],
-      ['everyone', 4],
     ]);
     expect(fixture.nativeElement.textContent).toContain('Teszt Kata');
   });

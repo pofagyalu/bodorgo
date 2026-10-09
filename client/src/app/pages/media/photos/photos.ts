@@ -1,9 +1,19 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ElementRef,
+  afterRenderEffect,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
+import { fadeIn } from '../../../shared/fade-in';
 import { PhotoGalleryService } from '../../../shared/photo-gallery';
 import { MediaEdit, MediaEditDialog } from '../../../shared/media-edit-dialog/media-edit-dialog';
 import { MediaPhoto, MediaPhotoCategory, MediaService, newCount } from '../../../services/media';
@@ -31,9 +41,9 @@ export class Photos implements OnInit {
     initialValue: null,
   });
   // A phone's category tabs under the title (a wide screen has the Média
-  // sidebar): "Mind", then the categories, each with its count.
+  // sidebar): "Összes", then the categories, each with its count.
   categoryOptions = computed<TabOption[]>(() => [
-    { value: 'all', label: 'Mind', count: this.totalCount() },
+    { value: 'all', label: 'Összes', count: this.totalCount() },
     ...this.media.photoCategories().map((c) => ({
       value: c.key,
       label: c.title,
@@ -43,6 +53,16 @@ export class Photos implements OnInit {
 
   chooseCategory(key: string) {
     void this.router.navigate(key === 'all' ? ['/media/fotok'] : ['/media/fotok', key]);
+  }
+
+  // The categories' panels: fade in when another category is picked.
+  private groups = viewChild<ElementRef<HTMLElement>>('groups');
+
+  constructor() {
+    afterRenderEffect(() => {
+      this.categoryKey();
+      fadeIn(this.groups()?.nativeElement);
+    });
   }
 
   shownCategories = computed(() => {
