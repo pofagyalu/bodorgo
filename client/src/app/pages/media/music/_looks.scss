@@ -1,0 +1,36 @@
+// The colors of the three playlists' looks - each page, and the song list
+// (track-list) in that page's look.
+
+// Bódorgó FM - a retro radio station, in the colors of the radio photo:
+// warm cream paper, dark brown ink, brass and amber.
+$fm-paper: #f6ecd6;
+$fm-paper-deep: #efdfbd;
+$fm-ink: #4a2f1c;
+$fm-ink-soft: #7a5a3f;
+$fm-brass: #c9a25a;
+$fm-brass-dark: #9c7a3c;
+$fm-amber: #e08a2e;
+$fm-bakelite: #5a3a22;
+$fm-needle: #c8321f;
+$fm-serif: Georgia, 'Times New Roman', serif;
+
+// Buli - a modern streaming-app look: dark, the big green play button.
+$party-bg: #121212;
+$party-surface: #181818;
+$party-hover: #2a2a2a;
+$party-text: #ffffff;
+$party-muted: #b3b3b3;
+$party-green: #1ed760;
+
+// Duruzsoló - an evening by candlelight: a dusk sky (deep blue into plum),
+// amber for everything that glows, cream text, serif headings.
+$lounge-night: #121a30;
+$lounge-dusk: #2b2850;
+$lounge-plum: #5a3558;
+$lounge-panel: rgba(255, 255, 255, 0.06);
+$lounge-line: rgba(243, 233, 216, 0.12);
+$lounge-cream: #f3e9d8;
+$lounge-muted: #a9a8c0;
+$lounge-amber: #f0b860;
+$lounge-amber-light: #f8d28f;
+$lounge-serif: Georgia, 'Times New Roman', serif;

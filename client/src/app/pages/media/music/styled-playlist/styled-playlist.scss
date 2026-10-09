@@ -1,0 +1,734 @@
+@use '../looks' as *;
+
+// Buli and Duruzsoló: one page in two looks. Each part's layout comes first,
+// then what it looks like in each look:
+// - Buli (party): a modern streaming-app look - dark, a gradient header
+//   from the cover's colors, the big green play button.
+// - Duruzsoló (lounge): an evening by candlelight - a dusk sky, amber for
+//   everything that glows, cream text, serif headings; soft, round and slow
+//   - nothing bounces.
+// The look is a class on the page's two top elements; :where() keeps a
+// look's rule no stronger than a shared one, so the narrow-screen rules
+// further down win over both. As wide as the other Média pages.
+$party: ':where(.look--party)';
+$lounge: ':where(.look--lounge)';
+
+:host {
+  display: block;
+  max-width: 1390px;
+  margin: auto;
+  padding: 1.25rem clamp(1.375rem, 4vw, 3.625rem) 4.375rem;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.page {
+  overflow: hidden;
+}
+
+.page#{$party} {
+  border-radius: 1rem;
+  background: $party-bg;
+  color: $party-text;
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.25);
+}
+
+.page#{$lounge} {
+  border-radius: 1.5rem;
+  background: $lounge-night;
+  color: $lounge-cream;
+  box-shadow: 0 0.75rem 2rem rgba(18, 26, 48, 0.3);
+}
+
+// --- The header: the cover, the name, what's in it ---
+
+.hero {
+  display: flex;
+}
+
+// A gradient from the cover's pink/purple into the dark.
+#{$party} .hero {
+  align-items: flex-end;
+  gap: clamp(1rem, 3vw, 1.5rem);
+  padding: clamp(1rem, 2.5vw, 1.375rem) clamp(1.25rem, 3vw, 2rem);
+  background: linear-gradient(180deg, #a3237a 0%, #5b1f8f 55%, $party-bg 100%);
+}
+
+// The evening sky - the buttons at its right end.
+#{$lounge} .hero {
+  position: relative;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 1.75rem);
+  padding: clamp(1.25rem, 3vw, 2rem) clamp(1.25rem, 3vw, 2.25rem);
+  background:
+    radial-gradient(60% 120% at 85% 110%, rgba(240, 184, 96, 0.32), transparent 70%),
+    linear-gradient(160deg, $lounge-night 0%, $lounge-dusk 55%, $lounge-plum 100%);
+}
+
+.cover {
+  width: clamp(6rem, 11vw, 8.5rem);
+  aspect-ratio: 1;
+  flex: none;
+}
+
+#{$party} .cover {
+  border-radius: 0.375rem;
+  box-shadow: 0 0.5rem 2.5rem rgba(0, 0, 0, 0.55);
+}
+
+#{$lounge} .cover {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 0.25rem rgba(243, 233, 216, 0.14),
+    0 0.5rem 2rem rgba(0, 0, 0, 0.45);
+  transition: box-shadow 1.2s ease;
+}
+
+.page--on#{$party} .cover {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0.5rem 2.5rem rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0.5rem 2.5rem rgba(0, 0, 0, 0.55),
+      0 0 2.5rem rgba(255, 46, 147, 0.55);
+  }
+}
+
+// Playing: the cover's candle lights the edge - slowly, like breathing.
+.page--on#{$lounge} .cover {
+  animation: glow 5s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0.25rem rgba(240, 184, 96, 0.25),
+      0 0.5rem 2rem rgba(0, 0, 0, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 0.25rem rgba(240, 184, 96, 0.6),
+      0 0 2.75rem rgba(240, 184, 96, 0.45);
+  }
+}
+
+.hero-text {
+  display: grid;
+  min-width: 0;
+}
+
+#{$party} .hero-text {
+  gap: 0.5rem;
+}
+
+#{$lounge} .hero-text {
+  flex: 1 1 auto;
+  gap: 0.3rem;
+}
+
+.type {
+  font-weight: 700;
+}
+
+#{$party} .type {
+  font-size: 0.75rem;
+}
+
+#{$lounge} .type {
+  font-size: 0.6875rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: $lounge-amber;
+}
+
+.hero-text h1 {
+  margin: 0;
+}
+
+#{$party} .hero-text h1 {
+  font-size: clamp(2.25rem, 5vw, 3.75rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+#{$lounge} .hero-text h1 {
+  font-family: $lounge-serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.05;
+}
+
+#{$lounge} .tagline {
+  margin: 0;
+  font-family: $lounge-serif;
+  font-size: 1.05rem;
+  color: rgba(243, 233, 216, 0.85);
+}
+
+#{$party} .meta {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+
+  strong {
+    color: $party-text;
+  }
+}
+
+#{$lounge} .meta {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: $lounge-muted;
+  font-variant-numeric: tabular-nums;
+}
+
+// --- The action row ---
+
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+#{$party} .actions {
+  gap: 1.25rem;
+  padding: 0.75rem clamp(1.25rem, 3vw, 2rem);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent);
+}
+
+#{$lounge} .actions {
+  flex: none;
+  gap: 0.75rem;
+}
+
+.play-big {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+}
+
+#{$party} .play-big {
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 0;
+  background: $party-green;
+  color: #000;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.1s,
+    background 0.15s;
+
+  mat-icon {
+    width: 2rem;
+    height: 2rem;
+    font-size: 2rem;
+  }
+
+  &:hover:not(:disabled) {
+    transform: scale(1.05);
+    background: #3be477;
+  }
+}
+
+// An amber ring, not a filled disc: it fills when pointed at.
+#{$lounge} .play-big {
+  width: 4rem;
+  height: 4rem;
+  border: 2px solid $lounge-amber;
+  background: rgba(240, 184, 96, 0.12);
+  color: $lounge-amber-light;
+  transition:
+    background 0.4s ease,
+    color 0.4s ease,
+    box-shadow 0.4s ease;
+
+  mat-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 2.25rem;
+  }
+
+  &:hover:not(:disabled) {
+    background: $lounge-amber;
+    color: $lounge-night;
+    box-shadow: 0 0 1.75rem rgba(240, 184, 96, 0.5);
+  }
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+
+  mat-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 1.5rem;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: progress;
+  }
+}
+
+#{$party} .icon-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: $party-muted;
+  transition: color 0.15s;
+
+  &:hover:not(:disabled) {
+    color: $party-text;
+  }
+}
+
+#{$lounge} .icon-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: $lounge-muted;
+  transition:
+    color 0.3s ease,
+    background 0.3s ease;
+
+  &:hover:not(:disabled) {
+    color: $lounge-cream;
+    background: $lounge-panel;
+  }
+}
+
+// Shuffle / repeat when on - Buli: green, with a small dot under it.
+#{$party} .icon-btn--on {
+  position: relative;
+  color: $party-green;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: $party-green;
+  }
+
+  &:hover:not(:disabled) {
+    color: #3be477;
+  }
+}
+
+// Duruzsoló: amber, in a faint amber disc.
+#{$lounge} .icon-btn--on {
+  color: $lounge-amber;
+  background: rgba(240, 184, 96, 0.14);
+
+  &:hover:not(:disabled) {
+    color: $lounge-amber-light;
+    background: rgba(240, 184, 96, 0.22);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// --- Now playing: song | controls + progress | volume ---
+
+.now-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 0.8fr);
+  align-items: center;
+  gap: 1rem;
+}
+
+#{$party} .now-bar {
+  margin: 0 clamp(1.25rem, 3vw, 2rem) 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: $party-surface;
+}
+
+#{$lounge} .now-bar {
+  margin: 1rem clamp(1.25rem, 3vw, 2.25rem) 0.5rem;
+  padding: 0.75rem 1.125rem;
+  border: 1px solid $lounge-line;
+  border-radius: 1.25rem;
+  background: $lounge-panel;
+}
+
+.now-song {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.now-thumb {
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: none;
+  object-fit: cover;
+}
+
+#{$party} .now-thumb {
+  border-radius: 0.25rem;
+}
+
+#{$lounge} .now-thumb {
+  border-radius: 50%;
+}
+
+.now-text {
+  display: grid;
+  min-width: 0;
+
+  strong,
+  span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  span {
+    font-size: 0.78rem;
+  }
+}
+
+#{$party} .now-text {
+  strong {
+    font-size: 0.9rem;
+  }
+
+  span {
+    color: $party-muted;
+  }
+}
+
+#{$lounge} .now-text {
+  strong {
+    font-family: $lounge-serif;
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  span {
+    color: $lounge-muted;
+  }
+}
+
+#{$party} .now-bar--idle .now-text strong {
+  color: $party-muted;
+}
+
+#{$lounge} .now-bar--idle .now-text strong {
+  font-style: italic;
+  color: rgba(243, 233, 216, 0.75);
+}
+
+.now-controls {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.play-small {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+
+  mat-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 1.5rem;
+  }
+}
+
+#{$party} .play-small {
+  width: 2.25rem;
+  height: 2.25rem;
+  background: $party-text;
+  color: #000;
+  transition: transform 0.1s;
+
+  &:hover {
+    transform: scale(1.06);
+  }
+}
+
+#{$lounge} .play-small {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: $lounge-amber;
+  color: $lounge-night;
+  transition: background 0.3s ease;
+
+  &:hover {
+    background: $lounge-amber-light;
+  }
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.time {
+  min-width: 2.5rem;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+#{$party} .time {
+  color: $party-muted;
+}
+
+#{$lounge} .time {
+  color: $lounge-muted;
+}
+
+.now-volume {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+
+  input {
+    width: min(8rem, 100%);
+  }
+}
+
+// The sliders: a thin bar, filled up to where it is (--fill).
+input[type='range'] {
+  --fill: 0%;
+  flex: 1;
+  margin: 0;
+  appearance: none;
+  border-radius: 999px;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    border-radius: 50%;
+  }
+
+  &::-moz-range-thumb {
+    border: 0;
+    border-radius: 50%;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+}
+
+// Buli, the streaming-app slider: filled white (green on hover), the knob
+// only on hover.
+#{$party} input[type='range'] {
+  height: 0.25rem;
+  background: linear-gradient(90deg, $party-text var(--fill), #4d4d4d var(--fill));
+
+  &::-webkit-slider-thumb {
+    width: 0.75rem;
+    height: 0.75rem;
+    background: $party-text;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  &::-moz-range-thumb {
+    width: 0.75rem;
+    height: 0.75rem;
+    background: $party-text;
+  }
+
+  &:hover {
+    background: linear-gradient(90deg, $party-green var(--fill), #4d4d4d var(--fill));
+
+    &::-webkit-slider-thumb {
+      opacity: 1;
+    }
+  }
+}
+
+// Duruzsoló: a thinner line in amber, a small round knob always there.
+#{$lounge} input[type='range'] {
+  height: 0.1875rem;
+  background: linear-gradient(
+    90deg,
+    $lounge-amber var(--fill),
+    rgba(243, 233, 216, 0.2) var(--fill)
+  );
+
+  &::-webkit-slider-thumb {
+    width: 0.8125rem;
+    height: 0.8125rem;
+    background: $lounge-amber-light;
+    box-shadow: 0 0 0.5rem rgba(240, 184, 96, 0.6);
+  }
+
+  &::-moz-range-thumb {
+    width: 0.8125rem;
+    height: 0.8125rem;
+    background: $lounge-amber-light;
+    box-shadow: 0 0 0.5rem rgba(240, 184, 96, 0.6);
+  }
+}
+
+// PC: the page fills the window exactly - it doesn't scroll, the song list
+// (track-list) does, in whatever room is left.
+@media (min-width: 861px) {
+  :host {
+    height: calc(100dvh - var(--header-height));
+    padding-bottom: 1.375rem;
+  }
+
+  .page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+}
+
+// Narrower: the now-playing bar stacks.
+@media (max-width: 860px) {
+  .now-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .now-volume {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 580px) {
+  :host {
+    padding: 0.75rem 0.75rem 3rem;
+  }
+
+  // Buli: the cover above the name.
+  #{$party} .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  // Duruzsoló: the cover and the name side by side, the buttons in a row
+  // under them.
+  #{$lounge} .hero {
+    flex-wrap: wrap;
+  }
+
+  #{$lounge} .cover {
+    width: 5.5rem;
+  }
+
+  #{$lounge} .actions {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page--on .cover {
+    animation: none;
+  }
+}
+
+// Phone (no Média sidebar): Bódorgó FM | Buli rádió | Duruzsoló - shown
+// exactly when the sidebar isn't (media.scss).
+.list-chips {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 580px) and (hover: none) {
+  .list-chips {
+    display: flex;
+  }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 0.875rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+
+  mat-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    font-size: 1.125rem;
+  }
+}
+
+#{$party} .chip {
+  border: 1px solid #3a3a3a;
+  background: #1f1f1f;
+  color: #fff;
+
+  &.active {
+    border-color: $party-green;
+    background: $party-green;
+    color: #000;
+  }
+}
+
+#{$lounge} .chip {
+  border: 1px solid #3a3a5c;
+  background: $lounge-dusk;
+  color: $lounge-cream;
+
+  &.active {
+    border-color: $lounge-amber;
+    background: $lounge-amber;
+    color: $lounge-night;
+  }
+}
