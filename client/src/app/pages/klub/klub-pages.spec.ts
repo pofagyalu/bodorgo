@@ -320,25 +320,33 @@ describe('Documents', () => {
     expect(page.previewUrl(DOCS[0])).toBe(`${API}/documents/d1/preview`);
   });
 
-  it("has a tab for each category with documents (a phone's one at a time)", () => {
+  it('has a tab for all the documents, then one for each category with documents', () => {
     open();
     expect(page.categoryTabs()).toEqual([
+      { value: 'all', label: 'Összes', count: 3 },
       { value: 'Alapdokumentumok', label: 'Alapdokumentumok', count: 1 },
       { value: 'Számlák', label: 'Számlák', count: 1 },
       { value: 'Egyéb', label: 'Egyéb', count: 1 },
     ]);
-    expect(page.shownCategory()).toBe('Alapdokumentumok');
+    const others = () =>
+      [...fixture.nativeElement.querySelectorAll('.document-group')].map((g: HTMLElement) =>
+        g.classList.contains('document-group--other'),
+      );
+    const titles = () => fixture.nativeElement.querySelectorAll('.panel-title').length;
+
+    // Összes first: every category, each under its own title.
+    expect(page.shownCategory()).toBe('all');
+    expect(others()).toEqual([false, false, false]);
+    expect(titles()).toBe(3);
 
     page.activeCategory.set('Egyéb');
     fixture.detectChanges();
-    const others = [...fixture.nativeElement.querySelectorAll('.document-group')].map(
-      (g: HTMLElement) => g.classList.contains('document-group--other'),
-    );
-    expect(others).toEqual([true, true, false]);
+    expect(others()).toEqual([true, true, false]);
+    expect(titles()).toBe(0);
 
-    // Its last document gone: back to the first category.
+    // Its last document gone: back to Összes.
     page.documents.set([DOCS[0]]);
-    expect(page.shownCategory()).toBe('Alapdokumentumok');
+    expect(page.shownCategory()).toBe('all');
   });
 
   it('offers the songbook with the chosen chord diagrams', () => {

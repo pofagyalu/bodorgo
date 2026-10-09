@@ -41,6 +41,7 @@ export class TabStrip {
   value = model.required<string>();
 
   private scroller = viewChild.required<ElementRef<HTMLElement>>('scroller');
+  private ink = viewChild.required<ElementRef<HTMLElement>>('ink');
   // Tabs are left off screen on this side.
   moreBefore = signal(false);
   moreAfter = signal(false);
@@ -51,16 +52,22 @@ export class TabStrip {
     afterRenderEffect(() => {
       this.options();
       this.value();
+      this.placeInk(this.shown);
       this.showCurrent();
       this.measure();
     });
 
     // The row getting narrower or wider (a turned phone, a page that was
-    // hidden) changes what fits.
+    // hidden) changes what fits - and where the open tab is.
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
+      // The tabs' widths change once the page's own font is in.
+      document.fonts?.ready.then(() => this.placeInk(false));
       if (typeof ResizeObserver === 'undefined') return;
-      const observer = new ResizeObserver(() => this.measure());
+      const observer = new ResizeObserver(() => {
+        this.measure();
+        this.placeInk(false);
+      });
       observer.observe(this.scroller().nativeElement);
       destroyRef.onDestroy(() => observer.disconnect());
     });
@@ -87,5 +94,21 @@ export class TabStrip {
       behavior: this.shown ? 'smooth' : 'auto',
     });
     this.shown = true;
+  }
+
+  // The underline goes under the open tab, as wide as the tab - travelling
+  // there from where it was, or (the first time, or when only the layout
+  // changed) just put there.
+  private placeInk(slide: boolean) {
+    const row = this.scroller().nativeElement;
+    const tab = row.querySelector<HTMLElement>('[aria-selected="true"]');
+    const ink = this.ink().nativeElement;
+    // No tab is open (a page above them all, like Futókörök's first one):
+    // no underline.
+    if (!tab) ink.style.width = '0';
+    if (!tab || !row.clientWidth) return;
+    ink.style.transition = slide ? '' : 'none';
+    ink.style.transform = `translateX(${tab.offsetLeft}px)`;
+    ink.style.width = `${tab.offsetWidth}px`;
   }
 }

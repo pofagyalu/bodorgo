@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+import { Routes, UrlMatcher, UrlSegment } from '@angular/router';
 import { Home } from './pages/home/home';
 import { memberGuard } from './auth/member.guard';
 import { adminGuard } from './auth/admin.guard';
@@ -6,6 +6,19 @@ import { authGuard } from './auth/auth.guard';
 import { mokaGuard } from './auth/moka.guard';
 import { futokorAdminGuard } from './auth/futokor.guard';
 import { songEditGuard } from './auth/song-edit.guard';
+
+// "videok" and "videok/<category>" as one route, so the page stays the
+// same one while its category is changed (its tabs' underline can slide,
+// the row keeps where it was scrolled) - Angular builds the page anew
+// between two routes.
+function withCategory(base: string): UrlMatcher {
+  return (segments) => {
+    if (!segments.length || segments.length > 2 || segments[0].path !== base) return null;
+    const posParams: Record<string, UrlSegment> = {};
+    if (segments[1]) posParams['category'] = segments[1];
+    return { consumed: segments, posParams };
+  };
+}
 
 // Home stays eager since it's the near-universal first page hit; every
 // other route is lazy so its own code (and whatever heavy libraries it
@@ -95,22 +108,12 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'videok' },
       {
-        path: 'videok',
+        matcher: withCategory('videok'),
         title: 'Média – Videók',
         loadComponent: () => import('./pages/media/videos/videos').then((m) => m.Videos),
       },
       {
-        path: 'videok/:category',
-        title: 'Média – Videók',
-        loadComponent: () => import('./pages/media/videos/videos').then((m) => m.Videos),
-      },
-      {
-        path: 'fotok',
-        title: 'Média – Fotók',
-        loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
-      },
-      {
-        path: 'fotok/:category',
+        matcher: withCategory('fotok'),
         title: 'Média – Fotók',
         loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
       },

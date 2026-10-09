@@ -156,7 +156,8 @@
   min-width: 0;
 }
 
-.moka-mobile-nav {
+.moka-mobile-nav,
+.moka-mobile-sub {
   display: none;
 }
 
@@ -240,19 +241,13 @@
     }
   }
 
-  // Futókörök's or Kvíz's own pages: a second, lighter row under the games' tabs.
+  // Futókörök's or Kvíz's own pages: a second, lighter row under the
+  // games' tabs - the shared tab strip, its open tab in the logo's orange.
   .moka-mobile-sub {
+    display: block;
     background: #fffaf0;
-    padding-block: 0.375rem;
-
-    a {
-      font-size: 0.75rem;
-      padding: 0.4375rem 0.625rem;
-
-      &.active {
-        background: #fff0c9;
-        color: #9a5a05;
-      }
-    }
+    border-bottom-color: #f3e3c4;
+    --tab-ink: var(--logo-orange);
+    --tab-active: #b4500f;
   }
 }

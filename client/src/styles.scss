@@ -334,3 +334,22 @@ h1 {
   line-height: 1.4;
   pointer-events: none;
 }
+
+/* A tab's page (role="tabpanel" under a components/tab-strip) comes in
+   softly when its tab is opened: fading in, without moving. Only opacity,
+   so the browser has nothing to lay out again. */
+[role='tabpanel'] {
+  animation: tab-panel-in 0.25s ease-out;
+}
+
+@keyframes tab-panel-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [role='tabpanel'] {
+    animation: none;
+  }
+}

@@ -66,26 +66,16 @@
         }
         <a routerLink="kviz" routerLinkActive="active">Kvíz</a>
       </nav>
-      <!-- On a phone: Futókörök's own pages as a second row of tabs. -->
-      @if (inFutokor()) {
-        <nav class="moka-mobile-nav moka-mobile-sub" aria-label="Futókörök menü mobilon">
-          @for (item of futokorPages(); track item.link) {
-            <a
-              [routerLink]="item.link"
-              routerLinkActive="active"
-              [routerLinkActiveOptions]="{ exact: item.exact }"
-              >{{ item.label }}</a
-            >
-          }
-        </nav>
-      }
-      <!-- ...and Kvíz's. -->
-      @if (inQuiz()) {
-        <nav class="moka-mobile-nav moka-mobile-sub" aria-label="Kvíz menü mobilon">
-          @for (item of quizPages; track item.link) {
-            <a [routerLink]="item.link" routerLinkActive="active">{{ item.label }}</a>
-          }
-        </nav>
+      <!-- On a phone: Futókörök's or Kvíz's own pages as a second row -
+           the shared tabs (components/tab-strip), in Móka's orange. -->
+      @if (subTabs().length) {
+        <app-tab-strip
+          class="moka-mobile-sub"
+          [label]="inQuiz() ? 'Kvíz menü' : 'Futókörök menü'"
+          [options]="subTabs()"
+          [value]="subTab()"
+          (valueChange)="openSub($event)"
+        />
       }
     }
 

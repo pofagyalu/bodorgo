@@ -141,8 +141,13 @@ button {
   display: none;
 }
 
-// The categories as tabs: a phone's only (below).
+// The tabs (components/tab-strip) pick every category or one of them:
+// the others are hidden.
 .category-tabs {
+  margin-bottom: 1rem;
+}
+
+.document-group--other {
   display: none;
 }
 
@@ -171,18 +176,6 @@ button {
   }
 
   .heading > div {
-    display: none;
-  }
-
-  // One category at a time, picked on the tabs - which say its name and
-  // how many it has, so the panel's own title line is left out.
-  .category-tabs {
-    display: block;
-    margin-bottom: 1rem;
-  }
-
-  .document-group--other,
-  .panel-title {
     display: none;
   }
 

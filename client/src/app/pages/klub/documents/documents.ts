@@ -1,4 +1,13 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  afterRenderEffect,
+  inject,
+  signal,
+  computed,
+  viewChild,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../../auth/auth.service';
 import {
@@ -10,6 +19,10 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { BookDiagrams, SongService } from '../../../services/song';
 import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
+import { fadeIn } from '../../../shared/fade-in';
+
+// The first tab's value: every category (no category is called this).
+const ALL_CATEGORIES = 'all';
 
 @Component({
   selector: 'app-klub-documents',
@@ -47,23 +60,30 @@ export class Documents implements OnInit {
       .filter((g) => g.documents.length > 0 || g.songbook);
   });
 
-  // A phone shows one category at a time, picked on its tabs (a wide
-  // screen all of them, without tabs - documents.scss). The first one until
-  // another is picked, and again if the picked one's last document is gone.
-  activeCategory = signal<string>(DOCUMENT_CATEGORIES[0]);
-  shownCategory = computed(() => {
-    const groups = this.groupedDocuments();
-    return groups.some((g) => g.category === this.activeCategory())
+  // What the tabs pick: every category under each other ("Összes", the
+  // first tab), or one of them. Összes until another is picked, and again
+  // if the picked one's last document is gone.
+  readonly allCategories = ALL_CATEGORIES;
+  activeCategory = signal<string>(ALL_CATEGORIES);
+  shownCategory = computed(() =>
+    this.groupedDocuments().some((g) => g.category === this.activeCategory())
       ? this.activeCategory()
-      : (groups[0]?.category ?? '');
-  });
-  categoryTabs = computed<TabOption[]>(() =>
-    this.groupedDocuments().map((g) => ({
+      : ALL_CATEGORIES,
+  );
+  categoryTabs = computed<TabOption[]>(() => {
+    const tabs = this.groupedDocuments().map((g) => ({
       value: g.category,
       label: g.category,
       count: g.documents.length + (g.songbook ? 1 : 0),
-    })),
-  );
+    }));
+    return [
+      { value: ALL_CATEGORIES, label: 'Összes', count: tabs.reduce((n, t) => n + t.count, 0) },
+      ...tabs,
+    ];
+  });
+
+  // The categories' panels: fade in when another tab is picked.
+  private groups = viewChild<ElementRef<HTMLElement>>('groups');
 
   // The Daloskönyv (pages/daloskonyv) as a PDF - not an uploaded file: the
   // server draws it from the songs as they are now. With whose chord
@@ -98,6 +118,13 @@ export class Documents implements OnInit {
   formFile = signal<File | null>(null);
 
   deletingId = signal<string | null>(null);
+
+  constructor() {
+    afterRenderEffect(() => {
+      this.shownCategory();
+      fadeIn(this.groups()?.nativeElement);
+    });
+  }
 
   ngOnInit() {
     this.loadDocuments();
@@ -176,7 +203,7 @@ export class Documents implements OnInit {
     this.documentService.upload(name, this.formCategory(), year, file).subscribe({
       next: (res) => {
         this.documents.update((docs) => [...docs, res.data.document]);
-        // On a phone: to the tab the new document is on.
+        // To the tab the new document is on.
         this.activeCategory.set(res.data.document.category);
         this.uploading.set(false);
         this.showUpload.set(false);

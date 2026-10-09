@@ -350,9 +350,9 @@ export class Members implements OnInit {
 
   // The tabs (see members.html) - Meghívók only for an admin.
   tabOptions = computed<TabOption[]>(() => [
+    { value: 'everyone', label: 'Mindenki', count: this.users().length },
     { value: 'club', label: 'Klubtagok', count: this.clubMembers().length },
     { value: 'casual', label: 'A többiek', count: this.casualUsers().length },
-    { value: 'everyone', label: 'Mindenki', count: this.users().length },
     ...(this.isAdmin() ? [{ value: 'invites', label: 'Meghívók' }] : []),
   ]);
 
