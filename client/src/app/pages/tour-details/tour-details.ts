@@ -31,6 +31,7 @@ import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { shuffledLogoColors } from '../../shared/logo-colors';
 import { formatDrivingDuration } from '../../shared/format';
+import { FitLine } from '../../shared/fit-line';
 import { CalendarEvent, downloadIcs, googleCalendarUrl } from '../../shared/calendar-event';
 import { TourSchedule } from './tour-schedule/tour-schedule';
 import { TourWeatherOutlook } from './tour-weather-outlook/tour-weather-outlook';
@@ -62,6 +63,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
     VideoSmallCopy,
     TourSignup,
     TourExtras,
+    FitLine,
   ],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
