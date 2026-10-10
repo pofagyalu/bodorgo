@@ -156,6 +156,7 @@
             [value]="chordpro()"
             (input)="chordpro.set($any($event.target).value)"
             (keydown)="onKeydown($event)"
+            (click)="showLineStart()"
             (paste)="onPaste($event)"
           ></textarea>
           <p class="hint">

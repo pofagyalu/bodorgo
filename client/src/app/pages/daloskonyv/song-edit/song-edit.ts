@@ -238,8 +238,23 @@ export class SongEdit implements OnInit {
     );
   }
 
+  // A long line scrolls the box sideways. Back at the line's start (Home,
+  // ←, a click) the browser shows the cursor but leaves the box a little
+  // short of its left edge - the text stays cut off at the margin. So with
+  // the cursor at a line's start the box goes all the way left. After the
+  // browser has moved the cursor itself: on the next frame.
+  showLineStart() {
+    requestAnimationFrame(() => {
+      const el = this.textarea()?.nativeElement;
+      if (!el) return;
+      const at = el.selectionDirection === 'backward' ? el.selectionStart : el.selectionEnd;
+      if (at === 0 || el.value[at - 1] === '\n') el.scrollLeft = 0;
+    });
+  }
+
   // Alt + ← / →: the same from the keyboard.
   onKeydown(event: KeyboardEvent) {
+    this.showLineStart();
     if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
     event.preventDefault();
     this.nudge(event.key === 'ArrowLeft' ? -1 : 1);
