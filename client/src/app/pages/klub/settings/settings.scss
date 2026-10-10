@@ -48,3 +48,26 @@
 .settings-tabs {
   margin: 0 0 1.4rem;
 }
+
+// A phone: no heading - the page starts with its tabs, right under the
+// Klub menu, as every page's tabs on a phone.
+@media (max-width: 580px) {
+  .content {
+    padding: 0 1rem 3rem;
+  }
+
+  .heading {
+    display: none;
+  }
+
+  .settings-tabs {
+    // Stays under the Klub menu while the page scrolls, edge to edge -
+    // nothing of the page shows beside it.
+    position: sticky;
+    top: calc(var(--klub-nav-height) - 1px);
+    z-index: 20;
+    margin: 0 -1rem 1.4rem;
+    padding: 0 1rem;
+    background: #f5f7f5;
+  }
+}

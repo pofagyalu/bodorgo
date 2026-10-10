@@ -208,21 +208,36 @@
 // ...and only on a phone (narrow AND touch - a narrowed desktop window
 // keeps the icon rail) does it give way to tabs above the page.
 @media (max-width: 580px) and (hover: none) {
+  // How tall the games' menu is - where Futókörök's and Kvíz's own row
+  // stays, right under it.
   .moka-shell {
     display: block;
+    --moka-nav-height: 3.375rem;
   }
 
   .moka-sidebar {
     display: none;
   }
 
+  // On the screen all along, while the page scrolls under it (the page
+  // scrolls in the app's own frame, under the header). A pixel higher than
+  // the frame's top, and a pixel taller: scrolling, a phone rounds the menu
+  // and the page under it to different device pixels, and a row of the
+  // page would show above it.
   .moka-mobile-nav {
+    position: sticky;
+    top: -1px;
+    z-index: 25;
     display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: calc(var(--moka-nav-height) + 1px);
+    margin-top: -1px;
     overflow-x: auto;
     background: #fff;
     border-bottom: 1px solid #e4eae7;
     gap: 0.3125rem;
-    padding: 0.5rem 0.625rem;
+    padding: calc(0.5rem + 1px) 0.625rem 0.5rem;
   }
 
   .moka-mobile-nav a {
@@ -244,6 +259,11 @@
   // Futókörök's or Kvíz's own pages: a second, lighter row under the
   // games' tabs - the shared tab strip, its open tab in the logo's orange.
   .moka-mobile-sub {
+    // Stays under the games' menu while the page scrolls, edge to edge -
+    // nothing of the page shows beside it.
+    position: sticky;
+    top: calc(var(--moka-nav-height) - 1px);
+    z-index: 20;
     display: block;
     background: #fffaf0;
     border-bottom-color: #f3e3c4;

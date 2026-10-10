@@ -23,6 +23,7 @@ import { SongSheet } from '../song-sheet/song-sheet';
 import { Instrument } from '../chord-shapes';
 import { NOTATION, firstChord, stepsBetween, transposeChordPro } from '../chords';
 import { keyName, songKey, transposeKey } from '../song-key';
+import { ScreenAwake } from '../screen-awake';
 import { Metronome } from '../tempo';
 
 // The play button's paces, in rem per second at the normal letter size
@@ -422,7 +423,9 @@ export class SongPage implements OnDestroy {
   // which way the page turns.
   private shownIndex = -1;
   private holdUntil = 0;
-  private wakeLock: WakeLockSentinel | null = null;
+  // The screen stays on while a song is open (screen-awake.ts) - and
+  // while it scrolls by itself, however long untouched.
+  private awake = new ScreenAwake(() => this.pace() > 0);
   private resizeObserver = new ResizeObserver(() => this.measure());
 
   private onTouchStart = (e: Event) => {
@@ -436,9 +439,6 @@ export class SongPage implements OnDestroy {
   };
   private onWheel = () => {
     this.holdUntil = performance.now() + HOLD_MS;
-  };
-  private onVisible = () => {
-    if (document.visibilityState === 'visible' && this.pace()) void this.keepAwake();
   };
 
   constructor() {
@@ -566,14 +566,17 @@ export class SongPage implements OnDestroy {
       });
     });
 
-    document.addEventListener('visibilitychange', this.onVisible);
+    effect(() => {
+      if (this.song()) this.awake.start();
+      else this.awake.stop();
+    });
   }
 
   ngOnDestroy() {
     this.stop();
     this.stopMetronome();
     this.resizeObserver.disconnect();
-    document.removeEventListener('visibilitychange', this.onVisible);
+    this.awake.stop();
   }
 
   // What scrolls under the song: on a phone the song's own page, laid over
@@ -830,7 +833,7 @@ export class SongPage implements OnDestroy {
     this.scroller = el;
     const saved = paces[slug];
     this.pace.set(saved >= 1 && saved < PACES.length ? saved : 1);
-    void this.keepAwake();
+    this.awake.renew();
     el.addEventListener('touchstart', this.onTouchStart, { passive: true });
     el.addEventListener('touchend', this.onTouchEnd, { passive: true });
     el.addEventListener('touchcancel', this.onTouchEnd, { passive: true });
@@ -860,8 +863,9 @@ export class SongPage implements OnDestroy {
     el?.removeEventListener('touchend', this.onTouchEnd);
     el?.removeEventListener('touchcancel', this.onTouchEnd);
     el?.removeEventListener('wheel', this.onWheel);
-    void this.wakeLock?.release().catch(() => {});
-    this.wakeLock = null;
+    // Stopped - by hand, or at the song's end: the screen stays on all
+    // the same, for the verses still to play.
+    this.awake.renew();
   }
 
   private step = (now: number) => {
@@ -888,17 +892,4 @@ export class SongPage implements OnDestroy {
     this.lastTime = now;
     this.frame = requestAnimationFrame(this.step);
   };
-
-  // The screen stays on while the song plays (where the browser can).
-  private async keepAwake() {
-    try {
-      this.wakeLock = (await navigator.wakeLock?.request('screen')) ?? null;
-      if (!this.pace()) {
-        void this.wakeLock?.release().catch(() => {});
-        this.wakeLock = null;
-      }
-    } catch {
-      // Not allowed (battery saver...): it scrolls all the same.
-    }
-  }
 }

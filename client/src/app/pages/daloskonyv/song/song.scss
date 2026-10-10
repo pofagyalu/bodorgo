@@ -658,7 +658,11 @@ button {
     z-index: 20010;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 0 7rem;
+    // At the bottom the song's last row (the song before, a random one,
+    // the song after) stands just clear of the round play button - no
+    // further: what is under it would be empty white.
+    padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 0
+      calc(5.25rem + env(safe-area-inset-bottom, 0px));
     background: #fff;
   }
 
@@ -716,6 +720,42 @@ button {
   // lyrics.
   .song-page {
     padding-top: 0;
+    // The last row's three buttons are in the middle, never under the
+    // play button in the corner: it ends on the screen's foot.
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  // The play button as big as the last row's three, and as high: at the
+  // song's end the four stand on one line. The pause button over it, not
+  // beside it - clear of that row.
+  .play-bar {
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+  }
+
+  .play {
+    width: 2.75rem;
+    height: 2.75rem;
+
+    mat-icon {
+      font-size: 1.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  .play-bar--on .arrows mat-icon {
+    font-size: 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .arrows mat-icon + mat-icon {
+    margin-left: -0.95rem;
+  }
+
+  .countdown {
+    font-size: 1.3rem;
   }
 
   .song-bar {
