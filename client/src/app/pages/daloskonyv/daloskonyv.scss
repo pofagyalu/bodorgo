@@ -817,8 +817,10 @@ $line: #e4eae7;
 @media (min-width: 901px) {
   .book--open {
     display: grid;
-    // Wide enough for the six round buttons over the list in one row.
-    grid-template-columns: minmax(0, 1fr) 23rem;
+    // Wide enough for the six round buttons over the list in one row. The
+    // song's play button stands clear of it by the same measure (song.scss).
+    --toc-width: 23rem;
+    grid-template-columns: minmax(0, 1fr) var(--toc-width);
     height: calc(100dvh - var(--header-height));
     overflow: hidden;
 
@@ -946,6 +948,70 @@ $line: #e4eae7;
     .song-list {
       columns: auto;
     }
+  }
+}
+
+// A phone's own bar at the screen's foot (below) - nowhere else.
+.foot-bar {
+  display: none;
+}
+
+// A phone (narrow AND touch - a narrowed desktop window keeps the row after
+// the last song and the floating +): the tuner, the two annexes and "+ Dal"
+// as one bar at the screen's foot, there all along while the songs scroll
+// under it. Four round buttons of one size; the + is the filled one.
+@media (max-width: 580px) and (hover: none) {
+  .foot-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    // Under the panels that drop from the search's row (.toc-top).
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 1.25rem calc(0.6rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid $line;
+    background: #f5f7f5;
+
+    a {
+      display: grid;
+      place-items: center;
+      width: 2.6rem;
+      height: 2.6rem;
+      border: 1px solid $line;
+      border-radius: 50%;
+      background: #fff;
+      color: $teal;
+      // The row's room shared out between them...
+      margin-right: auto;
+    }
+
+    // ...and the + at the row's end, a little further from the three than
+    // they are from each other.
+    a.foot-bar-new {
+      margin: 0 0 0 1.5rem;
+      border-color: $teal;
+      background: $teal;
+      color: #fff;
+    }
+
+    mat-icon {
+      font-size: 1.3rem;
+      width: 1.3rem;
+      height: 1.3rem;
+    }
+  }
+
+  // The bar has them: no row after the last song, no floating +. The list
+  // ends clear of the bar.
+  .toc .annex-row,
+  .toc .new-song-btn {
+    display: none;
+  }
+
+  .book .toc {
+    padding-bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

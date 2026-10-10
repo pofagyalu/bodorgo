@@ -314,6 +314,9 @@ export class Daloskonyv implements OnInit {
     return keyName(song.key || song.detectedKey);
   }
 
+  // All of them, for a phone's bar at the screen's foot.
+  readonly allAnnexes = ANNEXES;
+
   // The pages that aren't songs (the tuner, the two annexes) - in the list
   // before the songs, found by the same search.
   annexes = computed(() => {

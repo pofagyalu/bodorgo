@@ -269,6 +269,26 @@
       </ul>
     }
 
+    <!-- A phone: the tuner, the two annexes and "+ Dal" as one bar at the
+         screen's foot - all of them, whatever is searched for (daloskonyv.scss
+         shows it only there, in place of the row above and the floating +). -->
+    <nav class="foot-bar" aria-label="Hangoló, mellékletek és új dal">
+      @for (annex of allAnnexes; track annex.id) {
+        <a
+          [routerLink]="[base(), 'melleklet', annex.id]"
+          [title]="annex.title + ' – ' + annex.about"
+          [attr.aria-label]="annex.title + ' – ' + annex.about"
+        >
+          <mat-icon>{{ annex.icon }}</mat-icon>
+        </a>
+      }
+      @if (songs() !== null) {
+        <a [routerLink]="[base(), 'uj']" class="foot-bar-new" title="Új dal" aria-label="Új dal">
+          <mat-icon>add</mat-icon>
+        </a>
+      }
+    </nav>
+
     @if (songs() === null) {
       <p class="list-note">Betöltés…</p>
     } @else if (!songs()!.length) {

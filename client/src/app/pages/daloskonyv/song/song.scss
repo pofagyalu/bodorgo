@@ -593,11 +593,13 @@ button {
 }
 
 // On a wide screen the list of the songs stands on the right
-// (daloskonyv.scss, 21rem wide): the play button is in the song's corner,
-// clear of it.
+// (daloskonyv.scss says how wide: --toc-width): the play button is in the
+// song's corner, clear of it - and of the two scrollbars between them (the
+// song pane's own, and the room the page keeps for its own at the
+// window's edge: about a rem each).
 @media (min-width: 901px) {
   .play-bar {
-    right: calc(21rem + 1.5rem);
+    right: calc(var(--toc-width, 23rem) + 3.25rem);
   }
 }
 
