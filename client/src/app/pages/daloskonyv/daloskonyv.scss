@@ -817,8 +817,10 @@ $line: #e4eae7;
 @media (min-width: 901px) {
   .book--open {
     display: grid;
-    // Wide enough for the six round buttons over the list in one row.
-    grid-template-columns: minmax(0, 1fr) 23rem;
+    // Wide enough for the six round buttons over the list in one row. The
+    // song's play button stands clear of it by the same measure (song.scss).
+    --toc-width: 23rem;
+    grid-template-columns: minmax(0, 1fr) var(--toc-width);
     height: calc(100dvh - var(--header-height));
     overflow: hidden;
 
