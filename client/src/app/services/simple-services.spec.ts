@@ -620,10 +620,12 @@ describe('dartLabel', () => {
 });
 
 describe('gameName', () => {
-  it('names an X01 game by its start score and Cricket by its name', () => {
-    expect(gameName({ type: 'x01', options: { startScore: 301, outMode: 'double' } })).toBe('301');
-    expect(gameName({ type: 'cricket', options: { startScore: 0, outMode: 'single' } })).toBe(
-      'Cricket',
-    );
+  it('names an X01 game by its start score, the others by their name', () => {
+    expect(
+      gameName({ type: 'x01', options: { startScore: 301, outMode: 'double', rounds: 8 } }),
+    ).toBe('301');
+    const options = { startScore: 301, outMode: 'single' as const, rounds: 8 };
+    expect(gameName({ type: 'cricket', options })).toBe('Cricket');
+    expect(gameName({ type: 'highscore', options })).toBe('High Score');
   });
 });

@@ -35,6 +35,7 @@ export class DartsHome {
     { label: '201', type: 'x01', startScore: 201 },
     { label: '101', type: 'x01', startScore: 101 },
     { label: 'Cricket', type: 'cricket' },
+    { label: 'High Score', type: 'highscore' },
   ];
   board = signal(this.boards[0]);
 
@@ -62,13 +63,13 @@ export class DartsHome {
 
   // The players as the game stands: by place once there is one, then in
   // throwing order - "🥇 Peti · 🥈 Gabi · Zoli (87)" (what's left in X01,
-  // the points in Cricket).
+  // the points in Cricket and High Score).
   standing(game: DartsGame): string {
     const placed = game.placings.map((idx) => game.players[idx]);
     const rest = game.players.filter((p) => !game.placings.includes(p.idx));
     return [
       ...placed.map((p, i) => `${MEDALS[i] ?? `${i + 1}.`} ${p.name}`),
-      ...rest.map((p) => `${p.name} (${game.type === 'cricket' ? p.points : p.remaining})`),
+      ...rest.map((p) => `${p.name} (${game.type === 'x01' ? p.remaining : p.points})`),
     ].join(' · ');
   }
 }

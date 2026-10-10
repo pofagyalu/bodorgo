@@ -8,8 +8,9 @@ import { canSeeFutokor } from '../../auth/futokor.guard';
 import { TabOption, TabStrip } from '../../components/tab-strip/tab-strip';
 
 // A game's own page: a darts game (moka/darts/<id> - not the list, not
-// "uj") or a quiz being played (moka/kviz/jatekok/<id>).
-const isGameUrl = (url: string) => /^\/moka\/(darts\/(?!uj\b)|kviz\/jatekok\/)[^/?#]+/.test(url);
+// "uj", not "szabalyok") or a quiz being played (moka/kviz/jatekok/<id>).
+const isGameUrl = (url: string) =>
+  /^\/moka\/(darts\/(?!(uj|szabalyok)\b)|kviz\/jatekok\/)[^/?#]+/.test(url);
 
 // Outer shell for moka/* - the games: Darts, Futókörök (the running
 // race), Kvíz. Same
@@ -23,6 +24,10 @@ const isGameUrl = (url: string) => /^\/moka\/(darts\/(?!uj\b)|kviz\/jatekok\/)[^
 export class Moka {
   private router = inject(Router);
   private auth = inject(AuthService);
+
+  // Darts' own pages, under it in the menu (on a phone: a second row of
+  // tabs, after the games themselves).
+  readonly dartsPages = [{ link: 'darts/szabalyok', label: 'Szabályok', icon: 'menu_book' }];
 
   // Futókörök's own pages, under it in the menu (on a phone: a second row
   // of tabs) - the club's cards only for admins.
@@ -44,6 +49,7 @@ export class Moka {
     ),
     { initialValue: this.router.url },
   );
+  inDarts = computed(() => this.url().startsWith('/moka/darts'));
   inFutokor = computed(() => this.url().startsWith('/moka/futokor'));
   inQuiz = computed(() => this.url().startsWith('/moka/kviz'));
 
@@ -58,8 +64,15 @@ export class Moka {
   // The phone's second row of tabs: the pages of the game one is in - a
   // tab's value is its page's link. Futókörök's opening page is the first
   // of its tabs there (on a wide screen the menu's Futókörök itself leads to
-  // it), so one of them is always the open one.
+  // it), so one of them is always the open one - and so is Darts' (its
+  // games: the leaderboards, a new game, one's own games).
   subTabs = computed<TabOption[]>(() => {
+    if (this.inDarts()) {
+      return [
+        { value: 'darts', label: 'Játékok' },
+        ...this.dartsPages.map((p) => ({ value: p.link, label: p.label })),
+      ];
+    }
     if (this.inFutokor()) {
       return [
         { value: 'futokor', label: 'Bemelegítés' },
@@ -67,6 +80,11 @@ export class Moka {
       ];
     }
     return this.inQuiz() ? this.quizPages.map((p) => ({ value: p.link, label: p.label })) : [];
+  });
+  // What the row of tabs is, for a screen reader.
+  subLabel = computed(() => {
+    if (this.inDarts()) return 'Darts menü';
+    return this.inQuiz() ? 'Kvíz menü' : 'Futókörök menü';
   });
   // The open one: the tab whose page the address is, or is under - the
   // deepest such (every page of Futókörök is under its opening page).

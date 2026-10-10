@@ -1,0 +1,123 @@
+:host {
+  display: block;
+  min-height: calc(100dvh - var(--header-height));
+  background:
+    radial-gradient(circle at 100% 0%, #f6b52840, transparent 45%),
+    radial-gradient(circle at 0% 40%, #f0782722, transparent 45%), #fffaf0;
+}
+
+.rules-page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: clamp(0.875rem, 4vw, 2rem) clamp(0.75rem, 4vw, 1.5rem) 3rem;
+  color: #23354a;
+  line-height: 1.55;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--logo-orange);
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+
+  mat-icon {
+    font-size: 1.125rem;
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+h1 {
+  font-family: Marhey, sans-serif;
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  line-height: 1.1;
+  background: linear-gradient(90deg, var(--logo-red), var(--logo-orange), var(--logo-yellow));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  // The gradient is only painted inside the title's own box: room on top
+  // for the accents of capital letters (Ő, Á...), most of it taken back from the margin.
+  padding-top: 0.3em;
+  margin: calc(0.25rem - 0.1em) 0 0.75rem;
+}
+
+.lead {
+  margin: 0 0 1.25rem;
+  font-size: 1.0625rem;
+}
+
+.card {
+  margin-bottom: 0.875rem;
+  padding: 1rem 1.125rem;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 0.375rem 1.25rem #213b4112;
+  animation: rise 0.35s ease-out both;
+
+  @for $i from 1 through 4 {
+    &:nth-of-type(#{$i}) {
+      animation-delay: #{($i - 1) * 0.06}s;
+    }
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.625rem);
+  }
+}
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-family: Marhey, sans-serif;
+  font-size: 1.25rem;
+
+  mat-icon {
+    color: var(--logo-orange);
+  }
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+li + li {
+  margin-top: 0.375rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}
+
+// A desktop has the room: the games side by side.
+@media (min-width: 1000px) {
+  .rules-page {
+    max-width: 72rem;
+    padding-inline: 2rem;
+  }
+
+  // Masonry (shared/masonry): 1px rows and no row gap - the directive
+  // gives each card a row span as tall as the card, with the column gap
+  // under it, so no card has an empty space below.
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1px;
+    column-gap: 0.875rem;
+
+    .card {
+      align-self: start;
+      margin-bottom: 0;
+    }
+  }
+}

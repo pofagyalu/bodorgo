@@ -63,7 +63,7 @@ describe('darts games', () => {
     expect(game).toMatchObject({
       type: 'x01',
       status: 'in_progress',
-      options: { startScore: 301, outMode: 'single', playUntil: 'all' },
+      options: { startScore: 301, outMode: 'single', playUntil: 'all', rounds: 8 },
       createdBy: { name: 'Nagy Zoli' },
       turns: [],
       next: { playerIdx: 0, round: 1, dartsLeft: 3, checkout: null },
@@ -88,6 +88,9 @@ describe('darts games', () => {
       { players: [me], startScore: 501 },
       { players: [me], outMode: 'triple' },
       { players: [me], playUntil: 'never' },
+      { players: [me], type: 'highscore', rounds: 0 },
+      { players: [me], type: 'highscore', rounds: 31 },
+      { players: [me], type: 'highscore', rounds: '5' },
       { players: Array.from({ length: 17 }, (_, i) => ({ guestName: `V${i}` })) },
     ];
     for (const body of bad) {
@@ -346,6 +349,52 @@ describe('darts games', () => {
       request(app).get(`/jatekok/darts/leaderboard${query}`).set(asUser(owner));
     expect((await board('?type=cricket')).body.data.players).toMatchObject([
       { name: 'Nagy Zoli', games: 1, firsts: 1, highestTurn: 9, highestCheckout: 0 },
+    ]);
+    expect((await board('')).body.data.players).toEqual([]);
+  });
+
+  it('plays High Score: the points add up, the most after the rounds wins', async () => {
+    const owner = await createOwner();
+    const res = await start(owner, {
+      type: 'highscore',
+      rounds: 2,
+      players: [{ userId: String(owner._id) }, { guestName: 'Peti' }],
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data.game).toMatchObject({
+      type: 'highscore',
+      options: { rounds: 2 },
+      next: { playerIdx: 0, round: 1, dartsLeft: 3, checkout: null },
+    });
+    const id = res.body.data.game._id;
+
+    // Zoli: 180 and 26. Peti: 60 and (so far) 100.
+    let game = await throwDarts(owner, id, 'T20 T20 T20  20 20 20  20 5 1  BULL BULL');
+    expect(game.players[0]).toMatchObject({ points: 206, position: null });
+    expect(game.players[0].remaining).toBeUndefined();
+    expect(game.players[0].marks).toBeUndefined();
+    expect(game.status).toBe('in_progress');
+    expect(game.next).toMatchObject({ playerIdx: 1, round: 2, dartsLeft: 1 });
+
+    // Peti's last dart takes it: 210 to 206.
+    game = await throwDarts(owner, id, 'BULL');
+    expect(game).toMatchObject({ status: 'finished', next: null, placings: [1, 0] });
+    expect(game.players[0]).toMatchObject({ position: 2, highestTurn: 180, average: 103 });
+
+    // Its own leaderboard - with the 180s, without a way out.
+    const board = (query) =>
+      request(app).get(`/jatekok/darts/leaderboard${query}`).set(asUser(owner));
+    expect((await board('?type=highscore')).body.data.players).toMatchObject([
+      {
+        name: 'Nagy Zoli',
+        games: 1,
+        firsts: 0,
+        seconds: 1,
+        average: 103,
+        highestTurn: 180,
+        highestCheckout: 0,
+        count180: 1,
+      },
     ]);
     expect((await board('')).body.data.players).toEqual([]);
   });

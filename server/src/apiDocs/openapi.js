@@ -454,16 +454,20 @@ const schemas = {
 
   DartsGame: obj({
     _id: id(),
-    type: str('', { enum: ['x01', 'cricket'] }),
+    type: str('', { enum: ['x01', 'cricket', 'highscore'] }),
     ended: bool('The players ended it themselves, before the rules did.'),
     options: obj({
       startScore: int('', { enum: [301, 201, 101] }),
       outMode: str('', { enum: ['single', 'double'] }),
       playUntil: str('', { enum: ['winner', 'top3', 'all'] }),
+      rounds: int('High Score only: how many rounds are played (1-30).'),
     }),
     status: str('', { enum: ['in_progress', 'finished', 'abandoned'] }),
     createdBy: obj({ _id: id(), name: str() }),
     createdAt: date(),
+    updatedAt: date(
+      'When it last changed - the same stamp the `darts-game` socket event carries for that change.',
+    ),
     finishedAt: { type: ['string', 'null'] },
     players: arrayOf(
       obj({
@@ -478,15 +482,16 @@ const schemas = {
             'Cricket only: the hits on 15-20 and 25 (the bull), at most 3 each - three close it.',
         },
         darts: int('Darts thrown.'),
-        points: int('Points scored (busts score nothing).'),
+        points: int('Points scored (busts score nothing) - in High Score this is the score.'),
         average: {
           type: ['number', 'null'],
-          description: 'Per three darts: points in X01, marks in Cricket.',
+          description: 'Per three darts: marks in Cricket, points in the others.',
         },
         highestTurn: int(),
         position: {
           type: ['integer', 'null'],
-          description: 'Once finished - and for everyone once the game is over.',
+          description:
+            'Once finished - and for everyone once the game is over (in High Score nobody has one before that).',
         },
         positionFinal: bool(
           'False while someone still to throw in that round could take the place (same round: fewer darts in the last turn wins).',
@@ -502,7 +507,9 @@ const schemas = {
           playerIdx: int(),
           round: int(),
           throws: arrayOf(ref('DartsThrow')),
-          startScore: int('What the player had left before it.'),
+          startScore: int(
+            'What the player had before it: left in X01, in points in Cricket and High Score.',
+          ),
           points: int(),
           marks: int('Cricket only: the hits that closed or scored.'),
           bust: bool(),
@@ -981,7 +988,7 @@ the user. Files (photos, PDFs, videos, Excel) come as they are; videos support
 
 ## Kotyogó and live updates (Socket.IO)
 
-The chat and the Szobabeosztás board are live over **Socket.IO** on the same origin, with
+The chat, the Szobabeosztás board, the quiz and the darts games are live over **Socket.IO** on the same origin, with
 the same session cookie.
 
 Every message belongs to a **chat room** - the one general room, or a tour's own room
@@ -1002,6 +1009,8 @@ the chat events use. A tour's Szobabeosztás is its own channel (\`join-tour\`).
 | ← client | \`poll-updated\` | a poll in the open chat changed (votes, closed) |
 | ← client | \`rooms-changed\` | the tour's room board changed - reload it |
 | ← client | \`chat-error\` | a message |
+| → server | \`join-darts\` / \`leave-darts\` | \`{ gameId }\` - follow a darts game; only for whoever started it or plays in it (the optional acknowledgement answers \`true\` / \`false\`) |
+| ← client | \`darts-game\` | \`{ gameId, updatedAt }\` - the game changed (a dart, an undo, a correction, its end); fetch it with \`GET /jatekok/darts/games/{id}\` unless its \`updatedAt\` is already this one |
 
 Photos are uploaded over HTTP (\`POST /chat-rooms/{chatRoomId}/images\`) and then announced
 as \`new-post\`.`;
@@ -3723,19 +3732,20 @@ const paths = {
       tag: T.games,
       summary: 'Start a darts game',
       description:
-        'X01 or Cricket on one phone: the game starts at once, the players throw in the order given. The X01 options mean nothing in Cricket. A player is a user (`userId`, each at most once) or just a name (`guestName`, 1-30 characters).',
+        'X01, Cricket or High Score on one phone: the game starts at once, the players throw in the order given. Each game has its own options - the others are ignored. A player is a user (`userId`, each at most once) or just a name (`guestName`, 1-30 characters).',
       body: obj(
         {
           type: str(
-            'Default x01. Cricket (standard scoring): 15-20 and the bull each take three hits to close; hits on a closed number score while someone still playing has it open; whoever has closed everything with the most points has finished.',
-            { enum: ['x01', 'cricket'] },
+            'Default x01. Cricket (standard scoring): 15-20 and the bull each take three hits to close; hits on a closed number score while someone still playing has it open; whoever has closed everything with the most points has finished. High Score (also known as Count Up): every dart adds to the score, no bust and no way out; after `rounds` rounds the most points wins - among equals the better best turn, then the throwing order.',
+            { enum: ['x01', 'cricket', 'highscore'] },
           ),
-          startScore: int('Default 301.', { enum: [301, 201, 101] }),
-          outMode: str('Default single: any dart may finish; double: only a double.', {
+          startScore: int('X01 only. Default 301.', { enum: [301, 201, 101] }),
+          rounds: int('High Score only: how many rounds are played, 1-30. Default 8.'),
+          outMode: str('X01 only. Default single: any dart may finish; double: only a double.', {
             enum: ['single', 'double'],
           }),
           playUntil: str(
-            'Where it stops by itself: at the winner, once three have finished, or (default) when everyone has a place. The round is always played out. The app always uses the default - the players end a game earlier with `/finish`.',
+            'X01 only. Where it stops by itself: at the winner, once three have finished, or (default) when everyone has a place. The round is always played out. The app always uses the default - the players end a game earlier with `/finish`.',
             { enum: ['winner', 'top3', 'all'] },
           ),
           players: arrayOf(obj({ userId: id(), guestName: str() })),
@@ -3752,7 +3762,7 @@ const paths = {
       tag: T.games,
       summary: 'One darts game',
       description:
-        'With every turn, who throws next and the way out if there is one. Only for whoever started it or plays in it - for anyone else there is no such game (404), as on every call below.',
+        'With every turn, who throws next and the way out if there is one. Only for whoever started it or plays in it - for anyone else there is no such game (404), as on every call below. Its people can follow it live: after every stored change the game’s Socket.IO channel gets `darts-game` (join with `join-darts` `{ gameId }` - see the introduction).',
       params: [path('id', 'The game.')],
       data: obj({ game: ref('DartsGame') }),
       errors: [403, 404],
@@ -3765,7 +3775,7 @@ const paths = {
       params: [
         query('type', 'The kind of game - each has its own leaderboard. Default x01.', {
           type: 'string',
-          enum: ['x01', 'cricket'],
+          enum: ['x01', 'cricket', 'highscore'],
         }),
         query('startScore', 'X01 only: just the games from this score.', {
           type: 'integer',
@@ -3786,11 +3796,12 @@ const paths = {
             thirds: int(),
             average: {
               type: ['number', 'null'],
-              description: 'Per three darts, over all games: points in X01, marks in Cricket.',
+              description:
+                'Per three darts, over all games: marks in Cricket, points in the others.',
             },
-            highestTurn: int('The best turn: its points in X01, its marks in Cricket.'),
+            highestTurn: int('The best turn: its marks in Cricket, its points in the others.'),
             highestCheckout: int('X01: the most points in a finishing turn.'),
-            count180: int('X01 only.'),
+            count180: int('X01 and High Score.'),
           }),
         ),
       }),
@@ -3845,7 +3856,7 @@ const paths = {
       tag: T.games,
       summary: 'End a darts game',
       description:
-        'Játék befejezése: the players agree it is over. The game is finished as it stands - whoever had finished keeps their place, the others are ranked by where they are (X01: the least left; Cricket: the most points, then marks). It counts on the leaderboard.',
+        'Játék befejezése: the players agree it is over. The game is finished as it stands - whoever had finished keeps their place, the others are ranked by where they are (X01: the least left; Cricket: the most points, then marks; High Score: the most points, then the best turn). It counts on the leaderboard.',
       params: [path('id', 'The game.')],
       data: obj({ game: ref('DartsGame') }),
       errors: [400, 403, 404],

@@ -213,7 +213,13 @@ export const routes: Routes = [
         title: 'Móka – Darts',
         loadComponent: () => import('./pages/moka/darts/darts-home').then((m) => m.DartsHome),
       },
-      // Before darts/:id, so "uj" isn't taken for a game's id.
+      // Before darts/:id, so "szabalyok" and "uj" aren't taken for a game's id.
+      {
+        path: 'darts/szabalyok',
+        title: 'Darts – Szabályok',
+        loadComponent: () =>
+          import('./pages/moka/darts/darts-rules/darts-rules').then((m) => m.DartsRules),
+      },
       {
         path: 'darts/uj',
         title: 'Darts – Új játék',

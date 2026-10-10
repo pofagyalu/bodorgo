@@ -215,6 +215,19 @@ describe('TourSocketService', () => {
     expect(socket.emit).not.toHaveBeenCalled();
   });
 
+  it('follows one darts game at a time, and leaves only the one it is in', () => {
+    service.joinDarts('d1');
+    service.joinDarts('d2');
+    service.leaveDarts('d1'); // not in it any more
+    service.leaveDarts('d2');
+    expect(socket.emit.mock.calls).toEqual([
+      ['join-darts', { gameId: 'd1' }],
+      ['leave-darts', { gameId: 'd1' }],
+      ['join-darts', { gameId: 'd2' }],
+      ['leave-darts', { gameId: 'd2' }],
+    ]);
+  });
+
   it('subscribes to an event and gives back the unsubscribe', () => {
     const handler = () => {};
     const off = service.on('post-created', handler);

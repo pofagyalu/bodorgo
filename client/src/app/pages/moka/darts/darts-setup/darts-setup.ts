@@ -7,6 +7,7 @@ import { AuthService } from '../../../../auth/auth.service';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import { errorMessage } from '../../../../shared/errors';
 import { DartsOutMode, DartsPerson, DartsService, DartsType } from '../../../../services/darts';
+import { DARTS_RULES } from '../darts-rules/rules';
 
 // Someone in the new game: a user of the app, or a guest who is only named.
 interface Chosen {
@@ -18,32 +19,8 @@ interface Chosen {
 
 const MAX_PLAYERS = 16;
 
-// Each game's rules in short - the "Szabályok" box.
-const RULES: Record<DartsType, { title: string; lines: string[] }> = {
-  x01: {
-    title: '301 (201, 101)',
-    lines: [
-      'Mindenki 301 pontról indul, és a dobott pontokat levonjuk – az nyer, aki először ér pontosan nullára.',
-      'Egy kör három nyíl. A dupla gyűrű kétszer, a tripla háromszor annyit ér; a tábla közepe 25, a legbelső kör (Bull) 50.',
-      'Besokallás: ha többet dobsz, mint amennyi hátravan, a kör nem számít, és onnan folytatod, ahol a kör elején álltál.',
-      'Sima kiszállónál bármelyik mezővel nullázhatsz. Dupla kiszállónál az utolsó nyílnak duplának (vagy Bullnak) kell lennie, és 1 ponton sem állhatsz meg.',
-      'A győztes után a többiek tovább játszanak a 2. és 3. helyért. Aki ugyanabban a körben száll ki, azok közül az a jobb, akinek kevesebb nyíl kellett.',
-    ],
-  },
-  cricket: {
-    title: 'Cricket',
-    lines: [
-      'Csak a 20, 19, 18, 17, 16, 15 és a tábla közepe (Bull) számít.',
-      'Minden számot háromszor kell eltalálni, hogy „lezárd”. A dupla két találat, a tripla három; a Bull külső köre egy, a belső kettő.',
-      'Ha egy számot már lezártál, a további találatok pontot érnek (a szám értékét) – de csak addig, amíg van olyan játékos, aki még nem zárta le.',
-      'Az nyer, aki mindent lezárt, és neki van a legtöbb pontja (vagy ugyanannyi, mint a legjobbnak).',
-      'A győztes után a többiek tovább játszanak a 2. és 3. helyért.',
-    ],
-  },
-};
-
-// Móka → Darts → Új játék: what is played (301 / 201 / 101 or Cricket, how
-// to finish) and by whom, in what order. The game starts when it's created.
+// Móka → Darts → Új játék: what is played (301 / 201 / 101, Cricket or High
+// Score - how to finish, how many rounds) and by whom, in what order. The game starts when it's created.
 @Component({
   selector: 'app-darts-setup',
   imports: [RouterLink, MatIconModule, Avatar, CdkDropList, CdkDrag, CdkDragHandle],
@@ -57,6 +34,8 @@ export class DartsSetup {
   private notifications = inject(NotificationsService);
 
   readonly startScores = [301, 201, 101];
+  // High Score: how many rounds are played.
+  readonly roundChoices = [5, 8, 10, 15, 20];
   readonly outModes: { value: DartsOutMode; label: string; hint: string }[] = [
     { value: 'single', label: 'Sima kiszálló', hint: 'Bármelyik mezővel nullára érhetsz' },
     {
@@ -68,13 +47,15 @@ export class DartsSetup {
   readonly types: { value: DartsType; label: string }[] = [
     { value: 'x01', label: '301 · 201 · 101' },
     { value: 'cricket', label: 'Cricket' },
+    { value: 'highscore', label: 'High Score' },
   ];
 
   type = signal<DartsType>('x01');
   startScore = signal(301);
   outMode = signal<DartsOutMode>('single');
+  rounds = signal(8);
   rulesOpen = signal(false);
-  rules = computed(() => RULES[this.type()]);
+  rules = computed(() => DARTS_RULES[this.type()]);
 
   people = signal<DartsPerson[]>([]);
   chosen = signal<Chosen[]>([]);
@@ -162,6 +143,7 @@ export class DartsSetup {
         type: this.type(),
         startScore: this.startScore(),
         outMode: this.outMode(),
+        ...(this.type() === 'highscore' && { rounds: this.rounds() }),
         players: this.chosen().map((c) =>
           c.userId ? { userId: c.userId } : { guestName: c.name },
         ),

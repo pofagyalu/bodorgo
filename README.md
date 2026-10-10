@@ -96,7 +96,7 @@ Members reach it in Média → Zene (`/media/zene/daloskonyv`); guests, who have
 
 ### Móka — games (`/moka`)
 
-- **Darts** — X01 (301 / 201 / 101) and Cricket, scored on one phone with a keypad; play goes on until everyone is placed; a leaderboard per game type. A game is visible only to its own players.
+- **Darts** — X01 (301 / 201 / 101), Cricket and High Score (the most points after a set number of rounds), scored on one phone with a keypad, followed live by the other players on their own phones; X01 and Cricket go on until everyone is placed; a leaderboard per game type. A game is visible only to its own players.
 - **Kvíz** — Kahoot-style quiz games. Anyone logged in may write a quiz; players join by QR code or code, and the question is on every phone. Six kinds of question: plain, picture uncovered tile by tile, true/false, zoom-out, song (plays on the host's device) and map (drop a pin; points by distance).
 - **Futókörök** — a checkpoint running race. Runners scan QR/NFC cards at the checkpoints with their phone; the app times the laps and shows results, splits and a map. **Still open only to the role manager** (see [13](#13-still-to-do)).
 
@@ -600,7 +600,7 @@ Run it again whenever the copy should be fresh — each day gets its own folder.
    ```
 
 7. **The reverse proxy.** Point the site's address at `WEB_PORT` and the API's address at `API_PORT`, both over HTTPS. Three things matter:
-   - **WebSockets** must be let through to the API (chat and quiz use them).
+   - **WebSockets** must be let through to the API (chat, quiz and darts use them).
    - **The two addresses must be under one domain**, like `example.org` and `api.example.org`. The login cookie is only sent between addresses of the same site.
    - With `NODE_ENV=production` the cookie is HTTPS-only: over plain HTTP nobody stays logged in.
 

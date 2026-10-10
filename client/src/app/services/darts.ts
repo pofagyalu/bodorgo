@@ -5,21 +5,24 @@ import { environment } from '../../environments/environment';
 
 // A dart: segment 1-20 with multiplier 1-3, 25 with 1 (the bull) or 2 (the
 // bullseye, 50), or 0 with 0 - a miss. The rules themselves live on the
-// server (jatekok/darts: x01.js, cricket.js); the app only shows what it
-// answers.
+// server (jatekok/darts: x01.js, cricket.js, highscore.js); the app only
+// shows what it answers.
 export interface DartThrow {
   segment: number;
   multiplier: number;
 }
 
-// The kinds of game: X01 (301 / 201 / 101) and Cricket.
-export type DartsType = 'x01' | 'cricket';
+// The kinds of game: X01 (301 / 201 / 101), Cricket and High Score (the
+// most points after a set number of rounds).
+export type DartsType = 'x01' | 'cricket' | 'highscore';
 export type DartsOutMode = 'single' | 'double';
 
-// X01's options (they mean nothing in Cricket).
+// X01's options, and High Score's rounds (Cricket has none) - each means
+// nothing in the other games.
 export interface DartsOptions {
   startScore: number;
   outMode: DartsOutMode;
+  rounds: number;
 }
 
 // The numbers that count in Cricket, in the order they're shown (25: the bull).
@@ -36,7 +39,7 @@ export interface DartsPlayer {
   marks?: Record<number, number>;
   darts: number;
   points: number;
-  // Per three darts: points in X01, marks in Cricket.
+  // Per three darts: marks in Cricket, points in the others.
   average: number | null;
   highestTurn: number;
   // Once finished - and for everyone once the game is over.
@@ -68,6 +71,8 @@ export interface DartsGame {
   ended: boolean;
   createdBy: { _id: string; name: string };
   createdAt: string;
+  // When it last changed - the live news of a change carries the same.
+  updatedAt: string;
   finishedAt: string | null;
   players: DartsPlayer[];
   placings: number[]; // player idx, best first
@@ -80,6 +85,13 @@ export interface DartsGame {
     dartsLeft: number;
     checkout: DartThrow[] | null; // X01 only
   } | null;
+}
+
+// The news that a game changed, to its people's phones (the 'darts-game'
+// socket event): the game itself is then asked for.
+export interface DartsNews {
+  gameId: string;
+  updatedAt: string;
 }
 
 // Someone to pick as a player.
@@ -99,10 +111,10 @@ export interface DartsLeader {
   firsts: number;
   seconds: number;
   thirds: number;
-  average: number | null; // per three darts: points in X01, marks in Cricket
-  highestTurn: number; // the best turn: points in X01, marks in Cricket
+  average: number | null; // per three darts: marks in Cricket, points in the others
+  highestTurn: number; // the best turn: marks in Cricket, points in the others
   highestCheckout: number; // X01
-  count180: number; // X01
+  count180: number; // X01 and High Score
 }
 
 export interface NewDartsGame extends Partial<DartsOptions> {
@@ -117,9 +129,11 @@ export function dartLabel(t: DartThrow): string {
   return `${['', '', 'D', 'T'][t.multiplier]}${t.segment}`;
 }
 
-// What a game is called: "301", "Cricket".
+// What a game is called: "301", "Cricket", "High Score".
 export function gameName(game: Pick<DartsGame, 'type' | 'options'>): string {
-  return game.type === 'cricket' ? 'Cricket' : String(game.options.startScore);
+  if (game.type === 'cricket') return 'Cricket';
+  if (game.type === 'highscore') return 'High Score';
+  return String(game.options.startScore);
 }
 
 interface GameResponse {

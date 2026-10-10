@@ -77,6 +77,8 @@ export class FakeSocket {
   leaveChat = vi.fn();
   joinQuiz = vi.fn();
   leaveQuiz = vi.fn();
+  joinDarts = vi.fn();
+  leaveDarts = vi.fn();
 
   on(event: string, handler: (payload: unknown) => void) {
     this.handlers.set(event, [...(this.handlers.get(event) ?? []), handler]);
