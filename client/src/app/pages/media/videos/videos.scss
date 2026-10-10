@@ -39,9 +39,18 @@ button {
     display: none;
   }
 
+  // Right under the Média menu, as Móka's second row is under its own -
+  // the page's room above it taken off.
   .category-tabs {
+    // Stays under the Média menu while the page scrolls, edge to edge -
+    // nothing of the page shows beside it.
+    position: sticky;
+    top: calc(var(--media-nav-height) - 1px);
+    z-index: 20;
     display: block;
-    margin-bottom: 1rem;
+    margin: -1.5rem -1rem 1rem;
+    padding: 0 1rem;
+    background: #f5f7f5;
   }
 }
 

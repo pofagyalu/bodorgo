@@ -426,19 +426,24 @@
 
   // Videók, Fotók, Zene: on the screen all along, while the page scrolls
   // under it (the page scrolls in the app's own frame, under the header).
+  // A pixel higher than the frame's top, and a pixel taller: scrolling,
+  // a phone rounds the menu and the page under it to different device
+  // pixels, and a row of the page would show above the menu. Its foot
+  // stays where it was.
   .media-mobile-nav {
     position: sticky;
-    top: 0;
+    top: -1px;
     z-index: 25;
     display: flex;
     align-items: center;
     box-sizing: border-box;
-    height: var(--media-nav-height);
+    height: calc(var(--media-nav-height) + 1px);
+    margin-top: -1px;
     overflow-x: auto;
     background: #fff;
     border-bottom: 1px solid #e4eae7;
     gap: 5px;
-    padding: 8px 10px;
+    padding: 9px 10px 8px;
   }
 
   .mobile-discover {

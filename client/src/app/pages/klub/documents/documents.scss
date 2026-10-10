@@ -165,6 +165,19 @@ button {
     padding: 1.5rem 1rem 3rem;
   }
 
+  // Right under the Klub menu, as every page's tabs on a phone - the
+  // page's room above them taken off.
+  .category-tabs {
+    // Stays under the Klub menu while the page scrolls, edge to edge -
+    // nothing of the page shows beside it.
+    position: sticky;
+    top: calc(var(--klub-nav-height) - 1px);
+    z-index: 20;
+    margin: -1.5rem -1rem 1rem;
+    padding: 0 1rem;
+    background: #f5f7f5;
+  }
+
   .panel {
     padding: 1rem;
   }

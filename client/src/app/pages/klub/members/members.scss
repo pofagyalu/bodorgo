@@ -661,10 +661,20 @@ button {
 
   // The tabs on a line of their own (with their own line under them), the
   // search on the next one.
+  // Right under the Klub menu, as every page's tabs on a phone - the
+  // page's room above them taken off.
+  // The search with them.
   .people-tabs {
+    // Stays under the Klub menu while the page scrolls, edge to edge -
+    // nothing of the page shows beside it.
+    position: sticky;
+    top: calc(var(--klub-nav-height) - 1px);
+    z-index: 20;
     flex-wrap: wrap;
     border-bottom: 0;
-    margin-bottom: 0.5rem;
+    margin: -1.5rem -1rem 0.5rem;
+    padding: 0 1rem;
+    background: #f5f7f5;
   }
 
   .people-tabs app-tab-strip {

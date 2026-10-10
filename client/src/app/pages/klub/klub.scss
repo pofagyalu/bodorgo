@@ -193,21 +193,36 @@
 }
 
 @media (max-width: 580px) {
+  // How tall the menu below is - where a page's own tabs stay, right
+  // under it (Dokumentumok, Beállítások, Felhasználók).
   .klub-shell {
     display: block;
+    --klub-nav-height: 3.375rem;
   }
 
   .klub-sidebar {
     display: none;
   }
 
+  // On the screen all along, while the page scrolls under it (the page
+  // scrolls in the app's own frame, under the header). A pixel higher than
+  // the frame's top, and a pixel taller: scrolling, a phone rounds the menu
+  // and the page under it to different device pixels, and a row of the
+  // page would show above it.
   .klub-mobile-nav {
+    position: sticky;
+    top: -1px;
+    z-index: 25;
     display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: calc(var(--klub-nav-height) + 1px);
+    margin-top: -1px;
     overflow-x: auto;
     background: #fff;
     border-bottom: 1px solid #e4eae7;
     gap: 5px;
-    padding: 8px 10px;
+    padding: 9px 10px 8px;
   }
 
   .klub-mobile-nav a {
