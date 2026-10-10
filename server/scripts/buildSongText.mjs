@@ -17,6 +17,7 @@ await esbuild.build({
     contents: `
       export { parseChordPro, plainLyrics, toBlocks, toWords } from './chordpro';
       export {
+        annotationText,
         chordNamePieces,
         parseChord,
         transposeChordPro,

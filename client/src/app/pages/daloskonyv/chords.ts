@@ -151,6 +151,15 @@ export function firstChord(source: string): string | undefined {
   return bracketed(source)[0];
 }
 
+// ChordPro's annotation: what stands in [brackets] after a star - "[*/]"
+// for the chord before once more, "[*Coda]" - is written over the lyrics
+// like a chord, in the chords' colour and without its star; but it is no
+// chord: it has no shape to show, and the key doesn't move it. Its text -
+// null for what isn't one.
+export function annotationText(name: string): string | null {
+  return name.startsWith('*') ? name.slice(1).trim() : null;
+}
+
 // How many semitones from one chord's root to another's, the short way
 // round (-5…+6) - null if either isn't a chord. From a song's first chord
 // to the one it was first written with: how to see it in its old key.

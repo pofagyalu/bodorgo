@@ -7,6 +7,11 @@
 //   {end_of_chorus}
 //   {comment: 2x}
 //
+// What stands in brackets after a star is an annotation, as in ChordPro:
+// "[*/]" - the chord before once more -, "[*Coda]". Written over the
+// lyrics like a chord, without its star; never moved with the key, and
+// with no shape to show (chords.ts's annotationText).
+//
 // Known directives: title/t, artist, comment/c, start_of_chorus/soc,
 // end_of_chorus/eoc, start_of_verse/sov, end_of_verse/eov, start_of_tab/sot,
 // end_of_tab/eot, define, screen, print. Anything else in {braces} is

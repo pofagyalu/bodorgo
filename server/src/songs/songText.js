@@ -79,6 +79,9 @@ function bracketed(source) {
 function firstChord(source) {
   return bracketed(source)[0];
 }
+function annotationText(name) {
+  return name.startsWith('*') ? name.slice(1).trim() : null;
+}
 
 // ../client/src/app/pages/daloskonyv/chord-shapes.ts
 var STRINGS = { guitar: 6, ukulele: 4 };
@@ -601,7 +604,11 @@ function withoutScreenChords(blocks) {
       if (line.type === 'comment' || !line.screenOnly) return [line];
       if (line.type === 'tab') return [];
       const segments = line.segments
-        .map((s) => (s.chord !== void 0 && parseChord(s.chord) ? { text: s.text } : s))
+        .map((s) =>
+          s.chord !== void 0 && (parseChord(s.chord) || annotationText(s.chord) !== null)
+            ? { text: s.text }
+            : s,
+        )
         .filter((s) => s.chord !== void 0 || s.text);
       const joined = segments.reduce((all, s) => {
         const last = all[all.length - 1];
@@ -620,6 +627,7 @@ export {
   CIRCLE,
   DEGREES,
   NOTATION,
+  annotationText,
   chordNamePieces,
   chordShape,
   chordSignature,

@@ -4,6 +4,7 @@ import { drawCover } from './songBookCover.js';
 import { ANNEXES } from './songBookAnnexes.js';
 import {
   NOTATION,
+  annotationText,
   chordNamePieces,
   keyName,
   parseChord,
@@ -430,7 +431,9 @@ function layoutLine(doc, line, left, m, right = contentRight(doc)) {
     const pieces = word.map((piece) => {
       const textWidth = widthOf(doc, piece.text, 'Body', m.text);
       // A chord never touches the next one, even over a short syllable.
-      const chordWidth = piece.chord ? chordNameWidth(doc, piece.chord, m.chord) + 4 : 0;
+      const chordWidth = piece.chord
+        ? chordNameWidth(doc, shownChord(piece.chord), m.chord) + 4
+        : 0;
       return { ...piece, width: Math.max(textWidth, chordWidth) };
     });
     const width = pieces.reduce((sum, p) => sum + p.width, 0);
@@ -451,6 +454,10 @@ function layoutLine(doc, line, left, m, right = contentRight(doc)) {
   return rows;
 }
 
+// What is written for what stands in [brackets]: an annotation's text
+// without its star, anything else as it is.
+const shownChord = (name) => annotationText(name) ?? name;
+
 // A comment's size beside words of this size.
 const commentSize = (m) => (10 * m.text) / TEXT_SIZE;
 
@@ -467,8 +474,12 @@ function drawRow(doc, row, y, m) {
   for (const piece of row.pieces) {
     if (piece.chord) {
       // In brackets but not a chord ("Intro", "2x"): a quiet label.
-      if (parseChord(piece.chord)) {
-        putChordName(doc, piece.chord, piece.x, y + 1, { size: m.chord, color: CHORD });
+      // An annotation ("[*/]") is written like a chord, without its star.
+      if (parseChord(piece.chord) || annotationText(piece.chord) !== null) {
+        putChordName(doc, shownChord(piece.chord), piece.x, y + 1, {
+          size: m.chord,
+          color: CHORD,
+        });
       } else {
         put(doc, piece.chord, piece.x, y + 1, { font: 'Italic', size: m.chord, color: GREY });
       }

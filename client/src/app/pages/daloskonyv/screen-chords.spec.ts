@@ -97,6 +97,11 @@ describe('withoutScreenChords', () => {
     expect(printed(song)).toEqual([['[Verse 2]', '{halkan}', 'Bent a házban [2x]']]);
   });
 
+  it('takes an annotation out with the chords', () => {
+    const song = ['[C]Kint a [*/]réten', '', '{screen}', '[C]Bent a [*/]házban'].join('\n');
+    expect(printed(song)).toEqual([['[C]Kint a [*/]réten'], ['Bent a házban']]);
+  });
+
   it('leaves out a verse that was nothing but chords', () => {
     const song = ['[C]Kint a réten', '', '{screen}', '[am] [F] [G]', '', 'Vége'].join('\n');
     expect(printed(song)).toEqual([['[C]Kint a réten'], ['Vége']]);
