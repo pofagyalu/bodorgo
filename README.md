@@ -257,6 +257,8 @@ The API's top-level paths: `/auth`, `/tours`, `/users`, `/payments`, `/finance`,
 | `ci/forgejo-runner/` | the CI runner's Docker setup for the NAS |
 | `compose.yaml`, `.env.docker.example`, `server/Dockerfile`, `client/Dockerfile`, `docker/`, `.dockerignore` | running the whole app in Docker (section 8) |
 | `handover/` | not in git: the database copy and files that travel with the app |
+| `docker/HANDOVER.md` | the instructions that go on the handover stick as `READ-ME-FIRST.md` (section 8) |
+| `nas/` | a copy of the NAS's hourly database backup script (section 6) |
 | `server/authentik/` | the two e-mail templates Authentik uses |
 | `server/scripts/` | one-off and helper scripts |
 | `brand/` | logo sources (the fonts are kept locally only: their licence forbids redistributing them) |
@@ -450,7 +452,7 @@ Uploaded files stay on the disk of the machine that received them. **Copying a d
 
 ### Backups
 
-On the NAS, an hourly scheduled task dumps MongoDB (all databases) and the NAS's PostgreSQL (Authentik, Forgejo and others) into `/volume2/backups/bodorgo-db/` — 24 rolling hourly dumps and 60 daily ones. Hyper Backup sends the `docker` and `backups` folders, encrypted, to Backblaze; the whole NAS is also backed up to a USB disk. A restore was tested on 2026-09-27.
+On the NAS, an hourly scheduled task dumps MongoDB (all databases) and the NAS's PostgreSQL (Authentik, Forgejo and others) into `/volume2/backups/bodorgo-db/` — 24 rolling hourly dumps and 60 daily ones. Authentik's database is dumped once more on its own (`authentik-NN.sql.gz`, without owners or grants), so the app's logins can travel without the other databases. The script is `/volume2/backups/scripts/bodorgo-db-backup.sh`; a copy is kept in `nas/bodorgo-db-backup.sh` — after changing the one on the NAS, update the copy. Hyper Backup sends the `docker` and `backups` folders, encrypted, to Backblaze; the whole NAS is also backed up to a USB disk. A restore was tested on 2026-09-27.
 
 ---
 
@@ -549,6 +551,26 @@ The NAS setup in section 7 is how the live site runs today. This section is the 
   - `INITIAL_ADMIN_USER` — until the new role manager is named.
 - [ ] **Authentik**: the client id and secret, and the new addresses added to the provider's Redirect URIs.
 - [ ] **The outside accounts**: Resend (the sender's domain), Stripe (its webhook must point at the new API address), Barion, the DNS records.
+
+### The handover folder (for a USB stick)
+
+One command gathers all of the above except the photos and videos and what the server made from them (`thumbnails/`), from the owner's machine (Docker Desktop running, the NAS shares mapped):
+
+```
+cd server
+node scripts/makeHandover.mjs
+```
+
+It makes `D:\bodorgo-handover\bodorgo-handover-<today>\` (`--out` for another place, `--only db,secrets` for some steps only):
+
+- `source/` — the last commit as a zip, and `main`'s history as a git bundle. Only what is committed.
+- `images/` — `bodorgo-api` and `bodorgo-web` built from that same commit for the live addresses, with `mongo:8.0`, in one `docker save` file. The local try-out's images keep their names.
+- `db/` — a fresh dump of the production database, loaded into a throwaway database to prove it restores.
+- `files/` — the live server's `documents/` and `chat-images/`.
+- `secrets.7z` — the live `.env`, a ready `.env` for `compose.yaml`, the pm2 file, and Authentik's database dump with its stack's two files; encrypted with a password 7-Zip asks for. Keep the password apart from the stick.
+- `READ-ME-FIRST.md` — how to start the app from the folder, made from `docker/HANDOVER.md`; and `CONTENTS.txt` with sizes and checksums.
+
+Run it again whenever the copy should be fresh — each day gets its own folder.
 
 ### Setting it up
 
@@ -786,6 +808,7 @@ Put the JSON files in `scripts/input/`. `example-tour.json`, `example-events.jso
 | Script | What |
 | --- | --- |
 | `refreshDevDb.js` | refreshes the dev database from production |
+| `makeHandover.mjs` | makes the handover folder for a USB stick (see [8](#8-running-it-in-docker-handing-the-app-over)) |
 | `buildSongText.mjs` | recompiles the songbook logic for the server's PDF |
 | `buildQuizMap.mjs` | rebuilds the quiz's bundled map |
 | `matchTourFolders.js`, `syncTourImages.js` | link photo folders to tours, sync one tour's album |
@@ -888,7 +911,8 @@ The Docker setup (section 8) does not contain Authentik, and nobody can log in w
 
 ### Handing over: the rest
 
-- [ ] Copy the uploaded files (`documents/`, `chat-images/` from the live server's folder) into `handover/` when the handover happens — only the database copy is there now.
+- [ ] Make the handover folder afresh the day before the launch (`node scripts/makeHandover.mjs`, section 8) and copy it to the stick.
+- [ ] Rehearse restoring Authentik from its own dump (`READ-ME-FIRST.md`, case C) — never tried.
 - [ ] Decide what happens to the photos, videos and the Jellyfin library, which live on the same NAS.
 - [ ] Schedule backups at the new place (section 8, "Backing up").
 - [ ] Try a full login in the Docker try-out.
