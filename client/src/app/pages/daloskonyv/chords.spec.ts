@@ -1,4 +1,5 @@
 import {
+  annotationText,
   chordNamePieces,
   firstChord,
   parseChord,
@@ -93,6 +94,21 @@ describe('transposer', () => {
 
   it('gives back what is not a chord name', () => {
     expect(move('C', 2, 'hungarian')('N.C.', '2x', '/')).toBe('N.C. 2x /');
+  });
+});
+
+describe('annotationText', () => {
+  it('reads what stands after a star, and nothing else', () => {
+    expect(annotationText('*/')).toBe('/');
+    expect(annotationText('* Coda')).toBe('Coda');
+    expect(annotationText('am')).toBeNull();
+    expect(annotationText('/')).toBeNull();
+  });
+
+  it('is never moved with the key', () => {
+    expect(transposeChordPro('[am]la [*/]la [*Am]la [G]la', 2, 'hungarian')).toBe(
+      '[hm]la [*/]la [*Am]la [A]la',
+    );
   });
 });
 

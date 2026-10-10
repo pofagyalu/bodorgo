@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { BlockLine, Segment, parseChordPro, toBlocks, toWords } from '../chordpro';
-import { parseChord, transposer } from '../chords';
+import { annotationText, parseChord, transposer } from '../chords';
 import { ChordShape, Instrument, shapeFinder, uniqueChords } from '../chord-shapes';
 import { songKey } from '../song-key';
 import { ChordDiagram } from '../chord-diagram/chord-diagram';
@@ -158,6 +158,12 @@ export class SongSheet {
   // hold.
   isChord(name: string): boolean {
     return parseChord(name) !== null;
+  }
+
+  // An annotation ("[*/]", "[*Coda]" - chords.ts): its text, written like
+  // a chord but without anything to show how to hold. null for the rest.
+  annotation(name: string): string | null {
+    return annotationText(name);
   }
 
   private open(anchor: HTMLElement, name: string, pinned: boolean) {

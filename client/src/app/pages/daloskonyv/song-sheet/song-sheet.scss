@@ -127,6 +127,12 @@ $chord: #b5533a;
   cursor: default;
 }
 
+// An annotation ("[*/]"): the chords' own look - but nothing to point at.
+.chord.chord--annotation,
+.lyrics--diagrams .chord.chord--annotation {
+  cursor: default;
+}
+
 // The song's chords in a row above the lyrics - wrapping on a phone.
 .diagrams {
   display: flex;
