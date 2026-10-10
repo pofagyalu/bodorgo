@@ -148,7 +148,7 @@ export interface WeatherOutlook {
   score: number; // 0-100
   tier: OutlookTier;
   tag: string; // "Napszemüveges idő"
-  word: string; // the mood in one word (the card's pill, the index): "Álomszép"
+  word: string; // the mood in one word (the card's pill, the index): "Koktélos"
   headline: string;
   lines: string[];
   // Set while it's still an early guess.

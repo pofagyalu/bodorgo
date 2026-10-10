@@ -141,7 +141,7 @@ describe('reading tours', () => {
       const listed = (id) => list.body.data.tours.find((t) => t._id === String(id));
       expect(listed(near._id).weatherOutlook).toMatchObject({
         tier: 'perfect',
-        word: 'Álomszép',
+        word: 'Koktélos',
         frozen: false,
       });
       expect(listed(far._id).weatherOutlook).toBeUndefined();

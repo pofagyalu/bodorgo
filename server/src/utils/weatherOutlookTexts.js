@@ -7,8 +7,8 @@ export const TIER_TEXTS = {
     // On the tour page, next to the mood badge.
     tag: 'Napszemüveges idő',
     // The mood in one word: on the tour list's pill, and beside the
-    // Bódorgó-index (whose bar runs from Durva to Álomszép).
-    word: 'Álomszép',
+    // Jóléti-index (whose bar runs from Pálinkás to Koktélos).
+    word: 'Koktélos',
     headlines: [
       'Ezt az időt rendelni se lehetett volna jobbra',
       'Napszemüveg fel, kifogások le',
@@ -17,7 +17,7 @@ export const TIER_TEXTS = {
   },
   great: {
     tag: 'Kirándulóidő',
-    word: 'Kellemes',
+    word: 'Sörös',
     headlines: [
       'Jó idő lesz, erre már nem lehet fogni semmit',
       'Majdnem tökéletes – a maradékot hozzuk mi',
@@ -26,7 +26,7 @@ export const TIER_TEXTS = {
   },
   mixed: {
     tag: 'Vegyesfelvágott',
-    word: 'Vegyes',
+    word: 'Elmegy',
     headlines: [
       'Lesz itt minden, mint a búcsúban',
       'Az időjárás még nem döntötte el, mit akar',
@@ -35,7 +35,7 @@ export const TIER_TEXTS = {
   },
   gloomy: {
     tag: 'Szürke idő',
-    word: 'Borongós',
+    word: 'Boros',
     headlines: [
       'Szürke ég, színes társaság',
       'A nap szabadságot vett ki. Mi is, csak mi eljövünk',
@@ -44,7 +44,7 @@ export const TIER_TEXTS = {
   },
   rough: {
     tag: 'Durva idő',
-    word: 'Durva',
+    word: 'Pálinkás',
     headlines: [
       'Nincs rossz idő, csak rossz ruha. Most kiderül',
       'Esik, fúj, hideg van. Megyünk',

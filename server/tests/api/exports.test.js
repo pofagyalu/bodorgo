@@ -118,7 +118,7 @@ describe('Programfüzet (tour PDF)', () => {
           score: 63,
           tier: 'mixed',
           tag: 'Vegyesfelvágott',
-          word: 'Vegyes',
+          word: 'Elmegy',
           headline: 'Lesz itt minden, mint a búcsúban',
           lines: [
             'A leggyengébb napnak a szombat ígérkezik: eső, 6 és 15 °C között.',

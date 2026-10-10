@@ -77,11 +77,11 @@ describe('WeatherRules', () => {
   it('shows the five stretches of the index, worst first', () => {
     open();
     expect(rows(2)).toEqual([
-      'Durva 0 ponttól',
-      'Borongós 30 ponttól',
-      'Vegyes 50 ponttól',
-      'Kellemes 70 ponttól',
-      'Álomszép 85 ponttól',
+      'Pálinkás 0 ponttól',
+      'Boros 30 ponttól',
+      'Elmegy 50 ponttól',
+      'Sörös 70 ponttól',
+      'Koktélos 85 ponttól',
     ]);
     expect(el.querySelector('.rules-dot--rough')).toBeTruthy();
   });

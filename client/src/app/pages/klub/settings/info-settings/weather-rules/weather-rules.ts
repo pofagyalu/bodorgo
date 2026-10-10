@@ -22,7 +22,7 @@ const percent = (share: number) => Math.round(share * 100);
 
 // Klub → Beállítások → Infó: how a tour's "Életviteli tanácsok" (the
 // weather outlook) comes about - when there is a forecast, how the
-// Bódorgó-index is worked out, what decides the packing list. Only the
+// Jóléti-index is worked out, what decides the packing list. Only the
 // sentences are written here: every number is the server's own, read from
 // its settings (GET /settings/weather-outlook), so a retuned formula shows
 // here by itself.

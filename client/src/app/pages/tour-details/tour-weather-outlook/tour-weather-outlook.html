@@ -25,10 +25,10 @@
 
         <div
           class="meter"
-          [attr.aria-label]="'Bódorgó-index: ' + roundedScore() + ' a 100-ból, ' + o.word"
+          [attr.aria-label]="'Jóléti-index: ' + roundedScore() + ' a 100-ból, ' + o.word"
         >
           <p class="meter-score">
-            Bódorgó-index: {{ roundedScore() }} / 100 – <strong>{{ o.word }}</strong>
+            Jóléti-index: {{ roundedScore() }} / 100 – <strong>{{ o.word }}</strong>
           </p>
           <div class="meter-bar">
             @for (part of meter; track part.tier) {
@@ -38,8 +38,8 @@
             <i class="meter-mark" [style.left.%]="o.score"></i>
           </div>
           <div class="meter-legend">
-            <span>Durva</span>
-            <span>Álomszép</span>
+            <span>Pálinkás</span>
+            <span>Koktélos</span>
           </div>
         </div>
       </div>

@@ -177,7 +177,7 @@ describe('TourCard', () => {
     };
 
     const pill = show(makeTour({ weatherOutlook: makeWeatherOutlook() }))!;
-    expect(pill.textContent).toContain('Vegyes');
+    expect(pill.textContent).toContain('Elmegy');
     expect(pill.title).toBe('Vegyesfelvágott');
     expect(pill.querySelector('img')!.getAttribute('src')).toContain('badges/badge-mixed.svg');
     expect(pill.classList).not.toContain('card__weather--early');
