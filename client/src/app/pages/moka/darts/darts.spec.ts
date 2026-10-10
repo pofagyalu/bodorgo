@@ -3,7 +3,16 @@ import { HttpTestingController } from '@angular/common/http/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { API } from '../../../../testing/http';
-import { Failure, fail, logIn, pageTesting, respond, settle } from '../../../../testing/component';
+import {
+  FakeSocket,
+  Failure,
+  fail,
+  logIn,
+  pageTesting,
+  respond,
+  settle,
+} from '../../../../testing/component';
+import { TourSocketService } from '../../../services/tour-socket';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { DartsGame, DartsPlayer, DartsTurn } from '../../../services/darts';
@@ -11,6 +20,7 @@ import { Moka } from '../moka';
 import { DartBoard } from './dart-board/dart-board';
 import { DartsGamePage } from './darts-game/darts-game';
 import { DartsHome } from './darts-home';
+import { DartsRules } from './darts-rules/darts-rules';
 import { DartsSetup } from './darts-setup/darts-setup';
 
 const games = `${API}/jatekok/darts/games`;
@@ -51,11 +61,12 @@ const turn = (
 const game = (over: Partial<DartsGame> = {}): DartsGame => ({
   _id: 'g1',
   type: 'x01',
-  options: { startScore: 301, outMode: 'single' },
+  options: { startScore: 301, outMode: 'single', rounds: 8 },
   status: 'in_progress',
   ended: false,
   createdBy: { _id: 'u0', name: 'Anna' },
   createdAt: '2026-01-01',
+  updatedAt: 'v1',
   finishedAt: null,
   players: [player(0, 'Anna'), player(1, 'Béla', { userId: null })],
   placings: [],
@@ -489,6 +500,126 @@ describe('DartsGamePage', () => {
     expect(page.turnTotal()).toBe(''); // no running total while correcting in Cricket
   });
 
+  it('shows a High Score game: the points so far, the rounds, its own rematch', async () => {
+    open(
+      game({
+        type: 'highscore',
+        options: { startScore: 301, outMode: 'single', rounds: 5 },
+        players: [
+          player(0, 'Anna', { remaining: undefined, points: 85 }),
+          player(1, 'Béla', { remaining: undefined, points: 40, userId: null }),
+        ],
+        turns: [turn(0, [[5, 1]]), turn(1, [[20, 2]]), turn(0, [[20, 3]])],
+        next: { playerIdx: 0, round: 2, dartsLeft: 2, checkout: null },
+      }),
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    expect(page.name()).toBe('High Score');
+    expect([page.isHighScore(), page.isX01(), page.isCricket()]).toEqual([true, false, false]);
+    expect(page.numbers()).toHaveLength(20);
+    expect(page.turnTotal()).toBe('60');
+    expect(el.textContent).toContain('5 körös');
+    expect(el.textContent).not.toContain('kiszálló');
+    expect(Array.from(el.querySelectorAll('.remaining'), (e) => e.textContent?.trim())).toEqual([
+      '85',
+      '40',
+    ]);
+
+    const confirm = TestBed.inject(ConfirmService);
+    const asking = page.finish();
+    expect(confirm.pending()?.message).toContain('pontok szerint');
+    confirm.answer(false);
+    await asking;
+
+    page.rematch();
+    const req = http.expectOne((r) => r.url === games && r.method === 'POST');
+    expect(req.request.body).toMatchObject({ type: 'highscore', rounds: 5 });
+  });
+
+  describe('followed live from another phone', () => {
+    const socket = () => TestBed.inject(TourSocketService) as unknown as FakeSocket;
+    const next1 = { playerIdx: 1, round: 1, dartsLeft: 3, checkout: null };
+
+    it('joins the game’s channel, and leaves it with the page', () => {
+      open();
+      expect(socket().joinDarts).toHaveBeenCalledWith('g1');
+      fixture.destroy();
+      expect(socket().leaveDarts).toHaveBeenCalledWith('g1');
+      socket().fire('darts-game', { gameId: 'g1', updatedAt: 'v2' });
+      http.expectNone(`${games}/g1`); // nobody listens any more
+    });
+
+    it('fetches the game when it changed elsewhere, and announces what happened', async () => {
+      vi.useFakeTimers();
+      open();
+      socket().fire('darts-game', { gameId: 'g1', updatedAt: 'v2' });
+      await answer(
+        `${games}/g1`,
+        'GET',
+        game({ updatedAt: 'v2', turns: [turn(0, [[5, 1]])], next: next1 }),
+      );
+      expect(page.game()?.updatedAt).toBe('v2');
+      expect(page.announcement()).toEqual({ kind: 'next', title: 'Béla', sub: 'következik' });
+
+      // A dart taken back elsewhere: shown, but nothing to announce.
+      vi.advanceTimersByTime(1600);
+      socket().fire('darts-game', { gameId: 'g1', updatedAt: 'v3' });
+      await answer(`${games}/g1`, 'GET', game({ updatedAt: 'v3' }));
+      expect(page.announcement()).toBeNull();
+      expect(page.current()?.name).toBe('Anna');
+
+      // Ended elsewhere with the Befejezés button: the podium here too.
+      socket().fire('darts-game', { gameId: 'g1', updatedAt: 'v4' });
+      await answer(
+        `${games}/g1`,
+        'GET',
+        game({ updatedAt: 'v4', status: 'finished', ended: true, next: null }),
+      );
+      expect(page.playing()).toBe(false);
+    });
+
+    it('ignores the news of its own change, and of other games', async () => {
+      open();
+      page.hit(20);
+      // The news arrives before the answer to the dart itself.
+      socket().fire('darts-game', { gameId: 'g1', updatedAt: 'v2' });
+      socket().fire('darts-game', { gameId: 'other', updatedAt: 'v9' });
+      await answer(
+        `${games}/g1/throws`,
+        'POST',
+        game({ updatedAt: 'v2', turns: [turn(0, [[20, 1]])] }),
+      );
+      await settle();
+      http.expectNone(`${games}/g1`);
+    });
+
+    it('catches up when the connection or the page comes back', async () => {
+      open();
+      socket().fire('connect', undefined);
+      await answer(`${games}/g1`, 'GET', game({ updatedAt: 'v2' }));
+      page.onVisible();
+      await answer(`${games}/g1`, 'GET', game({ updatedAt: 'v3' }));
+      expect(page.game()?.updatedAt).toBe('v3');
+
+      // No answer just now: the game stays as it was, and the keys still work.
+      socket().fire('connect', undefined);
+      await settle();
+      http.expectOne(`${games}/g1`).flush(null, { status: 500, statusText: 'x' });
+      await settle();
+      expect(error).not.toHaveBeenCalled();
+      page.hit(20);
+      await settle();
+      http.expectOne(`${games}/g1/throws`);
+    });
+
+    it('fetches nothing before the game itself has arrived', async () => {
+      open(fail(404));
+      socket().fire('connect', undefined);
+      await settle();
+      http.expectNone(`${games}/g1`);
+    });
+  });
+
   it('keeps the screen awake while the page is visible', async () => {
     const release = vi.fn();
     const request = vi.fn().mockResolvedValue({ release });
@@ -596,6 +727,22 @@ describe('DartsSetup', () => {
     setup.outMode.set('double');
     expect(setup.rules().title).toBe('Cricket');
     expect(setup.outHint()).toContain('Csak duplával');
+    setup.type.set('highscore');
+    expect(setup.rules().title).toBe('High Score');
+  });
+
+  it('starts a High Score game with the chosen number of rounds', () => {
+    open();
+    setup.type.set('highscore');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const choices = Array.from(el.querySelectorAll<HTMLButtonElement>('.choices--big .choice'));
+    expect(choices.map((b) => b.textContent?.trim())).toEqual(['5', '8', '10', '15', '20']);
+    choices[2].click();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('10 kör után');
+    setup.start();
+    expect(http.expectOne(games).request.body).toMatchObject({ type: 'highscore', rounds: 10 });
   });
 
   it('starts the game and opens it', () => {
@@ -684,6 +831,28 @@ describe('DartsHome', () => {
       players: ['A', 'B', 'C', 'D', 'E'].map((n, i) => player(i, n, { points: i * 10 })),
     });
     expect(home.standing(cricket)).toBe('🥇 A · 🥈 B · 🥉 C · 4. D · E (40)');
+    const highScore = game({
+      type: 'highscore',
+      players: [player(0, 'Anna', { points: 120 }), player(1, 'Béla', { points: 95 })],
+    });
+    expect(home.standing(highScore)).toBe('Anna (120) · Béla (95)');
+  });
+});
+
+describe('DartsRules', () => {
+  it('shows every game’s rules, and how a game is scored', () => {
+    setUp();
+    const fixture = TestBed.createComponent(DartsRules);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(Array.from(el.querySelectorAll('h2'), (h) => h.textContent?.trim())).toEqual([
+      'track_changes 301 (201, 101)',
+      'track_changes Cricket',
+      'track_changes High Score',
+      'smartphone Így megy a játék',
+    ]);
+    expect(el.textContent).toContain('Besokallás');
+    expect(el.textContent).toContain('élőben követhetik');
   });
 });
 
@@ -722,10 +891,26 @@ describe('Moka', () => {
     expect(admin.inFutokor()).toBe(true);
   });
 
+  it('gives Darts its own pages: the games and the rules', async () => {
+    const games = await open('/moka/darts/uj', 'member');
+    expect(games.subTabs().map((t) => t.label)).toEqual(['Játékok', 'Szabályok']);
+    expect(games.subTab()).toBe('darts');
+    expect(games.subLabel()).toBe('Darts menü');
+    TestBed.resetTestingModule();
+    const rules = await open('/moka/darts/szabalyok', 'member');
+    expect(rules.subTab()).toBe('darts/szabalyok');
+    TestBed.resetTestingModule();
+    expect((await open('/moka/kviz/jatekok', 'member')).subLabel()).toBe('Kvíz menü');
+    TestBed.resetTestingModule();
+    expect((await open('/moka/futokor', 'member')).subLabel()).toBe('Futókörök menü');
+  });
+
   it('knows when a darts game is on screen (not the "new game" page)', async () => {
     expect((await open('/moka/darts/abc123', 'admin')).inGame()).toBe(true);
     TestBed.resetTestingModule();
     expect((await open('/moka/darts/uj', 'admin')).inGame()).toBe(false);
+    TestBed.resetTestingModule();
+    expect((await open('/moka/darts/szabalyok', 'admin')).inGame()).toBe(false);
     TestBed.resetTestingModule();
     expect((await open('/moka/darts', 'admin')).inGame()).toBe(false);
   });

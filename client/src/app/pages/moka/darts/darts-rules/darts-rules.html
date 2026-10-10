@@ -1,0 +1,51 @@
+<section class="rules-page">
+  <a routerLink="/moka/darts" class="back"><mat-icon>arrow_back</mat-icon> Darts</a>
+  <h1>Szabályok</h1>
+  <p class="lead">
+    Három játék közül választhattok. Mindegyikben <strong>egy kör három nyíl</strong>, és sorban
+    dobtok – a pontokat, a helyezéseket és azt, hogy ki következik, a Bódorgó számolja.
+  </p>
+
+  <!-- On a desktop: columns, each card under the one that ends highest
+       (shared/masonry). -->
+  <div class="cards" appMasonry>
+    @for (game of games; track game.title) {
+      <div class="card">
+        <h2><mat-icon>track_changes</mat-icon> {{ game.title }}</h2>
+        <ul>
+          @for (line of game.lines; track $index) {
+            <li>{{ line }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="card">
+      <h2><mat-icon>smartphone</mat-icon> Így megy a játék</h2>
+      <ul>
+        <li>
+          <strong>Egy telefon számol.</strong> Minden nyíl után koppints a számra – előtte a
+          <em>Dupla</em> vagy a <em>Tripla</em> gombra, ha az volt; ha nem talált, a
+          <em>Mellé</em> gombra.
+        </li>
+        <li>
+          <strong>A többiek élőben követhetik</strong> a saját telefonjukon: a
+          <em>Móka → Darts</em> oldalon, a <em>Játékaim</em> között ott van a folyamatban lévő
+          játék.
+        </li>
+        <li>
+          <strong>Elírtad?</strong> A visszavonás gomb az utolsó dobást törli, a
+          <em>Körök</em> listában pedig bármelyik korábbi kör kijavítható.
+        </li>
+        <li>
+          A <strong>Befejezés</strong> gombbal közös megegyezéssel bármikor véget vethettek a
+          játéknak – ilyenkor a pillanatnyi állás számít.
+        </li>
+        <li>
+          Egy játékot csak a saját játékosai látnak. A <strong>ranglistán</strong> viszont mindenki
+          eredménye ott van – játékonként külön –, a vendégeké kivételével.
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>

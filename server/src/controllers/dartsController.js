@@ -4,13 +4,17 @@ import User from '../models/userModel.js';
 import AppError from '../utils/appError.js';
 import * as x01 from '../jatekok/darts/x01.js';
 import * as cricket from '../jatekok/darts/cricket.js';
+import * as highscore from '../jatekok/darts/highscore.js';
+import { emitDartsChanged } from '../jatekok/darts/dartsSocket.js';
 
 // Móka → Darts. One phone keeps the score: every dart is sent here, and
 // the answer is the whole game as it now stands (gameView) - the rules
-// live only on the server (jatekok/darts: x01.js, cricket.js).
+// live only on the server (jatekok/darts: x01.js, cricket.js, highscore.js).
+// The game's other people follow it on their own phones: every stored
+// change is announced to them (dartsSocket.js), and they ask for the game.
 
 // Each kind of game has its own rules; all are replayed the same way.
-const ENGINES = { x01, cricket };
+const ENGINES = { x01, cricket, highscore };
 
 const MAX_PLAYERS = 16;
 const MAX_GUEST_NAME = 30;
@@ -46,6 +50,7 @@ const rulesOf = (game) => ({
   startScore: game.options.startScore,
   outMode: game.options.outMode,
   playUntil: game.options.playUntil,
+  rounds: game.options.rounds,
   ended: game.ended,
 });
 const storedTurns = (game) => game.turns.map((t) => t.toObject());
@@ -61,7 +66,7 @@ function canEdit(game, user) {
 }
 
 // The players as the game stands: who they are and how they're doing.
-// `average` is per three darts: points in X01, marks in Cricket.
+// `average` is per three darts: marks in Cricket, points in the others.
 const playerViews = (game, state) =>
   game.players.map((p, idx) => {
     const s = state.players[idx];
@@ -72,7 +77,8 @@ const playerViews = (game, state) =>
       name: p.user ? shownName(p.user) : p.guestName,
       photoUpdatedAt: p.user?.photoUpdatedAt ?? null,
       // X01: what's left. Cricket: the hits on each number (three close it).
-      ...(game.type === 'cricket' ? { marks: s.marks } : { remaining: s.remaining }),
+      ...(game.type === 'x01' && { remaining: s.remaining }),
+      ...(game.type === 'cricket' && { marks: s.marks }),
       darts: s.darts,
       points: s.points,
       average: s.average,
@@ -91,6 +97,8 @@ const baseView = (game, state, user) => ({
   ended: game.ended,
   createdBy: { _id: refId(game.createdBy), name: shownName(game.createdBy) },
   createdAt: game.createdAt,
+  // When it last changed - what the live news of a change carries too.
+  updatedAt: game.updatedAt,
   finishedAt: game.finishedAt,
   players: playerViews(game, state),
   // Player indexes, best first: those who finished - and everyone once
@@ -134,10 +142,12 @@ function gameView(game, user) {
 }
 
 // Stores the game as the rules now see it: the turns that still count,
-// and whether it's over (a correction or an undo can reopen it).
+// and whether it's over (a correction or an undo can reopen it) - and
+// tells its people's phones.
 async function saveState(game, state) {
   applyState(game, state);
   await game.save();
+  emitDartsChanged(game);
 }
 
 // The same on the game in memory only - saveState stores it; a preview
@@ -192,13 +202,15 @@ export const createGame = async (req, res) => {
     startScore = 301,
     outMode = 'single',
     playUntil = 'all',
+    rounds = highscore.DEFAULT_ROUNDS,
     players,
   } = req.body ?? {};
   if (
     !GAME_TYPES.includes(type) ||
     !x01.START_SCORES.includes(startScore) ||
     !x01.OUT_MODES.includes(outMode) ||
-    !x01.PLAY_UNTIL.includes(playUntil)
+    !x01.PLAY_UNTIL.includes(playUntil) ||
+    !highscore.isValidRounds(rounds)
   ) {
     throw new AppError('Ismeretlen játékbeállítás.', 400);
   }
@@ -227,8 +239,9 @@ export const createGame = async (req, res) => {
   const created = await DartsGame.create({
     createdBy: req.user._id,
     type,
-    // The X01 options mean nothing in Cricket - left at their defaults.
+    // Each game keeps its own options - the others stay at their defaults.
     ...(type === 'x01' && { options: { startScore, outMode, playUntil } }),
+    ...(type === 'highscore' && { options: { rounds } }),
     players: cleaned,
   });
   sendGame(res, await loadGame(created._id, req.user), req.user, 201);
@@ -290,7 +303,7 @@ export const getLeaderboard = async (req, res) => {
           games: 0,
           places: [0, 0, 0],
           darts: 0,
-          // What the average is of: points in X01, marks in Cricket.
+          // What the average is of: marks in Cricket, points in the others.
           counted: 0,
           highestTurn: 0,
           highestCheckout: 0,
@@ -300,7 +313,7 @@ export const getLeaderboard = async (req, res) => {
       const row = rows.get(key);
       const s = state.players[idx];
       const turns = state.turns.filter((t) => t.playerIdx === idx);
-      // A turn's worth: its points in X01, its marks in Cricket.
+      // A turn's worth: its marks in Cricket, its points in the others.
       const worth = (t) => (type === 'cricket' ? t.marks : t.points);
       row.games += 1;
       if (s.position <= 3) row.places[s.position - 1] += 1;
@@ -312,6 +325,8 @@ export const getLeaderboard = async (req, res) => {
           row.highestCheckout,
           ...turns.filter((t) => t.finished).map((t) => t.points),
         );
+      }
+      if (type !== 'cricket') {
         row.count180 += turns.filter((t) => t.points === 180).length;
       }
     });
@@ -434,5 +449,6 @@ export const abandonGame = async (req, res) => {
   if (game.status === 'finished') throw new AppError('A játék már véget ért.', 400);
   game.status = 'abandoned';
   await game.save();
+  emitDartsChanged(game);
   sendGame(res, game, req.user);
 };

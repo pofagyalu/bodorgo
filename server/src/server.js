@@ -7,6 +7,7 @@ import createApp from './app.js';
 import createSessionMiddleware from './session.js';
 import registerChatHandlers from './chat/chatSocket.js';
 import registerQuizHandlers from './jatekok/quiz/quizSocket.js';
+import registerDartsHandlers from './jatekok/darts/dartsSocket.js';
 import logger from './logger.js';
 import { checkPollReminders } from './chat/pollReminders.js';
 import { warmUpMusic } from './music/jellyfin.js';
@@ -52,6 +53,7 @@ mongoose
     io.engine.use(sessionMiddleware);
     registerChatHandlers(io);
     registerQuizHandlers(io);
+    registerDartsHandlers(io);
 
     server.listen(PORT, () => {
       logger.info(`App is listening on ${PORT} (Node ${process.version})`);

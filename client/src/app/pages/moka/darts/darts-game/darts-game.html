@@ -7,8 +7,10 @@
       <div class="title">
         <strong>{{ name() }}</strong>
         <span>
-          @if (!isCricket()) {
+          @if (isX01()) {
             {{ g.options.outMode === 'double' ? 'dupla kiszálló' : 'sima kiszálló' }}
+          } @else if (isHighScore()) {
+            {{ g.options.rounds }} körös
           }
           @if (g.next) {
             · {{ g.next.round }}. kör
@@ -96,7 +98,7 @@
             />
             <span class="pname">{{ p.name }}</span>
             <!-- A new element for every new score, so it pops in each time. -->
-            <span *appRecreateOn="p.remaining; let score" class="remaining">{{ score }}</span>
+            <span *appRecreateOn="score(p); let score" class="remaining">{{ score }}</span>
             <span class="avg">⌀ {{ p.average ?? '–' }}</span>
           </div>
         }
@@ -121,6 +123,11 @@
                 <th title="Találat körönként (három nyílra)">Kör-átlag</th>
                 <th title="A legtöbb pont egy körben">Csúcs</th>
                 <th>Nyíl</th>
+              } @else if (isHighScore()) {
+                <th>Pont</th>
+                <th title="Három nyíl átlaga">Átlag</th>
+                <th title="A legjobb kör">Csúcs</th>
+                <th>Nyíl</th>
               } @else {
                 <th title="Három nyíl átlaga">Átlag</th>
                 <th title="A legjobb kör">Csúcs</th>
@@ -135,6 +142,11 @@
                 <td>{{ medal(p.position!) }}</td>
                 <td class="left">{{ p.name }}</td>
                 @if (isCricket()) {
+                  <td>{{ p.points }}</td>
+                  <td>{{ p.average ?? '–' }}</td>
+                  <td>{{ p.highestTurn }}</td>
+                  <td>{{ p.darts }}</td>
+                } @else if (isHighScore()) {
                   <td>{{ p.points }}</td>
                   <td>{{ p.average ?? '–' }}</td>
                   <td>{{ p.highestTurn }}</td>

@@ -65,10 +65,25 @@
       </div>
       <p class="hint">{{ outHint() }}</p>
     }
-    <p class="hint">
-      A játék addig tart, amíg mindenkinek helyezése nem lesz – vagy amíg közös megegyezéssel be nem
-      fejezitek a „Befejezés” gombbal.
-    </p>
+    @if (type() === 'highscore') {
+      <h2><mat-icon>repeat</mat-icon> Hány kör?</h2>
+      <div class="choices choices--big">
+        @for (r of roundChoices; track r) {
+          <button type="button" class="choice" [class.on]="rounds() === r" (click)="rounds.set(r)">
+            {{ r }}
+          </button>
+        }
+      </div>
+      <p class="hint">
+        A játék {{ rounds() }} kör után ér véget, és a legtöbb pont nyer – de közös megegyezéssel
+        előbb is befejezhetitek a „Befejezés” gombbal.
+      </p>
+    } @else {
+      <p class="hint">
+        A játék addig tart, amíg mindenkinek helyezése nem lesz – vagy amíg közös megegyezéssel be
+        nem fejezitek a „Befejezés” gombbal.
+      </p>
+    }
   </div>
 
   <!-- Who plays, in throwing order. -->

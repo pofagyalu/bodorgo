@@ -4,7 +4,8 @@
       <p class="eyebrow">Bódorgó Móka</p>
       <h1>Darts</h1>
       <p class="lead">
-        301 vagy Cricket, ahányan csak vagytok. Egy telefon számol, a dobogóra hárman állhatnak fel.
+        301, Cricket vagy High Score, ahányan csak vagytok. Egy telefon számol, a többiek a
+        sajátjukon élőben követhetik – a dobogóra hárman állhatnak fel.
       </p>
 
       <div class="actions">
@@ -45,7 +46,9 @@
               } @else {
                 <th title="Három nyíl átlaga">Átlag</th>
                 <th title="A legjobb kör">Csúcs</th>
-                <th title="A legnagyobb kiszálló">Kiszálló</th>
+                @if (board().type === 'x01') {
+                  <th title="A legnagyobb kiszálló">Kiszálló</th>
+                }
                 <th>180</th>
               }
             </tr>
@@ -69,8 +72,10 @@
                 <td>{{ p.games }}</td>
                 <td>{{ p.average ?? '–' }}</td>
                 <td>{{ p.highestTurn }}</td>
-                @if (board().type !== 'cricket') {
+                @if (board().type === 'x01') {
                   <td>{{ p.highestCheckout || '–' }}</td>
+                }
+                @if (board().type !== 'cricket') {
                   <td>{{ p.count180 }}</td>
                 }
               </tr>

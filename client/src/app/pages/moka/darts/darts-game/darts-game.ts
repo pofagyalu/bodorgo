@@ -19,10 +19,13 @@ import { playCelebration } from '../../../../shared/celebration-effects';
 import { errorMessage } from '../../../../shared/errors';
 import { Podium, PodiumWinner } from '../../../../shared/podium/podium';
 import { RecreateOn } from '../../../../shared/recreate-on';
+import { TourSocketService } from '../../../../services/tour-socket';
 import {
   CRICKET_TARGETS,
   DartThrow,
   DartsGame,
+  DartsNews,
+  DartsPlayer,
   DartsService,
   dartLabel,
   gameName,
@@ -58,11 +61,16 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 // Cricket's marks: one hit, two, closed.
 const MARKS = ['', '╱', '✕', '⊗'];
 
-// Móka → Darts: a game on one phone. The scoreboard on top, the current
+const dartCount = (game: DartsGame) =>
+  (game.turns ?? []).reduce((sum, turn) => sum + turn.throws.length, 0);
+
+// Móka → Darts: a game on a phone. The scoreboard on top, the current
 // turn's three darts under it, the keypad at the bottom within thumb
 // reach. Every dart goes to the server, which answers the
 // whole game as it now stands (the rules live there) - this only shows it,
-// and celebrates.
+// and celebrates. One phone is enough to keep the score; the game's other
+// people follow it live on their own (the server tells every phone with
+// the game open that it changed, and the game is fetched again).
 @Component({
   selector: 'app-darts-game',
   imports: [RouterLink, MatIconModule, Avatar, Podium, RecreateOn],
@@ -74,6 +82,7 @@ export class DartsGamePage implements OnDestroy {
   private router = inject(Router);
   private notifications = inject(NotificationsService);
   private confirm = inject(ConfirmService);
+  private socket = inject(TourSocketService);
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
 
@@ -91,6 +100,7 @@ export class DartsGamePage implements OnDestroy {
   editing = signal<Editing | null>(null);
   historyOpen = signal(false);
   private announceTimer?: ReturnType<typeof setTimeout>;
+  private stopListening: (() => void)[];
   private podium = viewChild(Podium);
 
   // The requests go one after the other, in the order the keys were
@@ -98,13 +108,15 @@ export class DartsGamePage implements OnDestroy {
   private queue: Promise<void> = Promise.resolve();
 
   isCricket = computed(() => this.game()?.type === 'cricket');
+  isX01 = computed(() => this.game()?.type === 'x01');
+  isHighScore = computed(() => this.game()?.type === 'highscore');
   name = computed(() => (this.game() ? gameName(this.game()!) : ''));
   playing = computed(() => this.game()?.status === 'in_progress');
   current = computed(() => {
     const g = this.game();
     return g?.next ? g.players[g.next.playerIdx] : null;
   });
-  // The X01 scoreboard's cards in a row: on a phone, on a desktop.
+  // The scoreboard's cards in a row (X01, High Score): on a phone, on a desktop.
   cols = computed(() => Math.min(this.game()?.players.length ?? 1, 4));
   colsWide = computed(() => Math.min(this.game()?.players.length ?? 1, 8));
   // The keypad's numbers: all twenty - in Cricket only the ones that count.
@@ -195,6 +207,14 @@ export class DartsGamePage implements OnDestroy {
       next: (game) => this.game.set(game),
       error: () => this.loadFailed.set(true),
     });
+    this.socket.joinDarts(this.id);
+    this.stopListening = [
+      this.socket.on<DartsNews>('darts-game', (news) => {
+        if (news.gameId === this.id) this.refresh(news.updatedAt);
+      }),
+      // Back after a dropped connection: whatever was missed.
+      this.socket.on('connect', () => this.refresh()),
+    ];
     void this.keepAwake();
   }
 
@@ -204,6 +224,12 @@ export class DartsGamePage implements OnDestroy {
 
   medal(position: number): string {
     return MEDALS[position - 1] ?? `${position}.`;
+  }
+
+  // The big number on a player's card: what's left in X01, the points so
+  // far in High Score.
+  score(p: DartsPlayer): number | undefined {
+    return this.isHighScore() ? p.points : p.remaining;
   }
 
   // Cricket: how a number stands for a player - "╱", "✕", "⊗" (closed).
@@ -324,8 +350,9 @@ export class DartsGamePage implements OnDestroy {
     }
     const ok = await this.confirm.ask({
       title: 'Befejezitek a játékot?',
-      message:
-        'A játék a mostani állással ér véget: aki már kiszállt, megtartja a helyét, a többiek a jelenlegi állás szerint következnek.',
+      message: this.isHighScore()
+        ? 'A játék a mostani állással ér véget: a helyezés a mostani pontok szerint alakul.'
+        : 'A játék a mostani állással ér véget: aki már kiszállt, megtartja a helyét, a többiek a jelenlegi állás szerint következnek.',
       detail: 'Ha mégis folytatnátok, az eredménynél vissza lehet vonni.',
       confirmText: 'Befejezzük',
       danger: false,
@@ -343,6 +370,7 @@ export class DartsGamePage implements OnDestroy {
         type: g.type,
         startScore: g.options.startScore,
         outMode: g.options.outMode,
+        ...(g.type === 'highscore' && { rounds: g.options.rounds }),
         players: g.players.map((p) => (p.userId ? { userId: p.userId } : { guestName: p.name })),
       })
       .subscribe({
@@ -367,6 +395,26 @@ export class DartsGamePage implements OnDestroy {
         if (ended) setTimeout(() => this.podium()?.celebrate(1));
       } catch (err) {
         this.notifications.addError(errorMessage(err, 'Nem sikerült – próbáld újra.'));
+      }
+    });
+  }
+
+  // The game changed on someone else's phone (or this one was away): it's
+  // fetched again - in line behind this phone's own darts, so an older
+  // answer never overwrites a newer one. `updatedAt`: the change the news is
+  // about - nothing to fetch if it's already here (this phone made it).
+  private refresh(updatedAt?: string) {
+    this.queue = this.queue.then(async () => {
+      const before = this.game();
+      if (!before || before.updatedAt === updatedAt) return;
+      try {
+        const game = await firstValueFrom(this.darts.getGame(this.id));
+        this.game.set(game);
+        // A dart thrown elsewhere, or the game's end, is celebrated here too.
+        const justOver = game.status === 'finished' && before.status !== 'finished';
+        if (dartCount(game) > dartCount(before) || justOver) this.react(before, game);
+      } catch {
+        // No connection just now - the next change (or coming back) brings it.
       }
     });
   }
@@ -404,9 +452,15 @@ export class DartsGamePage implements OnDestroy {
 
   private wakeLock: WakeLockSentinel | null = null;
 
-  // The browser lets the lock go whenever the page is hidden - asked for
-  // again each time it comes back.
+  // The phone woke up, or the tab came back: the game may have moved on,
+  // and the browser let the lock go while the page was hidden.
   @HostListener('document:visibilitychange')
+  onVisible() {
+    if (document.visibilityState !== 'visible') return;
+    this.refresh();
+    void this.keepAwake();
+  }
+
   async keepAwake() {
     if (document.visibilityState !== 'visible') return;
     try {
@@ -418,6 +472,8 @@ export class DartsGamePage implements OnDestroy {
 
   ngOnDestroy() {
     clearTimeout(this.announceTimer);
+    this.stopListening.forEach((stop) => stop());
+    this.socket.leaveDarts(this.id);
     void this.wakeLock?.release();
   }
 }

@@ -1,11 +1,12 @@
 import mongoose from 'mongoose';
 import { OUT_MODES, PLAY_UNTIL, START_SCORES } from '../jatekok/darts/x01.js';
+import { DEFAULT_ROUNDS, MAX_ROUNDS } from '../jatekok/darts/highscore.js';
 
 const { Schema } = mongoose;
 
-// The kinds of game: X01 (301 / 201 / 101, see jatekok/darts/x01.js) and
-// Cricket (cricket.js).
-export const GAME_TYPES = ['x01', 'cricket'];
+// The kinds of game: X01 (301 / 201 / 101, see jatekok/darts/x01.js),
+// Cricket (cricket.js) and High Score (highscore.js).
+export const GAME_TYPES = ['x01', 'cricket', 'highscore'];
 
 // A dart: see jatekok/darts/x01.js for what's valid.
 const throwSchema = new Schema(
@@ -52,11 +53,12 @@ const dartsGameSchema = new Schema(
   {
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     type: { type: String, enum: GAME_TYPES, default: 'x01' },
-    // X01's options (Cricket has none).
+    // X01's options, and High Score's `rounds` (Cricket has none).
     options: {
       startScore: { type: Number, enum: START_SCORES, default: 301 },
       outMode: { type: String, enum: OUT_MODES, default: 'single' },
       playUntil: { type: String, enum: PLAY_UNTIL, default: 'all' },
+      rounds: { type: Number, min: 1, max: MAX_ROUNDS, default: DEFAULT_ROUNDS },
     },
     // In throwing order.
     players: { type: [playerSchema], required: true },

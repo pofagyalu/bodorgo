@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { environment } from '../../environments/environment';
 
 // One live connection to the server, shared by everything on the chat page.
-// (and the quiz's game page). It can be in these kinds of channels at once
+// (and the quiz's and the darts' game pages). It can be in these kinds of channels at once
 // (see server src/chat/chatSocket.js):
 // - a tour's (joinTour): its Szobabeosztás changes ("rooms-changed", for
 //   pages/chat/room-board);
@@ -11,7 +11,10 @@ import { environment } from '../../environments/environment';
 //   components/feed) - the general Kotyogó or a tour's;
 // - a quiz game's (joinQuiz): the game as it stands after each change
 //   ('quiz-game', for pages/moka/quiz/quiz-game - see server
-//   src/jatekok/quiz/quizSocket.js).
+//   src/jatekok/quiz/quizSocket.js);
+// - a darts game's (joinDarts): the news that it changed ('darts-game', for
+//   pages/moka/darts/darts-game - see server
+//   src/jatekok/darts/dartsSocket.js).
 // Stays connected across switches - only the joined tour / room changes.
 @Injectable({ providedIn: 'root' })
 export class TourSocketService {
@@ -19,6 +22,7 @@ export class TourSocketService {
   private joinedTourId: string | null = null;
   private joinedChatRoomId: string | null = null;
   private joinedQuizId: string | null = null;
+  private joinedDartsId: string | null = null;
 
   private connection(): Socket {
     if (!this.socket) {
@@ -31,6 +35,7 @@ export class TourSocketService {
           this.socket!.emit('join-chat', { chatRoomId: this.joinedChatRoomId });
         }
         if (this.joinedQuizId) this.socket!.emit('join-quiz', { gameId: this.joinedQuizId });
+        if (this.joinedDartsId) this.socket!.emit('join-darts', { gameId: this.joinedDartsId });
       });
       // Tell the server when the chat's tab goes to the background (or
       // comes back): someone looking at the chat gets no push notification
@@ -109,6 +114,23 @@ export class TourSocketService {
     if (this.joinedQuizId !== gameId) return;
     if (this.socket?.connected) this.socket.emit('leave-quiz', { gameId });
     this.joinedQuizId = null;
+  }
+
+  // --- A darts game's channel ---
+
+  joinDarts(gameId: string) {
+    const socket = this.connection();
+    if (this.joinedDartsId && this.joinedDartsId !== gameId && socket.connected) {
+      socket.emit('leave-darts', { gameId: this.joinedDartsId });
+    }
+    this.joinedDartsId = gameId;
+    if (socket.connected) socket.emit('join-darts', { gameId });
+  }
+
+  leaveDarts(gameId: string) {
+    if (this.joinedDartsId !== gameId) return;
+    if (this.socket?.connected) this.socket.emit('leave-darts', { gameId });
+    this.joinedDartsId = null;
   }
 
   // Returns the function that removes this listener again.
