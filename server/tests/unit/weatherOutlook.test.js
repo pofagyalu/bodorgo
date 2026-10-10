@@ -122,7 +122,7 @@ describe('the outlook of a tour', () => {
       score: 100,
       tier: 'perfect',
       tag: 'Napszemüveges idő',
-      word: 'Álomszép',
+      word: 'Koktélos',
       lines: ['Minden nap jónak ígérkezik. Gyanúsan jónak.'],
       note: null,
     });

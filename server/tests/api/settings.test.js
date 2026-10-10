@@ -317,13 +317,7 @@ describe("Klub → Beállítások → Infó: the weather outlook's rules", () =>
     expect(tiers[0].from).toBe(0);
     expect(tiers.at(-1).to).toBe(100);
     tiers.slice(1).forEach((t, i) => expect(t.from).toBe(tiers[i].to));
-    expect(tiers.map((t) => t.word)).toEqual([
-      'Durva',
-      'Borongós',
-      'Vegyes',
-      'Kellemes',
-      'Álomszép',
-    ]);
+    expect(tiers.map((t) => t.word)).toEqual(['Pálinkás', 'Boros', 'Elmegy', 'Sörös', 'Koktélos']);
     expect(Object.keys(conditionNames).sort()).toEqual(
       Object.keys(OUTLOOK_SETTINGS.conditionScore).sort(),
     );

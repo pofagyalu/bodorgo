@@ -242,7 +242,7 @@ const schemas = {
       score: num('0-100: 70% the average of the days, 30% the worst day.'),
       tier: str('The mood: `perfect`, `great`, `mixed`, `gloomy` or `rough`.'),
       tag: str('The mood in words, e.g. "Napszemüveges idő".'),
-      word: str('The mood in one word (the tour card\'s pill, beside the index), e.g. "Álomszép".'),
+      word: str('The mood in one word (the tour card\'s pill, beside the index), e.g. "Koktélos".'),
       headline: str('A headline for the mood - a different one each day.'),
       lines: arrayOf(str('The weakest day, and the best day for the big outing.')),
       note: str('Set while it is still an early guess (the start is more than 5 days off).'),

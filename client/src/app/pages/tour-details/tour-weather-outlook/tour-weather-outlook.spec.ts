@@ -44,7 +44,7 @@ describe('TourWeatherOutlook', () => {
 
   it('marks the score on the bar', () => {
     show(makeTour({ weatherOutlook: makeWeatherOutlook({ score: 62.6 }) }));
-    expect(text('.meter-score')).toEqual(['Bódorgó-index: 63 / 100 – Vegyes']);
+    expect(text('.meter-score')).toEqual(['Jóléti-index: 63 / 100 – Elmegy']);
     expect((el.querySelector('.meter-mark') as HTMLElement).style.left).toBe('62.6%');
     expect(el.querySelectorAll('.meter-part').length).toBe(5);
   });
