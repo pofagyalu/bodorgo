@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import Quill from 'quill';
 import { firstValueFrom } from 'rxjs';
-import { MailingsResponse, SentMailing, TourService } from '../../../services/tour';
+import { ExtraDocument, MailingsResponse, SentMailing, TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { errorMessage } from '../../../shared/errors';
 import { lazyStyle } from '../../../shared/lazy-style';
@@ -28,7 +28,8 @@ type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 // Admin-only "Levél a résztvevőknek": a letter to everyone on this tour,
 // written in a small rich-text editor (Quill), saved as it's typed,
 // test-sent to yourself, then mass-mailed - optionally with each
-// attendee's own Programfüzet attached. Sent letters stay listed below,
+// attendee's own Programfüzet attached, and any of the tour's Extrák
+// documents (a map, a hike's GPX track...). Sent letters stay listed below,
 // read-only. The server does the real work (see mailingController.js).
 @Component({
   selector: 'app-tour-mail-panel',
@@ -42,6 +43,8 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
 
   tourId = input.required<string>();
+  // The tour's Extrák documents - any of them can go along attached.
+  documents = input<ExtraDocument[]>([]);
   closed = output<void>();
 
   @ViewChild('editor', { static: true }) private editorEl!: ElementRef<HTMLDivElement>;
@@ -51,6 +54,23 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
   subject = signal('');
   private defaultSubject = '';
   withPdf = signal(false);
+  // The ticked documents' ids - none to begin with.
+  private tickedDocuments = signal<string[]>([]);
+  // Those of them the tour still has, in the tour's order.
+  chosenDocuments = computed(() =>
+    this.documents().filter((d) => this.tickedDocuments().includes(d._id)),
+  );
+  // What the e-mail will say about its attachments (the server writes the
+  // real line - mailingController.js's attachmentLine); '' without any.
+  attachmentLine = computed(() => {
+    const names = this.chosenDocuments()
+      .map((d) => `„${d.title}”${this.isGpx(d) ? ' (GPX útvonal)' : ''}`)
+      .join(', ');
+    if (this.withPdf()) {
+      return `Csatolva küldjük a tábor programfüzetét${names ? `, valamint: ${names}` : ''}.`;
+    }
+    return names ? `Csatolva küldjük: ${names}.` : '';
+  });
   recipients = signal<MailingsResponse['data']['recipients']>({ eligible: [], skipped: [] });
   sent = signal<SentMailing[]>([]);
   isEmpty = signal(true);
@@ -129,6 +149,29 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
     });
   }
 
+  isGpx(doc: { mimeType: string }): boolean {
+    return doc.mimeType === 'application/gpx+xml';
+  }
+
+  isChosen(doc: ExtraDocument): boolean {
+    return this.tickedDocuments().includes(doc._id);
+  }
+
+  toggleDocument(doc: ExtraDocument, on: boolean) {
+    this.tickedDocuments.update((ids) =>
+      on ? [...ids.filter((id) => id !== doc._id), doc._id] : ids.filter((id) => id !== doc._id),
+    );
+  }
+
+  private chosenIds(): string[] {
+    return this.chosenDocuments().map((d) => d._id);
+  }
+
+  // A sent letter's attached documents, for its paperclip's tooltip.
+  sentDocumentNames(m: SentMailing): string {
+    return (m.documents ?? []).map((d) => d.name).join(', ');
+  }
+
   onSubjectChange(value: string) {
     this.subject.set(value);
     this.scheduleSave();
@@ -190,7 +233,7 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
     try {
       await this.flush();
       const res = await firstValueFrom(
-        this.tourService.sendMailTest(this.tourId(), this.withPdf()),
+        this.tourService.sendMailTest(this.tourId(), this.withPdf(), this.chosenIds()),
       );
       this.notifications.addSuccess(`Próbalevél elküldve: ${res.data.sentTo}`);
     } catch (err) {
@@ -210,12 +253,15 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
     this.sending.set(true);
     try {
       await this.flush();
-      const res = await firstValueFrom(this.tourService.sendMailing(this.tourId(), this.withPdf()));
+      const res = await firstValueFrom(
+        this.tourService.sendMailing(this.tourId(), this.withPdf(), this.chosenIds()),
+      );
       const m = res.data.mailing;
       this.sent.update((list) => [m, ...list]);
       this.notifications.addSuccess(`Levél elküldve ${m.recipientCount} résztvevőnek.`);
       // A fresh, empty letter for next time; the Programfüzet is no
-      // longer ticked by default once it has gone out.
+      // longer ticked by default once it has gone out, nor the documents.
+      this.tickedDocuments.set([]);
       this.quill?.setContents([], 'silent');
       this.subject.set(this.defaultSubject);
       this.isEmpty.set(true);

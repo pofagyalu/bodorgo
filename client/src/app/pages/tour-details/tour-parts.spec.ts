@@ -1011,7 +1011,7 @@ describe('TourExtras', () => {
     expect(error).toHaveBeenCalledWith('A dokumentumnak kell legyen címe.');
     extras.newDocumentTitle = ' Házirend ';
     extras.saveNewDocument();
-    expect(error).toHaveBeenCalledWith('Válassz ki egy PDF, JPG vagy PNG fájlt.');
+    expect(error).toHaveBeenCalledWith('Válassz ki egy PDF, JPG, PNG vagy GPX fájlt.');
 
     extras.onDocumentFileSelected({
       target: { files: [new File(['x'], 'h.pdf')] },
@@ -1036,6 +1036,76 @@ describe('TourExtras', () => {
     respond({ 'POST /documents': fail(400, 'Csak PDF, JPG vagy PNG.') });
     expect(error).toHaveBeenCalledWith('Csak PDF, JPG vagy PNG.');
     extras.cancelAddDocument();
+    expect(extras.addingDocument()).toBe(false);
+  });
+
+  it('shows a GPX track with its own icon, as a download', () => {
+    const GPX = {
+      _id: 'd3',
+      title: 'Kékes',
+      filename: 'k.gpx',
+      mimeType: 'application/gpx+xml',
+    } as const;
+    open(makeTour({ extraDocuments: [DOC, { ...DOC, _id: 'd2', mimeType: 'image/jpeg' }, GPX] }));
+    const cards = fixture.debugElement.queryAll(By.css('a.extra-doc-card[target="_blank"][title]'));
+    const icons = cards.map((c) => c.query(By.css('mat-icon')).nativeElement.textContent.trim());
+    expect(icons).toEqual(['picture_as_pdf', 'image', 'route']);
+    expect(cards[2].nativeElement.title).toBe('Kékes – GPX útvonal letöltése');
+    expect(cards[0].nativeElement.title).toBe('Térkép');
+
+    // The group is named after what is in it.
+    expect(extras.documentsLabel()).toBe('Dokumentumok és útvonalak');
+    fixture.componentRef.setInput('tour', makeTour({ extraDocuments: [GPX] }));
+    expect(extras.documentsLabel()).toBe('Útvonalak');
+    fixture.componentRef.setInput('tour', makeTour({ extraDocuments: [DOC] }));
+    expect(extras.documentsLabel()).toBe('Dokumentumok');
+  });
+
+  it('renames a document from its pencil', () => {
+    open(makeTour({ extraDocuments: [DOC] }));
+    const changes: { title: string }[][] = [];
+    extras.documentsChanged.subscribe((docs) => changes.push(docs));
+    const pencil = () => fixture.debugElement.query(By.css('.extra-doc-rename')).nativeElement;
+
+    pencil().click();
+    fixture.detectChanges();
+    expect(extras.renamingDocument()).toEqual(DOC);
+    expect(extras.renameTitle).toBe('Térkép');
+
+    // Empty: refused; unchanged: just closes.
+    extras.renameTitle = '  ';
+    extras.saveRenameDocument();
+    expect(error).toHaveBeenCalledWith('A dokumentumnak kell legyen címe.');
+    extras.renameTitle = 'Térkép ';
+    extras.saveRenameDocument();
+    expect(extras.renamingDocument()).toBeNull();
+    http.expectNone(`${API}/documents/d1`);
+
+    pencil().click();
+    extras.renameTitle = ' Kékes túra ';
+    extras.saveRenameDocument();
+    extras.saveRenameDocument(); // already saving
+    const req = http.expectOne(`${API}/documents/d1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ name: 'Kékes túra' });
+    req.flush({ data: { document: { _id: 'd1', name: 'Kékes túra' } } });
+    expect(changes[0].map((d) => d.title)).toEqual(['Kékes túra']);
+    expect(success).toHaveBeenCalledWith('Dokumentum átnevezve');
+    expect(extras.renamingDocument()).toBeNull();
+
+    pencil().click();
+    extras.renameTitle = 'Más';
+    extras.saveRenameDocument();
+    respond({ 'PATCH /documents/d1': fail(403, 'A tábor le van zárva.') });
+    expect(error).toHaveBeenCalledWith('A tábor le van zárva.');
+    expect(extras.savingRename()).toBe(false);
+    extras.cancelRenameDocument();
+    expect(extras.renamingDocument()).toBeNull();
+    // Starting an upload puts the rename away, and the other way round.
+    pencil().click();
+    extras.startAddDocument();
+    expect(extras.renamingDocument()).toBeNull();
+    pencil().click();
     expect(extras.addingDocument()).toBe(false);
   });
 
@@ -1183,11 +1253,64 @@ describe('TourMailPanel', () => {
     respond({ 'PUT /tours/t1/mailings/draft': { data: { updatedAt: '2026-02-02' } } });
     await settle();
     const req = http.expectOne(`${API}/tours/t1/mailings/test`);
-    expect(req.request.body).toEqual({ withPdf: true });
+    expect(req.request.body).toEqual({ withPdf: true, documents: [] });
     req.flush({ data: { sentTo: 'a@b.hu' } });
     await sending;
     expect(success).toHaveBeenCalledWith('Próbalevél elküldve: a@b.hu');
     expect(panel.sendingTest()).toBe(false);
+  });
+
+  it("attaches the ticked ones of the tour's documents, and unticks them once sent", async () => {
+    const map = {
+      _id: 'd1',
+      title: 'Térkép',
+      filename: 't.pdf',
+      mimeType: 'application/pdf',
+    } as const;
+    const track = {
+      _id: 'd2',
+      title: 'Kékes',
+      filename: 'k.gpx',
+      mimeType: 'application/gpx+xml',
+    } as const;
+    open();
+    fixture.componentRef.setInput('documents', [map, track]);
+    fixture.detectChanges();
+    const boxes = () =>
+      fixture.debugElement.queryAll(By.css('.attachments input')).map((b) => b.nativeElement);
+    expect(boxes().map((b) => b.checked)).toEqual([true, false, false]);
+    expect(panel.attachmentLine()).toBe('Csatolva küldjük a tábor programfüzetét.');
+
+    // Ticked in any order, sent in the tour's.
+    boxes()[2].click();
+    boxes()[1].click();
+    fixture.detectChanges();
+    expect(panel.attachmentLine()).toBe(
+      'Csatolva küldjük a tábor programfüzetét, valamint: „Térkép”, „Kékes” (GPX útvonal).',
+    );
+    boxes()[1].click();
+    panel.withPdf.set(false);
+    expect(panel.attachmentLine()).toBe('Csatolva küldjük: „Kékes” (GPX útvonal).');
+
+    type('Szia!');
+    const sending = panel.send();
+    await settle();
+    respond({ 'PUT /tours/t1/mailings/draft': { data: { updatedAt: '2026-02-02' } } });
+    await settle();
+    const req = http.expectOne(`${API}/tours/t1/mailings/send`);
+    expect(req.request.body).toEqual({ withPdf: false, documents: ['d2'] });
+    const documents = [{ name: 'Kékes', mimeType: 'application/gpx+xml' }];
+    req.flush({
+      data: { mailing: { ...mailing, _id: 'm2', withPdf: false, documents, skipped: [] } },
+    });
+    await sending;
+    fixture.detectChanges();
+    expect(panel.chosenDocuments()).toEqual([]);
+    expect(panel.attachmentLine()).toBe('');
+    expect(panel.sentDocumentNames(panel.sent()[0])).toBe('Kékes');
+    expect(fixture.debugElement.query(By.css('.chip--documents')).nativeElement.title).toBe(
+      'Csatolva: Kékes',
+    );
   });
 
   it('reports a test letter that could not be sent, and retries a failed draft save', async () => {

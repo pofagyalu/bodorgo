@@ -1,5 +1,8 @@
+import fs from 'fs';
 import mongoose from 'mongoose';
 import Tour from '../models/tourModel.js';
+import Document, { documentFilePath } from '../models/documentModel.js';
+import { documentDownloadName } from './documentController.js';
 import Reservation from '../models/reservationModel.js';
 import TourMailing from '../models/tourMailingModel.js';
 import AppError from '../utils/appError.js';
@@ -15,7 +18,7 @@ import logger from '../logger.js';
 // Letters to a tour's attendees, written by an admin on the tour page:
 // one draft per tour, saved as it's typed, then mass-mailed to every
 // attendee who can receive e-mail - optionally with each one's own
-// Programfüzet attached. Sent letters are kept, unchanged, as the record
+// Programfüzet attached, and any of the tour's Extrák documents. Sent letters are kept, unchanged, as the record
 // of what went out. All admin-only (see tourRoutes.js).
 
 async function findTour(idParam) {
@@ -45,12 +48,56 @@ async function attendeeRecipients(tour) {
   return partitionAttendeesByEmailEligibility([...byId.values()]);
 }
 
+// The chosen Extrák documents may weigh this much together - an e-mail
+// with more is turned back by many mailboxes.
+const MAX_ATTACHED_BYTES = 20 * 1024 * 1024;
+
+// The tour's Extrák documents the admin ticked (their ids), read in once,
+// ready to attach - named after the document, like a download.
+async function chosenDocuments(tour, ids) {
+  const wanted = [...new Set((Array.isArray(ids) ? ids : []).map(String))];
+  if (!wanted.length) return [];
+  const documents = wanted.every((id) => mongoose.isValidObjectId(id))
+    ? await Document.find({ _id: { $in: wanted }, tour: tour._id }).sort('createdAt')
+    : [];
+  if (documents.length !== wanted.length) {
+    throw new AppError('A csatolni kívánt dokumentumok egyike már nincs meg.', 400);
+  }
+  let bytes = 0;
+  for (const document of documents) {
+    const file = documentFilePath(document);
+    if (!fs.existsSync(file)) {
+      throw new AppError(`A(z) „${document.name}” dokumentum fájlja nem található.`, 400);
+    }
+    bytes += fs.statSync(file).size;
+  }
+  if (bytes > MAX_ATTACHED_BYTES) {
+    throw new AppError('A csatolt dokumentumok együtt legfeljebb 20 MB-ot tehetnek ki.', 400);
+  }
+  return documents.map((document) => ({
+    name: document.name,
+    mimeType: document.mimeType,
+    filename: documentDownloadName(document),
+    content: fs.readFileSync(documentFilePath(document)),
+  }));
+}
+
+// What the e-mail says about its attachments - '' without any.
+function attachmentLine(withPdf, documents, tourTitle) {
+  const names = documents
+    .map((d) => `„${d.name}”${d.mimeType === 'application/gpx+xml' ? ' (GPX útvonal)' : ''}`)
+    .join(', ');
+  if (withPdf) {
+    return `Csatolva küldjük a(z) "${tourTitle}" tábor programfüzetét${names ? `, valamint: ${names}` : ''}.`;
+  }
+  return names ? `Csatolva küldjük: ${names}.` : '';
+}
+
 // The e-mail itself: the greeting, the admin's letter, a line about the
-// attachment when there is one, and the usual closing.
-function letterEmail(recipientName, letterHtml, withPdf, tourTitle) {
+// attachments when there are any, and the usual closing.
+function letterEmail(recipientName, letterHtml, pdfLine) {
   const noReplyNote =
     'Erre az e-mailre kérjük, ne válaszolj - ez egy automatikusan generált üzenet.';
-  const pdfLine = withPdf ? `Csatolva küldjük a(z) "${tourTitle}" tábor programfüzetét.` : '';
   const html =
     `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#222;">` +
     `<p>Szia ${escapeHtml(recipientName)}!</p>` +
@@ -71,8 +118,12 @@ function letterEmail(recipientName, letterHtml, withPdf, tourTitle) {
   return { html, text };
 }
 
-async function sendLetter(tour, user, { subject, html, withPdf }) {
-  const { html: body, text } = letterEmail(user.name, html, withPdf, tour.title);
+async function sendLetter(tour, user, { subject, html, withPdf, documents = [] }) {
+  const { html: body, text } = letterEmail(
+    user.name,
+    html,
+    attachmentLine(withPdf, documents, tour.title),
+  );
   const attachments = [];
   if (withPdf) {
     const distanceInfo = await resolveDistanceInfo(tour, user);
@@ -81,6 +132,7 @@ async function sendLetter(tour, user, { subject, html, withPdf }) {
       content: await renderTourPdfToBuffer(tour, user, distanceInfo),
     });
   }
+  for (const { filename, content } of documents) attachments.push({ filename, content });
   await sendResendEmail({ to: user.email, subject, text, html: body, attachments });
 }
 
@@ -89,6 +141,7 @@ const publicMailing = (m) => ({
   subject: m.subject,
   html: m.html,
   withPdf: m.withPdf,
+  documents: (m.documents ?? []).map(({ name, mimeType }) => ({ name, mimeType })),
   sentAt: m.sentAt,
   sentByName: m.sentByName,
   recipientCount: m.recipients?.length ?? 0,
@@ -162,6 +215,7 @@ export const sendTest = async (req, res) => {
     subject: `[Próba] ${draft.subject || defaultSubject(tour)}`,
     html: draft.html,
     withPdf: !!req.body?.withPdf,
+    documents: await chosenDocuments(tour, req.body?.documents),
   });
   res.status(200).json({ status: 'success', data: { sentTo: req.user.email } });
 };
@@ -172,6 +226,7 @@ export const sendToAttendees = async (req, res) => {
   const tour = await findTour(req.params.id);
   const draft = await savedDraft(tour);
   const withPdf = !!req.body?.withPdf;
+  const documents = await chosenDocuments(tour, req.body?.documents);
   const subject = draft.subject || defaultSubject(tour);
   const { eligible, skipped } = await attendeeRecipients(tour);
   if (!eligible.length)
@@ -182,6 +237,7 @@ export const sendToAttendees = async (req, res) => {
   draft.status = 'sent';
   draft.subject = subject;
   draft.withPdf = withPdf;
+  draft.documents = documents.map(({ name, mimeType }) => ({ name, mimeType }));
   draft.sentAt = new Date();
   draft.sentByName = req.user.name;
   draft.recipients = [];
@@ -191,7 +247,7 @@ export const sendToAttendees = async (req, res) => {
   const failed = [];
   for (const user of eligible) {
     try {
-      await sendLetter(tour, user, { subject, html: draft.html, withPdf });
+      await sendLetter(tour, user, { subject, html: draft.html, withPdf, documents });
       draft.recipients.push({ name: user.name, email: user.email });
     } catch (err) {
       logger.error(`Tour ${tour._id}: letter to ${user.email} failed: ${err.message}`);

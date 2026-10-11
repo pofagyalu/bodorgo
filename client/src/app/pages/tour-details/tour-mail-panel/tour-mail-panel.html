@@ -69,8 +69,8 @@
           <div class="letter">
             <p>Szia {{ recipients().eligible[0] || 'Név' }}!</p>
             <div [innerHTML]="previewHtml()"></div>
-            @if (withPdf()) {
-              <p>Csatolva küldjük a tábor programfüzetét.</p>
+            @if (attachmentLine()) {
+              <p>{{ attachmentLine() }}</p>
             }
             <p>Üdvözlettel,<br />Bódorgó</p>
           </div>
@@ -78,18 +78,43 @@
       }
 
       <div class="options">
-        <label class="check">
-          <input
-            type="checkbox"
-            [checked]="withPdf()"
-            (change)="withPdf.set($any($event.target).checked)"
-            [disabled]="busy()"
-          />
-          <span>
-            <strong>Programfüzet csatolása</strong>
-            <small>mindenki a saját példányát kapja (saját távolság, kiemelt szoba)</small>
-          </span>
-        </label>
+        <!-- What goes along attached: the Programfüzet, and any of the
+             tour's Extrák documents. -->
+        <div class="attachments">
+          <span class="attachments-label">Csatolmányok</span>
+          <label class="check">
+            <input
+              type="checkbox"
+              [checked]="withPdf()"
+              (change)="withPdf.set($any($event.target).checked)"
+              [disabled]="busy()"
+            />
+            <span>
+              <strong>Programfüzet</strong>
+              <small>mindenki a saját példányát kapja (saját távolság, kiemelt szoba)</small>
+            </span>
+          </label>
+          @for (doc of documents(); track doc._id) {
+            <label class="check">
+              <input
+                type="checkbox"
+                [checked]="isChosen(doc)"
+                (change)="toggleDocument(doc, $any($event.target).checked)"
+                [disabled]="busy()"
+              />
+              <span>
+                <strong>{{ doc.title }}</strong>
+                <small>{{
+                  isGpx(doc)
+                    ? 'GPX útvonal'
+                    : doc.mimeType === 'application/pdf'
+                      ? 'PDF dokumentum'
+                      : 'kép'
+                }}</small>
+              </span>
+            </label>
+          }
+        </div>
 
         <div class="recipients">
           <mat-icon>group</mat-icon>
@@ -181,6 +206,11 @@
               @if (m.withPdf) {
                 <span class="chip" title="Programfüzettel"
                   ><mat-icon>picture_as_pdf</mat-icon></span
+                >
+              }
+              @if (m.documents?.length; as count) {
+                <span class="chip chip--documents" [title]="'Csatolva: ' + sentDocumentNames(m)"
+                  ><mat-icon>attach_file</mat-icon>{{ count }}</span
                 >
               }
               <span class="sent-meta"

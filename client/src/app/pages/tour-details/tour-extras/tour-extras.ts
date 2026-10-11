@@ -13,7 +13,7 @@ import { lazyStyle } from '../../../shared/lazy-style';
 // (download, e-mail to myself), the finished beszámoló for the tour's
 // attendees, the admin's "Levél a résztvevőknek" and "Beszámoló írása"
 // (their dialogs live here too), and up to 5 admin-uploaded documents
-// (map, places to visit...) - uploaded and deleted here, then handed back
+// (map, places to visit, a hike's GPX track...) - uploaded and deleted here, then handed back
 // to the tour page (documentsChanged), which owns the tour.
 @Component({
   selector: 'app-tour-extras',
@@ -166,7 +166,27 @@ export class TourExtras {
     return this.tourService.documentUrl(documentId);
   }
 
+  // A hike's GPX track (saved on a watch) - a download, for a map app.
+  isGpx(doc: ExtraDocument): boolean {
+    return doc.mimeType === 'application/gpx+xml';
+  }
+
+  // The uploaded group's caption says what is in it: documents, tracks,
+  // or both.
+  documentsLabel = computed(() => {
+    const docs = this.tour().extraDocuments ?? [];
+    const tracks = docs.filter((d) => this.isGpx(d)).length;
+    if (!tracks) return 'Dokumentumok';
+    return tracks === docs.length ? 'Útvonalak' : 'Dokumentumok és útvonalak';
+  });
+
+  documentIcon(doc: ExtraDocument): string {
+    if (this.isGpx(doc)) return 'route';
+    return doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image';
+  }
+
   startAddDocument() {
+    this.renamingDocument.set(null);
     this.newDocumentTitle = '';
     this.selectedDocumentFile = null;
     this.addingDocument.set(true);
@@ -188,7 +208,7 @@ export class TourExtras {
       return;
     }
     if (!this.selectedDocumentFile) {
-      this.notifications.addError('Válassz ki egy PDF, JPG vagy PNG fájlt.');
+      this.notifications.addError('Válassz ki egy PDF, JPG, PNG vagy GPX fájlt.');
       return;
     }
 
@@ -207,6 +227,55 @@ export class TourExtras {
       error: (err) => {
         this.notifications.addError(err?.error?.message ?? 'Hiba történt a feltöltés során.');
         this.uploadingDocument.set(false);
+      },
+    });
+  }
+
+  // --- A document's pencil: its title, to correct ---
+
+  renamingDocument = signal<ExtraDocument | null>(null);
+  savingRename = signal(false);
+  renameTitle = '';
+
+  startRenameDocument(doc: ExtraDocument, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.addingDocument.set(false);
+    this.renameTitle = doc.title;
+    this.renamingDocument.set(doc);
+  }
+
+  cancelRenameDocument() {
+    this.renamingDocument.set(null);
+  }
+
+  saveRenameDocument() {
+    const doc = this.renamingDocument();
+    if (!doc || this.savingRename()) return;
+    const title = this.renameTitle.trim();
+    if (!title) {
+      this.notifications.addError('A dokumentumnak kell legyen címe.');
+      return;
+    }
+    if (title === doc.title) {
+      this.renamingDocument.set(null);
+      return;
+    }
+    this.savingRename.set(true);
+    this.tourService.renameDocument(doc._id, title).subscribe({
+      next: (res) => {
+        this.savingRename.set(false);
+        this.renamingDocument.set(null);
+        this.documentsChanged.emit(
+          (this.tour().extraDocuments ?? []).map((d) =>
+            d._id === doc._id ? { ...d, title: res.data.document.name } : d,
+          ),
+        );
+        this.notifications.addSuccess('Dokumentum átnevezve');
+      },
+      error: (err) => {
+        this.savingRename.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt az átnevezés során.');
       },
     });
   }

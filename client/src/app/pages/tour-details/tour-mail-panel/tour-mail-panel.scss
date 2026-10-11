@@ -213,6 +213,22 @@
   background: #f4f7f5;
 }
 
+// The Programfüzet and the tour's documents, one under the other.
+.attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.attachments-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #56666e;
+}
+
 .check {
   display: flex;
   align-items: flex-start;
@@ -416,6 +432,18 @@
   width: 18px;
   height: 18px;
   color: #e02424;
+}
+
+// The paperclip with how many documents went along.
+.chip--documents {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #4a5b63;
+
+  mat-icon {
+    color: #4a5b63;
+  }
 }
 
 .sent-meta {

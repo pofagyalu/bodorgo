@@ -5,6 +5,7 @@ import {
   getDocumentPreview,
   getDocuments,
   getLegacyTourDocument,
+  renameDocument,
   uploadDocument,
   uploadMiddleware,
 } from '../controllers/documentController.js';
@@ -17,7 +18,10 @@ router
   .route('/')
   .get(requireAuth, getDocuments)
   .post(requireAuth, restrictTo('admin'), uploadMiddleware, uploadDocument);
-router.delete('/:id', requireAuth, restrictTo('admin'), deleteDocument);
+router
+  .route('/:id')
+  .patch(requireAuth, restrictTo('admin'), renameDocument)
+  .delete(requireAuth, restrictTo('admin'), deleteDocument);
 router.get('/:id/file', requireAuth, getDocumentFile);
 router.get('/:id/preview', requireAuth, getDocumentPreview);
 // Old tour-document links (before tour documents moved here).

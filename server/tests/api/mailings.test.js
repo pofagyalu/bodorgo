@@ -101,6 +101,67 @@ describe('letters to the attendees (admin)', () => {
     ).toBe(400);
   });
 
+  it("attaches the tour's chosen Extrák documents - a PDF, a GPX track - and keeps their names", async () => {
+    const { admin, tour } = await tourWithAttendees();
+    const upload = (name, tourId, content, filename) =>
+      request(app)
+        .post('/documents')
+        .set(asUser(admin))
+        .field('name', name)
+        .field('tour', String(tourId))
+        .attach('file', Buffer.from(content), { filename, contentType: 'application/octet-stream' })
+        .then((res) => res.body.data.document);
+    const gpx = await upload('Kékes: túra', tour._id, '<?xml version="1.0"?><gpx></gpx>', 'a.gpx');
+    const map = await request(app)
+      .post('/documents')
+      .set(asUser(admin))
+      .field('name', 'Térkép')
+      .field('tour', String(tour._id))
+      .attach('file', Buffer.from('%PDF-1.4 x'), {
+        filename: 'x.pdf',
+        contentType: 'application/pdf',
+      })
+      .then((res) => res.body.data.document);
+    const other = await upload('Másé', (await createTour())._id, '<gpx></gpx>', 'b.gpx');
+    await request(app)
+      .put(draftUrl(tour))
+      .set(asUser(admin))
+      .send({ subject: 'Útvonal', html: '<p>Itt a túra.</p>' });
+    const post = (what, body) =>
+      request(app).post(`/tours/${tour._id}/mailings/${what}`).set(asUser(admin)).send(body);
+
+    // Another tour's document, a gone one, a malformed id: nothing goes out.
+    for (const documents of [[other._id], ['000000000000000000000000'], ['nem-id']]) {
+      expect((await post('send', { documents })).status).toBe(400);
+    }
+    expect(sendResendEmail).not.toHaveBeenCalled();
+    expect(await TourMailing.countDocuments({ tour: tour._id, status: 'draft' })).toBe(1);
+
+    // Only the documents, without the Programfüzet - the test letter too.
+    expect((await post('test', { documents: [gpx._id] })).status).toBe(200);
+    const test = vi.mocked(sendResendEmail).mock.calls[0][0];
+    expect(test.attachments.map((a) => a.filename)).toEqual(['Kékes  túra.gpx']);
+    expect(test.attachments[0].content.toString()).toContain('<gpx>');
+    expect(test.text).toContain('Csatolva küldjük: „Kékes: túra” (GPX útvonal).');
+    vi.mocked(sendResendEmail).mockClear();
+
+    const sent = await post('send', { withPdf: true, documents: [map._id, gpx._id, gpx._id] });
+    expect(sent.status).toBe(200);
+    const email = vi.mocked(sendResendEmail).mock.calls[0][0];
+    expect(email.attachments.map((a) => a.filename)).toEqual([
+      '25-sarud.pdf',
+      'Kékes  túra.gpx',
+      'Térkép.pdf',
+    ]);
+    expect(email.text).toContain(
+      'programfüzetét, valamint: „Kékes: túra” (GPX útvonal), „Térkép”.',
+    );
+    expect(sent.body.data.mailing.documents).toEqual([
+      { name: 'Kékes: túra', mimeType: 'application/gpx+xml' },
+      { name: 'Térkép', mimeType: 'application/pdf' },
+    ]);
+  });
+
   it('refuses an empty letter, and anyone but an admin', async () => {
     const { admin, tour, anna } = await tourWithAttendees();
     await request(app)

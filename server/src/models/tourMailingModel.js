@@ -17,6 +17,9 @@ const tourMailingSchema = new Schema(
     // back its formatting exactly. Not used for sending.
     delta: { type: Schema.Types.Mixed },
     withPdf: { type: Boolean, default: false },
+    // The tour's Extrák documents that went out attached - what they were
+    // called then (a document can be deleted later).
+    documents: [{ _id: false, name: String, mimeType: String }],
     updatedByName: String,
     sentAt: Date,
     sentByName: String,

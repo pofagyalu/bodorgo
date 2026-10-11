@@ -21,8 +21,8 @@ export const DOCUMENT_CATEGORIES = [
 // documentController.js):
 // - a club document (Klub → Dokumentumok: alapító okirat, éves
 //   adóbevallás…) - no tour; has a category, maybe a year, and a preview;
-// - a tour's Extrák document (a map, a beszámoló…) - its tour set; at
-//   most 5 per tour, no preview.
+// - a tour's Extrák document (a map, a beszámoló, a hike's GPX track…) -
+//   its tour set; at most 5 per tour, no preview.
 // Viewable by every logged-in user, uploaded and deleted by admins. The
 // file lives under documents/ (outside public/ - only reachable through
 // the login-gated /documents/:id/file route): a club one right there, a
@@ -75,7 +75,12 @@ const documentSchema = new Schema(
   { timestamps: true, collection: 'clubdocuments' },
 );
 
-const MIME_TYPES = { '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.png': 'image/png' };
+const MIME_TYPES = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gpx': 'application/gpx+xml',
+};
 
 documentSchema.virtual('mimeType').get(function mimeType() {
   return MIME_TYPES[path.extname(this.filename).toLowerCase()] ?? 'application/octet-stream';
