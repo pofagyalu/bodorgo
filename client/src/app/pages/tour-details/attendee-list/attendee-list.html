@@ -159,7 +159,7 @@
           }
         </tr>
       }
-      @if (group.members.length > 1 && canSeeFamilySubtotal(group)) {
+      @if (canSeeFamilySubtotal(group)) {
         <tr
           class="family-subtotal-row"
           [class.attendee-row--stripe]="group.familyStripe === 1"

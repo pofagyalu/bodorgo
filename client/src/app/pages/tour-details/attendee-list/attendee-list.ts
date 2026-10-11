@@ -59,7 +59,8 @@ export interface StripedAttendeeRow extends AttendeeListRow {
 // One family's own rows, grouped together - see groupedFamilies below.
 // key is a real familyId for an actual family, or a synthetic
 // "solo-<attendeeId>" one for a lone attendee with no family on record
-// (always exactly one member, so it never qualifies for a subtotal row).
+// (no family, so no subtotal row - a real family has one even when only
+// one of its members is on the tour).
 export interface FamilyGroup {
   key: string;
   familyId: string | null;
@@ -227,13 +228,13 @@ export class AttendeeList implements OnInit {
     };
   }
 
-  // Admin sees every family's subtotal; anyone else only ever sees their
-  // own - a solo "family" (no familyId at all) never reaches here since
-  // the caller already guards on members.length >= 2, and a group only
-  // ever has 2+ members when they share a real, non-null familyId.
+  // Every real family has a subtotal row - also one with a single member
+  // on the tour; an attendee with no family on record has none. Admin sees
+  // every family's; anyone else only ever sees their own.
   canSeeFamilySubtotal(group: FamilyGroup): boolean {
+    if (group.familyId == null) return false;
     if (this.isAdmin()) return true;
-    return group.familyId != null && group.familyId === this.auth.user()?.familyId;
+    return group.familyId === this.auth.user()?.familyId;
   }
 
   // Collapsed by default for every family, on every fresh load - not

@@ -127,6 +127,22 @@ describe('AttendeeList', () => {
     expect(list.showActions).toBe(true);
   });
 
+  it('gives a family its subtotal row with one member on the tour too - not someone with no family', () => {
+    open('admin', {
+      attendees: [
+        row({ attendeeId: 'a1', name: 'Teszt Elek', userId: 'me' }),
+        row({ attendeeId: 'a3', name: 'Kovács Béla', userId: 'b', familyId: null }),
+      ],
+    });
+    const [solo, single] = list.groupedFamilies;
+    expect(list.canSeeFamilySubtotal(single)).toBe(true);
+    expect(list.canSeeFamilySubtotal(solo)).toBe(false);
+    expect(list.familyLabel(single)).toBe('Teszt család összesen');
+    const rows = fixture.debugElement.queryAll(By.css('.family-subtotal-row'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].nativeElement.textContent).toContain('Teszt család összesen');
+  });
+
   it('knows about the optional programmes and the prices', () => {
     open('member');
     expect(list.hasOptionalPrograms).toBe(true);
