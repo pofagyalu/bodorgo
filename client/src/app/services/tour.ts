@@ -601,6 +601,8 @@ export interface TourStatsResponse {
     totalTours: number;
     upcomingTours?: number;
     totalParticipants: number;
+    // Everyone the club knows, each person once (the users).
+    totalPeople?: number;
     // The gender split pooled across every tour attendee on record (not
     // every registered user - see tourController.js's getTourStats). null
     // until at least one attendee has a gender on file.
