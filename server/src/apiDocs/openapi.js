@@ -1293,6 +1293,9 @@ const paths = {
         totalTours: int('Tours that have already ended.'),
         upcomingTours: int('Tours still ahead.'),
         totalParticipants: int('Attendances over every tour.'),
+        totalPeople: int(
+          'Everyone the club knows, each person once - the number of users (Felhasználók → Mindenki).',
+        ),
         genderRatio: obj({ malePercentage: int('0-100'), femalePercentage: int('0-100') }),
         running: obj({
           totalKm: num('Kilometres over every finished lap, one decimal'),

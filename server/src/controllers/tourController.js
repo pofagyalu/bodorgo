@@ -865,12 +865,17 @@ export const getTourStats = async (req, res) => {
 
   const attendeeAges = await attendeeAgeStats();
 
+  // Everyone the club knows - each person once, however many tours they
+  // were on: the number of Klub → Felhasználók's "Mindenki".
+  const totalPeople = await User.countDocuments();
+
   res.status(200).json({
     status: 'success',
     data: {
       totalTours,
       upcomingTours,
       totalParticipants,
+      totalPeople,
       genderRatio,
       attendeeAges,
       running: await runningStats(),

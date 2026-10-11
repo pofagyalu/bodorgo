@@ -33,6 +33,16 @@
           <span class="stat-label">résztvevő összesen</span>
         </div>
 
+        <!-- Each person once, however many tours they were on - the number
+             of Klub → Felhasználók's "Mindenki". -->
+        @if (s.totalPeople; as people) {
+          <div class="stat-card">
+            <mat-icon [style.color]="totalPeopleIconColor">diversity_3</mat-icon>
+            <span class="stat-value">{{ people }}</span>
+            <span class="stat-label">különböző bódorgó</span>
+          </div>
+        }
+
         @if (s.mostAttendedTour; as m) {
           <a class="stat-card stat-card--link" [routerLink]="['/taborok', m.slug]">
             <mat-icon [style.color]="mostAttendedIconColor">groups</mat-icon>

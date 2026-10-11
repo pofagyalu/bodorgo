@@ -207,8 +207,13 @@ export class AttendeeList implements OnInit {
   // "Nagy család összesen" when every member shares the same first name
   // token (Hungarian surname-first convention) - falls back to a plain
   // "Család összesen" for a blended family or differing surnames, rather
-  // than guessing wrong.
+  // than guessing wrong. Someone on the tour without the rest of the
+  // family: "Péter egyedül" (the given name - what follows the surname).
   familyLabel(group: FamilyGroup): string {
+    if (group.members.length === 1) {
+      const [surname, ...given] = group.members[0].name.trim().split(/\s+/);
+      return `${given.join(' ') || surname} egyedül`;
+    }
     const surnames = new Set(group.members.map((m) => m.name.trim().split(/\s+/)[0]));
     if (surnames.size === 1) {
       return `${[...surnames][0]} család összesen`;

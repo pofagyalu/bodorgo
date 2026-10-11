@@ -8,6 +8,7 @@ import {
   createReservation,
   createTour,
 } from '../helpers/factories.js';
+import User from '../../src/models/userModel.js';
 import Tour from '../../src/models/tourModel.js';
 import Reservation from '../../src/models/reservationModel.js';
 import { fetchForecast, fetchHistorical } from '../../src/utils/weather.js';
@@ -230,6 +231,9 @@ describe('reading tours', () => {
     const stats = await request(app).get('/tours/tour-stats').set(asUser(member));
     expect(stats.status).toBe(200);
     expect(stats.body.data).toMatchObject({ totalTours: 4, upcomingTours: 0, running: null });
+    // Everyone the club knows, once each - the users.
+    expect(stats.body.data.totalPeople).toBe(await User.countDocuments());
+    expect(stats.body.data.totalPeople).toBeGreaterThan(0);
     // Tours still ahead aren't counted yet - they're "coming soon".
     const nextYear = new Date().getFullYear() + 1;
     await createTour({ startDate: new Date(`${nextYear}-05-10`) });
