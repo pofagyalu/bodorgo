@@ -8,7 +8,7 @@ import { fail, logIn, pageTesting, respond, settle } from '../../../testing/comp
 import { makePayment, makeTour } from '../../../testing/fixtures';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
-import { ScheduleEntry, Tour, TourService, TourVideo } from '../../services/tour';
+import { ExtraDocument, ScheduleEntry, Tour, TourService, TourVideo } from '../../services/tour';
 import { VideoCopiesService } from '../../services/video-copies';
 import { VideoCard } from '../../shared/video-card/video-card';
 import { VideoPlayer } from '../../shared/video-player/video-player';
@@ -1107,6 +1107,62 @@ describe('TourExtras', () => {
     expect(extras.renamingDocument()).toBeNull();
     pencil().click();
     expect(extras.addingDocument()).toBe(false);
+  });
+
+  it('tells a planned track from a walked one, and lets the pencil switch it', () => {
+    const track = {
+      kind: 'planned',
+      distanceM: 12336,
+      elevationGainM: 540,
+      elevationLossM: 525,
+      startedAt: null,
+      durationSec: null,
+    } as const;
+    const plan: ExtraDocument = {
+      ...DOC,
+      _id: 'd2',
+      title: 'Kékes',
+      mimeType: 'application/gpx+xml',
+      track,
+    };
+    const walked: ExtraDocument = { ...plan, _id: 'd3', track: { ...track, kind: 'recorded' } };
+    open(makeTour({ extraDocuments: [DOC, plan, walked] }));
+    const changes: ExtraDocument[][] = [];
+    extras.documentsChanged.subscribe((docs) => changes.push(docs));
+
+    expect([DOC, plan, walked].map((d) => extras.documentIcon(d))).toEqual([
+      'picture_as_pdf',
+      'route',
+      'hiking',
+    ]);
+    const captions = fixture.debugElement
+      .queryAll(By.css('.extra-doc-kind'))
+      .map((c) => c.nativeElement.textContent.trim());
+    expect(captions).toEqual(['Tervezett', 'Megtett']);
+    expect(extras.documentTooltip(plan)).toBe('Kékes – tervezett útvonal, 12,3 km (GPX letöltése)');
+    expect(extras.documentTooltip(walked)).toContain('megtett útvonal');
+
+    // The kind is offered for a track only.
+    const pencils = () =>
+      fixture.debugElement.queryAll(By.css('.extra-doc-rename')).map((p) => p.nativeElement);
+    pencils()[0].click();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('.document-upload-form select'))).toBeNull();
+    pencils()[1].click();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('.document-upload-form select'))).not.toBeNull();
+    expect(extras.renameKind).toBe('planned');
+
+    // Only the kind changed: only that is sent.
+    extras.renameKind = 'recorded';
+    extras.saveRenameDocument();
+    const req = http.expectOne(`${API}/documents/d2`);
+    expect(req.request.body).toEqual({ trackKind: 'recorded' });
+    req.flush({
+      data: { document: { _id: 'd2', name: 'Kékes', track: { ...track, kind: 'recorded' } } },
+    });
+    expect(changes[0][1].track?.kind).toBe('recorded');
+    expect(success).toHaveBeenCalledWith('Útvonal módosítva');
   });
 
   it('deletes a document only after a yes', async () => {

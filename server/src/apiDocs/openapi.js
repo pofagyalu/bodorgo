@@ -291,6 +291,33 @@ const schemas = {
     mimeType: str('Type - `application/gpx+xml` is a GPX track (a hike), always a download.', {
       enum: ['application/pdf', 'image/jpeg', 'image/png', 'application/gpx+xml'],
     }),
+    track: ref('DocumentTrack'),
+  }),
+
+  // What a GPX file's track is - on a tour's GPX documents only.
+  DocumentTrack: obj({
+    kind: str(
+      "`planned`: a plan, where the tour means to go. `recorded`: the hike that happened - those are printed in the beszámoló under their day, on a map. Decided by the file at upload (a watch's recording has times, a planned route none); an admin can switch it (PATCH /documents/{id}).",
+      { enum: ['planned', 'recorded'] },
+    ),
+    distanceM: int('Its length, in metres.'),
+    elevationGainM: {
+      type: ['integer', 'null'],
+      description: 'Climb, in metres - null when the file has no heights.',
+    },
+    elevationLossM: {
+      type: ['integer', 'null'],
+      description: 'Descent, in metres - null when the file has no heights.',
+    },
+    startedAt: {
+      type: ['string', 'null'],
+      format: 'date-time',
+      description: "The first point's time - null for a planned route.",
+    },
+    durationSec: {
+      type: ['integer', 'null'],
+      description: 'From the first point to the last, in seconds - null for a planned route.',
+    },
   }),
 
   User: obj({
@@ -866,6 +893,10 @@ const schemas = {
     }),
     year: int('For yearly club documents.'),
     preview: bool('A first-page picture exists (`/documents/{id}/preview`) - club documents only.'),
+    track: {
+      description: "A tour's GPX file: its track; null for anything else.",
+      oneOf: [ref('DocumentTrack'), { type: 'null' }],
+    },
     createdAt: date(),
   }),
 
@@ -1670,7 +1701,7 @@ const paths = {
       tag: T.tourFiles,
       summary: 'Beszámoló PDF',
       description:
-        "The finished beszámoló - the tour's attendees and admins. The picked album photo, place, dates, headcount, the days as bullet points, and at the end the club, the elnök and a wax seal with the elnök's name. `?draft=1` (admin): the working copy as it is now, marked PISZKOZAT.",
+        "The finished beszámoló - the tour's attendees and admins. The picked album photo, place, dates, headcount, the days as bullet points, and at the end the club, the elnök and a wax seal with the elnök's name. The tour's hikes that happened (its Extrák GPX tracks of kind `recorded`, as they are when the PDF is asked for) are printed under the day they were walked on, also on a day nothing was written about: the track on an OpenStreetMap map, then start, arrival, length, time, climb and descent - only what the file gives; a hike whose file has no times comes after the days. The map is made once from OpenStreetMap's tiles and kept; when it can't be made, the hike is printed without it. `?draft=1` (admin): the working copy as it is now, marked PISZKOZAT.",
       params: [tourId, query('draft', "`1`: the admin's preview of the working copy.")],
       response: file(['application/pdf'], 'The PDF.'),
       errors: [403, 404],
@@ -2658,7 +2689,7 @@ const paths = {
       role: 'admin',
       summary: 'Upload a document',
       description:
-        "PDF, JPG or PNG, at most 15 MB. For the club: `name`, `category`, `year` - its first-page preview is made at once. For a tour's Extrák: `name` and `tour` - at most 5 per tour, no preview; a tour also takes a GPX track (a hike saved on a watch), known by its `.gpx` name and its `<gpx>` content, whatever type the browser sends.",
+        "PDF, JPG or PNG, at most 15 MB. For the club: `name`, `category`, `year` - its first-page preview is made at once. For a tour's Extrák: `name` and `tour` - at most 5 per tour, no preview; a tour also takes a GPX track (a hike saved on a watch, or a planned route), known by its `.gpx` name and its `<gpx>` content, whatever type the browser sends; its `track` is read from the file - what it measures, and whether it is a plan or the hike that happened.",
       multipart: obj(
         {
           file: { type: 'string', format: 'binary' },
@@ -2679,11 +2710,14 @@ const paths = {
       closedTour: true,
       tag: T.documents,
       role: 'admin',
-      summary: 'Rename a document',
+      summary: 'Rename a document, or say what kind of track it is',
       description:
-        "Only its name - what the card shows, and what a download or an e-mail attachment of it is called. The file stays as it is. A closed tour's document can no longer be renamed.",
+        "Its name - what the card shows, and what a download or an e-mail attachment of it is called - and, for a GPX track, its kind: a plan or the hike that happened (a hike gets its map made for the beszámoló, in the background). At least one of the two; the file stays as it is. `trackKind` on a document that is no GPX track is a 400. A closed tour's document can no longer be changed.",
       params: [path('id', 'The document.')],
-      body: obj({ name: str('The new name; must not be empty.') }, ['name']),
+      body: obj({
+        name: str('The new name; must not be empty.'),
+        trackKind: str('A GPX track only.', { enum: ['planned', 'recorded'] }),
+      }),
       data: obj({ document: ref('Document') }),
       errors: [400, 404],
     }),

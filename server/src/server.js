@@ -12,6 +12,7 @@ import logger from './logger.js';
 import { checkPollReminders } from './chat/pollReminders.js';
 import { warmUpMusic } from './music/jellyfin.js';
 import { ensureDocumentPreviews } from './utils/documentPreviews.js';
+import { ensureDocumentTracks } from './utils/documentTracks.js';
 import {
   checkMembershipReminders,
   notifyAdminsIfAllMembersPaid,
@@ -87,6 +88,7 @@ mongoose
     ensureDocumentPreviews().catch((err) =>
       logger.error(`Document previews failed: ${err.message}`),
     );
+    ensureDocumentTracks().catch((err) => logger.error(`Document tracks failed: ${err.message}`));
 
     // New tour recap videos are announced by an admin's "Új média
     // felfedezése" (see photos/discovery.js), not on a schedule - the NAS

@@ -114,6 +114,15 @@
     border-radius: 6px;
     font: inherit;
   }
+
+  // A track's kind (planned / walked), beside its title.
+  select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    font: inherit;
+  }
 }
 
 .user-form-actions {
@@ -286,6 +295,16 @@
     height: 0.9rem;
     color: inherit;
   }
+}
+
+// Under a GPX track's title: "Tervezett" or "Megtett" (same specificity
+// as ".extra-doc-card span", later in the file - so it wins).
+.extra-doc-card .extra-doc-kind {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #a4530f;
 }
 
 // On the card's own top-right corner, half outside it - like the

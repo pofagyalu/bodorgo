@@ -12,6 +12,8 @@ import config from '../config.js';
 import { getClubSettings } from '../utils/clubSettings.js';
 import { huDate, huDateRange, huDayLabel } from '../utils/huDate.js';
 import { waxSealPng } from '../utils/waxSeal.js';
+import { tourHikes } from '../utils/documentTracks.js';
+import { MAP_CREDIT } from '../utils/trackMap.js';
 
 // A tour's beszámoló - what happened there, day by day. An admin writes it
 // on the tour page (one editor per day, saved as they type, for as many
@@ -365,6 +367,66 @@ function drawDay(doc, index, label, delta) {
   }
 }
 
+// A hike that happened that day (a recorded GPX track among the tour's
+// Extrák - utils/documentTracks.js), under the day's text: its name, its
+// track on the map, and its numbers in a light card.
+const HIKE_STATS_HEIGHT = 40;
+
+function drawHike(doc, hike) {
+  const width = doc.page.width - MARGIN * 2;
+  let image = null;
+  try {
+    if (hike.map) image = doc.openImage(hike.map);
+  } catch {
+    // Not a picture pdfkit can read - the hike goes without its map.
+  }
+  const mapHeight = image ? (width * image.height) / image.width : 0;
+
+  doc.moveDown(0.8);
+  ensureRoom(doc, 22 + (image ? mapHeight + 14 : 0) + HIKE_STATS_HEIGHT);
+  doc
+    .font('Heading')
+    .fontSize(10.5)
+    .fillColor(INK)
+    .text(`Túra: ${hike.name}`, MARGIN, doc.y, { width });
+  doc.y += 5;
+
+  if (image) {
+    const top = doc.y;
+    doc.save();
+    doc.roundedRect(MARGIN, top, width, mapHeight, 8).clip();
+    doc.image(image, MARGIN, top, { width, height: mapHeight });
+    doc.restore();
+    doc.roundedRect(MARGIN, top, width, mapHeight, 8).lineWidth(0.6).stroke(LINE);
+    doc
+      .font('Body')
+      .fontSize(6.5)
+      .fillColor(GREY)
+      .text(MAP_CREDIT, MARGIN, top + mapHeight + 2, { width, align: 'right', lineBreak: false });
+    doc.y = top + mapHeight + 14;
+  }
+
+  // The numbers side by side: a small label, the value under it.
+  const top = doc.y;
+  doc.roundedRect(MARGIN, top, width, HIKE_STATS_HEIGHT, 8).fill(CARD);
+  const cell = width / hike.stats.length;
+  hike.stats.forEach(([label, value], i) => {
+    const x = MARGIN + i * cell;
+    doc
+      .font('Body')
+      .fontSize(7.5)
+      .fillColor(GREY)
+      .text(label.toUpperCase(), x, top + 8, { width: cell, align: 'center', lineBreak: false });
+    doc
+      .font('Heading')
+      .fontSize(11)
+      .fillColor(INK)
+      .text(value, x, top + 19, { width: cell, align: 'center', lineBreak: false });
+  });
+  doc.x = MARGIN;
+  doc.y = top + HIKE_STATS_HEIGHT + 4;
+}
+
 // The header facts in a light card: Helyszín across the top (a link to
 // the map), then Időpont and Létszám side by side.
 function drawFacts(doc, facts, mapUrl) {
@@ -618,7 +680,19 @@ function drawPageFrames(doc, tour, draft) {
 // and ends it. Exported for trying the layout from a script.
 export async function renderReport(
   doc,
-  { tour, facts, days, dayLabels = [], photo, mapUrl, panoramaQr, presidentName, signedAt, draft },
+  {
+    tour,
+    facts,
+    days,
+    dayLabels = [],
+    hikes = [],
+    photo,
+    mapUrl,
+    panoramaQr,
+    presidentName,
+    signedAt,
+    draft,
+  },
 ) {
   doc.registerFont('Body', FONT_REGULAR);
   doc.registerFont('Heading', FONT_BOLD);
@@ -647,9 +721,19 @@ export async function renderReport(
 
   doc.moveDown(1.2);
   doc.font('Heading').fontSize(13).fillColor(GREEN).text('Tevékenységek', MARGIN, doc.y);
+  // A day is there for its text, or for a hike walked on it - the hikes
+  // under the text.
+  const hikesOf = (i) => hikes.filter((h) => h.day === i);
   days.forEach((delta, i) => {
-    if (hasText(delta)) drawDay(doc, i, dayLabels[i], delta);
+    if (!hasText(delta) && !hikesOf(i).length) return;
+    drawDay(doc, i, dayLabels[i], delta ?? { ops: [] });
+    hikesOf(i).forEach((hike) => drawHike(doc, hike));
   });
+  // The hikes no written day has (the file doesn't say when, or it was
+  // outside the days written about), after the days.
+  hikes
+    .filter((h) => h.day === null || h.day < 0 || h.day >= days.length)
+    .forEach((hike) => drawHike(doc, hike));
 
   drawPanorama(doc, panoramaQr, tour.panoramaUrl, tour.panoramaTitle);
   await drawSignature(doc, presidentName, signedAt ?? new Date());
@@ -710,6 +794,12 @@ export const downloadReportPdf = async (req, res) => {
     signedAt = report.published.at;
   }
 
+  // Every day of the tour, written about or not - a hike can be on any.
+  days = Array.from(
+    { length: Math.min(MAX_DAYS, Math.max(tour.duration ?? 1, days.length)) },
+    (_, i) => days[i] ?? null,
+  );
+
   const [lng, lat] = tour.location?.coordinates ?? [];
   const { presidentName } = await getClubSettings();
   const photo = await reportPhoto(tour, photoName);
@@ -726,6 +816,9 @@ export const downloadReportPdf = async (req, res) => {
     facts: effectiveFacts(facts, await autoFacts(tour)),
     days,
     dayLabels: days.map((_, i) => huDayLabel(tour.startDate, i)),
+    // The hikes that happened (the tour's recorded GPX tracks), as they
+    // are now - each under its day.
+    hikes: await tourHikes(tour),
     photo,
     mapUrl:
       Number.isFinite(lat) && Number.isFinite(lng)

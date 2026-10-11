@@ -371,6 +371,21 @@ export interface ExtraDocument {
   title: string;
   filename: string;
   mimeType: 'application/pdf' | 'image/jpeg' | 'image/png' | 'application/gpx+xml';
+  // A GPX's track, read from the file by the server.
+  track?: DocumentTrack | null;
+}
+
+// A GPX track among a tour's Extrák: a plan ('planned' - where we mean to
+// go) or the hike that happened ('recorded' - those are in the beszámoló,
+// on a map), and what it measures. The file decides at upload (a watch's
+// recording has times); the admin can say otherwise.
+export interface DocumentTrack {
+  kind: 'planned' | 'recorded';
+  distanceM: number;
+  elevationGainM: number | null;
+  elevationLossM: number | null;
+  startedAt: string | null;
+  durationSec: number | null;
 }
 
 // One attendee's accommodation share, computed server-side from the
@@ -674,6 +689,7 @@ export class TourService {
         name: string;
         filename: string;
         mimeType: ExtraDocument['mimeType'];
+        track?: DocumentTrack | null;
       };
     };
   }> {
@@ -688,17 +704,22 @@ export class TourService {
           name: string;
           filename: string;
           mimeType: ExtraDocument['mimeType'];
+          track?: DocumentTrack | null;
         };
       };
     }>(`${environment.apiBaseUrl}/documents`, formData);
   }
 
-  // Only its name (the card's title) - the file stays.
-  renameDocument(documentId: string, name: string) {
-    return this.http.patch<{ status: string; data: { document: { _id: string; name: string } } }>(
-      `${environment.apiBaseUrl}/documents/${documentId}`,
-      { name },
-    );
+  // Its name (the card's title) and - a GPX track - whether it is a plan
+  // or the hike that happened; the file stays.
+  renameDocument(
+    documentId: string,
+    changes: { name?: string; trackKind?: DocumentTrack['kind'] },
+  ) {
+    return this.http.patch<{
+      status: string;
+      data: { document: { _id: string; name: string; track?: DocumentTrack | null } };
+    }>(`${environment.apiBaseUrl}/documents/${documentId}`, changes);
   }
 
   deleteDocument(documentId: string): Observable<void> {

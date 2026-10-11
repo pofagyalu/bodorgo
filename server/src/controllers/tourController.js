@@ -371,6 +371,8 @@ export const getTour = async (req, res, next) => {
     title: d.name,
     filename: d.filename,
     mimeType: d.mimeType,
+    // A GPX: a plan or the hike that happened, and what it measures.
+    ...(d.track && { track: d.track }),
   }));
   const videos = tourVideoList(tour.order, await newVideoKeys(req.user));
   const hasVideo = videos.length > 0;
