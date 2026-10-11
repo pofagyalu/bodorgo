@@ -318,3 +318,16 @@
     background: #7f0016;
   }
 }
+
+// The pencil (rename) - the same round button, on the bottom-right corner:
+// away from the card's own ✕, and from the next card's (which a top-left
+// pencil would sit beside).
+.extra-doc-rename {
+  top: auto;
+  bottom: -0.55rem;
+  background: #1565c0;
+
+  &:hover {
+    background: #0d47a1;
+  }
+}

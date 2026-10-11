@@ -135,6 +135,10 @@ describe('Lezárás - closing a tour for good', () => {
         .set(as(admin))
         .send({ restricted: true }),
       'upload a document': uploadTourDocument(admin, tour),
+      'rename a document': request(app)
+        .patch(`/documents/${document._id}`)
+        .set(as(admin))
+        .send({ name: 'Más' }),
       'delete a document': request(app).delete(`/documents/${document._id}`).set(as(admin)),
       'record a cash payment': request(app)
         .post('/payments/cash')

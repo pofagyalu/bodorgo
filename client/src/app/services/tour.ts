@@ -297,6 +297,8 @@ export interface SentMailing {
   subject: string;
   html: string;
   withPdf: boolean;
+  // The tour's Extrák documents that went out attached, as named then.
+  documents?: { name: string; mimeType: string }[];
   sentAt: string;
   sentByName: string;
   recipientCount: number;
@@ -362,11 +364,13 @@ export interface TourVideo {
 
 // A tour's Extrák document - one of the club's documents with this tour
 // set (server documentController.js); opened by its id (documentUrl).
+// application/gpx+xml: a hike's GPX track - the server always sends that
+// one as a download.
 export interface ExtraDocument {
   _id: string;
   title: string;
   filename: string;
-  mimeType: 'application/pdf' | 'image/jpeg' | 'image/png';
+  mimeType: 'application/pdf' | 'image/jpeg' | 'image/png' | 'application/gpx+xml';
 }
 
 // One attendee's accommodation share, computed server-side from the
@@ -689,6 +693,14 @@ export class TourService {
     }>(`${environment.apiBaseUrl}/documents`, formData);
   }
 
+  // Only its name (the card's title) - the file stays.
+  renameDocument(documentId: string, name: string) {
+    return this.http.patch<{ status: string; data: { document: { _id: string; name: string } } }>(
+      `${environment.apiBaseUrl}/documents/${documentId}`,
+      { name },
+    );
+  }
+
   deleteDocument(documentId: string): Observable<void> {
     return this.http.delete<void>(`${environment.apiBaseUrl}/documents/${documentId}`);
   }
@@ -754,22 +766,21 @@ export class TourService {
     return `${this.apiUrl}/${tourId}/report/pdf${draft ? '?draft=1' : ''}`;
   }
 
-  // The saved draft to the admin themselves only.
-  sendMailTest(tourId: string, withPdf: boolean) {
+  // The saved draft to the admin themselves only. documents: the ids of
+  // the tour's Extrák documents to attach (here and in sendMailing).
+  sendMailTest(tourId: string, withPdf: boolean, documents: string[] = []) {
     return this.http.post<{ status: string; data: { sentTo: string } }>(
       `${this.apiUrl}/${tourId}/mailings/test`,
-      {
-        withPdf,
-      },
+      { withPdf, documents },
     );
   }
 
   // The saved draft to every attendee who can get an e-mail - it then
   // becomes a sent letter, kept and no longer editable.
-  sendMailing(tourId: string, withPdf: boolean) {
+  sendMailing(tourId: string, withPdf: boolean, documents: string[] = []) {
     return this.http.post<{ status: string; data: { mailing: SentMailing } }>(
       `${this.apiUrl}/${tourId}/mailings/send`,
-      { withPdf },
+      { withPdf, documents },
     );
   }
 

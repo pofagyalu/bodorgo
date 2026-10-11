@@ -288,7 +288,9 @@ const schemas = {
     _id: id(),
     title: str('Shown on the card.'),
     filename: str('On disk.'),
-    mimeType: str('Type.', { enum: ['application/pdf', 'image/jpeg', 'image/png'] }),
+    mimeType: str('Type - `application/gpx+xml` is a GPX track (a hike), always a download.', {
+      enum: ['application/pdf', 'image/jpeg', 'image/png', 'application/gpx+xml'],
+    }),
   }),
 
   User: obj({
@@ -846,7 +848,9 @@ const schemas = {
     _id: id(),
     name: str('Shown on the card.'),
     filename: str('On disk - the file itself is at `/documents/{id}/file`.'),
-    mimeType: str('From the file.', { enum: ['application/pdf', 'image/jpeg', 'image/png'] }),
+    mimeType: str('From the file. `application/gpx+xml` (a GPX track): tour documents only.', {
+      enum: ['application/pdf', 'image/jpeg', 'image/png', 'application/gpx+xml'],
+    }),
     tour: {
       type: ['string', 'null'],
       description: 'A tour’s Extrák document; null for a club document.',
@@ -1854,7 +1858,13 @@ const paths = {
       tag: T.mailing,
       role: 'admin',
       summary: 'Send the draft to myself',
+      description:
+        'With the same attachments the real send would carry: see `/tours/{id}/mailings/send`.',
       params: [tourId],
+      body: obj({
+        withPdf: bool('Attach my own Programfüzet.'),
+        documents: arrayOf(id("One of the tour's Extrák documents to attach.")),
+      }),
       data: obj({ sentTo: str() }),
       errors: [400],
     }),
@@ -1865,8 +1875,13 @@ const paths = {
       tag: T.mailing,
       role: 'admin',
       summary: 'Send the letter to all attendees',
-      description: 'Those who can get e-mail. The draft becomes a sent letter.',
+      description:
+        "Those who can get e-mail. The draft becomes a sent letter. Attachments: with `withPdf` each attendee's own Programfüzet; with `documents` any of this tour's Extrák documents (PDF, picture, GPX track), each named after the document. The chosen documents may weigh 20 MB together; one that is not this tour's, or is gone, is a 400 and nothing is sent. The sent letter keeps the attached documents' names and types in `documents`.",
       params: [tourId],
+      body: obj({
+        withPdf: bool("Attach each attendee's own Programfüzet."),
+        documents: arrayOf(id("One of the tour's Extrák documents to attach.")),
+      }),
       data: obj({ mailing: { type: 'object' } }),
       errors: [400],
     }),
@@ -2643,7 +2658,7 @@ const paths = {
       role: 'admin',
       summary: 'Upload a document',
       description:
-        "PDF, JPG or PNG, at most 15 MB. For the club: `name`, `category`, `year` - its first-page preview is made at once. For a tour's Extrák: `name` and `tour` - at most 5 per tour, no preview.",
+        "PDF, JPG or PNG, at most 15 MB. For the club: `name`, `category`, `year` - its first-page preview is made at once. For a tour's Extrák: `name` and `tour` - at most 5 per tour, no preview; a tour also takes a GPX track (a hike saved on a watch), known by its `.gpx` name and its `<gpx>` content, whatever type the browser sends.",
       multipart: obj(
         {
           file: { type: 'string', format: 'binary' },
@@ -2660,6 +2675,18 @@ const paths = {
     }),
   },
   '/documents/{id}': {
+    patch: op({
+      closedTour: true,
+      tag: T.documents,
+      role: 'admin',
+      summary: 'Rename a document',
+      description:
+        "Only its name - what the card shows, and what a download or an e-mail attachment of it is called. The file stays as it is. A closed tour's document can no longer be renamed.",
+      params: [path('id', 'The document.')],
+      body: obj({ name: str('The new name; must not be empty.') }, ['name']),
+      data: obj({ document: ref('Document') }),
+      errors: [400, 404],
+    }),
     delete: op({
       closedTour: true,
       tag: T.documents,
@@ -2676,9 +2703,12 @@ const paths = {
       tag: T.documents,
       summary: 'A document file',
       description:
-        "Inline for the browser's viewer, or with `download` as an attachment named after the document.",
+        "Inline for the browser's viewer, or with `download` as an attachment named after the document. A GPX track is always an attachment.",
       params: [path('id', 'The document.'), query('download', 'Any value: as an attachment.')],
-      response: file(['application/pdf', 'image/jpeg', 'image/png'], 'The file.'),
+      response: file(
+        ['application/pdf', 'image/jpeg', 'image/png', 'application/gpx+xml'],
+        'The file.',
+      ),
       errors: [404],
     }),
   },
@@ -2699,7 +2729,10 @@ const paths = {
       description:
         'Where tour documents were before - kept so links already sent out still work. New links use `/documents/{id}/file`.',
       params: [tourIdT, path('filename', 'The file name.')],
-      response: file(['application/pdf', 'image/jpeg', 'image/png'], 'The file.'),
+      response: file(
+        ['application/pdf', 'image/jpeg', 'image/png', 'application/gpx+xml'],
+        'The file.',
+      ),
       errors: [404],
     }),
   },

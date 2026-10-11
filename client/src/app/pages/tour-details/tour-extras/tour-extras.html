@@ -7,7 +7,7 @@
       <button
         type="button"
         class="icon-btn icon-btn--add icon-btn--upload"
-        title="Dokumentum feltöltése (PDF vagy JPG, legfeljebb 5)"
+        title="Dokumentum feltöltése (PDF, JPG, PNG vagy GPX útvonal, legfeljebb 5)"
         aria-label="Dokumentum feltöltése"
         (click)="startAddDocument()"
       >
@@ -21,7 +21,7 @@
       <input type="text" [(ngModel)]="newDocumentTitle" placeholder="Cím" />
       <input
         type="file"
-        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+        accept=".pdf,.jpg,.jpeg,.png,.gpx,application/pdf,image/jpeg,image/png,application/gpx+xml"
         (change)="onDocumentFileSelected($event)"
       />
       <div class="user-form-actions">
@@ -39,6 +39,39 @@
           class="icon-btn icon-btn--cancel"
           title="Mégse"
           (click)="cancelAddDocument()"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- A document's pencil: its name, to correct. -->
+  @if (renamingDocument(); as doc) {
+    <div class="document-upload-form">
+      <input
+        type="text"
+        [(ngModel)]="renameTitle"
+        placeholder="Cím"
+        aria-label="A dokumentum új címe"
+        (keydown.enter)="saveRenameDocument()"
+        (keydown.escape)="cancelRenameDocument()"
+      />
+      <div class="user-form-actions">
+        <button
+          type="button"
+          class="icon-btn icon-btn--save"
+          title="Mentés"
+          [disabled]="savingRename()"
+          (click)="saveRenameDocument()"
+        >
+          <mat-icon>check</mat-icon>
+        </button>
+        <button
+          type="button"
+          class="icon-btn icon-btn--cancel"
+          title="Mégse"
+          (click)="cancelRenameDocument()"
         >
           <mat-icon>close</mat-icon>
         </button>
@@ -131,20 +164,26 @@
     }
     @if ((tour().extraDocuments ?? []).length > 0) {
       <div class="extra-group">
-        <span class="extra-group-label">Dokumentumok</span>
+        <span class="extra-group-label">{{ documentsLabel() }}</span>
         <div class="extra-group-cards">
           @for (doc of tour().extraDocuments ?? []; track doc._id) {
             <a
               [href]="documentUrl(doc._id)"
               target="_blank"
               class="extra-doc-card"
-              [title]="doc.title"
+              [title]="isGpx(doc) ? doc.title + ' – GPX útvonal letöltése' : doc.title"
             >
-              <mat-icon>{{
-                doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image'
-              }}</mat-icon>
+              <mat-icon>{{ documentIcon(doc) }}</mat-icon>
               <span>{{ doc.title }}</span>
               @if (canEdit()) {
+                <button
+                  type="button"
+                  class="extra-doc-delete extra-doc-rename"
+                  title="Átnevezés"
+                  (click)="startRenameDocument(doc, $event)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
                 <button
                   type="button"
                   class="extra-doc-delete"
@@ -169,7 +208,11 @@
   <!-- Admin's letter to every attendee (see tour-mail-panel). -->
   @defer (when showMailPanel(); prefetch on idle) {
     @if (showMailPanel()) {
-      <app-tour-mail-panel [tourId]="tour()._id" (closed)="showMailPanel.set(false)" />
+      <app-tour-mail-panel
+        [tourId]="tour()._id"
+        [documents]="tour().extraDocuments ?? []"
+        (closed)="showMailPanel.set(false)"
+      />
     }
   }
 

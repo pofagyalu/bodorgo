@@ -188,6 +188,64 @@ describe("a tour's Extrák documents", () => {
     expect(fs.existsSync(documentFilePath(stored))).toBe(false);
   });
 
+  it('takes a GPX track too - by its name and content, always a download; never as a club document', async () => {
+    const admin = await createAdmin();
+    const member = await createMember();
+    const tour = await createTour();
+    const GPX = Buffer.from(
+      '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Garmin Connect"><trk><name>Kékes</name></trk></gpx>',
+    );
+    const up = (fields, file = GPX, type = 'application/octet-stream', filename = 'activity.GPX') =>
+      upload(admin, fields, file, type, filename);
+
+    // Whatever type the browser sends for it.
+    for (const type of ['application/octet-stream', 'application/gpx+xml', 'text/xml']) {
+      const res = await up({ name: 'Kékes túra', tour: String(tour._id) }, GPX, type);
+      expect(res.status).toBe(201);
+      expect(res.body.data.document.mimeType).toBe('application/gpx+xml');
+      expect(res.body.data.document.filename).toMatch(/\.gpx$/);
+    }
+    const doc = (await Document.findOne({ tour: tour._id })).toJSON();
+    const file = await request(app).get(`/documents/${doc._id}/file`).set(asUser(member));
+    expect(file.status).toBe(200);
+    expect(file.headers['content-disposition']).toContain('attachment');
+    expect(file.headers['content-disposition']).toContain('.gpx');
+
+    // Not a GPX inside; a GPX for the club; something else named in passing.
+    const notGpx = await up({ name: 'x', tour: String(tour._id) }, Buffer.from('<html></html>'));
+    expect(notGpx.status).toBe(400);
+    expect((await up({ name: 'x' })).status).toBe(400);
+    expect(
+      (await up({ name: 'x', tour: String(tour._id) }, GPX, 'application/octet-stream', 'a.kml'))
+        .status,
+    ).toBe(400);
+  });
+
+  it('admin renames one - the card and the download follow, the file stays', async () => {
+    const admin = await createAdmin();
+    const member = await createMember();
+    const tour = await createTour();
+    const doc = (await upload(admin, { name: 'Trékép', tour: String(tour._id) })).body.data
+      .document;
+    const rename = (body, user = admin, id = doc._id) =>
+      request(app).patch(`/documents/${id}`).set(asUser(user)).send(body);
+
+    const renamed = await rename({ name: '  Térkép ' });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body.data.document).toMatchObject({ name: 'Térkép', filename: doc.filename });
+    const page = (await request(app).get(`/tours/${tour._id}`).set(asUser(member))).body.data.tour;
+    expect(page.extraDocuments[0].title).toBe('Térkép');
+    const download = await request(app)
+      .get(`/documents/${doc._id}/file?download=1`)
+      .set(asUser(member));
+    expect(decodeURIComponent(download.headers['content-disposition'])).toContain('Térkép.pdf');
+
+    expect((await rename({ name: ' ' })).status).toBe(400);
+    expect((await rename({})).status).toBe(400);
+    expect((await rename({ name: 'x' }, member)).status).toBe(403);
+    expect((await rename({ name: 'x' }, admin, '000000000000000000000000')).status).toBe(404);
+  });
+
   it('needs a real tour', async () => {
     const admin = await createAdmin();
     expect((await upload(admin, { name: 'x', tour: '000000000000000000000000' })).status).toBe(404);

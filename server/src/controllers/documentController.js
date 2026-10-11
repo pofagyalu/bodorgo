@@ -20,16 +20,24 @@ import {
 const EXTENSIONS = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
 const MAX_PER_TOUR = 5;
 
+// A GPX track (a hike saved on a watch) - a tour's Extrák only. Browsers
+// send no dependable type for it (none, octet-stream, some XML one), so it
+// is known by its name here, and by its content in uploadDocument.
+const isGpxName = (file) => /\.gpx$/i.test(file.originalname ?? '');
+// The <gpx> root element comes right after the XML declaration.
+const looksLikeGpx = (buffer) => /<gpx[\s>]/i.test(buffer.subarray(0, 4096).toString('utf8'));
+
 // .single('file') - one file plus name/category/year (club) or name/tour
 // (tour). Kept in memory until the fields are checked, then written where
 // it belongs (a tour's folder is only known from the tour field). PDF, JPG
-// or PNG, 15 MB - generous for a scanned or photographed paper.
+// or PNG (a tour: GPX too), 15 MB - generous for a scanned or photographed
+// paper.
 export const uploadMiddleware = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!EXTENSIONS[file.mimetype]) {
-      cb(new AppError('Csak PDF, JPG vagy PNG fájl tölthető fel.', 400));
+    if (!EXTENSIONS[file.mimetype] && !isGpxName(file)) {
+      cb(new AppError('Csak PDF, JPG vagy PNG fájl tölthető fel (táborhoz GPX is).', 400));
       return;
     }
     cb(null, true);
@@ -71,6 +79,14 @@ export const uploadDocument = async (req, res) => {
   if (!req.file) throw new AppError('Nincs feltöltött fájl.', 400);
   const name = req.body.name?.trim();
   if (!name) throw new AppError('A dokumentumnak kell legyen neve.', 400);
+  // The name decides (see isGpxName): a .gpx is never taken for a picture.
+  const gpx = isGpxName(req.file);
+  if (gpx && !req.body.tour) {
+    throw new AppError('GPX útvonal csak egy tábor Extrái közé tölthető fel.', 400);
+  }
+  if (gpx && !looksLikeGpx(req.file.buffer)) {
+    throw new AppError('Ez nem GPX fájl.', 400);
+  }
 
   let tour = null;
   if (req.body.tour) {
@@ -90,7 +106,7 @@ export const uploadDocument = async (req, res) => {
   // "klub-dok-…" / "tour-<order>-<slug>-…": recognizable on disk, unique,
   // and never the uploaded file's own (possibly unsafe) name.
   const unique = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-  const filename = `${tour ? `tour-${tour.order}-${tour.slug}` : 'klub-dok'}-${unique}.${EXTENSIONS[req.file.mimetype]}`;
+  const filename = `${tour ? `tour-${tour.order}-${tour.slug}` : 'klub-dok'}-${unique}.${gpx ? 'gpx' : EXTENSIONS[req.file.mimetype]}`;
   const document = new Document({
     name,
     filename,
@@ -119,16 +135,24 @@ async function findDocument(id) {
   return document;
 }
 
+// What a document's file is called once it leaves the server (a download,
+// an e-mail attachment): after the document - "Alapító okirat.pdf" - not
+// the name on disk.
+export function documentDownloadName(document) {
+  const safeName = document.name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'dokumentum';
+  return `${safeName}${path.extname(document.filename)}`;
+}
+
 // Sends the file - inline for the browser's own viewer, or with
 // ?download=1 as an attachment named after the document ("Alapító
 // okirat.pdf"). A plain <a download> doesn't work across the client's and
-// the API's subdomains, so the server sets it.
+// the API's subdomains, so the server sets it. A GPX track is always an
+// attachment: it is for a map app, and a browser would show it as raw XML.
 function sendDocument(req, res, document) {
   const file = documentFilePath(document);
   if (!fs.existsSync(file)) throw new AppError('A dokumentum fájlja nem található.', 404);
-  if (req.query.download) {
-    const safeName = document.name.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'dokumentum';
-    return res.download(file, `${safeName}${path.extname(document.filename)}`);
+  if (req.query.download || /\.gpx$/i.test(document.filename)) {
+    return res.download(file, documentDownloadName(document));
   }
   res.sendFile(file);
 }
@@ -156,6 +180,18 @@ export const getDocumentPreview = async (req, res) => {
   if (!file || !fs.existsSync(file)) throw new AppError('Nincs előnézet.', 404);
   res.setHeader('Cache-Control', 'private, max-age=86400');
   res.sendFile(file);
+};
+
+// PATCH /documents/:id - admin: { name } - what the card (and a download)
+// calls it; the file stays as it is.
+export const renameDocument = async (req, res) => {
+  const document = await findDocument(req.params.id);
+  await assertTourOpenById(document.tour);
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+  if (!name) throw new AppError('A dokumentumnak kell legyen neve.', 400);
+  document.name = name;
+  await document.save();
+  res.status(200).json({ status: 'success', data: { document: view(document) } });
 };
 
 // DELETE /documents/:id - admin; the file and its preview go too.
