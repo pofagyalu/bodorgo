@@ -57,6 +57,14 @@
         (keydown.enter)="saveRenameDocument()"
         (keydown.escape)="cancelRenameDocument()"
       />
+      <!-- A GPX track: a plan, or the hike that happened (that one goes
+           into the beszámoló, on a map). -->
+      @if (doc.track) {
+        <select [(ngModel)]="renameKind" aria-label="Az útvonal fajtája">
+          <option value="planned">Tervezett útvonal</option>
+          <option value="recorded">Megtett útvonal (a beszámolóba kerül)</option>
+        </select>
+      }
       <div class="user-form-actions">
         <button
           type="button"
@@ -171,10 +179,13 @@
               [href]="documentUrl(doc._id)"
               target="_blank"
               class="extra-doc-card"
-              [title]="isGpx(doc) ? doc.title + ' – GPX útvonal letöltése' : doc.title"
+              [title]="documentTooltip(doc)"
             >
               <mat-icon>{{ documentIcon(doc) }}</mat-icon>
               <span>{{ doc.title }}</span>
+              @if (trackCaption(doc); as caption) {
+                <span class="extra-doc-kind">{{ caption }}</span>
+              }
               @if (canEdit()) {
                 <button
                   type="button"

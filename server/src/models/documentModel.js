@@ -66,6 +66,26 @@ const documentSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    // A tour's GPX file only (utils/documentTracks.js): what its track
+    // measures, read from the file at upload - and whether it is a plan
+    // ('planned': where we mean to go) or the hike that happened
+    // ('recorded' - those go into the beszámoló, with a map). The file
+    // decides at upload (a watch's recording has times), an admin can say
+    // otherwise.
+    track: {
+      type: new Schema(
+        {
+          kind: { type: String, enum: ['planned', 'recorded'], required: true },
+          distanceM: { type: Number, required: true },
+          elevationGainM: { type: Number, default: null },
+          elevationLossM: { type: Number, default: null },
+          startedAt: { type: Date, default: null },
+          durationSec: { type: Number, default: null },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     // Unset for the tour documents from before this collection held them.
     uploadedBy: {
       type: Schema.Types.ObjectId,

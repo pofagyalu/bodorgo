@@ -12,6 +12,7 @@ import {
   previewPath,
   tryMakeDocumentPreview,
 } from '../utils/documentPreviews.js';
+import { deleteTrackMap, ensureTrackMap, trackOf, trackView } from '../utils/documentTracks.js';
 
 // Klub → Dokumentumok and every tour's Extrák, one mechanism (see
 // documentModel.js): the same upload rules, storage, login-gated file
@@ -54,6 +55,8 @@ const view = (d) => ({
   category: d.category ?? null,
   year: d.year ?? null,
   preview: !!d.preview,
+  // A tour's GPX: its track (utils/documentTracks.js) - null otherwise.
+  track: trackView(d),
   createdAt: d.createdAt,
 });
 
@@ -116,11 +119,15 @@ export const uploadDocument = async (req, res) => {
       year: req.body.year ? Number(req.body.year) : undefined,
     }),
     uploadedBy: req.user._id,
+    // A plan or the hike that happened, and what it measures.
+    ...(gpx && { track: trackOf(req.file.buffer.toString('utf8')) ?? undefined }),
   });
   const file = documentFilePath(document);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, req.file.buffer);
   await document.save();
+  // A hike that happened: its map for the beszámoló, in the background.
+  if (document.track?.kind === 'recorded') void ensureTrackMap(document);
 
   // A club document's card picture - a moment for a PDF page; if it fails,
   // the card shows an icon and the next server start tries again.
@@ -182,15 +189,29 @@ export const getDocumentPreview = async (req, res) => {
   res.sendFile(file);
 };
 
-// PATCH /documents/:id - admin: { name } - what the card (and a download)
-// calls it; the file stays as it is.
+// PATCH /documents/:id - admin: { name?, trackKind? } - what the card (and
+// a download) calls it, and - a GPX track - whether it is a plan or the
+// hike that happened; the file stays as it is.
 export const renameDocument = async (req, res) => {
   const document = await findDocument(req.params.id);
   await assertTourOpenById(document.tour);
-  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
-  if (!name) throw new AppError('A dokumentumnak kell legyen neve.', 400);
-  document.name = name;
+  const { name, trackKind } = req.body ?? {};
+  if (name === undefined && trackKind === undefined) {
+    throw new AppError('A dokumentumnak kell legyen neve.', 400);
+  }
+  if (name !== undefined) {
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    if (!trimmed) throw new AppError('A dokumentumnak kell legyen neve.', 400);
+    document.name = trimmed;
+  }
+  if (trackKind !== undefined) {
+    if (!document.track?.kind || !['planned', 'recorded'].includes(trackKind)) {
+      throw new AppError('Csak egy GPX útvonal lehet tervezett vagy megtett.', 400);
+    }
+    document.track.kind = trackKind;
+  }
   await document.save();
+  if (document.track?.kind === 'recorded') void ensureTrackMap(document);
   res.status(200).json({ status: 'success', data: { document: view(document) } });
 };
 
@@ -200,6 +221,7 @@ export const deleteDocument = async (req, res) => {
   await assertTourOpenById(document.tour);
   fs.rm(documentFilePath(document), { force: true }, () => {}); // a missing file mustn't block it
   deleteDocumentPreview(document.filename);
+  deleteTrackMap(document);
   await Document.deleteOne({ _id: document._id });
   res.status(204).json({ status: 'success', data: null });
 };

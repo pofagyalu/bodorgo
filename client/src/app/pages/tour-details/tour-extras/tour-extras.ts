@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { ExtraDocument, Tour, TourImage, TourService } from '../../../services/tour';
+import { DocumentTrack, ExtraDocument, Tour, TourImage, TourService } from '../../../services/tour';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
@@ -180,9 +180,28 @@ export class TourExtras {
     return tracks === docs.length ? 'Útvonalak' : 'Dokumentumok és útvonalak';
   });
 
+  // A plan's line, or the walker of a hike that happened.
   documentIcon(doc: ExtraDocument): string {
-    if (this.isGpx(doc)) return 'route';
+    if (this.isGpx(doc)) return doc.track?.kind === 'recorded' ? 'hiking' : 'route';
     return doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image';
+  }
+
+  // Under a track's title: which of the two it is - '' for anything else.
+  trackCaption(doc: ExtraDocument): string {
+    if (!doc.track) return '';
+    return doc.track.kind === 'recorded' ? 'Megtett' : 'Tervezett';
+  }
+
+  // "12,3 km"
+  private km(metres: number): string {
+    return `${(metres / 1000).toFixed(1).replace('.', ',')} km`;
+  }
+
+  documentTooltip(doc: ExtraDocument): string {
+    if (!this.isGpx(doc)) return doc.title;
+    if (!doc.track) return `${doc.title} – GPX útvonal letöltése`;
+    const kind = doc.track.kind === 'recorded' ? 'megtett' : 'tervezett';
+    return `${doc.title} – ${kind} útvonal, ${this.km(doc.track.distanceM)} (GPX letöltése)`;
   }
 
   startAddDocument() {
@@ -220,7 +239,13 @@ export class TourExtras {
         const d = res.data.document;
         this.documentsChanged.emit([
           ...(this.tour().extraDocuments ?? []),
-          { _id: d._id, title: d.name, filename: d.filename, mimeType: d.mimeType },
+          {
+            _id: d._id,
+            title: d.name,
+            filename: d.filename,
+            mimeType: d.mimeType,
+            ...(d.track && { track: d.track }),
+          },
         ]);
         this.notifications.addSuccess('Dokumentum feltöltve');
       },
@@ -231,17 +256,20 @@ export class TourExtras {
     });
   }
 
-  // --- A document's pencil: its title, to correct ---
+  // --- A document's pencil: its title, to correct - and, of a GPX track,
+  // whether it is a plan or the hike that happened ---
 
   renamingDocument = signal<ExtraDocument | null>(null);
   savingRename = signal(false);
   renameTitle = '';
+  renameKind: DocumentTrack['kind'] = 'planned';
 
   startRenameDocument(doc: ExtraDocument, event: Event) {
     event.preventDefault();
     event.stopPropagation();
     this.addingDocument.set(false);
     this.renameTitle = doc.title;
+    this.renameKind = doc.track?.kind ?? 'planned';
     this.renamingDocument.set(doc);
   }
 
@@ -257,27 +285,39 @@ export class TourExtras {
       this.notifications.addError('A dokumentumnak kell legyen címe.');
       return;
     }
-    if (title === doc.title) {
+    // Only what changed is sent.
+    const kindChanged = !!doc.track && this.renameKind !== doc.track.kind;
+    if (title === doc.title && !kindChanged) {
       this.renamingDocument.set(null);
       return;
     }
     this.savingRename.set(true);
-    this.tourService.renameDocument(doc._id, title).subscribe({
-      next: (res) => {
-        this.savingRename.set(false);
-        this.renamingDocument.set(null);
-        this.documentsChanged.emit(
-          (this.tour().extraDocuments ?? []).map((d) =>
-            d._id === doc._id ? { ...d, title: res.data.document.name } : d,
-          ),
-        );
-        this.notifications.addSuccess('Dokumentum átnevezve');
-      },
-      error: (err) => {
-        this.savingRename.set(false);
-        this.notifications.addError(err?.error?.message ?? 'Hiba történt az átnevezés során.');
-      },
-    });
+    this.tourService
+      .renameDocument(doc._id, {
+        ...(title !== doc.title && { name: title }),
+        ...(kindChanged && { trackKind: this.renameKind }),
+      })
+      .subscribe({
+        next: (res) => {
+          this.savingRename.set(false);
+          this.renamingDocument.set(null);
+          const saved = res.data.document;
+          this.documentsChanged.emit(
+            (this.tour().extraDocuments ?? []).map((d) =>
+              d._id === doc._id
+                ? { ...d, title: saved.name, ...(saved.track && { track: saved.track }) }
+                : d,
+            ),
+          );
+          this.notifications.addSuccess(
+            title !== doc.title ? 'Dokumentum átnevezve' : 'Útvonal módosítva',
+          );
+        },
+        error: (err) => {
+          this.savingRename.set(false);
+          this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
+        },
+      });
   }
 
   // Confirmed in the app's shared dialog (shared/confirm-dialog).

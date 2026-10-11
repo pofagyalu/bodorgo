@@ -75,6 +75,14 @@ vi.mock('../src/utils/distance.js', async (importOriginal) => ({
   computeDrivingRoute: vi.fn(async () => null),
 }));
 
+// Map tiles (OpenStreetMap) - none to be had; a test that draws a hike's
+// map gives its own.
+vi.mock('../src/utils/mapTiles.js', () => ({
+  fetchMapTile: vi.fn(async () => {
+    throw new Error('no map tiles in tests');
+  }),
+}));
+
 // Weather (Open-Meteo).
 vi.mock('../src/utils/weather.js', async (importOriginal) => ({
   ...(await importOriginal()),
