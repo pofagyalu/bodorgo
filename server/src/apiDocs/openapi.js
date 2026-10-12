@@ -773,6 +773,9 @@ const schemas = {
   Song: obj({
     _id: id(),
     title: str('The book is in the order of the titles - the songs have no numbers.'),
+    subtitle: str(
+      'A line under the title, when the song has one - optional, empty for none. Shown under the title on the song page and printed there in both PDFs.',
+    ),
     artist: str('May be empty.'),
     slug: str('From the title, accents folded ("Eső után" → `eso-utan`) - the song’s address.'),
     chordpro: str(
@@ -823,6 +826,7 @@ const schemas = {
   }),
   SongInput: obj({
     title: str('Required for a new song.'),
+    subtitle: str('Optional; at most 150 characters. An empty one takes it away.'),
     artist: str(),
     chordpro: str(
       'ChordPro text - see Song. At most 20 000 characters. On a change (PATCH): if the chords in it differ from the stored ones and no `key` is sent along, the key set by hand is dropped (the key is the detected one again).',

@@ -884,12 +884,19 @@ describe('SongEdit', () => {
     expect(error).toHaveBeenCalledWith('A dalnak kell legyen címe.');
 
     page.title.set(' Új dal ');
+    page.subtitle.set(' egy filmből ');
     page.artist.set(' Valaki ');
     page.chordpro.set('[C]la');
+    // The preview shows the subtitle under the title.
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.preview .subtitle').textContent).toBe(
+      'egy filmből',
+    );
     page.save();
     const req = http.expectOne((r) => r.url === songs && r.method === 'POST');
     expect(req.request.body).toEqual({
       title: 'Új dal',
+      subtitle: 'egy filmből',
       artist: 'Valaki',
       chordpro: '[C]la',
       key: '',

@@ -287,6 +287,13 @@ function drawSong(doc, song, diagrams, { ownShapes = true } = {}) {
   const titleHeight = doc.heightOfString(song.title, titleOptions);
   doc.text(song.title, left, y, titleOptions);
   y += titleHeight + 1;
+  // The subtitle, where the song has one: a quieter line of its own.
+  if (song.subtitle) {
+    doc.font('Body').fontSize(11.5).fillColor(INK);
+    const subtitleHeight = doc.heightOfString(song.subtitle, titleOptions);
+    doc.text(song.subtitle, left, y, titleOptions);
+    y += subtitleHeight + 2;
+  }
   // Under the title: the artist, and after it the song's key (the one set
   // by hand, or what its chords say) in a quiet tag - "a-moll".
   const key = keyName(songKey(song));

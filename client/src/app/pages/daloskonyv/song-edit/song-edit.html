@@ -23,6 +23,15 @@
             (input)="title.set($any($event.target).value)"
           />
         </label>
+        <label class="field field--subtitle">
+          <span>Alcím <small>(nem kötelező)</small></span>
+          <input
+            type="text"
+            maxlength="150"
+            [value]="subtitle()"
+            (input)="subtitle.set($any($event.target).value)"
+          />
+        </label>
         <label class="field field--artist">
           <span>Előadó</span>
           <input
@@ -199,6 +208,9 @@
           <div class="pane-head"><strong>Így fog kinézni</strong></div>
           <div class="preview">
             <h2>{{ title() || 'Cím' }}</h2>
+            @if (subtitle().trim(); as sub) {
+              <p class="subtitle">{{ sub }}</p>
+            }
             @if (artist() || previewKey()) {
               <p class="artist">
                 @if (artist()) {

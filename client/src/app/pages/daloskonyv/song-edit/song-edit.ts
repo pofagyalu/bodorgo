@@ -56,6 +56,7 @@ export class SongEdit implements OnInit {
   saving = signal(false);
 
   title = signal('');
+  subtitle = signal('');
   artist = signal('');
   chordpro = signal('');
 
@@ -118,6 +119,7 @@ export class SongEdit implements OnInit {
         }
         this.song.set(song);
         this.title.set(song.title);
+        this.subtitle.set(song.subtitle ?? '');
         this.artist.set(song.artist);
         this.chordpro.set(song.chordpro);
         this.chooseKey(song.key);
@@ -275,6 +277,7 @@ export class SongEdit implements OnInit {
     }
     const input = {
       title,
+      subtitle: this.subtitle().trim(),
       artist: this.artist().trim(),
       chordpro: this.chordpro(),
       // The key set by hand, if it still holds - '' leaves it to the chords.

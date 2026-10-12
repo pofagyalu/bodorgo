@@ -372,6 +372,15 @@ button {
     letter-spacing: -0.03em;
     color: $ink;
   }
+
+  // The subtitle: a quieter line between the title and the artist.
+  .subtitle {
+    margin: 0.2rem 0 0;
+    font-size: calc(1.05rem * var(--scale));
+    line-height: 1.25;
+    color: $ink;
+    opacity: 0.8;
+  }
 }
 
 .artist {

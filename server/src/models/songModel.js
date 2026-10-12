@@ -15,6 +15,9 @@ const songSchema = new Schema(
       trim: true,
       maxlength: 150,
     },
+    // A line under the title, when the song has one ("a Hair című
+    // musicalből", "népdal") - optional.
+    subtitle: { type: String, trim: true, maxlength: 150, default: '' },
     artist: { type: String, trim: true, maxlength: 150, default: '' },
     // From the title (accents folded: "Eső után" → eso-utan) - the song's
     // address. A new title gets a new one.
