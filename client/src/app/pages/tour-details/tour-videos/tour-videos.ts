@@ -63,7 +63,7 @@ export class TourVideos {
   }
 
   coverUrl(v: TourVideo): string {
-    return this.tourService.videoCoverUrl(this.tour()._id, v.id);
+    return this.tourService.videoCoverUrl(this.tour()._id, v.id, v.coverVersion);
   }
 
   subtitlesUrl(v: TourVideo): string {

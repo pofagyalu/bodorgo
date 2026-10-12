@@ -223,6 +223,7 @@ describe('TourService', () => {
     expect(service.tourImagesZipUrl('t1')).toBe(`${tours}/t1/images/download-zip`);
     expect(service.videoUrl('t1', 'v1', 'small')).toBe(`${tours}/t1/videos/v1/video?quality=small`);
     expect(service.videoCoverUrl('t1', 'v1')).toBe(`${tours}/t1/videos/v1/cover`);
+    expect(service.videoCoverUrl('t1', 'v1', 7)).toBe(`${tours}/t1/videos/v1/cover?v=7`);
     expect(service.subtitlesUrl('t1', 'v1')).toBe(`${tours}/t1/videos/v1/subtitles.vtt`);
   });
 

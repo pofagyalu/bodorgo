@@ -18,6 +18,11 @@ export async function createUser(overrides = {}) {
     email: `user${n}@test.local`,
     role: 'member',
     familyId: new mongoose.Types.ObjectId(),
+    // Its own Futókód, never anyone else's: the model draws one at random
+    // otherwise, and users made at the same instant (Promise.all) can draw
+    // the same one before either is saved - a duplicate key, once in a
+    // great while.
+    futokod: String(1000 + n),
     ...overrides,
   });
 }
