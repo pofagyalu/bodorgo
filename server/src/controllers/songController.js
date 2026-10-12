@@ -96,6 +96,10 @@ function songFields(body, { partial = false } = {}) {
     fields.title = String(body.title ?? '').trim();
     if (!fields.title) throw new AppError('A dalnak kell legyen címe.', 400);
   }
+  if (body.subtitle !== undefined) {
+    fields.subtitle = String(body.subtitle ?? '').trim();
+    if (fields.subtitle.length > 150) throw new AppError('Az alcím túl hosszú.', 400);
+  }
   if (body.artist !== undefined) fields.artist = String(body.artist ?? '').trim();
   if (body.chordpro !== undefined) {
     fields.chordpro = String(body.chordpro ?? '').replace(/\r\n?/g, '\n');
@@ -278,7 +282,7 @@ async function currentBook(query) {
   let book = bookCache.get(key);
   if (book?.version !== version) {
     const songs = await inBookOrder(
-      Song.find(IN_BOOK).select('title artist chordpro key tempo'),
+      Song.find(IN_BOOK).select('title subtitle artist chordpro key tempo'),
     ).lean();
     // The cover's "edition": the day the newest song came in.
     const pdf = await renderSongBook(songs, { diagrams, size, lastAdded: newest.createdAt });

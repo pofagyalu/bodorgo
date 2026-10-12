@@ -192,6 +192,45 @@ describe('Daloskönyv: the songs', () => {
     expect((await add(owner, { title: 'Eső után' })).body.data.song.slug).toBe('eso-utan-2');
   });
 
+  it('a song may have a subtitle - optional, printed under the title in its PDF', async () => {
+    const owner = await createOwner();
+    const pdfOf = (slug) =>
+      request(app)
+        .get(`/songs/${slug}/pdf`)
+        .set(asUser(owner))
+        .buffer()
+        .parse((res, done) => {
+          const chunks = [];
+          res.on('data', (c) => chunks.push(c));
+          res.on('end', () => done(null, Buffer.concat(chunks)));
+        });
+    // None given: an empty one.
+    const plain = (await add(owner, { title: 'Alcím nélkül', chordpro: '[C]la' })).body.data.song;
+    expect(plain.subtitle).toBe('');
+
+    const res = await add(owner, {
+      title: 'Let the Sunshine In',
+      subtitle: '  a Hair című musicalből ',
+      chordpro: '[C]la',
+    });
+    expect(res.status).toBe(201);
+    const { song } = res.body.data;
+    expect(song.subtitle).toBe('a Hair című musicalből');
+    const opened = await request(app).get(`/songs/${song.slug}`).set(asUser(owner));
+    expect(opened.body.data.song.subtitle).toBe('a Hair című musicalből');
+
+    // One more line to draw than without it; the book takes it too.
+    const withSubtitle = await pdfOf(song.slug);
+    expect(withSubtitle.status).toBe(200);
+    const patch = (body) => request(app).patch(`/songs/${song._id}`).set(asUser(owner)).send(body);
+    expect((await patch({ subtitle: 'x'.repeat(151) })).status).toBe(400);
+    const cleared = await patch({ subtitle: '' });
+    expect(cleared.body.data.song.subtitle).toBe('');
+    expect((await pdfOf(song.slug)).body.length).toBeLessThan(withSubtitle.body.length);
+    await patch({ subtitle: 'a Hair című musicalből' });
+    expect((await request(app).get('/songs/book.pdf').set(asUser(owner))).status).toBe(200);
+  });
+
   it('lists them by title, the Hungarian way, without the lyrics', async () => {
     const owner = await createOwner();
     for (const title of ['Zöld csillag', 'Érzés', 'Első', 'Álmodtam', 'Ajándék', 'Eső után']) {

@@ -43,6 +43,9 @@ export interface SongListItem {
 }
 
 export interface Song extends SongListItem {
+  // A line under the title, when the song has one - optional ('' or
+  // missing: none).
+  subtitle?: string;
   // Lyrics and chords as ChordPro text (pages/daloskonyv/chordpro.ts).
   chordpro: string;
   tags: string[];
@@ -58,6 +61,7 @@ export interface Song extends SongListItem {
 // What the editor sends.
 export interface SongInput {
   title: string;
+  subtitle?: string;
   artist: string;
   chordpro: string;
   originalKey?: string;
@@ -661,6 +665,7 @@ function waitingSong(song: WaitingSong): Song {
     _id: song.localId,
     slug: song.localId,
     title: input.title,
+    subtitle: input.subtitle ?? '',
     artist: input.artist,
     key: input.key ?? '',
     detectedKey: detectKey(input.chordpro),

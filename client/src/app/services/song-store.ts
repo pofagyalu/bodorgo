@@ -32,6 +32,7 @@ export interface WaitingSong {
   // What the editor would have sent (SongInput).
   input: {
     title: string;
+    subtitle?: string;
     artist: string;
     chordpro: string;
     originalKey?: string;

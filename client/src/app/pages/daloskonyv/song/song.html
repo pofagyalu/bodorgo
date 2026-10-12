@@ -263,6 +263,10 @@
       <article class="sheet" #sheet>
         <header class="song-head">
           <h2>{{ song()!.title }}</h2>
+          <!-- The subtitle, where the song has one. -->
+          @if (song()!.subtitle; as subtitle) {
+            <p class="subtitle">{{ subtitle }}</p>
+          }
           <!-- The artist, and after it the song's key in a quiet tag: the one
              set by hand, or what the chords say - moved with the
              transposing on the screen. -->
@@ -401,6 +405,9 @@
           <header class="song-head">
             <h2>{{ p.title }}</h2>
             @if (p.song; as other) {
+              @if (other.subtitle) {
+                <p class="subtitle">{{ other.subtitle }}</p>
+              }
               @if (other.artist || peekKey(other) || other.tempo || peekPlayed(other)) {
                 <p class="artist">
                   @if (other.artist) {
