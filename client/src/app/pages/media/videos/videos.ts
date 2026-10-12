@@ -95,11 +95,11 @@ export class Videos {
   }
 
   coverUrl(category: MediaVideoCategory, video: MediaVideo): string {
-    return this.media.coverUrl(category.key, video.id);
+    return this.media.coverUrl(category.key, video.id, video.coverVersion);
   }
 
   categoryCoverUrl(category: MediaVideoCategory): string {
-    return this.media.categoryCoverUrl(category.key);
+    return this.media.categoryCoverUrl(category.key, category.coverVersion);
   }
 
   // The hovered category image shows to the left of the small one (to its

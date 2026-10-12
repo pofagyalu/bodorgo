@@ -7,6 +7,7 @@ import MediaVideoTitle from '../models/mediaVideoTitleModel.js';
 import { canEditMedia, maySee, ownSettingsFrom, saveOwnSettings } from '../utils/mediaAccess.js';
 import {
   VIDEO_EXTENSIONS,
+  coverVersion,
   findSubtitlePath,
   resolveVideoPath,
   srtToVtt,
@@ -146,7 +147,9 @@ function sendCover(res, filePath) {
     'Content-Type',
     COVER_TYPES[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream',
   );
-  // Covers change rarely; a short cache still picks up a replaced one soon.
+  // Covers change rarely; a short cache still picks up a replaced one soon
+  // (the page asks for a replaced one at once anyway: its address carries
+  // the list's coverVersion).
   res.setHeader('Cache-Control', 'private, max-age=3600');
   res.sendFile(filePath);
 }
@@ -167,6 +170,7 @@ export const listMediaVideos = async (req, res) => {
       .map((relPath) => {
         const parsed = parseVideoName(relPath);
         const own = settings.get(`${category.key}/${relPath}`);
+        const thumb = findThumb(root, relPath);
         return {
           id: encodeId(relPath),
           title: own?.title || parsed.title,
@@ -180,7 +184,8 @@ export const listMediaVideos = async (req, res) => {
           year: parsed.year,
           season: parsed.season,
           episode: parsed.episode,
-          hasCover: !!findThumb(root, relPath),
+          hasCover: !!thumb,
+          ...coverVersion(thumb),
           hasSubtitles: !!findSubtitlePath(root, relPath),
           // Its small copy and the two pictures' lines (utils/videoCopies.js).
           ...videoQualityInfo({
@@ -200,11 +205,13 @@ export const listMediaVideos = async (req, res) => {
           (b.episode ?? 0) - (a.episode ?? 0) ||
           a.title.localeCompare(b.title, 'hu'),
       );
+    const folderCover = findFolderCover(root);
     return {
       key: category.key,
       title: category.title,
       description: category.description,
-      hasCover: !!findFolderCover(root),
+      hasCover: !!folderCover,
+      ...coverVersion(folderCover),
       videos,
     };
   }).filter((c) => c.videos.length > 0);

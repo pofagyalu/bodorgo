@@ -350,6 +350,9 @@ export interface TourVideo {
   id: string;
   label: string;
   hasCover: boolean;
+  // When its cover file was last changed (ms) - in the cover's address, so
+  // a replaced cover shows at once (see videoCoverUrl).
+  coverVersion?: number;
   hasSubtitles: boolean;
   // Its small copy (see services/video-copies.ts) - 'ready': that one
   // plays unless the original is picked.
@@ -1052,8 +1055,10 @@ export class TourService {
     return `${this.apiUrl}/${tourId}/videos/${videoId}/video?quality=${quality}`;
   }
 
-  videoCoverUrl(tourId: string, videoId: string): string {
-    return `${this.apiUrl}/${tourId}/videos/${videoId}/cover`;
+  // version: the video's coverVersion - a replaced cover gets another
+  // address, so the browser doesn't show the one it kept.
+  videoCoverUrl(tourId: string, videoId: string, version?: number): string {
+    return `${this.apiUrl}/${tourId}/videos/${videoId}/cover${version ? `?v=${version}` : ''}`;
   }
 
   subtitlesUrl(tourId: string, videoId: string): string {

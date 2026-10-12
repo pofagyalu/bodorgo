@@ -1,7 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import config from '../config.js';
-import { VIDEO_EXTENSIONS, findSubtitlePath, resolveVideoPath } from './videoFiles.js';
+import {
+  VIDEO_EXTENSIONS,
+  coverVersion,
+  findSubtitlePath,
+  resolveVideoPath,
+} from './videoFiles.js';
 import { videoQualityInfo } from './videoCopies.js';
 import { videoKey } from './newMedia.js';
 
@@ -115,15 +120,19 @@ export const tourVideoFile = (root, relPath) => ({
 // lines (utils/videoCopies.js).
 export function tourVideoList(order, newKeys = new Set()) {
   const root = tourVideosRoot();
-  return (scanTourVideos().get(order) ?? []).map(({ relPath, label }) => ({
-    id: encodeVideoId(relPath),
-    // An admin: "Új" on one a discovery has just met (utils/newMedia.js).
-    ...(newKeys.has(videoKey('tour', relPath)) ? { isNew: true } : {}),
-    label: displayVersionLabel(label),
-    hasCover: !!findVideoThumb(root, relPath),
-    hasSubtitles: !!findSubtitlePath(root, relPath),
-    ...videoQualityInfo(tourVideoFile(root, relPath)),
-  }));
+  return (scanTourVideos().get(order) ?? []).map(({ relPath, label }) => {
+    const thumb = findVideoThumb(root, relPath);
+    return {
+      id: encodeVideoId(relPath),
+      // An admin: "Új" on one a discovery has just met (utils/newMedia.js).
+      ...(newKeys.has(videoKey('tour', relPath)) ? { isNew: true } : {}),
+      label: displayVersionLabel(label),
+      hasCover: !!thumb,
+      ...coverVersion(thumb),
+      hasSubtitles: !!findSubtitlePath(root, relPath),
+      ...videoQualityInfo(tourVideoFile(root, relPath)),
+    };
+  });
 }
 
 // Every tour video as the "seen" records know it (utils/newMedia.js).

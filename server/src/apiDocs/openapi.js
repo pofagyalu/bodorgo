@@ -1845,6 +1845,8 @@ const paths = {
     get: op({
       tag: T.gallery,
       summary: "A video's cover",
+      description:
+        "Kept by the browser for an hour. The tour's video list (in GET /tours/{id}) gives each video with a cover its `coverVersion` - when the cover file was last changed, in milliseconds; asked for with `?v={coverVersion}`, a replaced cover is another address and shows at once (the server itself ignores `v`).",
       params: [tourIdT, path('videoId', 'The video.')],
       response: file(['image/jpeg'], 'The picture.'),
       errors: [404],
@@ -2787,7 +2789,7 @@ const paths = {
       role: 'member',
       summary: 'All video categories and videos',
       description:
-        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, `small` - its small copy: `none`, `queued`, `converting`, `ready` (then that is what plays unless the original is asked for) or `failed` -, `height` and `smallHeight` - the lines of the original's picture and of the small copy's (the original's, 720 at most), what the player's quality switch is labelled with; null when the file's header can't be read - and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. A video an admin kept for chosen members is left out for everyone else (an admin gets every video). The role manager only: `viewers` - the ids of the users who may see the video; empty when every member may. On a video, `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
+        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, `coverVersion` on one with a cover (and on a category with one) - when the cover file was last changed, in milliseconds; put in the cover's address as `?v=` it makes a replaced cover show at once instead of after the browser's hour -, `small` - its small copy: `none`, `queued`, `converting`, `ready` (then that is what plays unless the original is asked for) or `failed` -, `height` and `smallHeight` - the lines of the original's picture and of the small copy's (the original's, 720 at most), what the player's quality switch is labelled with; null when the file's header can't be read - and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. A video an admin kept for chosen members is left out for everyone else (an admin gets every video). The role manager only: `viewers` - the ids of the users who may see the video; empty when every member may. On a video, `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
       data: obj({ categories: arrayOf({ type: 'object' }) }),
     }),
   },
@@ -2796,6 +2798,8 @@ const paths = {
       tag: T.media,
       role: 'member',
       summary: "A category's cover",
+      description:
+        'Kept by the browser for an hour; asked for with `?v={coverVersion}` (from GET /media/videos) a replaced cover shows at once - the server itself ignores `v`.',
       params: [path('category', 'e.g. `szilveszter`.')],
       response: file(['image/jpeg', 'image/png'], 'The picture.'),
       errors: [404],
@@ -2882,6 +2886,8 @@ const paths = {
       tag: T.media,
       role: 'member',
       summary: "A video's cover",
+      description:
+        'Kept by the browser for an hour; asked for with `?v={coverVersion}` (from GET /media/videos) a replaced cover shows at once - the server itself ignores `v`.',
       params: [path('category', 'The category.'), path('id', 'The video.')],
       response: file(['image/jpeg'], 'The picture.'),
       errors: [404],

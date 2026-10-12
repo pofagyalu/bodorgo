@@ -68,6 +68,9 @@ describe('Média videos', () => {
       [2025, false, true],
       [2024, true, false],
     ]);
+    // A cover's version: when its file was last changed - none without one.
+    expect(farsang.coverVersion).toBeGreaterThan(0);
+    expect(farsang.videos.map((v) => typeof v.coverVersion)).toEqual(['undefined', 'number']);
     // The length comes from the file itself - null where it can't be read
     // (the 2024 one here isn't a real video).
     expect(farsang.videos.map((v) => v.durationSeconds)).toEqual([754, null]);

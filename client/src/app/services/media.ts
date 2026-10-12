@@ -18,6 +18,9 @@ export interface MediaVideo {
   season: number | null;
   episode: number | null;
   hasCover: boolean;
+  // When its cover file was last changed (ms) - in the cover's address, so
+  // a replaced cover shows at once (see coverUrl).
+  coverVersion?: number;
   hasSubtitles: boolean;
   // Its length - null if the server couldn't read it from the file.
   durationSeconds?: number | null;
@@ -40,6 +43,7 @@ export interface MediaVideoCategory {
   title: string;
   description: string;
   hasCover: boolean;
+  coverVersion?: number;
   videos: MediaVideo[];
 }
 
@@ -205,16 +209,19 @@ export class MediaService {
     return `${this.apiUrl}/${category}/${id}/video?quality=${quality}`;
   }
 
-  coverUrl(category: string, id: string): string {
-    return `${this.apiUrl}/${category}/${id}/cover`;
+  // version: the list's coverVersion - a replaced cover gets another
+  // address, so the browser doesn't show the one it kept (it keeps a cover
+  // for an hour).
+  coverUrl(category: string, id: string, version?: number): string {
+    return `${this.apiUrl}/${category}/${id}/cover${version ? `?v=${version}` : ''}`;
   }
 
   subtitlesUrl(category: string, id: string): string {
     return `${this.apiUrl}/${category}/${id}/subtitles.vtt`;
   }
 
-  categoryCoverUrl(category: string): string {
-    return `${this.apiUrl}/${category}/cover`;
+  categoryCoverUrl(category: string, version?: number): string {
+    return `${this.apiUrl}/${category}/cover${version ? `?v=${version}` : ''}`;
   }
 
   // --- Fotók ---

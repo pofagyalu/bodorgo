@@ -108,6 +108,11 @@ describe('MediaService', () => {
         `${videos}/tabor/v1/video?quality=small`,
       );
       expect(service.coverUrl('tabor', 'v1')).toBe(`${videos}/tabor/v1/cover`);
+      // A cover's version rides in its address: a replaced one is another address.
+      expect(service.coverUrl('tabor', 'v1', 1790000000000)).toBe(
+        `${videos}/tabor/v1/cover?v=1790000000000`,
+      );
+      expect(service.categoryCoverUrl('tabor', 5)).toBe(`${videos}/tabor/cover?v=5`);
       expect(service.subtitlesUrl('tabor', 'v1')).toBe(`${videos}/tabor/v1/subtitles.vtt`);
       expect(service.categoryCoverUrl('tabor')).toBe(`${videos}/tabor/cover`);
     });

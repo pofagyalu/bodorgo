@@ -7,6 +7,12 @@ import AppError from './appError.js';
 
 export const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.mov', '.webm']);
 
+// A cover file's `coverVersion` for the lists: when it was last changed.
+// The page puts it in the cover's address, so a picture replaced in the
+// folder shows at the next look - the browser keeps the old address's.
+export const coverVersion = (file) =>
+  file ? { coverVersion: Math.round(fs.statSync(file).mtimeMs) } : {};
+
 // Tried in order against the video's own basename - .hun.srt is Jellyfin's
 // own convention for a Hungarian subtitle track; .srt alone covers
 // anything not language-tagged.

@@ -514,6 +514,9 @@ describe('TourVideos', () => {
       `${API}/tours/t1/videos/v1/video?quality=small`,
     );
     expect(videos.coverUrl(video)).toBe(`${API}/tours/t1/videos/v1/cover`);
+    expect(videos.coverUrl({ ...video, coverVersion: 7 })).toBe(
+      `${API}/tours/t1/videos/v1/cover?v=7`,
+    );
     expect(videos.subtitlesUrl(video)).toBe(`${API}/tours/t1/videos/v1/subtitles.vtt`);
   });
 

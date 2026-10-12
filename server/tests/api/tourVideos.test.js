@@ -46,6 +46,7 @@ describe('tour videos, matched by tour number', () => {
       ['Rendezői változat', true],
       ['Kilián-féle vágás', false],
     ]);
+    expect(res.body.data.videos.map((v) => typeof v.coverVersion)).toEqual(['number', 'undefined']);
 
     const single = await createTour({ order: 11 });
     const res11 = await request(app)
