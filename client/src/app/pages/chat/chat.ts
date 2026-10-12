@@ -154,11 +154,17 @@ export class Chat implements OnInit, OnDestroy {
     const at = this.overview()?.general.opensAt;
     return at ? new Date(at) : null;
   });
-  // In the message field's place while it is shut ("... megnyitás: október 22.").
+  // In the message field's place while it is shut ("... megnyitás: október 22. 22:00").
   closedNote = computed(() => {
     const at = this.generalOpensAt();
     if (!this.isGeneral() || !at) return null;
-    const day = new Intl.DateTimeFormat('hu-HU', { month: 'long', day: 'numeric' }).format(at);
+    // The day and the hour, in the reader's own time.
+    const day = new Intl.DateTimeFormat('hu-HU', {
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(at);
     return `A ${GENERAL_NAME} Kotyogó még zárva van – megnyitás: ${day}`;
   });
 

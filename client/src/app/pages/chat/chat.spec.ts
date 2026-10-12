@@ -155,11 +155,14 @@ describe('Chat', () => {
   });
 
   it('keeps the general room shut until it opens: read, with the opening day where the message field was', () => {
-    const general = { ...OVERVIEW.general, opensAt: '2026-10-22T00:00:00+02:00' };
+    // Midday: the 22nd wherever the test runs (the hour is the reader's own).
+    const general = { ...OVERVIEW.general, opensAt: '2026-10-22T12:00:00Z' };
     open({}, false, { 'GET /chat-rooms/overview': { data: { ...OVERVIEW, general } } });
     expect(page.isGeneral()).toBe(true);
     expect(page.readOnly()).toBe(true);
-    expect(page.closedNote()).toBe('A Bódorgók Kotyogó még zárva van – megnyitás: október 22.');
+    expect(page.closedNote()).toMatch(
+      /^A Bódorgók Kotyogó még zárva van – megnyitás: október 22\. \d{1,2}:00$/,
+    );
     const note = fixture.nativeElement.querySelector('.closed-note') as HTMLElement;
     expect(note.textContent).toContain('megnyitás: október 22.');
     expect(fixture.nativeElement.querySelector('app-compose')).toBeNull();
