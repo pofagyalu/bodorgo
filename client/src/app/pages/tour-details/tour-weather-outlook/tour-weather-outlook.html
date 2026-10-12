@@ -22,25 +22,28 @@
         } @else if (o.note) {
           <p class="outlook-note">{{ o.note }}</p>
         }
+      </div>
 
-        <div
-          class="meter"
-          [attr.aria-label]="'Jóléti-index: ' + roundedScore() + ' a 100-ból, ' + o.word"
-        >
-          <p class="meter-score">
-            Jóléti-index: {{ roundedScore() }} / 100 – <strong>{{ o.word }}</strong>
-          </p>
-          <div class="meter-bar">
-            @for (part of meter; track part.tier) {
-              <span [class]="'meter-part meter-part--' + part.tier" [style.width.%]="part.width">
-              </span>
-            }
-            <i class="meter-mark" [style.left.%]="o.score"></i>
-          </div>
-          <div class="meter-legend">
-            <span>Pálinkás</span>
-            <span>Koktélos</span>
-          </div>
+      <!-- The Jóléti-index bar: a part of the panel of its own - under the
+           text on a phone, under the scene on a wide screen (the scene is
+           shown whole there, and the bar fills the room below it). -->
+      <div
+        class="meter"
+        [attr.aria-label]="'Jóléti-index: ' + roundedScore() + ' a 100-ból, ' + o.word"
+      >
+        <p class="meter-score">
+          Jóléti-index: {{ roundedScore() }} / 100 – <strong>{{ o.word }}</strong>
+        </p>
+        <div class="meter-bar">
+          @for (part of meter; track part.tier) {
+            <span [class]="'meter-part meter-part--' + part.tier" [style.width.%]="part.width">
+            </span>
+          }
+          <i class="meter-mark" [style.left.%]="o.score"></i>
+        </div>
+        <div class="meter-legend">
+          <span>Pálinkás</span>
+          <span>Koktélos</span>
         </div>
       </div>
 

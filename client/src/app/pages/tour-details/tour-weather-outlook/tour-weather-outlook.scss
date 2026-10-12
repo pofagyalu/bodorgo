@@ -105,8 +105,11 @@ $moods: (
 }
 
 // The score bar: the five moods side by side, a marker where the tour is.
+// A part of the panel of its own (not inside the summary), so a wide
+// screen can put it under the scene.
 .meter {
-  margin-top: 1.2rem;
+  padding: 0 1.5rem 1.2rem;
+  min-width: 0;
 }
 
 .meter-bar {
@@ -207,32 +210,50 @@ $moods: (
   color: #666;
 }
 
-// Wider: the summary and the packing list side by side under the scene.
+// Wider: the summary (the score bar under it) and the packing list side
+// by side under the scene.
 @media (min-width: 640px) {
   .outlook {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      'scene scene'
+      'summary pack'
+      'meter pack';
   }
 
   .outlook-scene {
-    grid-column: 1 / -1;
+    grid-area: scene;
+  }
+
+  .outlook-summary {
+    grid-area: summary;
+  }
+
+  .meter {
+    grid-area: meter;
   }
 
   .outlook-pack {
+    grid-area: pack;
     padding-top: 1.2rem;
   }
 }
 
-// Desktop: its own wide layout - the scene on the left at the panel's
-// full height, the summary and the packing list beside it.
+// Desktop: its own wide layout - on the left the scene, whole (never cut
+// at its sides: what matters in it is there), with the score bar in the
+// room under it; the summary and the packing list beside them.
 @media (min-width: 1024px) {
   .outlook {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'scene summary pack'
+      'meter summary pack';
   }
 
-  .outlook-scene {
-    grid-column: auto;
-    height: 100%;
-    min-height: 16rem;
-    aspect-ratio: auto;
+  .meter {
+    align-self: center;
+    padding: 1.2rem 1.5rem;
   }
 }
