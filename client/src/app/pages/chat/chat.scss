@@ -441,6 +441,15 @@ $tab-curve: 0.625rem; // the inverse radius at the open tab's feet
       background: #78909c;
     }
   }
+
+  // Switched on (the search bar is open).
+  &.tool-btn--on {
+    background: #f07827;
+
+    &:hover {
+      background: #d96515;
+    }
+  }
 }
 
 // cdkScrollable (chat.html): dragging a person near its top/bottom edge
@@ -671,6 +680,10 @@ $tab-curve: 0.625rem; // the inverse radius at the open tab's feet
 
       &.muted {
         color: #a3b3ba;
+      }
+
+      &.tool-btn--on {
+        color: #f07827;
       }
 
       &:active {

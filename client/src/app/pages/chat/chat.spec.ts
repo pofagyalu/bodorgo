@@ -154,6 +154,26 @@ describe('Chat', () => {
     expect(socket.leaveTour).toHaveBeenCalled();
   });
 
+  it('keeps the general room shut until it opens: read, with the opening day where the message field was', () => {
+    // Midday: the 22nd wherever the test runs (the hour is the reader's own).
+    const general = { ...OVERVIEW.general, opensAt: '2026-10-22T12:00:00Z' };
+    open({}, false, { 'GET /chat-rooms/overview': { data: { ...OVERVIEW, general } } });
+    expect(page.isGeneral()).toBe(true);
+    expect(page.readOnly()).toBe(true);
+    expect(page.closedNote()).toMatch(
+      /^A Bódorgók Kotyogó még zárva van – megnyitás: október 22\. \d{1,2}:00$/,
+    );
+    const note = fixture.nativeElement.querySelector('.closed-note') as HTMLElement;
+    expect(note.textContent).toContain('megnyitás: október 22.');
+    expect(fixture.nativeElement.querySelector('app-compose')).toBeNull();
+
+    // A tour's chat is none of its business.
+    page.selectTour('next');
+    settleRequests({ 'GET /chat-rooms/overview': { data: { ...OVERVIEW, general } } });
+    expect(page.readOnly()).toBe(false);
+    expect(page.closedNote()).toBeNull();
+  });
+
   it('sorts the tours newest first and files the finished ones away', () => {
     open();
     expect(page.allTours().map((t) => t._id)).toEqual(['later', 'next', 'eleven', 'old', 'silent']);
@@ -228,6 +248,17 @@ describe('Chat', () => {
     respond({ 'PUT /push/chat-mutes/room-g': fail() });
     expect(page.chatMuted()).toBe(true);
     expect(error).toHaveBeenCalledWith('Nem sikerült menteni.');
+  });
+
+  it('opens the search of the open chat from its magnifier, bringing the chat tab forward', () => {
+    open({ tabor: 'next' });
+    page.activePane.set('rooms');
+    expect(page.searchingChat()).toBe(false);
+    page.toggleChatSearch();
+    expect(page.activePane()).toBe('chat');
+    expect(page.searchingChat()).toBe(true);
+    page.toggleChatSearch();
+    expect(page.searchingChat()).toBe(false);
   });
 
   it('lets an admin switch the background of a tour chat', () => {

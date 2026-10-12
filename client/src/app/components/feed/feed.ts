@@ -10,6 +10,7 @@ import {
   afterRenderEffect,
   ElementRef,
 } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../auth/auth.service';
 import { TourSocketService } from '../../services/tour-socket';
 import { Compose, Mentionable } from './compose/compose';
@@ -62,7 +63,7 @@ const UNREAD_TOP_GAP_PX = 12;
 @Component({
   selector: 'app-feed',
   standalone: true,
-  imports: [Compose, Post, PollCreate],
+  imports: [Compose, Post, PollCreate, MatIconModule],
   templateUrl: './feed.html',
   styleUrls: ['./feed.scss'],
 })
@@ -75,6 +76,9 @@ export class Feed implements OnInit, OnDestroy {
   tourId = input<string | null>(null);
   // A past tour's chat: an archive - no message field.
   readOnly = input(false);
+  // What stands in the message field's place then - when it isn't the
+  // usual "this chat is over" (the general room before it opens).
+  closedNote = input<string | null>(null);
   currentUserId = computed(() => this.authService.user()?.id);
 
   posts = signal<IPost[]>([]);
@@ -192,6 +196,19 @@ export class Feed implements OnInit, OnDestroy {
         el.scrollTop = el.scrollHeight;
       }
     });
+
+    // The search bar just opened: the cursor into its field.
+    afterRenderEffect(() => {
+      if (this.searching()) this.searchInput()?.nativeElement.focus();
+    });
+
+    // The hit shown: into the middle of the view.
+    afterRenderEffect(() => {
+      const id = this.currentHit();
+      const container = this.feedContainer()?.nativeElement;
+      if (!id || !container) return;
+      container.querySelector(`#post-${id}`)?.scrollIntoView?.({ block: 'center' });
+    });
   }
 
   ngOnInit() {
@@ -262,6 +279,65 @@ export class Feed implements OnInit, OnDestroy {
       },
       error: () => {}, // no suggestions/highlighting - the chat itself still works
     });
+  }
+
+  // --- Search: this chat's own messages (the whole history is here) ---
+
+  // The search bar is open (the magnifier among the chat's buttons -
+  // chat.html's chatTools).
+  searching = signal(false);
+  searchQuery = signal('');
+  private searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  // The messages that have the words searched for - in their text or in
+  // their writer's name; no upper/lower case, no accents ("tura" finds
+  // "túra"). From two letters on; deleted messages have nothing to find.
+  searchHits = computed<string[]>(() => {
+    const query = usernameKey(this.searchQuery().trim());
+    if (!this.searching() || query.length < 2) return [];
+    return this.posts()
+      .filter(
+        (p) =>
+          !p.deletedAt &&
+          usernameKey(`${p.text} ${p.creator.username ?? ''} ${p.creator.name}`).includes(query),
+      )
+      .map((p) => p._id);
+  });
+  private searchHitSet = computed(() => new Set(this.searchHits()));
+  // Which hit is shown, counted back from the newest (0 = the newest).
+  private searchStep = signal(0);
+  currentHit = computed<string | null>(() => {
+    const hits = this.searchHits();
+    return hits.length ? hits[hits.length - 1 - (this.searchStep() % hits.length)] : null;
+  });
+  // "3 / 12" - the newest is 1.
+  searchPosition = computed(() => (this.searchStep() % (this.searchHits().length || 1)) + 1);
+
+  isSearchHit(postId: string): boolean {
+    return this.searchHitSet().has(postId);
+  }
+
+  toggleSearch() {
+    if (this.searching()) this.closeSearch();
+    else this.searching.set(true);
+  }
+
+  closeSearch() {
+    this.searching.set(false);
+    this.searchQuery.set('');
+    this.searchStep.set(0);
+  }
+
+  onSearchInput(value: string) {
+    this.searchQuery.set(value);
+    this.searchStep.set(0); // a new search starts at the newest hit
+  }
+
+  // To the hit before this one (older: +1) or after it (newer: -1) - round
+  // and round.
+  stepSearch(older: 1 | -1) {
+    const count = this.searchHits().length;
+    if (count) this.searchStep.update((step) => (step + older + count) % count);
   }
 
   // A photo goes as an upload (the server then announces the message over

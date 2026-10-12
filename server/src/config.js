@@ -139,6 +139,10 @@ const config = {
   backgroundJobs: process.env.BACKGROUND_JOBS === 'on',
   // The one admin who may change roles (utils/roleManager.js) - their
   // e-mail. Checked at every start; changing it hands the app over.
+  // The general Kotyogó ("Bódorgók") opens at this moment (an ISO date
+  // and time, e.g. 2026-10-22T00:00:00+02:00) - until then it can be read
+  // but not written in (see chat/chatRooms.js). Unset: it is open.
+  generalChatOpensAt: process.env.GENERAL_CHAT_OPENS_AT || null,
   initialAdminUser: process.env.INITIAL_ADMIN_USER?.trim().toLowerCase() || null,
   // The emergency way in (authOidcController.js's localLogin), for when
   // there is no working OIDC provider: with LOCAL_LOGIN=true the login page

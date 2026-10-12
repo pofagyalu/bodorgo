@@ -29,7 +29,9 @@ export interface ChatRoomSummary {
 }
 
 export interface ChatOverview {
-  general: ChatRoomSummary;
+  // opensAt: the general room is shut until then (the site's launch) -
+  // read, not written; null once it is open.
+  general: ChatRoomSummary & { opensAt?: string | null };
   // past: the tour is over (midnight after its last day) - its chat is listed
   // among the archives; closed: it's read-only too (every past one but the
   // test tour's).

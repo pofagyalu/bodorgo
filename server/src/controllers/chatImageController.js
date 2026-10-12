@@ -15,8 +15,9 @@ import {
 } from '../chat/chatImages.js';
 import { emitToChatRoom, getIo } from '../chat/tourEvents.js';
 import {
-  CHAT_CLOSED_MESSAGE,
+  chatClosedMessage,
   chatRoomClosed,
+  generalChatOpensAt,
   chatRoomView,
   generalChatRoom,
   loadChatRoom,
@@ -64,7 +65,7 @@ export const chatImageUpload = (req, res, next) =>
 // POST /chat-rooms/:chatRoomId/images - multipart: image (+ optional text).
 export const postChatImage = async (req, res) => {
   const room = await loadChatRoom(req.params.chatRoomId);
-  if (await chatRoomClosed(room)) throw new AppError(CHAT_CLOSED_MESSAGE, 403);
+  if (await chatRoomClosed(room)) throw new AppError(chatClosedMessage(room), 403);
   if (!req.file) throw new AppError('Nincs kép kiválasztva.', 400);
 
   const { chatImages } = await getClubSettings();
@@ -247,6 +248,8 @@ export const getChatOverview = async (req, res) => {
     data: {
       general: {
         chatRoomId: String(general._id),
+        // Shut until then (the site's launch) - null: it is open.
+        opensAt: generalChatOpensAt(),
         lastPost: lastPostOf.get(String(general._id)) ?? null,
         unread: await unreadIn(general),
         memberCount: activeUsers,

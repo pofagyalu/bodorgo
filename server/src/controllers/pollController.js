@@ -7,6 +7,8 @@ import AppError from '../utils/appError.js';
 import { emitToChatRoom } from '../chat/tourEvents.js';
 import {
   CHAT_CLOSED_MESSAGE,
+  chatClosedMessage,
+  chatRoomClosed,
   generalChatRoom,
   tourChatClosed,
   tourChatRoom,
@@ -305,6 +307,8 @@ export const createTourPoll = async (req, res) => {
 // POST /chat-rooms/general/polls - from the general room, by anyone
 // logged in; everyone is told.
 export const createGeneralPoll = async (req, res) => {
+  const room = await generalChatRoom();
+  if (await chatRoomClosed(room)) throw new AppError(chatClosedMessage(room), 403);
   await startChatPoll(req, res, null);
 };
 

@@ -4,7 +4,7 @@ import logger from '../logger.js';
 import { chatChannel, setIo, tourRoom } from './tourEvents.js';
 import { lastReadAt, markChatRead, notifyChatPostInBackground } from './chatNotifications.js';
 import { deleteChatImageFiles } from './chatImages.js';
-import { CHAT_CLOSED_MESSAGE, chatRoomClosed } from './chatRooms.js';
+import { chatClosedMessage, chatRoomClosed } from './chatRooms.js';
 import { onGeneralTextPostInBackground } from './firstWritersGame.js';
 
 // One Socket.IO connection per open browser tab (see the client's
@@ -93,7 +93,7 @@ export default function registerChatHandlers(io) {
         const room = await ChatRoom.findById(chatRoomId);
         if (!room) return socket.emit('chat-error', 'Nincs ilyen Kotyogó.');
         // A past tour's chat is an archive: read, not written.
-        if (await chatRoomClosed(room)) return socket.emit('chat-error', CHAT_CLOSED_MESSAGE);
+        if (await chatRoomClosed(room)) return socket.emit('chat-error', chatClosedMessage(room));
         const post = await Post.create({
           chatRoomId,
           creator: sessionUser.id,
