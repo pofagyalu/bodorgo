@@ -1931,6 +1931,12 @@ const paths = {
       data: obj({
         general: obj({
           chatRoomId: id(),
+          opensAt: {
+            type: ['string', 'null'],
+            format: 'date-time',
+            description:
+              'The general room is shut until then (the site launch - the server setting GENERAL_CHAT_OPENS_AT): it can be read, but messages, photos and polls are refused (403). null: it is open.',
+          },
           lastPost: { type: 'object' },
           unread: int(),
           memberCount: int(),

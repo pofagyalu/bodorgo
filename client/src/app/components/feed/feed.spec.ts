@@ -177,6 +177,65 @@ describe('Feed', () => {
     expect(feed.chatFull('p1')).toBe(`${API}/chat-rooms/room1/images/p1`);
   });
 
+  it('searches its own messages: text and writer, without case or accents, newest first', () => {
+    open();
+    socket.fire('initial-posts', {
+      chatRoomId: 'room1',
+      posts: [
+        post('p1', 'kid', '2020-05-01T10:00:00', { text: 'Holnap TÚRA a Kékesre' }),
+        post('p2', 'me', '2020-05-01T11:00:00', { text: 'Hozok pogácsát' }),
+        post('p3', 'kid', '2020-05-01T12:00:00', { text: 'túra', deletedAt: 'x' }),
+        post('p4', 'Béla', '2020-05-02T09:00:00', { text: 'A tura után sör' }),
+      ],
+    });
+    fixture.detectChanges();
+    const bar = () => fixture.nativeElement.querySelector('.search-bar') as HTMLElement | null;
+    expect(bar()).toBeNull();
+
+    feed.toggleSearch();
+    fixture.detectChanges();
+    expect(bar()).not.toBeNull();
+    // One letter is not searched for yet.
+    feed.onSearchInput('t');
+    expect(feed.searchHits()).toEqual([]);
+
+    // "tura" finds "TÚRA" and "tura" - not the deleted one; the newest first.
+    feed.onSearchInput(' tura ');
+    fixture.detectChanges();
+    expect(feed.searchHits()).toEqual(['p1', 'p4']);
+    expect(feed.currentHit()).toBe('p4');
+    expect(bar()!.textContent).toContain('1 / 2');
+    const marked = (cls: string) =>
+      [...fixture.nativeElement.querySelectorAll(`app-post.${cls}`)].map((el) => el.id);
+    expect(marked('search-hit')).toEqual(['post-p1', 'post-p4']);
+    expect(marked('search-hit--current')).toEqual(['post-p4']);
+
+    // Older, round to the newest again, and back.
+    feed.stepSearch(1);
+    expect(feed.currentHit()).toBe('p1');
+    expect(feed.searchPosition()).toBe(2);
+    feed.stepSearch(1);
+    expect(feed.currentHit()).toBe('p4');
+    feed.stepSearch(-1);
+    expect(feed.currentHit()).toBe('p1');
+
+    // By who wrote it; and nothing found.
+    feed.onSearchInput('bela');
+    expect(feed.searchHits()).toEqual(['p4']);
+    feed.onSearchInput('nincs ilyen');
+    fixture.detectChanges();
+    expect(feed.currentHit()).toBeNull();
+    expect(bar()!.textContent).toContain('nincs találat');
+    feed.stepSearch(1); // nothing to step through
+
+    // Closing it forgets the search.
+    feed.toggleSearch();
+    fixture.detectChanges();
+    expect(bar()).toBeNull();
+    expect(feed.searchQuery()).toBe('');
+    expect(marked('search-hit')).toEqual([]);
+  });
+
   it('switches to the next background', () => {
     open();
     const error = vi

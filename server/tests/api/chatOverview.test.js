@@ -5,7 +5,11 @@ import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createMember, createReservation, createTour } from '../helpers/factories.js';
 import Poll from '../../src/models/pollModel.js';
 import Post from '../../src/models/postModel.js';
+import config from '../../src/config.js';
 import {
+  chatClosedMessage,
+  chatRoomClosed,
+  generalChatOpensAt,
   generalChatRoom,
   tourChatClosed,
   tourChatPast,
@@ -42,6 +46,63 @@ describe("a tour's chat closes at midnight after its last day", () => {
     const eleven = { order: 11, startDate: daysAgo(400), duration: 3 };
     expect(tourChatPast(eleven)).toBe(true);
     expect(tourChatClosed(eleven)).toBe(false);
+  });
+});
+
+describe('the general Kotyogó can be kept shut until the launch', () => {
+  it('read but not written before the set moment; open from then on, or with none set', async () => {
+    const member = await createMember();
+    const room = await generalChatRoom();
+    const overview = async () =>
+      (await request(app).get('/chat-rooms/overview').set(asUser(member))).body.data.general;
+    const photo = await sharp({
+      create: { width: 40, height: 40, channels: 3, background: '#5a8' },
+    })
+      .jpeg()
+      .toBuffer();
+    const sendPhoto = () =>
+      request(app)
+        .post(`/chat-rooms/${room._id}/images`)
+        .set(asUser(member))
+        .attach('image', photo, { filename: 'x.jpg', contentType: 'image/jpeg' });
+    const startPoll = () =>
+      request(app)
+        .post('/chat-rooms/general/polls')
+        .set(asUser(member))
+        .send({
+          question: 'Mikor?',
+          options: ['Ma', 'Holnap'],
+          closesAt: new Date(Date.now() + 5 * 3600 * 1000),
+        });
+
+    try {
+      // No moment set: open, as ever.
+      expect(await chatRoomClosed(room)).toBe(false);
+      expect((await overview()).opensAt).toBeNull();
+
+      const opensAt = new Date(Date.now() + 10 * day);
+      config.generalChatOpensAt = opensAt.toISOString();
+      expect(generalChatOpensAt()).toEqual(opensAt);
+      expect(await chatRoomClosed(room)).toBe(true);
+      expect(chatClosedMessage(room)).toContain('megnyitás:');
+      expect((await overview()).opensAt).toBe(opensAt.toISOString());
+      const refused = await sendPhoto();
+      expect(refused.status).toBe(403);
+      expect(refused.body.message).toContain('még zárva van');
+      expect((await startPoll()).status).toBe(403);
+      expect(await Post.countDocuments({ chatRoomId: room._id })).toBe(0);
+
+      // The moment has come - and a date that is none is no lock.
+      config.generalChatOpensAt = daysAgo(1).toISOString();
+      expect(await chatRoomClosed(room)).toBe(false);
+      expect((await overview()).opensAt).toBeNull();
+      expect((await sendPhoto()).status).toBe(201);
+      expect((await startPoll()).status).toBe(201);
+      config.generalChatOpensAt = 'valamikor';
+      expect(generalChatOpensAt()).toBeNull();
+    } finally {
+      config.generalChatOpensAt = null;
+    }
   });
 });
 

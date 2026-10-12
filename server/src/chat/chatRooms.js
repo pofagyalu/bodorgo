@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import ChatRoom from '../models/chatRoomModel.js';
 import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
+import config from '../config.js';
+import { huDate } from '../utils/huDate.js';
 
 // Finding (or making, the first time) the chat rooms - see chatRoomModel.js.
 
@@ -61,15 +63,32 @@ export function tourChatClosed(tour, now = new Date()) {
   return tour.order !== ALWAYS_WRITABLE_TOUR_ORDER && tourChatPast(tour, now);
 }
 
-// Is this room read-only? Only a tour's can be (the general one never
-// closes); a room whose tour is gone counts as closed.
+// The general Kotyogó ("Bódorgók") can be kept shut until a set moment
+// (config.generalChatOpensAt - the site's launch): when it opens, while
+// that is still ahead - null once it is open (or no moment is set).
+export function generalChatOpensAt(now = new Date()) {
+  const at = config.generalChatOpensAt ? new Date(config.generalChatOpensAt) : null;
+  return at && !Number.isNaN(at.getTime()) && now < at ? at : null;
+}
+
+// Is this room read-only? A tour's once the tour is over (a room whose
+// tour is gone counts as closed); the general one until it opens.
 export async function chatRoomClosed(room) {
-  if (room.type !== 'tour') return false;
+  if (room.type !== 'tour') return !!generalChatOpensAt();
   const tour = await Tour.findById(room.tourId).select('startDate duration order');
   return !tour || tourChatClosed(tour);
 }
 
 export const CHAT_CLOSED_MESSAGE = 'Ez a Kotyogó már lezárult – csak olvasható.';
+
+// What whoever tries to write in a closed room is told: a tour's is over,
+// the general one hasn't opened yet.
+export function chatClosedMessage(room) {
+  const opensAt = room.type !== 'tour' ? generalChatOpensAt() : null;
+  return opensAt
+    ? `Ez a Kotyogó még zárva van – megnyitás: ${huDate(opensAt)}`
+    : CHAT_CLOSED_MESSAGE;
+}
 
 // What the client gets about a room.
 export const chatRoomView = (room) => ({

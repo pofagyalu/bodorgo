@@ -139,10 +139,27 @@ export class Chat implements OnInit, OnDestroy {
   selectedTour = computed(
     () => this.allTours().find((t) => t._id === this.selectedTourId()) ?? null,
   );
-  // A past tour's chat: an archive - read, not written.
+  // A past tour's chat: an archive - read, not written. The general one:
+  // until it opens (generalOpensAt).
   readOnly = computed(() => {
     const tour = this.selectedTour();
-    return !!tour && !isChatOpen(tour) && tour.order !== ALWAYS_WRITABLE_TOUR_ORDER;
+    if (!tour) return this.isGeneral() && !!this.generalOpensAt();
+    return !isChatOpen(tour) && tour.order !== ALWAYS_WRITABLE_TOUR_ORDER;
+  });
+
+  // The general room is shut until the site's launch (the server says
+  // when - the list of Kotyogós is asked for again every little while, so
+  // it opens by itself): when it opens, or null once it is open.
+  generalOpensAt = computed(() => {
+    const at = this.overview()?.general.opensAt;
+    return at ? new Date(at) : null;
+  });
+  // In the message field's place while it is shut ("... megnyitás: október 22.").
+  closedNote = computed(() => {
+    const at = this.generalOpensAt();
+    if (!this.isGeneral() || !at) return null;
+    const day = new Intl.DateTimeFormat('hu-HU', { month: 'long', day: 'numeric' }).format(at);
+    return `A ${GENERAL_NAME} Kotyogó még zárva van – megnyitás: ${day}`;
   });
 
   // --- The launch game: "the first three to write in Bódorgók" ---
@@ -398,6 +415,15 @@ export class Chat implements OnInit, OnDestroy {
 
   nextBackground() {
     this.feed()?.nextBackground();
+  }
+
+  // --- Search in the open Kotyogó: the feed's own bar ---
+  searchingChat = computed(() => this.feed()?.searching() ?? false);
+
+  // On a phone the search is the chat's: its tab comes to the front.
+  toggleChatSearch() {
+    this.activePane.set('chat');
+    this.feed()?.toggleSearch();
   }
 
   // --- Resizable Szobabeosztás panel (side-by-side layout only) ---

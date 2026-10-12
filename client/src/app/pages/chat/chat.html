@@ -95,7 +95,7 @@
             <!-- Phone: the chat's own buttons sit in its tab, at the right
                  end - over the tab, which leaves them room (--tools: how
                  many there are). -->
-            <span class="tab-slot" [style.--tools]="canSwitchBackground() ? 2 : 1">
+            <span class="tab-slot" [style.--tools]="canSwitchBackground() ? 3 : 2">
               <button
                 type="button"
                 role="tab"
@@ -117,7 +117,7 @@
               [attr.aria-selected]="activePane() === 'rooms'"
               (click)="activePane.set('rooms')"
             >
-              <mat-icon>bed</mat-icon>Szobabeosztás
+              <mat-icon>bed</mat-icon>Lakberendező
             </button>
           </div>
         }
@@ -141,7 +141,12 @@
           aria-label="Kotyogó"
         >
           @for (f of feedKey(); track f.chatRoomId) {
-            <app-feed [chatRoomId]="f.chatRoomId" [tourId]="f.tourId" [readOnly]="readOnly()" />
+            <app-feed
+              [chatRoomId]="f.chatRoomId"
+              [tourId]="f.tourId"
+              [readOnly]="readOnly()"
+              [closedNote]="closedNote()"
+            />
           }
         </section>
 
@@ -151,7 +156,7 @@
             class="pane-resizer"
             role="separator"
             aria-orientation="vertical"
-            aria-label="Szobabeosztás szélessége"
+            aria-label="Lakberendező szélessége"
             title="Húzd a szélesség állításához (dupla kattintás: alaphelyzet)"
             (pointerdown)="startResize($event)"
             (dblclick)="resetRoomsWidth()"
@@ -161,7 +166,7 @@
             class="pane pane-rooms"
             cdkScrollable
             [class.inactive]="activePane() !== 'rooms'"
-            aria-label="Szobabeosztás"
+            aria-label="Lakberendező"
           >
             <app-room-board [tour]="t" />
           </section>
@@ -180,6 +185,17 @@
 <ng-template #chatTools>
   @if (chatRoomId()) {
     <div class="chat-tools">
+      <!-- Search in this Kotyogó's messages (the bar is the feed's). -->
+      <button
+        type="button"
+        class="tool-btn"
+        [class.tool-btn--on]="searchingChat()"
+        title="Keresés ebben a Kotyogóban"
+        aria-label="Keresés ebben a Kotyogóban"
+        (click)="toggleChatSearch()"
+      >
+        <mat-icon>search</mat-icon>
+      </button>
       <button
         type="button"
         class="tool-btn"

@@ -1,4 +1,57 @@
 <div class="feed-wrapper">
+  <!-- Search in this chat (the magnifier among the chat's buttons): a dark
+       see-through bar over the top of the messages. -->
+  @if (searching()) {
+    <div class="search-bar" role="search">
+      <mat-icon>search</mat-icon>
+      <input
+        #searchInput
+        type="search"
+        placeholder="Keresés ebben a Kotyogóban"
+        aria-label="Keresés ebben a Kotyogóban"
+        [value]="searchQuery()"
+        (input)="onSearchInput($any($event.target).value)"
+        (keydown.enter)="stepSearch(1)"
+        (keydown.shift.enter)="stepSearch(-1)"
+        (keydown.escape)="closeSearch()"
+      />
+      @if (searchQuery().trim().length >= 2) {
+        <span class="search-count" aria-live="polite">
+          @if (searchHits().length) {
+            {{ searchPosition() }} / {{ searchHits().length }}
+          } @else {
+            nincs találat
+          }
+        </span>
+      }
+      <button
+        type="button"
+        title="Régebbi találat"
+        aria-label="Régebbi találat"
+        [disabled]="searchHits().length < 2"
+        (click)="stepSearch(1)"
+      >
+        <mat-icon>keyboard_arrow_up</mat-icon>
+      </button>
+      <button
+        type="button"
+        title="Újabb találat"
+        aria-label="Újabb találat"
+        [disabled]="searchHits().length < 2"
+        (click)="stepSearch(-1)"
+      >
+        <mat-icon>keyboard_arrow_down</mat-icon>
+      </button>
+      <button
+        type="button"
+        title="Keresés bezárása"
+        aria-label="Keresés bezárása"
+        (click)="closeSearch()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  }
   <div
     class="feed-container"
     #feedContainer
@@ -14,6 +67,9 @@
         <div class="unread-break" #unreadBreak><span>Új üzenetek</span></div>
       }
       <app-post
+        [id]="'post-' + post._id"
+        [class.search-hit]="isSearchHit(post._id)"
+        [class.search-hit--current]="post._id === currentHit()"
         [creatorInput]="post.creator.username || post.creator.name"
         [textInput]="post.text"
         [timestampInput]="post.createdAt"
@@ -37,7 +93,7 @@
 
   <!-- A past tour's chat is an archive: read, not written. -->
   @if (readOnly()) {
-    <p class="closed-note">Ez a Kotyogó lezárult – már csak olvasható.</p>
+    <p class="closed-note">{{ closedNote() ?? 'Ez a Kotyogó lezárult – már csak olvasható.' }}</p>
   } @else {
     <app-compose
       [mentionables]="mentionables()"
