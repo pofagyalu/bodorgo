@@ -1155,10 +1155,11 @@ describe('TourExtras', () => {
       'route',
       'hiking',
     ]);
-    const captions = fixture.debugElement
-      .queryAll(By.css('.extra-doc-kind'))
-      .map((c) => c.nativeElement.textContent.trim());
-    expect(captions).toEqual(['Tervezett', 'Megtett']);
+    // Only the hike that happened has the tick on its icon.
+    const ticks = fixture.debugElement
+      .queryAll(By.css('.extra-group-cards .extra-doc-icon'))
+      .map((icon) => !!icon.query(By.css('.extra-doc-walked')));
+    expect(ticks).toEqual([false, false, true]);
     expect(extras.documentTooltip(plan)).toBe('Kékes – tervezett útvonal, 12,3 km (GPX letöltése)');
     expect(extras.documentTooltip(walked)).toContain('megtett útvonal');
 

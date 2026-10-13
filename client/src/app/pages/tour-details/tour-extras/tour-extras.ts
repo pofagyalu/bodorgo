@@ -186,10 +186,9 @@ export class TourExtras {
     return doc.mimeType === 'application/pdf' ? 'picture_as_pdf' : 'image';
   }
 
-  // Under a track's title: which of the two it is - '' for anything else.
-  trackCaption(doc: ExtraDocument): string {
-    if (!doc.track) return '';
-    return doc.track.kind === 'recorded' ? 'Megtett' : 'Tervezett';
+  // A hike that happened (not a plan) - its card's icon gets a tick.
+  isWalked(doc: ExtraDocument): boolean {
+    return doc.track?.kind === 'recorded';
   }
 
   // "12,3 km"

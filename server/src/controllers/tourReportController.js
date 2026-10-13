@@ -394,9 +394,52 @@ const tourHeading = (tour) =>
 
 const bottomOf = (doc) => doc.page.height - doc.page.margins.bottom;
 
+// Where each page that was left for a new one stopped (its y, by the
+// page's number) - a block that didn't fit goes whole onto the next page,
+// and leaves the rest of this one empty (see drawTurnThePage).
+const leftAt = new WeakMap();
+
 // A new page unless `height` still fits on this one.
 function ensureRoom(doc, height) {
-  if (doc.y + height > bottomOf(doc)) doc.addPage();
+  if (doc.y + height <= bottomOf(doc)) return;
+  const pages = leftAt.get(doc) ?? leftAt.set(doc, new Map()).get(doc);
+  pages.set(doc.bufferedPageRange().count - 1, doc.y);
+  doc.addPage();
+}
+
+// A page left with at least this much of its height empty at the bottom
+// (as the reader sees it: from where it stopped to the paper's edge) says
+// that there is more to read overleaf.
+const TURN_THE_PAGE_FROM = 0.1;
+
+// On such a page, in the middle of the empty part above the footer: a
+// large, faint "Lapozz, kérlek!" and what for - so nobody takes the white
+// space for the end. As large as the room allows.
+function drawTurnThePage(doc, pageNumber) {
+  const stoppedAt = leftAt.get(doc)?.get(pageNumber);
+  if (stoppedAt == null) return;
+  if (doc.page.height - stoppedAt < doc.page.height * TURN_THE_PAGE_FROM) return;
+  const room = doc.page.height - MARGINS.bottom - stoppedAt;
+  if (room < 44) return; // no room for its two lines above the footer
+  const size = Math.max(20, Math.min(40, room * 0.3));
+  const width = doc.page.width - MARGIN * 2;
+  const top = stoppedAt + (room - size * 1.85) / 2;
+  doc.save();
+  doc.fillOpacity(0.22).fillColor(GREEN);
+  doc
+    .font('Heading')
+    .fontSize(size)
+    .text('Lapozz, kérlek!', MARGIN, top, { width, align: 'center', lineBreak: false });
+  doc
+    .font('Italic')
+    .fillOpacity(0.4)
+    .fontSize(Math.max(11, size * 0.5))
+    .text('még van olvasnivaló a következő oldalon', MARGIN, top + size * 1.25, {
+      width,
+      align: 'center',
+      lineBreak: false,
+    });
+  doc.restore();
 }
 
 // The bullet of a list level: •, ◦, ▪ (as drawn shapes - the font has no
@@ -472,7 +515,7 @@ function drawDay(doc, index, label, delta, weather) {
   const bulletAt = (level) => base + level * LEVEL_STEP;
   const textAt = (level) => bulletAt(level) + 11;
 
-  doc.moveDown(0.9);
+  doc.moveDown(1.5);
   ensureRoom(doc, 60); // the label and a line or two with it
   const top = doc.y;
   const title = `${index + 1}. nap`;
@@ -781,7 +824,8 @@ async function drawSignature(doc, presidentName, signedAt) {
 }
 
 // Every page: the logo and the tour at the top, the club and the page
-// number at the bottom - and across a preview, PISZKOZAT.
+// number at the bottom - across a preview, PISZKOZAT; and on a page left
+// largely empty for the next one, a call to turn it.
 function drawPageFrames(doc, tour, draft) {
   const range = doc.bufferedPageRange();
   const width = doc.page.width;
@@ -828,6 +872,8 @@ function drawPageFrames(doc, tour, draft) {
       align: 'right',
       lineBreak: false,
     });
+
+    drawTurnThePage(doc, i - range.start);
 
     if (draft) {
       doc.save();

@@ -181,11 +181,15 @@
               class="extra-doc-card"
               [title]="documentTooltip(doc)"
             >
-              <mat-icon>{{ documentIcon(doc) }}</mat-icon>
+              <!-- A hike that happened: a small green tick on its icon (no
+                   line of text - the card stays as tall as the others). -->
+              <span class="extra-doc-icon">
+                <mat-icon>{{ documentIcon(doc) }}</mat-icon>
+                @if (isWalked(doc)) {
+                  <mat-icon class="extra-doc-walked" aria-label="Megtett útvonal">check</mat-icon>
+                }
+              </span>
               <span>{{ doc.title }}</span>
-              @if (trackCaption(doc); as caption) {
-                <span class="extra-doc-kind">{{ caption }}</span>
-              }
               @if (canEdit()) {
                 <button
                   type="button"

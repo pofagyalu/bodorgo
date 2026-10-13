@@ -126,6 +126,57 @@ const OUTLOOK_BADGE_DIR = path.join(rootDir, 'assets', 'img', 'weather-outlook')
 // "Életviteli tanácsok" - the tour's weather outlook (tourModel.js's
 // weatherOutlook, the same texts as the tour page's panel): its mood and
 // headline, then what to pack. Nothing at all while the tour has none.
+// Where each page that was left for a new one stopped (its y, by the
+// page's number): a block that didn't fit goes whole onto the next page,
+// and leaves the rest of this one empty (see drawTurnThePage).
+const leftAt = new WeakMap();
+
+// A new page, for a block that doesn't fit the rest of this one.
+function leavePage(doc) {
+  const pages = leftAt.get(doc) ?? leftAt.set(doc, new Map()).get(doc);
+  pages.set(doc.bufferedPageRange().count - 1, doc.y);
+  doc.addPage();
+}
+
+// A page left with at least this much of its height empty at the bottom
+// (as the reader sees it: from where it stopped to the paper's edge) says
+// that there is more to read overleaf.
+const TURN_THE_PAGE_FROM = 0.1;
+// ...if its two lines have at least this much room (pt) to stand in.
+const TURN_THE_PAGE_ROOM = 44;
+
+// On such a page, in the middle of the empty part (down to `bottom`: the
+// footer's rule, or page 1's footnotes): a large, faint "Lapozz, kérlek!"
+// and what for - so nobody takes the white space for the end. As large as
+// the room allows.
+function drawTurnThePage(doc, pageNumber, bottom) {
+  const stoppedAt = leftAt.get(doc)?.get(pageNumber);
+  if (stoppedAt == null) return;
+  if (doc.page.height - stoppedAt < doc.page.height * TURN_THE_PAGE_FROM) return;
+  const room = bottom - stoppedAt;
+  if (room < TURN_THE_PAGE_ROOM) return;
+  const size = Math.max(20, Math.min(40, room * 0.3));
+  const width = doc.page.width - PAGE_MARGIN * 2;
+  const top = stoppedAt + (room - size * 1.85) / 2;
+  doc.save();
+  doc
+    .font('Heading')
+    .fontSize(size)
+    .fillColor(COLORS.darkGreen)
+    .fillOpacity(0.22)
+    .text('Lapozz, kérlek!', PAGE_MARGIN, top, { width, align: 'center', lineBreak: false });
+  doc
+    .font('Italic')
+    .fontSize(Math.max(11, size * 0.5))
+    .fillOpacity(0.4)
+    .text('még van olvasnivaló a következő oldalon', PAGE_MARGIN, top + size * 1.25, {
+      width,
+      align: 'center',
+      lineBreak: false,
+    });
+  doc.restore();
+}
+
 function drawWeatherOutlook(doc, outlook, contentWidth) {
   if (!outlook?.tier) return;
 
@@ -153,7 +204,7 @@ function drawWeatherOutlook(doc, outlook, contentWidth) {
   const blockHeight = headHeight + 6 + paragraphsHeight + packHeight;
 
   const pageBottom = Math.min(doc.page.height - PAGE_MARGIN - 40, doc.page.maxY() - 10);
-  if (doc.y + 30 + blockHeight + 14 > pageBottom) doc.addPage();
+  if (doc.y + 30 + blockHeight + 14 > pageBottom) leavePage(doc);
 
   doc
     .font('Heading')
@@ -439,7 +490,7 @@ async function renderRoomAllocationPage(doc, tour, contentWidth, viewer) {
   const collator = new Intl.Collator('hu');
   for (const names of namesByRoom.values()) names.sort((a, b) => collator.compare(a.name, b.name));
 
-  doc.addPage();
+  leavePage(doc);
   doc
     .font('Heading')
     .fontSize(16)
@@ -597,18 +648,55 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
     }
   }
 
-  doc.y = heroTop;
-  doc.x = infoColX;
-  doc.font('Heading').fontSize(20).fillColor(COLORS.darkGreen).text(tour.title, infoColX, heroTop, {
-    width: infoColWidth,
-  });
-  doc
-    .font('Body')
-    .fontSize(10)
-    .fillColor('#666')
-    .text(`${tour.order === 1 ? 'Első' : `${tour.order}.`} bódorgó tábor`, infoColX, doc.y, {
-      width: infoColWidth,
-    });
+  // The title on a banner of its own: the club's greens running into each
+  // other, a few of the logo's other colors as soft discs at its right
+  // end, the title and the tour's number in white on it.
+  {
+    const pad = 12;
+    const textWidth = infoColWidth - pad * 2;
+    const subtitle = `${tour.order === 1 ? 'Első' : `${tour.order}.`} bódorgó tábor`;
+    const titleHeight = doc
+      .font('Heading')
+      .fontSize(20)
+      .heightOfString(tour.title, { width: textWidth });
+    const subtitleHeight = doc
+      .font('Body')
+      .fontSize(10)
+      .heightOfString(subtitle, { width: textWidth });
+    const bannerHeight = pad - 3 + titleHeight + subtitleHeight + pad;
+    const right = infoColX + infoColWidth;
+
+    doc.save();
+    doc.roundedRect(infoColX, heroTop, infoColWidth, bannerHeight, 9).clip();
+    const greens = doc
+      .linearGradient(infoColX, heroTop, right, heroTop + bannerHeight)
+      .stop(0, COLORS.darkGreen)
+      .stop(1, COLORS.green);
+    doc.rect(infoColX, heroTop, infoColWidth, bannerHeight).fill(greens);
+    const discs = [
+      [right - 18, heroTop + 6, 34, COLORS.yellow, 0.4],
+      [right - 62, heroTop + bannerHeight + 4, 30, COLORS.orange, 0.38],
+      [right - 6, heroTop + bannerHeight - 4, 22, COLORS.blue, 0.3],
+      [right - 96, heroTop - 8, 20, '#ffffff', 0.16],
+    ];
+    for (const [x, y, r, color, opacity] of discs) {
+      doc.circle(x, y, r).fillOpacity(opacity).fill(color);
+    }
+    doc.restore();
+
+    doc
+      .font('Heading')
+      .fontSize(20)
+      .fillColor('#ffffff')
+      .text(tour.title, infoColX + pad, heroTop + pad - 3, { width: textWidth });
+    doc
+      .font('Body')
+      .fontSize(10)
+      .fillColor('#e6f3e9')
+      .text(subtitle, infoColX + pad, doc.y, { width: textWidth });
+    doc.y = heroTop + bannerHeight;
+    doc.x = infoColX;
+  }
   doc.y += 10;
 
   // The Helyszín row, with short tap-to-navigate links appended right
@@ -768,7 +856,7 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
     const fitsOnePage =
       blockHeight + boxPadding + bottomPadding <= pageBottom - doc.page.margins.top;
     if (doc.y + blockHeight + bottomPadding > pageBottom && (fitsOnePage || doc.y > 700)) {
-      doc.addPage();
+      leavePage(doc);
     }
     const boxed = doc.y + blockHeight + bottomPadding <= pageBottom;
     if (boxed) {
@@ -824,7 +912,7 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
     // size was last set, an easy way to under-shoot) - has to clear the
     // box's own top+bottom padding (8 + 6) plus a few pixels of real
     // visual gap, or the next day's box overlaps this one's bottom edge.
-    doc.y += 20;
+    doc.y += 28;
   }
 
   // Extra infók - only when the tour actually has at least one uploaded
@@ -834,7 +922,7 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
   // cards, which link straight to each file.
   const extraDocuments = await tourDocuments(tour._id);
   if (extraDocuments.length > 0) {
-    if (doc.y > 700) doc.addPage();
+    if (doc.y > 700) leavePage(doc);
     doc
       .font('Heading')
       .fontSize(16)
@@ -901,6 +989,10 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
       .lineWidth(0.5)
       .stroke('#ccc');
 
+    // Where the page's own content may reach down to - above page 1's
+    // footnotes.
+    let contentBottom = footerY - 14;
+
     // First page only: its footnotes, stacked upwards from the footer (so
     // "**" goes first, to end up under "*") - the bold orange stars, then
     // the note.
@@ -935,7 +1027,11 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
             'Mi a célban várunk!',
         );
       }
+      contentBottom = noteBottom;
     }
+
+    // A page left largely empty for the next one: a call to turn it.
+    drawTurnThePage(doc, i - range.start, contentBottom - 6);
 
     doc.y = footerY;
     doc
