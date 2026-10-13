@@ -63,6 +63,25 @@ describe('Tours', () => {
     expect(fixture.nativeElement.textContent).toContain('Mátra');
   });
 
+  it('opens on this year even when a tour is already entered for the next one', () => {
+    const now = new Date().getFullYear();
+    open({ data: { years: [now - 1, now, now + 1] } });
+    expect(page.years()).toEqual([now + 1, now, now - 1]);
+    expect(page.period()).toBe(String(now));
+
+    // No tour this year: the latest year before it.
+    TestBed.resetTestingModule();
+    setUp();
+    open({ data: { years: [now - 2, now + 1] } });
+    expect(page.period()).toBe(String(now - 2));
+
+    // Only tours to come: the nearest of them.
+    TestBed.resetTestingModule();
+    setUp();
+    open({ data: { years: [now + 1, now + 2] } });
+    expect(page.period()).toBe(String(now + 1));
+  });
+
   it('loads another year when it is picked, and remembers the choice', () => {
     open();
     page.toggleYears(new Event('click'));
