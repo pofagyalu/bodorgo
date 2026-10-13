@@ -110,6 +110,21 @@ vi.mock('../src/utils/stripe.js', async (importOriginal) => ({
     url: 'https://stripe.test/checkout',
   })),
   retrieveCheckoutSession: vi.fn(async () => ({ id: 'cs_test', payment_status: 'unpaid' })),
+  getStripePayoutState: vi.fn(async () => ({
+    livemode: false,
+    available: 5000,
+    pending: 1102,
+    bank: { bankName: 'TESZT BANK', last4: '0000' },
+    schedule: 'manual',
+    payouts: [],
+  })),
+  createStripePayout: vi.fn(async (account, amount) => ({
+    id: 'po_test',
+    amount,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    arrivalDate: null,
+  })),
 }));
 vi.mock('../src/utils/barion.js', async (importOriginal) => ({
   ...(await importOriginal()),

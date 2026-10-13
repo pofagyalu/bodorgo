@@ -16,6 +16,7 @@ import {
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
 import { BarionWithdraw } from '../barion-withdraw/barion-withdraw';
+import { StripePayoutCard } from '../stripe-payout/stripe-payout';
 
 interface FeeRow {
   fromYear: number;
@@ -28,7 +29,7 @@ interface FeeRow {
 // (settings.ts shows them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-club-settings',
-  imports: [FormsModule, MatIconModule, BarionWithdraw],
+  imports: [FormsModule, MatIconModule, BarionWithdraw, StripePayoutCard],
   templateUrl: './club-settings.html',
   styleUrl: './club-settings.scss',
 })

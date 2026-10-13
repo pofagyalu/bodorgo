@@ -2432,6 +2432,56 @@ const paths = {
       errors: [400, 403, 502],
     }),
   },
+  '/payments/stripe/payouts/{wallet}': {
+    get: op({
+      tag: T.payments,
+      role: 'admin',
+      summary: "A Stripe account's balance and payouts",
+      description:
+        'For Beállítások’ Stripe card. `configured: false` (and nothing else) while that account has no key in .env. Amounts in forints.',
+      params: [path('wallet', '`membership` (Tagdíjak) or `tour` (Előlegek).')],
+      data: obj({
+        configured: { type: 'boolean' },
+        minPayout: int('Stripe’s least payout, Ft.'),
+        livemode: {
+          type: 'boolean',
+          description: 'false with a test key: pretend money from test cards.',
+        },
+        available: int('Can be paid out now.'),
+        pending: int('Paid by card, not yet released by Stripe.'),
+        bank: obj({ bankName: str(), last4: str() }),
+        schedule: str(
+          'Stripe’s own payout schedule - `manual` means it pays out only from here or the Dashboard.',
+        ),
+        payouts: arrayOf(
+          obj({
+            id: str(),
+            amount: int(),
+            status: str('', { enum: ['paid', 'pending', 'in_transit', 'canceled', 'failed'] }),
+            createdAt: str(),
+            arrivalDate: str('Expected at the bank.'),
+          }),
+        ),
+      }),
+      errors: [404, 502],
+    }),
+  },
+  '/payments/stripe/payouts': {
+    post: op({
+      tag: T.payments,
+      role: 'admin',
+      summary: 'Pay out from a Stripe account',
+      description:
+        'Sends part of the available balance to the account’s bank account - the one set in the Stripe Dashboard, never one given in the request. At least 360 Ft, whole forints, at most the available balance. Recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin**.' +
+        FRESH_LOGIN,
+      body: obj({ wallet: str('', { enum: ['membership', 'tour'] }), amount: int('Forints.') }, [
+        'wallet',
+        'amount',
+      ]),
+      data: obj({ payout: { type: 'object' } }),
+      errors: [400, 403, 404, 502],
+    }),
+  },
 
   // --- Pénzügyek ---
   '/finance/transactions': {

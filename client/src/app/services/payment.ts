@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import type { PaymentMethodKey } from './settings';
+import type { PaymentMethodKey, PaymentWallet } from './settings';
 
 // Mirrors paymentModel.js's own status enum - derived server-side from
 // whichever gateway's own status (Stripe's Checkout Session, or Barion's
@@ -33,6 +33,29 @@ export interface WithdrawalStatusResponse {
 export interface WithdrawResponse {
   status: string;
   data: { fee: number; net: number };
+}
+
+// A Stripe account's money (Beállítások' Stripe card): what can be paid out
+// now, what's still on its way from the cards, the bank account it goes to
+// (set in the Stripe Dashboard) and the latest payouts. Forints.
+export interface StripePayout {
+  id: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'in_transit' | 'canceled' | 'failed';
+  createdAt: string;
+  arrivalDate: string | null;
+}
+
+export interface StripePayoutState {
+  configured: boolean; // false while that account has no key on the server
+  minPayout?: number;
+  livemode?: boolean; // false with a test key: pretend money from test cards
+  available?: number;
+  pending?: number;
+  bank?: { bankName: string; last4: string } | null;
+  // Stripe's own schedule - anything but 'manual' means it also pays out by itself.
+  schedule?: string | null;
+  payouts?: StripePayout[];
 }
 
 // This app has (at least) two things a payment can be for - a tour's
@@ -132,5 +155,22 @@ export class PaymentService {
   // not something this call can influence.
   withdraw(purpose: WithdrawalPurpose, amount: number): Observable<WithdrawResponse> {
     return this.http.post<WithdrawResponse>(`${this.apiUrl}/withdraw`, { purpose, amount });
+  }
+
+  // Admin-only - a Stripe account's balance and payouts (wallet: whose).
+  getStripePayouts(wallet: PaymentWallet): Observable<{ data: StripePayoutState }> {
+    return this.http.get<{ data: StripePayoutState }>(`${this.apiUrl}/stripe/payouts/${wallet}`);
+  }
+
+  // Admin-only, fresh login - sends that many forints of the available
+  // balance to the account's own bank account (never one given here).
+  createStripePayout(
+    wallet: PaymentWallet,
+    amount: number,
+  ): Observable<{ data: { payout: StripePayout } }> {
+    return this.http.post<{ data: { payout: StripePayout } }>(`${this.apiUrl}/stripe/payouts`, {
+      wallet,
+      amount,
+    });
   }
 }
