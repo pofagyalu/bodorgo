@@ -16,6 +16,7 @@ import { VideoSmallCopy } from '../../shared/video-small-copy/video-small-copy';
 import { AttendeeList, AttendeeListRow } from './attendee-list/attendee-list';
 import { PayMethods } from './attendee-list/pay-methods/pay-methods';
 import { EVENT_FORM_TIME_OPTIONS } from './event-form/event-form';
+import { ReportDayEditor } from './report-day-editor/report-day-editor';
 import { ReviewStars } from './review-stars/review-stars';
 import { TourEvent } from './tour-event/tour-event';
 import { TourExtras } from './tour-extras/tour-extras';
@@ -1441,7 +1442,11 @@ describe('TourMailPanel', () => {
 describe('TourReportPanel', () => {
   let fixture: ComponentFixture<TourReportPanel>;
   let panel: TourReportPanel;
-  const quills = () => (panel as unknown as { quills: Quill[] }).quills;
+  // Each day's own editor (report-day-editor).
+  const quills = () =>
+    fixture.debugElement
+      .queryAll(By.directive(ReportDayEditor))
+      .map((day) => (day.componentInstance as unknown as { quill: () => Quill }).quill());
 
   const report = (over = {}) => ({
     status: 'draft',
@@ -1450,6 +1455,8 @@ describe('TourReportPanel', () => {
     facts: { place: 'Mátraháza', dates: 'júl. 10–12.', headcount: '14 fő' },
     auto: { place: 'Mátraháza', dates: 'júl. 10–12.', headcount: '14 fő' },
     photo: null,
+    attendees: [],
+    hikes: [],
     updatedAt: '2026-01-01T10:00:00Z',
     updatedByName: 'Gazda',
     published: null,
@@ -1516,6 +1523,25 @@ describe('TourReportPanel', () => {
     expect(closed).toHaveBeenCalled();
   });
 
+  it('closes on a click beside the window - not when a selection is dragged out of it', async () => {
+    await open();
+    const closed = vi.fn();
+    panel.closed.subscribe(closed);
+    const backdrop: HTMLElement = fixture.nativeElement.querySelector('.report-backdrop');
+    const inside: HTMLElement = fixture.nativeElement.querySelector('.report-head');
+
+    // Pressed in the window, let go outside: the click lands on the backdrop.
+    inside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await settle();
+    expect(closed).not.toHaveBeenCalled();
+
+    backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await settle();
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
+
   it('unpicks a photo on a second click', async () => {
     await open();
     panel.pickPhoto('a.jpg');
@@ -1542,6 +1568,7 @@ describe('TourReportPanel', () => {
     expect(panel.confirming()).toBe(false);
     expect(changed).toHaveBeenCalled();
     expect(success).toHaveBeenCalledWith('A beszámoló kész - a résztvevők letölthetik.');
+    fixture.detectChanges();
     expect(quills()[0].isEnabled()).toBe(false);
 
     // locked: nothing can be changed or saved any more
@@ -1554,6 +1581,7 @@ describe('TourReportPanel', () => {
     respond({ 'POST /tours/t1/report/reopen': { data: { report: report() } } });
     await reopening;
     expect(panel.isFinal()).toBe(false);
+    fixture.detectChanges();
     expect(quills()[0].isEnabled()).toBe(true);
   });
 
@@ -1574,5 +1602,164 @@ describe('TourReportPanel', () => {
     await reopening;
     expect(error).toHaveBeenCalledWith('Nem sikerült visszanyitni.');
     expect(panel.busy()).toBe(false);
+  });
+});
+
+describe('ReportDayEditor', () => {
+  let fixture: ComponentFixture<ReportDayEditor>;
+  let day: ReportDayEditor;
+  let edited: ReturnType<typeof vi.fn<() => void>>;
+  const quill = () => (day as unknown as { quill: () => Quill }).quill();
+  // A toolbar button of the editor (the person or the hike one).
+  const press = (kind: 'person' | 'hike') =>
+    (day as unknown as { openPicker: (kind: string) => void }).openPicker(kind);
+
+  const ATTENDEES = [
+    { id: 'u1', name: 'Kovács Béla' },
+    { id: 'u2', name: 'Nagy Sándor' },
+    { id: 'u3', name: 'Tóth Anna' },
+  ];
+  const HIKES = [{ id: 'h1', name: 'Kékes' }];
+
+  async function open(inputs: Record<string, unknown> = {}) {
+    fixture = TestBed.createComponent(ReportDayEditor);
+    day = fixture.componentInstance;
+    const all: Record<string, unknown> = {
+      content: { ops: [{ insert: 'Sanyi leesett a bicikliről\n' }] },
+      attendees: ATTENDEES,
+      hikes: HIKES,
+      ...inputs,
+    };
+    for (const [name, value] of Object.entries(all)) fixture.componentRef.setInput(name, value);
+    edited = vi.fn<() => void>();
+    day.edited.subscribe(edited);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  it('shows the saved text, and gives it back as it stands', async () => {
+    await open();
+    expect(day.filled()).toBe(true);
+    expect(JSON.stringify(day.contents())).toContain('Sanyi leesett');
+    expect(day.linked()).toEqual([]);
+    expect(edited).not.toHaveBeenCalled();
+
+    quill().insertText(0, 'Reggel ', 'user');
+    expect(edited).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(day.contents())).toContain('Reggel Sanyi');
+  });
+
+  it('has no text to give while the day is empty', async () => {
+    await open({ content: null });
+    expect(day.filled()).toBe(false);
+    expect(day.contents()).toBeNull();
+    quill().insertText(0, '   ', 'user');
+    expect(day.contents()).toBeNull();
+  });
+
+  it('links the word the cursor is in to an attendee - the likely ones offered first', async () => {
+    await open();
+    quill().setSelection(2, 0); // inside "Sanyi"
+    press('person');
+    expect(day.picker()).toMatchObject({ kind: 'person', index: 0, length: 5, text: 'Sanyi' });
+    // "San…" - Nagy Sándor first, the rest as they came.
+    expect(day.pickerChoices().map((c) => [c.name, c.likely])).toEqual([
+      ['Nagy Sándor', true],
+      ['Kovács Béla', false],
+      ['Tóth Anna', false],
+    ]);
+
+    day.linkTo(day.pickerChoices()[0]);
+    expect(day.picker()).toBeNull();
+    expect(edited).toHaveBeenCalledTimes(1);
+    expect((day.contents() as { ops: unknown[] }).ops[0]).toEqual({
+      insert: 'Sanyi',
+      attributes: { person: 'u2' },
+    });
+    expect(day.linked()).toEqual([{ kind: 'person', text: 'Sanyi', name: 'Nagy Sándor' }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.linked').textContent).toContain(
+      'Sanyi → Nagy Sándor',
+    );
+  });
+
+  it('shows who a linked word is, and takes the link off', async () => {
+    await open({
+      content: {
+        ops: [{ insert: 'Sanyi', attributes: { person: 'u2' } }, { insert: ' leesett\n' }],
+      },
+    });
+    expect(day.linked()).toEqual([{ kind: 'person', text: 'Sanyi', name: 'Nagy Sándor' }]);
+    quill().setSelection(0, 5);
+    press('person');
+    expect(day.picker()?.current).toBe('u2');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.person-chip--current').textContent).toContain(
+      'Nagy Sándor',
+    );
+
+    day.linkTo(null);
+    expect(day.linked()).toEqual([]);
+    expect(JSON.stringify(day.contents())).not.toContain('person');
+  });
+
+  it('keeps what is typed right after a linked word out of the link', async () => {
+    await open({
+      content: { ops: [{ insert: 'Sanyi', attributes: { person: 'u2' } }, { insert: '\n' }] },
+    });
+    // As the browser does it: the new text carries the format before it.
+    quill().insertText(5, ' leesett', { person: 'u2' }, 'user');
+    expect((day.contents() as { ops: unknown[] }).ops.slice(0, 2)).toEqual([
+      { insert: 'Sanyi', attributes: { person: 'u2' } },
+      { insert: ' leesett\n' },
+    ]);
+    // Inside the word (a typo put right) it stays linked.
+    quill().insertText(2, 'x', { person: 'u2' }, 'user');
+    expect((day.contents() as { ops: unknown[] }).ops[0]).toEqual({
+      insert: 'Saxnyi',
+      attributes: { person: 'u2' },
+    });
+  });
+
+  it('links a piece of text to a walked hike', async () => {
+    await open();
+    expect(fixture.nativeElement.querySelector('.ql-hike')).not.toBeNull();
+    quill().setSelection(6, 7); // "leesett"
+    press('hike');
+    expect(day.pickerChoices()).toEqual([{ id: 'h1', name: 'Kékes', likely: false }]);
+    day.linkTo(day.pickerChoices()[0]);
+    expect(day.linked()).toEqual([{ kind: 'hike', text: 'leesett', name: 'Kékes' }]);
+    expect(JSON.stringify(day.contents())).toContain('"hike":"h1"');
+  });
+
+  it('has no hike button on a tour without a walked hike', async () => {
+    await open({ hikes: [] });
+    expect(fixture.nativeElement.querySelector('.ql-person')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.ql-hike')).toBeNull();
+  });
+
+  it('asks for a selection when there is nothing to link, and closes on a second press', async () => {
+    await open({ content: { ops: [{ insert: 'Egy\nKettő\n' }] } });
+    quill().setSelection(3, 0); // at the end of "Egy" - a word
+    press('person');
+    expect(day.picker()?.text).toBe('Egy');
+    press('person');
+    expect(day.picker()).toBeNull();
+
+    quill().setSelection(0, 9); // across the two lines
+    press('person');
+    expect(day.picker()).toBeNull();
+    expect(error).toHaveBeenCalledWith('Jelöld ki a nevet a szövegben, aztán nyomd meg újra.');
+  });
+
+  it('is read-only while the beszámoló is finished', async () => {
+    await open({ locked: true });
+    expect(quill().isEnabled()).toBe(false);
+    press('person');
+    expect(day.picker()).toBeNull();
+
+    fixture.componentRef.setInput('locked', false);
+    fixture.detectChanges();
+    expect(quill().isEnabled()).toBe(true);
   });
 });

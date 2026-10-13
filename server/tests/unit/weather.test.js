@@ -115,7 +115,14 @@ describe('fetching from Open-Meteo', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const day = await fetchHistorical(46, 18.7, '2022-06-24');
-    expect(day).toEqual({ condition: 'clear', tempDayC: 28, tempNightC: 14, windSpeedKmh: 11 });
+    expect(day).toEqual({
+      condition: 'clear',
+      tempDayC: 28,
+      tempNightC: 14,
+      windSpeedKmh: 11,
+      precipitationMm: 0,
+      precipitationHours: 0,
+    });
     const url = new URL(fetchMock.mock.calls[0][0]);
     expect(url.hostname).toBe('archive-api.open-meteo.com');
     expect(url.searchParams.get('start_date')).toBe('2022-06-24');

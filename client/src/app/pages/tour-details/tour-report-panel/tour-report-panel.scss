@@ -6,8 +6,10 @@
 
 .report-backdrop {
   position: fixed;
+  // Over the main menu too (its z-index is 10000) - a window this tall
+  // would have its top under it.
   inset: 0;
-  z-index: 1000;
+  z-index: 30000;
   display: grid;
   place-items: center;
   padding: 1.25rem;
@@ -18,7 +20,7 @@
 .report-panel {
   display: flex;
   flex-direction: column;
-  width: min(52rem, 100%);
+  width: min(80rem, 100%);
   max-height: calc(100dvh - 2.5rem);
   background: #fff;
   border-radius: 1rem;
@@ -257,37 +259,6 @@
   font-size: 0.85rem;
   font-style: italic;
   color: #7a8580;
-}
-
-// Quill's own snow theme, softened to match the page.
-.editor-wrap {
-  border-radius: 0.625rem;
-
-  &.is-locked {
-    opacity: 0.75;
-  }
-
-  ::ng-deep .ql-toolbar.ql-snow {
-    border: 1px solid #d4dfda;
-    border-radius: 0.625rem 0.625rem 0 0;
-    background: #f7faf8;
-  }
-
-  // height: auto - Quill's own 100% made each editor taller than its box,
-  // running into the next day's (same fix as the poll dialog's).
-  ::ng-deep .ql-container.ql-snow {
-    height: auto;
-    border: 1px solid #d4dfda;
-    border-top: 0;
-    border-radius: 0 0 0.625rem 0.625rem;
-    font-family: inherit;
-    font-size: 0.95rem;
-  }
-
-  ::ng-deep .ql-editor {
-    min-height: 6.5rem;
-    line-height: 1.55;
-  }
 }
 
 .status-row {

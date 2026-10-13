@@ -62,6 +62,7 @@ export class TourSchedule {
   usernames = input<Record<string, string>>({});
   eventUpdated = output<ScheduleEntry>();
   eventAdded = output<ScheduleEntry>();
+  eventRemoved = output<ScheduleEntry>();
 
   // An admin - and the tour not closed yet (Lezárás, see Tour.closed).
   canEdit = computed(() => this.auth.user()?.role === 'admin' && !this.tour().closed);

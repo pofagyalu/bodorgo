@@ -1,10 +1,7 @@
 import {
   Component,
-  ElementRef,
-  Injector,
   OnDestroy,
   OnInit,
-  afterNextRender,
   computed,
   inject,
   input,
@@ -15,34 +12,33 @@ import {
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import Quill from 'quill';
 import { firstValueFrom } from 'rxjs';
 import { ReportFacts, TourImage, TourReport, TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { errorMessage } from '../../../shared/errors';
-import { lazyStyle } from '../../../shared/lazy-style';
+import { ReportDayEditor } from '../report-day-editor/report-day-editor';
 
 const SAVE_DELAY_MS = 1500;
 
 type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 // Admin-only "Beszámoló": what happened on the tour, day by day - one
-// small rich-text editor (Quill) per day, the PDF's header lines, and one
-// of the tour's album photos for its top. Saved as it's typed, for as
+// small rich-text editor per day (report-day-editor, which also links
+// words to attendees and hikes), the PDF's header lines, and one of the
+// tour's album photos for its top. Saved as it's typed, for as
 // many days as it takes; Kész makes it the one the tour's attendees
 // download as a PDF (with the elnök and the wax seal at the end);
 // Visszanyitás makes it editable again. The server does the rest (see
 // tourReportController.js).
 @Component({
   selector: 'app-tour-report-panel',
-  imports: [FormsModule, MatIconModule, DatePipe],
+  imports: [FormsModule, MatIconModule, DatePipe, ReportDayEditor],
   templateUrl: './tour-report-panel.html',
   styleUrl: './tour-report-panel.scss',
 })
 export class TourReportPanel implements OnInit, OnDestroy {
   private tourService = inject(TourService);
   private notifications = inject(NotificationsService);
-  private injector = inject(Injector);
 
   tourId = input.required<string>();
   // The tour's album - one of them can go on the PDF.
@@ -51,15 +47,15 @@ export class TourReportPanel implements OnInit, OnDestroy {
   // Kész or Visszanyitás - the tour page updates its download card.
   changed = output<void>();
 
-  private dayEls = viewChildren<ElementRef<HTMLDivElement>>('dayEditor');
-  private quills: Quill[] = [];
+  // One per day of the tour - each keeps its own text.
+  private dayEditors = viewChildren(ReportDayEditor);
 
   loading = signal(true);
   report = signal<TourReport | null>(null);
   facts = signal<ReportFacts>({ place: '', dates: '', headcount: '' });
   photo = signal<string | null>(null);
   // Which days have any text - for Kész, and the day headings' dots.
-  filledDays = signal<boolean[]>([]);
+  filledDays = computed(() => this.dayEditors().map((day) => day.filled()));
 
   saveState = signal<SaveState>('idle');
   savedAt = signal<Date | null>(null);
@@ -100,56 +96,12 @@ export class TourReportPanel implements OnInit, OnDestroy {
         this.photo.set(report.photo);
         if (report.updatedAt) this.savedAt.set(new Date(report.updatedAt));
         this.loading.set(false);
-        // The day editors exist once this has rendered.
-        afterNextRender(() => this.createEditors(report), { injector: this.injector });
       },
       error: (err) => {
         this.notifications.addError(errorMessage(err, 'A beszámoló betöltése nem sikerült.'));
         this.loading.set(false);
       },
     });
-  }
-
-  private createEditors(report: TourReport) {
-    // The editors' stylesheet comes with them (shared/lazy-style) - asked
-    // for already when the tour page showed an admin the button
-    // (tour-extras).
-    void lazyStyle('quill');
-    this.quills = this.dayEls().map((el, i) => {
-      const quill = new Quill(el.nativeElement, {
-        theme: 'snow',
-        placeholder:
-          i === 0
-            ? 'Mi történt ezen a napon? (pl. megérkezés, esti gitározás…) - felsorolás, alpontok a gombokkal vagy Tab-bal'
-            : 'Mi történt ezen a napon?',
-        modules: {
-          toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ list: 'bullet' }, { list: 'ordered' }],
-            [{ indent: '-1' }, { indent: '+1' }],
-            ['clean'],
-          ],
-        },
-      });
-      const content = report.days[i];
-      if (content) quill.setContents(content as never, 'silent');
-      quill.on('text-change', (_delta, _old, source) => {
-        this.updateFilled();
-        if (source === 'user') this.scheduleSave();
-      });
-      return quill;
-    });
-    this.updateFilled();
-    this.applyLock();
-  }
-
-  private updateFilled() {
-    this.filledDays.set(this.quills.map((q) => q.getText().trim().length > 0));
-  }
-
-  // A finished beszámoló is read-only until it's reopened.
-  private applyLock() {
-    for (const q of this.quills) q.enable(!this.isFinal());
   }
 
   // --- The header lines and the photo ---
@@ -172,7 +124,7 @@ export class TourReportPanel implements OnInit, OnDestroy {
   // --- Saving ---
 
   // Saved about 1.5 s after the last change.
-  private scheduleSave() {
+  scheduleSave() {
     if (this.isFinal()) return;
     this.saveState.set('pending');
     clearTimeout(this.saveTimer);
@@ -185,7 +137,7 @@ export class TourReportPanel implements OnInit, OnDestroy {
     this.saveState.set('saving');
     this.saving = firstValueFrom(
       this.tourService.saveReport(this.tourId(), {
-        days: this.quills.map((q) => (q.getText().trim() ? q.getContents() : null)),
+        days: this.dayEditors().map((day) => day.contents()),
         facts: this.facts(),
         photo: this.photo(),
       }),
@@ -224,7 +176,6 @@ export class TourReportPanel implements OnInit, OnDestroy {
       await this.flush();
       const res = await firstValueFrom(this.tourService.finishReport(this.tourId()));
       this.report.set(res.data.report);
-      this.applyLock();
       this.confirming.set(false);
       this.saveState.set('idle');
       this.notifications.addSuccess('A beszámoló kész - a résztvevők letölthetik.');
@@ -242,13 +193,23 @@ export class TourReportPanel implements OnInit, OnDestroy {
     try {
       const res = await firstValueFrom(this.tourService.reopenReport(this.tourId()));
       this.report.set(res.data.report);
-      this.applyLock();
       this.changed.emit();
     } catch (err) {
       this.notifications.addError(errorMessage(err, 'Nem sikerült visszanyitni.'));
     } finally {
       this.busy.set(false);
     }
+  }
+
+  // A click on the dark area around the window closes it - but only one
+  // that began there too: a text selection dragged out of the window and
+  // let go outside it ends in a click on that area as well.
+  pressedOutside = false;
+
+  backdropClick(event: MouseEvent) {
+    const outside = this.pressedOutside && event.target === event.currentTarget;
+    this.pressedOutside = false;
+    if (outside) void this.close();
   }
 
   async close() {

@@ -619,6 +619,14 @@ export class TourDetails {
     );
   }
 
+  // The admin deleted an event in <app-tour-schedule>.
+  onEventRemoved(removed: ScheduleEntry) {
+    this.tour.update((cur) =>
+      cur ? { ...cur, schedule: (cur.schedule ?? []).filter((e) => e._id !== removed._id) } : cur,
+    );
+    this.notifications.addSuccess('Esemény törölve');
+  }
+
   // The admin added an event in <app-tour-schedule>.
   onEventAdded(added: ScheduleEntry) {
     this.tour.update((cur) => (cur ? { ...cur, schedule: [...(cur.schedule ?? []), added] } : cur));

@@ -4,6 +4,8 @@ import { TourService, ScheduleEntry } from '../../../services/tour';
 import { AuthService } from '../../../auth/auth.service';
 import { EventForm, EventFormModel } from '../event-form/event-form';
 import { Avatar } from '../../../components/avatar/avatar';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { NotificationsService } from '../../../notifications/notifications.service';
 
 // How many faces the collapsed sign-up row shows before "+N".
 const STACK_SIZE = 5;
@@ -31,6 +33,8 @@ export interface ScheduleCandidate {
 })
 export class TourEvent {
   private tourService = inject(TourService);
+  private confirm = inject(ConfirmService);
+  private notifications = inject(NotificationsService);
   auth = inject(AuthService);
 
   @Input({ required: true }) event!: ScheduleEntry;
@@ -49,6 +53,9 @@ export class TourEvent {
   // opt-in goes by itself - the tour page hands over no candidates then.)
   @Input() locked = false;
   @Output() updated = new EventEmitter<ScheduleEntry>();
+  // An admin deleted it.
+  @Output() removed = new EventEmitter<ScheduleEntry>();
+  deleting = signal(false);
 
   readonly stackSize = STACK_SIZE;
 
@@ -124,6 +131,30 @@ export class TourEvent {
           this.saving.set(false);
         },
       });
+  }
+
+  // Asked first - whoever opted in goes with it.
+  async remove() {
+    if (this.deleting()) return;
+    const joined = this.event.participants?.length ?? 0;
+    const ok = await this.confirm.ask({
+      title: 'Esemény törlése',
+      message: `Biztosan törlöd: „${this.event.time} ${this.event.description}”?`,
+      detail: joined ? `${joined} jelentkező is törlődik vele.` : undefined,
+      confirmText: 'Törlés',
+    });
+    if (!ok) return;
+    this.deleting.set(true);
+    this.tourService.deleteScheduleEvent(this.tourId, this.event._id).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.removed.emit(this.event);
+      },
+      error: (err) => {
+        this.deleting.set(false);
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a törlés során.');
+      },
+    });
   }
 
   startEdit() {

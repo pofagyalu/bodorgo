@@ -19,7 +19,26 @@
 // below, on every line - not just the first - so the description text
 // never flows underneath it. Only added when that button actually renders.
 .event-main--admin {
-  padding-right: 2.4rem;
+  padding-right: 4.8rem;
+}
+
+// Beside the pencil, to its left - the same filled look, in red.
+.icon-btn--delete {
+  position: absolute;
+  top: 0;
+  right: 2.4rem;
+  background: #b3261e;
+  border-radius: 8px;
+  color: #fff;
+
+  &:hover {
+    background: #8c1d18;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
 }
 
 .event-time {

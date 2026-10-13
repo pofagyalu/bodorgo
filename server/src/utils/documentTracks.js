@@ -113,6 +113,17 @@ export function trackStats(track) {
   return stats;
 }
 
+// A hike's numbers in one line, for the beszámoló's JSON: "12,4 km, 4 ó
+// 45 p, +621 m / −619 m" - only the ones the file can give.
+export function trackSummary(track) {
+  const parts = [`${hu(track.distanceM / 1000, 1)} km`];
+  if (track.startedAt && track.durationSec) parts.push(huDuration(track.durationSec));
+  if (track.elevationGainM != null && track.elevationLossM != null) {
+    parts.push(`+${hu(track.elevationGainM)} m / −${hu(track.elevationLossM)} m`);
+  }
+  return parts.join(', ');
+}
+
 // Which day of the tour a moment is on (0 = the first), in Budapest - null
 // without a moment.
 function dayIndex(tour, at) {
@@ -124,18 +135,36 @@ function dayIndex(tour, at) {
   return Math.round((utcDay(at) - utcDay(tour.startDate)) / 86400000);
 }
 
-// The tour's hikes that happened, for the beszámoló, in the order they
-// were walked: { name, day (null when the file doesn't say when), stats,
-// map (the picture's file, or null) }. The maps are made here if need be.
-export async function tourHikes(tour) {
+// The tour's GPX documents of the hikes that happened, in the order they
+// were walked.
+async function recordedDocuments(tour) {
   const documents = (await Document.find({ tour: tour._id, 'track.kind': 'recorded' })).filter(
     (d) => fs.existsSync(documentFilePath(d)),
   );
-  documents.sort(
+  return documents.sort(
     (a, b) =>
       (a.track.startedAt?.getTime() ?? Infinity) - (b.track.startedAt?.getTime() ?? Infinity) ||
       a.createdAt - b.createdAt,
   );
+}
+
+// The same hikes as their bare numbers (the beszámoló's JSON, and what a
+// piece of its text can be linked to): { id, name, day (null when the file
+// doesn't say when), track (documentModel.js) } - no map is made.
+export async function tourHikeNumbers(tour) {
+  return (await recordedDocuments(tour)).map((document) => ({
+    id: String(document._id),
+    name: document.name,
+    day: dayIndex(tour, document.track.startedAt),
+    track: document.track,
+  }));
+}
+
+// The tour's hikes that happened, for the beszámoló, in the order they
+// were walked: { name, day (null when the file doesn't say when), stats,
+// map (the picture's file, or null) }. The maps are made here if need be.
+export async function tourHikes(tour) {
+  const documents = await recordedDocuments(tour);
   return Promise.all(
     documents.map(async (document) => ({
       name: document.name,

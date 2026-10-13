@@ -1,4 +1,8 @@
-<div class="report-backdrop" (click)="close()">
+<div
+  class="report-backdrop"
+  (mousedown)="pressedOutside = $event.target === $event.currentTarget"
+  (click)="backdropClick($event)"
+>
   <div
     class="report-panel"
     (click)="$event.stopPropagation()"
@@ -118,9 +122,18 @@
                 <span class="day-pill">{{ i + 1 }}. nap</span>
                 <span class="day-date">{{ label }}</span>
               </div>
-              <div class="editor-wrap" [class.is-locked]="isFinal()">
-                <div #dayEditor class="editor"></div>
-              </div>
+              <app-report-day-editor
+                [content]="r.days[i]"
+                [placeholder]="
+                  i === 0
+                    ? 'Mi történt ezen a napon? (pl. megérkezés, esti gitározás…) - felsorolás, alpontok a gombokkal vagy Tab-bal'
+                    : 'Mi történt ezen a napon?'
+                "
+                [attendees]="r.attendees"
+                [hikes]="r.hikes"
+                [locked]="isFinal()"
+                (edited)="scheduleSave()"
+              />
             </div>
           }
         </section>

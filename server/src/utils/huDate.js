@@ -93,6 +93,13 @@ export function huDateRange(start, days) {
   return last.day === first.day ? `${head}.` : `${head}–${last.day}.`;
 }
 
+// One day of a tour as plain data: { ymd: "2023-10-20", weekday: "péntek" }.
+export function tourDay(start, dayIndex) {
+  const first = budapestParts(start);
+  const at = new Date(Date.UTC(first.year, first.month - 1, first.day + dayIndex));
+  return { ymd: at.toISOString().slice(0, 10), weekday: WEEKDAYS[at.getUTCDay()] };
+}
+
 // One day of a tour, in the beszámoló editor: "október 20., péntek".
 export function huDayLabel(start, dayIndex) {
   const first = budapestParts(start);

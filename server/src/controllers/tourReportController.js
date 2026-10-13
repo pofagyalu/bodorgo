@@ -12,14 +12,21 @@ import config from '../config.js';
 import { getClubSettings } from '../utils/clubSettings.js';
 import { huDate, huDateRange, huDayLabel } from '../utils/huDate.js';
 import { waxSealPng } from '../utils/waxSeal.js';
-import { tourHikes } from '../utils/documentTracks.js';
+import { tourHikeNumbers, tourHikes } from '../utils/documentTracks.js';
 import { MAP_CREDIT } from '../utils/trackMap.js';
+import {
+  CONDITION_WORDS,
+  ensureRecordedRain,
+  rainText,
+  recordedDay,
+} from '../utils/reportWeather.js';
 
 // A tour's beszámoló - what happened there, day by day. An admin writes it
 // on the tour page (one editor per day, saved as they type, for as many
 // days as it takes), then says Kész: from then on the tour's attendees can
 // download it as a PDF - a photo from the tour's album, the tour's place,
-// dates and headcount, the days as bullet points, and at the end the club's
+// dates and headcount, the days as bullet points (each with what the
+// weather was like and its Jóléti-index), and at the end the club's
 // name, the elnök, and a red wax seal (utils/waxSeal.js).
 
 const CLUB_NAME = 'Bódorgó Szabadidős, Kulturális és Fogyasztóvédelmi Klub';
@@ -31,11 +38,11 @@ const FONT_BOLD = path.join(rootDir, 'assets', 'fonts', 'Mulish-Bold.ttf');
 const FONT_ITALIC = path.join(rootDir, 'assets', 'fonts', 'Mulish-Italic.ttf');
 
 const FACT_KEYS = ['place', 'dates', 'headcount'];
-const MAX_DAYS = 10; // tourModel's duration max
+export const MAX_DAYS = 10; // tourModel's duration max
 const MAX_DAY_CHARS = 50000;
 const MAX_FACT_CHARS = 300;
 
-async function findTour(idParam) {
+export async function findTour(idParam) {
   const query = mongoose.isValidObjectId(idParam) ? { _id: idParam } : { slug: idParam };
   const tour = await Tour.findOne(query);
   if (!tour) throw new AppError('No tour found with that ID!', 404);
@@ -52,7 +59,7 @@ async function isAttendee(userId, tourId) {
 
 // What each header line says when the admin leaves it empty: from the tour
 // itself, and the number of people signed up for it.
-async function autoFacts(tour) {
+export async function autoFacts(tour) {
   const place = [tour.location?.description, tour.location?.address]
     .map((s) => (s ?? '').trim())
     .filter(Boolean)
@@ -67,15 +74,34 @@ async function autoFacts(tour) {
   };
 }
 
-const effectiveFacts = (facts, auto) =>
+// Who was on the tour: [{ id, name }], by name - the only people a word of
+// the beszámoló can be linked to.
+export async function tourAttendees(tour) {
+  const reservations = await Reservation.find({ tour: tour._id }).select('attendees').lean();
+  const byId = new Map();
+  for (const reservation of reservations) {
+    for (const a of reservation.attendees ?? []) {
+      if (a.user && !byId.has(String(a.user))) byId.set(String(a.user), a.name);
+    }
+  }
+  return [...byId]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'hu'));
+}
+
+export const effectiveFacts = (facts, auto) =>
   Object.fromEntries(FACT_KEYS.map((k) => [k, (facts?.[k] ?? '').trim() || auto[k]]));
 
 // --- The day texts (Quill deltas) ---
 
 // Keeps only what the editor's toolbar offers - text, bold/italic/
 // underline, bullet and numbered lists and their levels - and drops the
-// rest (pictures, links, colors…).
-function cleanDelta(delta) {
+// rest (pictures, links, colors…). A word can also be linked to one of the
+// tour's attendees (`person`: their user id; attendeeIds: who they are),
+// and to one of its walked hikes (`hike`: the GPX document's id; hikeIds) -
+// nothing shows either in the PDF, they only say who and which hike the
+// text is about.
+function cleanDelta(delta, attendeeIds, hikeIds) {
   const ops = Array.isArray(delta?.ops) ? delta.ops : [];
   const out = [];
   let chars = 0;
@@ -91,6 +117,12 @@ function cleanDelta(delta) {
     if (['bullet', 'checked', 'unchecked'].includes(a.list)) attributes.list = 'bullet';
     if (a.list === 'ordered') attributes.list = 'ordered';
     if (Number.isInteger(a.indent) && a.indent > 0) attributes.indent = Math.min(a.indent, 4);
+    if (typeof a.person === 'string' && attendeeIds.has(a.person) && op.insert.trim()) {
+      attributes.person = a.person;
+    }
+    if (typeof a.hike === 'string' && hikeIds.has(a.hike) && op.insert.trim()) {
+      attributes.hike = a.hike;
+    }
     out.push(
       Object.keys(attributes).length ? { insert: op.insert, attributes } : { insert: op.insert },
     );
@@ -98,12 +130,12 @@ function cleanDelta(delta) {
   return { ops: out };
 }
 
-const hasText = (delta) => (delta?.ops ?? []).some((op) => op.insert?.trim?.());
+export const hasText = (delta) => (delta?.ops ?? []).some((op) => op.insert?.trim?.());
 
-// A delta as lines: [{ runs: [{ text, bold, italic, underline }], list,
+// A delta as lines: [{ runs: [{ text, bold, italic, underline, person, hike }], list,
 // indent }] - in a delta a line's own format (list, indent) sits on the
 // newline that ends it.
-function deltaLines(delta) {
+export function deltaLines(delta) {
   const lines = [];
   let runs = [];
   for (const op of delta?.ops ?? []) {
@@ -111,7 +143,14 @@ function deltaLines(delta) {
     const a = op.attributes ?? {};
     op.insert.split('\n').forEach((part, i, parts) => {
       if (part)
-        runs.push({ text: part, bold: !!a.bold, italic: !!a.italic, underline: !!a.underline });
+        runs.push({
+          text: part,
+          bold: !!a.bold,
+          italic: !!a.italic,
+          underline: !!a.underline,
+          person: a.person ?? null,
+          hike: a.hike ?? null,
+        });
       if (i < parts.length - 1) {
         lines.push({ runs, list: a.list ?? null, indent: a.indent ?? 0 });
         runs = [];
@@ -140,6 +179,8 @@ async function adminView(tour, report) {
     facts: Object.fromEntries(FACT_KEYS.map((k) => [k, report?.facts?.[k] ?? ''])),
     photo: report?.photo ?? null,
     auto: await autoFacts(tour),
+    attendees: await tourAttendees(tour),
+    hikes: (await tourHikeNumbers(tour)).map(({ id, name }) => ({ id, name })),
     updatedAt: report?.updatedAt ?? null,
     updatedByName: report?.updatedByName ?? null,
     published: report?.published?.at
@@ -169,7 +210,9 @@ export const getReport = async (req, res) => {
 
 // PUT /tours/:id/report (admin) - { days: [delta], facts, photo } - the
 // working copy, saved as the admin types. Not while it's Kész. photo: the
-// file name of one of the tour's album photos (or null).
+// file name of one of the tour's album photos (or null). A link to someone
+// who isn't on the tour, or to a hike that isn't the tour's, is dropped,
+// its text kept.
 export const saveReport = async (req, res) => {
   const tour = await findTour(req.params.id);
   const days = Array.isArray(req.body?.days) ? req.body.days : [];
@@ -194,7 +237,9 @@ export const saveReport = async (req, res) => {
     throw new AppError('A beszámoló már kész - a szerkesztéshez előbb nyisd vissza.', 409);
   }
   const report = existing ?? new TourReport({ tour: tour._id });
-  report.days = days.map((d) => (d ? cleanDelta(d) : null));
+  const attendeeIds = new Set((await tourAttendees(tour)).map((a) => a.id));
+  const hikeIds = new Set((await tourHikeNumbers(tour)).map((h) => h.id));
+  report.days = days.map((d) => (d ? cleanDelta(d, attendeeIds, hikeIds) : null));
   report.facts = facts;
   report.photo = photo;
   report.updatedByName = req.user.name;
@@ -309,10 +354,29 @@ function textLine(doc, runs, x, marker) {
   });
 }
 
-// A day: a colored "1. nap" label with its date, and what the admin wrote
-// below it - bullets •, sub-bullets ◦, then ▪ - the first level in the
-// day's color.
-function drawDay(doc, index, label, delta) {
+// What the weather was like on a day, for its heading: "napos · 20° / 5° ·
+// 2,6 mm eső (8 órán át) · Jóléti-index 91 – Koktélos" - null while the
+// day has no recorded weather (utils/reportWeather.js).
+function weatherLine(tour, dayIndex) {
+  const { weather, wellbeing } = recordedDay(tour, dayIndex);
+  if (!weather) return null;
+  const degrees = (c) => `${Math.round(c)}°`;
+  const parts = [
+    CONDITION_WORDS[weather.condition],
+    weather.tempDayC != null &&
+      (weather.tempNightC != null
+        ? `${degrees(weather.tempDayC)} / ${degrees(weather.tempNightC)}`
+        : degrees(weather.tempDayC)),
+    rainText(weather),
+    wellbeing && `Jóléti-index ${wellbeing.index} – ${wellbeing.word}`,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+}
+
+// A day: a colored "1. nap" label with its date, what the weather was like
+// at the right end of that line, and what the admin wrote below it -
+// bullets •, sub-bullets ◦, then ▪ - the first level in the day's color.
+function drawDay(doc, index, label, delta, weather) {
   const color = DAY_COLORS[index % DAY_COLORS.length];
   const base = MARGIN + 6;
   const bulletAt = (level) => base + level * LEVEL_STEP;
@@ -333,7 +397,21 @@ function drawDay(doc, index, label, delta) {
       .fillColor(GREY)
       .text(label, MARGIN + pillWidth + 8, top + 4, { lineBreak: false });
   }
-  doc.y = top + 19 + 6;
+  if (weather) {
+    // Beside the date when it fits there, else on a line of its own.
+    doc.font('Body').fontSize(8.5);
+    const dateEnd =
+      MARGIN + pillWidth + 8 + (label ? doc.font('Italic').fontSize(10).widthOfString(label) : 0);
+    const right = doc.page.width - MARGIN;
+    const fits = doc.font('Body').fontSize(8.5).widthOfString(weather) <= right - dateEnd - 12;
+    doc.fillColor(GREY).text(weather, MARGIN, fits ? top + 5.5 : top + 24, {
+      width: right - MARGIN,
+      align: fits ? 'right' : 'left',
+      lineBreak: false,
+    });
+    if (!fits) doc.y = top + 19 + 14;
+  }
+  doc.y = Math.max(doc.y, top + 19 + 6);
 
   const bullet = (level) => (at, lineHeight) =>
     drawBullet(doc, level, bulletAt(level), at + lineHeight * 0.5, level === 0 ? color : INK);
@@ -685,6 +763,7 @@ export async function renderReport(
     facts,
     days,
     dayLabels = [],
+    dayWeather = [],
     hikes = [],
     photo,
     mapUrl,
@@ -726,7 +805,7 @@ export async function renderReport(
   const hikesOf = (i) => hikes.filter((h) => h.day === i);
   days.forEach((delta, i) => {
     if (!hasText(delta) && !hikesOf(i).length) return;
-    drawDay(doc, i, dayLabels[i], delta ?? { ops: [] });
+    drawDay(doc, i, dayLabels[i], delta ?? { ops: [] }, dayWeather[i]);
     hikesOf(i).forEach((hike) => drawHike(doc, hike));
   });
   // The hikes no written day has (the file doesn't say when, or it was
@@ -800,6 +879,7 @@ export const downloadReportPdf = async (req, res) => {
     (_, i) => days[i] ?? null,
   );
 
+  await ensureRecordedRain(tour);
   const [lng, lat] = tour.location?.coordinates ?? [];
   const { presidentName } = await getClubSettings();
   const photo = await reportPhoto(tour, photoName);
@@ -816,6 +896,8 @@ export const downloadReportPdf = async (req, res) => {
     facts: effectiveFacts(facts, await autoFacts(tour)),
     days,
     dayLabels: days.map((_, i) => huDayLabel(tour.startDate, i)),
+    // What the weather was like - of the days that have their recorded one.
+    dayWeather: days.map((_, i) => weatherLine(tour, i)),
     // The hikes that happened (the tour's recorded GPX tracks), as they
     // are now - each under its day.
     hikes: await tourHikes(tour),

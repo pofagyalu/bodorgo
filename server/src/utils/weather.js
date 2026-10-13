@@ -62,6 +62,10 @@ export function classifyDay({ code, sunshineS, daylightS, precipitationMm, snowf
 // The chance of rain only exists in a forecast - the archive records what
 // fell, and refuses the request outright if asked for it.
 const FORECAST_ONLY = ',precipitation_probability_max';
+// How much fell and for how many hours - kept of what happened only (a
+// day's `condition` forgives a light shower on a sunny day, see
+// classifyDay; the beszámoló's data says it rained all the same).
+const RECORDED_ONLY = ',precipitation_hours';
 
 async function fetchDailyWeather(baseUrl, lat, lng, dateStr, extraDaily = '') {
   const url = new URL(baseUrl);
@@ -101,7 +105,13 @@ async function fetchDailyWeather(baseUrl, lat, lng, dateStr, extraDaily = '') {
     windSpeedKmh: Math.round(daily.windspeed_10m_max[0]),
     // 0-100, forecast only (see FORECAST_ONLY) - null in the last days of
     // the 15, where the provider has no figure yet.
-    ...(extraDaily && { rainChance: daily.precipitation_probability_max?.[0] ?? null }),
+    ...(extraDaily === FORECAST_ONLY && {
+      rainChance: daily.precipitation_probability_max?.[0] ?? null,
+    }),
+    ...(extraDaily === RECORDED_ONLY && {
+      precipitationMm: Math.round((daily.precipitation_sum?.[0] ?? 0) * 10) / 10,
+      precipitationHours: Math.round(daily.precipitation_hours?.[0] ?? 0),
+    }),
   };
 }
 
@@ -116,7 +126,7 @@ export async function fetchForecast(lat, lng, dateStr) {
 
 export async function fetchHistorical(lat, lng, dateStr) {
   try {
-    return await fetchDailyWeather(HISTORICAL_URL, lat, lng, dateStr);
+    return await fetchDailyWeather(HISTORICAL_URL, lat, lng, dateStr, RECORDED_ONLY);
   } catch (err) {
     logger.error(`Historical weather fetch failed for ${dateStr}: ${err.message}`);
     return null;
