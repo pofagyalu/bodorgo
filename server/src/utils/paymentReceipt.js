@@ -4,7 +4,8 @@ import PDFDocument from 'pdfkit';
 import slugify from 'slugify';
 import { RECEIPTS_DIR as RECEIPTS_DIR_CONFIG } from './dataDirs.js';
 import { huDate, huDateTime } from './huDate.js';
-import { PAYMENT_METHOD_NAMES } from './clubSettings.js';
+import { PAYMENT_METHOD_NAMES, getClubSettings } from './clubSettings.js';
+import { waxSealPng } from './waxSeal.js';
 
 // Same code-adjacent asset paths tourPdfController.js already established
 // (server/assets, git-tracked, auto-deployed - see sync.js) - duplicated
@@ -24,6 +25,57 @@ const DARK_GREEN = '#1b6548';
 // Hungarian even on the live server (see utils/huDate.js).
 const formatHu = (date) => huDateTime(date);
 const formatHuDate = (date) => huDate(date);
+
+const CLUB_NAME = 'Bódorgó Szabadidős, Kulturális és Fogyasztóvédelmi Klub';
+const SEAL_SIZE = 90;
+
+// The end, as on a tour's beszámoló (tourReportController.js): the elnök's
+// wax seal pressed on slightly askew, and beside it the club, the elnök
+// (Beállítások) and the day of the payment.
+async function drawSignature(doc, issuedAt, top) {
+  const { presidentName } = await getClubSettings();
+  const seal = await waxSealPng(presidentName);
+  const right = doc.page.width - 50;
+
+  const lines = [
+    { text: CLUB_NAME, font: 'Heading', size: 10.5, color: '#222' },
+    presidentName && { label: 'Elnök: ', text: presidentName, size: 10.5, color: '#222' },
+    { label: 'Kelt: ', text: formatHuDate(issuedAt), size: 9.5, color: '#666' },
+  ].filter(Boolean);
+  const widthOf = (l) => {
+    let w = doc
+      .font(l.font ?? 'Body')
+      .fontSize(l.size)
+      .widthOfString(l.text);
+    if (l.label) w += doc.font('Heading').fontSize(l.size).widthOfString(l.label);
+    return w;
+  };
+  const textWidth = Math.max(...lines.map(widthOf));
+  const lineStep = 16;
+  let y = top + (SEAL_SIZE - lines.length * lineStep) / 2;
+  for (const l of lines) {
+    let x = right - widthOf(l);
+    if (l.label) {
+      doc.font('Heading').fontSize(l.size).fillColor(l.color).text(l.label, x, y, {
+        lineBreak: false,
+      });
+      x += doc.widthOfString(l.label);
+    }
+    doc
+      .font(l.font ?? 'Body')
+      .fontSize(l.size)
+      .fillColor(l.color)
+      .text(l.text, x, y, { lineBreak: false });
+    y += lineStep;
+  }
+
+  const sealX = right - textWidth - SEAL_SIZE - 6;
+  doc.save();
+  doc.rotate(-9, { origin: [sealX + SEAL_SIZE / 2, top + SEAL_SIZE / 2] });
+  doc.image(seal, sealX, top, { width: SEAL_SIZE, height: SEAL_SIZE });
+  doc.restore();
+  doc.y = top + SEAL_SIZE;
+}
 
 // The fee line's name on the receipt and in its e-mail: "Stripe díj".
 export const paymentFeeLabel = (payment) =>
@@ -68,7 +120,7 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
   const filename = receiptFilenameFor(payment, payerName);
   const filePath = path.join(RECEIPTS_DIR, filename);
 
-  const doc = new PDFDocument({ margin: 50, size: 'A4' });
+  const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
 
@@ -167,19 +219,38 @@ export async function generateReceiptPdf(payment, payerName, tourTitle, tourStar
     align: 'right',
   });
 
-  doc.moveDown(3);
-  doc
-    .font('Body')
-    .fontSize(9)
-    .fillColor('#999')
-    .text(
+  // The foot of the last page: the seal and the signature - on a page of
+  // their own if the rows have reached that far down.
+  const footerLineY = doc.page.height - 50 - 22;
+  const sealTop = footerLineY - 12 - SEAL_SIZE;
+  if (doc.y > sealTop - 20) doc.addPage();
+  await drawSignature(doc, new Date(payment.createdAt ?? Date.now()), sealTop);
+
+  // Every page's footer: a line, under it what this document is, and on
+  // the right which page of how many - so it's clear nothing is missing.
+  const pages = doc.bufferedPageRange();
+  for (let i = 0; i < pages.count; i++) {
+    doc.switchToPage(pages.start + i);
+    doc
+      .moveTo(colNameX, footerLineY)
+      .lineTo(colNameX + contentWidth, footerLineY)
+      .strokeColor('#ddd')
+      .stroke();
+    doc.font('Body').fontSize(9).fillColor('#999');
+    doc.text(
       isMembership
         ? 'Ez a dokumentum a Bódorgó klub által kezelt tagdíjbefizetés visszaigazolása.'
         : 'Ez a dokumentum a Bódorgó klub által kezelt előlegbefizetés visszaigazolása.',
       50,
-      doc.y,
-      { width: contentWidth },
+      footerLineY + 8,
+      { width: contentWidth, lineBreak: false },
     );
+    doc.text(`${i + 1}/${pages.count}. oldal`, 50, footerLineY + 8, {
+      width: contentWidth,
+      align: 'right',
+      lineBreak: false,
+    });
+  }
 
   doc.end();
 
