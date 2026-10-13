@@ -3,6 +3,7 @@ import AppError from '../utils/appError.js';
 import { tourDay } from '../utils/huDate.js';
 import { trackSummary } from '../utils/documentTracks.js';
 import { weatherOutlookRules } from '../utils/weatherOutlook.js';
+import { COUNTRIES, countryOf } from '../utils/countries.js';
 import {
   CONDITION_WORDS,
   ensureRecordedRain,
@@ -36,21 +37,10 @@ import {
 
 const MAX_SWAP_CHARS = 20000;
 
-// The country a tour was in. A tour has no field for it - it is read off
-// the end of its address ("…, Szlovákia", "…, SK"); an address that names
-// none is in Hungary.
-const COUNTRIES = [
-  [/(szlovákia|slovensko|\bSK)\s*$/i, 'Szlovákia'],
-  [/(lengyelország|polska|\bPL)\s*$/i, 'Lengyelország'],
-  [/(ausztria|österreich|\bAT)\s*$/i, 'Ausztria'],
-  [/(románia|\bRO)\s*$/i, 'Románia'],
-  [/(csehország|\bCZ)\s*$/i, 'Csehország'],
-  [/(szlovénia|\bSI)\s*$/i, 'Szlovénia'],
-  [/(horvátország|\bHR)\s*$/i, 'Horvátország'],
-];
-const tourCountry = (tour) =>
-  COUNTRIES.find(([ending]) => ending.test((tour.location?.address ?? '').trim()))?.[1] ??
-  'Magyarország';
+// The country a tour was in, by its name: the tour's own field - or, for a
+// beszámoló frozen before tours had one, read off the end of its address
+// ("…, Szlovákia", "…, SK").
+const tourCountry = (tour) => COUNTRIES[countryOf(tour.location)];
 
 // What a model has to be told about this data before it reads it. The
 // Jóléti-index's bands and shares come from the formula itself

@@ -190,7 +190,11 @@ const schemas = {
     location: obj({
       type: { type: 'string', const: 'Point' },
       coordinates: arrayOf(num('[longitude, latitude]')),
-      address: str('Address of the accommodation.'),
+      address: str('Address of the accommodation, without the country.'),
+      country: str(
+        'Two-letter code of the country it is in (default HU). Abroad, it is shown after the address ("…, SK"), and the Táborok search finds the tour by the country\'s name.',
+        { enum: ['HU', 'SK', 'PL', 'RO', 'AT', 'SI', 'HR', 'RS', 'UA', 'CZ', 'DE', 'IT'] },
+      ),
       description: str('Place name.'),
     }),
     panoramaUrl: str(

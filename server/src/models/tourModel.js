@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import slugify from 'slugify';
 import { computeDrivingRoute, BUDAPEST_CENTER } from '../utils/distance.js';
 import logger from '../logger.js';
+import { COUNTRY_CODES, HOME_COUNTRY } from '../utils/countries.js';
 
 const { Schema } = mongoose;
 
@@ -68,6 +69,14 @@ const tourSchema = new Schema(
         type: [Number],
       },
       address: String,
+      // Which country it is in - a two-letter code (utils/countries.js).
+      // The address itself is typed without it; abroad, it's shown after
+      // the address (addressWithCountry).
+      country: {
+        type: String,
+        enum: COUNTRY_CODES,
+        default: HOME_COUNTRY,
+      },
       description: String,
     },
     coordinates: {

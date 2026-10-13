@@ -12,6 +12,7 @@ import { loadTourCoverBuffer } from './tourCoverController.js';
 import { tourDocuments } from './documentController.js';
 import { huDate, huDateWeekday } from '../utils/huDate.js';
 import { onSitePaymentText } from '../utils/onSitePayment.js';
+import { addressWithCountry } from '../utils/countries.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
 // - the cover image lives under there; the logo/fonts live under
@@ -756,7 +757,7 @@ async function renderTourPdfDocument(doc, tour, viewer, distanceInfo) {
     infoColWidth,
     COLORS.orange,
     'home',
-    `Cím: ${tour.location?.address || 'nincs megadva'}`,
+    `Cím: ${addressWithCountry(tour.location) || 'nincs megadva'}`,
   );
   doc.y += 6;
   infoLine(

@@ -32,6 +32,7 @@ import { environment } from '../../../environments/environment';
 import { shuffledLogoColors } from '../../shared/logo-colors';
 import { formatDrivingDuration } from '../../shared/format';
 import { FitLine } from '../../shared/fit-line';
+import { addressWithCountry } from '../../shared/countries';
 import { CalendarEvent, downloadIcs, googleCalendarUrl } from '../../shared/calendar-event';
 import { TourSchedule } from './tour-schedule/tour-schedule';
 import { TourWeatherOutlook } from './tour-weather-outlook/tour-weather-outlook';
@@ -71,6 +72,7 @@ export class TourDetails {
   auth = inject(AuthService);
   environment = environment;
   readonly formatDrivingDuration = formatDrivingDuration;
+  readonly addressWithCountry = addressWithCountry;
 
   // So onSignedUp below can tell it to re-check "am I an attendee now" right
   // after a successful sign-up - review-stars.ts only ever checks that
@@ -470,7 +472,9 @@ export class TourDetails {
       minute: '2-digit',
       timeZone: 'Europe/Budapest',
     }).format(new Date(t.startDate));
-    const place = [t.location.description, t.location.address].filter(Boolean).join(', ');
+    const place = [t.location.description, addressWithCountry(t.location)]
+      .filter(Boolean)
+      .join(', ');
     return {
       title: `${t.order}. Bódorgó – ${t.title}`,
       start: new Date(t.startDate),
