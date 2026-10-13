@@ -1,0 +1,109 @@
+<!-- One Stripe account (Tagdíjak / Előlegek): the card payments Stripe
+     holds, the bank account they go to (set at Stripe), and paying out. -->
+<section class="panel withdraw-panel">
+  <div class="panel-title">
+    <h2>{{ title() }} – Stripe</h2>
+    @if (state()?.livemode === false) {
+      <span class="test-mode">TESZT MÓD – nem valódi pénz</span>
+    } @else {
+      <span>bankkártyás befizetések</span>
+    }
+  </div>
+
+  @if (loadError()) {
+    <p class="withdraw-notice error">A Stripe egyenlegét most nem sikerült lekérdezni.</p>
+  } @else if (state(); as s) {
+    <div class="account">
+      <div class="account-head">
+        <strong>Egyenleg a Stripe-nál</strong>
+      </div>
+      <dl class="account-fields">
+        <dt>Kiutalható</dt>
+        <dd>
+          <strong class="balance">{{ money(s.available ?? 0) }}</strong>
+        </dd>
+        <dt>Úton van</dt>
+        <dd>
+          {{ money(s.pending ?? 0) }}
+          <small>– friss befizetés, a Stripe néhány nap múlva engedi ki</small>
+        </dd>
+        <dt>Bankszámla</dt>
+        <dd>
+          @if (s.bank; as bank) {
+            {{ bank.bankName }} <span class="iban">••••{{ bank.last4 }}</span>
+          } @else {
+            a Stripe-nál beállított bankszámla
+          }
+          <small>– a Stripe felületén módosítható, itt nem</small>
+        </dd>
+      </dl>
+    </div>
+
+    @if (automatic()) {
+      <p class="account-warning">
+        A Stripe-nál automatikus kiutalás van beállítva, így a pénz magától is megérkezik a
+        bankszámlára. Ha csak innen szeretnéd indítani, állítsd a Stripe-ban kézire (Settings →
+        Payouts → Manual).
+      </p>
+    }
+
+    @if (notice(); as n) {
+      <p class="withdraw-notice" [class.error]="n.kind === 'error'">{{ n.text }}</p>
+    }
+
+    <div class="withdraw-row">
+      <div class="withdraw-row-head">
+        <strong>Kiutalás a bankszámlára</strong>
+      </div>
+      <div class="withdraw-row-body">
+        <input
+          type="number"
+          [min]="minPayout()"
+          step="1"
+          placeholder="Összeg (Ft)"
+          [attr.aria-label]="'Kiutalandó összeg - ' + title() + ' (Stripe)'"
+          [disabled]="paying() || available() < minPayout()"
+          [value]="amount()"
+          (input)="amount.set($any($event.target).valueAsNumber || null)"
+        />
+        <button
+          class="outline-btn"
+          type="button"
+          [disabled]="paying() || available() < minPayout()"
+          (click)="amount.set(available())"
+        >
+          Mindet
+        </button>
+        <button class="primary-btn" type="button" [disabled]="!canPay()" (click)="payOut()">
+          {{ paying() ? 'Kiutalás...' : 'Kiutalás' }}
+        </button>
+      </div>
+      @if (amountProblem(); as problem) {
+        <span class="withdraw-preview">{{ problem }}</span>
+      } @else if (available() < minPayout()) {
+        <span class="withdraw-preview">
+          Kiutalni {{ money(minPayout()) }} felett lehet – most nincs ennyi kiutalható.
+        </span>
+      }
+    </div>
+
+    @if (s.payouts?.length) {
+      <div class="payouts">
+        <strong>Legutóbbi kiutalások</strong>
+        <ul>
+          @for (p of s.payouts; track p.id) {
+            <li>
+              <span>{{ p.createdAt | date: 'yyyy. MM. dd.' }}</span>
+              <span class="payout-amount">{{ money(p.amount) }}</span>
+              <span class="payout-status" [class.payout-status--bad]="p.status === 'failed'">
+                {{ statusLabel(p.status) }}
+              </span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  } @else {
+    <p class="empty-note">Betöltés...</p>
+  }
+</section>

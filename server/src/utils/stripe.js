@@ -82,3 +82,49 @@ export function constructWebhookEvent(rawBody, signature) {
   }
   throw lastError;
 }
+
+// --- Payouts: an account's balance to its own bank account ---
+//
+// The bank account is the one set for the account in the Stripe Dashboard -
+// never taken from this app, so nothing here can redirect the money. HUF
+// amounts are in fillér at Stripe (like charges), whole forints here.
+
+const hufOf = (entries = []) =>
+  Math.floor((entries.find((e) => e.currency === 'huf')?.amount ?? 0) / 100);
+
+const payoutView = (p) => ({
+  id: p.id,
+  amount: Math.round(p.amount / 100),
+  status: p.status, // paid, pending, in_transit, canceled, failed
+  createdAt: new Date(p.created * 1000).toISOString(),
+  arrivalDate: p.arrival_date ? new Date(p.arrival_date * 1000).toISOString() : null,
+});
+
+// What can be paid out now, what is still on its way from the cards, the
+// bank account it goes to, whether Stripe pays out by itself (schedule other
+// than 'manual'), and the latest payouts.
+export async function getStripePayoutState(account) {
+  const stripe = clientFor(account);
+  const [balance, payouts, self] = await Promise.all([
+    stripe.balance.retrieve(),
+    stripe.payouts.list({ limit: 5 }),
+    stripe.accounts.retrieveCurrent(),
+  ]);
+  const banks = (self.external_accounts?.data ?? []).filter((a) => a.object === 'bank_account');
+  const bank = banks.find((a) => a.currency === 'huf' && a.default_for_currency) ?? banks[0];
+  return {
+    // false with a test key: pretend money from test cards.
+    livemode: balance.livemode,
+    available: hufOf(balance.available),
+    pending: hufOf(balance.pending),
+    bank: bank ? { bankName: bank.bank_name ?? '', last4: bank.last4 ?? '' } : null,
+    schedule: self.settings?.payouts?.schedule?.interval ?? null,
+    payouts: payouts.data.map(payoutView),
+  };
+}
+
+export async function createStripePayout(account, amount) {
+  return payoutView(
+    await clientFor(account).payouts.create({ amount: Math.round(amount * 100), currency: 'huf' }),
+  );
+}

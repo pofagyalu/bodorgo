@@ -18,7 +18,13 @@ import User from '../../src/models/userModel.js';
 import sendResendEmail from '../../src/utils/resendEmail.js';
 import { getClubSettings } from '../../src/utils/clubSettings.js';
 import config from '../../src/config.js';
-import { createCheckoutSession, retrieveCheckoutSession } from '../../src/utils/stripe.js';
+import {
+  createCheckoutSession,
+  retrieveCheckoutSession,
+  getStripePayoutState,
+  createStripePayout,
+} from '../../src/utils/stripe.js';
+import AuditLog from '../../src/models/auditLogModel.js';
 import {
   createBarionPayment,
   getBarionPaymentState,
@@ -417,6 +423,72 @@ describe('withdrawals (admin)', () => {
     expect((await w({ purpose: 'tourAdvance', amount: -5 })).status).toBe(400);
     vi.mocked(createBarionWithdrawal).mockRejectedValueOnce(new Error('down'));
     expect((await w({ purpose: 'tourAdvance', amount: 100000 })).status).toBe(502);
+  });
+});
+
+describe('Stripe payouts (admin)', () => {
+  const get = (user, wallet = 'membership') =>
+    request(app).get(`/payments/stripe/payouts/${wallet}`).set(asUser(user));
+  const pay = (user, body, opts) =>
+    request(app).post('/payments/stripe/payouts').set(asUser(user, opts)).send(body);
+
+  it('shows the balance, the bank account and the payouts', async () => {
+    const admin = await createAdmin();
+    const res = await get(admin);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      configured: true,
+      minPayout: 360,
+      available: 5000,
+      pending: 1102,
+      bank: { bankName: 'TESZT BANK', last4: '0000' },
+      schedule: 'manual',
+    });
+    expect((await get(admin, 'mas')).status).toBe(404);
+    expect((await get(await createMember())).status).toBe(403);
+  });
+
+  it('says so when the account has no key, and when Stripe is down', async () => {
+    const admin = await createAdmin();
+    const key = config.stripe.accounts.tour.secretKey;
+    config.stripe.accounts.tour.secretKey = undefined;
+    try {
+      expect((await get(admin, 'tour')).body.data).toEqual({ configured: false });
+      expect((await pay(admin, { wallet: 'tour', amount: 1000 })).status).toBe(400);
+    } finally {
+      config.stripe.accounts.tour.secretKey = key;
+    }
+    vi.mocked(getStripePayoutState).mockRejectedValueOnce(new Error('down'));
+    expect((await get(admin)).status).toBe(502);
+  });
+
+  it('pays out, records it in the Napló and e-mails the admins', async () => {
+    const admin = await createAdmin();
+    const res = await pay(admin, { wallet: 'membership', amount: 4000 });
+    expect(res.status).toBe(201);
+    expect(res.body.data.payout).toMatchObject({ id: 'po_test', amount: 4000 });
+    expect(createStripePayout).toHaveBeenCalledWith('membership', 4000);
+    const entry = await AuditLog.findOne({ action: 'withdrawal' });
+    expect(entry.summary).toContain('Tagdíjak – Stripe');
+    expect(entry.summary).toContain('TESZT BANK ••••0000');
+    expect(vi.mocked(sendResendEmail).mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it('refuses too little, too much, fractions, a stale login and non-admins', async () => {
+    const admin = await createAdmin();
+    expect((await pay(admin, { wallet: 'membership', amount: 359 })).status).toBe(400);
+    expect((await pay(admin, { wallet: 'membership', amount: 5001 })).status).toBe(400);
+    expect((await pay(admin, { wallet: 'membership', amount: 1000.5 })).status).toBe(400);
+    expect((await pay(admin, { wallet: 'mas', amount: 1000 })).status).toBe(404);
+    expect(
+      (await pay(admin, { wallet: 'membership', amount: 1000 }, { minutesAgo: 30 })).status,
+    ).toBe(403);
+    expect((await pay(await createMember(), { wallet: 'membership', amount: 1000 })).status).toBe(
+      403,
+    );
+    expect(createStripePayout).not.toHaveBeenCalled();
+    vi.mocked(createStripePayout).mockRejectedValueOnce(new Error('down'));
+    expect((await pay(admin, { wallet: 'membership', amount: 1000 })).status).toBe(502);
   });
 });
 

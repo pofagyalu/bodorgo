@@ -11,6 +11,8 @@ import {
   retrieveCheckoutSession,
   constructWebhookEvent,
   stripeAccountReady,
+  getStripePayoutState,
+  createStripePayout,
 } from '../utils/stripe.js';
 import {
   createBarionPayment,
@@ -1011,4 +1013,75 @@ export const withdrawFunds = async (req, res) => {
   });
 
   res.status(200).json({ status: 'success', data: { fee, net } });
+};
+
+// --- Stripe payouts: an account's balance to its own bank account ---
+
+// Stripe's own least payout in forints.
+const STRIPE_MIN_PAYOUT = 360;
+
+const STRIPE_WALLETS = { membership: 'Tagdíjak', tour: 'Előlegek' };
+
+// GET /payments/stripe/payouts/:wallet - requireAuth, restrictTo('admin').
+// What Beállítások' Stripe card shows: the balance that can be paid out,
+// what's still on its way, the bank account (set in the Stripe Dashboard)
+// and the latest payouts. configured: false while that account has no key.
+export const getStripePayouts = async (req, res) => {
+  const wallet = req.params.wallet;
+  if (!STRIPE_WALLETS[wallet]) throw new AppError('Nincs ilyen számla.', 404);
+  if (!stripeAccountReady(wallet)) {
+    return res.status(200).json({ status: 'success', data: { configured: false } });
+  }
+  let state;
+  try {
+    state = await getStripePayoutState(wallet);
+  } catch (err) {
+    logger.error(`Stripe payout state failed for ${wallet}: ${err.message}`);
+    throw new AppError('A Stripe most nem érhető el.', 502);
+  }
+  res.status(200).json({
+    status: 'success',
+    data: { configured: true, minPayout: STRIPE_MIN_PAYOUT, ...state },
+  });
+};
+
+// POST /payments/stripe/payouts - requireAuth, restrictTo('admin'), fresh
+// login. { wallet, amount }: sends that many forints of the account's
+// available balance to its bank account - the one set in the Stripe
+// Dashboard, never one from this request. In the Napló, and e-mailed to
+// every admin, like the Barion withdrawal above.
+export const createStripePayoutNow = async (req, res) => {
+  const wallet = req.body?.wallet;
+  if (!STRIPE_WALLETS[wallet]) throw new AppError('Nincs ilyen számla.', 404);
+  if (!stripeAccountReady(wallet)) {
+    throw new AppError('Ehhez a számlához még nincs beállítva a Stripe.', 400);
+  }
+  const amount = Number(req.body?.amount);
+  if (!Number.isInteger(amount) || amount < STRIPE_MIN_PAYOUT) {
+    throw new AppError(`A kiutalás legalább ${STRIPE_MIN_PAYOUT} Ft, egész forint.`, 400);
+  }
+
+  let state;
+  let payout;
+  try {
+    state = await getStripePayoutState(wallet);
+    if (amount > state.available) {
+      throw new AppError(`Most legfeljebb ${formatForint(state.available)} Ft utalható ki.`, 400);
+    }
+    payout = await createStripePayout(wallet, amount);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    logger.error(`Stripe payout failed for ${wallet}: ${err.message}`);
+    throw new AppError('Nem sikerült elindítani a kiutalást.', 502);
+  }
+
+  const bank = state.bank ? `${state.bank.bankName} ••••${state.bank.last4}`.trim() : 'bankszámla';
+  await recordAudit(req, {
+    action: 'withdrawal',
+    summary: `Kiutalás a számlára (${STRIPE_WALLETS[wallet]} – Stripe): ${formatForint(amount)} Ft → ${bank}`,
+    details: { wallet, amount, bank: state.bank, stripePayoutId: payout.id },
+    mail: true,
+  });
+
+  res.status(201).json({ status: 'success', data: { payout } });
 };

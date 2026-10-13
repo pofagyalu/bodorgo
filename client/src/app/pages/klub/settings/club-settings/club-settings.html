@@ -194,6 +194,11 @@
     }
   </section>
 
+  <!-- The Stripe accounts: the card payments held there, and paying them
+       out to the bank account - one card each, shown once it has its key. -->
+  <app-stripe-payout wallet="membership" />
+  <app-stripe-payout wallet="tour" />
+
   <!-- The two Barion wallets: settings + withdrawing, one card each. -->
   <app-barion-withdraw wallet="membership" />
   <app-barion-withdraw wallet="tour" />
