@@ -1,6 +1,6 @@
 import { Routes, UrlMatcher, UrlSegment } from '@angular/router';
 import { Home } from './pages/home/home';
-import { mediaMemberGuard, memberGuard } from './auth/member.guard';
+import { libraryGuard, mediaMemberGuard, memberGuard } from './auth/member.guard';
 import { adminGuard } from './auth/admin.guard';
 import { authGuard } from './auth/auth.guard';
 import { mokaGuard } from './auth/moka.guard';
@@ -123,6 +123,22 @@ export const routes: Routes = [
         canActivate: [mediaMemberGuard],
         title: 'Média – Fotók',
         loadComponent: () => import('./pages/media/photos/photos').then((m) => m.Photos),
+      },
+      // Könyvtár: the role manager's own PDF books on shelves, and one
+      // book's pages (pages/media/library).
+      {
+        path: 'konyvtar',
+        pathMatch: 'full',
+        canActivate: [libraryGuard],
+        title: 'Média – Könyvtár',
+        loadComponent: () => import('./pages/media/library/library').then((m) => m.Library),
+      },
+      {
+        path: 'konyvtar/:book',
+        canActivate: [libraryGuard],
+        title: 'Média – Könyvtár',
+        loadComponent: () =>
+          import('./pages/media/library/library-book').then((m) => m.LibraryBookPage),
       },
       // Zene: the playlists as cards, then each one's own page - Bódorgó
       // FM, and Buli and Duruzsoló: one page in two looks, the playlist in

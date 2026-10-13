@@ -1,0 +1,227 @@
+@if (missing()) {
+  <div class="reader">
+    <p class="note">Nincs ilyen könyv. <a routerLink="/media/konyvtar">Vissza a könyvtárba</a></p>
+  </div>
+} @else if (book(); as book) {
+  <div class="reader">
+    <!-- The line of controls: on a phone it stays under the Média menu. -->
+    <div class="bar">
+      <a class="round" routerLink="/media/konyvtar" title="Vissza a polcokhoz">
+        <mat-icon>arrow_back</mat-icon>
+      </a>
+      <button
+        type="button"
+        class="round toc-button"
+        (click)="tocOpen.set(!tocOpen())"
+        [attr.aria-expanded]="tocOpen()"
+        title="Tartalomjegyzék"
+      >
+        <mat-icon>toc</mat-icon>
+      </button>
+      <div class="title">
+        <h1>{{ draft()?.title ?? book.title }}</h1>
+        @if (byline()) {
+          <p>{{ byline() }}</p>
+        }
+      </div>
+      @if (!draft()) {
+        <button
+          type="button"
+          class="round"
+          (click)="edit()"
+          title="A könyv címe, oldalszámozása és tartalomjegyzéke"
+        >
+          <mat-icon>edit</mat-icon>
+        </button>
+      }
+
+      <div class="turn">
+        <button
+          type="button"
+          class="round"
+          (click)="go(page() - 1)"
+          [disabled]="page() <= 1"
+          title="Előző oldal"
+        >
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <label class="page-box" [title]="'A PDF ' + page() + '. lapja a ' + book.pages + '-ból'">
+          <input
+            #box
+            type="text"
+            inputmode="numeric"
+            [value]="page() + offset()"
+            (change)="goPrinted(box.value)"
+            (keydown.enter)="box.blur()"
+            aria-label="Oldalszám"
+          />
+          <span>/ {{ book.pages + offset() }}</span>
+        </label>
+        <button
+          type="button"
+          class="round"
+          (click)="go(page() + 1)"
+          [disabled]="page() >= book.pages"
+          title="Következő oldal"
+        >
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <div class="body">
+      <!-- The table of contents: a column beside the page; on a phone a
+           dark panel that drops over it (the toc button). The pencil turns
+           it into the book's editor. -->
+      <aside
+        class="toc"
+        [class.toc--open]="tocOpen()"
+        [class.toc--edit]="draft()"
+        aria-label="Tartalomjegyzék"
+      >
+        @if (draft(); as d) {
+          <h2>A könyv</h2>
+          <label class="field">
+            <span>Cím</span>
+            <input
+              #title
+              type="text"
+              maxlength="200"
+              [value]="d.title"
+              (input)="setTitle(title.value)"
+            />
+          </label>
+          <label class="field">
+            <span>Alcím</span>
+            <input
+              #subtitle
+              type="text"
+              maxlength="200"
+              [value]="d.subtitle"
+              (input)="setSubtitle(subtitle.value)"
+            />
+          </label>
+          <label class="field">
+            <span>Szerző</span>
+            <input
+              #author
+              type="text"
+              maxlength="200"
+              [value]="d.author"
+              (input)="setAuthor(author.value)"
+            />
+          </label>
+          <!-- Which number the book itself prints on the page shown - from
+               it every page's number follows. -->
+          <label class="field field--row">
+            <span>Ezen a lapon ez az oldalszám áll</span>
+            <input
+              #printedBox
+              type="text"
+              inputmode="numeric"
+              [value]="page() + d.pageOffset"
+              (change)="setPrinted(printedBox.value)"
+            />
+          </label>
+
+          <h2>Tartalom</h2>
+          <div class="tools">
+            <button type="button" (click)="addCurrentPage()">
+              <mat-icon>add</mat-icon>Ez az oldal
+            </button>
+            <button type="button" (click)="propose()" [disabled]="proposing()">
+              <mat-icon [class.spin]="proposing()">auto_fix_high</mat-icon>Javaslat a könyvből
+            </button>
+          </div>
+          <ol>
+            @for (entry of d.toc; track entry) {
+              <li class="edit-line" [class.edit-line--on]="entry.page === page()">
+                <input
+                  #line
+                  type="text"
+                  maxlength="200"
+                  class="edit-title"
+                  [attr.data-toc-line]="$index"
+                  [value]="entry.title"
+                  (change)="setLineTitle($index, line.value)"
+                  aria-label="A sor szövege"
+                />
+                <input
+                  #linePage
+                  type="text"
+                  inputmode="numeric"
+                  class="edit-page"
+                  [value]="entry.page + d.pageOffset"
+                  (change)="setLinePage($index, linePage.value)"
+                  aria-label="Oldalszám"
+                />
+                <button type="button" (click)="go(entry.page)" title="Ugrás erre az oldalra">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button
+                  type="button"
+                  class="edit-remove"
+                  (click)="removeLine($index)"
+                  title="A sor törlése"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </li>
+            } @empty {
+              <li class="toc-none">Még nincs sora.</li>
+            }
+          </ol>
+          <div class="actions">
+            <button type="button" class="save" (click)="save()" [disabled]="saving()">
+              {{ saving() ? 'Mentés…' : 'Mentés' }}
+            </button>
+            <button type="button" (click)="cancel()" [disabled]="saving()">Mégse</button>
+          </div>
+        } @else {
+          <h2>Tartalom</h2>
+          @if (book.toc.length) {
+            <ol>
+              @for (entry of book.toc; track $index) {
+                <li>
+                  <button
+                    type="button"
+                    class="toc-line"
+                    [class.toc-line--on]="$index === currentToc()"
+                    [style.padding-left.rem]="0.6 + entry.level * 0.9"
+                    (click)="go(entry.page)"
+                  >
+                    <span class="toc-title">{{ entry.title }}</span>
+                    <span class="toc-page">{{ entry.page + book.pageOffset }}</span>
+                  </button>
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="toc-none">
+              Ennek a könyvnek még nincs tartalomjegyzéke – a ceruzával írhatsz hozzá.
+            </p>
+          }
+          @if (!book.hasText) {
+            <p class="toc-none">
+              Nincs benne szöveg, ezért keresni sem lehet benne – OCR után cseréld ki a fájlt.
+            </p>
+          }
+        }
+      </aside>
+
+      <div class="sheet" [class.sheet--loading]="loading()">
+        @if (pageUrl(); as url) {
+          <img
+            [src]="url"
+            [alt]="book.title + ' – ' + printed()"
+            (load)="loading.set(false)"
+            (error)="loading.set(false)"
+          />
+        }
+        @if (loading()) {
+          <div class="sheet-wait"><mat-icon class="spin">autorenew</mat-icon></div>
+        }
+      </div>
+    </div>
+  </div>
+}

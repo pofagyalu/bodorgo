@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { filter, map, startWith } from 'rxjs';
 import { MediaService, newCount, photoNewCount } from '../../services/media';
 import { AuthService } from '../../auth/auth.service';
+import { canSeeLibrary } from '../../auth/member.guard';
 
 // Outer shell for media/* - the club's videos and photos that don't belong
 // to one tour (the members'), and Zene (everyone's who is logged in). Same
@@ -27,6 +28,8 @@ export class Media implements OnInit {
     const role = this.auth.user()?.role;
     return role === 'admin' || role === 'member';
   });
+  // Könyvtár is the role manager's own - nobody else has the menu item.
+  hasLibrary = computed(() => canSeeLibrary(this.auth.user()));
   // Admins: how many of a category's photos or videos carry "Új".
   newCount = newCount;
   photoNewCount = photoNewCount;

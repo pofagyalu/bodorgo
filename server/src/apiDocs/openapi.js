@@ -1077,6 +1077,7 @@ const T = {
   documents: 'Dokumentumok',
   media: 'Média',
   music: 'Zene',
+  library: 'Könyvtár',
   songs: 'Daloskönyv',
   games: 'Móka',
   race: 'Futókör',
@@ -1110,6 +1111,10 @@ const tags = [
   [T.users, 'People, families, profile photos, usernames.'],
   [T.documents, "Klub → Dokumentumok and every tour's Extrák - one mechanism for both."],
   [T.media, "Média → Videók and Fotók - the club's own videos and photo folders on the NAS."],
+  [
+    T.library,
+    "Média → Könyvtár - the role manager's own PDF books on shelves, searchable by their text. Nobody else gets anything here (404).",
+  ],
   [
     T.music,
     'The music: Jellyfin playlists (Bódorgó FM, Buli rádió and Duruzsoló - for everyone logged in, guests too), streamed through this server - the Jellyfin key never reaches the browser.',
@@ -3610,6 +3615,146 @@ const paths = {
       body: obj({ muted: bool() }, ['muted']),
       data: obj({ muted: bool() }),
       errors: [404],
+    }),
+  },
+
+  // --- Könyvtár ---
+  '/library': {
+    get: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'The shelves with their books',
+      description:
+        "The role manager only - 404 for everybody else, on every /library address. Each shelf is a folder of the server's library folder (a folder starting with `_` is not one), listed even when empty, with the PDFs read so far as its books, by title. A book has `title` (its file name until it is given another), `subtitle` and `author` (empty until the owner writes them), `pages`, `pageOffset` (the number printed on a page minus the PDF's page number) and `hasText` - false for a scan without OCR, in which nothing can be searched. `scan` tells how the last POST /library/scan stands: `running`, `done` of `total` books, `current` (the file being read) and `errors` (the files that could not be read).",
+      data: obj({ shelves: arrayOf({ type: 'object' }), scan: { type: 'object' } }),
+      errors: [404],
+    }),
+  },
+  '/library/scan': {
+    post: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'Read the folders again (Frissítés)',
+      description:
+        "The role manager only. Starts in the background and answers at once; GET /library's `scan` tells how it is going. A new PDF is read page by page: its text is stored for the search, its bookmarks become its table of contents. A file whose size or date changed is read again - its title, page shift and a table of contents written by hand stay. A book whose file is gone is removed. While a scan runs, asking again starts nothing new. The text is only what the PDF holds: a scanned book needs OCR first (done outside the app).",
+      ok: 202,
+      data: obj({ scan: { type: 'object' } }),
+      errors: [404],
+    }),
+  },
+  '/library/search': {
+    get: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'Search the books',
+      description:
+        "The role manager only. Every word of `q` must be there (at most 8 words, at least two letters in all); accents and capitals don't matter, and a word matches inside a longer one. `titles`: the books whose title, subtitle or author matches. `contents`: the matching lines of the tables of contents (`book`, `page`, `title`). `pages`: the pages whose text matches, by book and page (`book`, `page` - the PDF's page number -, `snippet`: the text around the first word in three parts, `before`, `match`, `after`). At most 60 of each; `more` is true when more pages matched. `books`: the books the hits are in, by id.",
+      params: [
+        query('q', 'What to look for.'),
+        query('shelf', 'Only this shelf (its `key`); every shelf without it.'),
+      ],
+      data: obj({
+        titles: arrayOf({ type: 'object' }),
+        contents: arrayOf({ type: 'object' }),
+        pages: arrayOf({ type: 'object' }),
+        more: bool('More pages matched than were sent.'),
+        books: { type: 'object' },
+      }),
+      errors: [400, 404],
+    }),
+  },
+  '/library/books/{id}': {
+    get: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'A book with its table of contents',
+      description:
+        'The role manager only. What GET /library gives of the book, with `filename` and `toc`: the lines of its table of contents, each a `title`, the PDF `page` it points at and its `level` (0 for a chapter, up to 3 for what is inside one).',
+      params: [path('id', 'The book.')],
+      data: obj({ book: { type: 'object' } }),
+      errors: [404],
+    }),
+    patch: op({
+      tag: T.library,
+      role: 'admin',
+      summary: "Change a book's title, subtitle, author, page shift or table of contents",
+      description:
+        "The role manager only. Only the fields sent change. `title`: 1-200 characters; the file is not renamed. `subtitle` and `author`: at most 200 characters each, empty to remove. `pageOffset`: the number printed on a page minus the PDF's page number (a whole number). `toc`: the whole table of contents, replacing the old one - each line a `title`, a `page` the book has, and optionally a `level` (0-3); from then on a new scan leaves it as it is.",
+      params: [path('id', 'The book.')],
+      body: obj({
+        title: str('The new title.'),
+        subtitle: str('A line under the title; may be empty.'),
+        author: str('Who wrote it; may be empty.'),
+        pageOffset: int('Printed page number minus PDF page number.'),
+        toc: arrayOf(
+          obj(
+            {
+              title: str('The line.'),
+              page: int('The PDF page it points at.'),
+              level: int('0-3.'),
+            },
+            ['title', 'page'],
+          ),
+        ),
+      }),
+      data: obj({ book: { type: 'object' } }),
+      errors: [400, 404],
+    }),
+  },
+  '/library/books/{id}/pages/{page}': {
+    get: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'One page of a book as a picture',
+      description:
+        "The role manager only. The PDF's page drawn 1400 pixels wide - made the first time it is asked for, then kept on the server (until the file is replaced) and by the browser for a day. `page` is the PDF's own page number, from 1.",
+      params: [path('id', 'The book.'), path('page', "The PDF's page number.")],
+      response: file(['image/webp'], 'The page.'),
+      errors: [404],
+    }),
+  },
+  '/library/books/{id}/pages/{page}/opening': {
+    get: op({
+      tag: T.library,
+      role: 'admin',
+      summary: "A page's first words",
+      description:
+        "The role manager only. The first six words of the page's stored text (80 characters at most; empty for a page without text) - what a new line of the table of contents pointing at this page is offered as.",
+      params: [path('id', 'The book.'), path('page', "The PDF's page number.")],
+      data: obj({ opening: str("The page's first words.") }),
+      errors: [404],
+    }),
+  },
+  '/library/books/{id}/toc-proposal': {
+    get: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'A table of contents guessed from the book',
+      description:
+        "The role manager only. For a book without bookmarks: on each page the text written clearly larger than the rest (at least 1.3 times the page's usual letter size) is taken for a title; a page without one, and a title the page before already had (a running head), are left out. Nothing is saved - the lines are for the owner to correct and send with PATCH /library/books/{id}. Dependable on a PDF with real text; in a scanned book the sizes are what the OCR made of them, so most lines need correcting.",
+      params: [path('id', 'The book.')],
+      data: obj({
+        toc: arrayOf(
+          obj({ title: str('The line.'), page: int('The PDF page.'), level: int('0.') }),
+        ),
+      }),
+      errors: [404],
+    }),
+  },
+  '/library/shelves/{shelf}/books': {
+    post: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'Put a PDF on a shelf',
+      description:
+        "The role manager only. The file is written into the shelf's folder under its own name (characters a file name can't have taken out, accents kept), then read like any PDF found there: the answer comes at once, GET /library's `scan` tells how the reading goes. 300 MB at most. 400 when it is not a PDF (by its name and its first bytes), 409 when the shelf already has a file of that name, 404 when there is no such shelf. The text is only what the PDF holds - a scan needs OCR before it is uploaded.",
+      params: [path('shelf', "The shelf's `key` (its folder).")],
+      multipart: obj({ file: { type: 'string', format: 'binary', description: 'The PDF.' } }, [
+        'file',
+      ]),
+      ok: 202,
+      data: obj({ scan: { type: 'object' } }),
+      errors: [400, 404, 409],
     }),
   },
 

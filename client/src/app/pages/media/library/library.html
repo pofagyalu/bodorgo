@@ -1,0 +1,189 @@
+<div class="content">
+  <div class="heading">
+    <div class="heading-text">
+      <div class="kicker">Média</div>
+      <h1>Könyvtár</h1>
+      <p>Saját kották és tankönyvek a polcokon – címre és szövegre kereshetően.</p>
+    </div>
+    <!-- The server reads the shelves' folders again: new PDFs come in,
+         removed ones go. -->
+    <button
+      type="button"
+      class="refresh"
+      (click)="library.refresh()"
+      [disabled]="library.scan()?.running"
+      title="Az új PDF-ek beolvasása a polcok mappáiból"
+    >
+      <mat-icon [class.spin]="library.scan()?.running">autorenew</mat-icon>
+      <span>{{ library.scan()?.running ? 'Beolvasás…' : 'Frissítés' }}</span>
+    </button>
+  </div>
+
+  @if (library.scan(); as scan) {
+    @if (scan.running && scan.total) {
+      <p class="scan-note">
+        Beolvasás: {{ scan.done }} / {{ scan.total }} könyv
+        @if (scan.current) {
+          – {{ scan.current }}
+        }
+      </p>
+    }
+    @for (error of scan.errors; track $index) {
+      <p class="scan-note scan-note--error">Nem sikerült beolvasni: {{ error }}</p>
+    }
+  }
+
+  @if (library.shelves(); as shelves) {
+    @for (shelf of shelves; track shelf.key) {
+      <section class="shelf" [attr.data-shelf]="shelf.key">
+        <header class="shelf-head">
+          <h2>{{ shelf.title }}</h2>
+          <span class="shelf-count">{{ shelf.books.length }} könyv</span>
+          <label
+            class="upload"
+            [class.upload--busy]="uploading()[shelf.key] !== undefined"
+            title="PDF feltöltése erre a polcra"
+          >
+            <mat-icon>upload</mat-icon>
+            <span>{{
+              uploading()[shelf.key] !== undefined
+                ? 'Feltöltés… ' + uploading()[shelf.key] + '%'
+                : 'Feltöltés'
+            }}</span>
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              [disabled]="uploading()[shelf.key] !== undefined"
+              (change)="onFile(shelf, $any($event.target))"
+            />
+          </label>
+          <label class="search">
+            <mat-icon>search</mat-icon>
+            <input
+              type="search"
+              [value]="queries()[shelf.key] ?? ''"
+              (input)="onQuery(shelf, $any($event.target).value)"
+              (focus)="openShelf.set(shelf.key)"
+              (keydown.escape)="openShelf.set(null)"
+              [placeholder]="'Keresés: ' + shelf.title"
+              [attr.aria-label]="'Keresés a(z) ' + shelf.title + ' polcon'"
+              autocomplete="off"
+            />
+            @if (queries()[shelf.key]) {
+              <button type="button" class="search-clear" (click)="clear(shelf)" title="Törlés">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </label>
+        </header>
+
+        <!-- What the search found: a panel dropping over the bookcase from
+             under the search box, so the shelves stay where they are. Shut
+             by Esc or a click beside it; the box opens it again. -->
+        <div class="results-anchor">
+          @if (openShelf() === shelf.key) {
+            @if (results()[shelf.key]; as found) {
+              <div class="results">
+                @if (!hasHits(found)) {
+                  <p class="no-hits">Nincs találat.</p>
+                }
+                @if (found.titles.length) {
+                  <h3>Könyvek</h3>
+                  <ul>
+                    @for (book of found.titles; track book._id) {
+                      <li>
+                        <a class="hit" [routerLink]="[book._id]">
+                          <span class="hit-where"
+                            ><strong>{{ book.title }}</strong></span
+                          >
+                          <span class="hit-text">{{ byline(book) }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (found.contents.length) {
+                  <h3>Tartalomjegyzék</h3>
+                  <ul>
+                    @for (line of found.contents; track $index) {
+                      <li>
+                        <a
+                          class="hit"
+                          [routerLink]="[line.book]"
+                          [queryParams]="{ page: line.page }"
+                        >
+                          <span class="hit-where">
+                            <strong>{{ found.books[line.book].title }}</strong>
+                            <span>{{ printedPage(found.books[line.book], line.page) }}</span>
+                          </span>
+                          <span class="hit-text">{{ line.title }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (found.pages.length) {
+                  <h3>Oldalak</h3>
+                  <ul>
+                    @for (hit of found.pages; track $index) {
+                      <li>
+                        <a class="hit" [routerLink]="[hit.book]" [queryParams]="{ page: hit.page }">
+                          <span class="hit-where">
+                            <strong>{{ found.books[hit.book].title }}</strong>
+                            <span>{{ printedPage(found.books[hit.book], hit.page) }}</span>
+                          </span>
+                          <span class="hit-text"
+                            >{{ hit.snippet.before }}<mark>{{ hit.snippet.match }}</mark
+                            >{{ hit.snippet.after }}</span
+                          >
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                  @if (found.more) {
+                    <p class="no-hits">Több találat is van – írj be még egy szót.</p>
+                  }
+                }
+              </div>
+            } @else if (searching()[shelf.key]) {
+              <div class="results"><p class="no-hits">Keresés…</p></div>
+            }
+          }
+        </div>
+
+        <!-- The bookcase: the books stand on boards, as many rows as they
+             need (library.scss draws a board under every row). -->
+        <div class="bookcase">
+          @for (book of shelf.books; track book._id) {
+            <a
+              class="spine"
+              [class.spine--dim]="isDimmed(shelf, book)"
+              [style]="spineStyle(book, $index)"
+              [routerLink]="[book._id]"
+              [title]="
+                (book.author ? book.author + ': ' : '') + book.title + ' – ' + book.pages + ' oldal'
+              "
+            >
+              <span class="spine-title">{{ book.title }}</span>
+              <!-- A scan without OCR: nothing in it can be searched. -->
+              @if (!book.hasText) {
+                <span class="spine-flag" title="Nincs benne szöveg – OCR kell hozzá">OCR</span>
+              }
+            </a>
+          } @empty {
+            <p class="empty-shelf">
+              <span
+                >Üres polc – tegyél PDF-et a <code>library/{{ shelf.key }}</code> mappába, aztán
+                Frissítés.</span
+              >
+            </p>
+          }
+        </div>
+      </section>
+    } @empty {
+      <p class="empty-note">
+        Még nincs polc – a szerver <code>library</code> mappájában minden almappa egy polc.
+      </p>
+    }
+  }
+</div>

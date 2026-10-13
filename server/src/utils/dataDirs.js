@@ -31,3 +31,8 @@ export const QUIZ_IMAGES_DIR =
 // size quota, the oldest going first. Not in git, never synced; pm2 must
 // not watch it (/volume2/server/ecosystem.config.js's ignore_watch).
 export const CHAT_IMAGES_DIR = process.env.CHAT_IMAGES_DIR || path.join(rootDir, 'chat-images');
+
+// Média → Könyvtár: the owner's PDF books, each subfolder a shelf (see
+// utils/libraryIndex.js). Not in git, never synced; pm2 must not watch it -
+// the pages' pictures are written into its _lapok folder.
+export const LIBRARY_DIR = process.env.LIBRARY_DIR || path.join(rootDir, 'library');

@@ -50,3 +50,17 @@ export const memberGuard = () => {
     }),
   );
 };
+
+// Média → Könyvtár is the role manager's alone (the server's twin:
+// libraryController.js's libraryOwnerOnly) - anyone else is taken to Média.
+export const canSeeLibrary = (user: { canManageRoles?: boolean } | null) => !!user?.canManageRoles;
+
+export const libraryGuard = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  return auth.checkAuth().pipe(
+    map(() => canSeeLibrary(auth.user()) || router.parseUrl(auth.isLoggedIn() ? '/media' : '/')),
+    catchError(() => of(router.parseUrl('/'))),
+  );
+};

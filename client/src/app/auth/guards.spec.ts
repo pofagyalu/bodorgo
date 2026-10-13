@@ -10,7 +10,7 @@ import { authHttpInterceptor } from './auth-http-interceptor';
 import { authGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { canSeeFutokor, futokorAdminGuard } from './futokor.guard';
-import { mediaMemberGuard, memberGuard } from './member.guard';
+import { libraryGuard, mediaMemberGuard, memberGuard } from './member.guard';
 import { canSeeMoka, mokaGuard } from './moka.guard';
 import { canEditSongs, songEditGuard } from './song-edit.guard';
 
@@ -91,6 +91,25 @@ describe('route guards', () => {
 
     it('takes a guest to Zene, anyone else to the front page', () => {
       expect(sentTo(guest)).toBe('/media/zene');
+      expect(sentTo(nobody)).toBe('/');
+      expect(sentTo('error')).toBe('/');
+    });
+  });
+
+  describe('libraryGuard', () => {
+    function sentTo(me: Me): string | true {
+      let result: boolean | UrlTree | undefined;
+      TestBed.runInInjectionContext(libraryGuard).subscribe((v) => (result = v));
+      const req = http.expectOne(`${API}/auth/me`);
+      if (me === 'error') req.flush('', { status: 500, statusText: 'Error' });
+      else req.flush({ id: 'u1', ...me });
+      return result === true ? true : String(result);
+    }
+
+    it('is for the role manager alone - anyone else is taken to Média', () => {
+      expect(sentTo(owner)).toBe(true);
+      expect(sentTo(admin)).toBe('/media');
+      expect(sentTo(member)).toBe('/media');
       expect(sentTo(nobody)).toBe('/');
       expect(sentTo('error')).toBe('/');
     });

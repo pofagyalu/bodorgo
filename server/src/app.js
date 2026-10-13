@@ -25,6 +25,7 @@ import membershipRouter from './routes/membershipRoutes.js';
 import pollRouter from './routes/pollRoutes.js';
 import chatRoomRouter from './routes/chatRoomRoutes.js';
 import musicRouter from './routes/musicRoutes.js';
+import libraryRouter from './routes/libraryRoutes.js';
 import songRouter from './routes/songRoutes.js';
 import jatekRouter from './routes/jatekRoutes.js';
 import futokorRouter from './routes/futokorRoutes.js';
@@ -106,6 +107,11 @@ export default function createApp(sessionMiddleware) {
   // server-to-server, verified by signature instead (see
   // utils/stripe.js's constructWebhookEvent).
   app.post('/payments/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+
+  // Média → Könyvtár: the role manager's own PDF books. Before the body
+  // parser below: a book's table of contents is larger than its 10 kB, so
+  // this router reads its own JSON (routes/libraryRoutes.js).
+  app.use('/library', libraryRouter);
 
   // Body parser, reading data from body into
   app.use(express.json({ limit: '10kb' }));
