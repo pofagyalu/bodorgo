@@ -28,6 +28,15 @@
           <label
             >Cím (utca, város)<input type="text" [(ngModel)]="form.address" name="address"
           /></label>
+          <!-- Abroad, its code is shown after the address by itself. -->
+          <label class="country-field"
+            >Ország
+            <select [(ngModel)]="form.country" name="country">
+              @for (c of countries; track c.code) {
+                <option [value]="c.code">{{ c.code }} – {{ c.name }}</option>
+              }
+            </select>
+          </label>
         </div>
 
         <div class="form-row">

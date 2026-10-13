@@ -22,25 +22,6 @@
   padding-right: 4.8rem;
 }
 
-// Beside the pencil, to its left - the same filled look, in red.
-.icon-btn--delete {
-  position: absolute;
-  top: 0;
-  right: 2.4rem;
-  background: #b3261e;
-  border-radius: 8px;
-  color: #fff;
-
-  &:hover {
-    background: #8c1d18;
-  }
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-}
-
 .event-time {
   float: left;
   width: 3.6rem;
@@ -100,6 +81,26 @@
 
   &:hover {
     background: #37474f;
+  }
+}
+
+// Beside the pencil, to its left - the same filled look, in red. (After
+// .icon-btn, or its bare grey look wins.)
+.icon-btn--delete {
+  position: absolute;
+  top: 0;
+  right: 2.4rem;
+  background: #b3261e;
+  border-radius: 8px;
+  color: #fff;
+
+  &:hover {
+    background: #8c1d18;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
   }
 }
 

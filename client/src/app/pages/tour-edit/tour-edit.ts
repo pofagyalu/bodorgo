@@ -8,12 +8,14 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { environment } from '../../../environments/environment';
 import { CropDialog } from '../../components/crop-dialog/crop-dialog';
 import { AccommodationEditor } from './accommodation-editor/accommodation-editor';
+import { COUNTRIES, HOME_COUNTRY } from '../../shared/countries';
 
 interface TourEditForm {
   order: number | null;
   title: string;
   placeName: string;
   address: string;
+  country: string;
   lat: number | null;
   lng: number | null;
   startDateLocal: string;
@@ -63,6 +65,7 @@ function emptyForm(): TourEditForm {
     title: '',
     placeName: '',
     address: '',
+    country: HOME_COUNTRY,
     lat: null,
     lng: null,
     startDateLocal: '',
@@ -114,6 +117,7 @@ export class TourEdit implements OnDestroy {
   private notifications = inject(NotificationsService);
   auth = inject(AuthService);
   environment = environment;
+  readonly countries = COUNTRIES;
 
   // The route param as-is (accepts either an id or a slug, same as
   // tour-details.ts) - null means create mode.
@@ -183,6 +187,7 @@ export class TourEdit implements OnDestroy {
           title: t.title,
           placeName: t.location.description,
           address: t.location.address,
+          country: t.location.country ?? HOME_COUNTRY,
           lat: t.location.coordinates[1] ?? null,
           lng: t.location.coordinates[0] ?? null,
           startDateLocal: toDatetimeLocal(t.startDate),
@@ -285,6 +290,7 @@ export class TourEdit implements OnDestroy {
       location: {
         description: f.placeName,
         address: f.address,
+        country: f.country,
         coordinates: f.lat != null && f.lng != null ? [f.lng, f.lat] : undefined,
       },
       startDate: f.startDateLocal ? new Date(f.startDateLocal).toISOString() : undefined,

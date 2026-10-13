@@ -12,6 +12,7 @@ import config from '../config.js';
 import { getClubSettings } from '../utils/clubSettings.js';
 import { budapestYmd, huDate, huDateRange, huDayLabel, tourDay } from '../utils/huDate.js';
 import { waxSealPng } from '../utils/waxSeal.js';
+import { addressWithCountry, countryOf } from '../utils/countries.js';
 import { hikeMap, tourHikeNumbers, trackStats } from '../utils/documentTracks.js';
 import { MAP_CREDIT } from '../utils/trackMap.js';
 import {
@@ -60,7 +61,7 @@ async function isAttendee(userId, tourId) {
 // What each header line says when the admin leaves it empty: from the tour
 // itself, and the number of people signed up for it.
 export async function autoFacts(tour) {
-  const place = [tour.location?.description, tour.location?.address]
+  const place = [tour.location?.description, addressWithCountry(tour.location)]
     .map((s) => (s ?? '').trim())
     .filter(Boolean)
     .filter((s, i, all) => i === 0 || !all[0].includes(s))
@@ -185,6 +186,7 @@ async function freezeTour(tour) {
       location: {
         description: tour.location?.description ?? '',
         address: tour.location?.address ?? '',
+        country: countryOf(tour.location),
         coordinates: [...(tour.location?.coordinates ?? [])],
       },
       // The recorded weather only - a forecast is not what happened.

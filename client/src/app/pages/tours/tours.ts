@@ -4,6 +4,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { TourService, Tour } from '../../services/tour';
 import { TourCard } from './tour-card/tour-card';
 import { AuthService } from '../../auth/auth.service';
+// The songbook's way of comparing text - no upper/lower case, no accents:
+// "mohacs" finds Mohács, "osz" finds ősz.
+import { fold } from '../daloskonyv/search';
+import { countryFound } from '../../shared/countries';
 
 @Component({
   selector: 'app-tours',
@@ -147,16 +151,22 @@ export class Tours implements OnInit {
   // or, with something searched for, the matches among ALL tours (a search
   // isn't held to the chosen year).
   filteredTours = computed(() => {
-    const search = this.searchTerm().trim().toLowerCase();
+    const search = fold(this.searchTerm().trim());
     const direction = this.ascending() ? 1 : -1;
     const source = this.shown() ?? [];
 
     return source
       .filter((t) => {
         if (!search) return true;
-        const title = (t.title || '').toLowerCase();
-        const summary = (t.summary || '').toLowerCase();
-        return title.includes(search) || summary.includes(search);
+        const title = fold(t.title || '');
+        const summary = fold(t.summary || '');
+        const place = fold(t.location?.description || '');
+        return (
+          title.includes(search) ||
+          summary.includes(search) ||
+          place.includes(search) ||
+          countryFound(t.location?.country, search)
+        );
       })
       .sort(
         (a, b) => direction * (new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),

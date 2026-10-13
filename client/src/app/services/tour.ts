@@ -200,6 +200,8 @@ export interface Tour {
     type: string;
     coordinates: number[];
     address: string;
+    // Two-letter code (shared/countries.ts); absent means Hungary.
+    country?: string;
   };
   coordinates: string;
   // Raw, Budapest-specific cache computed server-side at tour save time
@@ -519,6 +521,7 @@ export interface TourPayload {
   location?: {
     description?: string;
     address?: string;
+    country?: string;
     coordinates?: number[];
   };
   startDate?: string;

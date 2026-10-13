@@ -67,6 +67,12 @@
     min-width: 90px;
   }
 
+  // The country after the address, on the same line: as wide as its
+  // longest name, the address gives up that much.
+  .country-field {
+    flex: 0 0 auto;
+  }
+
   // Short numeric fields (a price, a percentage, an age) don't need to
   // stretch to an equal share of the row either - narrow and left-aligned
   // reads better than a wide input holding a 2-3 digit number. The label

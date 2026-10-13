@@ -127,7 +127,7 @@ describe('Tours', () => {
     page.toggleOrder();
   });
 
-  it('searches every year, in titles and summaries, after a short pause', () => {
+  it('searches every year - titles, summaries, place names, countries - after a short pause', () => {
     vi.useFakeTimers();
     open();
     page.onSearch('zem');
@@ -143,6 +143,42 @@ describe('Tours', () => {
     vi.advanceTimersByTime(300);
     fixture.detectChanges();
     expect(page.filteredTours().map((x) => x.title)).toEqual(['Bükk']);
+
+    // Without the accents too - and the other way round.
+    page.onSearch('zemplen');
+    vi.advanceTimersByTime(300);
+    fixture.detectChanges();
+    expect(page.filteredTours().map((x) => x.title)).toEqual(['Zemplén']);
+    page.onSearch('bárlang');
+    vi.advanceTimersByTime(300);
+    fixture.detectChanges();
+    expect(page.filteredTours().map((x) => x.title)).toEqual(['Bükk']);
+
+    // By its country, when it is abroad.
+    T2024[0].location.country = 'SK';
+    T2025[1].location.country = 'PL';
+    for (const [typed, found] of [
+      ['szlovakia', 'Zemplén'],
+      ['Szlovák', 'Zemplén'],
+      ['sk', 'Zemplén'],
+      ['lengyel', 'Bükk'],
+    ]) {
+      page.onSearch(typed);
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+      expect(page.filteredTours().map((x) => x.title)).toEqual([found]);
+    }
+    page.onSearch('roman');
+    vi.advanceTimersByTime(300);
+    fixture.detectChanges();
+    expect(page.filteredTours()).toEqual([]);
+
+    // By the name of its place (Helyszín neve).
+    T2024[0].location.description = 'Penzión Anton';
+    page.onSearch('penzion');
+    vi.advanceTimersByTime(300);
+    fixture.detectChanges();
+    expect(page.filteredTours().map((x) => x.title)).toEqual(['Zemplén']);
 
     page.onSearch('');
     vi.advanceTimersByTime(300);

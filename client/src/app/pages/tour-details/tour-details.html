@@ -96,7 +96,7 @@
             <mat-icon [style.color]="addressIconColor">home</mat-icon>
             <!-- A character or two too long for the line: made a touch
                  smaller instead (shared/fit-line) - the lines below too. -->
-            <span appFitLine>{{ t.location.address }}</span>
+            <span appFitLine>{{ addressWithCountry(t.location) }}</span>
           </div>
         } @else {
           <div class="info-line">
