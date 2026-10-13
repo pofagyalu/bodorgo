@@ -8,6 +8,7 @@ import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservat
 import { tourHasEnded } from './reviewController.js';
 import { computeAge } from './userController.js';
 import { tourVideoList } from '../utils/tourVideos.js';
+import { canSeeTourMedia } from '../utils/tourMediaAccess.js';
 import { newVideoKeys } from '../utils/newMedia.js';
 import APIFeatures from '../utils/apiFeatures.js';
 import AppError from '../utils/appError.js';
@@ -374,7 +375,10 @@ export const getTour = async (req, res, next) => {
     // A GPX: a plan or the hike that happened, and what it measures.
     ...(d.track && { track: d.track }),
   }));
-  const videos = tourVideoList(tour.order, await newVideoKeys(req.user));
+  // A guest who isn't on the tour gets neither its videos nor its album
+  // (utils/tourMediaAccess.js) - canSeeMedia tells the page not to ask.
+  const canSeeMedia = await canSeeTourMedia(req.user, tour._id);
+  const videos = canSeeMedia ? tourVideoList(tour.order, await newVideoKeys(req.user)) : [];
   const hasVideo = videos.length > 0;
 
   res.status(200).json({
@@ -383,6 +387,7 @@ export const getTour = async (req, res, next) => {
       tour: tourJson,
       hasVideo,
       videos,
+      canSeeMedia,
       participantCount,
       attendeePayments: attendeePaymentsWithMethod,
       paymentTotals,

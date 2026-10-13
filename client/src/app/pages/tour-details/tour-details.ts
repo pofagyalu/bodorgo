@@ -133,6 +133,9 @@ export class TourDetails {
   // Admins: how many of them carry "Új" (see TourImage.isNew).
   newImageCount = computed(() => this.tourImages().filter((i) => i.isNew).length);
   private imagesRequested = false;
+  // Not for a guest who isn't on the tour (the server wouldn't give them
+  // the album) - null until the tour has said.
+  private canSeeMedia = signal<boolean | null>(null);
   private gallery = inject(PhotoGalleryService);
 
   currentUserId = computed(() => this.auth.user()?.id);
@@ -390,11 +393,12 @@ export class TourDetails {
 
     // Same "wait for both pieces of async state" pattern as the picker
     // effect above - fires once the tour is loaded AND login status is
-    // known to be true, never for an anonymous visitor.
+    // known to be true, never for an anonymous visitor - nor for a guest
+    // who isn't on the tour.
     effect(() => {
       const t = this.tour();
       const loggedIn = this.auth.isLoggedIn();
-      if (!t || !loggedIn || this.imagesRequested) return;
+      if (!t || !loggedIn || !this.canSeeMedia() || this.imagesRequested) return;
       this.imagesRequested = true;
       this.tourService.getTourImages(t._id).subscribe({
         next: (res) => {
@@ -418,6 +422,7 @@ export class TourDetails {
         this.paymentTotals.set(res.data.paymentTotals);
         this.distanceInfo.set(res.data.distanceInfo);
         this.videos.set(res.data.videos ?? []);
+        this.canSeeMedia.set(res.data.canSeeMedia ?? true);
         this.userPhotos.set(res.data.userPhotos ?? {});
         this.usernames.set(res.data.usernames ?? {});
       },

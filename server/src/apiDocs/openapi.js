@@ -1096,7 +1096,10 @@ const tags = [
     T.tourFiles,
     'Cover picture, the Programfüzet PDF, the beszámoló, the attendee Excel. (Extrák documents: see Dokumentumok.)',
   ],
-  [T.gallery, "A tour's photos (from the NAS) and its recap videos."],
+  [
+    T.gallery,
+    "A tour's photos (from the NAS) and its recap videos. Members and admins - a guest only those of a tour they are on themselves (403 on every other tour's).",
+  ],
   [T.mailing, 'Admins writing to all attendees of a tour.'],
   [
     T.chat,
@@ -1357,9 +1360,9 @@ const paths = {
       tag: T.tours,
       summary: 'One tour',
       description:
-        "Everything the tour page shows - schedule, accommodation, weather (`dailyWeather`, and `weatherOutlook` once every day has a forecast), Extrák, attendees with their payment rows. Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
+        "Everything the tour page shows - schedule, accommodation, weather (`dailyWeather`, and `weatherOutlook` once every day has a forecast), Extrák, attendees with their payment rows. Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field. `canSeeMedia: false` for a guest who is not on the tour: `videos` is empty then, and the photo and video routes answer 403.",
       params: [tourId],
-      data: obj({ tour: ref('Tour') }),
+      data: obj({ tour: ref('Tour'), canSeeMedia: bool() }),
       errors: [404],
     }),
     patch: op({
@@ -1804,7 +1807,7 @@ const paths = {
       tag: T.gallery,
       summary: "A tour's photos",
       description:
-        '`{ filename, width, height }` in order. A restricted photo is left out for those who may not see it. `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.',
+        '`{ filename, width, height }` in order. A restricted photo is left out for those who may not see it. `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field. A guest only on a tour they are on themselves (403 otherwise).',
       params: [tourIdT],
       data: obj({
         images: arrayOf(
@@ -1817,7 +1820,7 @@ const paths = {
           }),
         ),
       }),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
   '/tours/{tourId}/images/download-zip': {
@@ -1827,7 +1830,7 @@ const paths = {
       description: 'Streamed; only the photos I may see.',
       params: [tourIdT],
       response: file(['application/zip'], 'The zip.'),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
   '/tours/{tourId}/images/{filename}': {
@@ -1851,7 +1854,7 @@ const paths = {
       params: [tourIdT, path('filename', 'The photo.')],
       body: obj({ restricted: bool() }, ['restricted']),
       data: obj({ image: { type: 'object' } }),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
   '/tours/{tourId}/images/{filename}/thumb': {
@@ -1860,7 +1863,7 @@ const paths = {
       summary: 'A photo thumbnail',
       params: [tourIdT, path('filename', 'The photo.')],
       response: file(['image/webp'], 'WebP, 400 px wide (the original if missing).'),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
   '/tours/{tourId}/images/{filename}/download': {
@@ -1869,7 +1872,7 @@ const paths = {
       summary: 'Download a photo',
       params: [tourIdT, path('filename', 'The photo.')],
       response: file(['image/jpeg'], 'As an attachment.'),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
   '/tours/{tourId}/videos/{videoId}/video': {
@@ -1887,7 +1890,7 @@ const paths = {
         ),
       ],
       response: file(['video/mp4'], 'The video.'),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
   '/tours/{tourId}/videos/{videoId}/small': {
@@ -1921,7 +1924,7 @@ const paths = {
         "Kept by the browser for an hour. The tour's video list (in GET /tours/{id}) gives each video with a cover its `coverVersion` - when the cover file was last changed, in milliseconds; asked for with `?v={coverVersion}`, a replaced cover is another address and shows at once (the server itself ignores `v`).",
       params: [tourIdT, path('videoId', 'The video.')],
       response: file(['image/jpeg'], 'The picture.'),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
   '/tours/{tourId}/videos/{videoId}/subtitles.vtt': {
@@ -1930,7 +1933,7 @@ const paths = {
       summary: "A video's subtitles",
       params: [tourIdT, path('videoId', 'The video.')],
       response: file(['text/vtt'], 'WebVTT.'),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
 
@@ -4298,7 +4301,7 @@ const paths = {
       tag: T.games,
       summary: 'Take a tour photo for a quiz question',
       description:
-        'The quiz gets a copy of its own of a photo in a tour’s album, so a game played later still has it whatever happens to the album. Not a restricted photo (404, as if it were not there) - in a quiz everybody would see it.',
+        'The quiz gets a copy of its own of a photo in a tour’s album, so a game played later still has it whatever happens to the album. Not a restricted photo (404, as if it were not there) - in a quiz everybody would see it. Nor a photo of an album the caller may not open (a guest: a tour they are not on) - 404 too.',
       body: obj({ tourId: id(), filename: str('As in the tour’s `images`.') }, [
         'tourId',
         'filename',

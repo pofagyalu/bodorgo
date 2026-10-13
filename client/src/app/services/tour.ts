@@ -499,6 +499,10 @@ export interface TourResponse {
     // are separate requireAuth-gated requests (see TourService.videoUrl).
     hasVideo: boolean;
     videos: TourVideo[];
+    // false for a guest who isn't on the tour: its album and videos aren't
+    // theirs to see (server/src/utils/tourMediaAccess.js) - `videos` is
+    // empty then, and the album isn't to be asked for.
+    canSeeMedia?: boolean;
     participantCount: number;
     attendeePayments: AttendeePayment[];
     paymentTotals: PaymentTotals | null;

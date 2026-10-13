@@ -52,6 +52,7 @@ import { updateAccommodation } from '../controllers/accommodationController.js';
 import { getRoomBoard, assignRoom, setFinalized } from '../controllers/roomAllocationController.js';
 import requireAuth, { restrictTo } from '../auth/requireAuth.js';
 import { tourOpen, tourReportOpen } from '../utils/tourClosed.js';
+import { tourMediaAccess } from '../utils/tourMediaAccess.js';
 
 const router = express.Router();
 
@@ -177,32 +178,35 @@ router
   .delete(requireAuth, restrictTo('admin'), tourOpen, tourController.deleteScheduleEvent);
 
 // Gallery routes - all requireAuth (see the root README's "Tour
-// photos"), same "logged in, that's it, no
-// role restriction" bar as the homepage documents. The literal
+// photos"): members and admins - a guest only on a tour they are on
+// themselves (tourMediaAccess - utils/tourMediaAccess.js). The literal
 // "download-zip" path must be registered before the generic "/:filename"
 // one below it, or Express would match "download-zip" as a filename.
-router.route('/:tourId/images').get(requireAuth, tourImageController.getTourImages);
+router
+  .route('/:tourId/images')
+  .get(requireAuth, tourMediaAccess, tourImageController.getTourImages);
 router
   .route('/:tourId/images/download-zip')
-  .get(requireAuth, tourImageController.downloadTourImagesZip);
+  .get(requireAuth, tourMediaAccess, tourImageController.downloadTourImagesZip);
 router
   .route('/:tourId/images/:filename/thumb')
-  .get(requireAuth, tourImageController.getTourImageThumb);
+  .get(requireAuth, tourMediaAccess, tourImageController.getTourImageThumb);
 router
   .route('/:tourId/images/:filename/download')
-  .get(requireAuth, tourImageController.downloadTourImage);
+  .get(requireAuth, tourMediaAccess, tourImageController.downloadTourImage);
 router
   .route('/:tourId/images/:filename')
-  .get(requireAuth, tourImageController.getTourImage)
+  .get(requireAuth, tourMediaAccess, tourImageController.getTourImage)
   .patch(requireAuth, restrictTo('admin'), tourOpen, tourImageController.setImageRestricted);
 
 // Post-tour recap video(s), matched by tour number (see
-// utils/tourVideos.js) - same "logged in, that's it, no role restriction"
-// bar as the gallery routes above. :videoId is one of the ids getTour
-// lists in `videos`.
-router.route('/:tourId/videos/:videoId/video').get(requireAuth, getTourVideo);
-router.route('/:tourId/videos/:videoId/cover').get(requireAuth, getTourVideoCover);
-router.route('/:tourId/videos/:videoId/subtitles.vtt').get(requireAuth, getTourVideoSubtitles);
+// utils/tourVideos.js) - for the same people as the gallery routes above.
+// :videoId is one of the ids getTour lists in `videos`.
+router.route('/:tourId/videos/:videoId/video').get(requireAuth, tourMediaAccess, getTourVideo);
+router.route('/:tourId/videos/:videoId/cover').get(requireAuth, tourMediaAccess, getTourVideoCover);
+router
+  .route('/:tourId/videos/:videoId/subtitles.vtt')
+  .get(requireAuth, tourMediaAccess, getTourVideoSubtitles);
 // A video's small copy (utils/videoCopies.js) - made and removed by admins.
 router
   .route('/:tourId/videos/:videoId/small')

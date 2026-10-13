@@ -319,6 +319,12 @@ describe('TourDetails', () => {
       expect(openGallery).not.toHaveBeenCalled();
     });
 
+    it('does not ask for the photos of a tour a guest is not on', () => {
+      open('guest', makeTour(), { canSeeMedia: false });
+      expect(page.tourImages()).toEqual([]);
+      expect(fixture.nativeElement.querySelector('.gallery-badge')).toBeNull();
+    });
+
     it('lets an admin restrict a photo to the attendees', async () => {
       openWith('admin');
       const notifications = TestBed.inject(NotificationsService);
