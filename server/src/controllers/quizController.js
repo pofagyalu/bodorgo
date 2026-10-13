@@ -8,6 +8,7 @@ import logger from '../logger.js';
 import { LIVE_STATUSES, Quiz, QuizGame, QuizScoring } from '../models/quizModels.js';
 import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
+import { canSeeTourMedia } from '../utils/tourMediaAccess.js';
 import {
   BASE_POINTS,
   DEFAULT_SCORING,
@@ -217,7 +218,8 @@ export const uploadImage = async (req, res) => {
 
 // POST /jatekok/quiz/images/from-tour - { tourId, filename }: a photo of a
 // tour's album, copied for the quiz. Not a restricted one - in a quiz
-// everybody would see it.
+// everybody would see it -, and not from an album the caller may not open
+// (a guest's are their own tours' - utils/tourMediaAccess.js).
 export const imageFromTour = async (req, res) => {
   const { tourId, filename } = req.body ?? {};
   const tour =
@@ -225,7 +227,12 @@ export const imageFromTour = async (req, res) => {
       ? await Tour.findById(tourId).select('+images +sourceFolder')
       : null;
   const photo = tour?.images.find((i) => i.filename === filename);
-  if (!photo || photo.restricted || !tour.sourceFolder) {
+  if (
+    !photo ||
+    photo.restricted ||
+    !tour.sourceFolder ||
+    !(await canSeeTourMedia(req.user, tourId))
+  ) {
     throw new AppError('Nincs ilyen fénykép ehhez a táborhoz.', 404);
   }
   // Never outside the tour's own folder, whatever the name says.
