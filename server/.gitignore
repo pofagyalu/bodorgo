@@ -23,3 +23,7 @@ scripts/input/*
 !scripts/input/example-attendance.json
 # Test coverage report (npm run test:coverage) - generated, never committed.
 coverage/
+
+# The owner's own PDF books for the Könyvtár page (Média), one folder per
+# shelf - copyrighted books, on disk only, never in git.
+library/

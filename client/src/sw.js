@@ -37,8 +37,10 @@ const HASHED = /-[A-Z0-9]{8}\.[a-z0-9]+$/;
 const PAGE_WAIT_MS = 4000;
 // The most answers kept; the oldest go first.
 const API_KEEP = 400;
-// Answers not kept: the live connection's, and the songbook's (see above).
-const API_SKIP = /\/socket\.io\/|\/songs(\/|$)/;
+// Answers not kept: the live connection's, the songbook's (see above), and
+// the Könyvtár's searches - every word typed would be one more of the 400,
+// pushing out what is worth having without a network.
+const API_SKIP = /\/socket\.io\/|\/songs(\/|$)|\/library\/search$/;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

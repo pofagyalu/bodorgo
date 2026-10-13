@@ -148,6 +148,13 @@
           </div>
         </div>
       </div>
+
+      <!-- The role manager's own PDF books (pages/media/library). -->
+      @if (hasLibrary()) {
+        <a routerLink="konyvtar" routerLinkActive="active" class="nav-item" title="Könyvtár">
+          <mat-icon>auto_stories</mat-icon><span>Könyvtár</span>
+        </a>
+      }
     </nav>
 
     <div class="side-bottom">
@@ -182,9 +189,12 @@
         <a routerLink="fotok" routerLinkActive="active">Fotók</a>
       }
       <a routerLink="zene" routerLinkActive="active">Zene</a>
+      @if (hasLibrary()) {
+        <a routerLink="konyvtar" routerLinkActive="active">Könyvtár</a>
+      }
       <!-- Not in Zene: discovery looks for photos and videos - a playlist
            is refreshed on its own page. -->
-      @if (isAdmin() && section() !== 'zene') {
+      @if (isAdmin() && section() !== 'zene' && section() !== 'konyvtar') {
         <button
           type="button"
           class="mobile-discover"
