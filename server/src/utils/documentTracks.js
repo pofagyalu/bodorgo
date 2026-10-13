@@ -1,4 +1,5 @@
 import fs from 'fs';
+import mongoose from 'mongoose';
 import Document, { documentFilePath } from '../models/documentModel.js';
 import { measureTrack, parseGpx } from '../futokor/gpx.js';
 import { budapestParts, huTime } from './huDate.js';
@@ -133,6 +134,14 @@ function dayIndex(tour, at) {
     return Date.UTC(year, month - 1, day);
   };
   return Math.round((utcDay(at) - utcDay(tour.startDate)) / 86400000);
+}
+
+// The map of a hike by its GPX document's id - made now if need be; null
+// when the document is gone, or the map can't be made.
+export async function hikeMap(id) {
+  const document = mongoose.isValidObjectId(id) ? await Document.findById(id) : null;
+  if (!document?.track || !fs.existsSync(documentFilePath(document))) return null;
+  return ensureTrackMap(document);
 }
 
 // The tour's GPX documents of the hikes that happened, in the order they

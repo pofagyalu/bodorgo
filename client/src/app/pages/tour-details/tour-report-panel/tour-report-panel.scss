@@ -287,6 +287,11 @@
   }
 }
 
+// Why Kész can't be pressed yet - at the buttons' side.
+.not-over {
+  text-align: right;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

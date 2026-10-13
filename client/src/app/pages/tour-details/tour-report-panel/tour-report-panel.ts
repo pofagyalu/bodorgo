@@ -67,6 +67,8 @@ export class TourReportPanel implements OnInit, OnDestroy {
 
   isFinal = computed(() => this.report()?.status === 'final');
   hasText = computed(() => this.filledDays().some(Boolean));
+  // A beszámoló says what happened - Kész only once the tour is over.
+  canFinish = computed(() => this.hasText() && !!this.report()?.canFinish);
 
   readonly factFields: { key: keyof ReportFacts; label: string }[] = [
     { key: 'place', label: 'Helyszín' },
@@ -165,7 +167,7 @@ export class TourReportPanel implements OnInit, OnDestroy {
   }
 
   askFinish() {
-    if (this.busy() || !this.hasText()) return;
+    if (this.busy() || !this.canFinish()) return;
     this.confirming.set(true);
   }
 

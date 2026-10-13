@@ -1,7 +1,7 @@
 import TourReport from '../models/tourReportModel.js';
 import AppError from '../utils/appError.js';
 import { tourDay } from '../utils/huDate.js';
-import { tourHikeNumbers, trackSummary } from '../utils/documentTracks.js';
+import { trackSummary } from '../utils/documentTracks.js';
 import { weatherOutlookRules } from '../utils/weatherOutlook.js';
 import {
   CONDITION_WORDS,
@@ -12,11 +12,10 @@ import {
 import { ensureAliases, hideNames, showNames } from '../utils/reportAliases.js';
 import {
   MAX_DAYS,
-  autoFacts,
   deltaLines,
   effectiveFacts,
   findTour,
-  tourAttendees,
+  reportTourData,
 } from './tourReportController.js';
 
 // A tour's beszámoló as data for an AI model: what happened, with whom,
@@ -121,20 +120,27 @@ const linkedIds = (days) =>
 // GET /tours/:id/report/json (admin) - the finished beszámoló as data.
 // ?draft=1: the working copy as it is now.
 export const getReportJson = async (req, res) => {
-  const tour = await findTour(req.params.id);
-  const report = await TourReport.findOne({ tour: tour._id });
+  const live = await findTour(req.params.id);
+  const report = await TourReport.findOne({ tour: live._id });
   const draft = req.query.draft === '1';
   if (!draft && !report?.published?.at) {
     throw new AppError('Ehhez a táborhoz még nincs kész beszámoló.', 404);
   }
   const source = draft ? report : report.published;
+  // The finished one says the tour as it was at Kész; the working copy as
+  // it is now.
+  if (draft) await ensureRecordedRain(live);
+  const {
+    tour,
+    auto,
+    attendees,
+    hikes: walked,
+  } = await reportTourData(live, draft ? null : report.published.frozen);
   const dayCount = Math.min(MAX_DAYS, Math.max(tour.duration ?? 1, source?.days?.length ?? 0));
   const texts = Array.from({ length: dayCount }, (_, i) => source?.days?.[i] ?? null);
 
-  await ensureRecordedRain(tour);
-  const attendees = await tourAttendees(tour);
   const aliases = await ensureAliases([...attendees.map((a) => a.id), ...linkedIds(texts)]);
-  const facts = effectiveFacts(source?.facts, await autoFacts(tour));
+  const facts = effectiveFacts(source?.facts, auto);
   const [lng, lat] = tour.location?.coordinates ?? [];
   const tourId = String(tour._id);
   const country = tourCountry(tour);
@@ -144,7 +150,7 @@ export const getReportJson = async (req, res) => {
   // it was outside the tour's days) and with its chunk's id - which a note
   // linked to the hike points at (hikeRef).
   const perDay = new Map();
-  const tracks = (await tourHikeNumbers(tour)).map((hike) => {
+  const tracks = walked.map((hike) => {
     const day = hike.day !== null && hike.day >= 0 && hike.day < dayCount ? hike.day + 1 : null;
     const n = (perDay.get(day) ?? 0) + 1;
     perDay.set(day, n);

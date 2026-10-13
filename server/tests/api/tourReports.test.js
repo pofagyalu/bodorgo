@@ -181,13 +181,13 @@ describe('beszámoló (tour report)', () => {
     // Admins only, and only once it's finished (or as the draft).
     expect((await request(app).get(url(tour, '/json')).set(asUser(anna))).status).toBe(403);
     expect((await request(app).get(url(tour, '/json')).set(asUser(admin))).status).toBe(404);
-    await request(app).post(url(tour, '/finish')).set(asUser(admin));
-
     // The rain of a day frozen before it was kept: asked for once.
     vi.mocked(fetchHistorical).mockResolvedValueOnce({
       precipitationMm: 2.6,
       precipitationHours: 8,
     });
+    await request(app).post(url(tour, '/finish')).set(asUser(admin));
+
     const res = await request(app).get(url(tour, '/json')).set(asUser(admin));
     expect(res.status).toBe(200);
     const data = res.body.data;
@@ -305,6 +305,85 @@ describe('beszámoló (tour report)', () => {
     await request(app).put(url(tour)).set(asUser(admin)).send({ days: [], photo: 'IMG_1.jpg' });
     const back = await request(app).get(url(tour)).set(asUser(admin));
     expect(back.body.data.report.photo).toBe('IMG_1.jpg');
+  });
+
+  it('can only be finished once the tour is over', async () => {
+    const admin = await createAdmin();
+    const day = 24 * 3600 * 1000;
+    // Its third, last day is today.
+    const running = await createTour({ duration: 3, startDate: new Date(Date.now() - 2 * day) });
+    const text = { days: [{ ops: [{ insert: 'Megérkeztünk.\n' }] }] };
+    await request(app).put(url(running)).set(asUser(admin)).send(text);
+    const got = await request(app).get(url(running)).set(asUser(admin));
+    expect(got.body.data.report.canFinish).toBe(false);
+    expect(got.body.data.report.finishFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const early = await request(app).post(url(running, '/finish')).set(asUser(admin));
+    expect(early.status).toBe(409);
+    expect(early.body.message).toBe('A beszámolót csak a tábor vége után lehet késznek jelölni.');
+    expect((await TourReport.findOne({ tour: running._id })).status).toBe('draft');
+
+    // Its last day was the day before yesterday.
+    const over = await createTour({ duration: 3, startDate: new Date(Date.now() - 4 * day) });
+    await request(app).put(url(over)).set(asUser(admin)).send(text);
+    expect((await request(app).get(url(over)).set(asUser(admin))).body.data.report.canFinish).toBe(
+      true,
+    );
+    expect((await request(app).post(url(over, '/finish')).set(asUser(admin))).status).toBe(200);
+  });
+
+  it('keeps the tour as it was at Kész - later changes to the tour leave it alone', async () => {
+    const { admin, tour, anna, outsider } = await setup();
+    await tour.constructor.updateOne(
+      { _id: tour._id },
+      {
+        dailyWeather: [{ day: 1, condition: 'clear', tempDayC: 15, tempNightC: 6, isFinal: true }],
+      },
+    );
+    await request(app)
+      .put(url(tour))
+      .set(asUser(admin))
+      .send({ days: [day({ insert: 'Megérkeztünk.\n' })] });
+    await request(app).post(url(tour, '/finish')).set(asUser(admin));
+    const before = (await request(app).get(url(tour, '/json')).set(asUser(admin))).body.data;
+
+    // The tour moves, is renamed, gets someone new and other weather.
+    const changed = await tour.constructor.findById(tour._id);
+    changed.title = 'Átnevezve';
+    changed.startDate = new Date('2024-05-09T22:00:00Z');
+    changed.location.address = 'Kokava, Szlovákia';
+    await changed.save();
+    await tour.constructor.updateOne(
+      { _id: tour._id },
+      { dailyWeather: [{ day: 1, condition: 'rain', tempDayC: 5, tempNightC: 1, isFinal: true }] },
+    );
+    await createReservation(tour, [outsider]);
+
+    const after = (await request(app).get(url(tour, '/json')).set(asUser(admin))).body.data;
+    expect(after).toEqual(before);
+    expect(after).toMatchObject({
+      tour: { title: 'Csöde' },
+      when: { startDate: '2023-10-20' },
+      where: { country: 'Magyarország' },
+      headcount: 1,
+    });
+    expect(after.days[0].weather.condition).toBe('clear');
+    // The working copy is of the tour as it is now.
+    const draft = (await request(app).get(url(tour, '/json?draft=1')).set(asUser(admin))).body.data;
+    expect(draft).toMatchObject({
+      tour: { title: 'Átnevezve' },
+      when: { startDate: '2024-05-10' },
+      where: { country: 'Szlovákia' },
+      headcount: 2,
+    });
+    // The PDF of the finished one still draws - for who was there.
+    const pdf = await binary(request(app).get(url(tour, '/pdf')).set(asUser(anna)));
+    expect(pdf.status).toBe(200);
+
+    // Finished again: the tour as it is by then.
+    await request(app).post(url(tour, '/reopen')).set(asUser(admin));
+    await request(app).post(url(tour, '/finish')).set(asUser(admin));
+    const again = (await request(app).get(url(tour, '/json')).set(asUser(admin))).body.data;
+    expect(again).toMatchObject({ tour: { title: 'Átnevezve' }, headcount: 2 });
   });
 
   it('cannot be finished empty', async () => {

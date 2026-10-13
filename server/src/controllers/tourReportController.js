@@ -10,9 +10,9 @@ import TourReport from '../models/tourReportModel.js';
 import AppError from '../utils/appError.js';
 import config from '../config.js';
 import { getClubSettings } from '../utils/clubSettings.js';
-import { huDate, huDateRange, huDayLabel } from '../utils/huDate.js';
+import { budapestYmd, huDate, huDateRange, huDayLabel, tourDay } from '../utils/huDate.js';
 import { waxSealPng } from '../utils/waxSeal.js';
-import { tourHikeNumbers, tourHikes } from '../utils/documentTracks.js';
+import { hikeMap, tourHikeNumbers, trackStats } from '../utils/documentTracks.js';
 import { MAP_CREDIT } from '../utils/trackMap.js';
 import {
   CONDITION_WORDS,
@@ -164,6 +164,88 @@ export function deltaLines(delta) {
   return lines;
 }
 
+// --- Kész: only once the tour is over, and the tour kept as it was ---
+
+// A beszámoló says what happened: it can be finished from the day after
+// the tour's last one (in Budapest) - "2026-10-26".
+const finishFrom = (tour) => tourDay(tour.startDate, Math.max(1, tour.duration ?? 1)).ymd;
+const tourIsOver = (tour) => budapestYmd() >= finishFrom(tour);
+
+// The tour as it stands, for the finished beszámoló to keep (the model's
+// published.frozen): what the PDF and the data read of it.
+async function freezeTour(tour) {
+  // The rain of its days, should they be from before that was kept.
+  await ensureRecordedRain(tour);
+  return {
+    tour: {
+      title: tour.title,
+      order: tour.order ?? null,
+      startDate: tour.startDate,
+      duration: tour.duration,
+      location: {
+        description: tour.location?.description ?? '',
+        address: tour.location?.address ?? '',
+        coordinates: [...(tour.location?.coordinates ?? [])],
+      },
+      // The recorded weather only - a forecast is not what happened.
+      dailyWeather: (tour.dailyWeather ?? [])
+        .filter((w) => w.isFinal)
+        .map((w) => ({
+          day: w.day,
+          condition: w.condition ?? null,
+          tempDayC: w.tempDayC ?? null,
+          tempNightC: w.tempNightC ?? null,
+          windSpeedKmh: w.windSpeedKmh ?? null,
+          precipitationMm: w.precipitationMm ?? null,
+          precipitationHours: w.precipitationHours ?? null,
+          isFinal: true,
+        })),
+      // Whether it had an Életviteli tanácsok - its days get the
+      // Jóléti-index then (utils/reportWeather.js).
+      weatherOutlook:
+        tour.weatherOutlook?.score != null ? { score: tour.weatherOutlook.score } : null,
+      panoramaUrl: tour.panoramaUrl ?? null,
+      panoramaTitle: tour.panoramaTitle ?? null,
+    },
+    facts: await autoFacts(tour),
+    attendees: await tourAttendees(tour),
+    hikes: (await tourHikeNumbers(tour)).map(({ id, name, day, track }) => ({
+      id,
+      name,
+      day,
+      track: {
+        distanceM: track.distanceM,
+        elevationGainM: track.elevationGainM ?? null,
+        elevationLossM: track.elevationLossM ?? null,
+        startedAt: track.startedAt ?? null,
+        durationSec: track.durationSec ?? null,
+      },
+    })),
+  };
+}
+
+// What a beszámoló reads of its tour: { tour, auto (the header lines the
+// tour gives), attendees, hikes ({ id, name, day, track }) } - as kept at
+// Kész (frozen), or the tour as it is now: for the working copy, and for a
+// beszámoló finished before the tour was kept with it.
+export async function reportTourData(tour, frozen) {
+  if (!frozen) {
+    return {
+      tour,
+      auto: await autoFacts(tour),
+      attendees: await tourAttendees(tour),
+      hikes: await tourHikeNumbers(tour),
+    };
+  }
+  return {
+    // The address it is asked by stays the tour's own.
+    tour: { ...frozen.tour, _id: tour._id, slug: tour.slug },
+    auto: frozen.facts,
+    attendees: frozen.attendees,
+    hikes: frozen.hikes,
+  };
+}
+
 // --- The views ---
 
 function dayCount(tour, report) {
@@ -183,6 +265,9 @@ async function adminView(tour, report) {
     hikes: (await tourHikeNumbers(tour)).map(({ id, name }) => ({ id, name })),
     updatedAt: report?.updatedAt ?? null,
     updatedByName: report?.updatedByName ?? null,
+    // Kész only once the tour is over - from this day on.
+    canFinish: tourIsOver(tour),
+    finishFrom: finishFrom(tour),
     published: report?.published?.at
       ? { at: report.published.at, byName: report.published.byName }
       : null,
@@ -249,12 +334,16 @@ export const saveReport = async (req, res) => {
 };
 
 // POST /tours/:id/report/finish (admin) - Kész: locks the working copy and
-// makes it the one the attendees download.
+// makes it the one the attendees download, with the tour kept as it is
+// now. Not before the tour is over.
 export const finishReport = async (req, res) => {
   const tour = await findTour(req.params.id);
   const report = await TourReport.findOne({ tour: tour._id });
   if (!report || !(report.days ?? []).some(hasText)) {
     throw new AppError('Még egy napról sincs szöveg a beszámolóban.', 400);
+  }
+  if (!tourIsOver(tour)) {
+    throw new AppError('A beszámolót csak a tábor vége után lehet késznek jelölni.', 409);
   }
   report.status = 'final';
   report.published = {
@@ -263,6 +352,7 @@ export const finishReport = async (req, res) => {
     photo: report.photo,
     at: new Date(),
     byName: req.user.name,
+    frozen: await freezeTour(tour),
   };
   await report.save();
   res.status(200).json({ status: 'success', data: { report: await adminView(tour, report) } });
@@ -847,8 +937,8 @@ async function reportPhoto(tour, filename) {
 // attendees and the admins. ?draft=1 (admin): the working copy as it is
 // now, marked PISZKOZAT - to see it before saying Kész.
 export const downloadReportPdf = async (req, res) => {
-  const tour = await findTour(req.params.id);
-  const report = await TourReport.findOne({ tour: tour._id });
+  const live = await findTour(req.params.id);
+  const report = await TourReport.findOne({ tour: live._id });
   const admin = isAdmin(req.user);
   const draft = admin && req.query.draft === '1';
 
@@ -864,7 +954,7 @@ export const downloadReportPdf = async (req, res) => {
     if (!report?.published?.at) {
       throw new AppError('Ehhez a táborhoz még nincs kész beszámoló.', 404);
     }
-    if (!admin && !(await isAttendee(req.user._id, tour._id))) {
+    if (!admin && !(await isAttendee(req.user._id, live._id))) {
       throw new AppError('A beszámolót csak a tábor résztvevői tölthetik le.', 403);
     }
     days = report.published.days ?? [];
@@ -873,16 +963,20 @@ export const downloadReportPdf = async (req, res) => {
     signedAt = report.published.at;
   }
 
+  // The finished one shows the tour as it was at Kész; the working copy
+  // as it is now.
+  if (draft) await ensureRecordedRain(live);
+  const { tour, auto, hikes } = await reportTourData(live, draft ? null : report.published.frozen);
+
   // Every day of the tour, written about or not - a hike can be on any.
   days = Array.from(
     { length: Math.min(MAX_DAYS, Math.max(tour.duration ?? 1, days.length)) },
     (_, i) => days[i] ?? null,
   );
 
-  await ensureRecordedRain(tour);
   const [lng, lat] = tour.location?.coordinates ?? [];
   const { presidentName } = await getClubSettings();
-  const photo = await reportPhoto(tour, photoName);
+  const photo = await reportPhoto(live, photoName);
   const panoramaQr = tour.panoramaUrl
     ? await QRCode.toBuffer(tour.panoramaUrl, { width: 400, margin: 0 })
     : null;
@@ -893,14 +987,21 @@ export const downloadReportPdf = async (req, res) => {
   doc.pipe(res);
   await renderReport(doc, {
     tour,
-    facts: effectiveFacts(facts, await autoFacts(tour)),
+    facts: effectiveFacts(facts, auto),
     days,
     dayLabels: days.map((_, i) => huDayLabel(tour.startDate, i)),
     // What the weather was like - of the days that have their recorded one.
     dayWeather: days.map((_, i) => weatherLine(tour, i)),
-    // The hikes that happened (the tour's recorded GPX tracks), as they
-    // are now - each under its day.
-    hikes: await tourHikes(tour),
+    // The hikes that happened (the tour's recorded GPX tracks), each
+    // under its day - with its map, while its GPX file is still there.
+    hikes: await Promise.all(
+      hikes.map(async (hike) => ({
+        name: hike.name,
+        day: hike.day,
+        stats: trackStats(hike.track),
+        map: await hikeMap(hike.id),
+      })),
+    ),
     photo,
     mapUrl:
       Number.isFinite(lat) && Number.isFinite(lng)

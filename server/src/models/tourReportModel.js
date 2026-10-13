@@ -20,6 +20,9 @@ const factsSchema = new Schema(
 // into `published`: that's what the tour's attendees download as a PDF.
 // Reopening (Visszanyitás) unlocks the working copy but keeps `published`
 // until the next Kész, so the download never shows a half-edited text.
+// Kész also keeps the tour as it was then (`published.frozen`): a
+// beszámoló is a record of the past, and what the tour says later must
+// not change it.
 const tourReportSchema = new Schema(
   {
     tour: { type: Schema.Types.ObjectId, ref: 'Tour', required: true, unique: true },
@@ -39,6 +42,11 @@ const tourReportSchema = new Schema(
       photo: String,
       at: Date,
       byName: String,
+      // The tour as it stood at Kész (tourReportController.js's
+      // freezeTour): its title, days, place, recorded weather, who was on
+      // it, the header lines it gave, its walked hikes. Missing from the
+      // ones finished before this was kept - those read the tour itself.
+      frozen: { type: Schema.Types.Mixed },
     },
   },
   { timestamps: true },
