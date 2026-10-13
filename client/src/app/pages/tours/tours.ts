@@ -16,7 +16,8 @@ export class Tours implements OnInit {
   private tourService = inject(TourService);
   auth = inject(AuthService);
 
-  // The page opens with one year's tours - the latest year that has any -
+  // The page opens with one year's tours - this year's, or the latest year
+  // before it that has any (a tour entered for next year waits its turn) -
   // so it never loads every card at once. Another year is loaded when it's
   // chosen; every tour only for "Összes" or a search (which looks through
   // all of them).
@@ -70,10 +71,14 @@ export class Tours implements OnInit {
         const years = [...res.data.years].reverse();
         this.years.set(years);
         // Back on the page: what was chosen last time (see TourService) -
-        // otherwise the latest year with a tour.
+        // otherwise this year, or the latest one before it that has a
+        // tour. A tour already entered for next year doesn't take the
+        // page over - unless there are only such.
         const remembered = this.tourService.toursPeriod;
         const known = remembered === 'all' || years.some((y) => String(y) === remembered);
-        this.choosePeriod(known ? remembered : years.length ? String(years[0]) : 'all');
+        const thisYear = new Date().getFullYear();
+        const opening = years.find((y) => y <= thisYear) ?? years.at(-1);
+        this.choosePeriod(known ? remembered : opening ? String(opening) : 'all');
       },
       error: (err) => console.error(err),
     });
