@@ -1457,6 +1457,8 @@ describe('TourReportPanel', () => {
     photo: null,
     attendees: [],
     hikes: [],
+    canFinish: true,
+    finishFrom: '2025-07-13',
     updatedAt: '2026-01-01T10:00:00Z',
     updatedByName: 'Gazda',
     published: null,
@@ -1583,6 +1585,22 @@ describe('TourReportPanel', () => {
     expect(panel.isFinal()).toBe(false);
     fixture.detectChanges();
     expect(quills()[0].isEnabled()).toBe(true);
+  });
+
+  it('cannot finish the report of a tour that is not over yet', async () => {
+    await open({
+      data: {
+        canDownload: false,
+        report: report({ canFinish: false, finishFrom: '2026-10-26' }),
+      },
+    });
+    expect(panel.hasText()).toBe(true);
+    expect(panel.canFinish()).toBe(false);
+    panel.askFinish();
+    expect(panel.confirming()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.not-over').textContent).toContain(
+      '2026. 10. 26.-től',
+    );
   });
 
   it('cannot finish an empty report, and reports failures', async () => {

@@ -162,6 +162,13 @@
           </span>
         </div>
 
+        @if (!isFinal() && !r.canFinish) {
+          <small class="hint not-over">
+            A beszámolót a tábor vége után lehet késznek jelölni -
+            {{ r.finishFrom | date: 'yyyy. MM. dd.' }}-től. Addig is írhatod.
+          </small>
+        }
+
         @if (confirming()) {
           <div class="confirm">
             <mat-icon>history_edu</mat-icon>
@@ -202,7 +209,7 @@
                 type="button"
                 class="btn primary"
                 (click)="askFinish()"
-                [disabled]="busy() || !hasText()"
+                [disabled]="busy() || !canFinish()"
               >
                 <mat-icon>verified</mat-icon> Kész
               </button>

@@ -348,6 +348,9 @@ export interface TourReport {
   photo: string | null;
   attendees: ReportAttendee[];
   hikes: ReportHike[];
+  // Kész only once the tour is over - from finishFrom (YYYY-MM-DD) on.
+  canFinish: boolean;
+  finishFrom: string;
   updatedAt: string | null;
   updatedByName: string | null;
   published: { at: string; byName: string } | null;
