@@ -1,4 +1,8 @@
-<div class="mail-backdrop" (click)="close()">
+<div
+  class="mail-backdrop"
+  (mousedown)="pressedOutside = $event.target === $event.currentTarget"
+  (click)="backdropClick($event)"
+>
   <div
     class="mail-panel"
     (click)="$event.stopPropagation()"

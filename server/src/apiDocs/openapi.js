@@ -1531,6 +1531,16 @@ const paths = {
       data: obj({ event: ref('ScheduleEvent') }),
       errors: [400, 404],
     }),
+    delete: op({
+      closedTour: true,
+      tag: T.schedule,
+      role: 'admin',
+      summary: 'Delete a program item',
+      description: 'Takes it off the tour, with whoever had opted into it.',
+      params: [tourIdT, path('eventId', 'The program item.')],
+      ok: 204,
+      errors: [404],
+    }),
   },
   '/tours/{tourId}/schedule/{eventId}/participants': {
     patch: op({
@@ -1649,7 +1659,7 @@ const paths = {
       tag: T.tourFiles,
       summary: 'The beszámoló',
       description:
-        "Whether I can download the finished beszámoló (it is Kész, and I was on the tour - or I'm an admin). An admin also gets the working copy: the days (the editor's content), the header lines and what they'd be when left empty (`auto`, from the tour), the picked album photo, and when it was last finished.",
+        "Whether I can download the finished beszámoló (it is Kész, and I was on the tour - or I'm an admin). An admin also gets the working copy: the days (the editor's content), the header lines and what they'd be when left empty (`auto`, from the tour), the picked album photo, when it was last finished, and the tour's attendees (`attendees`: `{ id, name }` - who a word of the text can be linked to) and its walked hikes (`hikes`: `{ id, name }` - the Extrák GPX tracks of kind `recorded`, which a piece of the text can be linked to).",
       params: [tourId],
       data: obj({
         canDownload: bool(),
@@ -1667,7 +1677,7 @@ const paths = {
       role: 'admin',
       summary: 'Save the beszámoló',
       description:
-        "Saved as the admin types. `days`: one editor content (Quill delta) per day, or null - only text, bold/italic/underline and bullet/numbered lists with their levels are kept. `facts`: the header lines (place, dates, headcount); empty = the tour's own. `photo`: one of the tour's album photos (file name), or null. Refused while it's Kész.",
+        "Saved as the admin types. `days`: one editor content (Quill delta) per day, or null - only text, bold/italic/underline and bullet/numbered lists with their levels are kept. A piece of text can carry `person` among its attributes - the user id of one of the tour's attendees it is about (shown nowhere, the PDF prints the text as typed); a `person` who isn't on the tour is dropped, the text stays. The same way `hike`: the id of one of the tour's walked hikes (a GPX document of kind `recorded`) the text happened on. `facts`: the header lines (place, dates, headcount); empty = the tour's own. `photo`: one of the tour's album photos (file name), or null. Refused while it's Kész.",
       params: [tourId],
       body: obj({
         days: arrayOf({ type: ['object', 'null'], description: 'Quill delta.' }),
@@ -1708,10 +1718,59 @@ const paths = {
       tag: T.tourFiles,
       summary: 'Beszámoló PDF',
       description:
-        "The finished beszámoló - the tour's attendees and admins. The picked album photo, place, dates, headcount, the days as bullet points, and at the end the club, the elnök and a wax seal with the elnök's name. The tour's hikes that happened (its Extrák GPX tracks of kind `recorded`, as they are when the PDF is asked for) are printed under the day they were walked on, also on a day nothing was written about: the track on an OpenStreetMap map, then start, arrival, length, time, climb and descent - only what the file gives; a hike whose file has no times comes after the days. The map is made once from OpenStreetMap's tiles and kept; when it can't be made, the hike is printed without it. `?draft=1` (admin): the working copy as it is now, marked PISZKOZAT.",
+        "The finished beszámoló - the tour's attendees and admins. The picked album photo, place, dates, headcount, the days as bullet points - each day's heading with what the weather was like (its kind, day and night temperature, the rain that fell, and - on a tour that had an Életviteli tanácsok - the Jóléti-index of the day as it turned out with its word, Pálinkás … Koktélos; only once the day has its recorded weather, never a forecast) - and at the end the club, the elnök and a wax seal with the elnök's name. The tour's hikes that happened (its Extrák GPX tracks of kind `recorded`, as they are when the PDF is asked for) are printed under the day they were walked on, also on a day nothing was written about: the track on an OpenStreetMap map, then start, arrival, length, time, climb and descent - only what the file gives; a hike whose file has no times comes after the days. The map is made once from OpenStreetMap's tiles and kept; when it can't be made, the hike is printed without it. `?draft=1` (admin): the working copy as it is now, marked PISZKOZAT.",
       params: [tourId, query('draft', "`1`: the admin's preview of the working copy.")],
       response: file(['application/pdf'], 'The PDF.'),
       errors: [403, 404],
+    }),
+  },
+  '/tours/{id}/report/json': {
+    get: op({
+      tag: T.tourFiles,
+      role: 'admin',
+      summary: 'Beszámoló as data (for an AI model)',
+      description:
+        "The finished beszámoló as data: what happened, with whom, when and where. `chunks`: the text, one per top-level bullet with its sub-bullets (joined by ` – `), and one per walked hike (its name, length, time, climb and descent in one line) - `header` says which tour (its number and country), day and date it is from (a bullet's also the day's recorded weather and Jóléti-index), `body` is the text itself; the two together are what to embed. `metadata` is `{ kind, tourId, day, date, people, hikeRef }`, `kind` being `event` or `hike`; `hikeRef` is the `id` of the hike's chunk when a piece of the bullet is linked to a hike (null otherwise) - so the hike's numbers can be handed to the model with the note. `promptNotes`: lines for the model's system prompt - what the aliases are, that the weather is the recorded one, what the Jóléti-index is (its bands, and that it is worked out from the recorded weather, neither measured nor a forecast), that what was written overrides the weather data, and what `hikeRef` is. The rest is plain numbers for exact filtering, not for embedding: `when`, `where` (with `country`, read off the end of the tour's address - Magyarország when it names none), `headcount`, `days` (date, weekday, the recorded weather - null while there is only a forecast; with `precipitationMm` and `precipitationHours`, which a day frozen before they were kept gets from the Open-Meteo archive the first time this is asked, and which the header says too („2,6 mm eső (8 órán át)”) - and `wellbeing`: the Jóléti-index of the day as it turned out and its word, Pálinkás … Koktélos - null on a tour that had no Életviteli tanácsok), `hikes` (the walked GPX tracks: start, seconds, metres, climb, descent; `day` null when the file has no time). No name and no user id is in it: a word linked to an attendee reads as their alias (`P7` - the same person has the same one in every tour), `attendees` and `people` are aliases too. A name typed but not linked stays as typed. `?draft=1`: the working copy as it is now.",
+      params: [tourId, query('draft', '`1`: the working copy instead of the finished one.')],
+      data: obj({
+        schema: str('`bodorgo.tour-report/1`'),
+        status: str('`final` or `draft`'),
+        recordedAt: { ...date('When it was finished (Kész).'), nullable: true },
+        tour: obj({ id: str(), order: int(), title: str() }),
+        when: obj({ startDate: str(), endDate: str(), days: int() }),
+        where: obj({ text: str(), lat: num(), lng: num() }),
+        headcount: int(),
+        attendees: arrayOf(str('Alias.')),
+        days: arrayOf({ type: 'object' }),
+        hikes: arrayOf({ type: 'object' }),
+        chunks: arrayOf({ type: 'object' }),
+        promptNotes: arrayOf(str()),
+      }),
+      errors: [404],
+    }),
+  },
+  '/tours/report-names/hide': {
+    post: op({
+      tag: T.tourFiles,
+      role: 'admin',
+      summary: 'Names to aliases in a text',
+      description:
+        'For a question on its way to an AI model: every user\'s full name in `text` becomes their alias ("Nagy Gábor" → `P7`, an ending stays: "Nagy Gábornak" → `P7nak`). Whole full names only, upper or lower case. `people`: the aliases put in. `ambiguous`: full names two users share - left as they are.',
+      body: obj({ text: str() }, ['text']),
+      data: obj({ text: str(), people: arrayOf(str()), ambiguous: arrayOf(str()) }),
+      errors: [400],
+    }),
+  },
+  '/tours/report-names/show': {
+    post: op({
+      tag: T.tourFiles,
+      role: 'admin',
+      summary: 'Aliases back to names in a text',
+      description:
+        "For the model's answer: every alias in `text` (`P7`) becomes that person's name. `unknown`: aliases nobody has - left as they are.",
+      body: obj({ text: str() }, ['text']),
+      data: obj({ text: str(), unknown: arrayOf(str()) }),
+      errors: [400],
     }),
   },
   '/tours/{id}/attendees/export.xlsx': {

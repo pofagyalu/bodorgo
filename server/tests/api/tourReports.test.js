@@ -1,9 +1,10 @@
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createMember, createReservation, createTour } from '../helpers/factories.js';
 import TourReport from '../../src/models/tourReportModel.js';
 import { huDateRange } from '../../src/utils/huDate.js';
+import { fetchHistorical } from '../../src/utils/weather.js';
 
 // Binary responses (the PDF, the seal) as a Buffer.
 const binary = (req) =>
@@ -108,6 +109,189 @@ describe('beszámoló (tour report)', () => {
       .send({ days: [day({ insert: 'Új\n' })] });
     const after = await TourReport.findOne({ tour: tour._id }).lean();
     expect(after.published.days[0].ops[1].insert).toBe('gitározás');
+  });
+
+  it('links a word to one of the tour attendees, and only to them', async () => {
+    const { admin, tour, anna, outsider } = await setup();
+    const got = await request(app).get(url(tour)).set(asUser(admin));
+    expect(got.body.data.report.attendees).toEqual([{ id: String(anna._id), name: 'Anna' }]);
+
+    await request(app)
+      .put(url(tour))
+      .set(asUser(admin))
+      .send({
+        days: [
+          day(
+            { insert: 'Anci', attributes: { person: String(anna._id) } },
+            { insert: ' elesett, ' },
+            { insert: 'Pista', attributes: { person: String(outsider._id), italic: true } },
+            { insert: ' nevetett', attributes: { person: { $ne: null } } },
+            { insert: '\n' },
+          ),
+        ],
+      });
+    const report = await TourReport.findOne({ tour: tour._id }).lean();
+    expect(report.days[0].ops).toEqual([
+      { insert: 'Anci', attributes: { person: String(anna._id) } },
+      { insert: ' elesett, ' },
+      { insert: 'Pista', attributes: { italic: true } },
+      { insert: ' nevetett' },
+      { insert: '\n' },
+    ]);
+
+    // Nothing of it in the PDF's way: it still draws.
+    const pdf = await binary(request(app).get(url(tour, '/pdf?draft=1')).set(asUser(admin)));
+    expect(pdf.status).toBe(200);
+  });
+
+  it('gives the finished beszámoló as data, its people as aliases', async () => {
+    const { admin, tour, anna, outsider } = await setup();
+    await tour.constructor.updateOne(
+      { _id: tour._id },
+      {
+        // The tour had an Életviteli tanácsok - so its days get the index.
+        weatherOutlook: { score: 60 },
+        dailyWeather: [
+          {
+            day: 1,
+            condition: 'rain',
+            tempDayC: 12,
+            tempNightC: 9,
+            windSpeedKmh: 22,
+            isFinal: true,
+          },
+          { day: 2, condition: 'clear', tempDayC: 20, isFinal: false },
+        ],
+      },
+    );
+    const text = [
+      day(
+        { insert: 'Anci', attributes: { person: String(anna._id) } },
+        { insert: ' leesett a bicikliről' },
+        { insert: '\n', attributes: { list: 'bullet' } },
+        { insert: 'komoly baj nem lett' },
+        { insert: '\n', attributes: { list: 'bullet', indent: 1 } },
+        { insert: 'Este gitározás' },
+        { insert: '\n', attributes: { list: 'bullet' } },
+      ),
+      day({ insert: 'Pihenés\n' }),
+    ];
+    await request(app).put(url(tour)).set(asUser(admin)).send({ days: text });
+
+    // Admins only, and only once it's finished (or as the draft).
+    expect((await request(app).get(url(tour, '/json')).set(asUser(anna))).status).toBe(403);
+    expect((await request(app).get(url(tour, '/json')).set(asUser(admin))).status).toBe(404);
+    await request(app).post(url(tour, '/finish')).set(asUser(admin));
+
+    // The rain of a day frozen before it was kept: asked for once.
+    vi.mocked(fetchHistorical).mockResolvedValueOnce({
+      precipitationMm: 2.6,
+      precipitationHours: 8,
+    });
+    const res = await request(app).get(url(tour, '/json')).set(asUser(admin));
+    expect(res.status).toBe(200);
+    const data = res.body.data;
+    const alias = data.attendees[0];
+    expect(alias).toMatch(/^P\d+$/);
+    expect(data).toMatchObject({
+      schema: 'bodorgo.tour-report/1',
+      status: 'final',
+      tour: { id: String(tour._id), order: 23, title: 'Csöde' },
+      when: { startDate: '2023-10-20', endDate: '2023-10-23', days: 4 },
+      where: {
+        text: 'Sárkány panzió, Csöde',
+        country: 'Magyarország',
+        lat: 46.817223,
+        lng: 16.53181,
+      },
+      headcount: 1,
+      hikes: [],
+    });
+    expect(data.days).toHaveLength(4);
+    expect(data.days[0]).toEqual({
+      day: 1,
+      date: '2023-10-20',
+      weekday: 'péntek',
+      weather: {
+        condition: 'rain',
+        tempDayC: 12,
+        tempNightC: 9,
+        windSpeedKmh: 22,
+        precipitationMm: 2.6,
+        precipitationHours: 8,
+      },
+      wellbeing: { index: 53, word: 'Elmegy' },
+    });
+    expect(data.promptNotes.join(' ')).toContain('0–29 Pálinkás, 30–49 Boros');
+    // A forecast is not what happened.
+    expect(data.days[1].weather).toBeNull();
+    expect(data.chunks).toEqual([
+      {
+        id: `${tour._id}:1:1`,
+        header:
+          'Csöde (23. túra, Magyarország), 1. nap, 2023-10-20 péntek, eső, 12°C, 2,6 mm eső (8 órán át), Jóléti-index 53 (Elmegy):',
+        body: `${alias} leesett a bicikliről – komoly baj nem lett`,
+        metadata: {
+          kind: 'event',
+          tourId: String(tour._id),
+          day: 1,
+          date: '2023-10-20',
+          people: [alias],
+          hikeRef: null,
+        },
+      },
+      {
+        id: `${tour._id}:1:2`,
+        header:
+          'Csöde (23. túra, Magyarország), 1. nap, 2023-10-20 péntek, eső, 12°C, 2,6 mm eső (8 órán át), Jóléti-index 53 (Elmegy):',
+        body: 'Este gitározás',
+        metadata: {
+          kind: 'event',
+          tourId: String(tour._id),
+          day: 1,
+          date: '2023-10-20',
+          people: [],
+          hikeRef: null,
+        },
+      },
+      {
+        id: `${tour._id}:2:1`,
+        header: 'Csöde (23. túra, Magyarország), 2. nap, 2023-10-21 szombat:',
+        body: 'Pihenés',
+        metadata: {
+          kind: 'event',
+          tourId: String(tour._id),
+          day: 2,
+          date: '2023-10-21',
+          people: [],
+          hikeRef: null,
+        },
+      },
+    ]);
+    // No name, no user id anywhere in it.
+    expect(JSON.stringify(data)).not.toContain('Anci');
+    expect(JSON.stringify(data)).not.toContain(String(anna._id));
+
+    // The same person keeps the alias; names and aliases swap both ways.
+    const again = await request(app).get(url(tour, '/json')).set(asUser(admin));
+    expect(again.body.data.attendees).toEqual([alias]);
+    const hidden = await request(app)
+      .post('/tours/report-names/hide')
+      .set(asUser(admin))
+      .send({ text: 'Mikor esett le anna a bicikliről? És Annának fájt? Kívülálló ott volt?' });
+    const other = hidden.body.data.people.find((p) => p !== alias);
+    expect(hidden.body.data).toMatchObject({
+      text: `Mikor esett le ${alias} a bicikliről? És ${alias}nak fájt? ${other} ott volt?`,
+      ambiguous: [],
+    });
+    const shown = await request(app)
+      .post('/tours/report-names/show')
+      .set(asUser(admin))
+      .send({ text: `${alias}, 2023-10-20, Csöde. ${other} nem. P99999?` });
+    expect(shown.body.data).toEqual({
+      text: `Anna, 2023-10-20, Csöde. ${outsider.name} nem. P99999?`,
+      unknown: ['P99999'],
+    });
   });
 
   it('takes one of the tour album photos, and only those', async () => {

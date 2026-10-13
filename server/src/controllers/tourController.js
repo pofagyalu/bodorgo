@@ -671,6 +671,27 @@ export const updateScheduleEvent = async (req, res) => {
   res.status(200).json({ status: 'success', data: { event } });
 };
 
+// Admin-only (see tourRoutes.js) - takes a schedule event off the tour,
+// with whoever had opted into it.
+export const deleteScheduleEvent = async (req, res) => {
+  const { tourId, eventId } = req.params;
+
+  const tour = await Tour.findById(tourId);
+  if (!tour) {
+    throw new AppError('No tour found with that ID!', 404);
+  }
+
+  const event = tour.schedule.id(eventId);
+  if (!event) {
+    throw new AppError('No such schedule event!', 404);
+  }
+
+  event.deleteOne();
+  await tour.save();
+
+  res.status(204).json({ status: 'success', data: null });
+};
+
 const oneDecimal = (n) => Math.round(n * 10) / 10;
 
 // The homepage's age chart: how old the attendees were, tour by tour and

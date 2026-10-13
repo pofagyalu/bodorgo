@@ -219,4 +219,50 @@ describe("a hike's map and its place in the beszámoló", () => {
     // Two maps heavier than a beszámoló without any.
     expect(pdf.body.length).toBeGreaterThan(plain.body.length + 10000);
   });
+
+  it("a note can be linked to the hike it happened on - the beszámoló's data points at it", async () => {
+    vi.mocked(fetchMapTile).mockRejectedValue(new Error('no map tiles'));
+    const admin = await createAdmin();
+    const tour = await createTour({ duration: 3, startDate: new Date('2026-07-09T22:00:00Z') });
+    const other = await createTour();
+    await upload(admin, tour, 'Kékes', gpx({ day: '2026-07-11' }));
+    await upload(admin, tour, 'Terv', gpx({ times: false }));
+    await upload(admin, other, 'Máshol', gpx({ day: '2026-07-11' }));
+    const kekes = await Document.findOne({ name: 'Kékes' });
+    const elsewhere = await Document.findOne({ name: 'Máshol' });
+
+    // Only the tour's own walked hikes are offered.
+    const got = await request(app).get(`/tours/${tour._id}/report`).set(asUser(admin));
+    expect(got.body.data.report.hikes).toEqual([{ id: String(kekes._id), name: 'Kékes' }]);
+
+    await request(app)
+      .put(`/tours/${tour._id}/report`)
+      .set(asUser(admin))
+      .send({
+        days: [
+          null,
+          {
+            ops: [
+              { insert: 'Valaki ' },
+              { insert: 'beleesett a patakba', attributes: { hike: String(kekes._id) } },
+              { insert: '\nEste ' },
+              { insert: 'tábortűz', attributes: { hike: String(elsewhere._id) } },
+              { insert: '\n' },
+            ],
+          },
+        ],
+      });
+    const res = await request(app).get(`/tours/${tour._id}/report/json?draft=1`).set(asUser(admin));
+    const hikeId = `${tour._id}:2:hike:1`;
+    expect(res.body.data.chunks.map((c) => [c.id, c.metadata.kind, c.metadata.hikeRef])).toEqual([
+      [`${tour._id}:2:1`, 'event', hikeId],
+      // Another tour's hike: the link was dropped when saved.
+      [`${tour._id}:2:2`, 'event', null],
+      [hikeId, 'hike', null],
+    ]);
+    const hike = res.body.data.chunks[2];
+    expect(hike.header).toMatch(/, 2\. nap, 2026-07-11:$/);
+    expect(hike.body).toMatch(/^túra – Kékes, 1,6 km, 48 p, \+145 m \/ −0 m$/);
+    expect(res.body.data.hikes).toMatchObject([{ name: 'Kékes', day: 2, date: '2026-07-11' }]);
+  });
 });

@@ -344,6 +344,12 @@ const tourSchema = new Schema(
         // 0-100, only while it's a forecast (the archive has no such
         // figure) and only where the provider gives one.
         rainChance: Number,
+        // What fell that day (mm) and for how many hours - of the recorded
+        // weather only, and missing from days frozen before these were
+        // kept (the beszámoló's JSON fetches them then - see
+        // tourReportJsonController.js).
+        precipitationMm: Number,
+        precipitationHours: Number,
         isFinal: { type: Boolean, default: false },
         fetchedAt: Date,
       },

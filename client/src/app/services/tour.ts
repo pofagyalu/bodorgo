@@ -323,6 +323,20 @@ export interface ReportFacts {
   headcount: string;
 }
 
+// Someone who was on the tour - a word of the beszámoló can be linked to
+// them.
+export interface ReportAttendee {
+  id: string;
+  name: string;
+}
+
+// One of the tour's walked hikes (an Extrák GPX track) - a piece of the
+// beszámoló's text can be linked to it.
+export interface ReportHike {
+  id: string;
+  name: string;
+}
+
 // The admin's working copy: one editor content (Quill delta) per day, and
 // the album photo at the top of the PDF.
 export interface TourReport {
@@ -332,6 +346,8 @@ export interface TourReport {
   facts: ReportFacts;
   auto: ReportFacts;
   photo: string | null;
+  attendees: ReportAttendee[];
+  hikes: ReportHike[];
   updatedAt: string | null;
   updatedByName: string | null;
   published: { at: string; byName: string } | null;
@@ -992,6 +1008,10 @@ export class TourService {
       `${this.apiUrl}/${tourId}/schedule/${eventId}`,
       payload,
     );
+  }
+
+  deleteScheduleEvent(tourId: string, eventId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${tourId}/schedule/${eventId}`);
   }
 
   createScheduleEvent(

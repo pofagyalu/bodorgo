@@ -130,6 +130,11 @@ const userSchema = new Schema(
     // from any phone without logging in (see utils/futokod.js) - given when
     // the user is made, never sent to anyone but themselves and the admins.
     futokod: { type: String, unique: true, sparse: true, select: false },
+    // Their number in what an AI model gets of the beszámolók ("P7" - see
+    // utils/reportAliases.js): the model never sees a name or this id.
+    // Given the first time it's needed, the same in every tour, never
+    // changed or given to someone else.
+    reportAlias: { type: Number, unique: true, sparse: true, select: false },
     // Profile photo - the image itself lives in its own collection (see
     // userPhotoModel.js); this is just when it last changed, doubling as
     // the client's cache-busting version (?v=...) and as "has a photo".

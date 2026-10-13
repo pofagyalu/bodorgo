@@ -22,6 +22,15 @@
       >
         <mat-icon>edit</mat-icon>
       </button>
+      <button
+        type="button"
+        class="icon-btn icon-btn--delete"
+        title="Esemény törlése"
+        [disabled]="deleting()"
+        (click)="remove()"
+      >
+        <mat-icon>delete</mat-icon>
+      </button>
     }
   </div>
 }

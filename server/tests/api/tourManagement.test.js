@@ -412,6 +412,16 @@ describe('program schedule', () => {
     return { admin, tour, event: created.body.data.event, status: created.status };
   }
 
+  it('admin deletes an event, nobody else', async () => {
+    const { admin, tour, event } = await tourWithOptionalEvent();
+    const member = await createMember();
+    const path = `/tours/${tour._id}/schedule/${event._id}`;
+    expect((await request(app).delete(path).set(asUser(member))).status).toBe(403);
+    expect((await request(app).delete(path).set(asUser(admin))).status).toBe(204);
+    expect((await tour.constructor.findById(tour._id)).schedule).toHaveLength(0);
+    expect((await request(app).delete(path).set(asUser(admin))).status).toBe(404);
+  });
+
   it('admin adds and edits events; incomplete events are refused', async () => {
     const { admin, tour, event, status } = await tourWithOptionalEvent();
     expect(status).toBe(201);

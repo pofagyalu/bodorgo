@@ -6,7 +6,8 @@
 .mail-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  // Over the main menu too, like the Beszámoló window.
+  z-index: 30000;
   display: grid;
   place-items: center;
   padding: 20px;
@@ -19,7 +20,7 @@
 .mail-panel {
   display: flex;
   flex-direction: column;
-  width: min(760px, 100%);
+  width: min(80rem, 100%);
   max-height: calc(100dvh - 40px);
   background: #fff;
   border-radius: 16px;

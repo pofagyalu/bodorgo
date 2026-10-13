@@ -1,0 +1,46 @@
+<div class="editor-wrap" [class.is-locked]="locked()">
+  <div #editor class="editor"></div>
+</div>
+<!-- Whose name is the picked text - or which hike was it on? Every
+     attendee (every walked hike), one tap. -->
+@if (picker(); as p) {
+  <div class="person-picker">
+    <div class="person-picker-head">
+      <span
+        >{{ p.kind === 'hike' ? 'Melyik túrán történt' : 'Ki ő' }}:
+        <strong>„{{ p.text }}”</strong>?</span
+      >
+      <button type="button" class="link-btn" (click)="picker.set(null)">Mégse</button>
+    </div>
+    <div class="person-chips">
+      @for (a of pickerChoices(); track a.id) {
+        <button
+          type="button"
+          class="person-chip"
+          [class.person-chip--likely]="a.likely"
+          [class.person-chip--current]="a.id === p.current"
+          (click)="linkTo(a)"
+        >
+          {{ a.name }}
+        </button>
+      } @empty {
+        <span class="empty">Ennek a tábornak még nincs résztvevője.</span>
+      }
+    </div>
+    @if (p.current) {
+      <button type="button" class="link-btn" (click)="linkTo(null)">
+        <mat-icon>link_off</mat-icon> Összekötés törlése
+      </button>
+    }
+  </div>
+}
+@if (linked().length) {
+  <p class="linked">
+    @for (l of linked(); track $index) {
+      <span>
+        <mat-icon>{{ l.kind === 'hike' ? 'hiking' : 'person' }}</mat-icon>
+        {{ l.text }} → {{ l.name }}
+      </span>
+    }
+  </p>
+}

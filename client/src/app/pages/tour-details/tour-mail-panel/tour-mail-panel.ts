@@ -278,6 +278,17 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
     }
   }
 
+  // A click on the dark area around the window closes it - but only one
+  // that began there too: a text selection dragged out of the window and
+  // let go outside it ends in a click on that area as well.
+  pressedOutside = false;
+
+  backdropClick(event: MouseEvent) {
+    const outside = this.pressedOutside && event.target === event.currentTarget;
+    this.pressedOutside = false;
+    if (outside) void this.close();
+  }
+
   async close() {
     if (this.busy()) return;
     await this.flush();

@@ -25,6 +25,11 @@ import {
   saveReport,
 } from '../controllers/tourReportController.js';
 import {
+  getReportJson,
+  hideReportNames,
+  showReportNames,
+} from '../controllers/tourReportJsonController.js';
+import {
   getMailings,
   saveDraft,
   sendTest,
@@ -94,6 +99,12 @@ router
   .post(requireAuth, restrictTo('admin'), tourReportOpen, finishReport);
 router.route('/:id/report/reopen').post(requireAuth, restrictTo('admin'), tourOpen, reopenReport);
 router.route('/:id/report/pdf').get(requireAuth, downloadReportPdf);
+// The beszámoló as data for an AI model, its people as aliases - and the
+// swap of names and aliases in a question and an answer (see
+// tourReportJsonController.js).
+router.route('/:id/report/json').get(requireAuth, restrictTo('admin'), getReportJson);
+router.route('/report-names/hide').post(requireAuth, restrictTo('admin'), hideReportNames);
+router.route('/report-names/show').post(requireAuth, restrictTo('admin'), showReportNames);
 // Letters to the tour's attendees (admin) - see mailingController.js.
 router.route('/:id/mailings').get(requireAuth, restrictTo('admin'), getMailings);
 router.route('/:id/mailings/draft').put(requireAuth, restrictTo('admin'), tourOpen, saveDraft);
@@ -162,7 +173,8 @@ router
 
 router
   .route('/:tourId/schedule/:eventId')
-  .patch(requireAuth, restrictTo('admin'), tourOpen, tourController.updateScheduleEvent);
+  .patch(requireAuth, restrictTo('admin'), tourOpen, tourController.updateScheduleEvent)
+  .delete(requireAuth, restrictTo('admin'), tourOpen, tourController.deleteScheduleEvent);
 
 // Gallery routes - all requireAuth (see the root README's "Tour
 // photos"), same "logged in, that's it, no

@@ -1,0 +1,142 @@
+// One day's editor in the Beszámoló window (tour-report-panel), with what
+// belongs to linking a word to an attendee or a hike.
+:host {
+  display: grid;
+  gap: 0.375rem;
+}
+
+// Quill's own snow theme, softened to match the page.
+.editor-wrap {
+  border-radius: 0.625rem;
+
+  &.is-locked {
+    opacity: 0.75;
+  }
+
+  ::ng-deep .ql-toolbar.ql-snow {
+    border: 1px solid #d4dfda;
+    border-radius: 0.625rem 0.625rem 0 0;
+    background: #f7faf8;
+  }
+
+  // height: auto - Quill's own 100% made each editor taller than its box,
+  // running into the next day's (same fix as the poll dialog's).
+  ::ng-deep .ql-container.ql-snow {
+    height: auto;
+    border: 1px solid #d4dfda;
+    border-top: 0;
+    border-radius: 0 0 0.625rem 0.625rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+  }
+
+  ::ng-deep .ql-editor {
+    min-height: 6.5rem;
+    line-height: 1.55;
+  }
+
+  // A word linked to an attendee (green) or a piece of text linked to a
+  // hike (orange) - shown here only, not in the PDF.
+  ::ng-deep .ql-editor [data-person],
+  ::ng-deep .ql-editor [data-hike] {
+    border-bottom: 0.125rem dotted #1a796c;
+    background: #0000000d;
+  }
+
+  ::ng-deep .ql-editor [data-hike] {
+    border-color: #d0661a;
+  }
+}
+
+// Whose name the picked text is: every attendee of the tour - or which
+// hike it was on.
+.person-picker {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #b7dcc6;
+  border-radius: 0.625rem;
+  background: #f4faf7;
+  font-size: 0.85rem;
+}
+
+.person-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.person-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.person-chip {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #d4dfda;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  color: #254257;
+  cursor: pointer;
+
+  &--likely {
+    border-color: #1a796c;
+    font-weight: 700;
+  }
+
+  &--current {
+    background: #1a796c;
+    color: #fff;
+  }
+}
+
+.empty {
+  color: #56666e;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: #1a796c;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// Under the editor: its linked words and who (which hike) they are.
+.linked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  font-size: 0.78rem;
+  color: #56666e;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
+  mat-icon {
+    font-size: 0.95rem;
+    width: 0.95rem;
+    height: 0.95rem;
+    color: #1a796c;
+  }
+}
