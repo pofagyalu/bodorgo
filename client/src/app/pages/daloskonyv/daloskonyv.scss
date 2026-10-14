@@ -688,6 +688,12 @@ $line: #e4eae7;
       background: #e8f3ee;
     }
 
+    // Marked by the search's ↓/↑ (Enter opens it).
+    &.highlighted {
+      background: #e8f3ee;
+      box-shadow: inset 0 0 0 2px $teal;
+    }
+
     &.active {
       background: $teal;
       color: #fff;

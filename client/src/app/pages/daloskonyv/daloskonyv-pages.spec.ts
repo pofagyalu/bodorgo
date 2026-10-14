@@ -1040,6 +1040,53 @@ describe('Daloskonyv', () => {
     fixture.detectChanges();
   }
 
+  describe("the search's keys", () => {
+    const input = () => fixture.nativeElement.querySelector('.search input') as HTMLInputElement;
+    const marked = () =>
+      [...fixture.nativeElement.querySelectorAll('.song-list li a.highlighted')].map(
+        (a: HTMLAnchorElement) => a.id,
+      );
+    const type = (text: string) => {
+      input().value = text;
+      input().dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    };
+    const press = (key: string) => {
+      input().dispatchEvent(new KeyboardEvent('keydown', { key }));
+      fixture.detectChanges();
+    };
+
+    it('marks the first song found, moves with ↓/↑ and opens the marked one with Enter', () => {
+      open();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      // Nothing typed: nothing marked, Enter does nothing.
+      press('Enter');
+      expect(marked()).toEqual([]);
+      expect(navigate).not.toHaveBeenCalled();
+
+      type('e'); // in more than one title
+      const hits = page.found().map((f) => f.song.slug);
+      expect(hits.length).toBeGreaterThan(1);
+      expect(marked()).toEqual(['song-hit-0']);
+      expect(input().getAttribute('aria-activedescendant')).toBe('song-hit-0');
+
+      press('ArrowDown');
+      expect(marked()).toEqual(['song-hit-1']);
+      press('ArrowUp');
+      press('ArrowUp'); // no further than the first
+      expect(marked()).toEqual(['song-hit-0']);
+      for (let i = 0; i < hits.length + 2; i++) press('ArrowDown'); // nor past the last
+      expect(marked()).toEqual([`song-hit-${hits.length - 1}`]);
+
+      press('Enter');
+      expect(navigate).toHaveBeenLastCalledWith(['/daloskonyv', hits.at(-1)]);
+
+      // Typing on starts from the first again.
+      type('er');
+      expect(marked()).toEqual(['song-hit-0']);
+    });
+  });
+
   describe('playlists', () => {
     // Two lists of mine; made-up names. s1 Álmodj…, s2 Tavaszi szél, s3 Zöld erdőben.
     const MY_LISTS = [

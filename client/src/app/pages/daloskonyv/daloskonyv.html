@@ -90,7 +90,9 @@
             placeholder="Keresés cím, előadó vagy szöveg szerint"
             aria-label="Keresés a dalok között"
             [value]="search()"
-            (input)="search.set($any($event.target).value)"
+            (input)="onSearch($any($event.target).value)"
+            (keydown)="onSearchKey($event)"
+            [attr.aria-activedescendant]="highlightOn() ? 'song-hit-' + highlight() : null"
           />
         </label>
         <!-- A phone only: the playlists' selector - always at hand, it is the
@@ -336,6 +338,8 @@
                    nowhere then (a link navigates whatever its click
                    handler says). -->
               <a
+                [id]="'song-hit-' + $index"
+                [class.highlighted]="highlightOn() && $index === highlight()"
                 [routerLink]="picking() ? null : [base(), song.slug]"
                 [attr.role]="picking() ? 'checkbox' : null"
                 [attr.aria-checked]="picking() ? isInPlaylist(song) : null"
