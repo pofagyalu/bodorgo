@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import Transport from 'winston-transport';
+import winston from 'winston';
 import config from '../config.js';
 import logger from '../logger.js';
 import User from '../models/userModel.js';
@@ -162,7 +162,7 @@ export async function flushErrorMailNow(timeoutMs = 5000) {
   await Promise.race([send(), new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
 }
 
-class ErrorMailTransport extends Transport {
+class ErrorMailTransport extends winston.Transport {
   log(info, callback) {
     try {
       noteError(info);
