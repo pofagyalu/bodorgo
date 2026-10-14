@@ -3393,6 +3393,60 @@ const paths = {
       }),
     }),
   },
+  '/settings/logs': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: "Naplófájlok: the server's log files",
+      description:
+        '**The role manager only** (403 for any other admin), after re-identifying (they hold e-mail and IP addresses). The files of `logs/` (logger.js): one `app-YYYY-MM-DD.log` (info and up, kept 14 days) and one `error-YYYY-MM-DD.log` (errors, kept 30 days) a day, older days gzipped (`.gz`); a day over 20 MB goes on in a numbered file (`.log.1`). Newest day first.' +
+        FRESH_LOGIN,
+      data: obj({
+        files: arrayOf(
+          obj({
+            name: str('The file name, e.g. `error-2026-10-14.log.gz`.'),
+            kind: str('', { enum: ['app', 'error'] }),
+            date: str('`YYYY-MM-DD`.'),
+            gz: bool('Gzipped (a finished day).'),
+            size: int('Bytes on the disk.'),
+          }),
+        ),
+      }),
+    }),
+  },
+  '/settings/logs/{name}': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: "A log file's last lines",
+      description:
+        '**The role manager only**, after re-identifying. A gzipped day is unpacked. 404 for a name that is not one of the log files.' +
+        FRESH_LOGIN,
+      params: [
+        path('name', 'A name from `/settings/logs`.'),
+        query('lines', 'How many of the last lines: 1-5000, default 500.'),
+      ],
+      data: obj({
+        name: str(),
+        totalLines: int('All the lines of the file.'),
+        lines: { ...arrayOf(str()), description: 'The last ones, oldest first.' },
+      }),
+      errors: [404],
+    }),
+  },
+  '/settings/logs/{name}/download': {
+    get: op({
+      tag: T.settings,
+      role: 'admin',
+      summary: 'Download a log file',
+      description:
+        '**The role manager only**, after re-identifying. The file as it is on the disk (a finished day gzipped).' +
+        FRESH_LOGIN,
+      params: [path('name', 'A name from `/settings/logs`.')],
+      response: file(['text/plain', 'application/gzip'], 'The log file.'),
+      errors: [404],
+    }),
+  },
   '/settings/weather-outlook': {
     get: op({
       tag: T.settings,

@@ -32,6 +32,7 @@ import {
   setActiveOidcProvider,
 } from '../controllers/settingsController.js';
 import { getAuditLog } from '../controllers/auditLogController.js';
+import { downloadLogFile, getLogFile, listLogFiles } from '../controllers/logFilesController.js';
 import requireAuth, { restrictTo, roleManagerOnly } from '../auth/requireAuth.js';
 import { requireFreshLogin } from '../auth/freshLogin.js';
 import { weatherOutlookRules } from '../utils/weatherOutlook.js';
@@ -87,6 +88,13 @@ router.put(
 // Napló: who did what and when, of what moves money, rights or the club's
 // settings - admins only.
 router.get('/audit-log', requireAuth, restrictTo('admin'), getAuditLog);
+
+// Naplófájlok: the server's log files - the role manager's alone, after
+// re-identifying (they hold e-mail and IP addresses).
+const logFilesGuard = [requireAuth, roleManagerOnly, requireFreshLogin];
+router.get('/logs', ...logFilesGuard, listLogFiles);
+router.get('/logs/:name', ...logFilesGuard, getLogFile);
+router.get('/logs/:name/download', ...logFilesGuard, downloadLogFile);
 
 // Fizetési módok: which gateways are on and their fees - anyone logged in
 // reads them (the pay dialogs), admins set them.

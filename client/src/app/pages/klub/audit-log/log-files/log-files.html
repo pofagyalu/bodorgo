@@ -1,0 +1,65 @@
+<section class="panel">
+  <p class="logs-intro">
+    Az egész nap naplója 14 napig, a hibáké 30 napig marad meg, utána magától törlődik.
+  </p>
+
+  @if (needsLogin()) {
+    <p class="empty-note">A naplófájlokhoz 10 percen belüli azonosítás kell.</p>
+    <button type="button" class="logs-more" (click)="start()">Azonosítás</button>
+  } @else if (failed()) {
+    <p class="empty-note" role="alert">A naplófájlokat nem sikerült betölteni.</p>
+    <button type="button" class="logs-more" (click)="start()">Újra</button>
+  } @else if (files(); as list) {
+    @if (!list.length) {
+      <p class="empty-note">Még nincs naplófájl.</p>
+    } @else {
+      <div class="logs-bar">
+        <app-period-picker
+          class="logs-day"
+          label="Nap"
+          [options]="dayOptions()"
+          [wideValues]="[]"
+          [value]="day()"
+          (valueChange)="pickDay($event)"
+        />
+        <app-toggle-switch
+          label="Csak hibák"
+          [checked]="errorsOnly()"
+          (checkedChange)="setErrorsOnly($event)"
+        />
+        <span class="spacer"></span>
+        @if (downloadUrl(); as url) {
+          <a class="logs-download" [href]="url" title="A fájl letöltése">
+            <mat-icon>download</mat-icon>
+            Letöltés
+          </a>
+        }
+      </div>
+
+      @if (!file()) {
+        <p class="empty-note">
+          Erről a napról nincs
+          {{ errorsOnly() ? 'hibanapló - aznap nem volt hiba' : 'teljes napló' }}.
+        </p>
+      } @else {
+        @if (totalLines()) {
+          <p class="logs-count">{{ countNote() }}</p>
+        }
+        <ol class="logs-list">
+          @for (e of entries(); track $index) {
+            <li [class.logs-error]="e.error">{{ e.text }}</li>
+          }
+        </ol>
+        @if (loading()) {
+          <p class="empty-note">Betöltés…</p>
+        } @else if (canLoadMore()) {
+          <button type="button" class="logs-more" (click)="more()">Régebbi sorok</button>
+        } @else if (lines().length < totalLines()) {
+          <p class="empty-note">A többi sor a letöltött fájlban.</p>
+        }
+      }
+    }
+  } @else {
+    <p class="empty-note">Betöltés…</p>
+  }
+</section>

@@ -1,0 +1,89 @@
+@use '../../settings/shared';
+
+// Klub → Napló → Naplófájlok: the same card look as the Napló's.
+:host {
+  display: block;
+}
+
+@include shared.cards;
+
+.logs-intro {
+  margin: 0 0 1rem;
+  color: #56666e;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+// The day, errors only, download - on one line, wrapping on a phone.
+.logs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.logs-day {
+  --period-picker-left: 0;
+  --period-picker-right: auto;
+}
+
+.logs-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #1a796c;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+
+  mat-icon {
+    font-size: 1.15rem;
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+}
+
+.logs-count {
+  margin: 0 0 0.5rem;
+  color: #56666e;
+  font-size: 0.75rem;
+}
+
+// One entry a block: its lines as written (a stack trace keeps its shape),
+// broken where the screen ends - nothing scrolls sideways on a phone.
+.logs-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #2f414b;
+
+  li {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid #f0f2f0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+.logs-error {
+  background: #fdf1ee;
+  color: #8f3320;
+}
+
+.logs-more {
+  margin-top: 1rem;
+  padding: 0.5rem 1.125rem;
+  border: 1px solid #cfdad5;
+  border-radius: 999px;
+  background: #fff;
+  color: #203747;
+  font-weight: 600;
+
+  &:hover {
+    background: #f3f7f5;
+  }
+}

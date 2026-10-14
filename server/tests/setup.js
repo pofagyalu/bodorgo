@@ -57,6 +57,7 @@ vi.mock('../src/logger.js', () => {
   const noop = () => {};
   return {
     default: {
+      add: noop,
       info: noop,
       warn: noop,
       error: noop,

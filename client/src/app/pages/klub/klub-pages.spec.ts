@@ -151,6 +151,27 @@ describe('AuditLog (Klub → Napló)', () => {
     expect(rows()).toHaveLength(1);
     expect(page.failed()).toBe(false);
   });
+
+  it('has the Naplófájlok tab for the role manager only', () => {
+    const tabs = () =>
+      [...fixture.nativeElement.querySelectorAll('[role="tab"]')].map((t: HTMLElement) =>
+        t.textContent?.trim(),
+      );
+    logIn({ role: 'admin' });
+    open({ data: { entries: [], hasMore: false } });
+    expect(tabs()).toEqual([]);
+    expect(fixture.nativeElement.querySelector('app-log-files')).toBeNull();
+
+    logIn({ role: 'admin', canManageRoles: true });
+    fixture.detectChanges();
+    expect(tabs()).toEqual(['Események', 'Naplófájlok']);
+    // Not built until it is opened (it asks to re-identify).
+    expect(fixture.nativeElement.querySelector('app-log-files')).toBeNull();
+    page.selectTab('files');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-log-files')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('section.panel[hidden]')).not.toBeNull();
+  });
 });
 
 describe('Finance', () => {

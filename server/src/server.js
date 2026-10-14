@@ -19,6 +19,7 @@ import {
 } from './utils/membershipReminders.js';
 import { checkYearlyReport } from './utils/yearlyReportMail.js';
 import { syncRoleManager } from './utils/roleManager.js';
+import { flushErrorMailNow, startErrorMail } from './utils/errorMail.js';
 import { importOidcSettingsFromEnv } from './utils/oidcSettings.js';
 import { migrateUserIdentities } from './utils/userIdentities.js';
 import { ensureFutokodok } from './utils/futokod.js';
@@ -27,8 +28,12 @@ import { FutokorCourse } from './models/futokorModels.js';
 // This handler must run before anything else
 process.on('uncaughtException', (err) => {
   logger.error('UNCAUGHT EXCEPTION! 💣 Shutting down...', err);
-  process.exit(1);
+  // The role manager's error e-mail first (a few seconds at most).
+  flushErrorMailNow().finally(() => process.exit(1));
 });
+
+// Live only: the server's errors by e-mail to the role manager.
+if (config.nodeEnv === 'production') startErrorMail();
 
 const DB = config.db.uri;
 const PORT = config.port;
@@ -138,7 +143,7 @@ mongoose
       logger.error('UNHANDLED REJECTION! 💣 Shutting down...', err);
       // Graceful shutdown waiting for server to close
       server.close(() => {
-        process.exit(1);
+        flushErrorMailNow().finally(() => process.exit(1));
       });
     });
   })
