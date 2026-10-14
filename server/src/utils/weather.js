@@ -83,7 +83,9 @@ async function fetchDailyWeather(baseUrl, lat, lng, dateStr, extraDaily = '') {
 
   const res = await fetch(url);
   if (!res.ok) {
-    throw new Error(`Open-Meteo request failed: ${res.status} ${await res.text()}`);
+    const err = new Error(`Open-Meteo request failed: ${res.status} ${await res.text()}`);
+    err.status = res.status;
+    throw err;
   }
 
   const data = await res.json();
@@ -115,11 +117,24 @@ async function fetchDailyWeather(baseUrl, lat, lng, dateStr, extraDaily = '') {
   };
 }
 
+// Open-Meteo busy or out of reach (429, 5xx, no answer at all): it passes
+// by itself, and the next page view asks again - a warning, not an error
+// (errors are e-mailed to the role manager, see errorMail.js). A refused
+// request (another 4xx) is our mistake: an error.
+export const isPassingFailure = (err) =>
+  err.status == null || err.status === 429 || err.status >= 500;
+
+function logFailure(what, dateStr, err) {
+  const message = `${what} fetch failed for ${dateStr}: ${err.message}`;
+  if (isPassingFailure(err)) logger.warn(message);
+  else logger.error(message);
+}
+
 export async function fetchForecast(lat, lng, dateStr) {
   try {
     return await fetchDailyWeather(FORECAST_URL, lat, lng, dateStr, FORECAST_ONLY);
   } catch (err) {
-    logger.error(`Weather forecast fetch failed for ${dateStr}: ${err.message}`);
+    logFailure('Weather forecast', dateStr, err);
     return null;
   }
 }
@@ -128,7 +143,7 @@ export async function fetchHistorical(lat, lng, dateStr) {
   try {
     return await fetchDailyWeather(HISTORICAL_URL, lat, lng, dateStr, RECORDED_ONLY);
   } catch (err) {
-    logger.error(`Historical weather fetch failed for ${dateStr}: ${err.message}`);
+    logFailure('Historical weather', dateStr, err);
     return null;
   }
 }

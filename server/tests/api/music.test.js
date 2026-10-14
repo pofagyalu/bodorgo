@@ -149,7 +149,10 @@ describe('background music', () => {
       .set('Range', 'bytes=0-');
     expect(part.status).toBe(206);
     expect(part.headers['content-range']).toBe('bytes 0-11/12');
-    expect(calls.at(-1).headers.Range).toBe('bytes=0-');
+    // The audio request's own (the playlist's pictures may still be loading
+    // in the background, after it).
+    const audio = calls.filter((c) => c.url.includes('/Audio/a1/stream'));
+    expect(audio.at(-1).headers.Range).toBe('bytes=0-');
   });
 
   it("a song's thumbnail: the artist's photo, else the album cover, else none", async () => {
