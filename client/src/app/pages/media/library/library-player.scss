@@ -1,0 +1,188 @@
+// The play-along player: a dark bar along the bottom of the book while a
+// track is on - play, the track's place, and the practice tools.
+:host {
+  display: block;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.player {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem 0.7rem;
+  border-radius: 0.9rem;
+  background: #14232df2;
+  backdrop-filter: blur(6px);
+  color: #e9f1ee;
+  box-shadow: 0 0.6rem 1.8rem #0000004d;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.play {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #8fd3b8;
+  color: #14232d;
+
+  mat-icon {
+    width: 1.7rem;
+    height: 1.7rem;
+    font-size: 1.7rem;
+  }
+}
+
+.tool {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #a9bdc5;
+
+  &:hover,
+  &:focus-visible {
+    background: #ffffff1a;
+    color: #fff;
+  }
+}
+
+.name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.time {
+  flex: none;
+  min-width: 2.4rem;
+  color: #a9bdc5;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.bar {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+
+  input {
+    width: 100%;
+    margin: 0;
+    accent-color: #8fd3b8;
+  }
+}
+
+// The A-B part, behind the bar.
+.part {
+  position: absolute;
+  top: 50%;
+  height: 0.9rem;
+  transform: translateY(-50%);
+  border-radius: 0.3rem;
+  background: #f6b52859;
+  pointer-events: none;
+}
+
+.practice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #ffffff33;
+  border-radius: 999px;
+  background: none;
+  color: #e9f1ee;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  mat-icon {
+    width: 1.05rem;
+    height: 1.05rem;
+    font-size: 1.05rem;
+  }
+
+  .small {
+    width: 0.9rem;
+    height: 0.9rem;
+    font-size: 0.9rem;
+  }
+}
+
+.chip--on {
+  border-color: #f6b528;
+  background: #f6b52833;
+  color: #ffd98a;
+}
+
+.speed {
+  position: relative;
+}
+
+// Every speed in one row, above its button.
+.speeds {
+  position: absolute;
+  bottom: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  width: max-content;
+  max-width: 17rem;
+  padding: 0.45rem;
+  border-radius: 0.7rem;
+  background: #0d181f;
+  box-shadow: 0 0.4rem 1.2rem #00000080;
+
+  button {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ffffff26;
+    border-radius: 0.45rem;
+    background: none;
+    color: #e9f1ee;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .on {
+    border-color: #8fd3b8;
+    background: #8fd3b833;
+  }
+}

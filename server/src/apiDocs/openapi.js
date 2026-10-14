@@ -3687,7 +3687,7 @@ const paths = {
       role: 'admin',
       summary: 'The shelves with their books',
       description:
-        "The role manager only - 404 for everybody else, on every /library address. Each shelf is a folder of the server's library folder (a folder starting with `_` is not one), listed even when empty, with the PDFs read so far as its books, by title. A book has `title` (its file name until it is given another), `subtitle` and `author` (empty until the owner writes them), `pages`, `pageOffset` (the number printed on a page minus the PDF's page number) and `hasText` - false for a scan without OCR, in which nothing can be searched. `scan` tells how the last POST /library/scan stands: `running`, `done` of `total` books, `current` (the file being read) and `errors` (the files that could not be read).",
+        "The role manager only - 404 for everybody else, on every /library address. Each shelf is a folder of the server's library folder (a folder starting with `_` is not one), listed even when empty, with the PDFs read so far as its books, by title. A book has `title` (its file name until it is given another), `subtitle` and `author` (empty until the owner writes them), `pages`, `pageOffset` (the number printed on a page minus the PDF's page number) and `hasText` - false for a scan without OCR, in which nothing can be searched -, and `tracks`: how many play-along tracks it has (the audio files in the folder beside its PDF named like it, without `.pdf`). `scan` tells how the last POST /library/scan stands: `running`, `done` of `total` books, `current` (the file being read) and `errors` (the files that could not be read).",
       data: obj({ shelves: arrayOf({ type: 'object' }), scan: { type: 'object' } }),
       errors: [404],
     }),
@@ -3731,7 +3731,7 @@ const paths = {
       role: 'admin',
       summary: 'A book with its table of contents',
       description:
-        'The role manager only. What GET /library gives of the book, with `filename` and `toc`: the lines of its table of contents, each a `title`, the PDF `page` it points at and its `level` (0 for a chapter, up to 3 for what is inside one).',
+        'The role manager only. What GET /library gives of the book, with `filename` and `toc`: the lines of its table of contents, each a `title`, the PDF `page` it points at and its `level` (0 for a chapter, up to 3 for what is inside one); `tracks`: its play-along tracks - the audio files (MP3, M4A, AAC, WAV, OGG, Opus, FLAC) in the folder beside its PDF named like it without `.pdf`, by their names with numbers in order (2 before 10), each with its `file` name, `number` (the first number of the name, or the one after "Track"/"CD"; null without one) and `title` (the name without the numbers in front); `audioLinks`: which track belongs to which PDF `page` (a link to a file no longer there is left out).',
       params: [path('id', 'The book.')],
       data: obj({ book: { type: 'object' } }),
       errors: [404],
@@ -3741,7 +3741,7 @@ const paths = {
       role: 'admin',
       summary: "Change a book's title, subtitle, author, page shift or table of contents",
       description:
-        "The role manager only. Only the fields sent change. `title`: 1-200 characters; the file is not renamed. `subtitle` and `author`: at most 200 characters each, empty to remove. `pageOffset`: the number printed on a page minus the PDF's page number (a whole number). `toc`: the whole table of contents, replacing the old one - each line a `title`, a `page` the book has, and optionally a `level` (0-3); from then on a new scan leaves it as it is.",
+        "The role manager only. Only the fields sent change. `title`: 1-200 characters; the file is not renamed. `subtitle` and `author`: at most 200 characters each, empty to remove. `pageOffset`: the number printed on a page minus the PDF's page number (a whole number). `toc`: the whole table of contents, replacing the old one - each line a `title`, a `page` the book has, and optionally a `level` (0-3); from then on a new scan leaves it as it is. `audioLinks`: every link of the book's tracks to its pages, replacing the old ones - each a `file` of its audio folder and a `page` the book has; a link given twice is kept once.",
       params: [path('id', 'The book.')],
       body: obj({
         title: str('The new title.'),
@@ -3758,9 +3758,41 @@ const paths = {
             ['title', 'page'],
           ),
         ),
+        audioLinks: arrayOf(
+          obj({ file: str('A file of the audio folder.'), page: int('The PDF page.') }, [
+            'file',
+            'page',
+          ]),
+        ),
       }),
       data: obj({ book: { type: 'object' } }),
       errors: [400, 404],
+    }),
+  },
+  '/library/books/{id}/audio/{file}': {
+    get: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'One play-along track of a book',
+      description:
+        "The role manager only. `file` is the track's file name as GET /library/books/{id} gives it, URL-encoded; 404 for anything that is not an audio file of the book's folder. Supports `Range`, so a player can start anywhere without the whole file. Kept by the browser for a day.",
+      params: [path('id', 'The book.'), path('file', "The track's file name.")],
+      response: file(['audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/wav'], 'The audio.'),
+      errors: [404],
+    }),
+  },
+  '/library/books/{id}/audio-proposal': {
+    get: op({
+      tag: T.library,
+      role: 'admin',
+      summary: 'Track-to-page links guessed from the book',
+      description:
+        'The role manager only. A page whose text says "Track 8" or "CD 8" gets the track numbered 8 (see the tracks\' `number` on GET /library/books/{id}); a number without a track is left out. Nothing is saved - the links are for the owner to correct and send as `audioLinks` with PATCH /library/books/{id}.',
+      params: [path('id', 'The book.')],
+      data: obj({
+        audioLinks: arrayOf(obj({ file: str('The track.'), page: int('The PDF page.') })),
+      }),
+      errors: [404],
     }),
   },
   '/library/books/{id}/pages/{page}': {

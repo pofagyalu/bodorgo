@@ -36,6 +36,19 @@ const libraryBookSchema = new Schema(
       ],
       default: [],
     },
+    // Which of the book's play-along tracks (utils/libraryAudio.js) belong
+    // to which page - a track may be on several pages, a page may have
+    // several. file: its name in the book's audio folder; page: the PDF's.
+    audioLinks: {
+      type: [
+        {
+          _id: false,
+          file: { type: String, required: true, maxlength: 300 },
+          page: { type: Number, required: true, min: 1 },
+        },
+      ],
+      default: [],
+    },
     // Set once the owner changed the contents - a new scan keeps it then.
     tocEdited: { type: Boolean, default: false },
     // The file as it was when read - a changed one is read again.

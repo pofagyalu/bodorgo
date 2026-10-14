@@ -171,6 +171,41 @@
               <li class="toc-none">Még nincs sora.</li>
             }
           </ol>
+          @if (book.tracks.length) {
+            <h2>Hangok ezen az oldalon</h2>
+            <div class="tools">
+              <button type="button" (click)="proposeAudio()" [disabled]="proposing()">
+                <mat-icon [class.spin]="proposing()">auto_fix_high</mat-icon>Javaslat a könyvből
+              </button>
+            </div>
+            <ul class="edit-tracks">
+              @for (t of book.tracks; track t.file) {
+                <li [class.edit-track--on]="isLinkedHere(t.file)">
+                  <label>
+                    <input
+                      type="checkbox"
+                      [checked]="isLinkedHere(t.file)"
+                      (change)="toggleLinkHere(t.file)"
+                    />
+                    <span class="track-title">{{ t.title }}</span>
+                  </label>
+                  @if (trackPages(t.file).length) {
+                    <span class="track-pages">
+                      @for (p of trackPages(t.file); track p) {
+                        <button
+                          type="button"
+                          (click)="removeLink(t.file, p)"
+                          [title]="'Levétel erről: ' + (p + d.pageOffset) + '. oldal'"
+                        >
+                          {{ p + d.pageOffset }}<mat-icon>close</mat-icon>
+                        </button>
+                      }
+                    </span>
+                  }
+                </li>
+              }
+            </ul>
+          }
           <div class="actions">
             <button type="button" class="save" (click)="save()" [disabled]="saving()">
               {{ saving() ? 'Mentés…' : 'Mentés' }}
@@ -206,22 +241,77 @@
               Nincs benne szöveg, ezért keresni sem lehet benne – OCR után cseréld ki a fájlt.
             </p>
           }
+          <!-- The play-along tracks: the folder beside the PDF. -->
+          @if (book.tracks.length) {
+            <h2 class="tracks-head">Hangok</h2>
+            <ol class="tracks">
+              @for (t of book.tracks; track t.file) {
+                <li>
+                  <button
+                    type="button"
+                    class="track-line"
+                    [class.track-line--on]="nowPlaying()?.file === t.file"
+                    (click)="playTrack(t)"
+                  >
+                    <mat-icon>{{ isOn(t) ? 'pause' : 'play_arrow' }}</mat-icon>
+                    <span class="toc-title">{{ t.title }}</span>
+                  </button>
+                  @if (trackPages(t.file).length) {
+                    <span class="track-pages">
+                      @for (p of trackPages(t.file); track p) {
+                        <button type="button" (click)="go(p)" title="Ugrás erre az oldalra">
+                          {{ p + book.pageOffset }}
+                        </button>
+                      }
+                    </span>
+                  }
+                </li>
+              }
+            </ol>
+          }
         }
       </aside>
 
-      <div class="sheet" [class.sheet--loading]="loading()">
-        @if (pageUrl(); as url) {
-          <img
-            [src]="url"
-            [alt]="book.title + ' – ' + printed()"
-            (load)="loading.set(false)"
-            (error)="loading.set(false)"
-          />
+      <div class="page-col">
+        @if (pageTracks().length) {
+          <div class="page-tracks" aria-label="Az oldal hangjai">
+            @for (t of pageTracks(); track t.file) {
+              <button
+                type="button"
+                class="page-track"
+                [class.page-track--on]="nowPlaying()?.file === t.file"
+                (click)="playTrack(t)"
+              >
+                <mat-icon>{{ isOn(t) ? 'pause' : 'play_arrow' }}</mat-icon>
+                <span>{{ t.title }}</span>
+              </button>
+            }
+          </div>
         }
-        @if (loading()) {
-          <div class="sheet-wait"><mat-icon class="spin">autorenew</mat-icon></div>
-        }
+        <div class="sheet" [class.sheet--loading]="loading()">
+          @if (pageUrl(); as url) {
+            <img
+              [src]="url"
+              [alt]="book.title + ' – ' + printed()"
+              (load)="loading.set(false)"
+              (error)="loading.set(false)"
+            />
+          }
+          @if (loading()) {
+            <div class="sheet-wait"><mat-icon class="spin">autorenew</mat-icon></div>
+          }
+        </div>
       </div>
     </div>
+
+    <!-- The track on: it stays here while the pages turn. -->
+    @if (nowPlaying(); as track) {
+      <app-library-player
+        class="player-dock"
+        [src]="nowPlayingUrl()!"
+        [title]="track.title"
+        (closed)="nowPlaying.set(null)"
+      />
+    }
   </div>
 }

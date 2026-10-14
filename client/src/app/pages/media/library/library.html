@@ -169,6 +169,10 @@
               @if (!book.hasText) {
                 <span class="spine-flag" title="Nincs benne szöveg – OCR kell hozzá">OCR</span>
               }
+              <!-- It has play-along tracks: a note at the spine's head. -->
+              @if (book.tracks) {
+                <mat-icon class="spine-audio" [title]="book.tracks + ' hang'">music_note</mat-icon>
+              }
             </a>
           } @empty {
             <p class="empty-shelf">
