@@ -35,10 +35,13 @@
   clip-path: polygon(0 0, 100% 0, 100% 90%, 0 100%);
 }
 
-// A tour with no cover uploaded yet - a plain soft-green block instead of
-// a broken image.
-.card__picture-img--empty {
-  background: linear-gradient(to right bottom, #d9ede7, #b9e6d6);
+// A tour with no cover uploaded yet (or one that didn't load): the green
+// "Hamarosan" stamp (shared/cover-placeholder) instead of a broken image.
+// (Its green set here too: the card picture's own background-image above
+// would win over the placeholder's.)
+app-cover-placeholder.card__picture-img {
+  display: grid;
+  background: linear-gradient(to right bottom, #d9ede7, #9fd9c1);
 }
 
 .card__badge {

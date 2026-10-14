@@ -42,6 +42,7 @@ import { TourExtras } from './tour-extras/tour-extras';
 import { AttendeeListRow as AttendeeListPayment } from './attendee-list/attendee-list';
 import { TourParticipants } from './tour-participants/tour-participants';
 import { TourVideos } from './tour-videos/tour-videos';
+import { CoverPlaceholder } from '../../shared/cover-placeholder/cover-placeholder';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 @Component({
@@ -55,6 +56,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
     ReviewStars,
     TourParticipants,
     TourVideos,
+    CoverPlaceholder,
     TourSignup,
     TourExtras,
     FitLine,
@@ -417,6 +419,7 @@ export class TourDetails {
     this.tourService.getTour(id).subscribe({
       next: (res) => {
         this.tour.set(res.data.tour);
+        this.coverFailed.set(false);
         this.participantCount.set(res.data.participantCount);
         this.attendeePayments.set(res.data.attendeePayments);
         this.paymentTotals.set(res.data.paymentTotals);
@@ -513,10 +516,12 @@ export class TourDetails {
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   }
 
-  // The login-only cover image URL ('' for a tour with no cover yet).
+  // The login-only cover image URL ('' for a tour with no cover yet - the
+  // "Hamarosan" placeholder shows then, and when the cover fails to load).
   coverUrl(t: Tour): string {
     return this.tourService.coverUrl(t) ?? '';
   }
+  coverFailed = signal(false);
 
   // Extrák (tour-extras) uploaded or deleted a document.
   onDocumentsChanged(extraDocuments: ExtraDocument[]) {
