@@ -1,0 +1,112 @@
+<audio
+  #audio
+  preload="auto"
+  (play)="playing.set(true)"
+  (pause)="playing.set(false)"
+  (timeupdate)="onTime()"
+  (durationchange)="duration.set(audio.duration)"
+  (loadedmetadata)="duration.set(audio.duration)"
+  (ended)="onEnded()"
+></audio>
+
+<div class="player" role="region" aria-label="Lejátszó">
+  <div class="top">
+    <button
+      type="button"
+      class="play"
+      (click)="toggle()"
+      [title]="playing() ? 'Szünet' : 'Lejátszás'"
+    >
+      <mat-icon>{{ playing() ? 'pause' : 'play_arrow' }}</mat-icon>
+    </button>
+    <button type="button" class="tool" (click)="back()" title="5 másodperccel vissza">
+      <mat-icon>replay_5</mat-icon>
+    </button>
+    <span class="name" [title]="title()">{{ title() }}</span>
+    <button type="button" class="tool" (click)="close()" title="Bezárás">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="track">
+    <span class="time">{{ clock(time()) }}</span>
+    <div class="bar">
+      <!-- The part being looped, between A and B. -->
+      @if (marks().a !== null) {
+        <span
+          class="part"
+          [style.left.%]="marks().a"
+          [style.width.%]="(marks().b ?? 100) - marks().a!"
+        ></span>
+      }
+      <input
+        #seekBar
+        type="range"
+        min="0"
+        step="0.1"
+        [max]="duration() || 0"
+        [value]="time()"
+        (input)="seek(seekBar.value)"
+        aria-label="Hol tart"
+      />
+    </div>
+    <span class="time">{{ clock(duration()) }}</span>
+  </div>
+
+  <div class="practice">
+    <!-- The speed: a button, and every speed in a row above it. -->
+    <div class="speed">
+      <button
+        type="button"
+        class="chip"
+        [class.chip--on]="speed() !== 1"
+        (click)="speedsOpen.set(!speedsOpen())"
+        [attr.aria-expanded]="speedsOpen()"
+        title="Lassítás - a hangmagasság marad"
+      >
+        <mat-icon>speed</mat-icon>{{ speed() * 100 }}%
+      </button>
+      @if (speedsOpen()) {
+        <div class="speeds">
+          @for (s of speeds; track s) {
+            <button type="button" [class.on]="s === speed()" (click)="setSpeed(s)">
+              {{ s * 100 }}%
+            </button>
+          }
+        </div>
+      }
+    </div>
+    <button
+      type="button"
+      class="chip"
+      [class.chip--on]="repeat()"
+      (click)="toggleRepeat()"
+      title="Az egész újra és újra"
+    >
+      <mat-icon>repeat</mat-icon>Ismétlés
+    </button>
+    <button
+      type="button"
+      class="chip"
+      [class.chip--on]="loopStart() !== null"
+      (click)="markLoop()"
+      [title]="
+        loopStart() === null
+          ? 'A rész eleje: innen'
+          : loopEnd() === null
+            ? 'A rész vége: eddig'
+            : 'A rész törlése'
+      "
+    >
+      <mat-icon>repeat_one</mat-icon>
+      @if (loopStart() === null) {
+        A
+      } @else if (loopEnd() === null) {
+        A {{ clock(loopStart()!) }} · B
+      } @else {
+        {{ clock(loopStart()!) }}–{{ clock(loopEnd()!) }}
+        <mat-icon class="small">close</mat-icon>
+      }
+    </button>
+  </div>
+</div>

@@ -282,4 +282,112 @@ describe('Könyvtár', () => {
     expect(fs.readdirSync(path.join(root, 'ures'))).toEqual(['Új könyv.pdf']);
     fs.rmSync(path.join(root, 'ures', 'Új könyv.pdf'));
   });
+
+  describe('play-along tracks', () => {
+    // A book whose pages name their tracks, and its audio folder beside it.
+    const audio = path.join(root, 'ures', 'gyakorlo');
+    const put = (name, content = 'ID3-hang') => fs.writeFileSync(path.join(audio, name), content);
+
+    beforeAll(async () => {
+      await makePdf('ures/gyakorlo.pdf', [
+        'Bevezetés, hang nélkül.',
+        'Exercise A1 - C Major Scale (Track 2) and Exercise A2 (Track 10)',
+        'Az elozo gyakorlat folytatása (Track 10), majd egy CD 99 sem létezo.',
+      ]);
+      fs.mkdirSync(audio, { recursive: true });
+      put('01 1 Introduction.mp3');
+      put('02 2 Example A1 - C Major Scale.mp3', Buffer.alloc(5000, 7));
+      put('10 10 Example A2.m4a');
+      put('jegyzet.txt'); // not a track
+    });
+
+    const bookWithTracks = async (owner) => {
+      const data = await scanned(owner);
+      return data.shelves.find((s) => s.key === 'ures').books.find((b) => b.title === 'gyakorlo');
+    };
+
+    it('lists the files of the folder named like the PDF, by their numbers', async () => {
+      const owner = await createOwner();
+      const book = await bookWithTracks(owner);
+      expect(book.tracks).toBe(3);
+      const res = await request(app).get(`/library/books/${book._id}`).set(asUser(owner));
+      expect(res.body.data.book.tracks).toEqual([
+        { file: '01 1 Introduction.mp3', number: 1, title: 'Introduction' },
+        {
+          file: '02 2 Example A1 - C Major Scale.mp3',
+          number: 2,
+          title: 'Example A1 - C Major Scale',
+        },
+        { file: '10 10 Example A2.m4a', number: 10, title: 'Example A2' },
+      ]);
+      expect(res.body.data.book.audioLinks).toEqual([]);
+      // A book without a folder has none.
+      const other = bookOn(await scanned(owner), 'gitar');
+      expect(other.tracks).toBe(0);
+    });
+
+    it('streams a track, a part of it when asked, and nothing outside the folder', async () => {
+      const owner = await createOwner();
+      const book = await bookWithTracks(owner);
+      const url = (file) => `/library/books/${book._id}/audio/${encodeURIComponent(file)}`;
+
+      let res = await request(app)
+        .get(url('02 2 Example A1 - C Major Scale.mp3'))
+        .set(asUser(owner));
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toBe('audio/mpeg');
+      expect(Number(res.headers['content-length'])).toBe(5000);
+
+      res = await request(app)
+        .get(url('02 2 Example A1 - C Major Scale.mp3'))
+        .set(asUser(owner))
+        .set('Range', 'bytes=100-199');
+      expect(res.status).toBe(206);
+      expect(Number(res.headers['content-length'])).toBe(100);
+
+      for (const file of ['jegyzet.txt', '../gyakorlo.pdf', '..\\gyakorlo.pdf', 'nincs.mp3']) {
+        expect((await request(app).get(url(file)).set(asUser(owner))).status).toBe(404);
+      }
+      // Nobody else hears it.
+      const admin = await createAdmin();
+      expect((await request(app).get(url('01 1 Introduction.mp3')).set(asUser(admin))).status).toBe(
+        404,
+      );
+    });
+
+    it('proposes links from "Track N" in the text, and saves the links', async () => {
+      const owner = await createOwner();
+      const book = await bookWithTracks(owner);
+      const proposal = await request(app)
+        .get(`/library/books/${book._id}/audio-proposal`)
+        .set(asUser(owner));
+      // CD 99 has no track; track 10 is on two pages.
+      expect(proposal.body.data.audioLinks).toEqual([
+        { file: '02 2 Example A1 - C Major Scale.mp3', page: 2 },
+        { file: '10 10 Example A2.m4a', page: 2 },
+        { file: '10 10 Example A2.m4a', page: 3 },
+      ]);
+
+      const patch = (audioLinks) =>
+        request(app).patch(`/library/books/${book._id}`).set(asUser(owner)).send({ audioLinks });
+      const res = await patch([
+        { file: '10 10 Example A2.m4a', page: 3 },
+        { file: '01 1 Introduction.mp3', page: 1 },
+        { file: '10 10 Example A2.m4a', page: 3 }, // twice - kept once
+      ]);
+      expect(res.status).toBe(200);
+      expect(res.body.data.book.audioLinks).toEqual([
+        { file: '01 1 Introduction.mp3', page: 1 },
+        { file: '10 10 Example A2.m4a', page: 3 },
+      ]);
+      expect((await patch([{ file: 'jegyzet.txt', page: 1 }])).status).toBe(400);
+      expect((await patch([{ file: '01 1 Introduction.mp3', page: 4 }])).status).toBe(400);
+
+      // A file taken away: its link is no longer given.
+      fs.renameSync(path.join(audio, '01 1 Introduction.mp3'), path.join(audio, 'x.bak'));
+      const again = await request(app).get(`/library/books/${book._id}`).set(asUser(owner));
+      expect(again.body.data.book.audioLinks).toEqual([{ file: '10 10 Example A2.m4a', page: 3 }]);
+      fs.renameSync(path.join(audio, 'x.bak'), path.join(audio, '01 1 Introduction.mp3'));
+    });
+  });
 });

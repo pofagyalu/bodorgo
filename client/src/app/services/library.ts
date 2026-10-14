@@ -19,6 +19,8 @@ export interface LibraryBook {
   pageOffset: number;
   // False for a scan without OCR - nothing in it can be searched.
   hasText: boolean;
+  // How many play-along tracks it has (on the shelves only).
+  tracks?: number;
 }
 
 export interface TocEntry {
@@ -27,9 +29,25 @@ export interface TocEntry {
   level: number;
 }
 
-export interface LibraryBookDetails extends LibraryBook {
+// A play-along track: a file in the folder beside the book's PDF.
+export interface LibraryTrack {
+  file: string;
+  // The first number of its name (a CD's track number) - null without one.
+  number: number | null;
+  title: string;
+}
+
+// A track belonging to a page (the PDF's page number).
+export interface AudioLink {
+  file: string;
+  page: number;
+}
+
+export interface LibraryBookDetails extends Omit<LibraryBook, 'tracks'> {
   filename: string;
   toc: TocEntry[];
+  tracks: LibraryTrack[];
+  audioLinks: AudioLink[];
 }
 
 export interface LibraryShelf {
@@ -122,6 +140,7 @@ export class LibraryService {
       author?: string;
       pageOffset?: number;
       toc?: TocEntry[];
+      audioLinks?: AudioLink[];
     },
   ): Observable<LibraryBookDetails> {
     return this.http
@@ -134,6 +153,18 @@ export class LibraryService {
     return this.http
       .get<{ data: { toc: TocEntry[] } }>(`${this.apiUrl}/books/${id}/toc-proposal`)
       .pipe(map((res) => res.data.toc));
+  }
+
+  // Track-to-page links guessed from the book ("Track 8" on a page) - to
+  // correct, not saved.
+  audioProposal(id: string): Observable<AudioLink[]> {
+    return this.http
+      .get<{ data: { audioLinks: AudioLink[] } }>(`${this.apiUrl}/books/${id}/audio-proposal`)
+      .pipe(map((res) => res.data.audioLinks));
+  }
+
+  audioUrl(bookId: string, file: string): string {
+    return `${this.apiUrl}/books/${bookId}/audio/${encodeURIComponent(file)}`;
   }
 
   // A page's first words: what a new line of the contents is offered as.

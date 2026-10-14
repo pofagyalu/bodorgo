@@ -1,4 +1,5 @@
 import { HttpEventType } from '@angular/common/http';
+import { API } from '../../../../testing/http';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
@@ -203,6 +204,14 @@ describe('LibraryBookPage', () => {
     toc: [
       { title: 'Mindenki másképp csinálja', page: 5, level: 0 },
       { title: 'Darabokra törted a szívem', page: 40, level: 0 },
+    ],
+    tracks: [
+      { file: '01 Masképp.mp3', number: 1, title: 'Masképp' },
+      { file: '02 Darabokra.mp3', number: 2, title: 'Darabokra' },
+    ],
+    audioLinks: [
+      { file: '01 Masképp.mp3', page: 5 },
+      { file: '01 Masképp.mp3', page: 6 },
     ],
   };
 
@@ -426,6 +435,119 @@ describe('LibraryBookPage', () => {
       fixture.detectChanges();
       expect(errors).toHaveBeenLastCalledWith('Nem jó.');
       expect(el().querySelector('.edit-line')).not.toBeNull();
+    });
+  });
+
+  describe('play-along tracks', () => {
+    beforeEach(() => {
+      vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+      vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    });
+
+    const chips = () =>
+      [...el().querySelectorAll('.page-track')].map((b) =>
+        b.textContent?.replace('play_arrow', '').replace('pause', '').trim(),
+      );
+    const player = () => el().querySelector('app-library-player');
+
+    it('puts a play button on a page with tracks; the player stays while the pages turn', () => {
+      open('5');
+      expect(chips()).toEqual(['Masképp']);
+      expect(player()).toBeNull();
+      (el().querySelector('.page-track') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(player()?.querySelector('audio')?.getAttribute('src')).toBe(
+        `${API}/library/books/b1/audio/01%20Mask%C3%A9pp.mp3`,
+      );
+
+      // Page 7 has none - the button goes, the player stays.
+      box().value = '9';
+      box().dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      expect(shown()).toMatch(/pages\/7$/);
+      expect(chips()).toEqual([]);
+      expect(player()).not.toBeNull();
+
+      (player()!.querySelector('button[title="Bezárás"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(player()).toBeNull();
+    });
+
+    it("lists the book's tracks with their pages, and plays one from there", () => {
+      open(null);
+      const lines = [...el().querySelectorAll('.tracks li')];
+      expect(lines.map((li) => li.querySelector('.toc-title')?.textContent)).toEqual([
+        'Masképp',
+        'Darabokra',
+      ]);
+      // Printed numbers (the shift is 2); a tap goes there.
+      const pages = lines[0].querySelectorAll('.track-pages button');
+      expect([...pages].map((b) => b.textContent?.trim())).toEqual(['7', '8']);
+      (pages[1] as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(shown()).toMatch(/pages\/6$/);
+      expect(lines[1].querySelector('.track-pages')).toBeNull();
+
+      (lines[1].querySelector('.track-line') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(player()?.querySelector('.name')?.textContent).toBe('Darabokra');
+    });
+
+    it('links tracks to the page shown in the editor, and saves the links', () => {
+      open('40');
+      (el().querySelector('.bar button[title^="A könyv címe"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const boxes = () => [...el().querySelectorAll<HTMLInputElement>('.edit-tracks input')];
+      expect(boxes().map((b) => b.checked)).toEqual([false, false]);
+      boxes()[1].click();
+      fixture.detectChanges();
+      expect(boxes().map((b) => b.checked)).toEqual([false, true]);
+      // On the page at once.
+      expect(chips()).toEqual(['Darabokra']);
+      // Off page 6 (printed 8) by its little button.
+      const first = el().querySelectorAll('.edit-tracks li')[0];
+      (first.querySelectorAll('.track-pages button')[1] as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      (
+        [...el().querySelectorAll('.toc button')].find((b) =>
+          b.textContent?.includes('Mentés'),
+        ) as HTMLButtonElement
+      ).click();
+      respond({
+        'PATCH /library/books/b1': (req) => {
+          expect(req.request.body.audioLinks).toEqual([
+            { file: '01 Masképp.mp3', page: 5 },
+            { file: '02 Darabokra.mp3', page: 40 },
+          ]);
+          expect(req.request.body.toc).toBeUndefined();
+          return { data: { book: { ...DETAILS, audioLinks: req.request.body.audioLinks } } };
+        },
+        'GET /library': { data: { shelves: SHELVES, scan: IDLE } },
+      });
+      fixture.detectChanges();
+      expect(chips()).toEqual(['Darabokra']);
+    });
+
+    it('takes the links guessed from "Track N" in the text', async () => {
+      open('5');
+      (el().querySelector('.bar button[title^="A könyv címe"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const propose = [...el().querySelectorAll('.toc button')].filter((b) =>
+        b.textContent?.includes('Javaslat'),
+      )[1] as HTMLButtonElement;
+      const confirm = TestBed.inject(ConfirmService);
+      propose.click();
+      await settle();
+      confirm.answer(true);
+      await settle();
+      respond({
+        'GET /library/books/b1/audio-proposal': {
+          data: { audioLinks: [{ file: '02 Darabokra.mp3', page: 5 }] },
+        },
+      });
+      fixture.detectChanges();
+      expect(chips()).toEqual(['Darabokra']);
     });
   });
 

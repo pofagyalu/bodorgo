@@ -330,6 +330,17 @@ button {
   letter-spacing: 0.04em;
 }
 
+.spine-audio {
+  position: absolute;
+  top: 0.08rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.75rem;
+  height: 0.75rem;
+  font-size: 0.75rem;
+  color: #d9b96a;
+}
+
 .empty-shelf {
   align-self: center;
   margin: 0;

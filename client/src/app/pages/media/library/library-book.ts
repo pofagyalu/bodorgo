@@ -6,15 +6,23 @@ import {
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { NotificationsService } from '../../../notifications/notifications.service';
-import { LibraryBookDetails, LibraryService, TocEntry } from '../../../services/library';
+import {
+  AudioLink,
+  LibraryBookDetails,
+  LibraryService,
+  LibraryTrack,
+  TocEntry,
+} from '../../../services/library';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { errorMessage } from '../../../shared/errors';
 import { byline, printedPage } from './library';
+import { LibraryPlayer } from './library-player';
 
 // What is being changed while the book is edited - saved together.
 interface Draft {
@@ -23,17 +31,20 @@ interface Draft {
   author: string;
   pageOffset: number;
   toc: TocEntry[];
+  audioLinks: AudioLink[];
 }
 
 // Média → Könyvtár: one book, a page at a time - the page is a picture the
 // server draws (the whole PDF never comes down). Beside it the table of
 // contents; the page shown is in the address (?page=), so a search hit
 // opens right there. The pencil turns the column into the book's editor:
-// its title, subtitle and author, which number is printed on the page shown, and the lines of
-// the contents.
+// its title, subtitle and author, which number is printed on the page
+// shown, the lines of the contents, and which play-along track belongs to
+// which page. A page with tracks has a play button for each; the player
+// stays under the page while the pages turn (library-player.ts).
 @Component({
   selector: 'app-library-book',
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, LibraryPlayer],
   templateUrl: './library-book.html',
   styleUrl: './library-book.scss',
 })
@@ -64,6 +75,40 @@ export class LibraryBookPage implements OnInit {
     const shown = this.draft() ?? this.book();
     return shown ? byline(shown) : '';
   });
+
+  // The track in the player - null: no player.
+  nowPlaying = signal<LibraryTrack | null>(null);
+  private player = viewChild(LibraryPlayer);
+
+  nowPlayingUrl = computed(() => {
+    const book = this.book();
+    const track = this.nowPlaying();
+    return book && track ? this.library.audioUrl(book._id, track.file) : null;
+  });
+
+  // The links as they are being edited, or as saved.
+  private links = computed(() => this.draft()?.audioLinks ?? this.book()?.audioLinks ?? []);
+
+  // The tracks of the page shown.
+  pageTracks = computed(() => {
+    const here = new Set(
+      this.links()
+        .filter((l) => l.page === this.page())
+        .map((l) => l.file),
+    );
+    return (this.book()?.tracks ?? []).filter((t) => here.has(t.file));
+  });
+
+  // Each track's pages, by its file.
+  private trackPageMap = computed(() => {
+    const pages = new Map<string, number[]>();
+    for (const l of this.links()) pages.set(l.file, [...(pages.get(l.file) ?? []), l.page]);
+    return pages;
+  });
+
+  trackPages(file: string): number[] {
+    return this.trackPageMap().get(file) ?? [];
+  }
 
   pageUrl = computed(() => {
     const book = this.book();
@@ -140,6 +185,17 @@ export class LibraryBookPage implements OnInit {
     else if (event.key === 'ArrowLeft') this.go(this.page() - 1);
   }
 
+  // A track's button: it starts - or, when it is the one on, pauses and
+  // goes on.
+  playTrack(track: LibraryTrack) {
+    if (this.nowPlaying()?.file === track.file) this.player()?.toggle();
+    else this.nowPlaying.set(track);
+  }
+
+  isOn(track: LibraryTrack): boolean {
+    return this.nowPlaying()?.file === track.file && !!this.player()?.playing();
+  }
+
   // --- Editing ---
 
   edit() {
@@ -151,6 +207,7 @@ export class LibraryBookPage implements OnInit {
       author: book.author,
       pageOffset: book.pageOffset,
       toc: book.toc.map((e) => ({ ...e })),
+      audioLinks: book.audioLinks.map((l) => ({ ...l })),
     });
     this.tocOpen.set(true);
   }
@@ -236,6 +293,63 @@ export class LibraryBookPage implements OnInit {
     });
   }
 
+  isLinkedHere(file: string): boolean {
+    return this.trackPages(file).includes(this.page());
+  }
+
+  // A track on or off the page shown.
+  toggleLinkHere(file: string) {
+    const draft = this.draft();
+    if (!draft) return;
+    const page = this.page();
+    const audioLinks = this.isLinkedHere(file)
+      ? draft.audioLinks.filter((l) => !(l.file === file && l.page === page))
+      : [...draft.audioLinks, { file, page }].sort((a, b) => a.page - b.page);
+    this.change({ audioLinks });
+  }
+
+  removeLink(file: string, page: number) {
+    this.change({
+      audioLinks: this.draft()!.audioLinks.filter((l) => !(l.file === file && l.page === page)),
+    });
+  }
+
+  // The links guessed from the book's text ("Track 8") - instead of what
+  // is there.
+  async proposeAudio() {
+    const book = this.book();
+    const draft = this.draft();
+    if (!book || !draft) return;
+    if (
+      draft.audioLinks.length &&
+      !(await this.confirm.ask({
+        title: 'Hangok a könyvből',
+        message: 'A mostani hang-oldal kapcsolatok helyére a könyvből kiolvasottak kerülnek.',
+        detail: 'Csak mentéskor lesz végleges.',
+        confirmText: 'Csere',
+      }))
+    ) {
+      return;
+    }
+    this.proposing.set(true);
+    this.library.audioProposal(book._id).subscribe({
+      next: (audioLinks) => {
+        this.proposing.set(false);
+        if (!audioLinks.length) {
+          this.notifications.addError(
+            'A könyv szövegében nincs „Track N” – kézzel kell a hangokat az oldalakhoz tenni.',
+          );
+          return;
+        }
+        this.change({ audioLinks });
+      },
+      error: (err) => {
+        this.proposing.set(false);
+        this.notifications.addError(errorMessage(err, 'Nem sikerült a javaslat.'));
+      },
+    });
+  }
+
   // The contents guessed from the book itself - instead of what is there.
   async propose() {
     const book = this.book();
@@ -280,6 +394,7 @@ export class LibraryBookPage implements OnInit {
     // A line left empty is not kept.
     const toc = draft.toc.map((e) => ({ ...e, title: e.title.trim() })).filter((e) => e.title);
     const tocChanged = JSON.stringify(toc) !== JSON.stringify(book.toc);
+    const linksChanged = JSON.stringify(draft.audioLinks) !== JSON.stringify(book.audioLinks);
     this.saving.set(true);
     this.library
       .update(book._id, {
@@ -290,6 +405,7 @@ export class LibraryBookPage implements OnInit {
         // Untouched contents are not sent - a new scan may still refresh
         // them from the PDF's bookmarks.
         ...(tocChanged ? { toc } : {}),
+        ...(linksChanged ? { audioLinks: draft.audioLinks } : {}),
       })
       .subscribe({
         next: (saved) => {

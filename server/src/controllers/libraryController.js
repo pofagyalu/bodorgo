@@ -15,6 +15,7 @@ import {
   startScan,
   uploadTarget,
 } from '../utils/libraryIndex.js';
+import { audioType, bookTracks, proposeAudioLinks, trackPath } from '../utils/libraryAudio.js';
 
 // Média → Könyvtár: the owner's own PDF books on shelves - for the role
 // manager (INITIAL_ADMIN_USER) alone, nobody else gets anything here. The
@@ -37,6 +38,23 @@ const bookCard = (b) => ({
   hasText: b.hasText,
 });
 
+// The whole book for its page: the contents, its tracks (the files in its
+// audio folder) and which page each is linked to - a link to a file that
+// is gone is left out.
+function bookDetails(book) {
+  const tracks = bookTracks(book);
+  const files = new Set(tracks.map((t) => t.file));
+  return {
+    ...bookCard(book),
+    filename: book.filename,
+    toc: book.toc,
+    tracks,
+    audioLinks: (book.audioLinks ?? [])
+      .filter((l) => files.has(l.file))
+      .map((l) => ({ file: l.file, page: l.page })),
+  };
+}
+
 async function bookOf(req) {
   const { id } = req.params;
   const book = mongoose.isValidObjectId(id) ? await LibraryBook.findById(id) : null;
@@ -53,7 +71,7 @@ export const listLibrary = async (req, res) => {
     books: books
       .filter((b) => b.shelf === folder)
       .sort((a, b) => a.title.localeCompare(b.title, 'hu'))
-      .map(bookCard),
+      .map((b) => ({ ...bookCard(b), tracks: bookTracks(b).length })),
   }));
   res.status(200).json({ status: 'success', data: { shelves, scan: scanState() } });
 };
@@ -65,21 +83,22 @@ export const scanLibrary = async (req, res) => {
   res.status(202).json({ status: 'success', data: { scan: scanState() } });
 };
 
-// GET /library/books/:id - the book with its table of contents.
+// GET /library/books/:id - the book with its table of contents and its
+// play-along tracks.
 export const getLibraryBook = async (req, res) => {
   const book = await bookOf(req);
   res.status(200).json({
     status: 'success',
-    data: { book: { ...bookCard(book), filename: book.filename, toc: book.toc } },
+    data: { book: bookDetails(book) },
   });
 };
 
 // PATCH /library/books/:id - its title, subtitle and author, the page
-// numbers' shift, and the
+// numbers' shift, which track belongs to which page, and the
 // table of contents (then kept as the owner wrote it).
 export const updateLibraryBook = async (req, res) => {
   const book = await bookOf(req);
-  const { title, subtitle, author, pageOffset, toc } = req.body ?? {};
+  const { title, subtitle, author, pageOffset, toc, audioLinks } = req.body ?? {};
 
   if (title !== undefined) {
     if (typeof title !== 'string' || !title.trim()) {
@@ -125,11 +144,29 @@ export const updateLibraryBook = async (req, res) => {
     book.toc = toc.map((e) => ({ title: e.title.trim(), page: e.page, level: e.level ?? 0 }));
     book.tocEdited = true;
   }
+  if (audioLinks !== undefined) {
+    const files = new Set(bookTracks(book).map((t) => t.file));
+    const ok =
+      Array.isArray(audioLinks) &&
+      audioLinks.length <= 5000 &&
+      audioLinks.every(
+        (l) =>
+          typeof l?.file === 'string' &&
+          files.has(l.file) &&
+          Number.isInteger(l.page) &&
+          l.page >= 1 &&
+          l.page <= book.pages,
+      );
+    if (!ok) throw new AppError('A hangok: a könyv mappájában lévő fájl és létező oldal.', 400);
+    // Each link once, in the order of the pages.
+    const seen = new Set();
+    book.audioLinks = audioLinks
+      .filter((l) => !seen.has(`${l.file}|${l.page}`) && seen.add(`${l.file}|${l.page}`))
+      .sort((a, b) => a.page - b.page)
+      .map((l) => ({ file: l.file, page: l.page }));
+  }
   await book.save();
-  res.status(200).json({
-    status: 'success',
-    data: { book: { ...bookCard(book), filename: book.filename, toc: book.toc } },
-  });
+  res.status(200).json({ status: 'success', data: { book: bookDetails(book) } });
 };
 
 // GET /library/books/:id/pages/:page - that one page as a picture (WebP).
@@ -221,6 +258,28 @@ export const uploadLibraryBook = (req, res, next) => {
     fs.renameSync(temp, uploadTarget(shelf, req.file.originalname));
     startScan();
     res.status(202).json({ status: 'success', data: { scan: scanState() } });
+  });
+};
+
+// GET /library/books/:id/audio/:file - one of the book's tracks (the
+// file's name, URL-encoded). res.sendFile answers Range requests itself, so
+// the player can jump anywhere without the whole file coming down first.
+export const getLibraryAudio = async (req, res) => {
+  const book = await bookOf(req);
+  const file = trackPath(book, req.params.file);
+  if (!file) throw new AppError('Nincs ilyen hangfájl.', 404);
+  res.set('Cache-Control', 'private, max-age=86400');
+  res.type(audioType(file));
+  res.sendFile(file);
+};
+
+// GET /library/books/:id/audio-proposal - links guessed from the text (a
+// page saying "Track 8" gets track 8). Nothing is saved.
+export const getLibraryAudioProposal = async (req, res) => {
+  const book = await bookOf(req);
+  res.status(200).json({
+    status: 'success',
+    data: { audioLinks: await proposeAudioLinks(book) },
   });
 };
 

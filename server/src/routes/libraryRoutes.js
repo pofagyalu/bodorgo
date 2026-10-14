@@ -1,5 +1,7 @@
 import express from 'express';
 import {
+  getLibraryAudio,
+  getLibraryAudioProposal,
   getLibraryBook,
   getLibraryPage,
   getLibraryPageOpening,
@@ -29,5 +31,7 @@ router.get('/books/:id/toc-proposal', getLibraryTocProposal);
 router.get('/books/:id/pages/:page', getLibraryPage);
 router.get('/books/:id/pages/:page/opening', getLibraryPageOpening);
 router.post('/shelves/:shelf/books', uploadLibraryBook);
+router.get('/books/:id/audio-proposal', getLibraryAudioProposal);
+router.get('/books/:id/audio/:file', getLibraryAudio);
 
 export default router;
