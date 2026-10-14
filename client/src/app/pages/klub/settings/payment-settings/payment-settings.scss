@@ -1,0 +1,74 @@
+@use '../shared';
+
+:host {
+  display: block;
+}
+
+@include shared.cards;
+
+h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #203747;
+}
+
+// Átutalási díjak: one block per gateway.
+.pay-method {
+  padding-top: 1rem;
+
+  & + & {
+    margin-top: 1rem;
+    border-top: 1px solid #edf1ee;
+  }
+}
+
+.pay-method-off {
+  margin: 0.35rem 0 0;
+  color: #8a5a1e;
+  font-size: 0.8rem;
+}
+
+.pay-method-fields {
+  margin-top: 0.75rem;
+
+  input {
+    width: 6.5rem;
+  }
+}
+
+.pay-method-example {
+  margin: 0.75rem 0 0;
+  color: #56666e;
+  font-size: 0.8rem;
+}
+
+// The bank accounts, the payout rows: one under the other.
+.sub-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+// Kiutalás számlára: Stripe, then Barion.
+.payout-group + .payout-group {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #edf1ee;
+}
+
+.payout-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+
+  span {
+    font-size: 0.75rem;
+    color: #56666e;
+    background: #edf4f1;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.55rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+}

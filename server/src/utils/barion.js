@@ -132,3 +132,27 @@ export async function createBarionWithdrawal({ walletKey, amount, recipientName,
 
   return data;
 }
+
+// A wallet's forint balance - wallet-level API too, the same x-api-key as
+// createBarionWithdrawal above. Barion's GET /v2/Accounts lists the
+// wallet's accounts, one per currency, each with its Balance: Available
+// (can be withdrawn) and Blocked (held). 0/0 when there is no HUF account.
+export async function getBarionBalance(walletKey) {
+  const res = await fetch(`${config.barion.baseUrl}/v2/Accounts`, {
+    headers: { 'x-api-key': walletKey },
+  });
+
+  const data = await res.json();
+  if (!res.ok || (data.Errors && data.Errors.length > 0)) {
+    const message =
+      data.Errors?.map((e) => e.Description || e.Title).join('; ') || `HTTP ${res.status}`;
+    throw new Error(`Barion balance query failed: ${message}`);
+  }
+
+  const accounts = Array.isArray(data) ? data : (data.Accounts ?? []);
+  const huf = accounts.find((a) => a.Currency === 'HUF');
+  const balance = huf?.Balance;
+  // An older answer gives Balance as a plain number.
+  if (typeof balance === 'number') return { available: balance, blocked: 0 };
+  return { available: balance?.Available ?? 0, blocked: balance?.Blocked ?? 0 };
+}

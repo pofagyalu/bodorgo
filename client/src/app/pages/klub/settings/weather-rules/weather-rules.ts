@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { SettingsService, WeatherOutlookRules } from '../../../../../services/settings';
-import { OutlookPackIcon, WeatherCondition } from '../../../../../services/tour';
+import { SettingsService, WeatherOutlookRules } from '../../../../services/settings';
+import { OutlookPackIcon, WeatherCondition } from '../../../../services/tour';
 
 const MONTHS = [
   'január',
@@ -20,7 +20,8 @@ const MONTHS = [
 // 0.6 -> 60
 const percent = (share: number) => Math.round(share * 100);
 
-// Klub → Beállítások → Infó: how a tour's "Életviteli tanácsok" (the
+// Klub → Beállítások → Bódorgó jóléti index (a tab of its own): how a
+// tour's "Életviteli tanácsok" (the
 // weather outlook) comes about - when there is a forecast, how the
 // Jóléti-index is worked out, what decides the packing list. Only the
 // sentences are written here: every number is the server's own, read from

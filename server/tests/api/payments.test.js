@@ -29,6 +29,7 @@ import {
   createBarionPayment,
   getBarionPaymentState,
   createBarionWithdrawal,
+  getBarionBalance,
 } from '../../src/utils/barion.js';
 
 // A tour with pricing and one unpaid member on it (+ an admin to receive
@@ -404,6 +405,21 @@ describe('withdrawals (admin)', () => {
       (await request(app).get('/payments/withdraw/membershipFee').set(asUser(admin))).body.data
         .configured,
     ).toBe(false);
+  });
+
+  it("gives a wallet's balance once it has its API key, and says when Barion fails", async () => {
+    const admin = await createAdmin();
+    const status = async (purpose) =>
+      (await request(app).get(`/payments/withdraw/${purpose}`).set(asUser(admin))).body.data;
+    expect(await status('tourAdvance')).toMatchObject({
+      balance: { available: 12000, blocked: 500 },
+      balanceError: false,
+    });
+    // No API key: nothing to ask Barion with.
+    expect(await status('membershipFee')).toMatchObject({ balance: null, balanceError: false });
+
+    vi.mocked(getBarionBalance).mockRejectedValueOnce(new Error('down'));
+    expect(await status('tourAdvance')).toMatchObject({ balance: null, balanceError: true });
   });
 
   it('withdraws with the Barion fee (0.1%, at least 70 Ft)', async () => {

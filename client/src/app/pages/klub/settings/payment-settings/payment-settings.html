@@ -1,0 +1,143 @@
+<div class="cards">
+  <!-- Átutalási díjak: the fee the payer pays on top, Stripe's and
+       Barion's - both always on, saved together. -->
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Átutalási díjak</h2>
+        <p class="subtext">
+          Az online kártyás fizetés szolgáltatóinak díja. A díjat a fizető állja: a végösszeg úgy
+          számolódik, hogy a díj levonása után a teljes tagdíj vagy előleg megérkezzen.
+        </p>
+      </div>
+    </div>
+
+    @if (payForm(); as form) {
+      @for (key of payMethodKeys; track key) {
+        <div class="pay-method">
+          <h3>{{ payMethodNames[key] }}</h3>
+          @if (payMethodOff(key)) {
+            <p class="pay-method-off">Most ki van kapcsolva – mentéskor bekapcsol.</p>
+          }
+
+          <div class="chat-fields pay-method-fields">
+            <label>
+              Díj (%)
+              <input
+                type="number"
+                min="0"
+                max="20"
+                step="0.1"
+                [ngModel]="form[key].feePercent"
+                (ngModelChange)="setPayField(key, 'feePercent', $event)"
+              />
+            </label>
+            <label>
+              Fix díj (Ft)
+              <input
+                type="number"
+                min="0"
+                step="1"
+                [ngModel]="form[key].feeFixed"
+                (ngModelChange)="setPayField(key, 'feeFixed', $event)"
+              />
+            </label>
+            <label>
+              Legalább (Ft)
+              <input
+                type="number"
+                min="0"
+                step="1"
+                [ngModel]="form[key].feeMin"
+                (ngModelChange)="setPayField(key, 'feeMin', $event)"
+              />
+            </label>
+          </div>
+
+          <p class="pay-method-example">
+            Példa: 1 000 Ft helyett {{ payExample(key, 1000) }} Ft, 20 000 Ft helyett
+            {{ payExample(key, 20000) }} Ft.
+          </p>
+        </div>
+      }
+
+      <div class="actions">
+        <span class="spacer"></span>
+        @if (payDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="resetPayMethods()"
+            [disabled]="savingPay()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="savePayMethods()"
+          [disabled]="!payDirty() || savingPay()"
+        >
+          {{ savingPay() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+
+  <!-- Kiutalási számlaadatok: the club's two bank accounts - Tagdíjak and
+       Előlegek - where the money goes, from Stripe and Barion alike. -->
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Kiutalási számlaadatok</h2>
+        <p class="subtext">
+          A két bankszámla, ahová a pénz kiutalásra kerül – a tagdíjaké és az előlegeké, akár
+          Stripe-on, akár Barionon fizettek. A Stripe-nál ugyanezeket a számlákat kell beállítani a
+          Stripe felületén.
+        </p>
+      </div>
+    </div>
+    <div class="sub-list">
+      <app-bank-account wallet="membership" (saved)="accountsSaved.set(accountsSaved() + 1)" />
+      <app-bank-account wallet="tour" (saved)="accountsSaved.set(accountsSaved() + 1)" />
+    </div>
+  </section>
+
+  <!-- Kiutalás számlára: each gateway's balance per account, and paying it
+       out - Stripe and Barion apart, Tagdíjak and Előlegek apart. -->
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Kiutalás számlára</h2>
+        <p class="subtext">
+          A befizetett pénz a szolgáltatónál gyűlik – innen utalható ki a fenti bankszámlákra.
+        </p>
+      </div>
+    </div>
+
+    <div class="payout-group">
+      <div class="payout-group-head">
+        <h3>Stripe</h3>
+        <span>bankkártyás befizetések</span>
+      </div>
+      <div class="sub-list">
+        <app-stripe-payout wallet="membership" />
+        <app-stripe-payout wallet="tour" />
+      </div>
+    </div>
+
+    <div class="payout-group">
+      <div class="payout-group-head">
+        <h3>Barion</h3>
+        <span>kiutalás: 0,1% díj, min. 70 Ft</span>
+      </div>
+      <div class="sub-list">
+        <app-barion-withdraw wallet="membership" [refresh]="accountsSaved()" />
+        <app-barion-withdraw wallet="tour" [refresh]="accountsSaved()" />
+      </div>
+    </div>
+  </section>
+</div>

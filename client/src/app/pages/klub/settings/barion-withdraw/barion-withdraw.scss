@@ -1,4 +1,6 @@
-// The same Klub card look as the rest of Beállítások (settings.scss).
+// The rows inside Beállítások → Fizetések' cards - a bank account
+// (bank-account), a Barion wallet and a Stripe account's payout (this one,
+// stripe-payout): the same Klub look as the rest of Beállítások.
 :host {
   display: block;
 }
@@ -10,40 +12,6 @@ input {
 
 button {
   cursor: pointer;
-}
-
-.panel {
-  background: #fff;
-  border: 1px solid #e7edea;
-  border-radius: 17px;
-  box-shadow: 0 5px 19px #213b4110;
-  padding: 24px;
-}
-
-.panel-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 18px;
-
-  h2 {
-    font-size: 17px;
-    letter-spacing: -0.025em;
-    margin: 0 0 5px;
-    color: #203747;
-  }
-}
-
-// The fee note, as a small pill on the title's right.
-.panel-title > span {
-  font-size: 12px;
-  color: #56666e;
-  background: #edf4f1;
-  border-radius: 8px;
-  padding: 4px 9px;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .primary-btn {
@@ -64,12 +32,6 @@ button {
     opacity: 0.55;
     cursor: default;
   }
-}
-
-.withdraw-panel {
-  padding: 24px;
-  display: grid;
-  gap: 16px;
 }
 
 .withdraw-notice {
@@ -137,17 +99,25 @@ button {
   color: #9aa6a2;
 }
 
+.balance {
+  font-size: 1.05rem;
+  color: #1a796c;
+}
+
+.account-fields small {
+  color: #56666e;
+}
+
 .withdraw-preview {
   font-size: 12px;
   font-weight: 600;
   color: #2f414b;
 }
 
-// --- The wallet's account, on top ---
+// --- A bank account (bank-account) ---
 
 .account {
   padding: 14px 16px;
-  margin-bottom: 4px;
   border: 1px solid #e7edea;
   border-radius: 12px;
 }
@@ -168,7 +138,7 @@ button {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 4px 14px;
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 13px;
 
   dt {

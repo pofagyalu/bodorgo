@@ -101,108 +101,6 @@
     }
   </section>
 
-  <!-- Fizetési módok: the online gateways (Stripe, Barion) - each on or
-       off, and the fee the payer pays on top. -->
-  <section class="panel">
-    <div class="panel-title">
-      <div>
-        <h2>Fizetési módok</h2>
-        <p class="subtext">
-          Az online kártyás fizetés szolgáltatói. A szolgáltató díját a fizető állja: a végösszeg
-          úgy számolódik, hogy a díj levonása után a teljes tagdíj vagy előleg megérkezzen. A
-          kikapcsolt szolgáltató a fizetésnél szürkén, „hamarosan” felirattal látszik.
-        </p>
-      </div>
-    </div>
-
-    @if (payForm(); as form) {
-      @for (key of payMethodKeys; track key) {
-        <div class="pay-method">
-          <label class="reminder-switch">
-            <input
-              type="checkbox"
-              [ngModel]="form[key].enabled"
-              (ngModelChange)="setPayField(key, 'enabled', $event)"
-            />
-            {{ payMethodNames[key] }}
-          </label>
-
-          <div class="chat-fields pay-method-fields">
-            <label>
-              Díj (%)
-              <input
-                type="number"
-                min="0"
-                max="20"
-                step="0.1"
-                [ngModel]="form[key].feePercent"
-                (ngModelChange)="setPayField(key, 'feePercent', $event)"
-              />
-            </label>
-            <label>
-              Fix díj (Ft)
-              <input
-                type="number"
-                min="0"
-                step="1"
-                [ngModel]="form[key].feeFixed"
-                (ngModelChange)="setPayField(key, 'feeFixed', $event)"
-              />
-            </label>
-            <label>
-              Legalább (Ft)
-              <input
-                type="number"
-                min="0"
-                step="1"
-                [ngModel]="form[key].feeMin"
-                (ngModelChange)="setPayField(key, 'feeMin', $event)"
-              />
-            </label>
-          </div>
-
-          <p class="pay-method-example">
-            Példa: 1 000 Ft helyett {{ payExample(key, 1000) }} Ft, 20 000 Ft helyett
-            {{ payExample(key, 20000) }} Ft.
-          </p>
-
-          <div class="actions">
-            <span class="spacer"></span>
-            @if (payMethodDirty(key)) {
-              <button
-                type="button"
-                class="outline-btn"
-                (click)="resetPayMethod(key)"
-                [disabled]="savingPayMethod() === key"
-              >
-                Mégse
-              </button>
-            }
-            <button
-              type="button"
-              class="primary-btn"
-              (click)="savePayMethod(key)"
-              [disabled]="!payMethodDirty(key) || savingPayMethod() !== null"
-            >
-              {{ savingPayMethod() === key ? 'Mentés…' : 'Mentés' }}
-            </button>
-          </div>
-        </div>
-      }
-    } @else {
-      <p class="empty-note">Betöltés...</p>
-    }
-  </section>
-
-  <!-- The Stripe accounts: the card payments held there, and paying them
-       out to the bank account - one card each, shown once it has its key. -->
-  <app-stripe-payout wallet="membership" />
-  <app-stripe-payout wallet="tour" />
-
-  <!-- The two Barion wallets: settings + withdrawing, one card each. -->
-  <app-barion-withdraw wallet="membership" />
-  <app-barion-withdraw wallet="tour" />
-
   <!-- Elnök: named at the end of a tour's beszámoló, with the wax seal
        (server utils/waxSeal.js) - which carries this name too. -->
   <section class="panel">
@@ -256,150 +154,129 @@
     }
   </section>
 
-  <!-- Chat photos: how much room they may take and how many a person may
-     send a day. Over the limit the oldest go - their messages stay. -->
-  <section class="panel chat-images">
+  <!-- Tagdíj emlékeztető: e-mails to members who haven't paid this year's
+     dues - its settings (the Értesítések list on Infó describes it too). -->
+  <section class="panel reminder-card">
     <div class="panel-title">
       <div>
-        <h2>Kotyogó fotók</h2>
+        <h2>Tagdíj emlékeztető</h2>
         <p class="subtext">
-          A táborok Kotyogójában küldött fotók. Ha betelik a keret, a legrégebbiek törlődnek – az
-          üzenet megmarad, „A fotó már nem érhető el” jelzéssel.
+          E-mail azoknak a tagoknak, akik még nem fizették be az idei tagdíjat – az első napon,
+          aztán havonta vagy negyedévente.
         </p>
       </div>
     </div>
-
-    @if (chatImages(); as c) {
-      <div class="chat-usage">
-        <div class="chat-usage-bar" [class.chat-usage-bar--full]="chatUsagePercent() >= 80">
-          <span [style.width.%]="chatUsagePercent()"></span>
-        </div>
-        <small>
-          {{ chatUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} fotó ({{
-            chatUsagePercent()
-          }}%)
-        </small>
-      </div>
-
-      <div class="chat-fields">
-        <label>
-          Tárhely keret (MB)
+    <div class="reminder">
+      @if (reminderLoading()) {
+        <p class="empty-note">Betöltés...</p>
+      } @else {
+        <label class="reminder-switch">
           <input
-            type="number"
-            min="50"
-            step="50"
-            [ngModel]="chatQuotaMB()"
-            (ngModelChange)="chatQuotaMB.set(+$event)"
+            type="checkbox"
+            [ngModel]="reminderEnabled()"
+            (ngModelChange)="reminderEnabled.set($event)"
           />
+          Bekapcsolva
         </label>
-        <label>
-          Fotó naponta, személyenként
+
+        <div class="reminder-row">
+          <span class="reminder-label">Első emlékeztető (befizetési határidő):</span>
+          <select
+            [ngModel]="reminderMonth()"
+            (ngModelChange)="reminderMonth.set(+$event)"
+            aria-label="Hónap"
+          >
+            @for (m of months; track m; let i = $index) {
+              <option [ngValue]="i + 1">{{ m }}</option>
+            }
+          </select>
           <input
             type="number"
             min="1"
-            [ngModel]="chatDailyLimit()"
-            (ngModelChange)="chatDailyLimit.set(+$event)"
+            max="28"
+            class="reminder-day"
+            [ngModel]="reminderDay()"
+            (ngModelChange)="reminderDay.set(+$event)"
+            aria-label="Nap"
           />
-        </label>
-      </div>
-
-      <div class="actions">
-        <span class="spacer"></span>
-        @if (chatImagesDirty()) {
-          <button
-            type="button"
-            class="outline-btn"
-            (click)="applyChatImages(c)"
-            [disabled]="savingChatImages()"
-          >
-            Mégse
-          </button>
-        }
-        <button
-          type="button"
-          class="primary-btn"
-          (click)="saveChatImages()"
-          [disabled]="!chatImagesDirty() || savingChatImages()"
-        >
-          {{ savingChatImages() ? 'Mentés…' : 'Mentés' }}
-        </button>
-      </div>
-    } @else {
-      <p class="empty-note">Betöltés...</p>
-    }
-  </section>
-
-  <!-- Kép gyorsítótár: the smaller versions of the album photos the viewer
-     shows (server photos/imageSizes.js). Over the limit the least
-     recently viewed go - they're made again when needed. -->
-  <section class="panel image-cache">
-    <div class="panel-title">
-      <div>
-        <h2>Kép gyorsítótár</h2>
-        <p class="subtext">
-          A táborok és a Média fotóinak kisebb változatai, amiket a képnézegető mutat – így mobilon
-          is gyorsan betöltenek. Az első megnézéskor készülnek. Ha betelik a keret, a legrégebben
-          nézettek törlődnek, és legközelebb újra elkészülnek. Az eredeti fotókat nem érinti.
-        </p>
-      </div>
-    </div>
-
-    @if (imageCache(); as c) {
-      <div class="chat-usage">
-        <div class="chat-usage-bar" [class.chat-usage-bar--full]="imageCachePercent() >= 80">
-          <span [style.width.%]="imageCachePercent()"></span>
+          <span>.</span>
         </div>
-        <small>
-          {{ imageCacheUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} kép ({{
-            imageCachePercent()
-          }}%)
-        </small>
-      </div>
 
-      <div class="chat-fields">
-        <label>
-          Tárhely keret (MB)
-          <input
-            type="number"
-            min="100"
-            step="512"
-            [ngModel]="imageCacheQuotaMB()"
-            (ngModelChange)="imageCacheQuotaMB.set(+$event)"
-          />
-        </label>
-      </div>
+        <div class="reminder-row">
+          <span class="reminder-label">Utána:</span>
+          <label class="reminder-choice">
+            <input
+              type="radio"
+              name="reminderFrequency"
+              value="quarterly"
+              [ngModel]="reminderFrequency()"
+              (ngModelChange)="reminderFrequency.set($event)"
+            />
+            negyedévente
+          </label>
+          <label class="reminder-choice">
+            <input
+              type="radio"
+              name="reminderFrequency"
+              value="monthly"
+              [ngModel]="reminderFrequency()"
+              (ngModelChange)="reminderFrequency.set($event)"
+            />
+            havonta
+          </label>
+        </div>
 
-      <div class="actions">
-        <button
-          type="button"
-          class="outline-btn"
-          (click)="clearImageCache()"
-          [disabled]="savingImageCache() || !c.usage.count"
-        >
-          Gyorsítótár ürítése
-        </button>
-        <span class="spacer"></span>
-        @if (imageCacheDirty()) {
+        <p class="reminder-dates">
+          <span class="reminder-label">Idei körök:</span> {{ previewDates().join(', ') }}
+          <small>(reggel 9 után, amíg ki nem fizeti)</small>
+        </p>
+
+        @if (reminder()?.nextRound; as next) {
+          <p class="reminder-next">
+            Következő kör: <strong>{{ roundLabel(next) }}</strong>
+          </p>
+        }
+
+        <details class="reminder-who">
+          <summary>Most {{ reminderRecipients().length }} tag kapna emlékeztetőt</summary>
+          @if (reminderRecipients().length) {
+            <p>{{ reminderRecipients().join(', ') }}</p>
+          } @else {
+            <p>Senki – mindenki befizette az idei tagdíjat.</p>
+          }
+        </details>
+
+        <div class="actions">
           <button
             type="button"
             class="outline-btn"
-            (click)="applyImageCache(c)"
-            [disabled]="savingImageCache()"
+            (click)="sendTestReminder()"
+            [disabled]="sendingTest()"
           >
-            Mégse
+            <mat-icon>forward_to_inbox</mat-icon>
+            {{ sendingTest() ? 'Küldés…' : 'Próba e-mail magamnak' }}
           </button>
-        }
-        <button
-          type="button"
-          class="primary-btn"
-          (click)="saveImageCache()"
-          [disabled]="!imageCacheDirty() || savingImageCache()"
-        >
-          {{ savingImageCache() ? 'Mentés…' : 'Mentés' }}
-        </button>
-      </div>
-    } @else {
-      <p class="empty-note">Betöltés...</p>
-    }
+          <span class="spacer"></span>
+          @if (reminderDirty()) {
+            <button
+              type="button"
+              class="outline-btn"
+              (click)="resetReminder()"
+              [disabled]="savingReminder()"
+            >
+              Mégse
+            </button>
+          }
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="saveReminder()"
+            [disabled]="!reminderDirty() || savingReminder()"
+          >
+            {{ savingReminder() ? 'Mentés…' : 'Mentés' }}
+          </button>
+        </div>
+      }
+    </div>
   </section>
 </div>

@@ -7,8 +7,10 @@
     </div>
   </div>
 
-  <!-- Three pages of cards, so no page is crowded: the club and its money,
-       what the app sends by itself (Értesítések), and what is only to read (Infó: the list of notifications, the versions). -->
+  <!-- Pages of cards, so no page is crowded: the club, its money
+       (Fizetések), the room the photos take (Tárhely), what the app sends
+       by itself (Értesítések), how the Jóléti-index is worked out, and what is only to read (Infó: the list of
+       notifications, the versions). -->
   <app-tab-strip
     class="settings-tabs"
     label="Beállítások csoportja"
@@ -25,8 +27,22 @@
     <app-club-settings />
   </div>
 
+  <div role="tabpanel" [hidden]="activeTab() !== 'payments'">
+    <app-payment-settings />
+  </div>
+
+  <div role="tabpanel" [hidden]="activeTab() !== 'storage'">
+    <app-storage-settings />
+  </div>
+
   <div role="tabpanel" [hidden]="activeTab() !== 'app'">
     <app-app-settings />
+  </div>
+
+  <!-- Bódorgó jóléti index: how the tours' weather outlook (Életviteli
+       tanácsok) is worked out - to read only. -->
+  <div role="tabpanel" [hidden]="activeTab() !== 'index'">
+    <app-weather-rules />
   </div>
 
   <div role="tabpanel" [hidden]="activeTab() !== 'info'">

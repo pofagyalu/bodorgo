@@ -18,6 +18,7 @@ import {
   createBarionPayment,
   getBarionPaymentState,
   createBarionWithdrawal,
+  getBarionBalance,
 } from '../utils/barion.js';
 import { generateReceiptPdf, paymentFeeLabel, RECEIPTS_DIR } from '../utils/paymentReceipt.js';
 import sendResendEmail from '../utils/resendEmail.js';
@@ -950,11 +951,26 @@ function isWithdrawalConfigured(wallet) {
 
 // GET /payments/withdraw/:purpose - requireAuth, restrictTo('admin'). Lets
 // Beállítások show each wallet's withdraw button as inactive until its
-// bank account is set there and its API key in .env.
+// bank account is set there and its API key in .env - and the wallet's
+// balance, asked from Barion once the key is there (null without a key,
+// or when Barion doesn't answer: balanceError then).
 export const getWithdrawalStatus = async (req, res) => {
   const purpose = req.params.purpose === 'membershipFee' ? 'membershipFee' : 'tourAdvance';
-  const configured = isWithdrawalConfigured(await withdrawalWalletConfigFor(purpose));
-  res.status(200).json({ status: 'success', data: { configured } });
+  const wallet = await withdrawalWalletConfigFor(purpose);
+  let balance = null;
+  let balanceError = false;
+  if (wallet.walletKey) {
+    try {
+      balance = await getBarionBalance(wallet.walletKey);
+    } catch (err) {
+      logger.error(`Barion balance failed for ${purpose}: ${err.message}`);
+      balanceError = true;
+    }
+  }
+  res.status(200).json({
+    status: 'success',
+    data: { configured: isWithdrawalConfigured(wallet), balance, balanceError },
+  });
 };
 
 // POST /payments/withdraw - requireAuth, restrictTo('admin'). Pulls real

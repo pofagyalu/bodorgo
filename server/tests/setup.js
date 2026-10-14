@@ -132,6 +132,7 @@ vi.mock('../src/utils/barion.js', async (importOriginal) => ({
   createBarionPayment: vi.fn(async () => ({ id: 'barion-test', url: 'https://barion.test/pay' })),
   getBarionPaymentState: vi.fn(async () => ({ Status: 'Prepared' })),
   createBarionWithdrawal: vi.fn(async () => ({ TransactionId: 'tx-test' })),
+  getBarionBalance: vi.fn(async () => ({ available: 12000, blocked: 500 })),
 }));
 
 // --- A fresh database per test file, emptied after every test ---

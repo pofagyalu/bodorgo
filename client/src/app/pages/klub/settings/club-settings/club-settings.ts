@@ -2,34 +2,39 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import {
-  ChatImageSettings,
-  ImageCacheSettings,
   MembershipFee,
-  PAYMENT_METHOD_NAMES,
-  PaymentMethodKey,
-  PaymentMethodSettings,
-  PaymentMethods,
+  MembershipReminder,
   SettingsService,
   feeForYear,
-  paymentFee,
 } from '../../../../services/settings';
 import { NotificationsService } from '../../../../notifications/notifications.service';
-import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
-import { BarionWithdraw } from '../barion-withdraw/barion-withdraw';
-import { StripePayoutCard } from '../stripe-payout/stripe-payout';
+
+const MONTHS = [
+  'január',
+  'február',
+  'március',
+  'április',
+  'május',
+  'június',
+  'július',
+  'augusztus',
+  'szeptember',
+  'október',
+  'november',
+  'december',
+];
 
 interface FeeRow {
   fromYear: number;
   amount: number;
 }
 
-// Klub → Beállítások → Klub és fizetés: the membership fee, the payment
-// methods, the president, and the room the photos take (the chat's, and the
-// picture cache). One of the settings page's tabs
+// Klub → Beállítások → Klub: the membership fee, the president, and the
+// e-mails reminding of an unpaid fee. One of the settings page's tabs
 // (settings.ts shows them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-club-settings',
-  imports: [FormsModule, MatIconModule, BarionWithdraw, StripePayoutCard],
+  imports: [FormsModule, MatIconModule],
   templateUrl: './club-settings.html',
   styleUrl: './club-settings.scss',
 })
@@ -56,10 +61,8 @@ export class ClubSettingsTab implements OnInit {
   currentFee = computed(() => feeForYear(this.saved(), this.currentYear));
 
   ngOnInit() {
-    this.loadPayMethods();
     this.loadPresident();
-    this.loadChatImages();
-    this.loadImageCache();
+    this.loadReminder();
     this.settingsService.getMembershipFees().subscribe({
       next: (res) => {
         this.foundingYear.set(res.data.foundingYear);
@@ -148,69 +151,6 @@ export class ClubSettingsTab implements OnInit {
     });
   }
 
-  // --- Fizetési módok: Stripe and Barion - on or off, and the fee on top ---
-
-  readonly payMethodKeys: PaymentMethodKey[] = ['stripe', 'barion'];
-  readonly payMethodNames = PAYMENT_METHOD_NAMES;
-  // What's saved, and the form (each method saved with its own Mentés).
-  private payMethods = signal<PaymentMethods | null>(null);
-  payForm = signal<PaymentMethods | null>(null);
-  savingPayMethod = signal<PaymentMethodKey | null>(null);
-
-  private loadPayMethods() {
-    this.settingsService.getPaymentMethods().subscribe({
-      next: (res) => {
-        this.payMethods.set(res.data);
-        this.payForm.set(res.data);
-      },
-      error: () => {},
-    });
-  }
-
-  payMethodDirty(key: PaymentMethodKey): boolean {
-    return JSON.stringify(this.payMethods()?.[key]) !== JSON.stringify(this.payForm()?.[key]);
-  }
-
-  setPayField(key: PaymentMethodKey, field: keyof PaymentMethodSettings, value: unknown) {
-    this.payForm.update(
-      (form) =>
-        form && {
-          ...form,
-          [key]: { ...form[key], [field]: field === 'enabled' ? !!value : Number(value) },
-        },
-    );
-  }
-
-  // What a sum becomes with the fee in the form right now.
-  payExample(key: PaymentMethodKey, sum: number): string {
-    const method = this.payForm()?.[key];
-    const total = method ? sum + paymentFee(sum, method) : sum;
-    return new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(total);
-  }
-
-  resetPayMethod(key: PaymentMethodKey) {
-    const saved = this.payMethods();
-    if (saved) this.payForm.update((form) => form && { ...form, [key]: saved[key] });
-  }
-
-  savePayMethod(key: PaymentMethodKey) {
-    const method = this.payForm()?.[key];
-    if (!method || this.savingPayMethod()) return;
-    this.savingPayMethod.set(key);
-    this.settingsService.updatePaymentMethod(key, method).subscribe({
-      next: (res) => {
-        this.payMethods.update((saved) => saved && { ...saved, [key]: res.data });
-        this.payForm.update((form) => form && { ...form, [key]: res.data });
-        this.savingPayMethod.set(null);
-        this.notifications.addSuccess(`${PAYMENT_METHOD_NAMES[key]} beállítás mentve.`);
-      },
-      error: (err) => {
-        this.savingPayMethod.set(null);
-        this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
-      },
-    });
-  }
-
   // --- Elnök: on a tour's beszámoló, and around its wax seal ---
 
   presidentSaved = signal<string | null>(null);
@@ -251,144 +191,109 @@ export class ClubSettingsTab implements OnInit {
     });
   }
 
-  // --- Chat fotók: the folder's size limit and the daily number per person ---
+  // --- Tagdíj emlékeztető: e-mails to whoever hasn't paid this year's fee ---
 
-  chatImages = signal<ChatImageSettings | null>(null);
-  chatQuotaMB = signal(1024);
-  chatDailyLimit = signal(10);
-  savingChatImages = signal(false);
+  readonly months = MONTHS;
 
-  chatImagesDirty = computed(() => {
-    const c = this.chatImages();
+  reminderLoading = signal(true);
+  reminder = signal<MembershipReminder | null>(null);
+  reminderRecipients = signal<string[]>([]);
+  // The form (saved with Mentés).
+  reminderEnabled = signal(false);
+  reminderMonth = signal(3);
+  reminderDay = signal(1);
+  reminderFrequency = signal<'monthly' | 'quarterly'>('quarterly');
+  savingReminder = signal(false);
+  sendingTest = signal(false);
+
+  reminderDirty = computed(() => {
+    const r = this.reminder();
     return (
-      !!c &&
-      (c.quotaMB !== Number(this.chatQuotaMB()) || c.dailyLimit !== Number(this.chatDailyLimit()))
+      !!r &&
+      (r.enabled !== this.reminderEnabled() ||
+        r.startMonth !== Number(this.reminderMonth()) ||
+        r.startDay !== Number(this.reminderDay()) ||
+        r.frequency !== this.reminderFrequency())
     );
   });
 
-  // How full the folder is, 0-100.
-  chatUsagePercent = computed(() => {
-    const c = this.chatImages();
-    if (!c) return 0;
-    return Math.min(100, Math.round((c.usage.bytes / (c.quotaMB * 1024 * 1024)) * 100));
+  // This year's rounds for what's in the form right now - so the effect
+  // of a change shows before saving ("1 March quarterly: Mar, Jun, Sep, Dec").
+  previewDates = computed(() => {
+    const step = this.reminderFrequency() === 'monthly' ? 1 : 3;
+    const day = Number(this.reminderDay());
+    const dates: string[] = [];
+    for (let m = Number(this.reminderMonth()); m <= 12; m += step) {
+      dates.push(`${MONTHS[m - 1]} ${day}.`);
+    }
+    return dates;
   });
 
-  chatUsageMB = computed(() => Math.round((this.chatImages()?.usage.bytes ?? 0) / (1024 * 1024)));
-
-  private loadChatImages() {
-    this.settingsService.getChatImageSettings().subscribe({
-      next: (res) => this.applyChatImages(res.data),
-      error: () => {},
+  private loadReminder() {
+    this.settingsService.getMembershipReminder().subscribe({
+      next: (res) => {
+        this.applyReminder(res.data.reminder);
+        this.reminderRecipients.set(res.data.recipients);
+        this.reminderLoading.set(false);
+      },
+      error: () => this.reminderLoading.set(false),
     });
   }
 
-  applyChatImages(c: ChatImageSettings) {
-    this.chatImages.set(c);
-    this.chatQuotaMB.set(c.quotaMB);
-    this.chatDailyLimit.set(c.dailyLimit);
+  private applyReminder(r: MembershipReminder) {
+    this.reminder.set(r);
+    this.reminderEnabled.set(r.enabled);
+    this.reminderMonth.set(r.startMonth);
+    this.reminderDay.set(r.startDay);
+    this.reminderFrequency.set(r.frequency);
   }
 
-  saveChatImages() {
-    if (this.savingChatImages()) return;
-    this.savingChatImages.set(true);
+  resetReminder() {
+    const r = this.reminder();
+    if (r) this.applyReminder(r);
+  }
+
+  saveReminder() {
+    if (this.savingReminder()) return;
+    this.savingReminder.set(true);
     this.settingsService
-      .updateChatImageSettings({
-        quotaMB: Number(this.chatQuotaMB()),
-        dailyLimit: Number(this.chatDailyLimit()),
+      .updateMembershipReminder({
+        enabled: this.reminderEnabled(),
+        startMonth: Number(this.reminderMonth()),
+        startDay: Number(this.reminderDay()),
+        frequency: this.reminderFrequency(),
       })
       .subscribe({
         next: (res) => {
-          this.applyChatImages(res.data);
-          this.savingChatImages.set(false);
-          this.notifications.addSuccess(
-            res.data.removed
-              ? `Kotyogó fotók mentve – ${res.data.removed} régi fotó törölve, hogy beférjen.`
-              : 'Kotyogó fotók mentve.',
-          );
+          this.applyReminder(res.data.reminder);
+          this.savingReminder.set(false);
+          this.notifications.addSuccess('Tagdíj emlékeztető mentve.');
         },
         error: (err) => {
-          this.savingChatImages.set(false);
+          this.savingReminder.set(false);
           this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
         },
       });
   }
 
-  // --- Kép gyorsítótár: the smaller photo versions for the viewer ---
-
-  private confirm = inject(ConfirmService);
-  imageCache = signal<ImageCacheSettings | null>(null);
-  imageCacheQuotaMB = signal(5120);
-  savingImageCache = signal(false);
-
-  imageCacheDirty = computed(() => {
-    const c = this.imageCache();
-    return !!c && c.quotaMB !== Number(this.imageCacheQuotaMB());
-  });
-
-  imageCachePercent = computed(() => {
-    const c = this.imageCache();
-    if (!c) return 0;
-    return Math.min(100, Math.round((c.usage.bytes / (c.quotaMB * 1024 * 1024)) * 100));
-  });
-
-  imageCacheUsageMB = computed(() =>
-    Math.round((this.imageCache()?.usage.bytes ?? 0) / (1024 * 1024)),
-  );
-
-  private loadImageCache() {
-    this.settingsService.getImageCacheSettings().subscribe({
-      next: (res) => this.applyImageCache(res.data),
-      error: () => {},
-    });
-  }
-
-  applyImageCache(c: ImageCacheSettings) {
-    this.imageCache.set(c);
-    this.imageCacheQuotaMB.set(c.quotaMB);
-  }
-
-  saveImageCache() {
-    if (this.savingImageCache()) return;
-    this.savingImageCache.set(true);
-    this.settingsService.updateImageCacheSettings(Number(this.imageCacheQuotaMB())).subscribe({
+  sendTestReminder() {
+    if (this.sendingTest()) return;
+    this.sendingTest.set(true);
+    this.settingsService.testMembershipReminder().subscribe({
       next: (res) => {
-        this.applyImageCache(res.data);
-        this.savingImageCache.set(false);
-        this.notifications.addSuccess(
-          res.data.removed
-            ? `Kép gyorsítótár mentve – ${res.data.removed} régóta nem nézett kép törölve, hogy beférjen.`
-            : 'Kép gyorsítótár mentve.',
-        );
+        this.sendingTest.set(false);
+        this.notifications.addSuccess(`Próba e-mail elküldve: ${res.data.sentTo}`);
       },
       error: (err) => {
-        this.savingImageCache.set(false);
-        this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+        this.sendingTest.set(false);
+        this.notifications.addError(err?.error?.message ?? 'A próba e-mail nem ment el.');
       },
     });
   }
 
-  async clearImageCache() {
-    if (this.savingImageCache()) return;
-    const ok = await this.confirm.ask({
-      message: 'Biztosan üríted a kép gyorsítótárat?',
-      detail:
-        'Az eredeti fotók megmaradnak – a kisebb változatok újra elkészülnek, ahogy megnézik őket.',
-      confirmText: 'Ürítés',
-    });
-    if (!ok) return;
-    this.savingImageCache.set(true);
-    this.settingsService.clearImageCache().subscribe({
-      next: (res) => {
-        this.applyImageCache(res.data);
-        this.savingImageCache.set(false);
-        this.notifications.addSuccess(
-          `Kép gyorsítótár kiürítve – ${res.data.removed} kép törölve.`,
-        );
-      },
-      error: (err) => {
-        this.savingImageCache.set(false);
-        this.notifications.addError(err?.error?.message ?? 'Az ürítés nem sikerült.');
-      },
-    });
+  // "2027-06-01" -> "június 1."
+  roundLabel(date: string): string {
+    const [, m, d] = date.split('-').map(Number);
+    return `${MONTHS[m - 1]} ${d}.`;
   }
 }

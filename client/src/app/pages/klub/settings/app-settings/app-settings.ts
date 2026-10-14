@@ -1,12 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import {
-  BirthdaySettings,
-  MembershipReminder,
-  SettingsService,
-  YearlyReportInfo,
-} from '../../../../services/settings';
+import { BirthdaySettings, SettingsService, YearlyReportInfo } from '../../../../services/settings';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import {
   BIRTHDAY_EFFECTS,
@@ -15,23 +10,8 @@ import {
 } from '../../../../shared/birthday/birthday.service';
 import { AuthService } from '../../../../auth/auth.service';
 
-const MONTHS = [
-  'január',
-  'február',
-  'március',
-  'április',
-  'május',
-  'június',
-  'július',
-  'augusztus',
-  'szeptember',
-  'október',
-  'november',
-  'december',
-];
-
-// Klub → Beállítások → Értesítések: what the app sends by itself - the fee
-// reminder, the yearly report, the birthday and rank greetings. One of the settings page's tabs
+// Klub → Beállítások → Értesítések: what the app sends by itself - the
+// yearly report, the birthday and rank greetings. One of the settings page's tabs
 // (settings.ts shows them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-app-settings',
@@ -45,116 +25,9 @@ export class AppSettingsTab implements OnInit {
   private auth = inject(AuthService);
 
   ngOnInit() {
-    this.loadReminder();
     this.loadYearlyReport();
     this.loadBirthday();
     this.loadRank();
-  }
-
-  // --- Tagdíj emlékeztető: the one notification that is set here ---
-
-  readonly months = MONTHS;
-
-  reminderLoading = signal(true);
-  reminder = signal<MembershipReminder | null>(null);
-  reminderRecipients = signal<string[]>([]);
-  // The form (saved with Mentés).
-  reminderEnabled = signal(false);
-  reminderMonth = signal(3);
-  reminderDay = signal(1);
-  reminderFrequency = signal<'monthly' | 'quarterly'>('quarterly');
-  savingReminder = signal(false);
-  sendingTest = signal(false);
-
-  reminderDirty = computed(() => {
-    const r = this.reminder();
-    return (
-      !!r &&
-      (r.enabled !== this.reminderEnabled() ||
-        r.startMonth !== Number(this.reminderMonth()) ||
-        r.startDay !== Number(this.reminderDay()) ||
-        r.frequency !== this.reminderFrequency())
-    );
-  });
-
-  // This year's rounds for what's in the form right now - so the effect
-  // of a change shows before saving ("1 March quarterly: Mar, Jun, Sep, Dec").
-  previewDates = computed(() => {
-    const step = this.reminderFrequency() === 'monthly' ? 1 : 3;
-    const day = Number(this.reminderDay());
-    const dates: string[] = [];
-    for (let m = Number(this.reminderMonth()); m <= 12; m += step) {
-      dates.push(`${MONTHS[m - 1]} ${day}.`);
-    }
-    return dates;
-  });
-
-  private loadReminder() {
-    this.settingsService.getMembershipReminder().subscribe({
-      next: (res) => {
-        this.applyReminder(res.data.reminder);
-        this.reminderRecipients.set(res.data.recipients);
-        this.reminderLoading.set(false);
-      },
-      error: () => this.reminderLoading.set(false),
-    });
-  }
-
-  private applyReminder(r: MembershipReminder) {
-    this.reminder.set(r);
-    this.reminderEnabled.set(r.enabled);
-    this.reminderMonth.set(r.startMonth);
-    this.reminderDay.set(r.startDay);
-    this.reminderFrequency.set(r.frequency);
-  }
-
-  resetReminder() {
-    const r = this.reminder();
-    if (r) this.applyReminder(r);
-  }
-
-  saveReminder() {
-    if (this.savingReminder()) return;
-    this.savingReminder.set(true);
-    this.settingsService
-      .updateMembershipReminder({
-        enabled: this.reminderEnabled(),
-        startMonth: Number(this.reminderMonth()),
-        startDay: Number(this.reminderDay()),
-        frequency: this.reminderFrequency(),
-      })
-      .subscribe({
-        next: (res) => {
-          this.applyReminder(res.data.reminder);
-          this.savingReminder.set(false);
-          this.notifications.addSuccess('Tagdíj emlékeztető mentve.');
-        },
-        error: (err) => {
-          this.savingReminder.set(false);
-          this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
-        },
-      });
-  }
-
-  sendTestReminder() {
-    if (this.sendingTest()) return;
-    this.sendingTest.set(true);
-    this.settingsService.testMembershipReminder().subscribe({
-      next: (res) => {
-        this.sendingTest.set(false);
-        this.notifications.addSuccess(`Próba e-mail elküldve: ${res.data.sentTo}`);
-      },
-      error: (err) => {
-        this.sendingTest.set(false);
-        this.notifications.addError(err?.error?.message ?? 'A próba e-mail nem ment el.');
-      },
-    });
-  }
-
-  // "2027-06-01" -> "június 1."
-  roundLabel(date: string): string {
-    const [, m, d] = date.split('-').map(Number);
-    return `${MONTHS[m - 1]} ${d}.`;
   }
 
   // --- Éves jelentés: the club's year on one page, e-mailed on 1 January ---

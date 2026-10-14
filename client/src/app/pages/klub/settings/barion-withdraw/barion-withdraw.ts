@@ -1,9 +1,7 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatIconModule } from '@angular/material/icon';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FreshLoginService } from '../../../../auth/fresh-login.service';
-import { PaymentService } from '../../../../services/payment';
-import { BarionWallet, BarionWalletKey, SettingsService } from '../../../../services/settings';
+import { PaymentService, WithdrawalStatusResponse } from '../../../../services/payment';
+import { BarionWalletKey } from '../../../../services/settings';
 
 // Mirrors utils/barion.js's own WITHDRAWAL_FEE_RATE/WITHDRAWAL_MIN_FEE
 // server-side - shown here purely so the admin sees the real net amount
@@ -15,74 +13,35 @@ function withdrawalFee(amount: number): number {
   return Math.max(Math.round(amount * WITHDRAWAL_FEE_RATE), WITHDRAWAL_MIN_FEE);
 }
 
-// One Barion wallet's card on Beállítások (admins only, like the page) -
-// Tagdíjak or Előlegek: where its payments land and which bank account
-// its money goes to (editable; every change is e-mailed to all admins),
-// and withdrawing to that account. The wallet's API key is a secret in the
-// server's .env - without it the withdraw button stays inactive.
+// One Barion wallet's row on the Kiutalás számlára card (Beállítások →
+// Fizetések) - Tagdíjak or Előlegek: its balance, and withdrawing to its
+// bank account (set on the Kiutalási számlaadatok card). The wallet's API
+// key is a secret in the server's .env - without it the withdraw button
+// stays inactive and there is no balance to show.
 @Component({
   selector: 'app-barion-withdraw',
-  imports: [FormsModule, MatIconModule],
   templateUrl: './barion-withdraw.html',
   styleUrl: './barion-withdraw.scss',
 })
-export class BarionWithdraw implements OnInit {
+export class BarionWithdraw {
   private paymentService = inject(PaymentService);
-  private settingsService = inject(SettingsService);
   private freshLogin = inject(FreshLoginService);
 
   wallet = input.required<BarionWalletKey>();
+  // Bumped by the page when a bank account was saved: asked again whether
+  // the wallet can pay out.
+  refresh = input(0);
   title = computed(() => (this.wallet() === 'membership' ? 'Tagdíjak' : 'Előlegek'));
   private purpose = computed(() =>
     this.wallet() === 'membership' ? 'membershipFee' : 'tourAdvance',
   );
 
-  // --- Its settings: shown, or edited ---
+  // What the server says (paymentController.js's getWithdrawalStatus):
+  // configured once both the bank account and the API key are set.
+  status = signal<WithdrawalStatusResponse['data'] | null>(null);
+  configured = computed(() => !!this.status()?.configured);
+  balance = computed(() => this.status()?.balance ?? null);
 
-  account = signal<BarionWallet | null>(null);
-  editing = signal(false);
-  saving = signal(false);
-  formError = signal<string | null>(null);
-  form = { payeeEmail: '', withdrawName: '', withdrawIban: '' };
-
-  async startEdit() {
-    // Where a payout goes: only for someone who identified themselves in
-    // the last minutes - asked before the form opens, so nothing typed is
-    // lost on the way to the provider.
-    if (!(await this.freshLogin.ensure('Barion-számla adatainak módosítása'))) return;
-    const a = this.account();
-    this.form = {
-      payeeEmail: a?.payeeEmail ?? '',
-      withdrawName: a?.withdrawName ?? '',
-      withdrawIban: a?.withdrawIban ?? '',
-    };
-    this.formError.set(null);
-    this.editing.set(true);
-  }
-
-  save() {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.formError.set(null);
-    this.settingsService.updateBarionWallet(this.wallet(), this.form).subscribe({
-      next: (res) => {
-        this.account.set(res.data);
-        this.saving.set(false);
-        this.editing.set(false);
-        this.loadStatus(); // an account just set can make it withdrawable
-      },
-      error: (err) => {
-        this.saving.set(false);
-        this.formError.set(err?.error?.message ?? 'A mentés nem sikerült.');
-      },
-    });
-  }
-
-  // --- Withdrawing ---
-
-  // True once the server says both the bank account (here) and the API key
-  // (.env) are set - see paymentController.js's getWithdrawalStatus.
-  configured = signal(false);
   amount = signal<number | null>(null);
   withdrawing = signal(false);
   notice = signal<{ kind: 'success' | 'error'; text: string } | null>(null);
@@ -93,17 +52,16 @@ export class BarionWithdraw implements OnInit {
   });
   net = computed(() => (this.amount() ?? 0) - this.fee());
 
-  ngOnInit() {
-    this.settingsService.getBarionSettings().subscribe({
-      next: (res) => this.account.set(res.data[this.wallet()]),
-      error: (err) => console.error('Failed to load Barion settings', err),
+  constructor() {
+    effect(() => {
+      this.refresh();
+      this.loadStatus();
     });
-    this.loadStatus();
   }
 
   private loadStatus() {
     this.paymentService.getWithdrawalStatus(this.purpose()).subscribe({
-      next: (res) => this.configured.set(res.data.configured),
+      next: (res) => this.status.set(res.data),
       error: (err) => console.error('Failed to load withdrawal status', err),
     });
   }
@@ -129,6 +87,7 @@ export class BarionWithdraw implements OnInit {
         });
         this.amount.set(null);
         this.withdrawing.set(false);
+        this.loadStatus(); // the balance after it
       },
       error: (err) => {
         this.notice.set({
