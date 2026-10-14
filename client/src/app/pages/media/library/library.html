@@ -158,13 +158,20 @@
             <a
               class="spine"
               [class.spine--dim]="isDimmed(shelf, book)"
-              [style]="spineStyle(book, $index)"
+              [style]="spineStyle(book, $index, shelf.books)"
               [routerLink]="[book._id]"
               [title]="
                 (book.author ? book.author + ': ' : '') + book.title + ' – ' + book.pages + ' oldal'
               "
             >
-              <span class="spine-title">{{ book.title }}</span>
+              <!-- Along the spine: the title, and the author beside it - each one
+                   line, cut with … where the spine is too short. -->
+              <span class="spine-text" [class.spine-text--author]="book.author">
+                <span class="spine-title">{{ book.title }}</span>
+                @if (book.author) {
+                  <span class="spine-author">{{ book.author }}</span>
+                }
+              </span>
               <!-- A scan without OCR: nothing in it can be searched. -->
               @if (!book.hasText) {
                 <span class="spine-flag" title="Nincs benne szöveg – OCR kell hozzá">OCR</span>
