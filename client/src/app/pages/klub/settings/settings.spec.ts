@@ -12,9 +12,12 @@ import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { AuthService } from '../../../auth/auth.service';
 import { BirthdayService } from '../../../shared/birthday/birthday.service';
 import { BarionWithdraw } from './barion-withdraw/barion-withdraw';
+import { BankAccount } from './bank-account/bank-account';
 import { KlubSettings, TAB_KEYS } from './settings';
 import { OidcSettingsTab } from './oidc-settings/oidc-settings';
 import { ClubSettingsTab } from './club-settings/club-settings';
+import { PaymentSettingsTab } from './payment-settings/payment-settings';
+import { StorageSettingsTab } from './storage-settings/storage-settings';
 import { AppSettingsTab } from './app-settings/app-settings';
 import { InfoSettingsTab } from './info-settings/info-settings';
 
@@ -89,6 +92,8 @@ describe('KlubSettings', () => {
   const tab = <T>(type: Type<T>) =>
     fixture.debugElement.query(By.directive(type)).componentInstance as T;
   const club = () => tab(ClubSettingsTab);
+  const pay = () => tab(PaymentSettingsTab);
+  const storage = () => tab(StorageSettingsTab);
   const app = () => tab(AppSettingsTab);
   const info = () => tab(InfoSettingsTab);
 
@@ -116,11 +121,11 @@ describe('KlubSettings', () => {
     expect(club().loading()).toBe(false);
     expect(club().rows()).toHaveLength(2);
     expect(club().currentFee()).toBe(5000);
-    expect(app().reminder()?.enabled).toBe(true);
-    expect(app().reminderRecipients()).toEqual(['Tag Tamás']);
-    expect(club().payForm()?.barion.feeMin).toBe(100);
-    expect(club().chatImages()?.quotaMB).toBe(100);
-    expect(club().imageCache()?.quotaMB).toBe(1000);
+    expect(club().reminder()?.enabled).toBe(true);
+    expect(club().reminderRecipients()).toEqual(['Tag Tamás']);
+    expect(pay().payForm()?.barion.feeMin).toBe(100);
+    expect(storage().chatImages()?.quotaMB).toBe(100);
+    expect(storage().imageCache()?.quotaMB).toBe(1000);
     expect(app().bdMessage()).toBe('Boldog, {név}!');
     expect(app().rkEffect()).toBe('stars');
     expect(club().presidentName()).toBe('Elnök Elek');
@@ -137,12 +142,12 @@ describe('KlubSettings', () => {
         (panel: HTMLElement) => panel.hidden,
       );
     expect(page.activeTab()).toBe('club');
-    expect(hidden()).toEqual([false, true, true]);
+    expect(hidden()).toEqual([false, true, true, true, true, true]);
 
-    fixture.nativeElement.querySelectorAll('[role="tab"]')[2].click();
+    fixture.nativeElement.querySelectorAll('[role="tab"]')[5].click();
     fixture.detectChanges();
     expect(page.activeTab()).toBe('info');
-    expect(hidden()).toEqual([true, true, false]);
+    expect(hidden()).toEqual([true, true, true, true, true, false]);
     expect(navigate.mock.calls[0][1]).toMatchObject({ queryParams: { lap: TAB_KEYS.info } });
   });
 
@@ -150,11 +155,11 @@ describe('KlubSettings', () => {
     const routes = Object.fromEntries(Object.keys(loaded()).map((key) => [key, fail(500)]));
     open({ ...routes, 'GET /settings/membership-fees': fail(403, 'Nincs jogod.') });
     expect(club().loading()).toBe(false);
-    expect(app().reminderLoading()).toBe(false);
+    expect(club().reminderLoading()).toBe(false);
     expect(error).toHaveBeenCalledWith('Nincs jogod.');
-    expect(club().chatUsagePercent()).toBe(0);
-    expect(club().imageCachePercent()).toBe(0);
-    expect(club().payExample('stripe', 1000)).toBe('1000'); // no method known: no fee
+    expect(storage().chatUsagePercent()).toBe(0);
+    expect(storage().imageCachePercent()).toBe(0);
+    expect(pay().payExample('stripe', 1000)).toBe('1000'); // no method known: no fee
   });
 
   describe('membership fees', () => {
@@ -226,31 +231,31 @@ describe('KlubSettings', () => {
     beforeEach(() => open());
 
     it('previews the rounds of the year from the chosen start and frequency', () => {
-      expect(app().previewDates()).toEqual([
+      expect(club().previewDates()).toEqual([
         'március 1.',
         'június 1.',
         'szeptember 1.',
         'december 1.',
       ]);
-      app().reminderFrequency.set('monthly');
-      app().reminderMonth.set(11);
-      app().reminderDay.set(15);
-      expect(app().previewDates()).toEqual(['november 15.', 'december 15.']);
-      expect(app().roundLabel('2026-06-01')).toBe('június 1.');
+      club().reminderFrequency.set('monthly');
+      club().reminderMonth.set(11);
+      club().reminderDay.set(15);
+      expect(club().previewDates()).toEqual(['november 15.', 'december 15.']);
+      expect(club().roundLabel('2026-06-01')).toBe('június 1.');
     });
 
     it('is dirty after a change and clean again after a reset', () => {
-      expect(app().reminderDirty()).toBe(false);
-      app().reminderEnabled.set(false);
-      expect(app().reminderDirty()).toBe(true);
-      app().resetReminder();
-      expect(app().reminderDirty()).toBe(false);
+      expect(club().reminderDirty()).toBe(false);
+      club().reminderEnabled.set(false);
+      expect(club().reminderDirty()).toBe(true);
+      club().resetReminder();
+      expect(club().reminderDirty()).toBe(false);
     });
 
     it('saves the form', () => {
-      app().reminderDay.set(5);
-      app().saveReminder();
-      app().saveReminder();
+      club().reminderDay.set(5);
+      club().saveReminder();
+      club().saveReminder();
       const req = http.expectOne(`${API}/settings/membership-reminder`);
       expect(req.request.body).toEqual({
         enabled: true,
@@ -258,24 +263,24 @@ describe('KlubSettings', () => {
         startDay: 5,
         frequency: 'quarterly',
       });
-      req.flush({ data: { reminder: { ...app().reminder()!, startDay: 5 } } });
+      req.flush({ data: { reminder: { ...club().reminder()!, startDay: 5 } } });
       expect(success).toHaveBeenCalledWith('Tagdíj emlékeztető mentve.');
-      expect(app().reminderDirty()).toBe(false);
+      expect(club().reminderDirty()).toBe(false);
     });
 
     it('reports a failed save and a failed test e-mail', () => {
-      app().saveReminder();
+      club().saveReminder();
       respond({ 'PUT /settings/membership-reminder': fail() });
       expect(error).toHaveBeenCalledWith('A mentés nem sikerült.');
-      app().sendTestReminder();
+      club().sendTestReminder();
       respond({ 'POST /settings/membership-reminder/test': fail(500, 'Nincs SMTP.') });
       expect(error).toHaveBeenCalledWith('Nincs SMTP.');
-      expect(app().sendingTest()).toBe(false);
+      expect(club().sendingTest()).toBe(false);
     });
 
     it('sends a test e-mail to the admin', () => {
-      app().sendTestReminder();
-      app().sendTestReminder();
+      club().sendTestReminder();
+      club().sendTestReminder();
       respond({ 'POST /settings/membership-reminder/test': { data: { sentTo: 'a@b.hu' } } });
       expect(success).toHaveBeenCalledWith('Próba e-mail elküldve: a@b.hu');
     });
@@ -312,17 +317,17 @@ describe('KlubSettings', () => {
     beforeEach(() => open());
 
     it('shows how full they are, capped at 100%', () => {
-      expect(club().chatUsagePercent()).toBe(25);
-      expect(club().chatUsageMB()).toBe(25);
-      expect(club().imageCachePercent()).toBe(100);
-      expect(club().imageCacheUsageMB()).toBe(2000);
+      expect(storage().chatUsagePercent()).toBe(25);
+      expect(storage().chatUsageMB()).toBe(25);
+      expect(storage().imageCachePercent()).toBe(100);
+      expect(storage().imageCacheUsageMB()).toBe(2000);
     });
 
     it('saves the chat photo limits and says how many photos had to go', () => {
-      club().chatQuotaMB.set(10);
-      expect(club().chatImagesDirty()).toBe(true);
-      club().saveChatImages();
-      club().saveChatImages();
+      storage().chatQuotaMB.set(10);
+      expect(storage().chatImagesDirty()).toBe(true);
+      storage().saveChatImages();
+      storage().saveChatImages();
       const usage = { bytes: 9 * MB, count: 2 };
       respond({
         'PUT /settings/chat-images': { data: { quotaMB: 10, dailyLimit: 10, usage, removed: 2 } },
@@ -330,45 +335,45 @@ describe('KlubSettings', () => {
       expect(success).toHaveBeenCalledWith(
         'Kotyogó fotók mentve – 2 régi fotó törölve, hogy beférjen.',
       );
-      expect(club().chatImagesDirty()).toBe(false);
+      expect(storage().chatImagesDirty()).toBe(false);
 
-      club().saveChatImages();
+      storage().saveChatImages();
       respond({
         'PUT /settings/chat-images': { data: { quotaMB: 10, dailyLimit: 10, usage, removed: 0 } },
       });
       expect(success).toHaveBeenLastCalledWith('Kotyogó fotók mentve.');
 
-      club().saveChatImages();
+      storage().saveChatImages();
       respond({ 'PUT /settings/chat-images': fail() });
       expect(error).toHaveBeenCalledWith('A mentés nem sikerült.');
     });
 
     it('saves the cache size', () => {
-      club().imageCacheQuotaMB.set(3000);
-      expect(club().imageCacheDirty()).toBe(true);
-      club().saveImageCache();
-      club().saveImageCache();
+      storage().imageCacheQuotaMB.set(3000);
+      expect(storage().imageCacheDirty()).toBe(true);
+      storage().saveImageCache();
+      storage().saveImageCache();
       const usage = { bytes: 0, count: 0 };
       respond({ 'PUT /settings/image-cache': { data: { quotaMB: 3000, usage, removed: 5 } } });
       expect(success.mock.calls.at(-1)![0]).toContain('5 régóta nem nézett kép törölve');
 
-      club().saveImageCache();
+      storage().saveImageCache();
       respond({ 'PUT /settings/image-cache': { data: { quotaMB: 3000, usage, removed: 0 } } });
       expect(success).toHaveBeenLastCalledWith('Kép gyorsítótár mentve.');
 
-      club().saveImageCache();
+      storage().saveImageCache();
       respond({ 'PUT /settings/image-cache': fail() });
       expect(error).toHaveBeenCalledWith('A mentés nem sikerült.');
     });
 
     it('empties the cache only after a yes', async () => {
       const confirm = TestBed.inject(ConfirmService);
-      void club().clearImageCache();
+      void storage().clearImageCache();
       confirm.answer(false);
       await settle();
       http.expectNone(`${API}/settings/image-cache`);
 
-      void club().clearImageCache();
+      void storage().clearImageCache();
       confirm.answer(true);
       await settle();
       respond({
@@ -377,9 +382,9 @@ describe('KlubSettings', () => {
         },
       });
       expect(success).toHaveBeenCalledWith('Kép gyorsítótár kiürítve – 9 kép törölve.');
-      expect(club().imageCachePercent()).toBe(0);
+      expect(storage().imageCachePercent()).toBe(0);
 
-      void club().clearImageCache();
+      void storage().clearImageCache();
       confirm.answer(true);
       await settle();
       respond({ 'DELETE /settings/image-cache': fail() });
@@ -387,39 +392,63 @@ describe('KlubSettings', () => {
     });
   });
 
-  describe('payment methods', () => {
+  describe('Átutalási díjak', () => {
     beforeEach(() => open());
 
-    it('edits one method without touching the other', () => {
-      club().setPayField('stripe', 'feePercent', '3.5');
-      club().setPayField('stripe', 'enabled', 0);
-      expect(club().payForm()?.stripe).toMatchObject({ feePercent: 3.5, enabled: false });
-      expect(club().payMethodDirty('stripe')).toBe(true);
-      expect(club().payMethodDirty('barion')).toBe(false);
-      club().resetPayMethod('stripe');
-      expect(club().payMethodDirty('stripe')).toBe(false);
+    it('has no switch: both methods are on', () => {
+      expect(pay().payForm()?.stripe.enabled).toBe(true);
+      expect(pay().payForm()?.barion.enabled).toBe(true);
+      expect(pay().payDirty()).toBe(false);
+    });
+
+    it('edits one method without touching the other, and undoes both at once', () => {
+      pay().setPayField('stripe', 'feePercent', '3.5');
+      expect(pay().payForm()?.stripe).toMatchObject({ feePercent: 3.5, enabled: true });
+      expect(pay().payMethodDirty('stripe')).toBe(true);
+      expect(pay().payMethodDirty('barion')).toBe(false);
+      expect(pay().payDirty()).toBe(true);
+      pay().resetPayMethods();
+      expect(pay().payDirty()).toBe(false);
     });
 
     it('shows what a payer would pay with the fee on top', () => {
       const digits = (text: string) => text.replace(/\D/g, '');
-      expect(digits(club().payExample('stripe', 10000))).toBe('10204');
-      expect(digits(club().payExample('barion', 1000))).toBe('1100'); // the minimum fee
+      expect(digits(pay().payExample('stripe', 10000))).toBe('10204');
+      expect(digits(pay().payExample('barion', 1000))).toBe('1100'); // the minimum fee
     });
 
-    it('saves a method', () => {
-      club().setPayField('barion', 'feeFixed', 50);
-      club().savePayMethod('barion');
-      club().savePayMethod('stripe'); // one save at a time
+    it('saves both with one Mentés - only the changed ones are sent', () => {
+      pay().setPayField('barion', 'feeFixed', 50);
+      pay().savePayMethods();
+      pay().savePayMethods(); // one save at a time
+      http.expectNone(`${API}/settings/payment-methods/stripe`);
       const req = http.expectOne(`${API}/settings/payment-methods/barion`);
+      expect(req.request.body).toMatchObject({ feeFixed: 50, enabled: true });
       req.flush({ data: req.request.body });
-      expect(success).toHaveBeenCalledWith('Barion beállítás mentve.');
-      expect(club().payMethodDirty('barion')).toBe(false);
+      expect(success).toHaveBeenCalledWith('Átutalási díjak mentve.');
+      expect(pay().payDirty()).toBe(false);
 
-      club().savePayMethod('stripe');
+      pay().setPayField('stripe', 'feeMin', 10);
+      pay().savePayMethods();
       respond({ 'PUT /settings/payment-methods/stripe': fail(400, 'Túl nagy díj.') });
       expect(error).toHaveBeenCalledWith('Túl nagy díj.');
-      expect(club().savingPayMethod()).toBeNull();
+      expect(pay().savingPay()).toBe(false);
     });
+  });
+
+  it('switches on a method that was saved as off with the next save', () => {
+    open({
+      ...loaded(),
+      'GET /settings/payment-methods': {
+        data: { stripe: method, barion: { ...method, enabled: false } },
+      },
+    });
+    expect(pay().payMethodOff('barion')).toBe(true);
+    expect(pay().payDirty()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('mentéskor bekapcsol');
+    pay().savePayMethods();
+    const req = http.expectOne(`${API}/settings/payment-methods/barion`);
+    expect(req.request.body.enabled).toBe(true);
   });
 
   describe('OIDC szolgáltató - the role manager only', () => {
@@ -809,6 +838,105 @@ describe('KlubSettings', () => {
   });
 });
 
+describe('BankAccount', () => {
+  let fixture: ComponentFixture<BankAccount>;
+  let card: BankAccount;
+  let http: HttpTestingController;
+
+  function open(wallet: 'membership' | 'tour', routes: Record<string, object> = loaded()) {
+    fixture = TestBed.createComponent(BankAccount);
+    fixture.componentRef.setInput('wallet', wallet);
+    card = fixture.componentInstance;
+    fixture.detectChanges();
+    respond(routes);
+    fixture.detectChanges();
+  }
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [BankAccount], providers: [pageTesting()] });
+    http = TestBed.inject(HttpTestingController);
+    // An admin who identified themselves just now (see fresh-login.service.ts).
+    logIn({ role: 'admin' });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('shows the account of the membership fees', () => {
+    open('membership');
+    expect(card.title()).toBe('Tagdíjak');
+    expect(card.account()?.payeeEmail).toBe('tag@klub.hu');
+    expect(fixture.nativeElement.textContent).toContain('HU11');
+  });
+
+  it('opens even when nothing could be loaded', async () => {
+    open('tour', { 'GET /settings/barion': fail() });
+    expect(card.title()).toBe('Előlegek');
+    expect(card.account()).toBeNull();
+    await card.startEdit();
+    expect(card.form).toEqual({ payeeEmail: '', withdrawName: '', withdrawIban: '' });
+  });
+
+  it('edits the account and tells the page it was saved', async () => {
+    open('membership');
+    const saved = vi.fn();
+    card.saved.subscribe(saved);
+    await card.startEdit();
+    expect(card.form.withdrawIban).toBe('HU11');
+    card.form.withdrawIban = 'HU22';
+    card.save();
+    card.save();
+    const req = http.expectOne(`${API}/settings/barion/membership`);
+    expect(req.request.body.withdrawIban).toBe('HU22');
+    req.flush({ data: req.request.body });
+    expect(card.editing()).toBe(false);
+    expect(card.account()?.withdrawIban).toBe('HU22');
+    expect(saved).toHaveBeenCalledWith(expect.objectContaining({ withdrawIban: 'HU22' }));
+  });
+
+  it('keeps the form open with the reason when the save fails', async () => {
+    open('membership');
+    await card.startEdit();
+    card.save();
+    respond({ 'PUT /settings/barion/membership': fail(400, 'Hibás IBAN.') });
+    expect(card.formError()).toBe('Hibás IBAN.');
+    expect(card.editing()).toBe(true);
+  });
+
+  describe('someone who logged in long ago', () => {
+    const confirm = () => TestBed.inject(ConfirmService);
+
+    beforeEach(() => {
+      logIn({ role: 'admin', freshLoginSecondsLeft: 0 });
+      open('membership');
+    });
+    afterEach(() => sessionStorage.clear());
+
+    it('saying no leaves everything as it was', async () => {
+      const go = vi
+        .spyOn(TestBed.inject(AuthService), 'identifyAgain')
+        .mockImplementation(() => {});
+      void card.startEdit();
+      respond({ 'GET /auth/me': { loggedIn: true, id: 'me', role: 'admin' } });
+      await settle();
+      confirm().answer(false);
+      await settle();
+      expect(go).not.toHaveBeenCalled();
+      expect(card.editing()).toBe(false);
+    });
+
+    it('goes on without asking if they identified since (on another tab)', async () => {
+      void card.startEdit();
+      respond({
+        'GET /auth/me': { loggedIn: true, id: 'me', role: 'admin', freshLoginSecondsLeft: 400 },
+      });
+      await settle();
+      expect(confirm().pending()).toBeNull();
+      expect(card.editing()).toBe(true);
+    });
+  });
+});
+
 describe('BarionWithdraw', () => {
   let fixture: ComponentFixture<BarionWithdraw>;
   let card: BarionWithdraw;
@@ -833,52 +961,43 @@ describe('BarionWithdraw', () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it('shows the wallet of the membership fees', () => {
-    open('membership');
+  it("shows the membership wallet's balance", () => {
+    open('membership', {
+      'GET /payments/withdraw/membershipFee': {
+        data: {
+          configured: true,
+          balance: { available: 12000, blocked: 500 },
+          balanceError: false,
+        },
+      },
+    });
     expect(card.title()).toBe('Tagdíjak');
-    expect(card.account()?.payeeEmail).toBe('tag@klub.hu');
     expect(card.configured()).toBe(true);
+    expect(card.balance()).toEqual({ available: 12000, blocked: 500 });
+    expect(fixture.nativeElement.textContent).toContain('500 Ft zárolva');
+  });
+
+  it('says so when Barion could not be asked for the balance', () => {
+    open('membership', {
+      'GET /payments/withdraw/membershipFee': {
+        data: { configured: true, balance: null, balanceError: true },
+      },
+    });
+    expect(fixture.nativeElement.textContent).toContain('most nem sikerült lekérdezni');
+  });
+
+  it('asks again whether it can pay out when the page says an account was saved', () => {
+    open('membership');
+    fixture.componentRef.setInput('refresh', 1);
+    fixture.detectChanges();
+    respond({ 'GET /payments/withdraw/membershipFee': { data: { configured: false } } });
+    expect(card.configured()).toBe(false);
   });
 
   it('shows the wallet of the tour advances', () => {
     open('tour');
     expect(card.title()).toBe('Előlegek');
     expect(card.configured()).toBe(false);
-  });
-
-  it('opens even when nothing could be loaded', async () => {
-    open('tour', {
-      'GET /settings/barion': fail(),
-      'GET /payments/withdraw/tourAdvance': fail(),
-    });
-    expect(card.account()).toBeNull();
-    await card.startEdit();
-    expect(card.form).toEqual({ payeeEmail: '', withdrawName: '', withdrawIban: '' });
-  });
-
-  it('edits the account and re-checks whether it can pay out', async () => {
-    open('membership');
-    await card.startEdit();
-    expect(card.form.withdrawIban).toBe('HU11');
-    card.form.withdrawIban = 'HU22';
-    card.save();
-    card.save();
-    const req = http.expectOne(`${API}/settings/barion/membership`);
-    expect(req.request.body.withdrawIban).toBe('HU22');
-    req.flush({ data: req.request.body });
-    expect(card.editing()).toBe(false);
-    expect(card.account()?.withdrawIban).toBe('HU22');
-    respond({ 'GET /payments/withdraw/membershipFee': { data: { configured: false } } });
-    expect(card.configured()).toBe(false);
-  });
-
-  it('keeps the form open with the reason when the save fails', async () => {
-    open('membership');
-    await card.startEdit();
-    card.save();
-    respond({ 'PUT /settings/barion/membership': fail(400, 'Hibás IBAN.') });
-    expect(card.formError()).toBe('Hibás IBAN.');
-    expect(card.editing()).toBe(true);
   });
 
   it('shows the fee: 0.1%, but at least 70 Ft', () => {
@@ -948,27 +1067,6 @@ describe('BarionWithdraw', () => {
       expect(go).toHaveBeenCalledWith(TestBed.inject(Router).url);
       http.expectNone(`${API}/payments/withdraw`);
       expect(card.withdrawing()).toBe(false);
-    });
-
-    it('saying no leaves everything as it was', async () => {
-      const go = identify();
-      void card.startEdit();
-      stillOld();
-      await settle();
-      confirm().answer(false);
-      await settle();
-      expect(go).not.toHaveBeenCalled();
-      expect(card.editing()).toBe(false);
-    });
-
-    it('goes on without asking if they identified since (on another tab)', async () => {
-      void card.startEdit();
-      respond({
-        'GET /auth/me': { loggedIn: true, id: 'me', role: 'admin', freshLoginSecondsLeft: 400 },
-      });
-      await settle();
-      expect(confirm().pending()).toBeNull();
-      expect(card.editing()).toBe(true);
     });
   });
 });

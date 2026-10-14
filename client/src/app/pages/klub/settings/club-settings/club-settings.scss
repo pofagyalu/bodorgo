@@ -101,30 +101,6 @@
   }
 }
 
-// Fizetési módok: one block per gateway.
-.pay-method {
-  padding-top: 1rem;
-
-  & + & {
-    margin-top: 1rem;
-    border-top: 1px solid #edf1ee;
-  }
-}
-
-.pay-method-fields {
-  margin-top: 0.75rem;
-
-  input {
-    width: 6.5rem;
-  }
-}
-
-.pay-method-example {
-  margin: 0.75rem 0 0;
-  color: #56666e;
-  font-size: 0.8rem;
-}
-
 // Elnök: the seal beside the name.
 .president-row {
   flex-wrap: nowrap;
@@ -179,33 +155,69 @@
   }
 }
 
-.chat-usage {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 14px;
+// The Tagdíj emlékeztető card's settings (its own card now).
+.reminder {
+  p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #2f414b;
+    line-height: 1.5;
+  }
 
-  small {
-    color: #56666e;
-    font-size: 12px;
+  select,
+  .reminder-day {
+    padding: 7px 9px;
+    border: 1px solid #dce5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: #1c2d38;
+  }
+
+  .reminder-day {
+    width: 64px;
   }
 }
 
-// How full the folder is - green, turning orange past 80%.
-.chat-usage-bar {
-  height: 10px;
-  border-radius: 999px;
-  background: #edf3f0;
-  overflow: hidden;
+.reminder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
 
-  span {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: #2fa583;
-    transition: width 0.3s ease;
+.reminder-label {
+  font-weight: 700;
+  color: #56666e;
+}
+
+.reminder-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+
+  input {
+    accent-color: #1a796c;
   }
 }
 
-.chat-usage-bar--full span {
-  background: #e08e0b;
+.reminder-dates small {
+  color: #6b7780;
+}
+
+.reminder-next {
+  color: #267b66 !important;
+}
+
+.reminder-who {
+  margin-top: 8px;
+  font-size: 13px;
+
+  summary {
+    cursor: pointer;
+    color: #1a796c;
+    font-weight: 650;
+  }
 }

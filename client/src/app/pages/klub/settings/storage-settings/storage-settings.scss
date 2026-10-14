@@ -1,0 +1,38 @@
+@use '../shared';
+
+:host {
+  display: block;
+}
+
+@include shared.cards;
+
+.chat-usage {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+
+  small {
+    color: #56666e;
+    font-size: 12px;
+  }
+}
+
+// How full the folder is - green, turning orange past 80%.
+.chat-usage-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: #edf3f0;
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #2fa583;
+    transition: width 0.3s ease;
+  }
+}
+
+.chat-usage-bar--full span {
+  background: #e08e0b;
+}

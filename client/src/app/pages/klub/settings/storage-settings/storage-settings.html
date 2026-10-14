@@ -1,0 +1,148 @@
+<div class="cards">
+  <!-- Chat photos: how much room they may take and how many a person may
+     send a day. Over the limit the oldest go - their messages stay. -->
+  <section class="panel chat-images">
+    <div class="panel-title">
+      <div>
+        <h2>Kotyogó fotók</h2>
+        <p class="subtext">
+          A táborok Kotyogójában küldött fotók. Ha betelik a keret, a legrégebbiek törlődnek – az
+          üzenet megmarad, „A fotó már nem érhető el” jelzéssel.
+        </p>
+      </div>
+    </div>
+
+    @if (chatImages(); as c) {
+      <div class="chat-usage">
+        <div class="chat-usage-bar" [class.chat-usage-bar--full]="chatUsagePercent() >= 80">
+          <span [style.width.%]="chatUsagePercent()"></span>
+        </div>
+        <small>
+          {{ chatUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} fotó ({{
+            chatUsagePercent()
+          }}%)
+        </small>
+      </div>
+
+      <div class="chat-fields">
+        <label>
+          Tárhely keret (MB)
+          <input
+            type="number"
+            min="50"
+            step="50"
+            [ngModel]="chatQuotaMB()"
+            (ngModelChange)="chatQuotaMB.set(+$event)"
+          />
+        </label>
+        <label>
+          Fotó naponta, személyenként
+          <input
+            type="number"
+            min="1"
+            [ngModel]="chatDailyLimit()"
+            (ngModelChange)="chatDailyLimit.set(+$event)"
+          />
+        </label>
+      </div>
+
+      <div class="actions">
+        <span class="spacer"></span>
+        @if (chatImagesDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="applyChatImages(c)"
+            [disabled]="savingChatImages()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="saveChatImages()"
+          [disabled]="!chatImagesDirty() || savingChatImages()"
+        >
+          {{ savingChatImages() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+
+  <!-- Kép gyorsítótár: the smaller versions of the album photos the viewer
+     shows (server photos/imageSizes.js). Over the limit the least
+     recently viewed go - they're made again when needed. -->
+  <section class="panel image-cache">
+    <div class="panel-title">
+      <div>
+        <h2>Kép gyorsítótár</h2>
+        <p class="subtext">
+          A táborok és a Média fotóinak kisebb változatai, amiket a képnézegető mutat – így mobilon
+          is gyorsan betöltenek. Az első megnézéskor készülnek. Ha betelik a keret, a legrégebben
+          nézettek törlődnek, és legközelebb újra elkészülnek. Az eredeti fotókat nem érinti.
+        </p>
+      </div>
+    </div>
+
+    @if (imageCache(); as c) {
+      <div class="chat-usage">
+        <div class="chat-usage-bar" [class.chat-usage-bar--full]="imageCachePercent() >= 80">
+          <span [style.width.%]="imageCachePercent()"></span>
+        </div>
+        <small>
+          {{ imageCacheUsageMB() }} MB / {{ c.quotaMB }} MB · {{ c.usage.count }} kép ({{
+            imageCachePercent()
+          }}%)
+        </small>
+      </div>
+
+      <div class="chat-fields">
+        <label>
+          Tárhely keret (MB)
+          <input
+            type="number"
+            min="100"
+            step="512"
+            [ngModel]="imageCacheQuotaMB()"
+            (ngModelChange)="imageCacheQuotaMB.set(+$event)"
+          />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="outline-btn"
+          (click)="clearImageCache()"
+          [disabled]="savingImageCache() || !c.usage.count"
+        >
+          Gyorsítótár ürítése
+        </button>
+        <span class="spacer"></span>
+        @if (imageCacheDirty()) {
+          <button
+            type="button"
+            class="outline-btn"
+            (click)="applyImageCache(c)"
+            [disabled]="savingImageCache()"
+          >
+            Mégse
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-btn"
+          (click)="saveImageCache()"
+          [disabled]="!imageCacheDirty() || savingImageCache()"
+        >
+          {{ savingImageCache() ? 'Mentés…' : 'Mentés' }}
+        </button>
+      </div>
+    } @else {
+      <p class="empty-note">Betöltés...</p>
+    }
+  </section>
+</div>

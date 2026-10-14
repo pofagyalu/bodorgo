@@ -12,11 +12,12 @@ const STATUS_LABELS: Record<StripePayout['status'], string> = {
   failed: 'sikertelen',
 };
 
-// One Stripe account's card on Beállítások (admins only, like the page) -
-// Tagdíjak or Előlegek: the money paid by card that Stripe holds, and
-// paying it out to the account's bank account. That bank account is set in
-// the Stripe Dashboard, never here - this card only shows it. Hidden while
-// the account has no key on the server (Előlegek, until it has its own).
+// One Stripe account's row on the Kiutalás számlára card (Beállítások →
+// Fizetések) - Tagdíjak or Előlegek: the money paid by card that Stripe
+// holds, and paying it out to the account's bank account. That bank account
+// is set in the Stripe Dashboard, never here - this row only shows it.
+// Hidden while the account has no key on the server (Előlegek, until it has
+// its own).
 @Component({
   selector: 'app-stripe-payout',
   imports: [DatePipe],

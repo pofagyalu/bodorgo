@@ -6,56 +6,13 @@
 
 @include shared.cards;
 
-// The Tagdíj emlékeztető card's settings (its own card now).
-.reminder {
-  p {
-    margin: 8px 0 0;
-    font-size: 13px;
-    color: #2f414b;
-    line-height: 1.5;
-  }
-
-  select,
-  .reminder-day {
-    padding: 7px 9px;
-    border: 1px solid #dce5e1;
-    border-radius: 9px;
-    background: #fff;
-    color: #1c2d38;
-  }
-
-  .reminder-day {
-    width: 64px;
-  }
-}
-
-.reminder-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
+// The Éves jelentés card's lines (the same look as the Tagdíj emlékeztető's
+// on the Klub tab).
+.reminder p {
+  margin: 8px 0 0;
   font-size: 13px;
-}
-
-.reminder-label {
-  font-weight: 700;
-  color: #56666e;
-}
-
-.reminder-choice {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-
-  input {
-    accent-color: #1a796c;
-  }
-}
-
-.reminder-dates small {
-  color: #6b7780;
+  color: #2f414b;
+  line-height: 1.5;
 }
 
 .reminder-next {

@@ -1,18 +1,13 @@
-// On top of the Barion card's look (barion-withdraw.scss), what only this
-// card has.
+// On top of the Barion row's look (barion-withdraw.scss), what only this
+// row has.
 // The server runs on a Stripe test key: the balance is pretend money.
-.panel-title > .test-mode {
-  background: #fdecea;
+.test-mode {
+  font-size: 11px;
+  font-weight: 700;
   color: #a3402a;
-}
-
-.balance {
-  font-size: 1.05rem;
-  color: #1a796c;
-}
-
-.account-fields small {
-  color: #56666e;
+  background: #fdecea;
+  padding: 3px 9px;
+  border-radius: 999px;
 }
 
 .empty-note {

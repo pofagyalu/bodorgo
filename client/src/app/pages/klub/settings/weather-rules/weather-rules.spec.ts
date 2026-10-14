@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { fail, pageTesting, respond } from '../../../../../../testing/component';
-import { makeWeatherRules } from '../../../../../../testing/fixtures';
+import { fail, pageTesting, respond } from '../../../../../testing/component';
+import { makeWeatherRules } from '../../../../../testing/fixtures';
 import { WeatherRules } from './weather-rules';
 
 describe('WeatherRules', () => {
@@ -28,7 +28,7 @@ describe('WeatherRules', () => {
 
   it('waits for the numbers', () => {
     open(null);
-    expect(text('h2')).toEqual(['Életviteli tanácsok']);
+    expect(text('h2')).toEqual(['Bódorgó jóléti index']);
     expect(text('.empty-note')).toEqual(['Betöltés…']);
     expect(el.querySelector('.rules-columns')).toBeNull();
   });

@@ -2418,10 +2418,15 @@ const paths = {
     get: op({
       tag: T.payments,
       role: 'admin',
-      summary: 'Can this wallet be withdrawn from',
-      description: "Its bank account is set on Beállítások and its API key in the server's .env.",
+      summary: 'Can this wallet be withdrawn from, and its balance',
+      description:
+        "`configured`: its bank account is set on Beállítások and its API key in the server's .env. `balance`: the wallet's forint balance asked from Barion (`GET /v2/Accounts` with the wallet's API key) - `available` can be withdrawn, `blocked` is held; null without an API key, or when Barion doesn't answer (`balanceError` is true then).",
       params: [path('purpose', '`membershipFee` or `tourAdvance`.')],
-      data: obj({ configured: bool() }),
+      data: obj({
+        configured: bool(),
+        balance: obj({ available: int('Forints.'), blocked: int('Forints.') }),
+        balanceError: bool(),
+      }),
     }),
   },
   '/payments/withdraw': {

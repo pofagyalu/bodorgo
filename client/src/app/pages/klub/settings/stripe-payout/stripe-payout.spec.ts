@@ -52,7 +52,7 @@ describe('StripePayoutCard', () => {
     open('membership');
     expect(card.title()).toBe('Tagdíjak');
     expect(fixture.nativeElement.hidden).toBe(false);
-    expect(text()).toContain('Tagdíjak – Stripe');
+    expect(text()).toContain('Tagdíjak');
     expect(text()).toContain('5000 Ft');
     expect(text()).toContain('TESZT BANK');
     expect(text()).toContain('••••0000');

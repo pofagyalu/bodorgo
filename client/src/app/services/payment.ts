@@ -25,9 +25,16 @@ export interface PaymentStatusResponse {
 // matching Payment.purpose itself.
 export type WithdrawalPurpose = 'membershipFee' | 'tourAdvance';
 
+// configured: its bank account and API key are set. balance: the wallet's
+// forints at Barion (available can be withdrawn, blocked is held) - null
+// without an API key, or when Barion didn't answer (balanceError).
 export interface WithdrawalStatusResponse {
   status: string;
-  data: { configured: boolean };
+  data: {
+    configured: boolean;
+    balance?: { available: number; blocked: number } | null;
+    balanceError?: boolean;
+  };
 }
 
 export interface WithdrawResponse {
