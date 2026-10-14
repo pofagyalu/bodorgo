@@ -105,6 +105,22 @@ export interface AuditEntry {
   summary: string; // one line, as it is shown
 }
 
+// Naplófájlok (Klub → Napló, the role manager's): one of the server's log
+// files - an app or an error file of a day (server logger.js).
+export interface LogFileInfo {
+  name: string; // e.g. error-2026-10-14.log.gz
+  kind: 'app' | 'error';
+  date: string; // YYYY-MM-DD
+  gz: boolean;
+  size: number; // bytes
+}
+
+export interface LogFileLines {
+  name: string;
+  totalLines: number;
+  lines: string[]; // the last ones, oldest first
+}
+
 // Fizetési módok (Beállítások): one online gateway - offered or not, and
 // the fee the payer pays on top.
 export type PaymentMethodKey = 'stripe' | 'barion';
@@ -436,6 +452,25 @@ export class SettingsService {
     return this.http.get<{ status: string; data: YearlyReportInfo }>(
       `${this.apiUrl}/yearly-report`,
     );
+  }
+
+  // --- Naplófájlok: the server's log files (the role manager's, after
+  // re-identifying) ---
+
+  getLogFiles() {
+    return this.http.get<{ data: { files: LogFileInfo[] } }>(`${this.apiUrl}/logs`);
+  }
+
+  // A file's last `lines` lines.
+  getLogFile(name: string, lines: number) {
+    return this.http.get<{ data: LogFileLines }>(
+      `${this.apiUrl}/logs/${encodeURIComponent(name)}`,
+      { params: { lines } },
+    );
+  }
+
+  logFileDownloadUrl(name: string) {
+    return `${this.apiUrl}/logs/${encodeURIComponent(name)}/download`;
   }
 
   // The report as it stands today (a PDF, opened in its own tab).

@@ -2,14 +2,40 @@
   <div class="heading">
     <div class="kicker">Klub</div>
     <h1>Napló</h1>
-    <p>
-      Ki, mit és mikor - minden, ami pénzt, jogosultságot vagy a klub beállításait érinti. Csak
-      adminoknak; a naplóból semmi nem törölhető. A szerepkörhöz, a készpénzes befizetéshez, a
-      kiutaláshoz és a Barion-számlák adataihoz 10 percen belüli azonosítás kell.
-    </p>
+    @if (showFiles()) {
+      <p>
+        A szerver saját naplófájljai: mi történt a szerveren, napról napra - a hibák pirossal. Csak
+        a szerepkör-kezelőnek, 10 percen belüli azonosítással, mert e-mail- és IP-címeket is
+        tartalmaznak. Hibáról e-mail is megy, legfeljebb negyedóránként egy.
+      </p>
+    } @else {
+      <p>
+        Ki, mit és mikor - minden, ami pénzt, jogosultságot vagy a klub beállításait érinti. Csak
+        adminoknak; a naplóból semmi nem törölhető. A szerepkörhöz, a készpénzes befizetéshez, a
+        kiutaláshoz és a Barion-számlák adataihoz 10 percen belüli azonosítás kell.
+        @if (canSeeFiles()) {
+          A szerver naplófájljai a Naplófájlok lapon vannak.
+        }
+      </p>
+    }
   </div>
 
-  <section class="panel">
+  @if (canSeeFiles()) {
+    <app-tab-strip
+      class="audit-tabs"
+      label="Napló"
+      [options]="tabs()"
+      [value]="showFiles() ? 'files' : 'events'"
+      (valueChange)="selectTab($any($event))"
+    />
+  }
+
+  <!-- Naplófájlok: built when first opened, then only hidden. -->
+  @if (canSeeFiles() && (showFiles() || filesOpened())) {
+    <app-log-files [hidden]="!showFiles()" />
+  }
+
+  <section class="panel" [hidden]="showFiles()">
     <!-- What gets here at all, so nobody looks for what was never written. -->
     <ul class="audit-kinds" aria-label="Amit a napló rögzít">
       <li><span class="audit-kind" data-kind="role-change">Szerepkör</span> adása, módosítása</li>

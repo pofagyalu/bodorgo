@@ -36,6 +36,11 @@ function envSettings() {
   };
 }
 
+// Unreadable saved secrets are said once per start (a warning: login goes
+// on with .env, and the OIDC szolgáltató tab shows it) - not at every
+// lookup, which is every login. Said again if they were readable meanwhile.
+let toldUnreadable = false;
+
 // The settings in use now, secrets readable - for the server's own use,
 // never sent to a browser. source: 'database' or 'env'; unreadable: the
 // saved secrets couldn't be decrypted, so .env stands in.
@@ -48,7 +53,7 @@ export async function getOidcSettings() {
   if (!saved?.serverUrl || !saved.clientId || !saved.clientSecretEnc) return env;
 
   try {
-    return {
+    const settings = {
       serverUrl: trimUrl(saved.serverUrl),
       providerSlug: saved.providerSlug ?? '',
       clientId: saved.clientId,
@@ -58,8 +63,15 @@ export async function getOidcSettings() {
       invitationFlow: saved.invitationFlow || DEFAULT_INVITATION_FLOW,
       source: 'database',
     };
+    toldUnreadable = false;
+    return settings;
   } catch (err) {
-    logger.error(`OIDC settings: the saved secrets can't be read (${err.message}) - using .env`);
+    if (!toldUnreadable) {
+      toldUnreadable = true;
+      logger.warn(
+        `OIDC settings: the saved secrets can't be read with this APP_SECRET_KEY (${err.message}) - using .env`,
+      );
+    }
     return { ...env, unreadable: true };
   }
 }
