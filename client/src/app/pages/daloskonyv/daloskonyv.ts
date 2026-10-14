@@ -172,6 +172,39 @@ export class Daloskonyv implements OnInit {
     }
   }
 
+  // --- The search's keys: with something typed and songs found, the first
+  // is marked; ↓/↑ move the mark through the found ones (the typing stays
+  // in the search box), Enter opens the marked song - or, while picking,
+  // ticks it in or out of the list, as a tap would. ---
+
+  highlight = signal(0);
+  highlightOn = computed(() => !!this.search().trim() && this.found().length > 0);
+
+  onSearch(value: string) {
+    this.search.set(value);
+    this.highlight.set(0);
+  }
+
+  onSearchKey(event: KeyboardEvent) {
+    if (!this.highlightOn()) return;
+    const last = this.found().length - 1;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      this.highlight.update((i) => Math.min(last, Math.max(0, Math.min(i, last) + step)));
+      // The marked row into sight, the list scrolling no more than needed.
+      const row = this.list()?.nativeElement.querySelector(`#song-hit-${this.highlight()}`);
+      row?.scrollIntoView?.({ block: 'nearest' });
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const song = this.found()[Math.min(this.highlight(), last)]?.song;
+      if (!song) return;
+      const list = this.playlist();
+      if (this.picking() && list) this.songService.toggleInList(list._id, song._id);
+      else void this.router.navigate([this.base(), song.slug]);
+    }
+  }
+
   // A row of the song list: while picking, a tap ticks the song in or out
   // of the list - it doesn't open it.
   onRowClick(event: Event, song: SongListItem) {
