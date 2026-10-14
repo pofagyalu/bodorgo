@@ -3,7 +3,21 @@
     <!-- Row 1: image left, key info + long description right -->
     <div class="hero-row">
       <div class="hero-image-wrap">
-        <img [src]="coverUrl(t)" [alt]="t.title" class="hero-image" (click)="openCoverGallery()" />
+        @if (coverUrl(t) && !coverFailed()) {
+          <img
+            [src]="coverUrl(t)"
+            [alt]="t.title"
+            class="hero-image"
+            (click)="openCoverGallery()"
+            (error)="coverFailed.set(true)"
+          />
+        } @else {
+          <!-- No cover yet (or it didn't load): the "Hamarosan" stamp. -->
+          <app-cover-placeholder
+            class="hero-image hero-image--empty"
+            (click)="openCoverGallery()"
+          />
+        }
         <span class="order-label">
           {{ t.order === 1 ? 'Első' : t.order + '.' }} bódorgó tábor
         </span>

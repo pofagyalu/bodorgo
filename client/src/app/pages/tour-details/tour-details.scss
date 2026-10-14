@@ -46,6 +46,13 @@
   border-radius: 12px;
 }
 
+// No cover yet: the placeholder keeps the cover's 3:2 shape.
+.hero-image--empty {
+  aspect-ratio: 3 / 2;
+  height: auto;
+  overflow: hidden;
+}
+
 .hero-info {
   flex: 1 1 auto;
   min-width: 0;

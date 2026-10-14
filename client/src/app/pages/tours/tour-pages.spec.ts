@@ -222,6 +222,22 @@ describe('TourCard', () => {
     expect(fixture.nativeElement.querySelector('.card__weather')).toBeNull();
   });
 
+  it('shows the "Hamarosan" stamp without a cover, and when the cover fails to load', () => {
+    setUp();
+    const fixture = TestBed.createComponent(TourCard);
+    fixture.componentRef.setInput('tour', makeTour());
+    fixture.detectChanges();
+    const stamp = () => fixture.nativeElement.querySelector('app-cover-placeholder');
+    expect(stamp()?.textContent).toContain('Hamarosan');
+
+    fixture.componentRef.setInput('tour', makeTour({ coverUpdatedAt: 'v1' }));
+    fixture.detectChanges();
+    expect(stamp()).toBeNull();
+    fixture.nativeElement.querySelector('img.card__picture-img').dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(stamp()).not.toBeNull();
+  });
+
   it('wears the weather outlook as a pill until the tour is over', () => {
     setUp();
     const fixture = TestBed.createComponent(TourCard);

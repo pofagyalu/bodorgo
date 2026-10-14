@@ -3,16 +3,21 @@
   <div class="card__header">
     <div class="card__picture">
       @if (coverUrl(); as url) {
-        <img
-          [ngSrc]="url"
-          [alt]="tour().title"
-          class="card__picture-img"
-          width="500"
-          height="333"
-          [priority]="priority()"
-        />
+        @if (!coverFailed()) {
+          <img
+            [ngSrc]="url"
+            [alt]="tour().title"
+            class="card__picture-img"
+            width="500"
+            height="333"
+            [priority]="priority()"
+            (error)="coverFailed.set(true)"
+          />
+        } @else {
+          <app-cover-placeholder class="card__picture-img" />
+        }
       } @else {
-        <div class="card__picture-img card__picture-img--empty"></div>
+        <app-cover-placeholder class="card__picture-img" />
       }
     </div>
 
