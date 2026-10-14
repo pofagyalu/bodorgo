@@ -300,20 +300,50 @@ button {
   opacity: 0.32;
 }
 
-.spine-title {
+// The writing along the spine, read from the head down: the title, and
+// the author in a smaller line beside it.
+.spine-text {
   writing-mode: vertical-rl;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+  max-height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  font-family: Georgia, 'Times New Roman', serif;
+  text-shadow: 0 1px 1px #00000080;
+}
+
+.spine-title {
   max-height: 100%;
   overflow: hidden;
-  // Two lines at most, side by side.
+  // Without an author the title may take two lines...
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-height: 1.15;
-  font-family: Georgia, 'Times New Roman', serif;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.03em;
-  text-shadow: 0 1px 1px #00000080;
+}
+
+// ...with one, each gets a single line.
+.spine-text--author .spine-title,
+.spine-author {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.spine-author {
+  max-height: 100%;
+  line-height: 1.1;
+  font-size: 0.66rem;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: #e3cf9e;
 }
 
 .spine-flag {

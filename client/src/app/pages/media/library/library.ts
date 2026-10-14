@@ -32,6 +32,31 @@ function hash(text: string): number {
   return h;
 }
 
+/** A spine's thickness in rem: 20 pages ≈ 2.4, 50 ≈ 2.9, 150 ≈ 3.9, 300 and more 4.8. */
+export function spineWidth(pages: number): number {
+  return Math.min(4.8, Math.max(2.3, 1.5 + Math.sqrt(Math.max(0, pages)) * 0.2));
+}
+
+// The heights a spine can have, in rem - a row of the bookcase is 13.5.
+const SPINE_HEIGHTS = [9.4, 9.9, 10.4, 10.9, 11.4, 11.9, 12.4, 12.9];
+
+/**
+ * A spine's height: picked by the book (so it keeps it), but never the
+ * same as, or right next to, the one before it on the shelf.
+ */
+export function spineHeight(books: { _id: string }[], index: number): number {
+  const step = (i: number): number => {
+    const own = (hash(books[i]._id) >>> 4) % SPINE_HEIGHTS.length;
+    if (i === 0) return own;
+    const before = step(i - 1);
+    // Too close to the neighbour: half the steps further on.
+    return Math.abs(own - before) < 2
+      ? (own + SPINE_HEIGHTS.length / 2) % SPINE_HEIGHTS.length
+      : own;
+  };
+  return SPINE_HEIGHTS[step(index)];
+}
+
 /** "Author · subtitle" - whichever the book has; empty with neither. */
 export function byline(book: { author: string; subtitle: string }): string {
   return [book.author, book.subtitle].filter(Boolean).join(' · ');
@@ -81,14 +106,15 @@ export class Library implements OnInit, OnDestroy {
     for (const timer of Object.values(this.timers)) clearTimeout(timer);
   }
 
-  // A thicker book for more pages, and not all the same height. The colors
-  // go round by the book's place on the shelf.
-  spineStyle(book: LibraryBook, index: number) {
-    const h = hash(book._id);
+  // A thicker book for more pages - by the square root, so a thin booklet
+  // and a fat one both look it without the fat one taking the shelf - and
+  // each its own height (spineHeight). The colors go round by the book's
+  // place on the shelf.
+  spineStyle(book: LibraryBook, index: number, books: LibraryBook[]) {
     return {
       '--spine-color': SPINE_COLORS[index % SPINE_COLORS.length],
-      '--spine-width': `${Math.min(4.2, Math.max(2.3, 2.1 + book.pages / 140)).toFixed(2)}rem`,
-      '--spine-height': `${(10.6 + ((h >> 4) % 5) * 0.45).toFixed(2)}rem`,
+      '--spine-width': `${spineWidth(book.pages).toFixed(2)}rem`,
+      '--spine-height': `${spineHeight(books, index).toFixed(2)}rem`,
     };
   }
 

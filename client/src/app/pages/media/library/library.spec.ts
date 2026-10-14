@@ -16,7 +16,7 @@ import {
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { LibraryBookDetails, LibrarySearch, LibraryShelf } from '../../../services/library';
-import { Library, printedPage } from './library';
+import { Library, printedPage, spineHeight, spineWidth } from './library';
 import { LibraryBookPage } from './library-book';
 
 const BOOK = {
@@ -58,6 +58,30 @@ describe('printedPage', () => {
   it("gives the book's own number, the PDF's where the book has none", () => {
     expect(printedPage({ pageOffset: 2 }, 5)).toBe('7. oldal');
     expect(printedPage({ pageOffset: -1 }, 1)).toBe('PDF 1. lap');
+  });
+});
+
+describe('spineWidth', () => {
+  it('makes a fatter book a thicker spine, within limits', () => {
+    expect(spineWidth(20)).toBeCloseTo(2.39, 2);
+    expect(spineWidth(151)).toBeGreaterThan(spineWidth(41) + 1);
+    expect(spineWidth(0)).toBe(2.3);
+    expect(spineWidth(5000)).toBe(4.8);
+  });
+});
+
+describe('spineHeight', () => {
+  it('keeps a book its height, never the same as - or close to - its neighbour', () => {
+    const books = Array.from({ length: 40 }, (_, i) => ({
+      _id: `6a1b${(1000 + i * 37).toString(16)}c0ffee${i}`,
+    }));
+    const heights = books.map((_, i) => spineHeight(books, i));
+    for (let i = 1; i < heights.length; i++) {
+      expect(Math.abs(heights[i] - heights[i - 1])).toBeGreaterThanOrEqual(1);
+    }
+    expect(new Set(heights).size).toBeGreaterThan(4);
+    for (const h of heights) expect(h).toBeLessThanOrEqual(12.9);
+    expect(spineHeight(books.slice(0, 1), 0)).toBe(heights[0]);
   });
 });
 
