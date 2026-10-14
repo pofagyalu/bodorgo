@@ -73,14 +73,44 @@ function refreshWeatherOutlook(tour, today) {
   return true;
 }
 
+// One refresh of a tour's weather at a time: opening the app asks for the
+// tour list and the tour's page together, and both would refresh it - two
+// sets of requests to Open-Meteo at once (it answers 429 to that), and two
+// saves racing each other. A second caller waits for the running one and
+// takes its result from the database.
+const weatherRefreshes = new Map();
+
+async function refreshTourWeather(tour) {
+  const id = String(tour._id);
+  const running = weatherRefreshes.get(id);
+  if (running) {
+    await running.catch(() => {});
+    const fresh = await Tour.findById(id).select('dailyWeather weatherOutlook').lean();
+    if (fresh) {
+      tour.dailyWeather = fresh.dailyWeather ?? [];
+      tour.weatherOutlook = fresh.weatherOutlook;
+    }
+    return;
+  }
+  const refresh = refreshTourWeatherNow(tour);
+  weatherRefreshes.set(id, refresh);
+  try {
+    await refresh;
+  } finally {
+    weatherRefreshes.delete(id);
+  }
+}
+
 // Called on every getTour - forecasts a tour's still-upcoming days
 // (throttled so repeat page views don't re-hit the API every time), and
 // once a day has passed, fetches the real recorded weather for it exactly
 // once and freezes it (isFinal) forever after. Never blocks the tour from
 // loading if Open-Meteo is unreachable - fetchForecast/fetchHistorical
 // already swallow their own errors and return null. Then the tour's
-// outlook from those forecasts (refreshWeatherOutlook).
-async function refreshTourWeather(tour) {
+// outlook from those forecasts (refreshWeatherOutlook). The days are asked
+// for one after another, not all at once (Open-Meteo limits how many
+// requests may run at the same time).
+async function refreshTourWeatherNow(tour) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -88,7 +118,7 @@ async function refreshTourWeather(tour) {
   const hasCoords = coords?.length === 2 && coords[0] != null && coords[1] != null;
   const [lng, lat] = hasCoords ? coords : [];
 
-  const tasks = [];
+  let fetched = false;
 
   for (let day = 1; hasCoords && day <= tour.duration; day++) {
     const existing = tour.dailyWeather.find((w) => w.day === day);
@@ -103,17 +133,15 @@ async function refreshTourWeather(tour) {
     // freezing those would keep them forever.
     if (date < today) {
       // One last fetch of what actually happened, then freeze forever.
-      tasks.push(
-        fetchHistorical(lat, lng, toDateStr(date)).then((result) => {
-          if (result)
-            upsertDailyWeather(tour, day, {
-              ...result,
-              rainChance: undefined, // the forecast's, no part of what happened
-              isFinal: true,
-              fetchedAt: new Date(),
-            });
-        }),
-      );
+      const result = await fetchHistorical(lat, lng, toDateStr(date));
+      fetched = true;
+      if (result)
+        upsertDailyWeather(tour, day, {
+          ...result,
+          rainChance: undefined, // the forecast's, no part of what happened
+          isFinal: true,
+          fetchedAt: new Date(),
+        });
       continue;
     }
 
@@ -125,17 +153,13 @@ async function refreshTourWeather(tour) {
       continue; // fetched recently enough, skip
     }
 
-    tasks.push(
-      fetchForecast(lat, lng, toDateStr(date)).then((result) => {
-        if (result)
-          upsertDailyWeather(tour, day, { ...result, isFinal: false, fetchedAt: new Date() });
-      }),
-    );
+    const result = await fetchForecast(lat, lng, toDateStr(date));
+    fetched = true;
+    if (result) upsertDailyWeather(tour, day, { ...result, isFinal: false, fetchedAt: new Date() });
   }
 
-  await Promise.all(tasks);
   const outlookChanged = refreshWeatherOutlook(tour, today);
-  if (tasks.length || outlookChanged) await tour.save();
+  if (fetched || outlookChanged) await tour.save();
 }
 
 // The tour list shows each coming tour's outlook too (the card's pill), so
@@ -148,13 +172,12 @@ async function refreshUpcomingToursWeather() {
   const horizon = new Date(today);
   horizon.setDate(horizon.getDate() + MAX_FORECAST_DAYS_AHEAD + 1);
   const tours = await Tour.find({ startDate: { $gt: today, $lt: horizon } });
-  await Promise.all(
-    tours.map((tour) =>
-      refreshTourWeather(tour).catch((err) =>
-        logger.error(`Weather refresh failed for tour ${tour.order}: ${err.message}`),
-      ),
-    ),
-  );
+  // One tour after another, as the days of one (refreshTourWeatherNow).
+  for (const tour of tours) {
+    await refreshTourWeather(tour).catch((err) =>
+      logger.error(`Weather refresh failed for tour ${tour.order}: ${err.message}`),
+    );
+  }
 }
 
 // GET /tours/ticker - the only tour data a logged-out visitor ever gets:

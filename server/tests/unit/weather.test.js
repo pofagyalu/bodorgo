@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { classifyDay } from '../../src/utils/weather.js';
 import { toDateStr } from '../../src/controllers/tourController.js';
+import logger from '../../src/logger.js';
 
 // Real days from the Open-Meteo archive (tour locations), which the old
 // code-only mapping got wrong.
@@ -144,5 +145,37 @@ describe('fetching from Open-Meteo', () => {
       vi.fn(async () => ({ ok: true, json: async () => ({ daily: { time: [] } }) })),
     );
     expect(await fetchForecast(46, 18, '2022-01-01')).toBeNull();
+  });
+
+  it('a busy or unreachable Open-Meteo is a warning (not e-mailed), a refused request an error', async () => {
+    const { fetchForecast } = await vi.importActual('../../src/utils/weather.js');
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const answer = (status, text) =>
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({ ok: false, status, text: async () => text })),
+      );
+
+    answer(503, '{"reason":"The service is overloaded"}');
+    await fetchForecast(46, 18, '2026-10-25');
+    answer(429, '{"reason":"Too many concurrent requests"}');
+    await fetchForecast(46, 18, '2026-10-25');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed');
+      }),
+    );
+    await fetchForecast(46, 18, '2026-10-25');
+    expect(warn).toHaveBeenCalledTimes(3);
+    expect(error).not.toHaveBeenCalled();
+
+    answer(400, '{"reason":"Parameter start_date is out of allowed range"}');
+    await fetchForecast(46, 18, '2026-10-30');
+    expect(error).toHaveBeenCalledOnce();
+    expect(error.mock.calls[0][0]).toContain('400');
+    warn.mockRestore();
+    error.mockRestore();
   });
 });

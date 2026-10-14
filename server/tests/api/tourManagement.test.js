@@ -77,6 +77,39 @@ describe('reading tours', () => {
     expect(fetchHistorical).not.toHaveBeenCalled();
   });
 
+  it('refreshes a tour once when the list and its page are opened together - one day at a time', async () => {
+    let running = 0;
+    let most = 0;
+    vi.mocked(fetchForecast)
+      .mockClear()
+      .mockImplementation(async () => {
+        running += 1;
+        most = Math.max(most, running);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        running -= 1;
+        return { condition: 'clear', tempDayC: 20, tempNightC: 10 };
+      });
+    const soon = await createTour({
+      startDate: new Date(Date.now() + 3 * 24 * 3600 * 1000),
+      duration: 3,
+    });
+    const member = await createMember();
+    const [list, page] = await Promise.all([
+      request(app).get('/tours').set(asUser(member)),
+      request(app).get(`/tours/${soon._id}`).set(asUser(member)),
+    ]);
+    expect(list.status).toBe(200);
+    expect(page.status).toBe(200);
+    // Each day asked for once, never two requests at the same time.
+    expect(fetchForecast).toHaveBeenCalledTimes(3);
+    expect(most).toBe(1);
+    // Both answers carry the same, saved weather.
+    const listed = list.body.data.tours.find((t) => t._id === String(soon._id));
+    expect(page.body.data.tour.dailyWeather).toHaveLength(3);
+    expect(listed.weatherOutlook).toEqual(page.body.data.tour.weatherOutlook);
+    expect((await Tour.findById(soon._id)).dailyWeather).toHaveLength(3);
+  });
+
   it('keeps the forecast on the day itself, freezes it the day after, asks nothing beyond 15 days', async () => {
     vi.mocked(fetchForecast).mockClear().mockResolvedValue({
       condition: 'clear',
