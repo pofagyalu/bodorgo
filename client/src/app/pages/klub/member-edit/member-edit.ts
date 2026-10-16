@@ -79,6 +79,29 @@ export class MemberEdit implements OnInit {
     return !!me?.canManageRoles && this.user()?._id !== me.id;
   });
 
+  // The e-mail is who logs in to the account, so - like the role - only the
+  // role manager changes it, not their own (it follows INITIAL_ADMIN_USER).
+  // Anyone adding someone new types it in.
+  canEditEmail = computed(() => this.isCreateMode || this.canEditRole());
+
+  emailHint = computed(() => {
+    if (this.isCreateMode || this.canEditRole()) return '';
+    const me = this.auth.user();
+    return me?.canManageRoles
+      ? 'A saját e-mail-címed a szerver beállításaiban van, itt nem módosítható.'
+      : 'E-mail-címet csak a szerepkör-kezelő admin módosíthat.';
+  });
+
+  // The same as the role: asked as soon as they step into the field, before
+  // anything is typed - coming back from the provider reloads the page. The
+  // field is left first, so the dialog closing doesn't step into it again;
+  // identified on another tab meanwhile, they are put back in it.
+  async enterEmail(input: HTMLInputElement) {
+    if (this.isCreateMode || this.auth.hasFreshLogin()) return;
+    input.blur();
+    if (await this.freshLogin.ensure('E-mail-cím módosítása')) input.focus();
+  }
+
   // A role is given only by someone who identified themselves in the last
   // minutes - asked as soon as another one is picked, not at Mentés; until
   // then the list shows the role as it was.

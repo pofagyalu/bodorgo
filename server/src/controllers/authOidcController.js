@@ -177,10 +177,11 @@ export const callback = async (req, res, next) => {
     user.emailVerified = !!claims.email_verified;
     user.previousLoginAt = user.lastLoginAt;
     user.lastLoginAt = new Date();
-    if (owner) {
-      user.role = 'admin';
-      user.canManageRoles = true;
-    }
+    // The role-manager flag is the INITIAL_ADMIN_USER's alone, checked at
+    // every login (not only at start): an account that somehow got it
+    // loses it the moment anyone else logs in to it.
+    user.canManageRoles = owner;
+    if (owner) user.role = 'admin';
     await user.save();
 
     req.session.regenerate((err) => {

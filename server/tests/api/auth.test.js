@@ -114,6 +114,13 @@ describe('login - Authentik says who, the app says the role', () => {
     });
   });
 
+  it("the role-manager flag is the INITIAL_ADMIN_USER's alone - checked at every login", async () => {
+    // An account that somehow has it, logged in to with another e-mail.
+    const other = await createAdmin({ canManageRoles: true, email: 'mas@test.local' });
+    await loginAs({ sub: 'sub-mas', email: 'mas@test.local', name: 'Más Admin' });
+    expect(await User.findById(other._id)).toMatchObject({ role: 'admin', canManageRoles: false });
+  });
+
   it('answers "Login failed" when Authentik rejects the code', async () => {
     const { authorizationCodeGrant } = await import('openid-client');
     vi.mocked(authorizationCodeGrant).mockRejectedValueOnce(new Error('invalid_grant'));

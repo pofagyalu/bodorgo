@@ -4,6 +4,7 @@ import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createMember, createUser } from '../helpers/factories.js';
 import User from '../../src/models/userModel.js';
 import { syncRoleManager } from '../../src/utils/roleManager.js';
+import AuditLog from '../../src/models/auditLogModel.js';
 
 // tests/setup.js: INITIAL_ADMIN_USER=owner@test.local.
 
@@ -75,5 +76,60 @@ describe('changing roles', () => {
       .send({ canManageRoles: true });
     expect((await User.findById(admin._id)).canManageRoles).toBe(false);
     expect((await add(await createMember(), { name: 'x' })).status).toBe(403);
+  });
+});
+
+// People are known by their e-mail alone at login (authOidcController.js):
+// whoever an account's e-mail belongs to logs in to it. So the e-mail - and
+// the role manager's record altogether - is guarded like a role.
+describe('the e-mail - who logs in to an account', () => {
+  const patch = (by, target, body, opts) =>
+    request(app).patch(`/users/${target._id}`).set(asUser(by, opts)).send(body);
+
+  it("only the role manager changes someone's e-mail, having just identified themselves; it is in the Napló", async () => {
+    const owner = await createAdmin({ canManageRoles: true, name: 'Gazda' });
+    const admin = await createAdmin();
+    const member = await createMember({ name: 'Tag Ember', email: 'regi@test.local' });
+
+    const refused = await patch(admin, member, { email: 'uj@test.local' });
+    expect(refused.status).toBe(403);
+    expect(refused.body.message).toContain('szerepkör-kezelő');
+    // Nothing of that edit is kept.
+    expect((await User.findById(member._id)).email).toBe('regi@test.local');
+
+    // The edit form always sends it: unchanged (any case) is no change.
+    expect((await patch(admin, member, { email: 'Regi@test.local', name: 'Új Név' })).status).toBe(
+      200,
+    );
+    expect(await AuditLog.countDocuments()).toBe(0);
+
+    const stale = await patch(owner, member, { email: 'uj@test.local' }, { minutesAgo: 30 });
+    expect(stale.status).toBe(403);
+    expect((await User.findById(member._id)).email).toBe('regi@test.local');
+
+    expect((await patch(owner, member, { email: ' UJ@test.local ' })).status).toBe(200);
+    expect((await User.findById(member._id)).email).toBe('uj@test.local');
+    expect(await AuditLog.findOne()).toMatchObject({
+      action: 'email-change',
+      actorName: 'Gazda',
+      summary: 'Új Név e-mail-címe: regi@test.local → uj@test.local',
+      details: { from: 'regi@test.local', to: 'uj@test.local' },
+    });
+  });
+
+  it("nobody else edits or archives the role manager's record; their e-mail follows INITIAL_ADMIN_USER", async () => {
+    const owner = await createAdmin({ canManageRoles: true, email: 'owner@test.local' });
+    const admin = await createAdmin();
+
+    const edit = await patch(admin, owner, { name: 'Más Valaki' });
+    expect(edit.status).toBe(403);
+    const archive = await request(app).delete(`/users/${owner._id}`).set(asUser(admin));
+    expect(archive.status).toBe(403);
+    expect(await User.findById(owner._id)).toMatchObject({ name: owner.name, retired: false });
+
+    // They edit their own details - but not the e-mail.
+    expect((await patch(owner, owner, { name: 'Gazda Új' })).status).toBe(200);
+    expect((await patch(owner, owner, { email: 'mas@test.local' })).status).toBe(400);
+    expect((await User.findById(owner._id)).email).toBe('owner@test.local');
   });
 });

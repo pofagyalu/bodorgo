@@ -12,6 +12,7 @@ import sendResendEmail from '../utils/resendEmail.js';
 import logger from '../logger.js';
 import { recordAudit, roleName } from '../utils/auditLog.js';
 import { assertFreshLogin } from '../auth/freshLogin.js';
+import { isInitialAdmin } from '../utils/roleManager.js';
 import { endAppSessions, listAppSessions } from '../utils/appSessions.js';
 import { endAuthentikSessions, listAuthentikSessions } from '../utils/authentikSessions.js';
 
@@ -426,6 +427,16 @@ function parseWeight(value) {
 
 const VALID_ROLES = ['admin', 'member', 'guest'];
 const ROLE_MANAGER_ONLY = 'Szerepkört csak a szerepkör-kezelő admin módosíthat.';
+const EMAIL_ROLE_MANAGER_ONLY = 'E-mail-címet csak a szerepkör-kezelő admin módosíthat.';
+const ROLE_MANAGERS_RECORD = 'A szerepkör-kezelő adatait csak ő maga módosíthatja.';
+const ROLE_MANAGERS_EMAIL =
+  'A szerepkör-kezelő e-mail-címe a szerver beállításaiban (INITIAL_ADMIN_USER) van, itt nem módosítható.';
+
+// The role manager's own record - nobody else may touch it: whoever had
+// its e-mail would log in as them (people are known by their e-mail
+// alone, authOidcController.js's callback).
+const isRoleManagersRecord = (user) => !!user.canManageRoles || isInitialAdmin(user.email);
+const isSelf = (req, user) => String(user._id) === String(req.user._id);
 
 // Same field set as updateUser below (role/address included) -
 // member-edit.ts/html uses one identical form for both creating a brand
@@ -524,6 +535,29 @@ export const updateUser = async (req, res) => {
   if (!user) {
     throw new AppError('No user found with that ID!', 404);
   }
+  if (isRoleManagersRecord(user) && !isSelf(req, user)) {
+    throw new AppError(ROLE_MANAGERS_RECORD, 403);
+  }
+
+  // The e-mail is who someone is at login: changing it hands the account
+  // to whoever has the new address. So only the role manager changes it,
+  // having just identified themselves, and it goes into the Napló - but
+  // never the role manager's own, which follows INITIAL_ADMIN_USER. The
+  // edit form always sends it: unchanged, it is no change.
+  const emailBefore = user.email ?? '';
+  const emailAfter =
+    email !== undefined
+      ? String(email ?? '')
+          .trim()
+          .toLowerCase()
+      : emailBefore;
+  const emailChanged = emailAfter !== emailBefore.toLowerCase();
+  if (emailChanged) {
+    if (!req.user.canManageRoles) throw new AppError(EMAIL_ROLE_MANAGER_ONLY, 403);
+    if (isRoleManagersRecord(user)) throw new AppError(ROLE_MANAGERS_EMAIL, 400);
+    assertFreshLogin(req);
+    user.email = emailAfter || undefined;
+  }
 
   // An admin may set anyone's username (e.g. filling them in for the
   // first time) - the user can still change their own afterwards.
@@ -537,7 +571,6 @@ export const updateUser = async (req, res) => {
   }
 
   if (name !== undefined) user.name = name;
-  if (email !== undefined) user.email = email ? email.toLowerCase() : undefined;
   if (familyId !== undefined)
     user.familyId = familyId ? await resolveFamilyId(familyId) : undefined;
   if (birthday !== undefined) user.birthday = birthday || undefined;
@@ -576,6 +609,16 @@ export const updateUser = async (req, res) => {
       target: user,
       summary: `${user.name} szerepköre: ${roleName(roleBefore)} → ${roleName(user.role)}`,
       details: { from: roleBefore, to: user.role },
+      mail: true,
+    });
+  }
+  // A changed e-mail: the same - it is who logs in to that account.
+  if (emailChanged) {
+    await recordAudit(req, {
+      action: 'email-change',
+      target: user,
+      summary: `${user.name} e-mail-címe: ${emailBefore || '(nincs)'} → ${user.email || '(nincs)'}`,
+      details: { from: emailBefore || null, to: user.email || null },
       mail: true,
     });
   }
@@ -637,6 +680,10 @@ export const joinFamily = async (req, res) => {
 // all reference the user, so it just marks them retired (see userModel.js's
 // retired) - reversible via restoreUser below.
 export const archiveUser = async (req, res) => {
+  const target = await User.findById(req.params.id).select('email canManageRoles');
+  if (target && isRoleManagersRecord(target)) {
+    throw new AppError(ROLE_MANAGERS_RECORD, 403);
+  }
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { retired: true, retiredAt: new Date() },

@@ -90,6 +90,7 @@ export type BarionWalletKey = 'membership' | 'tour';
 // controllers/auditLogController.js).
 export type AuditAction =
   | 'role-change'
+  | 'email-change'
   | 'cash-advance'
   | 'cash-membership'
   | 'cash-undo'
