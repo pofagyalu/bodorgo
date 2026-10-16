@@ -144,6 +144,46 @@ describe('LibraryPlayer', () => {
     expect(audio.now).toBe(31);
   });
 
+  it('drags A and B by their dots, each kept on its own side', () => {
+    open();
+    loaded(100);
+    at(10);
+    button('A').click();
+    fixture.detectChanges();
+    at(30);
+    button('B').click();
+    fixture.detectChanges();
+    const bar = el().querySelector('.bar') as HTMLElement;
+    vi.spyOn(bar, 'getBoundingClientRect').mockReturnValue({
+      left: 100,
+      width: 500,
+    } as DOMRect);
+    const [a, b] = [...el().querySelectorAll('.handle')] as HTMLElement[];
+    const drag = (dot: HTMLElement, x: number) => {
+      dot.dispatchEvent(new PointerEvent('pointerdown', { clientX: x, bubbles: true }));
+      dot.dispatchEvent(new PointerEvent('pointermove', { clientX: x, bubbles: true }));
+      dot.dispatchEvent(new PointerEvent('pointerup', { clientX: x, bubbles: true }));
+      fixture.detectChanges();
+    };
+    const player = fixture.componentInstance;
+
+    drag(b, 350); // half way: 0:50
+    expect(player.loopEnd()).toBe(50);
+    drag(a, 200); // a fifth: 0:20 - the track (0:30) is inside, plays on
+    expect(player.loopStart()).toBe(20);
+    expect(audio.now).toBe(30);
+    expect(button('0:20–0:50')).toBeTruthy();
+
+    drag(a, 590); // past B: stops just before it - and the track goes to A
+    expect(player.loopStart()).toBe(49.5);
+    expect(audio.now).toBe(49.5);
+    drag(b, 0); // before A: stops just after it
+    expect(player.loopEnd()).toBe(50);
+    drag(b, 900); // beyond the end
+    expect(player.loopEnd()).toBe(100);
+    expect(player.dragging()).toBeNull();
+  });
+
   it('takes B before A as the part the other way round', () => {
     open();
     loaded(60);
