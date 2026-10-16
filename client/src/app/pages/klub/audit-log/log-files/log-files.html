@@ -3,10 +3,7 @@
     Az egész nap naplója 14 napig, a hibáké 30 napig marad meg, utána magától törlődik.
   </p>
 
-  @if (needsLogin()) {
-    <p class="empty-note">A naplófájlokhoz 10 percen belüli azonosítás kell.</p>
-    <button type="button" class="logs-more" (click)="start()">Azonosítás</button>
-  } @else if (failed()) {
+  @if (failed()) {
     <p class="empty-note" role="alert">A naplófájlokat nem sikerült betölteni.</p>
     <button type="button" class="logs-more" (click)="start()">Újra</button>
   } @else if (files(); as list) {

@@ -3530,7 +3530,7 @@ const paths = {
       role: 'admin',
       summary: "Naplófájlok: the server's log files",
       description:
-        '**The role manager only** (403 for any other admin), after re-identifying (they hold e-mail and IP addresses). The files of `logs/` (logger.js): one `app-YYYY-MM-DD.log` (info and up, kept 14 days) and one `error-YYYY-MM-DD.log` (errors, kept 30 days) a day, older days gzipped (`.gz`); a day over 20 MB goes on in a numbered file (`.log.1`). Newest day first.' +
+        '**The role manager only** (403 for any other admin - they hold e-mail and IP addresses); no re-identifying needed. The files of `logs/` (logger.js): one `app-YYYY-MM-DD.log` (info and up, kept 14 days) and one `error-YYYY-MM-DD.log` (errors, kept 30 days) a day, older days gzipped (`.gz`); a day over 20 MB goes on in a numbered file (`.log.1`). Newest day first.' +
         FRESH_LOGIN,
       data: obj({
         files: arrayOf(
