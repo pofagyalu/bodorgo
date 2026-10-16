@@ -30,7 +30,7 @@
 
   <div class="track">
     <span class="time">{{ clock(time()) }}</span>
-    <div class="bar">
+    <div class="bar" #bar>
       <!-- The part being looped, between A and B. -->
       @if (marks().a !== null) {
         <span
@@ -49,6 +49,31 @@
         (input)="seek(seekBar.value)"
         aria-label="Hol tart"
       />
+      <!-- The part's two ends, to drag. -->
+      @if (marks().a !== null) {
+        <span
+          class="handle"
+          [class.dragging]="dragging() === 'a'"
+          [style.left.%]="marks().a"
+          title="A – húzd arrébb"
+          (pointerdown)="startDrag('a', $event)"
+          (pointermove)="onDrag($event)"
+          (pointerup)="endDrag()"
+          (pointercancel)="endDrag()"
+        ></span>
+      }
+      @if (marks().b !== null) {
+        <span
+          class="handle"
+          [class.dragging]="dragging() === 'b'"
+          [style.left.%]="marks().b"
+          title="B – húzd arrébb"
+          (pointerdown)="startDrag('b', $event)"
+          (pointermove)="onDrag($event)"
+          (pointerup)="endDrag()"
+          (pointercancel)="endDrag()"
+        ></span>
+      }
     </div>
     <span class="time">{{ clock(duration()) }}</span>
   </div>
