@@ -12,6 +12,8 @@ import sendResendEmail from '../utils/resendEmail.js';
 import logger from '../logger.js';
 import { recordAudit, roleName } from '../utils/auditLog.js';
 import { assertFreshLogin } from '../auth/freshLogin.js';
+import { endAppSessions, listAppSessions } from '../utils/appSessions.js';
+import { endAuthentikSessions, listAuthentikSessions } from '../utils/authentikSessions.js';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -305,7 +307,10 @@ export const getMe = async (req, res) => {
 // booked it for them.
 export const getMyAttendance = async (req, res) => {
   const reservations = await Reservation.find({ 'attendees.user': req.user._id })
-    .populate('tour', 'title slug order startDate duration coverUpdatedAt')
+    .populate(
+      'tour',
+      'title slug order startDate duration coverUpdatedAt price advancePaymentPercentage',
+    )
     .sort('-createdAt');
 
   const tours = await Promise.all(
@@ -338,7 +343,13 @@ export const getMyAttendance = async (req, res) => {
           paymentMethod = payment?.method ?? null;
         }
 
-        return { tour: r.tour, paid, paymentId, paymentMethod };
+        // Whether there is an advance to pay at all yet: a tour whose price
+        // or advance isn't set has no payment data - Profilom then says
+        // nothing about paying rather than "Nincs kifizetve".
+        const { price, advancePaymentPercentage, ...tour } = r.tour.toObject();
+        const payable = price > 0 && advancePaymentPercentage > 0;
+
+        return { tour, paid, payable, paymentId, paymentMethod };
       }),
   );
 
@@ -710,4 +721,49 @@ export const updateUsernames = async (req, res) => {
     if (r.username) await User.updateOne({ _id: r.id }, { username: r.username });
   }
   res.status(200).json({ status: 'success', data: { updated: changed.length } });
+};
+
+// Their edit page → Bejelentkezések (the role manager only): where they are
+// logged in - as their own Profilom card shows it (authOidcController.js's
+// sessions), without "this browser".
+export const getUserSessions = async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+  if (!user) return next(new AppError('Nincs ilyen felhasználó.', 404));
+  const self = String(user._id) === String(req.user._id);
+  const app = await listAppSessions(user._id, self ? req.sessionID : undefined);
+  let authentik = null;
+  let authentikError = null;
+  try {
+    authentik = user.email ? await listAuthentikSessions(user.email) : [];
+  } catch (err) {
+    logger.warn(`Authentik sessions of ${user.email} could not be listed: ${err.message}`);
+    authentikError = 'Az Oridzsinátor most nem válaszol.';
+  }
+  res.status(200).json({ status: 'success', data: { app, authentik, authentikError } });
+};
+
+// Their edit page → "Kijelentkeztetés mindenhonnan" (the role manager only,
+// identified again - userRoutes.js): every app session of theirs goes, so
+// each browser of theirs is logged out at its next click, and Authentik
+// forgets all their devices, so none gets back in without the password -
+// a lost phone, a computer left logged in. On themselves it spares this
+// browser, as Profilom's own button does. Into the Napló.
+export const logoutEverywhere = async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+  if (!user) return next(new AppError('Nincs ilyen felhasználó.', 404));
+  const self = String(user._id) === String(req.user._id);
+  const appEnded = await endAppSessions(user._id, { except: self ? req.sessionID : undefined });
+  let authentikEnded = null;
+  try {
+    authentikEnded = user.email ? await endAuthentikSessions(user.email) : 0;
+  } catch (err) {
+    logger.warn(`Authentik sessions of ${user.email} could not be ended: ${err.message}`);
+  }
+  await recordAudit(req, {
+    action: 'logout-everywhere',
+    target: user,
+    summary: `${user.name} kijelentkeztetve mindenhonnan`,
+    details: { appEnded, authentikEnded },
+  });
+  res.status(200).json({ status: 'success', data: { appEnded, authentikEnded } });
 };

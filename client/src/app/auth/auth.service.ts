@@ -19,6 +19,37 @@ export interface CurrentUser {
   photoUpdatedAt?: string | null;
 }
 
+// Profilom → Bejelentkezések (server GET /auth/sessions): where I am
+// logged in - in Bódorgó itself, and the devices Authentik remembers.
+export interface AppLoginSession {
+  id: string;
+  current: boolean;
+  device: string | null;
+  ip: string | null;
+  loginAt: string | null;
+  lastActiveAt: string | null;
+  expiresAt: string | null;
+}
+
+export interface AuthentikLoginSession {
+  id: string;
+  device: string | null;
+  ip: string | null;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  // How many Authentik records the row stands for (it keeps the old one at
+  // each new login); the times are the newest one's.
+  count: number;
+}
+
+export interface LoginSessions {
+  here: { device: string | null; ip: string };
+  app: AppLoginSession[];
+  // null: the app has no Authentik API token (or Authentik did not answer).
+  authentik: AuthentikLoginSession[] | null;
+  authentikError: string | null;
+}
+
 interface MeResponse {
   loggedIn: boolean;
   id?: string;
@@ -108,6 +139,19 @@ export class AuthService {
   // Same as login(): the server redirects on to Authentik's end-session page.
   logout() {
     window.location.href = `${environment.apiBaseUrl}/auth/logout`;
+  }
+
+  loginSessions() {
+    return this.http.get<{ data: LoginSessions }>(`${environment.apiBaseUrl}/auth/sessions`);
+  }
+
+  // Every other browser of mine out of the app, and Authentik forgets all
+  // my devices; this one stays logged in.
+  logoutOtherSessions() {
+    return this.http.post<{ data: { appEnded: number; authentikEnded: number | null } }>(
+      `${environment.apiBaseUrl}/auth/sessions/logout-others`,
+      {},
+    );
   }
 
   checkAuth() {

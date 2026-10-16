@@ -36,10 +36,10 @@
         <h2>Személyes adatok</h2>
         <p class="subtext">
           @if (isCreateMode) {
-            A név itt kerül rögzítésre - amint ez a személy először bejelentkezik az Authentik
+            A név itt kerül rögzítésre - amint ez a személy először bejelentkezik az Oridzsinátor
             fiókjával, a neve onnantól már azzal szinkronizálódik.
           } @else {
-            A név az Authentik fiókból származik, itt nem módosítható.
+            A név az Oridzsinátor fiókból származik, itt nem módosítható.
           }
         </p>
 
@@ -276,6 +276,10 @@
               <strong>{{ formatDateTime(u.createdAt) }}</strong>
             </div>
           </section>
+
+          @if (canSeeSessions()) {
+            <app-login-sessions class="panel" [user]="u" />
+          }
         </div>
       }
     </div>

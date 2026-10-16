@@ -1,0 +1,92 @@
+<h2>Bejelentkezések</h2>
+<p class="subtext">
+  @if (user(); as u) {
+    {{ u.name }} ezeken az eszközökön van bejelentkezve.
+  } @else {
+    Ezeken az eszközökön vagy bejelentkezve.
+  }
+  Egy belépés 90 napig érvényes.
+</p>
+
+@if (error()) {
+  <p class="error-note">{{ error() }}</p>
+} @else if (sessions(); as s) {
+  <ul class="session-list">
+    @for (row of named(); track row.id) {
+      <li class="session-row" [class.session-row--current]="row.current">
+        <mat-icon class="session-icon">{{ icon(row.device) }}</mat-icon>
+        <span class="session-text">
+          <strong>{{ row.device ?? 'Ismeretlen eszköz' }}</strong>
+          <small>
+            @if (row.loginAt) {
+              Belépés: {{ row.loginAt | date: 'yyyy. MM. dd. HH:mm' }}
+            } @else if (row.lastActiveAt) {
+              Utoljára aktív: {{ row.lastActiveAt | date: 'yyyy. MM. dd.' }}
+            }
+            @if (row.ip) {
+              · {{ row.ip }}
+            }
+          </small>
+        </span>
+        @if (row.current) {
+          <span class="session-badge">Ez az eszköz</span>
+        }
+      </li>
+    }
+    @if (!named().length && !unnamedCount()) {
+      <li class="empty-note">Nincs bejelentkezés.</li>
+    }
+    @if (unnamedCount()) {
+      <li class="session-more">+ {{ unnamedCount() }} régebbi bejelentkezés, eszköz nem ismert</li>
+    }
+  </ul>
+
+  <h3 class="session-subhead">Az Oridzsinátor ezeket az eszközöket ismeri</h3>
+  <p class="subtext">Ezekről jelszó nélkül is újra be lehet lépni.</p>
+  @if (s.authentikError) {
+    <p class="error-note">{{ s.authentikError }}</p>
+  } @else if (s.authentik === null) {
+    <p class="empty-note">Az Oridzsinátor eszközlistája itt nem érhető el.</p>
+  } @else {
+    <ul class="session-list">
+      @for (row of s.authentik; track row.id) {
+        <li class="session-row">
+          <mat-icon class="session-icon">{{ icon(row.device) }}</mat-icon>
+          <span class="session-text">
+            <strong>{{ row.device ?? 'Ismeretlen eszköz' }}</strong>
+            <small>
+              @if (row.lastUsedAt) {
+                Utoljára: {{ row.lastUsedAt | date: 'yyyy. MM. dd. HH:mm' }}
+              }
+              @if (row.ip) {
+                · {{ row.ip }}
+              }
+              @if (row.count > 1) {
+                · {{ row.count }}×
+              }
+            </small>
+          </span>
+        </li>
+      } @empty {
+        <li class="empty-note">Egy eszközt sem ismer.</li>
+      }
+    </ul>
+  }
+
+  <button type="button" class="logout-others" [disabled]="busy()" (click)="logOut()">
+    @if (busy()) {
+      <app-spinner />
+      Kijelentkeztetés folyamatban…
+    } @else {
+      <mat-icon>logout</mat-icon>
+      {{ user() ? 'Kijelentkeztetés mindenhonnan' : 'Kijelentkezés minden más eszközön' }}
+    }
+  </button>
+  @if (busy()) {
+    <p class="busy-note">Ez néhány másodpercig is eltarthat, kérlek, várj.</p>
+  }
+
+  @if (s.here; as here) {
+    <p class="session-here">Ez a böngésző: {{ here.device ?? 'ismeretlen' }} · {{ here.ip }}</p>
+  }
+}

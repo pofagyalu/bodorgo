@@ -13,6 +13,7 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   'cash-membership': 'Készpénzes tagdíj',
   'cash-undo': 'Visszavonás',
   withdrawal: 'Kiutalás',
+  'logout-everywhere': 'Kijelentkeztetés',
   'barion-settings': 'Barion-számla',
   settings: 'Beállítás',
 };

@@ -13,6 +13,7 @@ export const AUDIT_ACTIONS = [
   'cash-membership',
   'cash-undo',
   'withdrawal',
+  'logout-everywhere',
 ];
 
 const auditLogSchema = new mongoose.Schema({

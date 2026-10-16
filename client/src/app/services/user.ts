@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import type { LoginSessions } from '../auth/auth.service';
 
 // Structured rather than one free-text field specifically so `city` can
 // be used on its own for the "X-tól/-től" ("from X") wording on the tour
@@ -94,6 +95,9 @@ export interface MyAttendanceResponse {
     tours: {
       tour: AttendedTour;
       paid: boolean;
+      // The tour has an advance to pay at all yet (price and advance set) -
+      // without it nothing is said about paying.
+      payable: boolean;
       paymentId: string | null;
       paymentMethod: 'stripe' | 'cash' | null;
     }[];
@@ -277,6 +281,23 @@ export class UserService {
   // restoreUser (see userController.js's archiveUser).
   archiveUser(id: string): Observable<unknown> {
     return this.http.delete(`${this.apiUrl}/${id}`);
+  }
+
+  // The role manager only: where they are logged in (their edit page →
+  // Bejelentkezések).
+  getUserSessions(id: string): Observable<{ data: Omit<LoginSessions, 'here'> }> {
+    return this.http.get<{ data: Omit<LoginSessions, 'here'> }>(`${this.apiUrl}/${id}/sessions`);
+  }
+
+  // The role manager only, identified again: every browser of theirs out
+  // of the app, and Authentik forgets all their devices.
+  logoutEverywhere(
+    id: string,
+  ): Observable<{ data: { appEnded: number; authentikEnded: number | null } }> {
+    return this.http.post<{ data: { appEnded: number; authentikEnded: number | null } }>(
+      `${this.apiUrl}/${id}/logout-everywhere`,
+      {},
+    );
   }
 
   restoreUser(id: string): Observable<unknown> {

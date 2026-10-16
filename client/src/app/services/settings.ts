@@ -93,6 +93,7 @@ export type AuditAction =
   | 'cash-membership'
   | 'cash-undo'
   | 'withdrawal'
+  | 'logout-everywhere'
   | 'barion-settings'
   | 'settings';
 

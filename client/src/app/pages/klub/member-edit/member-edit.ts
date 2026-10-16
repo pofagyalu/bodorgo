@@ -7,6 +7,7 @@ import { FreshLoginService } from '../../../auth/fresh-login.service';
 import { Avatar } from '../../../components/avatar/avatar';
 import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 import { HuDateInput } from '../../../shared/hu-date-input/hu-date-input';
+import { LoginSessions } from '../../../components/login-sessions/login-sessions';
 
 interface AddressForm {
   zipCode: string;
@@ -33,7 +34,7 @@ function emptyAddress(): AddressForm {
 // create mode, since there's no Authentik account yet to source it from.
 @Component({
   selector: 'app-member-edit',
-  imports: [Avatar, PhotoEditor, HuDateInput],
+  imports: [Avatar, PhotoEditor, HuDateInput, LoginSessions],
   templateUrl: './member-edit.html',
   styleUrl: './member-edit.scss',
 })
@@ -90,6 +91,14 @@ export class MemberEdit implements OnInit {
     }
     this.role.set(picked);
   }
+  // Bejelentkezések (components/login-sessions): the role manager only, not
+  // on their own record (Profilom has theirs) - a lost phone, a computer
+  // left logged in.
+  canSeeSessions = computed(() => {
+    const me = this.auth.user();
+    return !!me?.canManageRoles && !!this.user() && this.user()?._id !== me.id;
+  });
+
   roleHint = computed(() => {
     const me = this.auth.user();
     if (me?.canManageRoles) {

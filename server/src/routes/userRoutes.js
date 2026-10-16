@@ -1,6 +1,7 @@
 import express from 'express';
 import * as userController from '../controllers/userController.js';
-import requireAuth, { restrictTo } from '../auth/requireAuth.js';
+import requireAuth, { restrictTo, roleManagerOnly } from '../auth/requireAuth.js';
+import { requireFreshLogin } from '../auth/freshLogin.js';
 import {
   photoUploadMiddleware,
   getUserPhoto,
@@ -59,5 +60,16 @@ router
   .patch(requireAuth, restrictTo('admin'), userController.updateUser)
   .delete(requireAuth, restrictTo('admin'), userController.archiveUser);
 router.patch('/:id/restore', requireAuth, restrictTo('admin'), userController.restoreUser);
+// Their edit page → Bejelentkezések: where they are logged in.
+router.get('/:id/sessions', requireAuth, roleManagerOnly, userController.getUserSessions);
+// ... and "Kijelentkeztetés mindenhonnan": the role manager only,
+// identified in the last ten minutes.
+router.post(
+  '/:id/logout-everywhere',
+  requireAuth,
+  roleManagerOnly,
+  requireFreshLogin,
+  userController.logoutEverywhere,
+);
 
 export default router;

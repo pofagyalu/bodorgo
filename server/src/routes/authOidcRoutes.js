@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import * as authOidcController from '../controllers/authOidcController.js';
+import requireAuth from '../auth/requireAuth.js';
 
 const router = express.Router();
 
@@ -33,5 +34,10 @@ router.get('/callback', authOidcController.callback);
 router.get('/logout', authOidcController.logout);
 
 router.get('/me', authOidcController.me);
+
+// Profilom → Bejelentkezések: my sessions, in the app and at Authentik.
+router.get('/sessions', requireAuth, authOidcController.sessions);
+// ... and logging out all of them but this browser.
+router.post('/sessions/logout-others', requireAuth, authOidcController.logoutOtherSessions);
 
 export default router;

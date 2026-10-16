@@ -44,8 +44,9 @@
     </p>
   } @else {
     <p class="oidc-note">
-      Az Authentik beállításai itt vannak elmentve (a titkok titkosítva). Ha a belépés így működik,
-      a szerver <code>.env</code> fájljából az <code>AUTHENTIK_*</code> sorok törölhetők.
+      Az Oridzsinátor (Authentik) beállításai itt vannak elmentve (a titkok titkosítva). Ha a
+      belépés így működik, a szerver <code>.env</code> fájljából az <code>AUTHENTIK_*</code> sorok
+      törölhetők.
     </p>
   }
 
@@ -58,7 +59,7 @@
         <h2>Szolgáltatók</h2>
         <p class="subtext">
           A bejelölt szolgáltatón keresztül lép be mindenki. A nevére kattintva a beállításai
-          nyílnak meg alatta. Az Authentik mindig megmarad.
+          nyílnak meg alatta. Az Oridzsinátor mindig megmarad.
         </p>
       </div>
     </div>
@@ -103,7 +104,7 @@
           <h2>{{ openedProvider()?.name ?? 'Új szolgáltató' }}</h2>
           <p class="subtext">
             Bármilyen OIDC szolgáltató, amelyik az Issuer URL-jén leírja magát
-            (<code>/.well-known/openid-configuration</code>). Meghívót csak az Authentik tud
+            (<code>/.well-known/openid-configuration</code>). Meghívót csak az Oridzsinátor tud
             küldeni: itt a felhasználókat a szolgáltatóban kell felvenni, ugyanazzal az e-mail
             címmel, amivel a klubban szerepelnek.
           </p>
@@ -258,7 +259,7 @@
               src="assets/images/providers/authentik-lockup-horizontal-color.svg"
               alt="authentik"
             />
-            <h2>Authentik szolgáltató</h2>
+            <h2>Oridzsinátor (Authentik) szolgáltató</h2>
             <p class="subtext">
               Az OAuth2/OpenID provider, amin keresztül a klub alkalmazásába be lehet lépni.
             </p>
@@ -338,8 +339,8 @@
             <dt>Redirect URIs</dt>
             <dd>
               <small>
-                Tájékoztatás az Authentik beállításához: a provider Redirect URIs listájában ezeknek
-                kell szerepelniük.
+                Tájékoztatás az Oridzsinátor (Authentik) beállításához: a provider Redirect URIs
+                listájában ezeknek kell szerepelniük.
               </small>
               @for (r of redirectUris(); track r.uri) {
                 <span class="oidc-uri">
@@ -363,10 +364,10 @@
       <section class="panel">
         <div class="panel-title">
           <div>
-            <h2>Meghívók (Authentik API)</h2>
+            <h2>Meghívók (Oridzsinátor API)</h2>
             <p class="subtext">
-              A Felhasználók → Meghívók ezzel a tokennel készíti a meghívó linkeket az Authentikben.
-              Token nélkül nem lehet meghívót küldeni.
+              A Felhasználók → Meghívók ezzel a tokennel készíti a meghívó linkeket az
+              Oridzsinátorban. Token nélkül nem lehet meghívót küldeni.
             </p>
           </div>
         </div>

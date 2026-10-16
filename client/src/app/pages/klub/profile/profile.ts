@@ -17,10 +17,14 @@ import { Avatar } from '../../../components/avatar/avatar';
 import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo-editor';
 import { Masonry } from '../../../shared/masonry/masonry.directive';
 import { TourMedal } from '../../../shared/tour-medal/tour-medal';
+import { LoginSessions } from '../../../components/login-sessions/login-sessions';
 
 interface AttendanceRow {
   tour: AttendedTour;
   paid: boolean;
+  // There is an advance to pay at all (price and advance set): only then is
+  // "Nincs kifizetve" said.
+  payable: boolean;
   paymentId: string | null;
   paymentMethod: 'stripe' | 'cash' | null;
 }
@@ -31,7 +35,7 @@ function emptyAddress(): UserAddress {
 
 @Component({
   selector: 'app-klub-profile',
-  imports: [RouterLink, MatIconModule, Avatar, PhotoEditor, Masonry, TourMedal],
+  imports: [RouterLink, MatIconModule, Avatar, PhotoEditor, Masonry, TourMedal, LoginSessions],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })

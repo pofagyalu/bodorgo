@@ -1,11 +1,12 @@
+import { authentikApi as api } from './authentikApi.js';
 import { getOidcSettings } from './oidcSettings.js';
 
 // Authentik invitations (Felhasználók → Meghívók): each person the club
 // adds gets their own single-use link to Authentik's invitation-only
 // registration flow, their e-mail and name already filled in. Created
 // through Authentik's REST API with the token of the `bodorgo-app` service
-// account, whose role may only add/view/delete invitations (see the
-// README's "Access and roles") - set, like Authentik's address, on
+// account (utils/authentikApi.js; its role: the README's "Access and
+// roles") - set, like Authentik's address, on
 // Beállítások → OIDC szolgáltató (utils/oidcSettings.js). The flow (slug `enrollment-invitation`):
 // invitation check -> registration form -> account (into the `bodorgo`
 // group, inactive) -> e-mail confirmation -> login.
@@ -20,21 +21,6 @@ export const invitationsEnabled = async () => {
 // Where an invitation's link points: the registration flow, with its token.
 export const invitationLink = ({ serverUrl, invitationFlow }, token) =>
   `${serverUrl}/if/flow/${invitationFlow}/?itoken=${token}`;
-
-async function api(settings, path, options = {}) {
-  const res = await fetch(`${settings.serverUrl}/api/v3${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${settings.apiToken}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  if (!res.ok && res.status !== 404) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Authentik ${res.status}: ${text.slice(0, 200)}`);
-  }
-  return res.status === 204 || res.status === 404 ? null : res.json();
-}
 
 // A new single-use invitation for this person; { id, link, expiresAt }.
 export async function createInvitation({ email, name }) {

@@ -157,6 +157,17 @@ describe('MemberEdit', () => {
     expect(page.role()).toBe('member');
   });
 
+  it('shows Bejelentkezések only to the role manager, not on their own record', () => {
+    open('u1');
+    respond({ 'GET /users/u1': { data: { user: USER } } });
+    logIn({ id: 'boss', role: 'admin' });
+    expect(page.canSeeSessions()).toBe(false);
+    logIn({ id: 'u1', role: 'admin', canManageRoles: true });
+    expect(page.canSeeSessions()).toBe(false);
+    logIn({ id: 'boss', role: 'admin', canManageRoles: true });
+    expect(page.canSeeSessions()).toBe(true);
+  });
+
   it('does not let an admin replace a photo the user set themselves', () => {
     open('u1');
     expect(page.photoLocked()).toBe(false); // nobody loaded yet
@@ -275,6 +286,7 @@ describe('KlubProfile', () => {
       duration,
     },
     paid: true,
+    payable: true,
     paymentId: null,
     paymentMethod: null,
   });
@@ -348,6 +360,25 @@ describe('KlubProfile', () => {
       [2021, [3, 2]],
       [2019, [1]],
     ]);
+  });
+
+  it('says "Nincs kifizetve" only for a tour that has an advance to pay', () => {
+    const routes = loaded();
+    routes['GET /users/me/attendance'] = {
+      data: {
+        tours: [
+          { ...tour(9, `${nextYear}-07-01`), paid: false },
+          { ...tour(10, `${nextYear}-09-01`), paid: false, payable: false },
+        ],
+      },
+    };
+    open(routes);
+    const rows = [...fixture.nativeElement.querySelectorAll('.attendance-row')].map(
+      (r: Element) => r.textContent ?? '',
+    );
+    expect(rows[0]).toContain('Nincs kifizetve');
+    expect(rows[1]).not.toContain('Nincs kifizetve');
+    expect(rows[1]).not.toContain('Fizetve');
   });
 
   it('says what could not be loaded', () => {
