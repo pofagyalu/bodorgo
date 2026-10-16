@@ -153,7 +153,13 @@ export const updateMe = async (req, res, next) => {
     throw new AppError('This route is not for password update.', 400);
   }
 
-  const filteredBody = filterObj(req.body, 'username', 'wantsEmailNotifications', 'address');
+  const filteredBody = filterObj(
+    req.body,
+    'username',
+    'wantsEmailNotifications',
+    'wantsMarketPush',
+    'address',
+  );
   if (typeof filteredBody.username === 'string') {
     filteredBody.username = filteredBody.username.trim() || undefined;
     if (filteredBody.username && (await isUsernameTaken(filteredBody.username, req.user._id))) {
@@ -275,7 +281,7 @@ export const getMyBirthday = async (req, res) => {
 
 export const getMe = async (req, res) => {
   const user = await User.findById(req.user._id).select(
-    'name username email birthday memberSince lastLoginAt wantsEmailNotifications address photoUpdatedAt photoSetBy +futokod',
+    'name username email birthday memberSince lastLoginAt wantsEmailNotifications wantsMarketPush address photoUpdatedAt photoSetBy +futokod',
   );
 
   const toursAttended = await toursAttendedOf(user._id);
@@ -292,6 +298,7 @@ export const getMe = async (req, res) => {
       lastLoginAt: user.lastLoginAt,
       toursAttended,
       wantsEmailNotifications: user.wantsEmailNotifications,
+      wantsMarketPush: user.wantsMarketPush !== false,
       address: user.address,
       photoUpdatedAt: user.photoUpdatedAt ?? null,
       photoSetBy: user.photoSetBy ?? null,

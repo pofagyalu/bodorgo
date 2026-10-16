@@ -18,6 +18,7 @@ import { PollService } from '../../services/poll';
 import { ChatService } from '../../services/chat';
 import { AuthService } from '../../auth/auth.service';
 import { UserService } from '../../services/user';
+import { MarketService } from '../../services/market';
 import { canSeeMoka } from '../../auth/moka.guard';
 
 // Same 7 colors sampled from the bódorgó logo as shared/logo-colors.ts's
@@ -57,12 +58,16 @@ export class Header implements OnDestroy {
   // with the polls (and by the Kotyogó page itself as chats are read).
   private chatService = inject(ChatService);
   unreadChat = this.chatService.unreadCount;
-  // On a phone the menu is folded away: the two together on its button.
-  waitingInMenu = computed(() => this.pendingPolls() + this.unreadChat());
+  // Ócskapiac badge: what others put up since I last opened it.
+  private marketService = inject(MarketService);
+  newMarket = this.marketService.newCount;
+  // On a phone the menu is folded away: all of them together on its button.
+  waitingInMenu = computed(() => this.pendingPolls() + this.unreadChat() + this.newMarket());
   private refreshPolls = () => {
     if (!this.auth.isLoggedIn()) return;
     this.pollService.refreshPending();
     this.chatService.refreshUnread();
+    this.marketService.refreshNew();
   };
   private pollTimer = setInterval(this.refreshPolls, 2 * 60 * 1000);
   private navSub = inject(Router)
@@ -73,6 +78,7 @@ export class Header implements OnDestroy {
     else {
       this.pollService.pendingCount.set(0);
       this.chatService.unreadCount.set(0);
+      this.marketService.newCount.set(0);
     }
   });
 

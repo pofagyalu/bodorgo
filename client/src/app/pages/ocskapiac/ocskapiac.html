@@ -1,0 +1,103 @@
+<div class="ocskapiac-page">
+  <div class="heading">
+    <div>
+      <h1 class="page-title">Ócskapiac</h1>
+      <p class="page-subtitle">
+        Ami neked kacat, az másnak kincs. Add tovább ingyen – vagy egy sörért. 🍺
+      </p>
+    </div>
+    <!-- On a phone: the floating + in the bottom right corner. -->
+    <button
+      type="button"
+      class="new-btn"
+      title="Új kacat"
+      aria-label="Új kacat"
+      (click)="form.set('new')"
+    >
+      <mat-icon class="add-icon">add</mat-icon><span class="add-text">＋ Új kacat</span>
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p class="empty-note">Kotorászunk a padláson…</p>
+  } @else if (items().length === 0) {
+    <div class="empty-big">
+      <span aria-hidden="true">🧺</span>
+      <p>Még senki nem szabadult meg semmitől… Légy te az első!</p>
+    </div>
+  } @else {
+    <div class="filters">
+      <div class="search-row">
+        <label class="search">
+          <mat-icon aria-hidden="true">search</mat-icon>
+          <input
+            type="search"
+            placeholder="Mit keresel? (csavar, cipő, lekvár…)"
+            aria-label="Keresés az Ócskapiacon"
+            [value]="search()"
+            (input)="search.set($any($event.target).value)"
+          />
+        </label>
+        <app-period-picker
+          label="Kategória"
+          [list]="true"
+          [options]="categoryOptions"
+          [value]="category()"
+          (valueChange)="setCategory($event)"
+        />
+      </div>
+      <app-tab-strip
+        label="Ócskapiac"
+        [options]="tabOptions()"
+        [value]="filter()"
+        (valueChange)="setFilter($event)"
+      />
+    </div>
+
+    @if (shown().length === 0) {
+      <p class="empty-note">
+        @switch (filter()) {
+          @case ('dibs') {
+            Még semmit nem stipistopiztál le.
+          }
+          @case ('mine') {
+            Még semmit nem tettél ki – biztos nincs egy fölösleges csavarod?
+          }
+          @case ('gone') {
+            Még nem vittek el semmit.
+          }
+          @default {
+            Nincs ilyen kacat.
+          }
+        }
+        @if (search() || category() !== 'all') {
+          <button type="button" class="link-btn" (click)="clearFilters()">Szűrők törlése</button>
+        }
+      </p>
+    } @else {
+      <div class="grid">
+        @for (item of shown(); track item._id) {
+          <button type="button" class="card-btn" (click)="open(item._id)">
+            <app-market-card [item]="item" />
+          </button>
+        }
+      </div>
+    }
+  }
+</div>
+
+@if (openItem(); as item) {
+  @if (!form()) {
+    <app-market-item
+      [item]="item"
+      (changed)="upsert($event)"
+      (deleted)="removed($event)"
+      (edit)="form.set($event)"
+      (closed)="close()"
+    />
+  }
+}
+
+@if (form()) {
+  <app-market-form [item]="editing()" (saved)="saved($event)" (closed)="form.set(null)" />
+}

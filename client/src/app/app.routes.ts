@@ -75,6 +75,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/szavazasok/szavazasok').then((m) => m.Szavazasok),
   },
   {
+    // Ócskapiac: giving away (or selling for a few beers) what we don't need.
+    path: 'ocskapiac',
+    title: 'Ócskapiac',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/ocskapiac/ocskapiac').then((m) => m.Ocskapiac),
+  },
+  {
     // Where a Futókör card's QR code leads: fk/<token> - short, so the code
     // is coarse and reads from further away. The address is printed on the
     // cards: it must never change. No guard: it has to open without a

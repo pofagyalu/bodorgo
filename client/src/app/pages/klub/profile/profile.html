@@ -329,6 +329,25 @@
             <span></span>
           </label>
         </div>
+        <div class="toggle-row">
+          <div>
+            <strong>Ócskapiac</strong>
+            <small
+              >Szól, ha valaki új kacatot tesz ki. (Ha a tiédet kérik vagy lestipistopizzák, arról
+              mindig szól.)</small
+            >
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              [checked]="p.wantsMarketPush"
+              [disabled]="savingNotifications()"
+              (change)="toggleMarketPush()"
+              aria-label="Ócskapiac értesítések"
+            />
+            <span></span>
+          </label>
+        </div>
         @if (push.state() === 'on') {
           <button type="button" class="link-btn" (click)="sendTestPush()" [disabled]="pushBusy()">
             Próbaértesítés küldése

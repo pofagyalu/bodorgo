@@ -1,0 +1,37 @@
+<div class="card" [class.gone]="item().status === 'gone'">
+  <div class="photo">
+    @if (thumb(); as url) {
+      <img [src]="url" [alt]="item().title" loading="lazy" />
+    } @else {
+      <span class="no-photo" aria-hidden="true">📦</span>
+    }
+    @if (item().photos.length > 1) {
+      <span class="photo-count" [title]="item().photos.length + ' fotó'"
+        >📷 {{ item().photos.length }}</span
+      >
+    }
+    @switch (item().status) {
+      @case ('reserved') {
+        <span class="stamp stamp--dibs">Stipistopi!</span>
+      }
+      @case ('gone') {
+        <span class="stamp stamp--gone">Elvitték!</span>
+      }
+    }
+  </div>
+
+  <div class="body">
+    <span class="price">{{ price() }}</span>
+    <h3 class="title">{{ item().title }}</h3>
+    <p class="meta">
+      <span>{{ category() }}</span>
+      <span class="dot">·</span>
+      <span>{{ item().mine ? 'Tiéd' : owner() }}</span>
+    </p>
+    @if (item().status === 'reserved') {
+      <p class="hold">✋ {{ item().iReserved ? 'Te' : holder() }} – még {{ days() }} napig</p>
+    } @else if (item().wanted.length && item().status === 'available') {
+      <p class="wanted">🙋 {{ item().wanted.length }} ember kéri</p>
+    }
+  </div>
+</div>

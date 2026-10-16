@@ -16,8 +16,8 @@
       (click)="isMobileMenuOpen = true"
     >
       ☰
-      <!-- Something waits behind the folded menu: unread chat messages
-           and polls to vote on, together. -->
+      <!-- Something waits behind the folded menu: unread chat messages,
+           polls to vote on and new Ócskapiac items, together. -->
       @if (waitingInMenu()) {
         <span class="hamburger-badge" aria-label="Új tartalom a menüben">{{
           waitingInMenu()
@@ -85,6 +85,16 @@
           <span class="menu-badge" [title]="pendingPolls() + ' szavazás vár rád'">{{
             pendingPolls()
           }}</span>
+        }
+      </a>
+      <a
+        routerLink="/ocskapiac"
+        routerLinkActive="active"
+        (mouseenter)="hoverItem($event.currentTarget)"
+        class="menu-item orange"
+        >Ócskapiac
+        @if (newMarket()) {
+          <span class="menu-badge" [title]="newMarket() + ' új kacat'">{{ newMarket() }}</span>
         }
       </a>
       <!-- Móka (the games) - for now only for whoever auth/moka.guard.ts lets in. -->
@@ -214,6 +224,16 @@
         >Voks
         @if (pendingPolls()) {
           <span class="menu-badge">{{ pendingPolls() }}</span>
+        }
+      </a>
+      <a
+        routerLink="/ocskapiac"
+        routerLinkActive="active"
+        (click)="closeMobileMenu()"
+        class="menu-item orange"
+        >Ócskapiac
+        @if (newMarket()) {
+          <span class="menu-badge">{{ newMarket() }}</span>
         }
       </a>
       @if (seesMoka()) {

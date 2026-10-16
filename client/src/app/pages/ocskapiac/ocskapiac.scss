@@ -1,0 +1,187 @@
+@use '../../shared/fab';
+
+// The same grey backdrop + white panel as the other top-level pages - with
+// a warm flea-market paper colour on the panel.
+:host {
+  display: block;
+  background: #ececec;
+  min-height: calc(100dvh - var(--header-height));
+}
+
+.ocskapiac-page {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  background: #fffdf8;
+  box-shadow: 0 0 2.5rem rgba(0, 0, 0, 0.08);
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.page-title {
+  margin: 0 0 0.3rem;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--logo-orange);
+}
+
+.page-subtitle {
+  margin: 0;
+  color: #7a6a55;
+  font-size: 0.95rem;
+}
+
+.new-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.2rem;
+  border: 0;
+  border-radius: 2rem;
+  background: #e67e22;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: #cf6d16;
+  }
+
+  .add-icon {
+    display: none;
+  }
+}
+
+.empty-note {
+  color: #9a8a72;
+  font-style: italic;
+}
+
+.empty-big {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  color: #7a6a55;
+  text-align: center;
+
+  span {
+    font-size: 4rem;
+  }
+}
+
+.link-btn {
+  margin-left: 0.375rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #e67e22;
+  font: inherit;
+  font-style: normal;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filters {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.search-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+app-period-picker {
+  --period-picker-accent: #e67e22;
+  flex: none;
+  max-width: 45%;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+  max-width: 28rem;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid #e6d8bf;
+  border-radius: 0.7rem;
+  background: #fff;
+
+  &:focus-within {
+    border-color: #e67e22;
+  }
+
+  mat-icon {
+    flex: none;
+    color: #a8987e;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.95rem;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.card-btn {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .ocskapiac-page {
+    padding: 1.25rem 1rem 5.5rem;
+  }
+
+  .new-btn {
+    @include fab.button;
+    background: #e67e22;
+
+    &:hover {
+      background: #cf6d16;
+    }
+
+    .add-icon {
+      display: block;
+    }
+
+    .add-text {
+      display: none;
+    }
+  }
+
+  // Two small cards side by side on a phone.
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+}
