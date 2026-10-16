@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { environment } from '../../../environments/environment';
@@ -37,10 +37,20 @@ export class PopularViews {
   });
   playingVideo = signal<PopularVideo | null>(null);
 
+  // Its answer is in (shown, or nothing to show) - the homepage puts the
+  // map under it only then, so the map doesn't jump down.
+  settled = output<void>();
+
   constructor() {
     this.views.popular().subscribe({
-      next: (popular) => this.popular.set(popular),
-      error: () => this.popular.set(null),
+      next: (popular) => {
+        this.popular.set(popular);
+        this.settled.emit();
+      },
+      error: () => {
+        this.popular.set(null);
+        this.settled.emit();
+      },
     });
   }
 

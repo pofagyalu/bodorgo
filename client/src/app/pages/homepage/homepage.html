@@ -124,25 +124,31 @@
        jump down as the statistics fill in above it). Its code (and the video
        player's) comes only then; nothing while nothing was seen. -->
   @if (statsLoaded()) {
-    @defer (on idle) {
-      <app-popular-views></app-popular-views>
+    @defer (on immediate) {
+      <app-popular-views (settled)="popularSettled.set(true)"></app-popular-views>
     }
   }
 
-  <section class="map-section">
-    <h2>Táboraink térképen</h2>
-    <!-- The map and its library (Leaflet, some 150 kB) are fetched only
+  <!-- The map only once Statisztikák and Népszerű are in (belowReady):
+       drawn earlier, they would push it down as they come. -->
+  @if (belowReady()) {
+    <section class="map-section">
+      <h2>Táboraink térképen</h2>
+      <!-- The map and its library (Leaflet, some 150 kB) are fetched only
          when the page is scrolled down to it - not with the first load. -->
-    <!-- The frame keeps the map's place and its quiet ground: the map
+      <!-- The frame keeps the map's place and its quiet ground: the map
          fades in over it, without a flicker. -->
-    <div class="map-frame">
-      @defer (on viewport) {
-        <app-tours-map></app-tours-map>
-      } @placeholder {
-        <div class="map-placeholder"></div>
-      }
-    </div>
-  </section>
+      <div class="map-frame">
+        @defer (on viewport) {
+          <app-tours-map></app-tours-map>
+        } @placeholder {
+          <div class="map-placeholder"></div>
+        }
+      </div>
+    </section>
+  }
 </div>
 
-<app-site-footer></app-site-footer>
+@if (belowReady()) {
+  <app-site-footer></app-site-footer>
+}
