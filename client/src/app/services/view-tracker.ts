@@ -12,16 +12,30 @@ export const PHOTO_SEEN_MS = 2000;
 // A video or a song: this many seconds really played - or half of a
 // shorter one.
 export const PLAY_SEEN_SECONDS = 30;
+// A Daloskönyv song: its page open this long.
+export const SONG_SEEN_MS = 10_000;
+// A songbook search that finds nothing: counted once the typing has
+// stopped this long (not every half-typed word on the way).
+export const SEARCH_SETTLE_MS = 2000;
 
-export type ViewType = 'photo' | 'video' | 'tour' | 'track';
+export type ViewType = 'photo' | 'video' | 'tour' | 'track' | 'song' | 'search';
 
 // What was seen. key: "tour:<tourId>:<filename>" / "media:<category>:
 // <filename>" for a photo, the same with the video's id for a video, the
-// tour's id, a song's id (with the playlist it was played from).
+// tour's id, a song's id (with the playlist it was played from), a
+// Daloskönyv song's id, the words searched for.
 export interface SeenItem {
   type: ViewType;
   key: string;
   playlist?: string;
+}
+
+// Opened from its home screen icon - the installed app, not a browser tab.
+export function isInstalledApp(): boolean {
+  return (
+    !!window.matchMedia?.('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
 }
 
 // Seconds to play before it counts: 30, or half of a shorter one.
@@ -103,6 +117,33 @@ export interface Popular {
   video: PopularVideo | null;
   tour: PopularTour | null;
   track: PopularTrack | null;
+  song: TopSong | null;
+}
+
+// Klub → Statisztika (GET /views/stats, admins): totals only.
+export type StatsDays = 7 | 30 | 90 | 0;
+export interface TopSong extends Counted {
+  title: string;
+  artist: string;
+  link: string;
+}
+export interface ViewStats {
+  days: StatsDays;
+  since: string | null;
+  // People a day (YYYY-MM-DD) - or a month (YYYY-MM) for every day.
+  activity: { unit: 'day' | 'month'; points: { label: string; people: number }[] };
+  people: { today: number; week: number; period: number; personDays: number; returning: number };
+  // Person-days on each.
+  devices: { phone: number; tablet: number; desktop: number };
+  app: { days: number; people: number };
+  top: {
+    photo: PopularPhoto[];
+    video: PopularVideo[];
+    tour: PopularTour[];
+    track: PopularTrack[];
+    song: TopSong[];
+  };
+  searches: { words: string; times: number; people: number }[];
 }
 
 const SEND_AFTER_MS = 1_000;
@@ -126,6 +167,8 @@ export class ViewTrackerService {
   constructor() {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') this.flush(true);
+      // Back in the app - maybe on another day by now.
+      else this.noteInstalledApp();
     });
     window.addEventListener('pagehide', () => this.flush(true));
   }
@@ -138,6 +181,23 @@ export class ViewTrackerService {
     this.queue.push(item);
     if (this.queue.length >= MAX_BATCH) this.flush();
     else this.timer ??= setTimeout(() => this.flush(), SEND_AFTER_MS);
+  }
+
+  // The installed app says it is the one in use - once a day (Klub →
+  // Statisztika's share of the installed app; the server can't tell).
+  private appDay = '';
+  noteInstalledApp() {
+    if (!this.auth.isLoggedIn() || !isInstalledApp()) return;
+    const day = new Date().toDateString();
+    if (this.appDay === day) return;
+    this.appDay = day;
+    this.http.post(`${this.url}/app`, {}).subscribe({ error: () => (this.appDay = '') });
+  }
+
+  stats(days: StatsDays): Observable<ViewStats> {
+    return this.http
+      .get<{ data: ViewStats }>(`${this.url}/stats?days=${days}`)
+      .pipe(map((res) => res.data));
   }
 
   popular(): Observable<Popular> {

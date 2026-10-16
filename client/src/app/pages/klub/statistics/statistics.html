@@ -1,0 +1,145 @@
+<div class="content">
+  <div class="heading">
+    <div>
+      <div class="kicker">Klub</div>
+      <h1>Statisztika</h1>
+      <p>
+        Hányan és mivel használják az alkalmazást, mit néztek meg a legtöbben, és mit kerestek hiába
+        a daloskönyvben. Csak összesítve - senki nem látja, ki mit nézett meg.
+      </p>
+    </div>
+    <app-period-picker
+      label="Időszak"
+      [options]="periodOptions"
+      [wideValues]="['0']"
+      [(value)]="period"
+    />
+  </div>
+
+  @if (error(); as e) {
+    <p class="empty-note">{{ e }}</p>
+  } @else if (stats(); as s) {
+    <div class="stats-body" [class.stats-body--loading]="loading()">
+      <!-- The headline numbers. -->
+      <section class="tiles" aria-label="Aktív felhasználók">
+        <div class="tile">
+          <span class="tile-value">{{ count(s.people.today) }}</span>
+          <span class="tile-label">ma</span>
+        </div>
+        <div class="tile">
+          <span class="tile-value">{{ count(s.people.week) }}</span>
+          <span class="tile-label">az elmúlt 7 napban</span>
+        </div>
+        <div class="tile">
+          <span class="tile-value">{{ count(s.people.period) }}</span>
+          <span class="tile-label">{{ periodText() }}</span>
+        </div>
+        <div class="tile">
+          <span class="tile-value">{{ returningPercent() }}%</span>
+          <span class="tile-label">visszatért (legalább 2 napon)</span>
+        </div>
+      </section>
+
+      <div class="cards">
+        <section class="panel panel--wide">
+          <div class="panel-title">
+            <div>
+              <h2>Aktív felhasználók</h2>
+              <span class="panel-note">{{
+                s.activity.unit === 'month'
+                  ? 'Hányan voltak itt havonta'
+                  : 'Hányan voltak itt naponta'
+              }}</span>
+            </div>
+          </div>
+          @if (s.people.personDays) {
+            <app-activity-chart [points]="s.activity.points" />
+          } @else {
+            <p class="empty-note">Ebben az időszakban még senki.</p>
+          }
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">
+            <div>
+              <h2>Eszközök</h2>
+              <span class="panel-note">Min használták, a napok szerint</span>
+            </div>
+          </div>
+          @if (hasDevices()) {
+            <app-device-chart [devices]="s.devices" />
+            <p class="app-line">
+              Telepített alkalmazással: <strong>{{ appPercent() }}%</strong>
+              <span class="muted">({{ count(s.app.people) }} fő)</span>
+            </p>
+          } @else {
+            <p class="empty-note">Még nincs adat.</p>
+          }
+        </section>
+
+        @for (list of lists(); track list.key) {
+          <section class="panel">
+            <div class="panel-title">
+              <div>
+                <h2>{{ list.title }}</h2>
+                <span class="panel-note">A legtöbbet nézettek</span>
+              </div>
+            </div>
+            @if (list.rows.length) {
+              <ol class="top-list">
+                @for (row of list.rows; track row.key) {
+                  <li>
+                    <span class="top-text">
+                      @if (row.link) {
+                        <a class="top-title" [routerLink]="row.link">{{ row.title }}</a>
+                      } @else {
+                        <span class="top-title">{{ row.title }}</span>
+                      }
+                      @if (row.sub) {
+                        <span class="top-sub">{{ row.sub }}</span>
+                      }
+                    </span>
+                    <span class="top-count" [title]="count(row.viewers) + ' különböző ember'">
+                      {{ count(row.views) }} {{ list.unit }}
+                      <span class="muted">· {{ count(row.viewers) }} fő</span>
+                    </span>
+                  </li>
+                }
+              </ol>
+            } @else {
+              <p class="empty-note">Ebben az időszakban még semmi.</p>
+            }
+          </section>
+        }
+
+        <section class="panel">
+          <div class="panel-title">
+            <div>
+              <h2>Hiába keresték</h2>
+              <span class="panel-note">A daloskönyvben nincs ilyen - érdemes felvenni</span>
+            </div>
+          </div>
+          @if (s.searches.length) {
+            <ol class="top-list">
+              @for (search of s.searches; track search.words) {
+                <li>
+                  <span class="top-text"
+                    ><span class="top-title">„{{ search.words }}”</span></span
+                  >
+                  <span class="top-count">
+                    {{ count(search.times) }}×
+                    <span class="muted">· {{ count(search.people) }} fő</span>
+                  </span>
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="empty-note">Ebben az időszakban még semmi.</p>
+          }
+        </section>
+      </div>
+    </div>
+  } @else {
+    <p class="empty-note">Betöltés…</p>
+  }
+</div>

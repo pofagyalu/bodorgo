@@ -97,6 +97,25 @@
           </div>
         </article>
       }
+
+      @if (p.song; as song) {
+        <a class="pop-card pop-card--link" [routerLink]="song.link">
+          <!-- The songbook's own cover (its card on Klub → Dokumentumok). -->
+          <span class="pop-picture pop-picture--song">
+            <img [src]="api('/songs/book.webp')" alt="" loading="lazy" />
+          </span>
+          <span class="pop-text">
+            <span class="pop-kicker">A hónap dala</span>
+            <span class="pop-title">{{ song.title }}</span>
+            @if (song.artist) {
+              <span class="pop-sub">{{ song.artist }}</span>
+            }
+            <span class="pop-count" [title]="count(song.viewers) + ' különböző ember'"
+              >{{ count(song.views) }} megnyitás</span
+            >
+          </span>
+        </a>
+      }
     </div>
   </section>
 }

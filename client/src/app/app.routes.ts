@@ -399,6 +399,12 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/klub/audit-log/audit-log').then((m) => m.AuditLog),
       },
       {
+        path: 'statisztika',
+        title: 'Klub statisztika',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/klub/statistics/statistics').then((m) => m.Statistics),
+      },
+      {
         path: 'profilom',
         title: 'Klub profilom',
         loadComponent: () => import('./pages/klub/profile/profile').then((m) => m.KlubProfile),

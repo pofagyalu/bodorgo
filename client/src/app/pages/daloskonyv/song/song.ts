@@ -25,6 +25,7 @@ import { NOTATION, firstChord, stepsBetween, transposeChordPro } from '../chords
 import { keyName, songKey, transposeKey } from '../song-key';
 import { ScreenAwake } from '../screen-awake';
 import { Metronome } from '../tempo';
+import { SONG_SEEN_MS, ViewTrackerService } from '../../../services/view-tracker';
 
 // The play button's paces, in rem per second at the normal letter size
 // (they grow with the letters): ▶, ▶▶, ▶▶▶.
@@ -126,6 +127,8 @@ export class SongPage implements OnDestroy {
   private peekSheet = viewChild<ElementRef<HTMLElement>>('peekSheet');
   private injector = inject(Injector);
   private changes = inject(ChangeDetectorRef);
+  // A song open for a while counts as a view of it (services/view-tracker).
+  private views = inject(ViewTrackerService);
 
   song = signal<Song | null>(null);
   canEdit = this.songService.canEdit;
@@ -442,6 +445,13 @@ export class SongPage implements OnDestroy {
   };
 
   constructor() {
+    // The song shown: a view of it once it has been open SONG_SEEN_MS.
+    effect((onCleanup) => {
+      const id = this.song()?._id;
+      if (!id) return;
+      const timer = setTimeout(() => this.views.seen({ type: 'song', key: id }), SONG_SEEN_MS);
+      onCleanup(() => clearTimeout(timer));
+    });
     // A new address: that song, from its top, stopped. From another song
     // the page is turned (turnPage): the open one stays until the new one
     // is here - no empty page in between.

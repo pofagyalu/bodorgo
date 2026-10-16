@@ -1138,7 +1138,7 @@ const tags = [
   ],
   [
     T.views,
-    'What was seen: the pages say when a photo, a video, a tour or a song counts as seen; the server keeps it once a day per person and item. For now only totals are ever shown (the homepage’s "Népszerű") - never who looked at what.',
+    'What was seen: the pages say when a photo, a video, a tour, a song or a Daloskönyv song counts as seen (and what the songbook search didn’t find); the server keeps it once a day per person and item. Who used the app on which day (and on what) is noted with every logged-in request. Only totals are ever shown (the homepage’s "Népszerű", Klub → Statisztika) - never who looked at what.',
   ],
   [T.push, 'Phone/browser notifications and per-chat muting.'],
   [T.system, 'Health check.'],
@@ -5090,15 +5090,17 @@ const paths = {
       tag: T.views,
       summary: 'Record what I have just seen',
       description:
-        'What counts as seen is the page’s to decide: a photo 2 s in the viewer (preloaded or swiped-past ones don’t), a video 30 s played (half of a shorter one), a tour’s page opened, a song 30 s played (half of a shorter one). Each item counts once a day per person - again the same day changes nothing, the next day counts again. Only what this user may see is recorded (a restricted tour photo, a guest and another tour’s media, a Média item kept for others: left out silently), so is anything that isn’t there (any more). At most 50 in one request. Also accepted as `text/plain` with the same JSON in it - what `navigator.sendBeacon` sends when the page closes.',
+        'What counts as seen is the page’s to decide: a photo 2 s in the viewer (preloaded or swiped-past ones don’t), a video 30 s played (half of a shorter one), a tour’s page opened, a song 30 s played (half of a shorter one), a Daloskönyv song’s page 10 s open; and a songbook search that found nothing (`search`: what was typed, 3-60 letters - kept lower case, without accents). Each item counts once a day per person - again the same day changes nothing, the next day counts again. Only what this user may see is recorded (a restricted tour photo, a guest and another tour’s media, a Média item kept for others: left out silently), so is anything that isn’t there (any more). At most 50 in one request. Also accepted as `text/plain` with the same JSON in it - what `navigator.sendBeacon` sends when the page closes.',
       body: obj(
         {
           views: arrayOf(
             obj(
               {
-                type: str('What it is.', { enum: ['photo', 'video', 'tour', 'track'] }),
+                type: str('What it is.', {
+                  enum: ['photo', 'video', 'tour', 'track', 'song', 'search'],
+                }),
                 key: str(
-                  'Which one. photo: `tour:<tourId>:<filename>` or `media:<category>:<filename>`; video: `tour:<tourId>:<videoId>` or `media:<category>:<videoId>`; tour: the tour’s id; track: the song’s Jellyfin id.',
+                  'Which one. photo: `tour:<tourId>:<filename>` or `media:<category>:<filename>`; video: `tour:<tourId>:<videoId>` or `media:<category>:<videoId>`; tour: the tour’s id; track: the song’s Jellyfin id; song: the Daloskönyv song’s id; search: the words searched for.',
                 ),
                 playlist: str(
                   'A song: the playlist it was played from (`bodorgo-fm`, `buli`, `hatter`).',
@@ -5174,6 +5176,65 @@ const paths = {
           viewers: int(),
         }),
       }),
+    }),
+  },
+
+  '/views/app': {
+    post: op({
+      tag: T.views,
+      summary: 'The installed app is in use today',
+      description:
+        'Sent once a day by the app opened from its home screen icon (a browser can’t tell that from the requests) - for Klub → Statisztika’s share of the installed app. Who used the app on which day, and on a phone, a tablet or a computer (from the browser’s User-Agent), is noted with every logged-in request anyway (once a day per device).',
+      ok: 204,
+    }),
+  },
+  '/views/stats': {
+    get: op({
+      tag: T.views,
+      role: 'admin',
+      summary: 'Klub → Statisztika',
+      description:
+        'Totals only - never who looked at what. For the last 7, 30 or 90 days, or every day (`days=0`): people a day (a month for every day), how many used the app (today, the last 7 days, in the period, and how many of them on at least two days), on what (person-days per device; with the installed app), the 10 most viewed photos, videos, tours, songs and Daloskönyv songs (what is no longer there is left out), and the 20 songbook searches most often without a result.',
+      params: [query('days', '7, 30 (the default), 90 or 0 (every day).', { type: 'integer' })],
+      data: obj({
+        days: int(),
+        since: str('The first day, YYYY-MM-DD - null for every day.'),
+        activity: obj({
+          unit: str('`day` or `month`.'),
+          points: arrayOf(obj({ label: str('YYYY-MM-DD or YYYY-MM.'), people: int() })),
+        }),
+        people: obj({
+          today: int(),
+          week: int('The last 7 days.'),
+          period: int(),
+          personDays: int(),
+          returning: int('Of `period`: here on at least two days.'),
+        }),
+        devices: obj({
+          phone: int('Person-days.'),
+          tablet: int(),
+          desktop: int(),
+        }),
+        app: obj({ days: int('Person-days with the installed app.'), people: int() }),
+        top: obj({
+          photo: arrayOf({ type: 'object' }),
+          video: arrayOf({ type: 'object' }),
+          tour: arrayOf({ type: 'object' }),
+          track: arrayOf({ type: 'object' }),
+          song: arrayOf(
+            obj({
+              key: str(),
+              title: str(),
+              artist: str(),
+              link: str(),
+              views: int(),
+              viewers: int(),
+            }),
+          ),
+        }),
+        searches: arrayOf(obj({ words: str(), times: int('Person-days.'), people: int() })),
+      }),
+      errors: [400],
     }),
   },
 

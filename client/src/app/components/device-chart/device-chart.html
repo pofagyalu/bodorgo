@@ -1,0 +1,18 @@
+<div class="canvas-box">
+  <canvas
+    baseChart
+    type="doughnut"
+    [data]="data()"
+    [options]="options"
+    role="img"
+    aria-label="Eszközök aránya"
+  ></canvas>
+</div>
+<ul class="legend">
+  @for (s of legend(); track s.key) {
+    <li>
+      <span class="key" [style.background]="s.color"></span>{{ s.label }}
+      <strong>{{ s.percent }}%</strong>
+    </li>
+  }
+</ul>

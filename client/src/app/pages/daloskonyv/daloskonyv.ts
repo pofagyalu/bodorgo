@@ -28,6 +28,7 @@ import { keyName } from './song-key';
 import { Instrument } from './chord-shapes';
 import { ANNEXES } from './annexes';
 import { LETTERS, fold, foundIn, hungarianLetter, letterOf, searchSongs, songsOf } from './search';
+import { SEARCH_SETTLE_MS, ViewTrackerService } from '../../services/view-tracker';
 
 // Daloskönyv: the club's songbook - for everyone logged in. The table of
 // contents (searchable), and the chosen song beside it (song/song.ts, the
@@ -54,6 +55,7 @@ export class Daloskonyv implements OnInit {
   private confirm = inject(ConfirmService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private views = inject(ViewTrackerService);
 
   songs = this.songService.songs;
   canEdit = this.songService.canEdit;
@@ -366,6 +368,20 @@ export class Daloskonyv implements OnInit {
     // again when a song has changed since (the service knows which it has).
     effect(() => {
       if (this.songService.lastChanged()) this.songService.loadLyrics();
+    });
+    // A search of the whole book (words too) that finds nothing - no song,
+    // no annex: counted once the typing has stopped (Klub → Statisztika's
+    // missing songs). Not one narrowed to a playlist or an artist.
+    effect((onCleanup) => {
+      const words = fold(this.search().trim());
+      if (words.length < 3 || this.artist() || (this.playlist() && !this.picking())) return;
+      if (!this.songs()?.length || !this.songService.lyrics()) return;
+      if (this.found().length || this.annexes().length) return;
+      const timer = setTimeout(
+        () => this.views.seen({ type: 'search', key: words }),
+        SEARCH_SETTLE_MS,
+      );
+      onCleanup(() => clearTimeout(timer));
     });
   }
 

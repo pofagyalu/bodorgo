@@ -1,0 +1,207 @@
+@use '../settings/shared';
+
+// Klub → Statisztika: the same Klub look as Napló and Beállítások.
+:host {
+  display: block;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  color: #23354a;
+}
+
+@include shared.cards;
+
+.content {
+  max-width: 86.875rem;
+  margin: auto;
+  padding: 2.375rem clamp(1rem, 4vw, 3.625rem) 4.375rem;
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+
+  h1 {
+    font-size: clamp(1.8125rem, 3vw, 2.375rem);
+    line-height: 1.1;
+    letter-spacing: -0.045em;
+    margin: 0.375rem 0 0.4375rem;
+    color: #193346;
+  }
+
+  p {
+    margin: 0;
+    max-width: 46rem;
+    color: #56666e;
+    line-height: 1.5;
+  }
+}
+
+.kicker {
+  color: #4c9184;
+  font-size: 0.6875rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+// The period picker in the Klub's teal.
+app-period-picker {
+  --period-picker-accent: #1a796c;
+}
+
+// Another period on its way: what is there fades a little.
+.stats-body {
+  transition: opacity 0.2s;
+}
+
+.stats-body--loading {
+  opacity: 0.55;
+}
+
+// The headline numbers: two in a row on a phone, four on a wider screen.
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.125rem;
+
+  @media (min-width: 48rem) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.125rem;
+  }
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.125rem;
+  background: #fff;
+  border: 1px solid #e7edea;
+  border-radius: 1.0625rem;
+  box-shadow: 0 0.3125rem 1.1875rem #213b4110;
+}
+
+.tile-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #1a796c;
+}
+
+.tile-label {
+  font-size: 0.8125rem;
+  color: #56666e;
+}
+
+// The activity chart goes across every column.
+.panel--wide {
+  column-span: all;
+}
+
+.panel-note {
+  font-size: 0.8125rem;
+  color: #6b7b82;
+}
+
+.app-line {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  color: #435562;
+}
+
+.muted {
+  color: #8a989e;
+  font-weight: 400;
+}
+
+.top-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: top;
+
+  li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid #eef2f0;
+    counter-increment: top;
+    font-size: 0.875rem;
+
+    &:first-child {
+      border-top: none;
+    }
+
+    &::before {
+      content: counter(top) '.';
+      flex: none;
+      width: 1.5rem;
+      color: #8a989e;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+.top-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.top-title,
+.top-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-title {
+  font-weight: 650;
+  color: #203747;
+}
+
+a.top-title {
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.top-sub {
+  font-size: 0.75rem;
+  color: #6b7b82;
+}
+
+.top-count {
+  flex: none;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: #203747;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 52rem) {
+  .heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  // The picker is on the left here: its panel opens from its left end.
+  app-period-picker {
+    --period-picker-left: 0;
+    --period-picker-right: auto;
+  }
+}

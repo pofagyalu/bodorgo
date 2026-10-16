@@ -58,6 +58,14 @@ const POPULAR: Popular = {
     views: 3,
     viewers: 2,
   },
+  song: {
+    key: 'd1',
+    title: 'Eső után',
+    artist: '',
+    link: '/media/zene/daloskonyv/eso-utan',
+    views: 6,
+    viewers: 4,
+  },
 };
 
 describe('PopularViews', () => {
@@ -74,7 +82,7 @@ describe('PopularViews', () => {
   }
 
   it('shows nothing while nothing has been seen', () => {
-    open({ days: 30, photo: null, video: null, tour: null, track: null });
+    open({ days: 30, photo: null, video: null, tour: null, track: null, song: null });
     expect(el().querySelector('.popular-section')).toBeNull();
   });
 
@@ -85,6 +93,7 @@ describe('PopularViews', () => {
       'A hónap videója',
       'Legnézettebb tábor',
       'Legtöbbet hallgatott szám',
+      'A hónap dala',
     ]);
     const [photo, video, tour, track] = cards();
     expect(photo.querySelector('img')!.getAttribute('src')).toBe(
@@ -99,10 +108,14 @@ describe('PopularViews', () => {
     expect(tour.textContent).toContain('12. Sarud');
     expect(track.textContent).toContain('Második dal');
     expect(track.textContent).toContain('3 lejátszás');
+    // The songbook's song goes to its page.
+    const song = cards()[4];
+    expect(song.getAttribute('href')).toBe('/media/zene/daloskonyv/eso-utan');
+    expect(song.textContent).toContain('6 megnyitás');
   });
 
   it('shows only the kinds there is one of', () => {
-    open({ ...POPULAR, video: null, track: null });
+    open({ ...POPULAR, video: null, track: null, song: null });
     expect(cards().length).toBe(2);
   });
 
