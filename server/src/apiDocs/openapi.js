@@ -1073,6 +1073,15 @@ JSON answers come as \`{ "status": "success", "data": { … } }\`. Errors as
 the user. Files (photos, PDFs, videos, Excel) come as they are; videos support
 \`Range\` requests.
 
+## Limits
+
+- At most **1000 requests per IP in 15 minutes** - above that every answer is \`429\` until
+  the 15 minutes are over.
+- **Scanners are shut out:** an IP asking for more than 30 addresses this server doesn't
+  have (the \`404\` "Can't find … on this server" kind - never the app's own \`404\`s, like a
+  deleted item) within a minute gets \`429\` for everything for an hour. One line in the error
+  log says so.
+
 ## Kotyogó and live updates (Socket.IO)
 
 The chat, the Szobabeosztás board, the quiz and the darts games are live over **Socket.IO** on the same origin, with

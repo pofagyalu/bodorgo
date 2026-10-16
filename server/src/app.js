@@ -33,6 +33,7 @@ import viewRouter from './routes/viewRoutes.js';
 import marketRouter from './routes/marketRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
+import { blockScanners, noteUnknownAddress } from './utils/scannerBlock.js';
 import globalErrorHandler from './controllers/errorController.js';
 import logger from './logger.js';
 
@@ -108,6 +109,10 @@ export default function createApp(sessionMiddleware) {
 
   app.use(morgan('combined', { stream: logger.stream }));
 
+  // Scanners (hundreds of addresses this server doesn't have, in seconds)
+  // are shut out for an hour - see utils/scannerBlock.js.
+  app.use(blockScanners);
+
   const limiter = rateLimit({
     windowMs: 15 * 60000, // 15 minutes
     max: 1000,
@@ -115,7 +120,8 @@ export default function createApp(sessionMiddleware) {
       logger.warn(`Rate limit exceeded: ${req.ip}`);
 
       return res.status(429).json({
-        message: 'Too many requests from this IP, please try again in an hour',
+        status: 'fail',
+        message: 'Túl sok kérés erről a címről - próbáld újra 15 perc múlva.',
       });
     },
   });
@@ -189,6 +195,8 @@ export default function createApp(sessionMiddleware) {
   });
 
   app.use((req, res, next) => {
+    // Too many of these from one IP: a scanner (utils/scannerBlock.js).
+    noteUnknownAddress(req.ip);
     // Since next gets an argument Express assumes this is an error
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
   });
