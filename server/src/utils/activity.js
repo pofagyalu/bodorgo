@@ -23,6 +23,19 @@ export function clearActivityMemory() {
   noted = new Set();
 }
 
+// The person's record of the day, made if it isn't there yet. Two first
+// requests at once (a phone and a computer, the app's own note) can both
+// try to make it: the one that loses just changes it - it is there by then.
+async function updateDay(user, day, update) {
+  const filter = { user: user._id, day };
+  try {
+    await ActiveDay.updateOne(filter, update, { upsert: true });
+  } catch (err) {
+    if (err?.code !== 11000) throw err;
+    await ActiveDay.updateOne(filter, update);
+  }
+}
+
 // Never in the request's way: not waited for, and a failure is only logged.
 export function noteActive(user, req) {
   const day = budapestYmd();
@@ -34,11 +47,7 @@ export function noteActive(user, req) {
   const key = `${user._id}|${device}`;
   if (noted.has(key)) return;
   noted.add(key);
-  ActiveDay.updateOne(
-    { user: user._id, day },
-    { $addToSet: { devices: device } },
-    { upsert: true },
-  ).catch((err) => {
+  updateDay(user, day, { $addToSet: { devices: device } }).catch((err) => {
     noted.delete(key);
     logger.warn(`activity not recorded: ${err.message}`);
   });
@@ -47,11 +56,5 @@ export function noteActive(user, req) {
 // The installed app was used today (POST /views/app - the app says so
 // itself, a browser can't tell).
 export async function noteInstalledApp(user) {
-  await ActiveDay.updateOne(
-    { user: user._id, day: budapestYmd() },
-    { $set: { app: true } },
-    {
-      upsert: true,
-    },
-  );
+  await updateDay(user, budapestYmd(), { $set: { app: true } });
 }

@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember, createTour } from '../helpers/factories.js';
 import ActiveDay from '../../src/models/activeDayModel.js';
@@ -21,17 +21,24 @@ const DESKTOP =
 
 const daysAgo = (n) => budapestYmd(new Date(Date.now() - n * 24 * 3600 * 1000));
 
+// The one-a-day rules (unique indexes) in place first: a test file starts
+// on a brand-new database, where they are built a moment after the start -
+// two writes in between would make two records of one day.
+beforeAll(() => Promise.all([ActiveDay.init(), View.init()]));
 beforeEach(() => clearActivityMemory());
 
-// noteActive isn't waited for: the record comes a moment after the answer.
-async function activeDays(user, count = 1) {
-  for (let i = 0; i < 50; i++) {
-    const days = await ActiveDay.find({ user: user._id }).lean();
-    if (days.length >= count && days.every((d) => d.devices.length)) return days;
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
-  return ActiveDay.find({ user: user._id }).lean();
-}
+// noteActive isn't waited for: the record comes a moment after the answer -
+// on the slow CI machine (the NAS) seconds after it. Waited for until it
+// is `ready`.
+const dayOf = (user, ready) =>
+  vi.waitFor(
+    async () => {
+      const day = await ActiveDay.findOne({ user: user._id }).lean();
+      if (!day || !ready(day)) throw new Error('not yet');
+      return day;
+    },
+    { timeout: 15000, interval: 50 },
+  );
 
 const get = (user, url, userAgent = DESKTOP) =>
   request(app).get(url).set(asUser(user)).set('User-Agent', userAgent);
@@ -49,13 +56,10 @@ describe('who used the app on which day', () => {
     const me = await createMember();
     await get(me, '/views/popular', PHONE);
     await get(me, '/views/popular', PHONE);
-    let [day] = await activeDays(me);
+    let day = await dayOf(me, (d) => d.devices.length > 0);
     expect(day).toMatchObject({ day: budapestYmd(), devices: ['phone'], app: false });
     await get(me, '/views/popular', DESKTOP);
-    for (let i = 0; i < 50 && day.devices.length < 2; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      [day] = await activeDays(me);
-    }
+    day = await dayOf(me, (d) => d.devices.length === 2);
     expect(day.devices.sort()).toEqual(['desktop', 'phone']);
     expect(await ActiveDay.countDocuments({ user: me._id })).toBe(1);
   });
@@ -64,8 +68,9 @@ describe('who used the app on which day', () => {
     const me = await createGuest();
     const res = await request(app).post('/views/app').set(asUser(me));
     expect(res.status).toBe(204);
-    const days = await activeDays(me);
-    expect(days[0]).toMatchObject({ day: budapestYmd(), app: true });
+    // The day's record has both: the app, and the device of the request.
+    const day = await dayOf(me, (d) => d.app && d.devices.length > 0);
+    expect(day).toMatchObject({ day: budapestYmd(), devices: ['desktop'], app: true });
   });
 });
 

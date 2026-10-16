@@ -31,7 +31,10 @@ const TOUR_VIDEO = `Season 03/${ORDER} - Nézettség (2021) S03E01.mp4`;
 const MEDIA_VIDEO = 'Season 07/Nézettségi reklám (2023) S07E01.mp4';
 const mediaVideoId = Buffer.from(MEDIA_VIDEO, 'utf8').toString('base64url');
 
-beforeAll(() => {
+beforeAll(async () => {
+  // The once-a-day rule (a unique index) in place first: a test file starts
+  // on a brand-new database, where it is built a moment after the start.
+  await View.init();
   const put = (root, rel) => {
     fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     fs.writeFileSync(path.join(root, rel), 'video');
