@@ -126,6 +126,17 @@ const userSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    // Ócskapiac: a push when someone puts up something new (Profilom's
+    // switch) - on unless turned off.
+    wantsMarketPush: {
+      type: Boolean,
+      default: true,
+    },
+    // When they last opened the Ócskapiac - the menu's badge counts what
+    // others put up since (see marketController.js).
+    marketSeenAt: {
+      type: Date,
+    },
     // Futókód: their own four-digit number for the Futókör, to run with
     // from any phone without logging in (see utils/futokod.js) - given when
     // the user is made, never sent to anyone but themselves and the admins.

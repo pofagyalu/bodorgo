@@ -438,6 +438,21 @@ describe('KlubProfile', () => {
     expect(page.savingNotifications()).toBe(false);
   });
 
+  it('switches the Ócskapiac pushes', () => {
+    open();
+    page.profile.update((p) => (p ? { ...p, wantsMarketPush: true } : p));
+    page.toggleMarketPush();
+    const req = http.expectOne(`${API}/users/updateMe`);
+    expect(req.request.body).toEqual({ wantsMarketPush: false });
+    req.flush({ data: {} });
+    expect(page.profile()?.wantsMarketPush).toBe(false);
+
+    page.toggleMarketPush();
+    respond({ 'PATCH /users/updateMe': fail() });
+    expect(error).toHaveBeenCalledWith('Hiba történt a mentés során.');
+    expect(page.profile()?.wantsMarketPush).toBe(false);
+  });
+
   it('takes over a changed photo, in the header too', () => {
     open();
     page.onPhotoChanged({ photoUpdatedAt: 'now', photoSetBy: 'self' });

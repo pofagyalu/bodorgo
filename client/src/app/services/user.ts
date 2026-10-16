@@ -134,6 +134,7 @@ export interface MyProfile {
   lastLoginAt?: string;
   toursAttended: number;
   wantsEmailNotifications: boolean;
+  wantsMarketPush: boolean;
   address?: UserAddress;
   photoUpdatedAt: string | null;
   photoSetBy: 'admin' | 'self' | null;
@@ -206,6 +207,8 @@ export interface UpdateMePayload {
   // own to change (see userController.js's updateMe).
   username?: string;
   wantsEmailNotifications?: boolean;
+  // Ócskapiac: a push when someone puts up something new.
+  wantsMarketPush?: boolean;
   address?: UserAddress;
 }
 

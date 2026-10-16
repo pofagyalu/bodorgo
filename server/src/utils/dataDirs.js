@@ -36,3 +36,9 @@ export const CHAT_IMAGES_DIR = process.env.CHAT_IMAGES_DIR || path.join(rootDir,
 // utils/libraryIndex.js). Not in git, never synced; pm2 must not watch it -
 // the pages' pictures are written into its _lapok folder.
 export const LIBRARY_DIR = process.env.LIBRARY_DIR || path.join(rootDir, 'library');
+
+// Ócskapiac: the photos of the things people give away (see
+// marketplace/marketPhotos.js). Under documents/ - not synced, not watched
+// by pm2.
+export const MARKET_PHOTOS_DIR =
+  process.env.MARKET_PHOTOS_DIR || path.join(CLUB_DOCUMENTS_DIR, 'ocskapiac');

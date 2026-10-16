@@ -244,6 +244,25 @@ export class KlubProfile implements OnInit {
     });
   }
 
+  // Ócskapiac: a push about every new item, or none.
+  toggleMarketPush() {
+    const current = this.profile();
+    if (!current) return;
+    const next = !current.wantsMarketPush;
+    this.savingNotifications.set(true);
+    this.userService.updateMe({ wantsMarketPush: next }).subscribe({
+      next: () => {
+        this.profile.update((p) => (p ? { ...p, wantsMarketPush: next } : p));
+        this.savingNotifications.set(false);
+        this.notifications.addSuccess('Beállítás mentve');
+      },
+      error: (err) => {
+        this.notifications.addError(err?.error?.message ?? 'Hiba történt a mentés során.');
+        this.savingNotifications.set(false);
+      },
+    });
+  }
+
   formatDateTime(dateStr: string): string {
     return new Intl.DateTimeFormat('hu-HU', {
       year: 'numeric',

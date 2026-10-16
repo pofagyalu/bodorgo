@@ -1,0 +1,140 @@
+<div class="backdrop" (click)="cancel()">
+  <form
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="item() ? 'Kacat szerkesztése' : 'Új kacat'"
+    novalidate
+    (click)="$event.stopPropagation()"
+    (submit)="submit($event)"
+  >
+    <header>
+      <h2>{{ item() ? 'Kacat szerkesztése' : 'Új kacat a placcra' }}</h2>
+      <button
+        type="button"
+        class="icon-close"
+        (click)="cancel()"
+        title="Bezárás"
+        aria-label="Bezárás"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+
+    <!-- Photos: 1-3. -->
+    <div class="field">
+      <span>Fotók ({{ photos().length }}/{{ maxPhotos }})</span>
+      <div class="photos">
+        @for (p of photos(); track p.url) {
+          <div class="photo">
+            <img [src]="p.url" alt="" />
+            <button
+              type="button"
+              class="photo-remove"
+              title="Levétel"
+              aria-label="Fotó levétele"
+              (click)="removePhoto(p)"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+        @if (photos().length < maxPhotos) {
+          <label class="photo photo--add" [class.busy]="shrinking()">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              (change)="addPhotos($any($event.target))"
+              [disabled]="shrinking()"
+            />
+            <mat-icon>{{ shrinking() ? 'hourglass_top' : 'add_a_photo' }}</mat-icon>
+            <span>{{ shrinking() ? 'Egy pillanat…' : 'Fotó' }}</span>
+          </label>
+        }
+      </div>
+    </div>
+
+    <label class="field">
+      <span>Mi ez?</span>
+      <input
+        type="text"
+        name="title"
+        maxlength="80"
+        placeholder="pl. Fél doboz 4×40-es csavar"
+        [value]="title()"
+        (input)="title.set($any($event.target).value)"
+      />
+    </label>
+
+    <label class="field">
+      <span>Pár szó róla <small>(nem kötelező)</small></span>
+      <textarea
+        name="description"
+        rows="3"
+        maxlength="1000"
+        placeholder="Milyen állapotban van, hol lehet átvenni…"
+        [value]="description()"
+        (input)="description.set($any($event.target).value)"
+      ></textarea>
+    </label>
+
+    <div class="field">
+      <span>Kategória</span>
+      <div class="chips">
+        @for (c of categories; track c.value) {
+          <button
+            type="button"
+            class="chip"
+            [class.on]="category() === c.value"
+            [attr.aria-pressed]="category() === c.value"
+            (click)="category.set(c.value)"
+          >
+            {{ c.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="field">
+      <span>Mennyiért?</span>
+      <div class="chips">
+        @for (k of priceKinds; track k.value) {
+          <button
+            type="button"
+            class="chip"
+            [class.on]="priceKind() === k.value"
+            [attr.aria-pressed]="priceKind() === k.value"
+            (click)="setPriceKind(k.value)"
+          >
+            {{ k.emoji }} {{ k.label }}
+          </button>
+        }
+      </div>
+      @if (needsAmount()) {
+        <div class="amount">
+          <input
+            type="number"
+            name="amount"
+            inputmode="numeric"
+            min="1"
+            [attr.max]="amountMax()"
+            aria-label="Mennyi"
+            [value]="amount() ?? ''"
+            (input)="setAmount($any($event.target).value)"
+          />
+          <span>{{ unit() }}</span>
+        </div>
+      }
+    </div>
+
+    <footer>
+      <button type="button" class="btn btn--plain" (click)="cancel()" [disabled]="saving()">
+        Mégse
+      </button>
+      <button type="submit" class="btn btn--save" [disabled]="!canSave()">
+        {{ saving() ? 'Mentés…' : item() ? 'Mentés' : 'Ki vele!' }}
+      </button>
+    </footer>
+  </form>
+</div>

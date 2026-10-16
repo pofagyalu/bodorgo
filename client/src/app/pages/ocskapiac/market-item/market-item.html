@@ -1,0 +1,195 @@
+<div class="backdrop" (click)="close()">
+  <article
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="item().title"
+    (click)="$event.stopPropagation()"
+  >
+    <button type="button" class="icon-close" (click)="close()" title="Bezárás" aria-label="Bezárás">
+      <mat-icon>close</mat-icon>
+    </button>
+
+    @if (item().photos.length) {
+      <div class="photos-wrap">
+        <div class="photos" #strip (scroll)="onPhotosScroll(strip)">
+          @for (p of item().photos; track p._id) {
+            <img
+              [src]="photoUrl(p._id)"
+              [alt]="item().title"
+              [attr.width]="p.width"
+              [attr.height]="p.height"
+            />
+          }
+        </div>
+        @if (item().photos.length > 1) {
+          <div class="dots">
+            @for (p of item().photos; track p._id; let i = $index) {
+              <button
+                type="button"
+                [class.active]="i === photoIndex()"
+                [attr.aria-label]="i + 1 + '. fotó'"
+                (click)="showPhoto(strip, i)"
+              ></button>
+            }
+          </div>
+        }
+        @if (item().status === 'reserved') {
+          <span class="stamp">Stipistopi!</span>
+        } @else if (item().status === 'gone') {
+          <span class="stamp stamp--gone">Elvitték!</span>
+        }
+      </div>
+    } @else {
+      <div class="no-photos">
+        <span class="stamp stamp--gone">Elvitték!</span>
+      </div>
+    }
+
+    <div class="content">
+      <span class="price">{{ price() }}</span>
+      <h2>{{ item().title }}</h2>
+      <p class="meta">{{ category() }} · {{ item().createdAt | date: 'yyyy. MMM d.' }}</p>
+
+      <div class="owner">
+        <app-avatar
+          class="owner-avatar"
+          [name]="item().owner.name"
+          [userId]="item().owner._id"
+          [photoVersion]="item().owner.photoUpdatedAt"
+        />
+        <span
+          >{{ item().mine ? 'A te kacatod' : 'Gazdája: '
+          }}<b>{{ item().mine ? '' : owner() }}</b></span
+        >
+      </div>
+
+      @if (item().description) {
+        <p class="description">{{ item().description }}</p>
+      }
+
+      <!-- Who holds / who asks. -->
+      @if (item().status === 'reserved') {
+        <p class="hold">
+          ✋ {{ item().iReserved ? 'A te stipistopid' : holder() + ' lestipistopizta' }} – még
+          {{ days() }} napig {{ item().iReserved ? 'a tiéd' : 'foglalt' }}.
+        </p>
+      } @else if (item().status === 'gone') {
+        <p class="hold hold--gone">
+          🤝 Elvitték {{ item().goneAt | date: 'MMM d.' }} – ennek már gazdája van.
+        </p>
+      }
+      @if (item().wanted.length && item().status !== 'gone') {
+        <p class="wanted">🙋 Kérik: {{ wantedNames() }}</p>
+      }
+
+      <!-- The buttons. -->
+      @if (item().status !== 'gone') {
+        <div class="actions">
+          @if (item().mine) {
+            <button type="button" class="btn btn--gone" [disabled]="busy()" (click)="markGone()">
+              🤝 Odaadtam
+            </button>
+            <button
+              type="button"
+              class="btn btn--plain"
+              [disabled]="busy()"
+              (click)="edit.emit(item())"
+            >
+              <mat-icon>edit</mat-icon> Szerkesztés
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn btn--want"
+              [class.on]="item().iWant"
+              [disabled]="busy()"
+              (click)="toggleWant()"
+            >
+              {{ item().iWant ? '✔ Kérem – mégse' : '🙋 Kérem!' }}
+            </button>
+            @if (item().iReserved) {
+              <button type="button" class="btn btn--plain" [disabled]="busy()" (click)="undibs()">
+                Mégse kell
+              </button>
+            } @else if (item().status === 'available') {
+              <button
+                type="button"
+                class="btn btn--dibs"
+                [disabled]="busy()"
+                [title]="holdDays + ' napig a tiéd, senki más nem foglalhatja le'"
+                (click)="dibs()"
+              >
+                ✋ Stipistopi!
+              </button>
+            }
+          }
+          @if (canDelete()) {
+            <button type="button" class="btn btn--danger" [disabled]="busy()" (click)="remove()">
+              <mat-icon>delete</mat-icon> Törlés
+            </button>
+          }
+        </div>
+        @if (!item().mine && item().status === 'available') {
+          <p class="hint">
+            A <b>Stipistopi!</b> {{ holdDays }} napig neked foglalja. Ha addig nem viszed el, újra
+            bárkié lehet.
+          </p>
+        }
+      } @else if (canDelete()) {
+        <div class="actions">
+          <button type="button" class="btn btn--danger" [disabled]="busy()" (click)="remove()">
+            <mat-icon>delete</mat-icon> Törlés
+          </button>
+        </div>
+      }
+
+      <!-- The one-liners. -->
+      <section class="notes">
+        <h3>Üzenőfal</h3>
+        @for (n of item().notes; track n._id) {
+          <p class="note">
+            <b>{{ name(n.user) }}:</b> {{ n.text }}
+            <span class="note-time">{{ n.createdAt | date: 'MMM d. HH:mm' }}</span>
+            @if (n.user._id === myId()) {
+              <button
+                type="button"
+                class="note-delete"
+                title="Törlés"
+                aria-label="Megjegyzés törlése"
+                [disabled]="busy()"
+                (click)="deleteNote(n._id)"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </p>
+        } @empty {
+          <p class="note note--empty">Még senki nem írt ide semmit.</p>
+        }
+        @if (item().status !== 'gone') {
+          <form class="note-form" (submit)="sendNote($event)">
+            <input
+              type="text"
+              name="note"
+              [attr.maxlength]="maxNote"
+              placeholder="pl. Hívlak este! / A szomszédnak kellhet…"
+              aria-label="Rövid megjegyzés"
+              [value]="note()"
+              (input)="note.set($any($event.target).value)"
+            />
+            <button
+              type="submit"
+              class="send"
+              title="Küldés"
+              aria-label="Küldés"
+              [disabled]="busy() || !note().trim()"
+            >
+              <mat-icon>send</mat-icon>
+            </button>
+          </form>
+        }
+      </section>
+    </div>
+  </article>
+</div>

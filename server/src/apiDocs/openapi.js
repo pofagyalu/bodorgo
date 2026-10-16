@@ -352,6 +352,9 @@ const schemas = {
     photoUpdatedAt: date('Profile photo version - `/users/{id}/photo?v=`.'),
     retired: bool('Archived ("deleted") user.'),
     wantsEmailNotifications: bool('Gets e-mails from the app.'),
+    wantsMarketPush: bool(
+      'Ócskapiac: gets a push when someone puts up something new (default true). Own profile (GET /users/me) only.',
+    ),
     address: obj({ zipCode: str(), city: str(), street: str(), country: str() }),
   }),
 
@@ -879,6 +882,47 @@ const schemas = {
     createdAt: date(),
   }),
 
+  MarketItem: obj({
+    _id: id(),
+    title: str(),
+    description: str(),
+    category: str('', { enum: ['barkacs', 'gyerek', 'haztartas', 'kezmuves', 'egyeb'] }),
+    price: obj({
+      kind: str(
+        'ingyen (free) and joszo (a kind word) have no amount; the rest: amount beers, chocolates, pálinkas, coffees, jars of jam - or forints.',
+        { enum: ['ingyen', 'joszo', 'sor', 'csoki', 'palinka', 'kave', 'lekvar', 'forint'] },
+      ),
+      amount: int('1-99 (forint: 1-1 000 000); null for ingyen and joszo.', { nullable: true }),
+    }),
+    owner: obj({ _id: id(), name: str(), username: str(), photoUpdatedAt: date() }),
+    photos: arrayOf(
+      obj({
+        _id: id('At `/ocskapiac/{id}/photos/{photoId}` (+ `/thumb`).'),
+        width: int(),
+        height: int(),
+      }),
+    ),
+    status: str('reserved: someone’s stipistopi holds it (reservedUntil); gone: Odaadtam.', {
+      enum: ['available', 'reserved', 'gone'],
+    }),
+    reservedBy: obj({ _id: id(), name: str(), username: str() }),
+    reservedUntil: date('7 days after the stipistopi - after that it is free for anyone again.'),
+    wanted: arrayOf(obj({ user: obj({ _id: id(), name: str(), username: str() }), at: date() })),
+    notes: arrayOf(
+      obj({
+        _id: id(),
+        user: obj({ _id: id(), name: str(), username: str() }),
+        text: str('At most 100 characters.'),
+        createdAt: date(),
+      }),
+    ),
+    mine: bool('I am its owner.'),
+    iWant: bool('I pressed Kérem!.'),
+    iReserved: bool('My stipistopi holds it.'),
+    createdAt: date(),
+    goneAt: date('Odaadtam - it stays, photos and all.'),
+  }),
+
   Document: obj({
     _id: id(),
     name: str('Shown on the card.'),
@@ -1081,6 +1125,7 @@ const T = {
   songs: 'Daloskönyv',
   games: 'Móka',
   race: 'Futókör',
+  market: 'Ócskapiac',
   views: 'Megtekintések',
   settings: 'Beállítások',
   push: 'Értesítések',
@@ -1135,6 +1180,10 @@ const tags = [
   [
     T.settings,
     'Klub → Beállítások: membership fees, reminders, Kotyogó photos, Barion wallets, the birthday greeting.',
+  ],
+  [
+    T.market,
+    'Ócskapiac: things we don’t need any more, given away free - or for a few beers, chocolates, or cheap money. Anyone logged in (guests too) may offer something, press Kérem! (interested, any number of people) or Stipistopi! (dibs: one person, held for 7 days, then free again) and leave a one-line note. An item is changed by its owner only; deleted by its owner or an admin. The owner gets a push notification on Kérem! and Stipistopi!.',
   ],
   [
     T.views,
@@ -2641,7 +2690,12 @@ const paths = {
       tag: T.users,
       summary: 'Update my own record',
       description: 'Username, address, e-mail preference - name and e-mail are not mine to change.',
-      body: obj({ username: str(), wantsEmailNotifications: bool(), address: { type: 'object' } }),
+      body: obj({
+        username: str(),
+        wantsEmailNotifications: bool(),
+        wantsMarketPush: bool('Ócskapiac: a push when someone puts up something new.'),
+        address: { type: 'object' },
+      }),
       errors: [400],
     }),
   },
@@ -5118,6 +5172,177 @@ const paths = {
         runs: arrayOf(obj({ courseId: id(), runs: arrayOf(ref('FutokorRun')) })),
       }),
       errors: [400, 401, 403, 404, 429],
+    }),
+  },
+
+  // --- Ócskapiac ---
+  '/ocskapiac': {
+    get: op({
+      tag: T.market,
+      summary: 'Everything on offer',
+      description:
+        'Newest first; what went (Odaadtam) too, as gone - nothing is ever dropped. Asking counts as having seen what is new (GET /ocskapiac/new-count goes to 0).',
+      data: obj({ items: arrayOf(ref('MarketItem')) }),
+    }),
+    post: op({
+      tag: T.market,
+      summary: 'Offer something',
+      description:
+        'Multipart. 1-3 photos (images, at most 12 MB each): each is made into a WebP of at most 1600 px plus a 480 px thumbnail, EXIF (GPS) dropped. Everyone else gets a push about it ("Új kacat az Ócskapiacon", tag `ocskapiac-uj` - a newer one replaces the one before), but those who turned it off on Profilom (`wantsMarketPush`).',
+      multipart: obj(
+        {
+          title: str('1-80 characters.'),
+          description: str('At most 1000 characters.'),
+          category: str('Default: egyeb.', {
+            enum: ['barkacs', 'gyerek', 'haztartas', 'kezmuves', 'egyeb'],
+          }),
+          priceKind: str('Default: ingyen.', {
+            enum: ['ingyen', 'joszo', 'sor', 'csoki', 'palinka', 'kave', 'lekvar', 'forint'],
+          }),
+          priceAmount: int('1-99 (forint: 1-1 000 000); not for ingyen and joszo.'),
+          photos: arrayOf(str('', { format: 'binary' })),
+        },
+        ['title', 'photos'],
+      ),
+      ok: 201,
+      data: obj({ item: ref('MarketItem') }),
+      errors: [400],
+    }),
+  },
+  '/ocskapiac/new-count': {
+    get: op({
+      tag: T.market,
+      summary: 'How many things are new to me',
+      description:
+        'The Ócskapiac menu badge: items others put up since I last asked for GET /ocskapiac, still on offer (not gone, not deleted). Never opened it: all of others’ on offer.',
+      data: obj({ count: int() }),
+    }),
+  },
+  '/ocskapiac/{id}': {
+    get: op({
+      tag: T.market,
+      summary: 'One item',
+      params: [path('id', 'The item.')],
+      data: obj({ item: ref('MarketItem') }),
+      errors: [404],
+    }),
+    patch: op({
+      tag: T.market,
+      summary: 'Change my item',
+      description:
+        'Multipart, its owner only, not once gone. Only the fields sent change. New photos are added after the kept ones; removePhotos (repeatable) takes photos off - at least 1, at most 3 in the end.',
+      params: [path('id', 'The item.')],
+      multipart: obj({
+        title: str('1-80 characters.'),
+        description: str('At most 1000 characters.'),
+        category: str('Default: egyeb.', {
+          enum: ['barkacs', 'gyerek', 'haztartas', 'kezmuves', 'egyeb'],
+        }),
+        priceKind: str('Default: ingyen.', {
+          enum: ['ingyen', 'joszo', 'sor', 'csoki', 'palinka', 'kave', 'lekvar', 'forint'],
+        }),
+        priceAmount: int('1-99 (forint: 1-1 000 000); not for ingyen and joszo.'),
+        photos: arrayOf(str('', { format: 'binary' })),
+        removePhotos: arrayOf(id('A photo to take off.')),
+      }),
+      data: obj({ item: ref('MarketItem') }),
+      errors: [400, 403, 404],
+    }),
+    delete: op({
+      tag: T.market,
+      summary: 'Delete an item',
+      description:
+        'An admin: deleted for real, photos and all. Its owner: only marked deleted - kept with its photos, but gone from the list for everyone (404 from then on).',
+      params: [path('id', 'The item.')],
+      ok: 204,
+      errors: [403, 404],
+    }),
+  },
+  '/ocskapiac/{id}/gone': {
+    post: op({
+      tag: T.market,
+      summary: 'Odaadtam - it is gone',
+      description:
+        'Its owner. It stays listed, photos and all, as gone; no more Kérem!, Stipistopi! or notes.',
+      params: [path('id', 'The item.')],
+      data: obj({ item: ref('MarketItem') }),
+      errors: [400, 403, 404],
+    }),
+  },
+  '/ocskapiac/{id}/want': {
+    post: op({
+      tag: T.market,
+      summary: 'Kérem! - I am interested',
+      description: 'Not one’s own, not once gone. Again changes nothing. The owner gets a push.',
+      params: [path('id', 'The item.')],
+      data: obj({ item: ref('MarketItem') }),
+      errors: [400, 404],
+    }),
+    delete: op({
+      tag: T.market,
+      summary: 'Take back my Kérem!',
+      params: [path('id', 'The item.')],
+      data: obj({ item: ref('MarketItem') }),
+      errors: [404],
+    }),
+  },
+  '/ocskapiac/{id}/dibs': {
+    post: op({
+      tag: T.market,
+      summary: 'Stipistopi! - mine for 7 days',
+      description:
+        'Not one’s own, not once gone; 409 while someone’s stipistopi holds it. After 7 days the hold runs out by itself and anyone may take it. The owner gets a push.',
+      params: [path('id', 'The item.')],
+      data: obj({ item: ref('MarketItem') }),
+      errors: [400, 404, 409],
+    }),
+    delete: op({
+      tag: T.market,
+      summary: 'Mégse kell - let my stipistopi go',
+      params: [path('id', 'The item.')],
+      data: obj({ item: ref('MarketItem') }),
+      errors: [400, 404],
+    }),
+  },
+  '/ocskapiac/{id}/notes': {
+    post: op({
+      tag: T.market,
+      summary: 'Leave a one-line note',
+      description: 'Anyone; at most 100 characters; not once gone.',
+      params: [path('id', 'The item.')],
+      body: obj({ text: str() }, ['text']),
+      ok: 201,
+      data: obj({ item: ref('MarketItem') }),
+      errors: [400, 404],
+    }),
+  },
+  '/ocskapiac/{id}/notes/{noteId}': {
+    delete: op({
+      tag: T.market,
+      summary: 'Delete my note',
+      description: 'Its writer only.',
+      params: [path('id', 'The item.'), path('noteId', 'The note.')],
+      data: obj({ item: ref('MarketItem') }),
+      errors: [403, 404],
+    }),
+  },
+  '/ocskapiac/{id}/photos/{photoId}': {
+    get: op({
+      tag: T.market,
+      summary: 'A photo (WebP, at most 1600 px)',
+      description: 'Kept by the browser for a year.',
+      params: [path('id', 'The item.'), path('photoId', 'The photo.')],
+      response: file(['image/webp'], 'The photo.'),
+      errors: [404],
+    }),
+  },
+  '/ocskapiac/{id}/photos/{photoId}/thumb': {
+    get: op({
+      tag: T.market,
+      summary: 'A photo’s thumbnail (WebP, 480 px)',
+      params: [path('id', 'The item.'), path('photoId', 'The photo.')],
+      response: file(['image/webp'], 'The thumbnail.'),
+      errors: [404],
     }),
   },
 

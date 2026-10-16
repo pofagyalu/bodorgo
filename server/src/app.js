@@ -30,6 +30,7 @@ import songRouter from './routes/songRoutes.js';
 import jatekRouter from './routes/jatekRoutes.js';
 import futokorRouter from './routes/futokorRoutes.js';
 import viewRouter from './routes/viewRoutes.js';
+import marketRouter from './routes/marketRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
@@ -168,6 +169,8 @@ export default function createApp(sessionMiddleware) {
   app.use('/jatekok', jatekRouter);
   // Futókör: the running race (Móka → Futókörök) - see futokor/access.js.
   app.use('/futokor', futokorRouter);
+  // Ócskapiac: giving away what we don't need any more.
+  app.use('/ocskapiac', marketRouter);
   // Megtekintések: what was seen, and the homepage's most viewed.
   app.use('/views', viewRouter);
   app.use('/health', systemRouter);
