@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, inject, input } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, input, signal } from '@angular/core';
 import {
   BarController,
   BarElement,
@@ -28,6 +28,10 @@ const COLORS = { total: '#a9b4ba', in: '#32a48d', out: '#efa46f' };
 // this many lines, at every 20, 50, 100... thousand.
 const GRID_STEP = 10_000;
 const MAX_GRID_LINES = 12;
+
+// A phone is too narrow for the names side by side under the bars: there
+// each name stays on one line and tilts as far as it needs to fit.
+const PHONE_QUERY = '(max-width: 580px)';
 
 const forints = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 });
 const money = (amount: number) => `${forints.format(amount)} Ft`;
@@ -65,6 +69,15 @@ export class WaterfallChart {
   steps = input.required<WaterfallStep[]>();
   label = input('');
 
+  private phoneQuery = window.matchMedia?.(PHONE_QUERY);
+  private onPhone = signal(!!this.phoneQuery?.matches);
+
+  constructor() {
+    const onChange = () => this.onPhone.set(!!this.phoneQuery?.matches);
+    this.phoneQuery?.addEventListener('change', onChange);
+    inject(DestroyRef).onDestroy(() => this.phoneQuery?.removeEventListener('change', onChange));
+  }
+
   // Chart.js has no labels on its bars: this writes each one above its
   // bar, after the bars are drawn (so on every frame as they grow).
   readonly plugins: Plugin<'bar'>[] = [
@@ -89,9 +102,10 @@ export class WaterfallChart {
   ];
 
   // Floating bars: each one's data is its [from, to].
-  readonly data = computed<ChartData<'bar', [number, number][], string[]>>(() => ({
-    // A word a line, so the long names fit under their bars.
-    labels: this.steps().map((s) => s.label.split(' ')),
+  readonly data = computed<ChartData<'bar', [number, number][], string | string[]>>(() => ({
+    // A word a line, so the long names fit under their bars - on a phone
+    // a name is one line, tilted (see the x axis below).
+    labels: this.steps().map((s) => (this.onPhone() ? s.label : s.label.split(' '))),
     datasets: [
       {
         data: this.steps().map((s) => [s.from, s.to]),
@@ -125,7 +139,14 @@ export class WaterfallChart {
         x: {
           grid: { display: false },
           border: { color: '#e8eeea' },
-          ticks: { color: '#56666e', font, maxRotation: 0, autoSkip: false },
+          // On a phone Chart.js tilts the names just as far as they need
+          // not to overlap - at most standing upright.
+          ticks: {
+            color: '#56666e',
+            font,
+            maxRotation: this.onPhone() ? 90 : 0,
+            autoSkip: false,
+          },
         },
         y: {
           beginAtZero: true,

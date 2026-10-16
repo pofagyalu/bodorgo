@@ -9,16 +9,16 @@
 }
 
 // The chosen period and a small arrow. A fixed least width, so it doesn't
-// jump between "2026" and "Összes".
+// jump between "2026" and "Összes" (a page short of room may narrow it).
 .trigger {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.1rem;
-  min-width: 6.5rem;
+  min-width: var(--period-picker-min-width, 6.5rem);
   max-width: 100%;
   min-height: 2.75rem;
-  padding: 0 0.6rem 0 1rem;
+  padding: 0 0.6rem 0 var(--period-picker-padding-left, 1rem);
   border: 1px solid #dce6e3;
   border-radius: 0.7rem;
   background: #fff;
