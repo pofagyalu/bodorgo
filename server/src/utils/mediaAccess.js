@@ -55,13 +55,25 @@ export async function ownSettingsFrom(body, own, discoveredTitle) {
   return { title, viewers };
 }
 
+// A video's "AI-val készült" switch after a PATCH: only when the body has it.
+export function aiGeneratedFrom(body, own) {
+  if (body?.aiGenerated === undefined) return !!own?.aiGenerated;
+  if (typeof body.aiGenerated !== 'boolean') {
+    throw new AppError('Az AI jelölés igen/nem érték legyen.', 400);
+  }
+  return body.aiGenerated;
+}
+
 // Saves them in `Model` under `key` - or removes the record, when there is
-// nothing left to keep.
-export async function saveOwnSettings(Model, key, { title, viewers }) {
-  if (!title && !viewers.length) return Model.deleteOne(key);
+// nothing left to keep. `flags`: a video's on/off settings (aiGenerated).
+export async function saveOwnSettings(Model, key, { title, viewers, ...flags }) {
+  const anyFlag = Object.values(flags).some(Boolean);
+  if (!title && !viewers.length && !anyFlag) return Model.deleteOne(key);
   return Model.findOneAndUpdate(
     key,
-    title ? { $set: { title, viewers } } : { $set: { viewers }, $unset: { title: 1 } },
+    title
+      ? { $set: { title, viewers, ...flags } }
+      : { $set: { viewers, ...flags }, $unset: { title: 1 } },
     { upsert: true, runValidators: true },
   );
 }

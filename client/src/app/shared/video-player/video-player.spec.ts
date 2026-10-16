@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { VideoPlayer } from './video-player';
+import { AI_LINES, VideoPlayer } from './video-player';
 import { ViewTrackerService } from '../../services/view-tracker';
 
 describe('VideoPlayer', () => {
@@ -183,5 +183,15 @@ describe('VideoPlayer', () => {
     fixture.componentInstance.closed.subscribe(closed);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(closed).toHaveBeenCalled();
+  });
+
+  it('marks a video made with AI in the header, with a wink', () => {
+    open(null);
+    expect(el().querySelector('.ai-badge')).toBeNull();
+    expect(el().querySelector('.ai-line')).toBeNull();
+    fixture.componentRef.setInput('aiGenerated', true);
+    fixture.detectChanges();
+    expect(el().querySelector('.player-stage .ai-badge')!.textContent).toContain('AI');
+    expect(AI_LINES).toContain(el().querySelector('.ai-line')!.textContent!.trim());
   });
 });

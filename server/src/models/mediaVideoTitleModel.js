@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 // videos themselves aren't in the database (see mediaVideoController.js) -
 // only these are, by the category's key and the file's path inside the
 // category folder. The file on the NAS is never renamed. A video with
-// neither has no record here at all.
+// none of these set has no record here at all.
 const mediaVideoTitleSchema = new mongoose.Schema(
   {
     category: { type: String, required: true },
@@ -14,6 +14,8 @@ const mediaVideoTitleSchema = new mongoose.Schema(
     // The only members who see the video (admins always do) - empty: every
     // member does.
     viewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // Made with AI: the page marks it "✦ AI" (as YouTube does).
+    aiGenerated: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

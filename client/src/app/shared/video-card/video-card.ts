@@ -20,6 +20,8 @@ export class VideoCard {
   badge = input<string | number | null>(null);
   // Bottom-right corner of the cover, e.g. the video's length ("12:34").
   badgeRight = input<string | null>(null);
+  // Made with AI: "✦ AI" in the bottom-right corner, before the length.
+  aiGenerated = input(false);
   // Hover text (defaults to the title).
   tooltip = input<string | null>(null);
   // A line under the play badge, shown with it (e.g. the tour page's

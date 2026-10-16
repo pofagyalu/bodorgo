@@ -4,7 +4,13 @@ import AppError from '../utils/appError.js';
 import { mp4DurationSeconds } from '../utils/mp4Duration.js';
 import config from '../config.js';
 import MediaVideoTitle from '../models/mediaVideoTitleModel.js';
-import { canEditMedia, maySee, ownSettingsFrom, saveOwnSettings } from '../utils/mediaAccess.js';
+import {
+  aiGeneratedFrom,
+  canEditMedia,
+  maySee,
+  ownSettingsFrom,
+  saveOwnSettings,
+} from '../utils/mediaAccess.js';
 import {
   VIDEO_EXTENSIONS,
   coverVersion,
@@ -181,6 +187,8 @@ export const listMediaVideos = async (req, res) => {
           ...(canEdit ? { viewers: (own?.viewers ?? []).map(String) } : {}),
           // What the file name says - what an emptied title goes back to.
           discoveredTitle: parsed.title,
+          // Made with AI - marked on its card and in the player.
+          aiGenerated: !!own?.aiGenerated,
           year: parsed.year,
           season: parsed.season,
           episode: parsed.episode,
@@ -313,21 +321,32 @@ export function mediaVideoPaths() {
 }
 
 // PATCH /media/videos/:category/:id - the role manager: the video's own title, shown
-// instead of the one from its file name, and who may see it. Only what is
-// sent changes. An empty title (or the file name's own) takes the
-// correction away; an empty viewers list gives the video back to every
-// member.
+// instead of the one from its file name, who may see it, and whether it was
+// made with AI. Only what is sent changes. An empty title (or the file
+// name's own) takes the correction away; an empty viewers list gives the
+// video back to every member.
 export const updateMediaVideo = async (req, res) => {
   const { relPath } = await videoPath(req);
   const category = req.params.category;
   const discoveredTitle = parseVideoName(relPath).title;
   const own = await MediaVideoTitle.findOne({ category, path: relPath }).lean();
   const { title, viewers } = await ownSettingsFrom(req.body, own, discoveredTitle);
-  await saveOwnSettings(MediaVideoTitle, { category, path: relPath }, { title, viewers });
+  const aiGenerated = aiGeneratedFrom(req.body, own);
+  await saveOwnSettings(
+    MediaVideoTitle,
+    { category, path: relPath },
+    { title, viewers, aiGenerated },
+  );
   res.status(200).json({
     status: 'success',
     data: {
-      video: { id: req.params.id, title: title || discoveredTitle, discoveredTitle, viewers },
+      video: {
+        id: req.params.id,
+        title: title || discoveredTitle,
+        discoveredTitle,
+        viewers,
+        aiGenerated,
+      },
     },
   });
 };

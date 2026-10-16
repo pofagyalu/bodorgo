@@ -56,12 +56,13 @@
 
           <div class="video-grid">
             @for (v of c.videos; track v.id) {
-              <div class="video-item">
+              <div class="video-item" [class.video-item--ai]="!!v.aiGenerated">
                 <app-video-card
                   [title]="v.title"
                   [coverUrl]="v.hasCover ? coverUrl(c, v) : null"
                   [badge]="v.year"
                   [badgeRight]="length(v.durationSeconds)"
+                  [aiGenerated]="!!v.aiGenerated"
                   [tooltip]="v.title + (v.year ? ' (' + v.year + ')' : '')"
                   (playClicked)="play(c, v)"
                 />
@@ -113,6 +114,7 @@
   <app-video-player
     [title]="p.video.title"
     [subtitle]="p.category.title + (p.video.year ? ' · ' + p.video.year : '')"
+    [aiGenerated]="!!p.video.aiGenerated"
     [src]="videoUrl(p)"
     [smallSrc]="smallVideoUrl(p)"
     [height]="p.video.height"
@@ -131,6 +133,7 @@
     [title]="e.video.title"
     [discoveredTitle]="e.video.discoveredTitle"
     [viewers]="e.video.viewers ?? []"
+    [aiGenerated]="!!e.video.aiGenerated"
     [saving]="savingEdit()"
     [error]="editError()"
     (saved)="saveEdit($event)"

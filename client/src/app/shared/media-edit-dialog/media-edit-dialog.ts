@@ -11,19 +11,23 @@ import {
   viewChild,
 } from '@angular/core';
 import { MemberUser, MembershipService } from '../../services/membership';
+import { ToggleSwitch } from '../toggle-switch/toggle-switch';
 
 export interface MediaEdit {
   title: string;
   // The only members who see it - empty: every member does.
   viewers: string[];
+  // A video's only: made with AI.
+  aiGenerated?: boolean;
 }
 
 // The role manager's edit dialog of a Média video or photo - its own title (a
-// photo's name), and who may see it: every member, or only the chosen ones (admins
-// always do). The page saves what `saved` gives it, and says how that goes
-// through `saving` and `error`.
+// photo's name), who may see it: every member, or only the chosen ones (admins
+// always do), and - a video's - whether it was made with AI. The page saves
+// what `saved` gives it, and says how that goes through `saving` and `error`.
 @Component({
   selector: 'app-media-edit-dialog',
+  imports: [ToggleSwitch],
   templateUrl: './media-edit-dialog.html',
   styleUrl: './media-edit-dialog.scss',
 })
@@ -38,6 +42,8 @@ export class MediaEditDialog implements OnInit {
   discoveredTitle = input('');
   discoveredLabel = input('');
   viewers = input<string[]>([]);
+  // A video's "AI-val készült" switch - null: none (a photo, a folder).
+  aiGenerated = input<boolean | null>(null);
   saving = input(false);
   error = input<string | null>(null);
 
@@ -48,6 +54,7 @@ export class MediaEditDialog implements OnInit {
   private titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
 
   editTitle = signal('');
+  editAi = signal(false);
   restricted = signal(false);
   chosen = signal<ReadonlySet<string>>(new Set());
   // Asked to save "only the chosen" with nobody chosen.
@@ -66,6 +73,7 @@ export class MediaEditDialog implements OnInit {
 
   ngOnInit() {
     this.editTitle.set(this.title());
+    this.editAi.set(!!this.aiGenerated());
     this.chosen.set(new Set(this.viewers()));
     this.restricted.set(this.viewers().length > 0);
     // The cursor in the field, the title selected.
@@ -107,6 +115,7 @@ export class MediaEditDialog implements OnInit {
     this.saved.emit({
       title: this.editTitle().trim(),
       viewers: this.restricted() ? [...this.chosen()] : [],
+      ...(this.aiGenerated() === null ? {} : { aiGenerated: this.editAi() }),
     });
   }
 }
