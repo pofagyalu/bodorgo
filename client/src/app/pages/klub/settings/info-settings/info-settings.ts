@@ -42,6 +42,12 @@ const EMAILS: (NotificationInfo & { note?: string })[] = [
     note: ATTENDEE_RULE,
   },
   {
+    name: 'Új szavazás',
+    when: 'Egy admin új szavazást indít a Voks oldalon, és bejelöli az „E-mail értesítés küldése” jelölőnégyzetet.',
+    who: 'Az általa kiválasztott klubtagok (alapból mindenki).',
+    note: 'Csak akinek van e-mail címe, és nem kapcsolta ki az e-maileket - akkor is, ha még nem lépett be. A felfüggesztett tagok nem kapják.',
+  },
+  {
     name: 'Programfüzet e-mailben',
     when: 'Egy admin elküldi magának próbaként.',
     who: 'Az admin.',

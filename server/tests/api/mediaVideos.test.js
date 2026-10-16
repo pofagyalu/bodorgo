@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember } from '../helpers/factories.js';
 import { parseVideoName } from '../../src/controllers/mediaVideoController.js';
+import MediaVideoTitle from '../../src/models/mediaVideoTitleModel.js';
 
 // A small Jellyfin-style library in the test's temporary folder (see
 // setup.js's MEDIA_VIDEOS_ROOT).
@@ -254,6 +255,31 @@ describe('Média videos: own title and viewers', () => {
     expect((await patch('mindenki')).status).toBe(400);
     expect((await patch(['nem-id'])).status).toBe(400);
     expect((await patch(['64b000000000000000000000'])).status).toBe(400);
+  });
+
+  it('marks a video as made with AI - for everyone to see - and takes it back', async () => {
+    const admin = await createManager();
+    const member = await createMember();
+    const [video] = (await farsang(admin)).videos;
+    expect(video.aiGenerated).toBe(false);
+    const patch = (body) => request(app).patch(`${base}/${video.id}`).set(asUser(admin)).send(body);
+
+    const res = await patch({ aiGenerated: true });
+    expect(res.status).toBe(200);
+    expect(res.body.data.video).toMatchObject({ aiGenerated: true, title: 'Farsang' });
+    expect((await farsang(member)).videos[0].aiGenerated).toBe(true);
+    // Another change leaves it alone; only a boolean is taken.
+    await patch({ title: 'Gépi farsang' });
+    expect((await farsang(member)).videos[0]).toMatchObject({
+      title: 'Gépi farsang',
+      aiGenerated: true,
+    });
+    expect((await patch({ aiGenerated: 'igen' })).status).toBe(400);
+
+    await patch({ title: '', aiGenerated: false });
+    expect((await farsang(member)).videos[0].aiGenerated).toBe(false);
+    // Nothing left to keep: no record.
+    expect(await MediaVideoTitle.countDocuments()).toBe(0);
   });
 });
 

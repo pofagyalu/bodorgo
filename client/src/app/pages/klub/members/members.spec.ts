@@ -239,7 +239,9 @@ describe('Members', () => {
         items: [{ userId: 'me', year: Y - 1 }],
         method: 'stripe',
       });
-      req.flush({ data: { gatewayUrl: `${window.location.href}#fizetes`, paymentId: 'p9' } });
+      // Without any '#' an earlier test left on the address.
+      const here = window.location.href.split('#')[0];
+      req.flush({ data: { gatewayUrl: `${here}#fizetes`, paymentId: 'p9' } });
       expect(window.location.hash).toBe('#fizetes');
       window.location.hash = '';
     });

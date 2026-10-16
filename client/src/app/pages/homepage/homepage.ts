@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService, TourStatsResponse } from '../../services/tour';
@@ -8,6 +8,9 @@ import { shuffledLogoColors } from '../../shared/logo-colors';
 import { SiteFooter } from '../../shared/site-footer/site-footer';
 import { BodorgoTerm } from '../../shared/bodorgo-term/bodorgo-term';
 import { PopularViews } from '../../components/popular-views/popular-views';
+
+// How long the map waits for Népszerű at most.
+const POPULAR_WAIT_MS = 4000;
 
 @Component({
   selector: 'app-homepage',
@@ -22,6 +25,12 @@ export class HomePage {
   stats = signal<TourStatsResponse['data'] | null>(null);
   // The statistics have come (or failed): what is under them may come too.
   statsLoaded = signal(false);
+  // Népszerű has its answer too (see popular-views.ts's settled).
+  popularSettled = signal(false);
+  // The map and the footer come only once the blocks above them are in,
+  // so they appear where they stay - not first up here, then pushed down.
+  // A slow Népszerű doesn't hold them back for longer than a few seconds.
+  belowReady = computed(() => this.statsLoaded() && this.popularSettled());
 
   // Picked once per page view, one per icon off a shuffled copy of the 7
   // logo colors - a permutation, so none of these 6 can repeat (there is
@@ -76,6 +85,9 @@ export class HomePage {
   });
 
   constructor() {
+    const fallback = setTimeout(() => this.popularSettled.set(true), POPULAR_WAIT_MS);
+    inject(DestroyRef).onDestroy(() => clearTimeout(fallback));
+
     this.tourService.getTourStats().subscribe({
       next: (res) => {
         this.stats.set(res.data);

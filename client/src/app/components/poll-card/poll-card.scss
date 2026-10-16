@@ -1,4 +1,5 @@
-// A poll, the same in the chat bubble and on Voks.
+// A poll, the same in the chat bubble and on Voks. The stripe on its left
+// says how it stands: green open, orange waiting for my vote, grey closed.
 :host {
   display: block;
 }
@@ -8,9 +9,23 @@
   gap: 10px;
   padding: 12px 14px;
   border: 1px solid #dfe8e4;
+  border-left: 4px solid #1a796c;
   border-radius: 14px;
   background: #fff;
   color: #1c2d38;
+
+  &.closed {
+    border-left-color: #b0bec5;
+    background: #f6f8f7;
+  }
+
+  // In a Voks row (bodyOnly): the row is the frame.
+  &.poll--body {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
 
   &.loading {
     color: #56666e;
@@ -23,8 +38,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
-  font-size: 0.78rem;
-  color: #56666e;
+  font-size: 0.72rem;
+  color: #6b7b82;
 
   mat-icon {
     font-size: 15px;
@@ -45,8 +60,22 @@
   color: #1a796c;
 }
 
-.deadline {
+// "Nyitott · lezárul kedd 20:00" / "Lezárva".
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   margin-left: auto;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: #e3f3ec;
+  color: #1b6548;
+  font-weight: 700;
+
+  &.status--closed {
+    background: #e7ecee;
+    color: #5f7179;
+  }
 }
 
 .tour-line {
@@ -55,10 +84,13 @@
   color: #4c9184;
 }
 
+// The question is the title - the biggest, boldest thing on the card.
 .question {
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.3;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #193346;
 }
 
 .details {
@@ -156,12 +188,42 @@
 
 .option-text {
   flex: 1;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .option-count {
-  font-weight: 800;
+  font-size: 0.85rem;
+  font-weight: 700;
   color: #1a796c;
+}
+
+// "Te" (my answer) and "Nyertes" (a closed poll's winner) beside the answer.
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  flex: none;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+
+  mat-icon {
+    font-size: 0.8125rem;
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+}
+
+.tag--mine {
+  background: #1a796c;
+  color: #fff;
+}
+
+.tag--winner {
+  background: #fff3d6;
+  color: #8a5a00;
 }
 
 .voters {
@@ -271,6 +333,7 @@
 // Rád vár: waiting for my vote - an orange edge and a "Szavazz!" tag.
 .poll--awaits {
   border-color: #f0a04b;
+  border-left-color: #fb8c00;
   box-shadow: 0 0 0 1px #f0a04b;
 }
 

@@ -1,5 +1,10 @@
 @if (poll(); as p) {
-  <div class="poll" [class.closed]="p.isClosed" [class.poll--awaits]="p.awaitsMyVote">
+  <div
+    class="poll"
+    [class.closed]="p.isClosed"
+    [class.poll--awaits]="p.awaitsMyVote"
+    [class.poll--body]="bodyOnly()"
+  >
     <div class="poll-head">
       <span class="kind"><mat-icon>poll</mat-icon> Szavazás</span>
       <span
@@ -16,25 +21,29 @@
       @if (p.awaitsMyVote) {
         <span class="awaits" title="Még nem szavaztál">Szavazz!</span>
       }
-      <span class="deadline">
+      <!-- Open or closed, at a glance. -->
+      <span class="status" [class.status--closed]="p.isClosed">
         @if (p.isClosed) {
-          Lezárva
+          <mat-icon aria-hidden="true">lock</mat-icon> Lezárva
         } @else {
-          Lezárul: {{ deadline(p.closesAt) }}
+          Nyitott · lezárul {{ deadline(p.closesAt) }}
         }
       </span>
     </div>
 
-    @if (showTour()) {
-      <div class="tour-line">
-        @if (p.tour; as t) {
-          {{ t.order }}. {{ t.title }}
-        } @else {
-          Általános
-        }
-      </div>
+    <!-- In a Voks row the row already says these. -->
+    @if (!bodyOnly()) {
+      @if (showTour()) {
+        <div class="tour-line">
+          @if (p.tour; as t) {
+            {{ t.order }}. {{ t.title }}
+          } @else {
+            Általános
+          }
+        </div>
+      }
+      <h3 class="question">{{ p.question }}</h3>
     }
-    <h3 class="question">{{ p.question }}</h3>
     @if (p.details) {
       <!-- Cleaned by the server (only the editor's formatting survives). -->
       <div class="details" [innerHTML]="detailsHtml(p.details)"></div>
@@ -59,6 +68,16 @@
               p.myOptionId === o._id ? 'check_circle' : 'radio_button_unchecked'
             }}</mat-icon>
             <span class="option-text">{{ o.text }}</span>
+            <!-- The bar behind is its share of the votes; these say which
+                 one is mine and which won. -->
+            @if (p.myOptionId === o._id) {
+              <span class="tag tag--mine">Te</span>
+            }
+            @if (winnerId() === o._id) {
+              <span class="tag tag--winner"
+                ><mat-icon aria-hidden="true">emoji_events</mat-icon>Nyertes</span
+              >
+            }
             @if (r) {
               <span class="option-count">{{ r.count }}</span>
             }

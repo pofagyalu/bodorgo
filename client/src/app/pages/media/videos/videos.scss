@@ -278,3 +278,16 @@ button {
     height: 1.05rem;
   }
 }
+
+// A video made with AI has its mark in the top left corner (video-card):
+// the lock and the "Új" tag go under it.
+.video-item--ai {
+  .restricted-badge,
+  .new-tag--corner {
+    top: 2.2rem;
+  }
+
+  .new-tag--below {
+    top: 4.5rem;
+  }
+}

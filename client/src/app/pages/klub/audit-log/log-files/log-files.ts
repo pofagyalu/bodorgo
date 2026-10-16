@@ -1,6 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { FreshLoginService } from '../../../../auth/fresh-login.service';
 import { PeriodOption, PeriodPicker } from '../../../../components/period-picker/period-picker';
 import { LogFileInfo, SettingsService } from '../../../../services/settings';
 import { ToggleSwitch } from '../../../../shared/toggle-switch/toggle-switch';
@@ -50,10 +49,8 @@ function dayLabel(date: string): string {
 })
 export class LogFiles implements OnInit {
   private settingsService = inject(SettingsService);
-  private freshLogin = inject(FreshLoginService);
 
   files = signal<LogFileInfo[] | null>(null);
-  needsLogin = signal(false);
   failed = signal(false);
   loading = signal(false);
 
@@ -92,15 +89,11 @@ export class LogFiles implements OnInit {
   });
 
   ngOnInit() {
-    void this.start();
+    this.start();
   }
 
-  async start() {
-    this.needsLogin.set(false);
-    if (!(await this.freshLogin.ensure('Naplófájlok megnézése'))) {
-      this.needsLogin.set(true);
-      return;
-    }
+  // No re-identifying first: the role manager looks at them any time.
+  start() {
     this.failed.set(false);
     this.settingsService.getLogFiles().subscribe({
       next: (res) => {
@@ -108,7 +101,7 @@ export class LogFiles implements OnInit {
         this.day.set(res.data.files[0]?.date ?? '');
         this.loadLines(STEP);
       },
-      error: (err) => this.onError(err),
+      error: () => this.onError(),
     });
   }
 
@@ -140,14 +133,12 @@ export class LogFiles implements OnInit {
         this.totalLines.set(res.data.totalLines);
         this.loading.set(false);
       },
-      error: (err) => this.onError(err),
+      error: () => this.onError(),
     });
   }
 
-  private onError(err: { error?: { code?: string } }) {
+  private onError() {
     this.loading.set(false);
-    // The 10 minutes ran out meanwhile: asked again with the button.
-    if (err?.error?.code === 'fresh-login-required') this.needsLogin.set(true);
-    else this.failed.set(true);
+    this.failed.set(true);
   }
 }

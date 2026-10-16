@@ -15,6 +15,12 @@ router
   .post(requireAuth, restrictTo('admin'), pollController.createPoll);
 
 router.get('/pending', requireAuth, pollController.getPendingCount);
+router.get(
+  '/email-recipients',
+  requireAuth,
+  restrictTo('admin'),
+  pollController.getEmailRecipients,
+);
 
 router
   .route('/:id')

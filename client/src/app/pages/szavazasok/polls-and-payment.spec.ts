@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { API } from '../../../testing/http';
 import { FakeSocket, fail, logIn, pageTesting, respond } from '../../../testing/component';
@@ -365,6 +365,87 @@ describe('PollCreate', () => {
     const quill = (form as unknown as { quill: { getText(): string } }).quill;
     expect(quill.getText()).toContain('Busszal megyünk.');
   });
+
+  describe('e-mail about a new poll', () => {
+    const members = [
+      { _id: 'u1', name: 'Anna', canEmail: true, reason: null },
+      { _id: 'u2', name: 'Béla', canEmail: true, reason: null },
+      { _id: 'u3', name: 'Csaba', canEmail: false, reason: 'nincs e-mail cím' },
+    ];
+    const tickEmail = () => {
+      form.setWithEmail(true);
+      http.expectOne(`${API}/polls/email-recipients`).flush({ data: { members } });
+    };
+
+    it('is offered only for a new poll on the polls page', () => {
+      open();
+      expect(form.offerEmail()).toBe(false);
+      fixture.componentRef.setInput('tours', [makeTour()]);
+      expect(form.offerEmail()).toBe(true);
+      fixture.componentRef.setInput('poll', poll());
+      expect(form.offerEmail()).toBe(false);
+    });
+
+    it('lists the club members with everyone who can get it ticked; all or none in one click', () => {
+      open({ tours: [makeTour()] });
+      tickEmail();
+      fixture.detectChanges();
+      expect([...form.emailChosen()]).toEqual(['u1', 'u2']);
+      const boxes = fixture.nativeElement.querySelectorAll('.email-recipients li input');
+      expect(boxes).toHaveLength(3);
+      expect(boxes[2].disabled).toBe(true);
+      expect(fixture.nativeElement.querySelector('.email-recipients').textContent).toContain(
+        'nincs e-mail cím',
+      );
+      form.selectNoEmail();
+      expect(form.emailChosen().size).toBe(0);
+      form.toggleEmail('u2');
+      expect([...form.emailChosen()]).toEqual(['u2']);
+      form.selectAllEmail();
+      expect(form.emailChosen().size).toBe(2);
+      // Ticked again later: the list is not fetched twice.
+      form.setWithEmail(false);
+      form.setWithEmail(true);
+      http.expectNone(`${API}/polls/email-recipients`);
+    });
+
+    it('sends the ticked ones with the poll and says how many got it', () => {
+      open({ tours: [makeTour()] });
+      form.question.set('Jössz?');
+      tickEmail();
+      form.toggleEmail('u1');
+      submit();
+      const req = http.expectOne(`${API}/polls`);
+      expect(req.request.body.emailTo).toEqual(['u2']);
+      req.flush({ data: { poll: poll(), emailCount: 1 } });
+      expect(success).toHaveBeenCalledWith('E-mail értesítés: 1 főnek');
+    });
+
+    it('wants at least one recipient, and sends no list when unticked', () => {
+      open({ tours: [makeTour()] });
+      form.question.set('Jössz?');
+      tickEmail();
+      form.selectNoEmail();
+      submit();
+      expect(form.error()).toBe('Válassz ki legalább egy címzettet, vagy ne küldj e-mailt.');
+      http.expectNone(`${API}/polls`);
+      form.setWithEmail(false);
+      submit();
+      const req = http.expectOne(`${API}/polls`);
+      expect(req.request.body.emailTo).toBeUndefined();
+      req.flush({ data: { poll: poll(), emailCount: 0 } });
+      expect(success).not.toHaveBeenCalled();
+    });
+
+    it('says when the members could not be loaded', () => {
+      open({ tours: [makeTour()] });
+      form.setWithEmail(true);
+      http
+        .expectOne(`${API}/polls/email-recipients`)
+        .flush({}, { status: 500, statusText: 'Server Error' });
+      expect(form.emailError()).toBe(true);
+    });
+  });
 });
 
 describe('Szavazasok', () => {
@@ -376,8 +457,13 @@ describe('Szavazasok', () => {
     poll({ _id: 'done', awaitsMyVote: false, isClosed: true }),
   ];
 
-  function open(reply: object = { data: { polls: POLLS } }) {
-    setUp();
+  function open(reply: object = { data: { polls: POLLS } }, query: Record<string, string> = {}) {
+    setUp([
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { queryParamMap: convertToParamMap(query) } },
+      },
+    ]);
     logIn({ role: 'admin' });
     fixture = TestBed.createComponent(Szavazasok);
     page = fixture.componentInstance;
@@ -436,6 +522,158 @@ describe('Szavazasok', () => {
     page.openCreate();
     respond({ 'GET /tours': fail() });
     expect(error).toHaveBeenCalledWith('A táborok betöltése nem sikerült.');
+  });
+
+  describe('finding a poll', () => {
+    const matra = { _id: 't12', title: 'Mátra', slug: 'matra', order: 12 };
+    const bukk = { _id: 't11', title: 'Bükk', slug: 'bukk', order: 11 };
+    const results = (a: number, b: number) => [
+      { _id: 'o1', text: 'Mátra', count: a, percentage: Math.round((a / (a + b || 1)) * 100) },
+      { _id: 'o2', text: 'Bükk', count: b, percentage: Math.round((b / (a + b || 1)) * 100) },
+    ];
+    const MANY = [
+      poll({ _id: 'soon', question: 'Múzeum pénteken?', tour: matra, closesAt: '2099-01-01' }),
+      poll({
+        _id: 'later',
+        question: 'Ki főz?',
+        awaitsMyVote: false,
+        hasVoted: true,
+        tour: matra,
+        closesAt: '2099-02-01',
+      }),
+      poll({
+        _id: 'old',
+        question: 'Pizza vagy gulyás?',
+        awaitsMyVote: false,
+        isClosed: true,
+        closesAt: '2026-01-01',
+        totalVotes: 4,
+        results: results(3, 1),
+        hasVoted: true,
+        myOptionId: 'o2',
+      }),
+      poll({
+        _id: 'new',
+        question: 'Bogrács?',
+        details: '<p>A <strong>nagy</strong> bogrács</p>',
+        awaitsMyVote: false,
+        isClosed: true,
+        tour: bukk,
+        closesAt: '2026-03-01',
+        totalVotes: 2,
+        results: results(1, 1),
+      }),
+    ];
+    const ids = () => page.sections().map((s) => s.polls.map((p) => p._id));
+    let navigate: ReturnType<typeof vi.spyOn>;
+
+    function openMany(query: Record<string, string> = {}) {
+      open({ data: { polls: MANY } }, query);
+      navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    }
+
+    it('orders the open ones by closing, the closed ones last closed first', () => {
+      openMany();
+      expect(ids()).toEqual([['soon'], ['later'], ['new', 'old']]);
+    });
+
+    it('counts each tab and filters by it', () => {
+      openMany();
+      expect(page.tabOptions().map((t) => [t.label, t.count])).toEqual([
+        ['Mind', 4],
+        ['Rád vár', 1],
+        ['Nyitott', 2],
+        ['Lezárt', 2],
+        ['Szavaztam', 2],
+      ]);
+      page.setFilter('voted');
+      expect(ids()).toEqual([[], ['later'], ['old']]);
+      expect(navigate).toHaveBeenLastCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { q: null, szuro: 'voted', tabor: null },
+          replaceUrl: true,
+        }),
+      );
+    });
+
+    it('searches the question, the details and the tour, accents or not', () => {
+      openMany();
+      page.setSearch('muzeum');
+      expect(ids()).toEqual([['soon'], [], []]);
+      page.setSearch('nagy');
+      expect(ids()).toEqual([[], [], ['new']]);
+      page.setSearch('matra fo');
+      expect(ids()).toEqual([[], ['later'], []]);
+      expect(page.tabOptions()[0].count).toBe(1);
+    });
+
+    it('picks a tour, or the general ones; newest tour first in the list', () => {
+      openMany();
+      expect(page.tourOptions().map((o) => o.label)).toEqual([
+        'Minden tábor',
+        'Általános',
+        '12. Mátra',
+        '11. Bükk',
+      ]);
+      page.setTour('t11');
+      expect(ids()).toEqual([[], [], ['new']]);
+      page.setTour('general');
+      expect(ids()).toEqual([[], [], ['old']]);
+    });
+
+    it('starts from the address, and clears it all at once', () => {
+      openMany({ q: 'pizza', szuro: 'closed', tabor: 'general' });
+      expect(ids()).toEqual([[], [], ['old']]);
+      fixture.detectChanges();
+      page.setSearch('semmi');
+      fixture.detectChanges();
+      expect(page.nothingShown()).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('Nincs ilyen szavazás.');
+      page.clearFilters();
+      expect(ids()).toEqual([['soon'], ['later'], ['new', 'old']]);
+    });
+
+    it('shows a closed poll as a row - its winner and my vote - that opens into the card', () => {
+      openMany({ szuro: 'closed' });
+      const [, old] = page.sections()[2].polls;
+      expect(page.winner(old)).toBe('Mátra 75%');
+      expect(page.myAnswer(old)).toBe('Bükk');
+      expect(page.winner(page.sections()[2].polls[0])).toBe('Döntetlen');
+      expect(page.winner(poll({ isClosed: true, totalVotes: 0, results: [] }))).toBe(
+        'Nem szavazott senki',
+      );
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelectorAll('.closed-row')).toHaveLength(2);
+      expect(el.querySelectorAll('app-poll-card')).toHaveLength(0);
+      expect(el.querySelector('.closed-row')!.textContent).toContain('11. Bükk');
+      el.querySelector<HTMLButtonElement>('.closed-row')!.click();
+      fixture.detectChanges();
+      expect(el.querySelectorAll('app-poll-card')).toHaveLength(1);
+      // One card: the row is its top - the question, tour and winner aren't said again,
+      // Nyílt / Titkos still is.
+      expect(el.querySelectorAll('.poll .question, .poll .tour-line')).toHaveLength(0);
+      expect(el.querySelector('.poll .visibility')!.textContent).toContain('Nyílt');
+      // A tie: no winner marked.
+      expect(el.querySelectorAll('.tag--winner')).toHaveLength(0);
+      // The other one: 'Mátra' won, 'Bükk' was mine.
+      page.toggleRow('old');
+      fixture.detectChanges();
+      const tags = [...el.querySelectorAll('.option')].map((o) =>
+        [...o.querySelectorAll('.tag')].map((t) =>
+          t.textContent!.replace('emoji_events', '').trim(),
+        ),
+      );
+      expect(tags).toEqual([[], [], ['Nyertes'], ['Te']]);
+      // Both open: neither row repeats its winner.
+      expect(el.querySelectorAll('.row-winner')).toHaveLength(0);
+      page.toggleRow('new');
+      page.toggleRow('old');
+      fixture.detectChanges();
+      expect(el.querySelectorAll('app-poll-card')).toHaveLength(0);
+      expect(el.querySelectorAll('.row-winner')).toHaveLength(2);
+    });
   });
 });
 

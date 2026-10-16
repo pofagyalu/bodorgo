@@ -13,6 +13,11 @@
           <span>{{ subtitle() }}</span>
         }
       </div>
+      <!-- A wink at a video made with AI, in the middle of the line (a
+           phone: a line of its own; full screen has no header, so no wink). -->
+      @if (aiGenerated()) {
+        <span class="ai-line">{{ aiLine }}</span>
+      }
       <!-- Only a video with a small copy has the two to pick from. -->
       @if (smallSrc()) {
         <div class="player-quality" role="group" aria-label="Képminőség">
@@ -44,25 +49,35 @@
         <mat-icon>close</mat-icon>
       </button>
     </div>
-    <!-- Keyed by the source, so another video (or quality) starts fresh. -->
-    <video
-      *appRecreateOn="playingSrc(); let key"
-      #video
-      class="player-video"
-      controls
-      autoplay
-      preload="metadata"
-      crossorigin="use-credentials"
-      (loadstart)="applyVolume(video)"
-      (volumechange)="onVolumeChange(video)"
-      (loadedmetadata)="onLoaded(video)"
-      (timeupdate)="onTimeUpdate(video)"
-    >
-      <source [src]="key" type="video/mp4" />
-      @if (subtitlesSrc(); as subs) {
-        <!-- default: shown right away, not only when picked in the player's menu. -->
-        <track kind="subtitles" srclang="hu" label="Magyar" [src]="subs" default />
+    <!-- The video and what lies over it (the browser's own full screen
+         shows the bare video only, without the AI mark). -->
+    <div class="player-stage">
+      <!-- Keyed by the source, so another video (or quality) starts fresh. -->
+      <video
+        *appRecreateOn="playingSrc(); let key"
+        #video
+        class="player-video"
+        controls
+        autoplay
+        preload="metadata"
+        crossorigin="use-credentials"
+        (loadstart)="applyVolume(video)"
+        (volumechange)="onVolumeChange(video)"
+        (loadedmetadata)="onLoaded(video)"
+        (timeupdate)="onTimeUpdate(video)"
+      >
+        <source [src]="key" type="video/mp4" />
+        @if (subtitlesSrc(); as subs) {
+          <!-- default: shown right away, not only when picked in the player's menu. -->
+          <track kind="subtitles" srclang="hu" label="Magyar" [src]="subs" default />
+        }
+      </video>
+      <!-- Made with AI: over the picture, top left. -->
+      @if (aiGenerated()) {
+        <span class="ai-badge" title="AI-val készült videó"
+          ><mat-icon aria-hidden="true">auto_awesome</mat-icon>AI</span
+        >
       }
-    </video>
+    </div>
   </div>
 </div>

@@ -23,6 +23,13 @@
       </p>
     }
 
+    <!-- A video: made with AI - "✦ AI" on its card and in the player. -->
+    @if (aiGenerated() !== null) {
+      <div class="ai-switch">
+        <app-toggle-switch label="AI-val készült" [(checked)]="editAi" />
+      </div>
+    }
+
     <fieldset class="access">
       <legend class="field-label">Ki láthatja?</legend>
       <label class="choice">

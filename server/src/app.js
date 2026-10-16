@@ -35,6 +35,26 @@ import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
 import logger from './logger.js';
 
+const API_ROBOTS_TXT = `User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: PerplexityBot
+User-agent: Bytespider
+User-agent: meta-externalagent
+User-agent: Amazonbot
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: *
+Allow: /
+`;
+
 // sessionMiddleware is built once in server.js and shared with Socket.IO -
 // see session.js for why.
 export default function createApp(sessionMiddleware) {
@@ -153,6 +173,17 @@ export default function createApp(sessionMiddleware) {
   app.use('/health', systemRouter);
   // The API documentation (Scalar) - admins only, see apiDocs/docsRouter.js.
   app.use('/docs', docsRouter);
+
+  // Crawlers and browsers ask every host for these two - answered here so
+  // they don't land in the error log as 404s. Same rules as the client's
+  // client/src/robots.txt: crawling is allowed so the X-Robots-Tag noindex
+  // above is seen, AI-training crawlers are shut out. No icon on the API.
+  app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send(API_ROBOTS_TXT);
+  });
+  app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+  });
 
   app.use((req, res, next) => {
     // Since next gets an argument Express assumes this is an error

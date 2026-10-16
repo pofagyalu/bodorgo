@@ -53,6 +53,9 @@ export class PollCard implements OnInit, OnDestroy {
   live = input(false);
   // On Voks: which tour it belongs to, and a link to its chat.
   showTour = input(false);
+  // Inside a closed row on Voks that already says the question and the
+  // tour: without them, and with no frame of its own.
+  bodyOnly = input(false);
 
   // Deleted - the parent drops it from its list.
   removed = output<string>();
@@ -71,6 +74,16 @@ export class PollCard implements OnInit, OnDestroy {
   voterNames(r: { voters?: { name: string }[] }): string {
     return (r.voters ?? []).map((v) => v.name).join(', ');
   }
+
+  // A closed poll's winner: the one answer with the most votes (none on a
+  // tie, or with no votes).
+  winnerId = computed(() => {
+    const p = this.poll();
+    if (!p?.isClosed || !p.results?.length) return null;
+    const top = Math.max(...p.results.map((r) => r.count));
+    const best = p.results.filter((r) => r.count === top);
+    return top > 0 && best.length === 1 ? best[0]._id : null;
+  });
 
   minimumText = computed(() => {
     const p = this.poll();

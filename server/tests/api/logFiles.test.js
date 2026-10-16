@@ -66,10 +66,9 @@ describe('Naplófájlok - the role manager only, after re-identifying', () => {
     }
   });
 
-  it('refuses another admin, and asks the role manager to identify again after 10 minutes', async () => {
+  it('refuses another admin; the role manager needs no fresh login for them', async () => {
     expect((await get(await createAdmin(), '/logs')).status).toBe(403);
-    const stale = await get(await owner(), '/logs', { minutesAgo: 11 });
-    expect(stale.status).toBe(403);
-    expect(stale.body.code).toBe('fresh-login-required');
+    const later = await get(await owner(), '/logs', { minutesAgo: 600 });
+    expect(later.status).toBe(200);
   });
 });

@@ -48,6 +48,48 @@
   min-width: 0;
 }
 
+// A video made with AI: the wink, in the middle between the titles and the
+// quality switch.
+.ai-line {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  font-style: italic;
+  text-align: center;
+  color: #ffd76a;
+}
+
+// The video, and what lies over it.
+.player-stage {
+  position: relative;
+}
+
+// Made with AI: a see-through dark pill with a yellow sparkle and "AI" in
+// the picture's top left corner (as on YouTube).
+.ai-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background: rgba(15, 34, 41, 0.4);
+  backdrop-filter: blur(3px);
+  color: #ffd76a;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+
+  mat-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
 // Tömörített / Eredeti - both always in sight, the one playing filled in.
 .player-quality {
   display: flex;
@@ -132,6 +174,25 @@
 
   .player-titles {
     flex: 1 1 calc(100% - 3.5rem);
+  }
+
+  // The wink: a line of its own, under the rest.
+  .ai-line {
+    order: 3;
+    flex-basis: 100%;
+    font-size: 0.75rem;
+  }
+
+  .ai-badge {
+    top: 0.5rem;
+    left: 0.5rem;
+    font-size: 0.8125rem;
+
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
   }
 
   // Smaller than the title above them.

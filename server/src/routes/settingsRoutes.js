@@ -89,9 +89,10 @@ router.put(
 // settings - admins only.
 router.get('/audit-log', requireAuth, restrictTo('admin'), getAuditLog);
 
-// Naplófájlok: the server's log files - the role manager's alone, after
-// re-identifying (they hold e-mail and IP addresses).
-const logFilesGuard = [requireAuth, roleManagerOnly, requireFreshLogin];
+// Naplófájlok: the server's log files - the role manager's alone (they hold
+// e-mail and IP addresses). No re-identifying: he wants to look at them any
+// time.
+const logFilesGuard = [requireAuth, roleManagerOnly];
 router.get('/logs', ...logFilesGuard, listLogFiles);
 router.get('/logs/:name', ...logFilesGuard, getLogFile);
 router.get('/logs/:name/download', ...logFilesGuard, downloadLogFile);

@@ -98,4 +98,29 @@ describe('MediaEditDialog', () => {
     dialog.cancel();
     expect(cancelled).toBe(1);
   });
+
+  it('has no AI switch for a photo, and says nothing of it', () => {
+    open();
+    expect(fixture.nativeElement.querySelector('app-toggle-switch')).toBeNull();
+    save();
+    expect(saved[0]).not.toHaveProperty('aiGenerated');
+  });
+
+  it("a video's AI switch starts as it was, and is saved", () => {
+    TestBed.configureTestingModule({ providers: [httpTesting()] });
+    fixture = TestBed.createComponent(MediaEditDialog);
+    dialog = fixture.componentInstance;
+    fixture.componentRef.setInput('heading', 'Videó szerkesztése');
+    fixture.componentRef.setInput('title', 'Jelmezbál');
+    fixture.componentRef.setInput('aiGenerated', true);
+    saved = [];
+    dialog.saved.subscribe((edit) => saved.push(edit));
+    fixture.detectChanges();
+    respond({ 'GET /membership/users': { data: { users } } });
+    fixture.detectChanges();
+    expect(dialog.editAi()).toBe(true);
+    fixture.nativeElement.querySelector('app-toggle-switch button').click();
+    save();
+    expect(saved).toEqual([{ title: 'Jelmezbál', viewers: [], aiGenerated: false }]);
+  });
 });

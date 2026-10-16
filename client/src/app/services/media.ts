@@ -36,6 +36,8 @@ export interface MediaVideo {
   viewers?: string[];
   // Admins only: an Új média felfedezése met it in the last two weeks.
   isNew?: boolean;
+  // Made with AI: "✦ AI" on its card and in the player.
+  aiGenerated?: boolean;
 }
 
 export interface MediaVideoCategory {
@@ -109,6 +111,8 @@ export const albumKey = (category: string, album: string) => `${category}/${albu
 export interface MediaSettings {
   title: string;
   viewers: string[];
+  // A video's only: made with AI.
+  aiGenerated?: boolean;
 }
 
 // "Új média felfedezése" - what the last (or running) discovery found.
@@ -159,11 +163,20 @@ export class MediaService {
   private loaded = false;
 
   // The role manager: a video's own title, instead of the one from its file name (an
-  // empty one goes back to that), and who may see it. The list here follows.
+  // empty one goes back to that), who may see it, and whether it was made
+  // with AI. The list here follows.
   updateVideo(categoryKey: string, id: string, settings: MediaSettings) {
     return this.http
       .patch<{
-        data: { video: { id: string; title: string; discoveredTitle: string; viewers: string[] } };
+        data: {
+          video: {
+            id: string;
+            title: string;
+            discoveredTitle: string;
+            viewers: string[];
+            aiGenerated: boolean;
+          };
+        };
       }>(`${this.apiUrl}/${categoryKey}/${id}`, settings)
       .pipe(
         tap((res) =>
@@ -175,7 +188,12 @@ export class MediaService {
                     ...c,
                     videos: c.videos.map((v) =>
                       v.id === id
-                        ? { ...v, title: res.data.video.title, viewers: res.data.video.viewers }
+                        ? {
+                            ...v,
+                            title: res.data.video.title,
+                            viewers: res.data.video.viewers,
+                            aiGenerated: res.data.video.aiGenerated,
+                          }
                         : v,
                     ),
                   },

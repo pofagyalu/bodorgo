@@ -50,6 +50,16 @@ function storedMuted(): boolean {
   }
 }
 
+// What the header says of a video made with AI - one, picked at random each
+// time one is opened.
+export const AI_LINES = [
+  'A tartalom elkészítése során egyetlen pixel sem sérült meg.',
+  'Színészek nem, csak processzorok izzadtak a forgatáson.',
+  'A valósággal való bármilyen egyezés a gép fantáziájának műve.',
+  'Kaszkadőr helyett ventilátor dolgozott – a videókártyán.',
+  'Ezt a videót egy gép álmodta. Mi csak megnéztük.',
+];
+
 // A video playing in a dialog over the page - the title (and a smaller
 // line under it) on top, closed with ✕, Esc or a click beside it. Opened
 // from an app-video-card; used on Média → Videók and the tour page.
@@ -70,6 +80,9 @@ function storedMuted(): boolean {
 export class VideoPlayer {
   title = input.required<string>();
   subtitle = input<string | null>(null);
+  // Made with AI: "✦ AI" in the header, and one of AI_LINES.
+  aiGenerated = input(false);
+  readonly aiLine = AI_LINES[Math.floor(Math.random() * AI_LINES.length)];
   // The original.
   src = input.required<string>();
   // Its small copy, if it has one.

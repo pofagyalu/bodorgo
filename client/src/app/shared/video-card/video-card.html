@@ -20,6 +20,12 @@
     @if (badgeRight()) {
       <span class="corner-badge corner-badge--right">{{ badgeRight() }}</span>
     }
+    <!-- Made with AI: top left, as in the player. -->
+    @if (aiGenerated()) {
+      <span class="ai-badge" title="AI-val készült videó"
+        ><mat-icon aria-hidden="true">auto_awesome</mat-icon>AI</span
+      >
+    }
   </div>
   <span class="video-title">{{ title() }}</span>
 </button>

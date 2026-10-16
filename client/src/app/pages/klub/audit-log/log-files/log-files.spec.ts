@@ -106,17 +106,13 @@ describe('LogFiles (Klub → Napló → Naplófájlok)', () => {
     expect(fixture.nativeElement.textContent).toContain('nem sikerült betölteni');
   });
 
-  it('asks to identify again when the 10 minutes ran out meanwhile', async () => {
+  it('says so when a file could not be loaded', async () => {
     await open();
     page.pickDay('2026-10-14');
     http
       .expectOne((r) => r.url === `${API}/settings/logs/app-2026-10-14.log`)
-      .flush(
-        { message: 'Azonosítás kell.', code: 'fresh-login-required' },
-        { status: 403, statusText: 'Forbidden' },
-      );
+      .flush({ message: 'Hiba.' }, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
-    expect(page.needsLogin()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('10 percen belüli azonosítás');
+    expect(page.failed()).toBe(true);
   });
 });
