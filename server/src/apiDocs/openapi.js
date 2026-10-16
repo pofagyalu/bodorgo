@@ -3308,7 +3308,13 @@ const paths = {
       tag: T.settings,
       role: 'admin',
       summary: 'Tagdíj emlékeztető settings',
-      description: "The settings, this year's rounds and who would get one now.",
+      description:
+        "The settings, this year's rounds and who would get one now: every club member who hasn't paid this year's dues - logged in or not, and **even with the e-mails turned off** on Profilom (the reminder is mandatory). Club members always have an e-mail address.",
+      data: obj({
+        reminder: { type: 'object' },
+        year: int(),
+        recipients: { ...arrayOf(str()), description: 'Names.' },
+      }),
     }),
     put: op({
       tag: T.settings,

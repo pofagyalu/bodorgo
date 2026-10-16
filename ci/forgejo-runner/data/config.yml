@@ -30,10 +30,11 @@ container:
   # The NAS's own network for every job, like the runner itself - name
   # lookups from Docker's internal networks timed out on the Synology.
   network: host
-  # Every job container: at most 2 GB of memory, so a test run can never
-  # squeeze Forgejo or the live site (no CPU limit: Synology's kernel
+  # Every job container: at most 4 GB of memory, so a test run can never
+  # squeeze Forgejo or the live site (the NAS has 16 GB; 2 GB was too little
+  # for the client's tests from 2026-10-16 - killed, exit code 137) (no CPU limit: Synology's kernel
   # doesn't support --cpus - "NanoCPUs can not be set") - and Forgejo's
   # public name pointed at its LAN address so the job can check out the
   # code.
-  options: --memory=2g --add-host=forgejo.terfotozas.hu:192.168.1.81
+  options: --memory=4g --add-host=forgejo.terfotozas.hu:192.168.1.81
   privileged: false

@@ -48,15 +48,15 @@ export function dueRound(reminder, today) {
   return !reminder.lastRoundSent || reminder.lastRoundSent < latest ? latest : null;
 }
 
-// Who gets one for `year`: club members (admin or member, not suspended)
-// who had joined by then, have logged in at least once (so they have a
-// real, working address), and have no dues payment recorded for the year.
+// Who owes `year`'s dues: club members (admin or member, not suspended)
+// who had joined by then and have no dues payment recorded for the year -
+// logged in or not (a club member always has an e-mail address). The
+// reminder is mandatory: it goes even with the e-mails turned off on
+// Profilom (wantsEmailNotifications is not looked at).
 export async function unpaidMembers(year) {
   const members = await User.find({
     role: { $in: ['admin', 'member'] },
     retired: { $ne: true },
-    lastLoginAt: { $ne: null },
-    email: { $nin: [null, ''] },
     $or: [{ memberSince: null }, { memberSince: { $lte: year } }],
   }).select('name email');
   const paid = new Set(

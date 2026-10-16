@@ -76,7 +76,7 @@ const EMAILS: (NotificationInfo & { note?: string })[] = [
   {
     name: 'Tagdíj emlékeztető',
     when: 'A Klub lap Tagdíj emlékeztető kártyáján beállított napokon.',
-    who: 'Aki még nem fizette be az idei tagdíjat, és már bejelentkezett. Az adminok összesítőt kapnak róla.',
+    who: 'Minden klubtag, aki még nem fizette be az idei tagdíjat - akkor is, ha még nem lépett be, és akkor is, ha a Profilom oldalon kikapcsolta az e-maileket (ez kötelező). Az adminok összesítőt kapnak róla.',
     settings: 'membershipReminder',
   },
   {

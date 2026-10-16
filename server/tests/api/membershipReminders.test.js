@@ -61,12 +61,14 @@ describe('reminder rounds', () => {
 });
 
 describe('who gets one', () => {
-  it('only club members who logged in, have not paid this year, and were members', async () => {
+  it('every club member who owes this year - logged in or not, e-mails turned off or not', async () => {
     const admin = await createAdmin({ lastLoginAt: new Date() });
     const unpaid = await createMember({ lastLoginAt: new Date() });
     const paid = await createMember({ lastLoginAt: new Date() });
     await payDues(paid, admin);
-    await createMember(); // never logged in
+    const neverLoggedIn = await createMember();
+    // The reminder is mandatory: the Profilom switch doesn't stop it.
+    const noEmails = await createMember({ wantsEmailNotifications: false });
     await createMember({ lastLoginAt: new Date(), retired: true });
     await createMember({ lastLoginAt: new Date(), memberSince: year + 1 });
     await createGuest({ lastLoginAt: new Date() });
@@ -75,7 +77,9 @@ describe('who gets one', () => {
     await payDues(lastYearOnly, admin, year - 1);
 
     const names = (await unpaidMembers(year)).map((m) => m.name).sort();
-    expect(names).toEqual([admin.name, unpaid.name, lastYearOnly.name].sort());
+    expect(names).toEqual(
+      [admin.name, unpaid.name, neverLoggedIn.name, noEmails.name, lastYearOnly.name].sort(),
+    );
   });
 });
 
