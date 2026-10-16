@@ -80,7 +80,7 @@ export async function enforceChatImageQuota() {
   if (bytes <= limit) return 0;
 
   const oldest = Post.find({ image: { $ne: null }, 'image.expired': { $ne: true } })
-    .sort('createdAt')
+    .sort({ createdAt: 1, _id: 1 }) // the id breaks a tie: same millisecond
     .cursor();
   let removed = 0;
   for (let post = await oldest.next(); post && bytes > limit; post = await oldest.next()) {

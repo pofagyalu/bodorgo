@@ -59,6 +59,7 @@ export interface YearlyReportInfo {
 
 export interface MembershipReminderResponse {
   status: string;
+  // recipients: who would get one now - every unpaid club member.
   data: { reminder: MembershipReminder; year: number; recipients: string[] };
 }
 

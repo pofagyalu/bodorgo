@@ -278,6 +278,16 @@ describe('KlubSettings', () => {
       expect(club().sendingTest()).toBe(false);
     });
 
+    it('says every unpaid club member gets one, and "mindenki befizette" only when true', () => {
+      const text = () => fixture.nativeElement.textContent as string;
+      expect(text()).not.toContain('mindenki befizette');
+      expect(text()).toContain('akkor is, ha még nem lépett be');
+
+      club().reminderRecipients.set([]);
+      fixture.detectChanges();
+      expect(text()).toContain('Senki – mindenki befizette az idei tagdíjat.');
+    });
+
     it('sends a test e-mail to the admin', () => {
       club().sendTestReminder();
       club().sendTestReminder();

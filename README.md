@@ -402,7 +402,7 @@ Angular's Vitest-based test builder, in jsdom; no browser needed. Specs sit next
 
 ### Setting up the CI runner on the NAS
 
-Forgejo only hands out the jobs; the **runner**, a small container on the NAS, picks them up and runs each in a fresh `node:22-bookworm` container. One job at a time, at most 2 GB of memory each; a run takes a minute or two.
+Forgejo only hands out the jobs; the **runner**, a small container on the NAS, picks them up and runs each in a fresh `node:22-bookworm` container. One job at a time, at most 4 GB of memory each; a run takes a minute or two.
 
 1. **Turn Actions on.** Forgejo → the `bodorgo` repository → Settings → enable **Actions**. (If the option is missing, Actions is off for the whole Forgejo: set `[actions] ENABLED = true` in its `app.ini` and restart it.)
 2. **Create a registration code.** Forgejo → Site Administration → Actions → Runners → Create new runner → copy the code.
