@@ -107,6 +107,7 @@
   // What takes money out or changes rights stands out.
   &[data-kind='withdrawal'],
   &[data-kind='role-change'],
+  &[data-kind='email-change'],
   &[data-kind='barion-settings'] {
     background: #fbe7e3;
     color: #8f2b1c;

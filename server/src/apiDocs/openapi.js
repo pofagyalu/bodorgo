@@ -2801,7 +2801,7 @@ const paths = {
       role: 'admin',
       summary: 'Edit a person',
       description:
-        'Any admin edits the details. Changing `role` is for the role manager only (403 otherwise), and not their own (400). Sending the current role back unchanged is fine. A changed role is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin** (old → new, who).' +
+        'Any admin edits the details - except the role manager’s own record, which only they edit (403). Changing `role` is for the role manager only (403 otherwise), and not their own (400). Changing `email` is for the role manager only too (403 otherwise) - the e-mail is who logs in to the account - and never the role manager’s own, which follows `INITIAL_ADMIN_USER` (400). Sending the current role or e-mail back unchanged is fine. A changed role or e-mail is recorded in the Napló (`/settings/audit-log`) and **e-mailed to every admin** (old → new, who).' +
         FRESH_LOGIN,
       params: [userIdP],
       body: ref('User'),
@@ -2811,10 +2811,11 @@ const paths = {
       tag: T.users,
       role: 'admin',
       summary: 'Archive a person',
-      description: 'Never really deleted (their history stays) - reversible with `/restore`.',
+      description:
+        'Never really deleted (their history stays) - reversible with `/restore`. The role manager can’t be archived (403).',
       params: [userIdP],
       data: obj({ user: obj({ _id: id(), retired: bool() }) }),
-      errors: [404],
+      errors: [403, 404],
     }),
   },
   '/users/{id}/restore': {

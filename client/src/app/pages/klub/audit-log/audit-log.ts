@@ -9,6 +9,7 @@ import { AuditAction, AuditEntry, SettingsService } from '../../../services/sett
 // What each kind of entry is called on its label.
 const ACTION_LABELS: Record<AuditAction, string> = {
   'role-change': 'Szerepkör',
+  'email-change': 'E-mail-cím',
   'cash-advance': 'Készpénzes előleg',
   'cash-membership': 'Készpénzes tagdíj',
   'cash-undo': 'Visszavonás',

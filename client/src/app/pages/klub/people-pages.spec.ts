@@ -122,6 +122,50 @@ describe('MemberEdit', () => {
     expect(page.roleHint()).toBe('A saját szerepköröd nem módosíthatod.');
   });
 
+  it('lets only the role manager change an e-mail, and never their own', () => {
+    open('u1');
+    respond({ 'GET /users/u1': { data: { user: USER } } });
+    logIn({ id: 'boss', role: 'admin' });
+    expect(page.canEditEmail()).toBe(false);
+    expect(page.emailHint()).toContain('csak a szerepkör-kezelő admin');
+
+    logIn({ id: 'boss', role: 'admin', canManageRoles: true });
+    expect(page.canEditEmail()).toBe(true);
+    expect(page.emailHint()).toBe('');
+
+    logIn({ id: 'u1', role: 'admin', canManageRoles: true });
+    expect(page.canEditEmail()).toBe(false);
+    expect(page.emailHint()).toContain('szerver beállításaiban');
+  });
+
+  it('asks to identify again as soon as the role manager steps into the e-mail', async () => {
+    open('u1');
+    respond({ 'GET /users/u1': { data: { user: USER } } });
+    const input = { blur: vi.fn(), focus: vi.fn() } as unknown as HTMLInputElement;
+
+    logIn({ id: 'boss', role: 'admin', canManageRoles: true });
+    await page.enterEmail(input);
+    expect(input.blur).not.toHaveBeenCalled();
+
+    logIn({ id: 'boss', role: 'admin', canManageRoles: true, freshLoginSecondsLeft: 0 });
+    const identify = vi.spyOn(TestBed.inject(AuthService), 'identifyAgain');
+    identify.mockImplementation(() => {});
+    const asked = page.enterEmail(input);
+    expect(input.blur).toHaveBeenCalled();
+    respond({
+      'GET /auth/me': { loggedIn: true, id: 'boss', role: 'admin', canManageRoles: true },
+    });
+    await settle();
+    const confirm = TestBed.inject(ConfirmService);
+    expect(confirm.pending()?.message).toBe(
+      'E-mail-cím módosítása: ehhez újra azonosítanod kell magad.',
+    );
+    confirm.answer(true);
+    await asked;
+    expect(identify).toHaveBeenCalled();
+    expect(input.focus).not.toHaveBeenCalled();
+  });
+
   it('takes another role only from someone who identified themselves in the last minutes', async () => {
     open('u1');
     respond({ 'GET /users/u1': { data: { user: USER } } });

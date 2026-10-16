@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 // the Napló shows the two together (controllers/auditLogController.js).
 export const AUDIT_ACTIONS = [
   'role-change',
+  'email-change',
   'cash-advance',
   'cash-membership',
   'cash-undo',

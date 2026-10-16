@@ -85,8 +85,13 @@
               id="mEmail"
               type="email"
               [value]="email()"
+              [disabled]="!canEditEmail()"
+              (focus)="enterEmail($any($event.target))"
               (input)="email.set($any($event.target).value)"
             />
+            @if (emailHint()) {
+              <small>{{ emailHint() }}</small>
+            }
           </div>
 
           @if (!isCreateMode) {
