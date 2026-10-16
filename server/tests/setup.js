@@ -146,6 +146,8 @@ afterEach(async () => {
   const collections = await mongoose.connection.db.collections();
   await Promise.all(collections.map((c) => c.deleteMany({})));
   vi.clearAllMocks();
+  // Every test from the same address: none may count towards a scanner block.
+  (await import('../src/utils/scannerBlock.js')).resetScannerBlock();
 });
 
 afterAll(async () => {
