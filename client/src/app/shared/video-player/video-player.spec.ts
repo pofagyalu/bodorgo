@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { VideoPlayer } from './video-player';
+import { ViewTrackerService } from '../../services/view-tracker';
 
 describe('VideoPlayer', () => {
   let fixture: ComponentFixture<VideoPlayer>;
@@ -49,6 +50,50 @@ describe('VideoPlayer', () => {
     expect(video.currentTime).toBe(0);
     video.dispatchEvent(new Event('loadedmetadata'));
     expect(video.currentTime).toBe(42);
+  });
+
+  describe('the view count', () => {
+    const video = () => el().querySelector<HTMLVideoElement>('video')!;
+    const playTo = (from: number, to: number) => {
+      for (let t = from; t <= to; t++) {
+        video().currentTime = t;
+        video().dispatchEvent(new Event('timeupdate'));
+      }
+    };
+
+    function openCounted(duration?: number) {
+      open('/video?quality=small');
+      fixture.componentRef.setInput('viewKey', 'media:farsang:abc');
+      fixture.detectChanges();
+      if (duration) Object.defineProperty(video(), 'duration', { value: duration });
+      return vi.spyOn(TestBed.inject(ViewTrackerService), 'seen');
+    }
+
+    it('counts the video as seen after 30 seconds played - across a quality switch', () => {
+      const seen = openCounted();
+      playTo(0, 20);
+      video().currentTime = 300; // a jump ahead isn't watching
+      video().dispatchEvent(new Event('timeupdate'));
+      el().querySelectorAll<HTMLButtonElement>('.player-quality button')[1].click();
+      fixture.detectChanges();
+      playTo(0, 9);
+      expect(seen).not.toHaveBeenCalled();
+      playTo(10, 40);
+      expect(seen).toHaveBeenCalledExactlyOnceWith({ type: 'video', key: 'media:farsang:abc' });
+    });
+
+    it('counts a short video at its half', () => {
+      const seen = openCounted(30);
+      playTo(0, 15);
+      expect(seen).toHaveBeenCalledTimes(1);
+    });
+
+    it('counts nothing without a key', () => {
+      open(null);
+      const seen = vi.spyOn(TestBed.inject(ViewTrackerService), 'seen');
+      playTo(0, 60);
+      expect(seen).not.toHaveBeenCalled();
+    });
   });
 
   it('shows the resolution of the one playing, next to the switch', () => {

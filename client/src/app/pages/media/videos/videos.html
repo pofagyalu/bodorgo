@@ -118,6 +118,7 @@
     [height]="p.video.height"
     [smallHeight]="p.video.smallHeight"
     [subtitlesSrc]="p.video.hasSubtitles ? subtitlesUrl(p) : null"
+    [viewKey]="'media:' + p.category.key + ':' + p.video.id"
     (closed)="close()"
   />
 }

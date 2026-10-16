@@ -7,11 +7,12 @@ import { AgeChart } from '../../components/age-chart/age-chart';
 import { shuffledLogoColors } from '../../shared/logo-colors';
 import { SiteFooter } from '../../shared/site-footer/site-footer';
 import { BodorgoTerm } from '../../shared/bodorgo-term/bodorgo-term';
+import { PopularViews } from '../../components/popular-views/popular-views';
 
 @Component({
   selector: 'app-homepage',
   standalone: true,
-  imports: [MatIconModule, RouterLink, ToursMap, SiteFooter, AgeChart, BodorgoTerm],
+  imports: [MatIconModule, RouterLink, ToursMap, SiteFooter, AgeChart, BodorgoTerm, PopularViews],
   templateUrl: './homepage.html',
   styleUrl: './homepage.scss',
 })
@@ -19,6 +20,8 @@ export class HomePage {
   private tourService = inject(TourService);
 
   stats = signal<TourStatsResponse['data'] | null>(null);
+  // The statistics have come (or failed): what is under them may come too.
+  statsLoaded = signal(false);
 
   // Picked once per page view, one per icon off a shuffled copy of the 7
   // logo colors - a permutation, so none of these 6 can repeat (there is
@@ -74,8 +77,14 @@ export class HomePage {
 
   constructor() {
     this.tourService.getTourStats().subscribe({
-      next: (res) => this.stats.set(res.data),
-      error: (err) => console.error('Failed to load tour stats:', err),
+      next: (res) => {
+        this.stats.set(res.data);
+        this.statsLoaded.set(true);
+      },
+      error: (err) => {
+        console.error('Failed to load tour stats:', err);
+        this.statsLoaded.set(true);
+      },
     });
   }
 }

@@ -212,21 +212,30 @@ export const updateMediaPhotoAlbum = async (req, res) => {
   res.status(200).json({ status: 'success', data: { album: { key: album, ...saved } } });
 };
 
+// The recorded photo, if this user may see it - null if it isn't there, or
+// is kept for others (itself, or the category or album it is in). With
+// the name it was given and its folder's: what the homepage's "Népszerű"
+// shows (utils/views.js).
+export async function visibleMediaPhoto(user, category, filename) {
+  if (typeof category !== 'string' || typeof filename !== 'string') return null;
+  const photo = await MediaPhoto.findOne({ category, filename })
+    .select('category album filename width height')
+    .lean();
+  if (!photo) return null;
+  const own = await MediaPhotoSettings.findOne({ category, filename }).lean();
+  const folders = await folderSettings({ category, album: { $in: ['', photo.album ?? ''] } });
+  if (!maySee(user, own) || !maySeeFolders(user, folders, photo)) return null;
+  const folderTitle = photo.album
+    ? folders.get(`${category}/${photo.album}`)?.title || photo.album
+    : folders.get(`${category}/`)?.title || titleOf(category);
+  return { ...photo, title: own?.title || null, folderTitle };
+}
+
 // Only a recorded photo is ever served, and only from inside its folder -
-// never trust the address alone. A photo kept for others - itself, or the
-// category or album it is in - is, to this user, not there.
+// never trust the address alone. A photo kept for others is, to this user,
+// not there.
 async function ensureRecorded(req) {
-  const { category, filename } = req.params;
-  const photo = await MediaPhoto.findOne({ category, filename }).select('category album').lean();
-  if (
-    !photo ||
-    !maySee(req.user, await MediaPhotoSettings.findOne({ category, filename }).lean()) ||
-    !maySeeFolders(
-      req.user,
-      await folderSettings({ category, album: { $in: ['', photo.album ?? ''] } }),
-      photo,
-    )
-  ) {
+  if (!(await visibleMediaPhoto(req.user, req.params.category, req.params.filename))) {
     throw new AppError('Nincs ilyen fénykép.', 404);
   }
 }

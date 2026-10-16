@@ -36,6 +36,7 @@
       [height]="v.height"
       [smallHeight]="v.smallHeight"
       [subtitlesSrc]="v.hasSubtitles ? subtitlesUrl(v) : null"
+      [viewKey]="'tour:' + tour()._id + ':' + v.id"
       (closed)="playingVideo.set(null)"
     />
   }

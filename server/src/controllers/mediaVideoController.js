@@ -264,6 +264,29 @@ async function videoPath(req) {
   return { root, relPath, fullPath, area: category.folder };
 }
 
+// A video as the homepage's "Népszerű" plays it (utils/views.js) - null if
+// it isn't there, or this user may not see it.
+export async function visibleMediaVideo(user, categoryKey, id) {
+  let video;
+  try {
+    video = await videoPath({ params: { category: categoryKey, id }, user });
+  } catch {
+    return null;
+  }
+  const parsed = parseVideoName(video.relPath);
+  const own = await MediaVideoTitle.findOne({ category: categoryKey, path: video.relPath }).lean();
+  const thumb = findThumb(video.root, video.relPath);
+  return {
+    title: own?.title || parsed.title,
+    year: parsed.year,
+    categoryTitle: categoryOf(categoryKey).title,
+    hasCover: !!thumb,
+    ...coverVersion(thumb),
+    hasSubtitles: !!findSubtitlePath(video.root, video.relPath),
+    ...videoQualityInfo(video),
+  };
+}
+
 // Every Média video file, as the small copies know them - for "Új média
 // felfedezése" to count the ones without a copy.
 export function mediaVideoFiles() {

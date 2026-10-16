@@ -1,0 +1,163 @@
+// The homepage's sections' look (homepage.scss): the same heading, the
+// stat cards' grey.
+.popular-section {
+  margin-bottom: 3rem;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid #eee;
+  }
+}
+
+.popular-note {
+  margin: 0.6rem 0 1.2rem;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+// Small tiles - a click opens the real thing. Two in a row on a phone; on
+// a wider screen fixed-width tiles side by side, not stretched.
+.popular-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+
+  @media (min-width: 40rem) {
+    grid-template-columns: repeat(auto-fill, 11rem);
+  }
+}
+
+.pop-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #f7f7f7;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pop-card--link {
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-0.125rem);
+    box-shadow: 0 0.6rem 1.2rem rgba(0, 0, 0, 0.1);
+  }
+}
+
+// The picture: the photo, the video's cover, the tour's cover, the song's
+// picture - a click opens or plays it.
+.pop-picture {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  border: none;
+  background: #e4e4e4;
+  cursor: pointer;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+  }
+
+  &:hover img {
+    transform: scale(1.04);
+  }
+
+  &:focus-visible {
+    outline: 0.2rem solid var(--logo-blue);
+    outline-offset: -0.2rem;
+  }
+}
+
+.pop-picture--music {
+  background: #2b2b2b;
+}
+
+.pop-placeholder {
+  font-size: 2.2rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  color: #aaa;
+}
+
+// The round play (or pause) badge in the middle.
+.pop-play {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+
+  mat-icon {
+    font-size: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+.pop-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.6rem 0.6rem;
+  min-width: 0;
+}
+
+.pop-kicker {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--logo-orange);
+}
+
+.pop-title,
+.pop-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pop-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #333;
+}
+
+a.pop-title,
+a.pop-sub {
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.pop-sub {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.pop-count {
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  color: #888;
+}
