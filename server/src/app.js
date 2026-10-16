@@ -29,6 +29,7 @@ import libraryRouter from './routes/libraryRoutes.js';
 import songRouter from './routes/songRoutes.js';
 import jatekRouter from './routes/jatekRoutes.js';
 import futokorRouter from './routes/futokorRoutes.js';
+import viewRouter from './routes/viewRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import AppError from './utils/appError.js';
 import globalErrorHandler from './controllers/errorController.js';
@@ -147,6 +148,8 @@ export default function createApp(sessionMiddleware) {
   app.use('/jatekok', jatekRouter);
   // Futókör: the running race (Móka → Futókörök) - see futokor/access.js.
   app.use('/futokor', futokorRouter);
+  // Megtekintések: what was seen, and the homepage's most viewed.
+  app.use('/views', viewRouter);
   app.use('/health', systemRouter);
   // The API documentation (Scalar) - admins only, see apiDocs/docsRouter.js.
   app.use('/docs', docsRouter);

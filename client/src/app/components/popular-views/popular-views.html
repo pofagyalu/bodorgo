@@ -1,0 +1,116 @@
+@if (hasAny()) {
+  @let p = popular()!;
+  <section class="popular-section">
+    <h2>Népszerű</h2>
+    <p class="popular-note">Az elmúlt {{ p.days }} nap legnézettebbjei</p>
+
+    <div class="popular-grid">
+      @if (p.photo; as photo) {
+        <article class="pop-card">
+          <button
+            type="button"
+            class="pop-picture"
+            (click)="openPhoto(photo)"
+            title="A kép megnyitása"
+          >
+            <img [src]="api(photo.thumbUrl)" alt="" loading="lazy" />
+          </button>
+          <div class="pop-text">
+            <span class="pop-kicker">A hónap képe</span>
+            <a class="pop-title" [routerLink]="photo.link">{{ photo.title }}</a>
+            <span class="pop-count" [title]="count(photo.viewers) + ' különböző néző'"
+              >{{ count(photo.views) }} megtekintés</span
+            >
+          </div>
+        </article>
+      }
+
+      @if (p.video; as video) {
+        <article class="pop-card">
+          <button
+            type="button"
+            class="pop-picture"
+            (click)="playingVideo.set(video)"
+            title="A videó lejátszása"
+          >
+            @if (api(video.coverUrl); as cover) {
+              <img [src]="cover" alt="" loading="lazy" />
+            } @else {
+              <mat-icon class="pop-placeholder">movie</mat-icon>
+            }
+            <span class="pop-play"><mat-icon>play_arrow</mat-icon></span>
+          </button>
+          <div class="pop-text">
+            <span class="pop-kicker">A hónap videója</span>
+            <span class="pop-title">{{ video.title }}</span>
+            <a class="pop-sub" [routerLink]="video.link">{{ video.subtitle }}</a>
+            <span class="pop-count" [title]="count(video.viewers) + ' különböző néző'"
+              >{{ count(video.views) }} megtekintés</span
+            >
+          </div>
+        </article>
+      }
+
+      @if (p.tour; as tour) {
+        <a class="pop-card pop-card--link" [routerLink]="tour.link">
+          <span class="pop-picture">
+            @if (api(tour.coverUrl); as cover) {
+              <img [src]="cover" alt="" loading="lazy" />
+            } @else {
+              <mat-icon class="pop-placeholder">holiday_village</mat-icon>
+            }
+          </span>
+          <span class="pop-text">
+            <span class="pop-kicker">Legnézettebb tábor</span>
+            <span class="pop-title">{{ tour.order }}. {{ tour.title }}</span>
+            <span class="pop-count" [title]="count(tour.viewers) + ' különböző néző'"
+              >{{ count(tour.views) }} megtekintés</span
+            >
+          </span>
+        </a>
+      }
+
+      @if (p.track; as track) {
+        <article class="pop-card">
+          <button
+            type="button"
+            class="pop-picture pop-picture--music"
+            (click)="playTrack(track)"
+            [title]="isPlaying(track) ? 'Szünet' : 'Lejátszás'"
+          >
+            @if (api(track.imageUrl); as image) {
+              <img [src]="image" alt="" loading="lazy" />
+            } @else {
+              <mat-icon class="pop-placeholder">music_note</mat-icon>
+            }
+            <span class="pop-play"
+              ><mat-icon>{{ isPlaying(track) ? 'pause' : 'play_arrow' }}</mat-icon></span
+            >
+          </button>
+          <div class="pop-text">
+            <span class="pop-kicker">Legtöbbet hallgatott szám</span>
+            <span class="pop-title">{{ track.title }}</span>
+            <span class="pop-sub">{{ track.artist }}</span>
+            <span class="pop-count" [title]="count(track.viewers) + ' különböző hallgató'"
+              >{{ count(track.views) }} lejátszás</span
+            >
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+}
+
+@if (playingVideo(); as v) {
+  <app-video-player
+    [title]="v.title"
+    [subtitle]="v.subtitle"
+    [src]="api(v.src)!"
+    [smallSrc]="api(v.smallSrc)"
+    [height]="v.height"
+    [smallHeight]="v.smallHeight"
+    [subtitlesSrc]="api(v.subtitlesSrc)"
+    [viewKey]="v.key"
+    (closed)="playingVideo.set(null)"
+  />
+}

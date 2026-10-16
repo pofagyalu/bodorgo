@@ -119,6 +119,16 @@
     }
   </section>
 
+  <!-- Népszerű: the last 30 days' most viewed, under Statisztikák - only
+       once those have loaded (drawn earlier, it would show up here and then
+       jump down as the statistics fill in above it). Its code (and the video
+       player's) comes only then; nothing while nothing was seen. -->
+  @if (statsLoaded()) {
+    @defer (on idle) {
+      <app-popular-views></app-popular-views>
+    }
+  }
+
   <section class="map-section">
     <h2>Táboraink térképen</h2>
     <!-- The map and its library (Leaflet, some 150 kB) are fetched only

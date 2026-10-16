@@ -16,7 +16,7 @@ import { newMark } from '../utils/newMedia.js';
 // as "did this user show up on this tour" rather than "which tours did
 // this user attend". Not cached - restricted photos are meant to be rare
 // ("not too many"), so one extra query per request is a non-issue.
-async function canViewRestrictedImages(user, tourId) {
+export async function canViewRestrictedImages(user, tourId) {
   if (user.role === 'admin') return true;
   const attended = await Reservation.exists({ tour: tourId, 'attendees.user': user._id });
   return !!attended;

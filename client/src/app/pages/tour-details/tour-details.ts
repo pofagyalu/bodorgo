@@ -28,6 +28,7 @@ import {
 } from '../../services/tour';
 import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
+import { ViewTrackerService } from '../../services/view-tracker';
 import { environment } from '../../../environments/environment';
 import { shuffledLogoColors } from '../../shared/logo-colors';
 import { formatDrivingDuration } from '../../shared/format';
@@ -139,6 +140,8 @@ export class TourDetails {
   // the album) - null until the tour has said.
   private canSeeMedia = signal<boolean | null>(null);
   private gallery = inject(PhotoGalleryService);
+  // The page opened counts as a view of the tour (services/view-tracker).
+  private views = inject(ViewTrackerService);
 
   currentUserId = computed(() => this.auth.user()?.id);
 
@@ -419,6 +422,7 @@ export class TourDetails {
     this.tourService.getTour(id).subscribe({
       next: (res) => {
         this.tour.set(res.data.tour);
+        this.views.seen({ type: 'tour', key: res.data.tour._id });
         this.coverFailed.set(false);
         this.participantCount.set(res.data.participantCount);
         this.attendeePayments.set(res.data.attendeePayments);
@@ -547,6 +551,7 @@ export class TourDetails {
       mobile: img.source === 'mobile',
       restricted: img.restricted,
       isNew: img.isNew,
+      viewKey: `tour:${t._id}:${img.filename}`,
     }));
     // An admin with new photos lands on the first of them.
     const firstNew = Math.max(

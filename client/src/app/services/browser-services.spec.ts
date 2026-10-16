@@ -10,6 +10,7 @@ import { AuthService } from '../auth/auth.service';
 import { MusicPlayerService, MusicTrack } from './music-player';
 import { PushService } from './push';
 import { TourSocketService } from './tour-socket';
+import { ViewTrackerService } from './view-tracker';
 import { CLIENT_BUILD, CLIENT_VERSION, VersionService } from './version';
 
 const settle = async () => {
@@ -495,6 +496,32 @@ describe('MusicPlayerService', () => {
     service.repeatOne.set(false);
     audio().dispatchEvent(new Event('ended'));
     expect(service.currentTrack()?.id).toBe('b');
+  });
+
+  it('counts a song as heard after 30 seconds really played - once', async () => {
+    const seen = vi.spyOn(TestBed.inject(ViewTrackerService), 'seen');
+    await start([track('a'), track('b')]);
+    Object.defineProperty(audio(), 'duration', { configurable: true, value: 180 });
+    const playTo = (from: number, to: number) => {
+      for (let t = from; t <= to; t++) {
+        audio().currentTime = t;
+        audio().dispatchEvent(new Event('timeupdate'));
+      }
+    };
+    playTo(100, 129); // the jump to 100 isn't listening, the 29 seconds after are
+    expect(seen).not.toHaveBeenCalled();
+    playTo(130, 170);
+    expect(seen).toHaveBeenCalledExactlyOnceWith({
+      type: 'track',
+      key: 'a',
+      playlist: 'bodorgo-fm',
+    });
+    // The next song starts from nothing.
+    service.next();
+    playTo(0, 29);
+    expect(seen).toHaveBeenCalledTimes(1);
+    playTo(30, 30);
+    expect(seen).toHaveBeenLastCalledWith({ type: 'track', key: 'b', playlist: 'bodorgo-fm' });
   });
 
   it('skips a track that cannot be played, and gives up when none can', async () => {

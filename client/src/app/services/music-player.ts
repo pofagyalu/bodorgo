@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { AuthService } from '../auth/auth.service';
+import { PlayedTime, ViewTrackerService, secondsToCount } from './view-tracker';
 
 // One track of the club's playlist (see server music/jellyfin.js).
 export interface MusicTrack {
@@ -53,6 +54,11 @@ function volumeCanBeSet(): boolean {
 export class MusicPlayerService {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
+  // A song counts as heard (services/view-tracker) once 30 seconds of it -
+  // half of a shorter one - have really played.
+  private views = inject(ViewTrackerService);
+  private played = new PlayedTime();
+  private counted = false;
 
   // Each loaded playlist's tracks; the playing one's are `tracks`.
   lists = signal<Partial<Record<PlaylistKey, MusicTrack[]>>>({});
@@ -108,7 +114,10 @@ export class MusicPlayerService {
       });
       audio.addEventListener('playing', () => (this.failures = 0));
       audio.addEventListener('pause', () => this.isPlaying.set(false));
-      audio.addEventListener('timeupdate', () => this.currentTime.set(audio.currentTime));
+      audio.addEventListener('timeupdate', () => {
+        this.currentTime.set(audio.currentTime);
+        this.countPlayed(audio);
+      });
       audio.addEventListener('durationchange', () =>
         this.duration.set(Number.isFinite(audio.duration) ? audio.duration : 0),
       );
@@ -304,10 +313,20 @@ export class MusicPlayerService {
     const audio = this.player();
     if (audio.src !== src) {
       audio.src = src;
+      this.played.reset();
+      this.counted = false;
       this.currentTime.set(0);
       this.duration.set(track.durationMs ? track.durationMs / 1000 : 0);
     }
     this.updateMediaSession();
+  }
+
+  private countPlayed(audio: HTMLAudioElement) {
+    this.played.update(audio.currentTime);
+    const track = this.currentTrack();
+    if (!track || this.counted || this.played.seconds < secondsToCount(audio.duration)) return;
+    this.counted = true;
+    this.views.seen({ type: 'track', key: track.id, playlist: this.activeKey() });
   }
 
   private play() {

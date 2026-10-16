@@ -56,6 +56,7 @@
       (loadstart)="applyVolume(video)"
       (volumechange)="onVolumeChange(video)"
       (loadedmetadata)="onLoaded(video)"
+      (timeupdate)="onTimeUpdate(video)"
     >
       <source [src]="key" type="video/mp4" />
       @if (subtitlesSrc(); as subs) {

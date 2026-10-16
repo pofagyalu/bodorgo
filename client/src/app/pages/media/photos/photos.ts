@@ -161,6 +161,7 @@ export class Photos implements OnInit {
         fullUrl: this.media.photoUrl(category, p.filename),
         downloadUrl: this.media.photoDownloadUrl(category, p.filename),
         isNew: p.isNew,
+        viewKey: `media:${category}:${p.filename}`,
       })),
       index,
     );

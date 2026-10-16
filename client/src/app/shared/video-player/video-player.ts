@@ -3,6 +3,7 @@ import {
   ElementRef,
   HostListener,
   computed,
+  inject,
   input,
   output,
   signal,
@@ -10,6 +11,7 @@ import {
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RecreateOn } from '../recreate-on';
+import { PlayedTime, ViewTrackerService, secondsToCount } from '../../services/view-tracker';
 
 export type VideoQuality = 'small' | 'original';
 
@@ -76,8 +78,24 @@ export class VideoPlayer {
   // The lines of the two pictures, when known.
   height = input<number | null | undefined>(null);
   smallHeight = input<number | null | undefined>(null);
+  // Its key in the view counts (services/view-tracker) - it counts as seen
+  // once 30 seconds of it (half of a shorter one) have really played,
+  // across a quality switch too.
+  viewKey = input<string | null>(null);
 
   closed = output<void>();
+
+  private views = inject(ViewTrackerService);
+  private played = new PlayedTime();
+  private counted = false;
+
+  onTimeUpdate(video: HTMLVideoElement) {
+    this.played.update(video.currentTime);
+    const key = this.viewKey();
+    if (!key || this.counted || this.played.seconds < secondsToCount(video.duration)) return;
+    this.counted = true;
+    this.views.seen({ type: 'video', key });
+  }
 
   quality = signal<VideoQuality>(storedQuality());
   private playingSmall = computed(() => this.quality() === 'small' && !!this.smallSrc());

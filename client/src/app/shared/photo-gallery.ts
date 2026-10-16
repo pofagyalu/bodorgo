@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import type PhotoSwipeLightbox from 'photoswipe/lightbox';
 import type PhotoSwipe from 'photoswipe';
 import { photoSlide } from './photo-sizes';
 import { checkerTransparentPngs } from './pswp-checker';
 import { lazyStyle } from './lazy-style';
+import { PHOTO_SEEN_MS, ViewTrackerService } from '../services/view-tracker';
 
 // One photo in the viewer. The addresses are the page's (tour album or Média
 // photo routes); the smaller sizes come from ?w= (see shared/photo-sizes).
@@ -18,6 +19,9 @@ export interface GalleryPhoto {
   mobile?: boolean; // taken with a phone - a small phone icon
   restricted?: boolean; // only the tour's attendees see it (admin toggle)
   isNew?: boolean; // admins: a discovery has just brought it - "Új" on its thumbnail
+  // Its key in the view counts (services/view-tracker): it counts as seen
+  // after PHOTO_SEEN_MS as the one open.
+  viewKey?: string;
 }
 
 export interface GalleryOptions {
@@ -52,6 +56,7 @@ const PHONE_SVG =
 // styles.scss.
 @Injectable({ providedIn: 'root' })
 export class PhotoGalleryService {
+  private views = inject(ViewTrackerService);
   private lightbox: PhotoSwipeLightbox | null = null;
 
   async open(photos: GalleryPhoto[], index = 0, options: GalleryOptions = {}) {
@@ -74,6 +79,17 @@ export class PhotoGalleryService {
     lightbox.on('destroy', () => {
       if (this.lightbox === lightbox) this.lightbox = null;
     });
+    // A photo is seen once it has been the one open for a while - not the
+    // neighbours the viewer preloads, nor the ones swiped past.
+    let seenTimer: ReturnType<typeof setTimeout> | undefined;
+    const watchCurrent = () => {
+      clearTimeout(seenTimer);
+      const key = photos[lightbox.pswp?.currIndex ?? -1]?.viewKey;
+      if (key) seenTimer = setTimeout(() => this.views.seen({ type: 'photo', key }), PHOTO_SEEN_MS);
+    };
+    lightbox.on('afterInit', watchCurrent);
+    lightbox.on('change', watchCurrent);
+    lightbox.on('close', () => clearTimeout(seenTimer));
     lightbox.init();
     lightbox.loadAndOpen(
       index,

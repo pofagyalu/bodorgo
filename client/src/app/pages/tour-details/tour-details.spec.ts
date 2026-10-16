@@ -7,6 +7,7 @@ import { fail, logIn, pageTesting, respond } from '../../../testing/component';
 import { makePayment, makeTour, tourResponse } from '../../../testing/fixtures';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PhotoGalleryService } from '../../shared/photo-gallery';
+import { ViewTrackerService } from '../../services/view-tracker';
 import { Tour } from '../../services/tour';
 import { TourDetails } from './tour-details';
 import { TourParticipants } from './tour-participants/tour-participants';
@@ -306,10 +307,18 @@ describe('TourDetails', () => {
         ['b.jpg', true],
       ]);
       expect(photos[0].fullUrl).toBe(`${API}/tours/t1/images/a.jpg`);
+      // Each counts as a view of the tour's photo (services/view-tracker).
+      expect((photos[1] as { viewKey?: string }).viewKey).toBe('tour:t1:b.jpg');
       expect(index).toBe(0);
       expect(options.zipUrl).toBe(`${API}/tours/t1/images/download-zip`);
       expect(options.zipBytes).toBe(500);
       expect(options.onRestrict).toBeUndefined(); // only an admin can restrict
+    });
+
+    it('counts the opened page as a view of the tour', () => {
+      const seen = vi.spyOn(ViewTrackerService.prototype, 'seen');
+      open('member');
+      expect(seen).toHaveBeenCalledWith({ type: 'tour', key: 't1' });
     });
 
     it('has nothing to open without photos', () => {

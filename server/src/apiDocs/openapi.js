@@ -1081,6 +1081,7 @@ const T = {
   songs: 'Daloskönyv',
   games: 'Móka',
   race: 'Futókör',
+  views: 'Megtekintések',
   settings: 'Beállítások',
   push: 'Értesítések',
   system: 'Rendszer',
@@ -1134,6 +1135,10 @@ const tags = [
   [
     T.settings,
     'Klub → Beállítások: membership fees, reminders, Kotyogó photos, Barion wallets, the birthday greeting.',
+  ],
+  [
+    T.views,
+    'What was seen: the pages say when a photo, a video, a tour or a song counts as seen; the server keeps it once a day per person and item. For now only totals are ever shown (the homepage’s "Népszerű") - never who looked at what.',
   ],
   [T.push, 'Phone/browser notifications and per-chat muting.'],
   [T.system, 'Health check.'],
@@ -5076,6 +5081,99 @@ const paths = {
         runs: arrayOf(obj({ courseId: id(), runs: arrayOf(ref('FutokorRun')) })),
       }),
       errors: [400, 401, 403, 404, 429],
+    }),
+  },
+
+  // --- Megtekintések ---
+  '/views': {
+    post: op({
+      tag: T.views,
+      summary: 'Record what I have just seen',
+      description:
+        'What counts as seen is the page’s to decide: a photo 2 s in the viewer (preloaded or swiped-past ones don’t), a video 30 s played (half of a shorter one), a tour’s page opened, a song 30 s played (half of a shorter one). Each item counts once a day per person - again the same day changes nothing, the next day counts again. Only what this user may see is recorded (a restricted tour photo, a guest and another tour’s media, a Média item kept for others: left out silently), so is anything that isn’t there (any more). At most 50 in one request. Also accepted as `text/plain` with the same JSON in it - what `navigator.sendBeacon` sends when the page closes.',
+      body: obj(
+        {
+          views: arrayOf(
+            obj(
+              {
+                type: str('What it is.', { enum: ['photo', 'video', 'tour', 'track'] }),
+                key: str(
+                  'Which one. photo: `tour:<tourId>:<filename>` or `media:<category>:<filename>`; video: `tour:<tourId>:<videoId>` or `media:<category>:<videoId>`; tour: the tour’s id; track: the song’s Jellyfin id.',
+                ),
+                playlist: str(
+                  'A song: the playlist it was played from (`bodorgo-fm`, `buli`, `hatter`).',
+                ),
+              },
+              ['type', 'key'],
+            ),
+          ),
+        },
+        ['views'],
+      ),
+      data: obj({ recorded: int('How many of them were new today.') }),
+      errors: [400],
+    }),
+  },
+  '/views/popular': {
+    get: op({
+      tag: T.views,
+      summary: 'The most viewed of the last 30 days',
+      description:
+        'For the homepage’s "Népszerű": the photo, the video (a tour’s or Média’s), the tour and the song with the most views (person-days) in the last 30 days, today included - then the most different viewers. For each, the first of the top ones this user may see; null where there is none. Worked out again at most every 10 minutes. Addresses are relative, on this server.',
+      data: obj({
+        days: int('30.'),
+        photo: obj({
+          source: str('`tour` or `media`.'),
+          key: str(),
+          title: str('The tour (`12. Sarud`), or the Média photo’s name or its folder’s.'),
+          link: str(
+            'The app page it is on (`/taborok/<slug>`, `/media/fotok/<category>[/<album>]`).',
+          ),
+          filename: str(),
+          width: int(),
+          height: int(),
+          fullUrl: str(),
+          thumbUrl: str(),
+          downloadUrl: str(),
+          views: int(),
+          viewers: int('Different people.'),
+        }),
+        video: obj({
+          source: str('`tour` or `media`.'),
+          key: str(),
+          title: str(),
+          subtitle: str(),
+          link: str(),
+          coverUrl: str('Or null.'),
+          src: str('The original.'),
+          smallSrc: str('The small copy, or null.'),
+          subtitlesSrc: str('Or null.'),
+          height: int(),
+          smallHeight: int(),
+          views: int(),
+          viewers: int(),
+        }),
+        tour: obj({
+          key: str(),
+          id: str(),
+          title: str(),
+          order: int(),
+          link: str(),
+          coverUrl: str('Or null.'),
+          views: int(),
+          viewers: int(),
+        }),
+        track: obj({
+          key: str(),
+          playlist: str('Where to play it from.'),
+          id: str(),
+          title: str(),
+          artist: str(),
+          imageUrl: str('Or null.'),
+          views: int(),
+          viewers: int(),
+        }),
+      }),
     }),
   },
 
