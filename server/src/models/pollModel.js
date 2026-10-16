@@ -76,6 +76,10 @@ const pollSchema = new Schema(
     post: { type: Schema.Types.ObjectId, ref: 'Post', default: null },
     // The "closes in 2 hours" reminder went out (see pollReminders.js).
     reminderSentAt: { type: Date, default: null },
+    // The "Új szavazás" e-mail an admin chose to send with it, and to how
+    // many club members (see utils/pollEmail.js).
+    emailSentAt: { type: Date, default: null },
+    emailRecipientCount: { type: Number, default: 0 },
     votes: {
       type: [voteSchema],
       default: [],

@@ -2229,6 +2229,8 @@ const paths = {
       tag: T.polls,
       role: 'admin',
       summary: 'Create a poll (Voks page)',
+      description:
+        'With emailTo, the chosen club members get an "Új szavazás" e-mail (question, details, answers, closing time, a link to Voks) - sent in the background after the poll is saved. Ids that are not club members, or whose member has no e-mail address or turned e-mails off, are dropped; emailCount says how many it goes to.',
       body: obj(
         {
           tour: id('The tour it belongs to - none (or empty): a general poll, for everyone.'),
@@ -2242,11 +2244,19 @@ const paths = {
           minimumCount: int(
             'Optional: the first answer needs at least this many (1-500) - they are told when reached.',
           ),
+          emailTo: {
+            ...arrayOf(id()),
+            description:
+              'Optional: club members (from GET /polls/email-recipients) to e-mail about it.',
+          },
         },
         ['question', 'options', 'closesAt'],
       ),
       ok: 201,
-      data: obj({ poll: ref('Poll') }),
+      data: obj({
+        poll: ref('Poll'),
+        emailCount: int('How many club members the e-mail goes to (0: none was sent).'),
+      }),
       errors: [400],
     }),
   },
@@ -2256,6 +2266,25 @@ const paths = {
       summary: 'How many polls wait for my vote',
       description: 'The Voks menu badge - open polls of my tours and the general ones.',
       data: obj({ count: int() }),
+    }),
+  },
+  '/polls/email-recipients': {
+    get: op({
+      tag: T.polls,
+      role: 'admin',
+      summary: 'Who the new poll e-mail can go to',
+      description:
+        'The club members (admin or member, not suspended) by name, for the recipient list on the Voks form. canEmail false with a reason: no e-mail address, or e-mails turned off on Profilom.',
+      data: obj({
+        members: arrayOf(
+          obj({
+            _id: id(),
+            name: str(),
+            canEmail: bool(),
+            reason: str('Why not - null when canEmail.', { nullable: true }),
+          }),
+        ),
+      }),
     }),
   },
   '/polls/{id}': {

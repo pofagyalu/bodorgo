@@ -23,28 +23,127 @@
   } @else if (polls().length === 0) {
     <p class="empty-note">Még nincs egyetlen szavazás sem.</p>
   } @else {
+    <!-- Search, which tour, and the tabs. -->
+    <div class="filters">
+      <div class="search-row">
+        <label class="search">
+          <mat-icon aria-hidden="true">search</mat-icon>
+          <input
+            type="search"
+            placeholder="Keresés…"
+            aria-label="Keresés a szavazások között"
+            [value]="search()"
+            (input)="setSearch($any($event.target).value)"
+          />
+        </label>
+        <app-period-picker
+          label="Tábor"
+          [list]="true"
+          [options]="tourOptions()"
+          [wideValues]="['all', 'general']"
+          [value]="tour()"
+          (valueChange)="setTour($event)"
+        />
+      </div>
+      <app-tab-strip
+        label="Szavazások"
+        [options]="tabOptions()"
+        [value]="filter()"
+        (valueChange)="setFilter($event)"
+      />
+    </div>
+
+    @if (nothingShown()) {
+      <p class="empty-note">
+        Nincs ilyen szavazás.
+        <button type="button" class="link-btn" (click)="clearFilters()">Szűrők törlése</button>
+      </p>
+    }
+
     <!-- Open ones first - those still want votes - then the closed ones. -->
     @for (section of sections(); track section.title) {
       @if (section.polls.length) {
         <h2 class="section-title">
           {{ section.title }} <span class="section-count">{{ section.polls.length }}</span>
         </h2>
-        <div class="poll-list">
+        <div class="poll-list" [class.poll-list--rows]="section.rows">
           @for (poll of section.polls; track poll._id) {
-            <div class="poll-item">
-              @if (isAdmin()) {
-                <button type="button" class="edit-btn" title="Szerkesztés" (click)="openEdit(poll)">
-                  <mat-icon>edit</mat-icon>
+            @let open = !section.rows || expanded().has(poll._id);
+            @if (section.rows) {
+              <!-- A closed one: one row - it opens into one card, the row
+                   its top (the card below doesn't say it again). -->
+              <div class="closed-item" [class.closed-item--open]="open">
+                @if (isAdmin() && open) {
+                  <button
+                    type="button"
+                    class="edit-btn"
+                    title="Szerkesztés"
+                    (click)="openEdit(poll)"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="closed-row"
+                  [attr.aria-expanded]="open"
+                  (click)="toggleRow(poll._id)"
+                >
+                  <mat-icon class="lock" aria-hidden="true">lock</mat-icon>
+                  <span class="row-main">
+                    <span class="row-question">{{ poll.question }}</span>
+                    <span class="row-meta">
+                      {{ poll.tour ? poll.tour.order + '. ' + poll.tour.title : 'Általános' }}
+                      · {{ closedOn(poll) }}
+                    </span>
+                  </span>
+                  <!-- Open, the results below say it. -->
+                  @if (!open) {
+                    <span class="row-result">
+                      <span class="row-winner">{{ winner(poll) }}</span>
+                      @if (myAnswer(poll); as mine) {
+                        <span class="row-mine" title="A te szavazatod">
+                          <mat-icon aria-hidden="true">check</mat-icon>{{ mine }}
+                        </span>
+                      }
+                    </span>
+                  }
+                  <mat-icon class="chevron" aria-hidden="true">expand_more</mat-icon>
                 </button>
-              }
-              <app-poll-card
-                [pollId]="poll._id"
-                [initial]="poll"
-                [showTour]="true"
-                (changed)="onChanged($event)"
-                (removed)="onRemoved($event)"
-              />
-            </div>
+                @if (open) {
+                  <div class="closed-body">
+                    <app-poll-card
+                      [pollId]="poll._id"
+                      [initial]="poll"
+                      [showTour]="true"
+                      [bodyOnly]="true"
+                      (changed)="onChanged($event)"
+                      (removed)="onRemoved($event)"
+                    />
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="poll-item">
+                @if (isAdmin()) {
+                  <button
+                    type="button"
+                    class="edit-btn"
+                    title="Szerkesztés"
+                    (click)="openEdit(poll)"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+                <app-poll-card
+                  [pollId]="poll._id"
+                  [initial]="poll"
+                  [showTour]="true"
+                  (changed)="onChanged($event)"
+                  (removed)="onRemoved($event)"
+                />
+              </div>
+            }
           }
         </div>
       }

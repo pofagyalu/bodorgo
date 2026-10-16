@@ -16,6 +16,7 @@ import {
 import logger from '../logger.js';
 import { cleanMailHtml, isBlankMailHtml } from '../utils/mailHtml.js';
 import { chatAudience, pushInBackground } from '../chat/chatNotifications.js';
+import { pollEmailCandidates, pollEmailRecipients, sendPollEmails } from '../utils/pollEmail.js';
 
 const TOUR_SELECT = 'title slug order';
 
@@ -234,16 +235,33 @@ export const getPoll = async (req, res) => {
   });
 };
 
+// GET /polls/email-recipients - admin-only: the club members the Voks
+// form's "E-mail értesítés" may go to, each with whether they can get it.
+export const getEmailRecipients = async (req, res) => {
+  res.status(200).json({ status: 'success', data: { members: await pollEmailCandidates() } });
+};
+
 // POST /polls - admin-only (see pollRoutes.js): the Voks page's form.
+// emailTo (optional): the club members to tell about it by e-mail - sent
+// in the background after the poll is saved; the answer says how many.
 export const createPoll = async (req, res) => {
   const fields = pollFields(req.body);
   // No tour chosen: a general poll.
   const poll = new Poll({ ...fields, tour: req.body.tour || null, createdBy: req.user._id });
   applyMinimum(poll, fields.minimumCount);
+  const recipients = await pollEmailRecipients(req.body.emailTo);
+  if (recipients.length) {
+    poll.emailSentAt = new Date();
+    poll.emailRecipientCount = recipients.length;
+  }
   await poll.save();
-  res
-    .status(201)
-    .json({ status: 'success', data: { poll: await pollViewFor(poll._id, req.user) } });
+  const view = await pollViewFor(poll._id, req.user);
+  if (recipients.length) {
+    sendPollEmails(poll, recipients, view.tour?.title).catch((err) =>
+      logger.error(`Poll ${poll._id}: e-mails failed: ${err.message}`),
+    );
+  }
+  res.status(201).json({ status: 'success', data: { poll: view, emailCount: recipients.length } });
 };
 
 // A poll started from a chat - a tour's (tour set) or the general one

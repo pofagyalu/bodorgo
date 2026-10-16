@@ -112,6 +112,52 @@
       </small>
     </div>
 
+    <!-- A new poll on Voks: an e-mail about it to the ticked club members. -->
+    @if (offerEmail()) {
+      <label class="details-toggle">
+        <input
+          type="checkbox"
+          name="withEmail"
+          [ngModel]="withEmail()"
+          (ngModelChange)="setWithEmail($event)"
+        />
+        E-mail értesítés küldése
+      </label>
+      @if (withEmail()) {
+        <div class="email-recipients">
+          @if (emailMembers(); as members) {
+            <div class="email-head">
+              <span>Címzettek: {{ emailChosen().size }} fő</span>
+              <button type="button" class="link-btn" (click)="selectAllEmail()">Mindenki</button>
+              <button type="button" class="link-btn" (click)="selectNoEmail()">Senki</button>
+            </div>
+            <ul>
+              @for (m of members; track m._id) {
+                <li [class.disabled]="!m.canEmail">
+                  <label>
+                    <input
+                      type="checkbox"
+                      [checked]="emailChosen().has(m._id)"
+                      [disabled]="!m.canEmail"
+                      (change)="toggleEmail(m._id)"
+                    />
+                    <span class="name">{{ m.name }}</span>
+                    @if (m.reason) {
+                      <small>{{ m.reason }}</small>
+                    }
+                  </label>
+                </li>
+              }
+            </ul>
+          } @else if (emailError()) {
+            <p class="error">Nem sikerült betölteni a tagokat.</p>
+          } @else {
+            <p class="loading">Tagok betöltése…</p>
+          }
+        </div>
+      }
+    }
+
     @if (error()) {
       <p class="error">{{ error() }}</p>
     }

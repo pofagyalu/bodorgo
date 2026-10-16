@@ -62,7 +62,17 @@ export interface PollsResponse {
 
 export interface PollResponse {
   status: string;
-  data: { poll: Poll };
+  // emailCount: a new poll from Voks - how many got the e-mail about it.
+  data: { poll: Poll; emailCount?: number };
+}
+
+// A club member on the new poll's e-mail list (Voks): the ones who can't
+// get it say why.
+export interface PollEmailMember {
+  _id: string;
+  name: string;
+  canEmail: boolean;
+  reason: string | null;
 }
 
 // Shape for createPoll, createTourPoll and updatePoll - a partial on
@@ -77,6 +87,8 @@ export interface PollPayload {
   closesAt?: string;
   visibility?: PollVisibility;
   minimumCount?: number | null;
+  // createPoll only: club members to e-mail about the new poll.
+  emailTo?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -108,6 +120,13 @@ export class PollService {
 
   getPoll(id: string): Observable<PollResponse> {
     return this.http.get<PollResponse>(`${this.apiUrl}/${id}`);
+  }
+
+  // Admin only: who the new poll's e-mail can go to.
+  getEmailRecipients(): Observable<{ data: { members: PollEmailMember[] } }> {
+    return this.http.get<{ data: { members: PollEmailMember[] } }>(
+      `${this.apiUrl}/email-recipients`,
+    );
   }
 
   createPoll(payload: PollPayload): Observable<PollResponse> {

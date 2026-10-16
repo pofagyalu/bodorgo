@@ -4,6 +4,7 @@ import {
   ElementRef,
   HostListener,
   OnInit,
+  computed,
   inject,
   input,
   output,
@@ -13,7 +14,13 @@ import {
 import type Quill from 'quill';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { Poll, PollPayload, PollService, PollVisibility } from '../../services/poll';
+import {
+  Poll,
+  PollEmailMember,
+  PollPayload,
+  PollService,
+  PollVisibility,
+} from '../../services/poll';
 import { Tour } from '../../services/tour';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { lazyStyle } from '../../shared/lazy-style';
@@ -42,7 +49,9 @@ function defaultDeadline(): string {
 //   Kotyogó): the poll shows up in that chat as a live card (the server
 //   posts it - see pollController.startChatPoll).
 // - On Voks (tours given): "Hol?" - Általános or a tour - and with `poll`
-//   it edits that one instead of making a new one.
+//   it edits that one instead of making a new one. A new one may also go
+//   out by e-mail to the club members ticked in its list (admins only -
+//   Voks's create button is theirs).
 @Component({
   selector: 'app-poll-create',
   imports: [FormsModule, MatIconModule],
@@ -106,6 +115,48 @@ export class PollCreate implements OnInit, AfterViewInit {
     return this.quill.getSemanticHTML();
   }
 
+  // "E-mail értesítés": only for a new poll on Voks. Ticked, the club
+  // members are loaded - everyone who can get it starts ticked.
+  offerEmail = computed(() => !!this.tours() && !this.poll());
+  withEmail = signal(false);
+  emailMembers = signal<PollEmailMember[] | null>(null);
+  emailChosen = signal<ReadonlySet<string>>(new Set());
+  emailError = signal(false);
+  private emailable = computed(() => (this.emailMembers() ?? []).filter((m) => m.canEmail));
+
+  setWithEmail(on: boolean) {
+    this.withEmail.set(on);
+    if (on && !this.emailMembers()) this.loadEmailMembers();
+  }
+
+  private loadEmailMembers() {
+    this.emailError.set(false);
+    this.pollService.getEmailRecipients().subscribe({
+      next: (res) => {
+        this.emailMembers.set(res.data.members);
+        this.selectAllEmail();
+      },
+      error: () => this.emailError.set(true),
+    });
+  }
+
+  toggleEmail(id: string) {
+    this.emailChosen.update((chosen) => {
+      const next = new Set(chosen);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  selectAllEmail() {
+    this.emailChosen.set(new Set(this.emailable().map((m) => m._id)));
+  }
+
+  selectNoEmail() {
+    this.emailChosen.set(new Set());
+  }
+
   question = signal('');
   options = signal<string[]>(['Igen', 'Nem']);
   closesAt = signal(defaultDeadline());
@@ -152,6 +203,10 @@ export class PollCreate implements OnInit, AfterViewInit {
     if (Number.isNaN(closes.getTime()) || closes.getTime() <= Date.now()) {
       return this.error.set('A lezárás időpontja a jövőben legyen.');
     }
+    const emailTo = this.offerEmail() && this.withEmail() ? [...this.emailChosen()] : undefined;
+    if (emailTo && !emailTo.length) {
+      return this.error.set('Válassz ki legalább egy címzettet, vagy ne küldj e-mailt.');
+    }
 
     this.saving.set(true);
     this.error.set(null);
@@ -168,13 +223,16 @@ export class PollCreate implements OnInit, AfterViewInit {
     const request = editing
       ? this.pollService.updatePoll(editing._id, { ...payload, tour: this.place() })
       : this.tours()
-        ? this.pollService.createPoll({ ...payload, tour: this.place() })
+        ? this.pollService.createPoll({ ...payload, tour: this.place(), emailTo })
         : tourId
           ? this.pollService.createTourPoll(tourId, payload)
           : this.pollService.createGeneralPoll(payload);
     request.subscribe({
       next: (res) => {
         this.saving.set(false);
+        if (res.data.emailCount) {
+          this.notifications.addSuccess(`E-mail értesítés: ${res.data.emailCount} főnek`);
+        }
         this.saved.emit(res.data.poll);
         this.closed.emit();
       },
