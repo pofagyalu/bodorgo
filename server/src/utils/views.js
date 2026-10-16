@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import View from '../models/viewModel.js';
 import Tour from '../models/tourModel.js';
+import Song from '../models/songModel.js';
+import ActiveDay from '../models/activeDayModel.js';
 import { budapestYmd } from './huDate.js';
 import { canSeeTourMedia } from './tourMediaAccess.js';
 import { tourVideoList } from './tourVideos.js';
@@ -17,13 +19,26 @@ import { PLAYLISTS, playlistTracks } from '../music/jellyfin.js';
 // person may see at all. Photos and videos come from two places, a tour's
 // album and Média → Fotók / Videók: the key says which.
 
-export const VIEW_TYPES = ['photo', 'video', 'tour', 'track'];
+export const VIEW_TYPES = ['photo', 'video', 'tour', 'track', 'song', 'search'];
+// What the homepage's "Népszerű" shows.
+const POPULAR_TYPES = ['photo', 'video', 'tour', 'track', 'song'];
 
 // "tour:<tourId>:<filename>", "media:<category>:<filename or video id>" -
 // a filename may hold ":" itself, only the first two split.
 const MEDIA_KEY = /^(tour|media):([^:]+):(.+)$/;
 const TRACK_ID = /^[A-Za-z0-9-]{1,64}$/;
 const MAX_KEY = 500;
+// A search: what was typed, folded (lower case, no accents) by the page -
+// tidied here once more.
+const SEARCH_MIN = 3;
+const SEARCH_MAX = 60;
+const tidySearch = (text) =>
+  text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 
 const tourMediaParts = (key) => {
   const m = MEDIA_KEY.exec(key);
@@ -73,6 +88,8 @@ async function maySeeItem(user, { type, key, playlist }) {
     return mongoose.isValidObjectId(key) && !!(await Tour.exists({ _id: key }));
   }
   if (type === 'track') return !!(await track(playlist, key));
+  if (type === 'song') return mongoose.isValidObjectId(key) && !!(await Song.exists({ _id: key }));
+  if (type === 'search') return true;
   const parts = tourMediaParts(key);
   if (!parts) return false;
   const { source, owner, item } = parts;
@@ -95,6 +112,10 @@ function cleanView(raw) {
   }
   if (type === 'track') {
     return typeof playlist === 'string' && TRACK_ID.test(key) ? { type, key, playlist } : null;
+  }
+  if (type === 'search') {
+    const words = tidySearch(key);
+    return words.length >= SEARCH_MIN && words.length <= SEARCH_MAX ? { type, key: words } : null;
   }
   return { type, key };
 }
@@ -143,13 +164,14 @@ export function clearPopularCache() {
   cache = new Map();
 }
 
-// A type's most viewed in the last 30 days (today included): its views
-// (person-days), then its different viewers, then the latest.
-async function ranked(type) {
-  const hit = cache.get(type);
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.ranked;
-  const since = budapestYmd(new Date(Date.now() - (POPULAR_DAYS - 1) * 24 * 3600 * 1000));
-  const list = await View.aggregate([
+// The first day of the last `days` days, today included ("" - every day).
+const firstDay = (days) =>
+  days ? budapestYmd(new Date(Date.now() - (days - 1) * 24 * 3600 * 1000)) : '';
+
+// A type's most viewed since that day: its views (person-days), then its
+// different viewers, then the latest.
+function rankSince(type, since, limit) {
+  return View.aggregate([
     { $match: { type, day: { $gte: since } } },
     {
       $group: {
@@ -162,8 +184,15 @@ async function ranked(type) {
     },
     { $project: { views: 1, viewers: { $size: '$viewers' }, last: 1, playlist: 1 } },
     { $sort: { views: -1, viewers: -1, last: -1 } },
-    { $limit: RANKED },
+    { $limit: limit },
   ]);
+}
+
+// The last 30 days' (cached a while).
+async function ranked(type) {
+  const hit = cache.get(type);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.ranked;
+  const list = await rankSince(type, firstDay(POPULAR_DAYS), RANKED);
   // Nothing yet isn't kept: the first view shows at once.
   if (list.length) cache.set(type, { at: Date.now(), ranked: list });
   return list;
@@ -292,13 +321,31 @@ async function trackCard(user, key, playlist) {
   return null;
 }
 
-const CARDS = { photo: photoCard, video: videoCard, tour: tourCard, track: trackCard };
+async function songCard(user, key) {
+  if (!mongoose.isValidObjectId(key)) return null;
+  const song = await Song.findById(key).select('title artist slug').lean();
+  if (!song) return null;
+  return {
+    key,
+    title: song.title,
+    artist: song.artist,
+    link: `/media/zene/daloskonyv/${song.slug}`,
+  };
+}
+
+const CARDS = {
+  photo: photoCard,
+  video: videoCard,
+  tour: tourCard,
+  track: trackCard,
+  song: songCard,
+};
 
 // For this user, each type's most viewed of the last 30 days that they may
 // see - with how many views and viewers it had. null where there is none.
 export async function popularFor(user) {
   const result = {};
-  for (const type of VIEW_TYPES) {
+  for (const type of POPULAR_TYPES) {
     result[type] = null;
     for (const entry of await ranked(type)) {
       const card = await CARDS[type](user, entry._id, entry.playlist);
@@ -309,4 +356,108 @@ export async function popularFor(user) {
     }
   }
   return { days: POPULAR_DAYS, ...result };
+}
+
+// --- Klub → Statisztika (admins): the totals, never who looked at what ---
+
+// The periods it can show: the last 7, 30 or 90 days, or every day (0).
+export const STATS_PERIODS = [7, 30, 90, 0];
+const TOP = 10;
+const SEARCHES = 20;
+const RANKED_TYPES = ['photo', 'video', 'tour', 'track', 'song'];
+const DAY_MS = 24 * 3600 * 1000;
+
+// People a day (the last 7-90 days, every day of them - 0 where nobody
+// came), or a month (every day: the months there was anyone).
+async function activityPoints(days, since) {
+  if (!days) {
+    const months = await ActiveDay.aggregate([
+      { $group: { _id: { $substrBytes: ['$day', 0, 7] }, users: { $addToSet: '$user' } } },
+      { $project: { people: { $size: '$users' } } },
+      { $sort: { _id: 1 } },
+    ]);
+    return { unit: 'month', points: months.map((m) => ({ label: m._id, people: m.people })) };
+  }
+  const counted = new Map(
+    (
+      await ActiveDay.aggregate([
+        { $match: { day: { $gte: since } } },
+        { $group: { _id: '$day', people: { $sum: 1 } } },
+      ])
+    ).map((d) => [d._id, d.people]),
+  );
+  const points = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const day = budapestYmd(new Date(Date.now() - i * DAY_MS));
+    points.push({ label: day, people: counted.get(day) ?? 0 });
+  }
+  return { unit: 'day', points };
+}
+
+const distinctUsers = async (match) => (await ActiveDay.distinct('user', match)).length;
+
+// How many used the app, how often they came back, on what.
+async function usage(since) {
+  const inPeriod = { day: { $gte: since } };
+  const [period, today, week, personDays, returning, devices, appDays, appPeople] =
+    await Promise.all([
+      distinctUsers(inPeriod),
+      distinctUsers({ day: budapestYmd() }),
+      distinctUsers({ day: { $gte: firstDay(7) } }),
+      ActiveDay.countDocuments(inPeriod),
+      ActiveDay.aggregate([
+        { $match: inPeriod },
+        { $group: { _id: '$user', days: { $sum: 1 } } },
+        { $match: { days: { $gte: 2 } } },
+        { $count: 'people' },
+      ]),
+      ActiveDay.aggregate([
+        { $match: inPeriod },
+        { $unwind: '$devices' },
+        { $group: { _id: '$devices', days: { $sum: 1 } } },
+      ]),
+      ActiveDay.countDocuments({ ...inPeriod, app: true }),
+      distinctUsers({ ...inPeriod, app: true }),
+    ]);
+  const byDevice = Object.fromEntries(devices.map((d) => [d._id, d.days]));
+  return {
+    people: { today, week, period, personDays, returning: returning[0]?.people ?? 0 },
+    devices: {
+      phone: byDevice.phone ?? 0,
+      tablet: byDevice.tablet ?? 0,
+      desktop: byDevice.desktop ?? 0,
+    },
+    app: { days: appDays, people: appPeople },
+  };
+}
+
+// A type's most viewed in the period, as the admin sees them (an admin may
+// see everything) - what is no longer there is left out.
+async function topOf(user, type, since) {
+  const list = [];
+  for (const entry of await rankSince(type, since, TOP * 2)) {
+    const card = await CARDS[type](user, entry._id, entry.playlist);
+    if (card) list.push({ ...card, views: entry.views, viewers: entry.viewers });
+    if (list.length === TOP) break;
+  }
+  return list;
+}
+
+export async function statsFor(user, days) {
+  const since = firstDay(days);
+  const top = {};
+  for (const type of RANKED_TYPES) top[type] = await topOf(user, type, since);
+  const searches = (await rankSince('search', since, SEARCHES)).map((s) => ({
+    words: s._id,
+    times: s.views,
+    people: s.viewers,
+  }));
+  return {
+    days,
+    since: since || null,
+    activity: await activityPoints(days, since),
+    ...(await usage(since)),
+    top,
+    searches,
+  };
 }

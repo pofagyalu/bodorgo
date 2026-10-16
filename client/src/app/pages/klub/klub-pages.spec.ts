@@ -51,7 +51,7 @@ describe('Klub', () => {
     expect(page.isAdmin()).toBe(true);
   });
 
-  it('shows Napló and Beállítások to admins only', () => {
+  it('shows Napló, Statisztika and Beállítások to admins only', () => {
     const fixture = TestBed.createComponent(Klub);
     const links = () =>
       [...fixture.nativeElement.querySelectorAll('.klub-mobile-nav a')].map((a: HTMLElement) =>
@@ -60,10 +60,11 @@ describe('Klub', () => {
     logIn({ role: 'member' });
     fixture.detectChanges();
     expect(links()).not.toContain('Napló');
+    expect(links()).not.toContain('Statisztika');
 
     logIn({ role: 'admin' });
     fixture.detectChanges();
-    expect(links().slice(-2)).toEqual(['Napló', 'Beállítások']);
+    expect(links().slice(-3)).toEqual(['Napló', 'Statisztika', 'Beállítások']);
   });
 });
 

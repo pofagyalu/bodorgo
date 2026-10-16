@@ -32,6 +32,10 @@
           <a routerLink="naplo" routerLinkActive="active" class="nav-item">
             <mat-icon class="nav-icon nav-icon--settings">history</mat-icon><span>Napló</span>
           </a>
+          <a routerLink="statisztika" routerLinkActive="active" class="nav-item">
+            <mat-icon class="nav-icon nav-icon--settings">insights</mat-icon
+            ><span>Statisztika</span>
+          </a>
           <a routerLink="beallitasok" routerLinkActive="active" class="nav-item">
             <mat-icon class="nav-icon nav-icon--settings">settings</mat-icon
             ><span>Beállítások</span>
@@ -56,6 +60,7 @@
       <a routerLink="profilom" routerLinkActive="active">Profil</a>
       @if (isAdmin()) {
         <a routerLink="naplo" routerLinkActive="active">Napló</a>
+        <a routerLink="statisztika" routerLinkActive="active">Statisztika</a>
         <a routerLink="beallitasok" routerLinkActive="active">Beállítások</a>
       }
     </nav>

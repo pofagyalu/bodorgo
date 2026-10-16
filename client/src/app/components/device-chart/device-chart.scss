@@ -1,0 +1,35 @@
+:host {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+.canvas-box {
+  position: relative;
+  width: 9rem;
+  height: 9rem;
+}
+.legend {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  color: #435562;
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.key {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+}
+strong {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  color: #203747;
+}

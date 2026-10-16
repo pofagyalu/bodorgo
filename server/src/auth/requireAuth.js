@@ -1,5 +1,6 @@
 import AppError from '../utils/appError.js';
 import User from '../models/userModel.js';
+import { noteActive } from '../utils/activity.js';
 
 export default async function requireAuth(req, res, next) {
   if (!req.session?.user) {
@@ -12,6 +13,8 @@ export default async function requireAuth(req, res, next) {
   }
 
   req.user = user;
+  // Here today (Klub → Statisztika's active users) - once a day per device.
+  noteActive(user, req);
   next();
 }
 

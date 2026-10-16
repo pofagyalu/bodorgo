@@ -8,6 +8,7 @@ import { fail, logIn, pageTesting, respond, settle } from '../../../testing/comp
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { Song, SongService } from '../../services/song';
+import { ViewTrackerService } from '../../services/view-tracker';
 import { AnnexPage } from './annex/annex';
 import { ChordDiagram } from './chord-diagram/chord-diagram';
 import { chordShape } from './chord-shapes';
@@ -112,6 +113,18 @@ describe('SongPage', () => {
     respond({ 'GET /songs/tavaszi-szel': reply });
     fixture.detectChanges();
   }
+
+  it('counts the song as a view once it has been open 10 seconds', () => {
+    vi.useFakeTimers();
+    const seen = vi.spyOn(ViewTrackerService.prototype, 'seen');
+    open();
+    vi.advanceTimersByTime(9_000);
+    expect(seen).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1_000);
+    expect(seen).toHaveBeenCalledExactlyOnceWith({ type: 'song', key: page.song()!._id });
+    seen.mockRestore();
+    vi.useRealTimers();
+  });
 
   it('shows the song with its neighbours in the list', () => {
     open();
@@ -1550,6 +1563,31 @@ describe('Daloskonyv', () => {
     expect(page.found().map((f) => [f.song.slug, f.line])).toEqual([['tavaszi-szel', null]]);
     page.search.set('csend');
     expect(page.filtered().map((s) => s.slug)).toEqual(['almodj']);
+  });
+
+  it('counts a search of the whole book that finds nothing - once the typing has stopped', () => {
+    vi.useFakeTimers();
+    const seen = vi.spyOn(ViewTrackerService.prototype, 'seen');
+    open();
+    respond({ 'GET /songs/lyrics': { data: { lyrics: [{ _id: 's1', lines: ['Álmodj'] }] } } });
+    page.search.set('Szép kék');
+    fixture.detectChanges();
+    vi.advanceTimersByTime(1_000);
+    page.search.set('Szép kék ég');
+    fixture.detectChanges();
+    vi.advanceTimersByTime(1_999);
+    expect(seen).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(seen).toHaveBeenCalledExactlyOnceWith({ type: 'search', key: 'szep kek eg' });
+    // One that finds a song isn't counted, nor one too short.
+    for (const words of ['álmodj', 'xy']) {
+      page.search.set(words);
+      fixture.detectChanges();
+      vi.advanceTimersByTime(5_000);
+    }
+    expect(seen).toHaveBeenCalledTimes(1);
+    seen.mockRestore();
+    vi.useRealTimers();
   });
 
   it('shows each song’s key at its row’s end', () => {

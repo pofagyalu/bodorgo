@@ -218,6 +218,7 @@ describe('the most viewed (homepage)', () => {
       video: null,
       tour: null,
       track: null,
+      song: null,
     });
   });
 

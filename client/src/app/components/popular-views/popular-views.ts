@@ -13,11 +13,12 @@ import { PhotoGalleryService } from '../../shared/photo-gallery';
 import { VideoPlayer } from '../../shared/video-player/video-player';
 import { MusicPlayerService, PlaylistKey } from '../../services/music-player';
 
-// The homepage's "Népszerű": the most viewed photo, video and tour, and
-// the most played song of the last 30 days (server utils/views.js) - the
-// first of each this person may see. Each opens right here: the photo in
-// the viewer, the video in the player, the song in the music player, the
-// tour's page. Nothing at all while nothing has been seen.
+// The homepage's "Népszerű": the most viewed photo, video and tour, the
+// most played song and the most opened Daloskönyv song of the last 30 days
+// (server utils/views.js) - the first of each this person may see. Each
+// opens right here: the photo in the viewer, the video in the player, the
+// song in the music player - or goes to the tour's page, the songbook's
+// song. Nothing at all while nothing has been seen.
 @Component({
   selector: 'app-popular-views',
   imports: [MatIconModule, RouterLink, VideoPlayer],
@@ -32,7 +33,7 @@ export class PopularViews {
   popular = signal<Popular | null>(null);
   hasAny = computed(() => {
     const p = this.popular();
-    return !!p && !!(p.photo || p.video || p.tour || p.track);
+    return !!p && !!(p.photo || p.video || p.tour || p.track || p.song);
   });
   playingVideo = signal<PopularVideo | null>(null);
 

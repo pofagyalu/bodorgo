@@ -8,6 +8,7 @@ import { FreshLoginService } from './auth/fresh-login.service';
 import { VersionService } from './services/version';
 import { OfflineService } from './services/offline';
 import { SongService } from './services/song';
+import { ViewTrackerService } from './services/view-tracker';
 import { NotificationsService } from './notifications/notifications.service';
 import { NotificationListComponent } from './notifications/notification-list/notification-list.component';
 import { ConfirmDialog } from './shared/confirm-dialog/confirm-dialog';
@@ -29,11 +30,17 @@ export class AppComponent implements OnInit {
   private offline = inject(OfflineService);
   private songService = inject(SongService);
   private notifications = inject(NotificationsService);
+  private views = inject(ViewTrackerService);
 
   // No connection: said in a line under the header.
   isOffline = this.offline.isOffline;
 
   constructor() {
+    // The installed app, once someone is logged in: said once a day (Klub →
+    // Statisztika).
+    effect(() => {
+      if (this.authService.isLoggedIn()) this.views.noteInstalledApp();
+    });
     // The songbook is kept on the device for when there is no connection:
     // brought up to date once someone is logged in, and again whenever the
     // connection comes back.
