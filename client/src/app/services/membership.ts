@@ -8,7 +8,7 @@ export interface MemberUser {
   role: 'admin' | 'member' | 'guest';
   lastLoginAt?: string;
   createdAt: string;
-  // Admin-set (see profile.html's "Tag kezdete" column) - undefined until
+  // Admin-set (see profile.html's "Tagság kezdete" field) - undefined until
   // then, in which case the member is treated as eligible for every
   // tracked year (see members.ts's yearState).
   memberSince?: number;

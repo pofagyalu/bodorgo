@@ -626,7 +626,7 @@ describe('KlubSettings', () => {
       it('lists Authentik first, marks the active one, and opens the one clicked', () => {
         asOwner({ ...oidc, providers: [other] });
         expect(rows().map((row) => row.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-          'Authentik aktív',
+          'Oridzsinátor aktív',
           'Másik',
         ]);
         expect(fixture.nativeElement.querySelector('.oidc-authentik').hidden).toBe(false);

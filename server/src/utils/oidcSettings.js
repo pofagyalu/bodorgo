@@ -91,7 +91,8 @@ export const AUTHENTIK = 'authentik';
 
 export const authentikProvider = (settings) => ({
   id: AUTHENTIK,
-  name: 'Authentik',
+  // As people know it: the club's Authentik is called the Oridzsinátor.
+  name: 'Oridzsinátor',
   issuer: issuerUrl(settings),
   clientId: settings.clientId,
   clientSecret: settings.clientSecret,

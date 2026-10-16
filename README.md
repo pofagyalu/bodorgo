@@ -663,7 +663,7 @@ Authentik (`oridzs.terfotozas.hu`) is set up by hand in its admin UI. What the a
 
 - An OAuth2/OpenID provider and application for Bódorgó.
 - The group **`bodorgo`** is bound to the application, so only its members reach the app. Both sign-up paths below put new people into it.
-- The service account **`bodorgo-app`** with the role `bodorgo-invitations` (add / view / delete Invitation only) owns the token in `AUTHENTIK_API_TOKEN`.
+- The service account **`bodorgo-app`** with the role `bodorgo-invitations` owns the token in `AUTHENTIK_API_TOKEN`. The role may: add / view / delete **Invitation** (Felhasználók → Meghívók), view **User** (finding a person by e-mail), view / delete **Authenticated Session** (Bejelentkezések: the device list and logging out, added 2026-10-15).
 
 ### Flows
 

@@ -1247,6 +1247,54 @@ const paths = {
     }),
   },
 
+  '/auth/sessions': {
+    get: op({
+      tag: T.auth,
+      summary: 'Where I am logged in',
+      description:
+        'Profilom → Bejelentkezések, read only. `app`: my sessions in Bódorgó itself (the `sessions` collection), this one first with `current: true`; `device` (e.g. "Chrome · Android") and `ip` are known only for sessions made since 2026-10-15, `lastActiveAt` is right to within a day (the store writes a session back once a day). Logins from localhost or the Docker network (`127.x`, `::1`, `172.16–31.x`) are left out of both lists - they name no device; this browser’s own session always shows. A login replaces the same browser’s older sessions (same User-Agent and address), and a login started but not finished keeps its session only 15 minutes. `authentik`: the devices Authentik remembers me on - they may log in to the app again without a password - one row per device and address (`count`: how many records of it, Authentik keeps the old one at each new login; the newest one’s times), and a login to the app clears that browser’s older records; found by my e-mail with the app’s Authentik API token, `null` when there is no token, and `authentikError` says when Authentik could not be asked. Which Authentik session is this browser cannot be told (Authentik gives nothing to match it with), so `here` gives this browser’s device and address to compare with.',
+      data: obj({
+        here: obj({ device: { type: ['string', 'null'] }, ip: str() }),
+        app: arrayOf(
+          obj({
+            id: str('Only for telling the rows apart - not the session’s own id.'),
+            current: bool('This browser.'),
+            device: { type: ['string', 'null'] },
+            ip: { type: ['string', 'null'] },
+            loginAt: { type: ['string', 'null'], format: 'date-time' },
+            lastActiveAt: { type: ['string', 'null'], format: 'date-time' },
+            expiresAt: { type: ['string', 'null'], format: 'date-time' },
+          }),
+        ),
+        authentik: {
+          type: ['array', 'null'],
+          items: obj({
+            id: str('The Authentik session’s uuid.'),
+            device: { type: ['string', 'null'] },
+            ip: { type: ['string', 'null'] },
+            lastUsedAt: { type: ['string', 'null'], format: 'date-time' },
+            expiresAt: { type: ['string', 'null'], format: 'date-time' },
+            count: int('How many Authentik records this row stands for.'),
+          }),
+        },
+        authentikError: { type: ['string', 'null'] },
+      }),
+    }),
+  },
+
+  '/auth/sessions/logout-others': {
+    post: op({
+      tag: T.auth,
+      summary: 'Log out my other devices',
+      description:
+        'Profilom → Bejelentkezések → "Kijelentkezés minden más eszközön". Every app session of mine but this browser’s is deleted (also the ones `/auth/sessions` leaves out), so those browsers are logged out at their next request; then every Authentik session of mine is ended, so none of them logs back in without the password. This browser stays logged in to the app - which Authentik session is its own can’t be told, so Authentik asks for the password at its next visit too (a re-identification, Forgejo). `appEnded`: how many app sessions went; `authentikEnded`: how many Authentik ones, `null` when Authentik has no API token or could not be reached (the app sessions are gone all the same).',
+      data: obj({
+        appEnded: int('App sessions ended.'),
+        authentikEnded: { type: ['integer', 'null'], description: 'Authentik sessions ended.' },
+      }),
+    }),
+  },
+
   // --- Táborok ---
   '/tours/ticker': {
     get: op({
@@ -2597,7 +2645,19 @@ const paths = {
     get: op({
       tag: T.users,
       summary: 'Tours I attended',
-      data: obj({ tours: arrayOf(ref('Tour')) }),
+      description:
+        'Each tour I am signed up for, with my own `paid`, and `payable`: whether the tour has an advance to pay at all yet (its price and advance percentage are set) - without it Profilom says nothing about paying. `paymentId` / `paymentMethod`: the payment this app recorded, when there is one.',
+      data: obj({
+        tours: arrayOf(
+          obj({
+            tour: ref('Tour'),
+            paid: bool(),
+            payable: bool('The tour has an advance to pay (price and advance percentage set).'),
+            paymentId: { type: ['string', 'null'] },
+            paymentMethod: { type: ['string', 'null'], enum: ['stripe', 'cash', null] },
+          }),
+        ),
+      }),
     }),
   },
   '/users/me/family': {
@@ -2668,6 +2728,37 @@ const paths = {
       params: [userIdP],
       data: obj({ user: obj({ _id: id(), retired: bool() }) }),
       errors: [404],
+    }),
+  },
+  '/users/{id}/sessions': {
+    get: op({
+      tag: T.users,
+      role: 'admin',
+      summary: 'Where someone is logged in',
+      description:
+        'Their edit page → Bejelentkezések - the role manager only. The same lists as `/auth/sessions` gives about oneself (`app`, `authentik`, `authentikError`), without `here`; `current` only marks a session when it is the role manager’s own record and browser.',
+      params: [userIdP],
+      data: obj({
+        app: arrayOf(obj({ id: str(), current: bool(), device: { type: ['string', 'null'] } })),
+        authentik: { type: ['array', 'null'], items: obj({ id: str(), count: int() }) },
+        authentikError: { type: ['string', 'null'] },
+      }),
+      errors: [403, 404],
+    }),
+  },
+  '/users/{id}/logout-everywhere': {
+    post: op({
+      tag: T.users,
+      role: 'admin',
+      summary: 'Log someone out everywhere',
+      description:
+        'Their edit page → "Kijelentkeztetés mindenhonnan" - the role manager only, identified at the provider in the last 10 minutes (else 403 `fresh-login-required`). Every app session of theirs is deleted (each browser of theirs is logged out at its next request), then every Authentik session of theirs (found by their e-mail), so none of their devices logs back in without the password. On oneself it spares this browser, as `/auth/sessions/logout-others` does. Into the Napló (`logout-everywhere`). `appEnded` / `authentikEnded`: how many went; `authentikEnded: null` when Authentik has no API token or could not be reached (the app sessions are gone all the same).',
+      params: [userIdP],
+      data: obj({
+        appEnded: int('App sessions ended.'),
+        authentikEnded: { type: ['integer', 'null'], description: 'Authentik sessions ended.' },
+      }),
+      errors: [403, 404],
     }),
   },
   '/users/{id}/photo': {

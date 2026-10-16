@@ -214,7 +214,7 @@ describe('Beállítások → OIDC szolgáltató: other providers next to Authent
       requireVerifiedEmail: true,
     });
     const { history } = await ClubSettings.findOne({ key: 'club' });
-    expect(history.at(-1).change).toBe('OIDC szolgáltató: Aktív szolgáltató: Authentik → Másik');
+    expect(history.at(-1).change).toBe('OIDC szolgáltató: Aktív szolgáltató: Oridzsinátor → Másik');
 
     expect((await request(app).delete(`${url}/providers/${id}`).set(asUser(me))).status).toBe(400);
 

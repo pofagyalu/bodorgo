@@ -7,6 +7,20 @@ import AppError from '../utils/appError.js';
 import { emailMatch, isInitialAdmin } from '../utils/roleManager.js';
 import { AUTHENTIK, getOidcClient } from '../utils/oidcSettings.js';
 import { linkIdentity } from '../utils/userIdentities.js';
+import {
+  endAppSessions,
+  listAppSessions,
+  replaceSameDeviceSessions,
+} from '../utils/appSessions.js';
+import {
+  clearOlderAuthentikSessions,
+  endAuthentikSessions,
+  listAuthentikSessions,
+} from '../utils/authentikSessions.js';
+import { deviceName } from '../utils/deviceName.js';
+
+// How long a login started but not finished keeps its session.
+const LOGIN_ATTEMPT_MINUTES = 15;
 import { STEP_UP_MAX_AGE_SECONDS, freshLoginSecondsLeft } from '../auth/freshLogin.js';
 
 // Authentik is only the identity provider: it says who someone is, not
@@ -51,6 +65,13 @@ export const login = async (req, res) => {
   const nonce = openidClient.randomNonce();
 
   req.session.oidc = { code_verifier, state, nonce, returnTo: safeReturnTo(req.query.returnTo) };
+  // Only a login on its way: if they never come back from the provider,
+  // it is gone in a quarter of an hour, not 90 days (the callback's
+  // regenerate makes the real session, with the full life). Not when they
+  // are logged in already (re-identifying): that session keeps its life.
+  if (!req.session.user && req.session.cookie) {
+    req.session.cookie.maxAge = LOGIN_ATTEMPT_MINUTES * 60000;
+  }
   await req.session.save(); // ensure it is written to Mongo before the redirect
 
   // Computed from the actual incoming request rather than a fixed env var,
@@ -175,9 +196,19 @@ export const callback = async (req, res, next) => {
         // Which provider the token is from - the one to log out of.
         provider: provider.id,
         authAt,
+        ...loginDevice(req),
       };
 
-      req.session.save(() => {
+      req.session.save(async () => {
+        await replaceSameDeviceSessions(user._id, req.session.user, req.sessionID).catch((e) =>
+          logger.warn(`Old sessions of the same device not cleared: ${e.message}`),
+        );
+        // Authentik's dead records of this browser too - not waited for.
+        if (provider.id === AUTHENTIK) {
+          clearOlderAuthentikSessions(user.email, req.session.user.userAgent).catch((e) =>
+            logger.warn(`Older Authentik sessions of ${user.email} not cleared: ${e.message}`),
+          );
+        }
         logger.info('User session stored. Redirecting…');
         return res.redirect(`${getClientBaseUrl(req)}${(returnTo ?? '/').slice(1)}`);
       });
@@ -191,6 +222,16 @@ export const callback = async (req, res, next) => {
     return res.status(500).send('Login failed');
   }
 };
+
+// What a session keeps of the browser it was made in, for Profilom →
+// Bejelentkezések (utils/appSessions.js): the device, the address, when.
+const loginDevice = (req) => ({
+  userAgent: String(req.get('user-agent') ?? '').slice(0, 300),
+  // Brave and Chrome send the same User-Agent - only this tells them apart.
+  brands: String(req.get('sec-ch-ua') ?? '').slice(0, 300),
+  ip: req.ip,
+  loginAt: Date.now(),
+});
 
 export const me = async (req, res) => {
   if (!req.session.user) {
@@ -322,7 +363,59 @@ export const localLogin = async (req, res, next) => {
       // The password was typed just now (auth/freshLogin.js) - and is typed
       // again here, when a sensitive operation asks for it later.
       authAt: Date.now(),
+      ...loginDevice(req),
     };
-    req.session.save(() => res.status(200).json({ status: 'success' }));
+    req.session.save(async () => {
+      await replaceSameDeviceSessions(user._id, req.session.user, req.sessionID).catch((e) =>
+        logger.warn(`Old sessions of the same device not cleared: ${e.message}`),
+      );
+      res.status(200).json({ status: 'success' });
+    });
   });
+};
+
+// Profilom → Bejelentkezések: where I am logged in. `app`: my sessions in
+// Bódorgó itself (this one marked `current`); `authentik`: the devices
+// Authentik remembers me on, which may log in again without a password
+// (null: no Authentik API token; `authentikError` when it could not be
+// asked). `here`: this browser as both lists name it, to compare with.
+export const sessions = async (req, res) => {
+  const app = await listAppSessions(req.user._id, req.sessionID);
+  let authentik = null;
+  let authentikError = null;
+  try {
+    authentik = await listAuthentikSessions(req.user.email);
+  } catch (err) {
+    logger.warn(`Authentik sessions of ${req.user.email} could not be listed: ${err.message}`);
+    authentikError = 'Az Oridzsinátor most nem válaszol.';
+  }
+  res.status(200).json({
+    status: 'success',
+    data: {
+      here: { device: deviceName(req.get('user-agent'), req.get('sec-ch-ua')), ip: req.ip },
+      app,
+      authentik,
+      authentikError,
+    },
+  });
+};
+
+// Profilom → Bejelentkezések → "Kijelentkezés minden más eszközön": every
+// other browser of mine is logged out of the app at its next click, and
+// Authentik forgets all my devices, so none of them gets back in without
+// the password. This browser stays logged in to the app. The app sessions
+// go first: if Authentik can't be reached, they are still logged out, and
+// the answer says Authentik is left (`authentikEnded: null`).
+export const logoutOtherSessions = async (req, res) => {
+  const appEnded = await endAppSessions(req.user._id, { except: req.sessionID });
+  let authentikEnded = null;
+  try {
+    authentikEnded = await endAuthentikSessions(req.user.email);
+  } catch (err) {
+    logger.warn(`Authentik sessions of ${req.user.email} could not be ended: ${err.message}`);
+  }
+  logger.info(
+    `${req.user.email} logged out their other devices: ${appEnded} app sessions, ${authentikEnded ?? 'no'} Authentik sessions`,
+  );
+  res.status(200).json({ status: 'success', data: { appEnded, authentikEnded } });
 };

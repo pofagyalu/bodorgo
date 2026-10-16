@@ -864,7 +864,7 @@ function readProvider(body = {}, saved, others) {
   if (!next.name || next.name.length > 50) {
     throw new AppError('Adj nevet a szolgáltatónak (legfeljebb 50 karakter).', 400);
   }
-  if (sameName('Authentik') || others.some((p) => sameName(p.name))) {
+  if (sameName('Authentik') || sameName('Oridzsinátor') || others.some((p) => sameName(p.name))) {
     throw new AppError('Ilyen nevű szolgáltató már van.', 400);
   }
   if (!isWebAddress(next.issuer)) {
@@ -1006,7 +1006,7 @@ export const setActiveOidcProvider = async (req, res) => {
   await assertProviderAnswers(chosen);
 
   if (active !== chosen.id) {
-    const before = providers.find((p) => p.id === active)?.name ?? 'Authentik';
+    const before = providers.find((p) => p.id === active)?.name ?? 'Oridzsinátor';
     const settings = await settingsWithProviders();
     settings.oidcActiveProvider = chosen.id;
     const change = `Aktív szolgáltató: ${before} → ${chosen.name}`;

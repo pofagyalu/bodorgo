@@ -82,7 +82,7 @@
           </div>
 
           <div class="field">
-            <label for="pMemberSince">Tag kezdete</label>
+            <label for="pMemberSince">Tagság kezdete</label>
             <input
               id="pMemberSince"
               type="text"
@@ -199,8 +199,11 @@
                     {{ row.tour.order }}. {{ row.tour.title }}
                   </a>
                   <span class="attendance-date">{{ formatDate(row.tour.startDate) }}</span>
+                  <!-- No price or advance set yet: nothing to say about paying. -->
                   @if (!row.paid) {
-                    <span class="status unpaid">Nincs kifizetve</span>
+                    @if (row.payable) {
+                      <span class="status unpaid">Nincs kifizetve</span>
+                    }
                   } @else {
                     <span class="status paid">Fizetve</span>
                     @if (row.paymentMethod === 'cash') {
@@ -234,16 +237,19 @@
                     @for (row of group.rows; track row.tour._id) {
                       <span
                         class="past-chip"
-                        [class.unpaid]="!row.paid"
+                        [class.unpaid]="!row.paid && row.payable"
                         [title]="
-                          formatDate(row.tour.startDate) + (row.paid ? '' : ' · nincs kifizetve')
+                          formatDate(row.tour.startDate) +
+                          (row.paid || !row.payable ? '' : ' · nincs kifizetve')
                         "
                       >
                         <a [routerLink]="['/taborok', row.tour.slug]">
                           <strong>{{ row.tour.order }}</strong> {{ row.tour.title }}
                         </a>
                         @if (!row.paid) {
-                          <span class="unpaid-dot" aria-label="Nincs kifizetve"></span>
+                          @if (row.payable) {
+                            <span class="unpaid-dot" aria-label="Nincs kifizetve"></span>
+                          }
                         } @else if (row.paymentMethod !== 'cash' && row.paymentId) {
                           <a
                             [href]="receiptUrl(row.paymentId)"
@@ -366,6 +372,8 @@
           </ul>
         }
       </section>
+
+      <app-login-sessions class="panel" />
     </div>
   }
 

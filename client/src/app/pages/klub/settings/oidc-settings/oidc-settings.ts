@@ -73,7 +73,7 @@ export class OidcSettingsTab implements OnInit {
   // provider's id, or 'new' (one being added).
   oidcOpen = signal('authentik');
   providerRows = computed(() => [
-    { id: 'authentik', name: 'Authentik' },
+    { id: 'authentik', name: 'Oridzsinátor' },
     ...(this.oidc()?.providers ?? []),
   ]);
   openedProvider = computed(

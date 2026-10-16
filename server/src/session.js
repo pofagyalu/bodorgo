@@ -6,7 +6,7 @@ import config from './config.js';
 // Express (app.js) and Socket.IO (server.js) so both see the same session
 // store and secret - this is what lets a socket connection read
 // `socket.request.session.user`, the same shape requireAuth.js reads.
-const SESSION_MAX_AGE_SECONDS = 90 * 24 * 60 * 60; // 90 days
+export const SESSION_MAX_AGE_SECONDS = 90 * 24 * 60 * 60; // 90 days
 
 // dbName: the database the app itself is connected to (from the connection
 // string in .env) - the sessions live next to the rest of its data, so
