@@ -19,14 +19,14 @@
 }
 
 .close-btn {
-  font-size: 32px;
+  font-size: 2rem;
   background: none;
   border: none;
   cursor: pointer;
   color: #fff; // was inheriting dark text, invisible against the green gradient below
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 1.25rem;
+  right: 1.25rem;
 }
 
 /* Darkens the page behind the slide-in panel and closes it on tap,
@@ -60,12 +60,14 @@
     rgba(103, 201, 136, 0.85)
   );
   z-index: 20000;
-  box-shadow: 3px 0 8px rgba(0, 0, 0, 0.25);
-  padding: 100px 20px 20px; // extra top space so Táborok isn't crowded against the ✖
+  box-shadow: 0.1875rem 0 0.5rem rgba(0, 0, 0, 0.25);
+  // Where the list starts (Kezdőlap a little below the ✖) - set by eye on
+  // the phone. Kijelentkezés stays at the bottom (.logout-item).
+  padding: 4rem 1.25rem 1.25rem;
 
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1.25rem;
 
   // transform instead of animating `left` - a percentage-based full width
   // has no fixed pixel offset to slide from/to the way the old 260px panel did.
@@ -84,7 +86,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
   flex: 1;
   min-height: 0;
 }
