@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 
@@ -113,15 +113,22 @@ export default function createApp(sessionMiddleware) {
   // are shut out for an hour - see utils/scannerBlock.js.
   app.use(blockScanners);
 
+  // Counted per person, not per address: a family at home or twenty
+  // friends on one hotel Wi-Fi share an address, and one runaway phone
+  // used to shut them all out (2026-10-17: a quiz song asked for ~25 times
+  // a second). Only someone not logged in is counted by their address.
   const limiter = rateLimit({
     windowMs: 15 * 60000, // 15 minutes
     max: 1000,
+    keyGenerator: (req) =>
+      req.session?.user?.id ? `user:${req.session.user.id}` : ipKeyGenerator(req.ip),
     handler: function (req, res, next) {
-      logger.warn(`Rate limit exceeded: ${req.ip}`);
+      const who = req.session?.user;
+      logger.warn(`Rate limit exceeded: ${who ? `${who.email ?? who.id} (${req.ip})` : req.ip}`);
 
       return res.status(429).json({
         status: 'fail',
-        message: 'Túl sok kérés erről a címről - próbáld újra 15 perc múlva.',
+        message: 'Túl sok kérés - próbáld újra 15 perc múlva.',
       });
     },
   });
