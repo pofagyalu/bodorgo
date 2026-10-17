@@ -453,6 +453,18 @@ describe('QuizGamePage', () => {
     socket.fire('quiz-game', closed);
     fixture.detectChanges();
     expect(text()).toContain('Tavaszi szél');
+
+    // The game over: the song stops for good, its download too - a paused
+    // one went on asking the server, which refuses it now (2026-10-17).
+    const load = vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
+    const removeSrc = vi.spyOn(HTMLMediaElement.prototype, 'removeAttribute');
+    socket.fire(
+      'quiz-game',
+      game({ status: 'finished', pin: null, serverNow: at(serverNow() + 9000) }),
+    );
+    fixture.detectChanges();
+    expect(removeSrc).toHaveBeenCalledWith('src');
+    expect(load).toHaveBeenCalled();
   });
 
   it('puts the winners on the podium at the end', async () => {

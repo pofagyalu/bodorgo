@@ -304,7 +304,15 @@ export class QuizGamePage implements OnDestroy {
   // opens (whatever else was playing here stops), stopped with the next
   // question. `questionIdx` null: no song now.
   private playSong(questionIdx: number | null) {
-    this.song?.pause();
+    // Stopped for good, its download too: a paused song keeps loading, and
+    // once the game is over the server refuses it (400) - Safari on an
+    // iPhone asked again ~25 times a second, until the whole home's address
+    // hit the server's request limit (2026-10-17).
+    if (this.song) {
+      this.song.pause();
+      this.song.removeAttribute('src');
+      this.song.load();
+    }
     this.song = null;
     this.songBlocked.set(false);
     if (questionIdx === null) return;

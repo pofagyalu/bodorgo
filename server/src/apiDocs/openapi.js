@@ -1075,8 +1075,9 @@ the user. Files (photos, PDFs, videos, Excel) come as they are; videos support
 
 ## Limits
 
-- At most **1000 requests per IP in 15 minutes** - above that every answer is \`429\` until
-  the 15 minutes are over.
+- At most **1000 requests per person in 15 minutes** (logged in: per account, so people
+  sharing a Wi-Fi don't share it; not logged in: per IP) - above that every answer is \`429\`
+  until the 15 minutes are over.
 - **Scanners are shut out:** an IP asking for more than 30 addresses this server doesn't
   have (the \`404\` "Can't find … on this server" kind - never the app's own \`404\`s, like a
   deleted item) within a minute gets \`429\` for everything for an hour. One line in the error
