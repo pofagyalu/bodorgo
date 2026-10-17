@@ -1272,7 +1272,7 @@ const paths = {
       role: 'public',
       summary: 'Log out',
       description:
-        'Ends the session, and the Authentik one too (a session started with `/auth/local-login` just returns to the app).',
+        'Ends the session - and this browser’s open chat connections with it - and the Authentik one too (a session started with `/auth/local-login` just returns to the app).',
       response: { description: 'Redirect.' },
       ok: 302,
     }),
@@ -1350,7 +1350,7 @@ const paths = {
       tag: T.auth,
       summary: 'Log out my other devices',
       description:
-        'Profilom → Bejelentkezések → "Kijelentkezés minden más eszközön". Every app session of mine but this browser’s is deleted (also the ones `/auth/sessions` leaves out), so those browsers are logged out at their next request; then every Authentik session of mine is ended, so none of them logs back in without the password. This browser stays logged in to the app - which Authentik session is its own can’t be told, so Authentik asks for the password at its next visit too (a re-identification, Forgejo). `appEnded`: how many app sessions went; `authentikEnded`: how many Authentik ones, `null` when Authentik has no API token or could not be reached (the app sessions are gone all the same).',
+        'Profilom → Bejelentkezések → "Kijelentkezés minden más eszközön". Every app session of mine but this browser’s is deleted (also the ones `/auth/sessions` leaves out), so those browsers are logged out at their next request, and their open chat connections are cut at once; then every Authentik session of mine is ended, so none of them logs back in without the password. This browser stays logged in to the app - which Authentik session is its own can’t be told, so Authentik asks for the password at its next visit too (a re-identification, Forgejo). `appEnded`: how many app sessions went; `authentikEnded`: how many Authentik ones, `null` when Authentik has no API token or could not be reached (the app sessions are gone all the same).',
       data: obj({
         appEnded: int('App sessions ended.'),
         authentikEnded: { type: ['integer', 'null'], description: 'Authentik sessions ended.' },
@@ -2812,7 +2812,7 @@ const paths = {
       role: 'admin',
       summary: 'Archive a person',
       description:
-        'Felfüggesztés: never really deleted (their history stays) - reversible with `/restore`. Until then they are locked out: if they have an e-mail, their app sessions end at once, and the login and every request refuse them (401). The role manager can’t be archived (403).',
+        'Felfüggesztés: never really deleted (their history stays) - reversible with `/restore`. Until then they are locked out: if they have an e-mail, their app sessions end at once, open chat connections included, and the login and every request refuse them (401). The role manager can’t be archived (403).',
       params: [userIdP],
       data: obj({ user: obj({ _id: id(), retired: bool() }) }),
       errors: [403, 404],
@@ -2851,7 +2851,7 @@ const paths = {
       role: 'admin',
       summary: 'Log someone out everywhere',
       description:
-        'Their edit page → "Kijelentkeztetés mindenhonnan" - the role manager only, identified at the provider in the last 10 minutes (else 403 `fresh-login-required`). Every app session of theirs is deleted (each browser of theirs is logged out at its next request), then every Authentik session of theirs (found by their e-mail), so none of their devices logs back in without the password. On oneself it spares this browser, as `/auth/sessions/logout-others` does. Into the Napló (`logout-everywhere`). `appEnded` / `authentikEnded`: how many went; `authentikEnded: null` when Authentik has no API token or could not be reached (the app sessions are gone all the same).',
+        'Their edit page → "Kijelentkeztetés mindenhonnan" - the role manager only, identified at the provider in the last 10 minutes (else 403 `fresh-login-required`). Every app session of theirs is deleted and its open chat connections cut (each browser of theirs is logged out at its next request), then every Authentik session of theirs (found by their e-mail), so none of their devices logs back in without the password. On oneself it spares this browser, as `/auth/sessions/logout-others` does. Into the Napló (`logout-everywhere`). `appEnded` / `authentikEnded`: how many went; `authentikEnded: null` when Authentik has no API token or could not be reached (the app sessions are gone all the same).',
       params: [userIdP],
       data: obj({
         appEnded: int('App sessions ended.'),

@@ -21,6 +21,9 @@ export default function registerChatHandlers(io) {
     // chat push notifications skip whoever is already looking at it (see
     // chatNotifications.js).
     socket.data.userId = sessionUser?.id ?? null;
+    // Which session it belongs to: when that ends, so does this connection
+    // (tourEvents.js's disconnectSessions).
+    socket.data.sessionId = sessionUser ? (socket.request.sessionID ?? null) : null;
     socket.data.visibleChat = null;
     const markRead = (chatRoomId) =>
       sessionUser &&

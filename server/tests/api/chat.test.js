@@ -3,7 +3,9 @@ import { Server } from 'socket.io';
 import { io as ioClient } from 'socket.io-client';
 import { afterAll, beforeAll, afterEach, describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createMember, createTour } from '../helpers/factories.js';
+import mongoose from 'mongoose';
+import request from 'supertest';
+import { createAdmin, createMember, createTour } from '../helpers/factories.js';
 import registerChatHandlers from '../../src/chat/chatSocket.js';
 import Post from '../../src/models/postModel.js';
 import { generalChatRoom, tourChatRoom } from '../../src/chat/chatRooms.js';
@@ -20,6 +22,7 @@ beforeAll(async () => {
   io.engine.use((req, res, next) => {
     const raw = req.headers['x-test-user'];
     req.session = { user: raw ? JSON.parse(raw) : undefined };
+    req.sessionID = req.headers['x-test-session'];
     next();
   });
   registerChatHandlers(io);
@@ -33,9 +36,12 @@ afterEach(() => {
 
 afterAll(() => new Promise((resolve) => server.close(resolve)));
 
-async function connect(user) {
+async function connect(user, sessionId) {
   const socket = ioClient(url, {
-    extraHeaders: user ? asUser(user) : {},
+    extraHeaders: {
+      ...(user ? asUser(user) : {}),
+      ...(sessionId ? { 'x-test-session': sessionId } : {}),
+    },
     transports: ['websocket', 'polling'],
   });
   sockets.push(socket);
@@ -245,5 +251,68 @@ describe('hangulatjelek (reactions)', () => {
     b.socket.emit('react-post', { postId: post._id, emoji: '👍' });
     await new Promise((r) => setTimeout(r, 150));
     expect((await Post.findById(post._id)).reactions).toHaveLength(0);
+  });
+});
+
+// A session ended - suspended, logged out everywhere, logged out - takes its
+// open chat connections with it (utils/appSessions.js, tourEvents.js).
+describe('chat connections end with their session', () => {
+  // A stored session as connect-mongo keeps it.
+  const storeSession = (user, _id) =>
+    mongoose.connection.db.collection('sessions').insertOne({
+      _id,
+      expires: new Date(Date.now() + 24 * 3600 * 1000),
+      session: JSON.stringify({ cookie: {}, user: { id: String(user._id), email: user.email } }),
+    });
+  const cut = (socket) =>
+    new Promise((resolve) => socket.once('disconnect', (reason) => resolve(reason)));
+  const stillOn = (socket) =>
+    new Promise((resolve) => setTimeout(() => resolve(socket.connected), 100));
+
+  it('suspending someone cuts every chat of theirs - nobody else’s', async () => {
+    const admin = await createAdmin();
+    const member = await createMember({ email: 'felf@test.local' });
+    const other = await createMember({ email: 'mas@test.local' });
+    await storeSession(member, 'sid-phone');
+    await storeSession(member, 'sid-laptop');
+    await storeSession(other, 'sid-other');
+    const phone = await connect(member, 'sid-phone');
+    const laptop = await connect(member, 'sid-laptop');
+    const others = await connect(other, 'sid-other');
+
+    const phoneCut = cut(phone);
+    const laptopCut = cut(laptop);
+    await request(app).delete(`/users/${member._id}`).set(asUser(admin));
+    expect(await phoneCut).toBe('io server disconnect');
+    expect(await laptopCut).toBe('io server disconnect');
+    expect(await stillOn(others)).toBe(true);
+  });
+
+  it('logging out everywhere but here keeps this browser’s chat', async () => {
+    const me = await createMember({ email: 'en@test.local' });
+    await storeSession(me, 'sid-here');
+    await storeSession(me, 'sid-there');
+    const here = await connect(me, 'sid-here');
+    const there = await connect(me, 'sid-there');
+
+    const thereCut = cut(there);
+    await request(app)
+      .post('/auth/sessions/logout-others')
+      .set({ ...asUser(me), 'x-test-session': 'sid-here' });
+    expect(await thereCut).toBe('io server disconnect');
+    expect(await stillOn(here)).toBe(true);
+  });
+
+  it('logging out cuts this browser’s chat only', async () => {
+    const me = await createMember({ email: 'kilep@test.local' });
+    const mine = await connect(me, 'sid-mine');
+    const other = await connect(me, 'sid-other-tab');
+
+    const mineCut = cut(mine);
+    await request(app)
+      .get('/auth/logout')
+      .set({ ...asUser(me), 'x-test-session': 'sid-mine' });
+    expect(await mineCut).toBe('io server disconnect');
+    expect(await stillOn(other)).toBe(true);
   });
 });
