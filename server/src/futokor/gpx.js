@@ -22,15 +22,41 @@ const SAME_PLACE_M = 10;
 // watch records one every second, far more than drawing the loop needs.
 const KEEP_EVERY_M = 3;
 
+// Each <trkpt> of a GPX text: its attributes and what is inside it ('' for
+// a <trkpt ... />). Read forward once, never back - a file of points
+// without their </trkpt> (anyone may upload one) made a single regex over
+// the whole text search to its end again for every point, minutes of a
+// frozen server for a few MB. A point left open ends the reading: the
+// rest of that file is broken anyway.
+function* trackPointTags(text) {
+  let at = 0;
+  for (;;) {
+    const start = text.indexOf('<trkpt', at);
+    if (start < 0) return;
+    at = start + '<trkpt'.length;
+    if (/\w/.test(text[at] ?? '')) continue; // <trkptx>: another tag
+    const tagEnd = text.indexOf('>', at);
+    if (tagEnd < 0) return;
+    if (text[tagEnd - 1] === '/') {
+      yield { attrs: text.slice(at, tagEnd - 1), body: '' };
+      at = tagEnd + 1;
+      continue;
+    }
+    const close = text.indexOf('</trkpt>', tagEnd);
+    if (close < 0) return;
+    yield { attrs: text.slice(at, tagEnd), body: text.slice(tagEnd + 1, close) };
+    at = close + '</trkpt>'.length;
+  }
+}
+
 // Every track point of a GPX text, in order (all its segments one after
 // the other): { lat, lng, ele, time (ms) } - ele and time null if the
 // point has none (a planned route has no times).
 export function parseGpx(gpx) {
-  return [...String(gpx).matchAll(/<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>|<trkpt\b([^>]*)\/>/g)]
-    .map((m) => {
-      const attrs = m[1] ?? m[3] ?? '';
-      const ele = /<ele>([^<]+)<\/ele>/.exec(m[2] ?? '');
-      const time = Date.parse(/<time>([^<]+)<\/time>/.exec(m[2] ?? '')?.[1] ?? '');
+  return [...trackPointTags(String(gpx))]
+    .map(({ attrs, body }) => {
+      const ele = /<ele>([^<]+)<\/ele>/.exec(body);
+      const time = Date.parse(/<time>([^<]+)<\/time>/.exec(body)?.[1] ?? '');
       return {
         lat: Number(/\blat="([^"]+)"/.exec(attrs)?.[1]),
         lng: Number(/\blon="([^"]+)"/.exec(attrs)?.[1]),
