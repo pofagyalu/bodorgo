@@ -44,6 +44,14 @@
   }
 }
 
+// What two fingers zoom and move (pinch-zoom.ts): the picture and its
+// tiles together.
+.picture-content {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
 .tiles {
   position: absolute;
   inset: 0;

@@ -44,17 +44,31 @@ describe('QuizMap', () => {
     vi.unstubAllGlobals();
   });
 
-  it('lets a player look twice as close in a game, and no further out than the picture', () => {
-    const map = show();
+  it('lets a player look twice as close in a game, and back away until all of Hungary is in sight', () => {
+    // A close-up the author chose (a few rivers say nothing on their own).
+    const map = show({ bounds: BALATON });
     const fitted = map.getZoom();
-    expect(map.getMinZoom()).toBe(fitted);
+    const wholeCountry = map.getBoundsZoom(
+      [
+        [45.74, 16.11],
+        [48.59, 22.9],
+      ],
+      false,
+    );
+    expect(wholeCountry).toBeLessThan(fitted);
+    expect(map.getMinZoom()).toBeCloseTo(wholeCountry);
     // One zoom level is twice the size.
     expect(map.getMaxZoom()).toBeCloseTo(fitted + 1);
 
     map.setZoom(fitted + 5, { animate: false });
     expect(map.getZoom()).toBeCloseTo(fitted + 1);
-    map.setZoom(fitted - 5, { animate: false });
-    expect(map.getZoom()).toBeCloseTo(fitted);
+    map.setZoom(fitted - 10, { animate: false });
+    expect(map.getZoom()).toBeCloseTo(wholeCountry);
+  });
+
+  it('a picture chosen wider than the country: no further out than that', () => {
+    const map = show({ bounds: { south: 43, west: 13, north: 50, east: 26 } });
+    expect(map.getMinZoom()).toBe(map.getZoom());
   });
 
   it('zooms with two fingers or the wheel, moves about - but a double tap is the pin`s', () => {
@@ -66,12 +80,14 @@ describe('QuizMap', () => {
     expect(map.zoomControl).toBeUndefined();
   });
 
-  it('never shows more than the picture that was chosen', () => {
-    const map = show();
-    const shown = map.getBounds();
-    expect(map.options.maxBounds).toBeTruthy();
-    expect((map.options.maxBounds as L.LatLngBounds).equals(shown)).toBe(true);
-    expect(shown.contains([47.5, 19.04])).toBe(true);
+  it('opens on the picture that was chosen, and moves about over all of the drawing', () => {
+    const map = show({ bounds: BALATON });
+    expect(map.getBounds().contains([46.85, 17.7])).toBe(true);
+    const edges = map.options.maxBounds as L.LatLngBounds;
+    // Hungary and its neighbours whole - not only the chosen part.
+    expect(edges.contains([47.5, 19.04])).toBe(true);
+    expect(edges.contains([48.2, 16.37])).toBe(true); // Vienna
+    expect(edges.contains([60, 19])).toBe(false);
   });
 
   it('starts over with the next question`s picture', () => {
@@ -84,7 +100,7 @@ describe('QuizMap', () => {
     TestBed.tick();
     // A smaller part of the world: fitted closer, with its own limits.
     expect(map.getZoom()).toBeGreaterThan(first + 1);
-    expect(map.getMinZoom()).toBe(map.getZoom());
+    expect(map.getMinZoom()).toBeLessThan(map.getZoom());
     expect(map.getMaxZoom()).toBeCloseTo(map.getZoom() + 1);
     expect((map.options.maxBounds as L.LatLngBounds).contains([46.85, 17.7])).toBe(true);
   });
