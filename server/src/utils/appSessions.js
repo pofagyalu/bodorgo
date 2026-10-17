@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { deviceName } from './deviceName.js';
 import { isInternalAddress } from './internalAddress.js';
 import { SESSION_MAX_AGE_SECONDS } from '../session.js';
+import { disconnectSessions } from '../chat/tourEvents.js';
 
 // A person's sessions in the app itself (the `sessions` collection of
 // session.js): every browser logged in to Bódorgó, whether or not Authentik
@@ -47,11 +48,14 @@ export async function replaceSameDeviceSessions(
 }
 
 // Logging out: every session of theirs goes, but `except` (the browser
-// asking, when it is themselves) - also the ones the list leaves out.
-// Returns how many went.
+// asking, when it is themselves) - also the ones the list leaves out -,
+// and their open chat connections with them. Returns how many went.
 export async function endAppSessions(userId, { except } = {}) {
   const ids = (await sessionsOf(userId)).map(({ doc }) => doc._id).filter((id) => id !== except);
-  if (ids.length) await collection().deleteMany({ _id: { $in: ids } });
+  if (ids.length) {
+    await collection().deleteMany({ _id: { $in: ids } });
+    await disconnectSessions(ids);
+  }
   return ids.length;
 }
 

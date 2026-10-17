@@ -16,6 +16,23 @@ export function setIo(io) {
 // (e.g. chatNotifications.js's check of who's looking at a chat).
 export const getIo = () => ioInstance;
 
+// A session ended (logout, logged out everywhere, suspended - see
+// utils/appSessions.js): its open chat connections are cut too, or a tab
+// left open would go on reading and writing as them. Cut by the server,
+// the client doesn't connect again by itself. How many were cut.
+export async function disconnectSessions(sessionIds) {
+  if (!ioInstance || !sessionIds?.length) return 0;
+  const ended = new Set(sessionIds.map(String));
+  let cut = 0;
+  for (const socket of await ioInstance.fetchSockets()) {
+    if (socket.data.sessionId && ended.has(socket.data.sessionId)) {
+      socket.disconnect(true);
+      cut += 1;
+    }
+  }
+  return cut;
+}
+
 export function emitToTour(tourId, event, payload) {
   ioInstance?.to(tourRoom(String(tourId))).emit(event, payload);
 }

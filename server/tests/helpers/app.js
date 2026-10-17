@@ -6,6 +6,8 @@ import createApp from '../../src/app.js';
 // user from the (test) database, exactly as in production.
 function fakeSession(req, res, next) {
   const raw = req.get('x-test-user');
+  // Which session it is, for a test that needs one (x-test-session).
+  req.sessionID = req.get('x-test-session');
   req.session = {
     user: raw ? JSON.parse(raw) : undefined,
     save: (cb) => cb?.(),

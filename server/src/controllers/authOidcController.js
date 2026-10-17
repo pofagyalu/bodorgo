@@ -22,6 +22,7 @@ import { deviceName } from '../utils/deviceName.js';
 // How long a login started but not finished keeps its session.
 const LOGIN_ATTEMPT_MINUTES = 15;
 import { STEP_UP_MAX_AGE_SECONDS, freshLoginSecondsLeft } from '../auth/freshLogin.js';
+import { disconnectSessions } from '../chat/tourEvents.js';
 
 // Authentik is only the identity provider: it says who someone is, not
 // their role - roles live in the app (see utils/roleManager.js). Only
@@ -279,6 +280,8 @@ export const me = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
+    // This browser's open chat connections end with its session.
+    if (req.sessionID) await disconnectSessions([req.sessionID]);
     const idToken = req.session?.user?.id_token;
     // Logged in with a password (localLogin below): there is no provider to
     // log out of.
