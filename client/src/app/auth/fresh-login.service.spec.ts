@@ -13,6 +13,9 @@ describe('FreshLoginService: back from the provider', () => {
   let error: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    // Another test file in the same run may have left it (one asking to
+    // identify, answered yes).
+    sessionStorage.removeItem(KEY);
     TestBed.configureTestingModule({ providers: [pageTesting()] });
     service = TestBed.inject(FreshLoginService);
     const notifications = TestBed.inject(NotificationsService);

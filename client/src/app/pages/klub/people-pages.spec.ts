@@ -164,6 +164,9 @@ describe('MemberEdit', () => {
     await asked;
     expect(identify).toHaveBeenCalled();
     expect(input.focus).not.toHaveBeenCalled();
+    // The "sent to identify" mark it leaves (fresh-login.service.ts) would
+    // greet whatever test comes next with "Sikeres azonosítás".
+    sessionStorage.removeItem('bodorgo.freshLoginAsked');
   });
 
   it('takes another role only from someone who identified themselves in the last minutes', async () => {
