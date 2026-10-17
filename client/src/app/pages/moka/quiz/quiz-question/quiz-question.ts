@@ -9,6 +9,7 @@ import {
 } from '../../../../services/quiz';
 import { MapGuess, QuizMap } from '../quiz-map/quiz-map';
 import { QuizShape } from '../quiz-shape/quiz-shape';
+import { PinchZoom } from './pinch-zoom';
 
 // A question as it's shown: what everyone may see while it's open, and -
 // once it's closed - the answer too.
@@ -62,7 +63,7 @@ function shuffled(count: number, seed: string): number[] {
 // answer and what an answer is worth are its user's.
 @Component({
   selector: 'app-quiz-question',
-  imports: [MatIconModule, QuizMap, QuizShape],
+  imports: [MatIconModule, QuizMap, QuizShape, PinchZoom],
   templateUrl: './quiz-question.html',
   styleUrl: './quiz-question.scss',
 })

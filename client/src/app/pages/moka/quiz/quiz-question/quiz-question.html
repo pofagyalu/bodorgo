@@ -3,15 +3,18 @@
 <h2 class="question">{{ q.text }}</h2>
 
 @switch (q.type) {
-  <!-- The picture under tiles that go one by one. -->
+  <!-- The picture under tiles that go one by one - two fingers zoom it,
+       tiles and all (pinch-zoom.ts). -->
   @case ('picture') {
     @if (q.image; as image) {
-      <div class="picture">
-        <img [src]="imageUrl(image)" alt="" draggable="false" />
-        <div class="tiles" aria-hidden="true">
-          @for (turn of tileTurns(); track $index) {
-            <span [class.gone]="turn < tilesGone()"></span>
-          }
+      <div class="picture" [appPinchZoom]="image">
+        <div class="picture-content">
+          <img [src]="imageUrl(image)" alt="" draggable="false" />
+          <div class="tiles" aria-hidden="true">
+            @for (turn of tileTurns(); track $index) {
+              <span [class.gone]="turn < tilesGone()"></span>
+            }
+          </div>
         </div>
       </div>
     }

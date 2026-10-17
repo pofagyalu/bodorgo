@@ -37,6 +37,9 @@ const latLngBounds = (b: QuizBounds): L.LatLngBoundsLiteral => [
 // What there is a drawing of: Hungary with all its neighbours whole (the
 // same box as in server/scripts/buildQuizMap.mjs).
 const DRAWN: QuizBounds = { south: 41.8, west: 9.0, north: 52.8, east: 40.6 };
+// Hungary, its borders: in the game a player may always back away far
+// enough to see all of it.
+const HUNGARY: QuizBounds = { south: 45.74, west: 16.11, north: 48.59, east: 22.9 };
 
 // The app's own drawing of it: the countries, the rivers (the big ones and
 // the smaller ones) and the lakes, as GeoJSON - made from Natural Earth's
@@ -65,9 +68,10 @@ const GAME_ZOOM = 2;
 // of Hungary and its neighbours (where the tours are): borders, rivers and lakes,
 // and no names at all - they'd give the answer away. No map provider is
 // asked for anything.
-// - In the game it's `locked`: exactly the part its author chose, on every
-//   screen - a player can look closer at it (up to GAME_ZOOM times) and
-//   move about in it, never beyond it. While the question is open a tap puts
+// - In the game it's `locked`: it opens on exactly the part its author
+//   chose, on every screen - a player can look closer at it (up to
+//   GAME_ZOOM times), back away until all of Hungary is in sight, and move
+//   about over all there is a drawing of. While the question is open a tap puts
 //   my pin down, or moves it (`pickable`, `picked`); once it's closed the
 //   place itself and everyone's pins are on it (`place`, `guesses`).
 // - In the editor it isn't: the author moves and zooms it to the part the
@@ -138,10 +142,9 @@ export class QuizMap implements OnDestroy {
   private create() {
     const locked = this.locked();
     const map = L.map(this.container().nativeElement, {
-      // In the game the picture is the same for everyone - a player may
-      // only look closer at it (two fingers, or the mouse's wheel) and
-      // move about in what was shown: fit() sets how close, and where the
-      // edges are. No double-tap zoom: a second tap moves the pin.
+      // In the game the picture opens the same for everyone - a player
+      // zooms (two fingers, or the mouse's wheel) and moves about: fit()
+      // sets how far, and where the edges are. No double-tap zoom: a second tap moves the pin.
       doubleClickZoom: !locked,
       boxZoom: !locked,
       keyboard: !locked,
@@ -230,12 +233,15 @@ export class QuizMap implements OnDestroy {
     this.map.invalidateSize();
     this.map.fitBounds(latLngBounds(bounds), { animate: false });
     if (locked) {
-      // In the game: no further out than the picture as it was chosen, no
-      // closer than GAME_ZOOM times that, and never past its edges.
+      // In the game: it starts on the part as it was chosen, but a player
+      // may back away until all of Hungary is in sight (a close-up of a few
+      // rivers says nothing on its own) and move about over all there is a
+      // drawing of; no closer than GAME_ZOOM times the chosen part.
       const fitted = this.map.getZoom();
-      this.map.setMinZoom(fitted);
+      const wholeCountry = this.map.getBoundsZoom(latLngBounds(HUNGARY), false);
+      this.map.setMinZoom(Math.min(fitted, wholeCountry));
       this.map.setMaxZoom(fitted + Math.log2(GAME_ZOOM));
-      this.map.setMaxBounds(this.map.getBounds());
+      this.map.setMaxBounds(latLngBounds(DRAWN));
     }
     this.fitting = false;
     this.shown = key(bounds);
