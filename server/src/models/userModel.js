@@ -207,11 +207,13 @@ const userSchema = new Schema(
     // button (see userController.js's archiveUser/restoreUser) - the app's
     // "delete": someone who attended a few tours and then stopped, kept for
     // history (member lists, stats, past attendance, payments) exactly like
-    // anyone else, never actually removed. The ONE place this actually
-    // changes anything is that an admin building a new reservation or a
-    // schedule-event opt-in list won't see them offered as a candidate any
-    // more. Overrides the login-based Aktív/Inaktív status shown on that
-    // page (see members.ts's userStatus) - a later login doesn't undo it.
+    // anyone else, never actually removed. Shown as "Felfüggesztve": an
+    // admin building a new reservation or a schedule-event opt-in list
+    // won't see them offered as a candidate any more, and they are locked
+    // out - their sessions end (archiveUser), the login callback and
+    // requireAuth.js refuse them - until restored. Overrides the
+    // login-based Aktív/Inaktív status shown on that page (see members.ts's
+    // userStatus).
     retired: {
       type: Boolean,
       default: false,

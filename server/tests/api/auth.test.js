@@ -86,20 +86,20 @@ describe('login - Authentik says who, the app says the role', () => {
     const known = await createUser({ email: 'regi@test.local', role: 'member', sub: 'sub-k' });
     // Their address was changed in Authentik: the app doesn't know the new one.
     const res = await loginAs({ sub: 'sub-k', email: 'uj-cim@test.local', name: 'Régi Tag' });
-    expect(res.headers.location).toContain('login?error=not-invited');
+    expect(res.headers.location).toContain('?error=not-invited');
     expect(await User.findById(known._id)).toMatchObject({
       email: 'regi@test.local',
       sub: 'sub-k',
     });
     // And without any address at all.
     expect((await loginAs({ sub: 'sub-k', name: 'Régi Tag' })).headers.location).toContain(
-      'login?error=not-invited',
+      '?error=not-invited',
     );
   });
 
   it('refuses anyone not added in the app - no account is created', async () => {
     const res = await loginAs({ sub: 'sub-3', email: 'idegen@test.local', name: 'Idegen' });
-    expect(res.headers.location).toContain('login?error=not-invited');
+    expect(res.headers.location).toContain('?error=not-invited');
     expect(await User.findOne({ sub: 'sub-3' })).toBeNull();
     expect(await User.findOne({ email: 'idegen@test.local' })).toBeNull();
   });
@@ -119,6 +119,26 @@ describe('login - Authentik says who, the app says the role', () => {
     const other = await createAdmin({ canManageRoles: true, email: 'mas@test.local' });
     await loginAs({ sub: 'sub-mas', email: 'mas@test.local', name: 'Más Admin' });
     expect(await User.findById(other._id)).toMatchObject({ role: 'admin', canManageRoles: false });
+  });
+
+  it('a suspended person is refused at login - until an admin restores them', async () => {
+    const admin = await createAdmin();
+    const member = await createMember({
+      email: 'felfuggesztett@test.local',
+      name: 'Felfüggesztett',
+    });
+    await request(app).delete(`/users/${member._id}`).set(asUser(admin));
+
+    const refused = await loginAs({ sub: 'sub-f', email: 'felfuggesztett@test.local', name: 'F' });
+    expect(refused.headers.location).toContain('?error=suspended');
+    // The landing page says why - the login page is the emergency login's only.
+    expect(refused.headers.location).not.toContain('login');
+    expect((await User.findById(member._id)).lastLoginAt).toBeFalsy();
+
+    await request(app).patch(`/users/${member._id}/restore`).set(asUser(admin));
+    const back = await loginAs({ sub: 'sub-f', email: 'felfuggesztett@test.local', name: 'F' });
+    expect(back.headers.location).not.toContain('error');
+    expect((await User.findById(member._id)).lastLoginAt).toBeTruthy();
   });
 
   it('answers "Login failed" when Authentik rejects the code', async () => {
@@ -147,6 +167,16 @@ describe('who am I', () => {
     expect(res.body.photoUpdatedAt).toBeTruthy();
     const owner = await createAdmin({ canManageRoles: true });
     expect((await request(app).get('/auth/me').set(asUser(owner))).body.canManageRoles).toBe(true);
+  });
+
+  it('a suspended user is logged out, and refused on every request', async () => {
+    const member = await createMember({ retired: true });
+    expect((await request(app).get('/auth/me').set(asUser(member))).body).toEqual({
+      loggedIn: false,
+    });
+    const res = await request(app).get('/tours').set(asUser(member));
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('A fiókod fel van függesztve.');
   });
 
   it('a deleted user is logged out', async () => {

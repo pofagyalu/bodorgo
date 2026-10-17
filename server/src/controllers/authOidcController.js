@@ -135,7 +135,7 @@ export const callback = async (req, res, next) => {
       logger.error(
         `Denying login for sub=${claims.sub} (${claims.email}): "${provider.name}" doesn't say the e-mail is verified`,
       );
-      return res.redirect(`${getClientBaseUrl(req)}login?error=unverified-email`);
+      return res.redirect(`${getClientBaseUrl(req)}?error=unverified-email`);
     }
 
     // Who is it: the e-mail says, and nothing else - the account an admin
@@ -163,7 +163,13 @@ export const callback = async (req, res, next) => {
     }
     if (!user) {
       logger.error(`Denying login for sub=${claims.sub} (${claims.email}): not added in the app`);
-      return res.redirect(`${getClientBaseUrl(req)}login?error=not-invited`);
+      return res.redirect(`${getClientBaseUrl(req)}?error=not-invited`);
+    }
+    // Felfüggesztve (Klub → Felhasználók): locked out until an admin
+    // restores them.
+    if (user.retired) {
+      logger.warn(`Denying login for ${claims.email}: suspended`);
+      return res.redirect(`${getClientBaseUrl(req)}?error=suspended`);
     }
 
     // Name and e-mail follow Authentik (the identity provider); the role is
@@ -245,7 +251,9 @@ export const me = async (req, res) => {
   // requireAuth.js already does for req.user), and this way a user sees the
   // change immediately rather than needing to log out and back in.
   const user = await User.findById(req.session.user.id);
-  if (!user) {
+  // Suspended meanwhile: as good as logged out (requireAuth.js refuses
+  // them too).
+  if (!user || user.retired) {
     return res.json({ loggedIn: false });
   }
 

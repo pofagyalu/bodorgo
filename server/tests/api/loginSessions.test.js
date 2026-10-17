@@ -225,6 +225,30 @@ describe('Kijelentkeztetés mindenhonnan (POST /users/:id/logout-everywhere)', (
   });
 });
 
+describe('Felfüggesztés (DELETE /users/:id) logs them out', () => {
+  it('every app session of theirs ends at once; nobody else’s', async () => {
+    const admin = await createAdmin();
+    const member = await createMember({ email: 'felfuggesztett@test.local' });
+    const other = await createMember({ email: 'marad@test.local' });
+    await storeSession(member, { userAgent: ANDROID });
+    await storeSession(member, { userAgent: WINDOWS_FIREFOX });
+    const kept = await storeSession(other, { userAgent: ANDROID });
+
+    const res = await request(app).delete(`/users/${member._id}`).set(asUser(admin));
+    expect(res.status).toBe(200);
+    const left = await mongoose.connection.db.collection('sessions').find().toArray();
+    expect(left.map((s) => s._id)).toEqual([kept]);
+  });
+
+  it('someone without an e-mail - just a name in a family - is simply suspended', async () => {
+    const admin = await createAdmin();
+    const child = await createMember({ email: undefined, name: 'Kis Gyerek' });
+    const res = await request(app).delete(`/users/${child._id}`).set(asUser(admin));
+    expect(res.status).toBe(200);
+    expect(res.body.data.user.retired).toBe(true);
+  });
+});
+
 describe('isInternalAddress', () => {
   it.each([
     ['::1', true],

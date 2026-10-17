@@ -1261,7 +1261,7 @@ const paths = {
       role: 'public',
       summary: 'Login callback',
       description:
-        'Authentik returns here. Finds the user an admin added by their e-mail (any case) - the e-mail alone says who someone is; the Authentik id is only noted on the account (as `sub`, and among the user’s `identities` under the provider’s issuer address - one line per provider they have logged in through), so an Authentik user deleted and made again with the same address is the same person, and an id arriving with another address is whoever that address belongs to - and refreshes their name - never their role - then starts the session and redirects to the app (to the `returnTo` path given to `/auth/login`, if any). The session keeps when they really identified themselves at the provider (the ID token’s `auth_time`) - days ago, if the provider’s own session let this login through; a provider that sends none leaves sensitive operations closed. Someone not added is sent back with `login?error=not-invited`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
+        'Authentik returns here. Finds the user an admin added by their e-mail (any case) - the e-mail alone says who someone is; the Authentik id is only noted on the account (as `sub`, and among the user’s `identities` under the provider’s issuer address - one line per provider they have logged in through), so an Authentik user deleted and made again with the same address is the same person, and an id arriving with another address is whoever that address belongs to - and refreshes their name - never their role - then starts the session and redirects to the app (to the `returnTo` path given to `/auth/login`, if any). The session keeps when they really identified themselves at the provider (the ID token’s `auth_time`) - days ago, if the provider’s own session let this login through; a provider that sends none leaves sensitive operations closed. A refused login is sent back to the client’s landing page, which says why: someone not added with `?error=not-invited`, someone suspended (archived) with `?error=suspended`; the `INITIAL_ADMIN_USER` is created as the role-managing admin if they have no account yet.',
       response: { description: 'Redirect to the app.' },
       ok: 302,
     }),
@@ -2812,7 +2812,7 @@ const paths = {
       role: 'admin',
       summary: 'Archive a person',
       description:
-        'Never really deleted (their history stays) - reversible with `/restore`. The role manager can’t be archived (403).',
+        'Felfüggesztés: never really deleted (their history stays) - reversible with `/restore`. Until then they are locked out: if they have an e-mail, their app sessions end at once, and the login and every request refuse them (401). The role manager can’t be archived (403).',
       params: [userIdP],
       data: obj({ user: obj({ _id: id(), retired: bool() }) }),
       errors: [403, 404],
@@ -2823,6 +2823,7 @@ const paths = {
       tag: T.users,
       role: 'admin',
       summary: 'Restore an archived person',
+      description: 'They can log in again.',
       params: [userIdP],
       data: obj({ user: obj({ _id: id(), retired: bool() }) }),
       errors: [404],
@@ -3792,7 +3793,7 @@ const paths = {
       role: 'admin',
       summary: 'Choose the provider everybody logs in through',
       description:
-        '**The role manager only.** `provider` is `authentik` or another provider’s id. Refused (400) unless that provider answers at its address and has a readable secret. From then on `/auth/login` goes there; people are matched by their e-mail, so their accounts stay (each provider’s own id of them is kept among the user’s `identities`). A provider with `requireVerifiedEmail` lets in only those whose `email_verified` claim is true (`login?error=unverified-email` otherwise). Invitations only work while Authentik is the active one’s user store. Recorded in the history and e-mailed to every admin.',
+        '**The role manager only.** `provider` is `authentik` or another provider’s id. Refused (400) unless that provider answers at its address and has a readable secret. From then on `/auth/login` goes there; people are matched by their e-mail, so their accounts stay (each provider’s own id of them is kept among the user’s `identities`). A provider with `requireVerifiedEmail` lets in only those whose `email_verified` claim is true (otherwise the landing page with `?error=unverified-email`). Invitations only work while Authentik is the active one’s user store. Recorded in the history and e-mailed to every admin.',
       body: obj({ provider: str('`authentik` or a provider’s id.') }, ['provider']),
       data: ref('OidcSettings'),
       errors: [400, 404],

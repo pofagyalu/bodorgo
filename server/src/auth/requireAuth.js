@@ -11,6 +11,11 @@ export default async function requireAuth(req, res, next) {
   if (!user) {
     return next(new AppError('The user belonging to this session no longer exists.', 401));
   }
+  // Felfüggesztve (Klub → Felhasználók): suspending ends their sessions,
+  // but one that still comes (a socket's, a race) is refused all the same.
+  if (user.retired) {
+    return next(new AppError('A fiókod fel van függesztve.', 401));
+  }
 
   req.user = user;
   // Here today (Klub → Statisztika's active users) - once a day per device.
