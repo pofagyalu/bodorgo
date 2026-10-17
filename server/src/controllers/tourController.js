@@ -276,7 +276,10 @@ export const getAlltours = async (req, res) => {
     const { totals } = computeAttendeePayments(tour, tour.reservations);
     const price = totals?.averagePricePerPersonPerNight ?? tour.price;
 
-    return { ...tour.toObject(), participantCount, price };
+    // The reservations were loaded only for the counts above: the list
+    // shows none of them, and they carry everyone's birthday.
+    const { reservations: _reservations, ...shown } = tour.toObject();
+    return { ...shown, participantCount, price };
   });
 
   // SENDING RESPONSE
@@ -388,6 +391,19 @@ export const getTour = async (req, res, next) => {
   // - only ids and version names; playback goes through the
   // requireAuth-gated /tours/:id/videos/... routes.
   const tourJson = tour.toObject();
+  // Every logged-in user reads this, guests too: the reservations go out
+  // with who is on them (user ids) and who booked (name) only. The
+  // birthdays, roles and families loaded with them are for the prices
+  // above, and the booker's e-mail is nobody's business here.
+  tourJson.reservations = tourJson.reservations.map((r) => ({
+    _id: r._id,
+    paid: r.paid,
+    bookedBy: r.bookedBy && { _id: r.bookedBy._id, name: r.bookedBy.name },
+    attendees: r.attendees.map(({ user, ...attendee }) => ({
+      ...attendee,
+      user: user?._id ?? user,
+    })),
+  }));
   // Its Extrák (Document collection - see documentController.js), in the
   // shape the tour page reads.
   tourJson.extraDocuments = (await tourDocuments(tour._id)).map((d) => ({
