@@ -1,7 +1,13 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
-import { createAdmin, createGuest, createMember, createTour } from '../helpers/factories.js';
+import {
+  createAdmin,
+  createGuest,
+  createMember,
+  createReservation,
+  createTour,
+} from '../helpers/factories.js';
 
 describe('tours: members-only access', () => {
   it('refuses the tour list when logged out', async () => {
@@ -30,6 +36,38 @@ describe('tours: members-only access', () => {
   it('does not serve the old public files any more', async () => {
     const res = await request(app).get('/img/tours/tour-1-cover.jpg');
     expect(res.status).toBe(404);
+  });
+});
+
+// Every logged-in user reads the tours, guests too: who is on them, but not
+// the birthdays (age is the admins' only), roles, families or the booker's
+// e-mail that the prices are worked out from.
+describe('tours: what everyone sees of the attendees', () => {
+  it('the list sends no reservations at all; one tour only who is on it', async () => {
+    const tour = await createTour({ title: 'Mátrai tábor' });
+    const booker = await createMember({ name: 'Foglaló Tag', birthday: new Date('1980-03-04') });
+    const child = await createMember({ name: 'Kis Gyerek', birthday: new Date('2018-06-07') });
+    const reservation = await createReservation(tour, [booker, child]);
+    const guest = await createGuest();
+
+    const list = await request(app).get('/tours').set(asUser(guest));
+    const listed = list.body.data.tours.find((t) => t.title === 'Mátrai tábor');
+    expect(listed.participantCount).toBe(2);
+    expect(listed.reservations).toBeUndefined();
+
+    const res = await request(app).get(`/tours/${tour.slug}`).set(asUser(guest));
+    expect(res.status).toBe(200);
+    const sent = JSON.stringify(res.body);
+    expect(sent).not.toContain('birthday');
+    expect(sent).not.toContain('1980-03-04');
+    expect(sent).not.toContain(booker.email);
+    const [shown] = res.body.data.tour.reservations;
+    expect(shown._id).toBe(String(reservation._id));
+    expect(shown.bookedBy).toEqual({ _id: String(booker._id), name: 'Foglaló Tag' });
+    expect(shown.attendees.map((a) => [a.user, a.name])).toEqual([
+      [String(booker._id), 'Foglaló Tag'],
+      [String(child._id), 'Kis Gyerek'],
+    ]);
   });
 });
 

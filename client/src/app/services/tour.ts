@@ -158,26 +158,20 @@ export interface WeatherOutlook {
 }
 
 export interface Attendee {
-  // A bare id fresh off signUp()'s own response (Reservation.create()
-  // doesn't populate anything), but a populated object once loaded via
-  // getTour (attendees.user is populated there for computeAttendeePayments
-  // - see tourController.js) - genuinely both shapes in practice, since a
-  // freshly-appended reservation (see tour-details.ts's doSignUp) sits
-  // alongside getTour-loaded ones in the same reservations array until
-  // the page is reloaded. Use attendeeUserId() below rather than reading
-  // this directly.
-  user: string | { _id: string; role?: string; birthday?: string; familyId?: string };
+  // The user's bare id - from getTour and signUp() alike. getTour sends
+  // nothing more about them (no birthday, role or family: everyone reads
+  // it, guests too - server tourController.js).
+  user: string;
   name: string;
 }
 
-// See Attendee.user's own comment on why this can't just be read directly.
 export function attendeeUserId(attendee: Attendee): string {
-  return typeof attendee.user === 'string' ? attendee.user : attendee.user._id;
+  return attendee.user;
 }
 
 export interface Reservation {
   _id: string;
-  bookedBy: { _id: string; name: string; email: string };
+  bookedBy: { _id: string; name: string };
   attendees: Attendee[];
   paid: boolean;
 }

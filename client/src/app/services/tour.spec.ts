@@ -247,9 +247,8 @@ describe('TourService', () => {
 });
 
 describe('attendeeUserId', () => {
-  it('reads the id whether the user is populated or not', () => {
+  it("reads the user's id", () => {
     expect(attendeeUserId({ user: 'u1', name: 'A' })).toBe('u1');
-    expect(attendeeUserId({ user: { _id: 'u2' }, name: 'B' })).toBe('u2');
   });
 });
 

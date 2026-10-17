@@ -1373,7 +1373,7 @@ const paths = {
       tag: T.tours,
       summary: 'All tours',
       description:
-        "With attendee counts. Supports filtering/sorting/paging with query parameters (`sort`, `fields`, `page`, `limit`, `field[gte]=`…). Each tour carries its `weatherOutlook` once it has one (the tour card's pill) - the forecast of the tours starting within 15 days is brought up to date first, at most every 6 hours.",
+        "With attendee counts - no reservations (who is on a tour: `/tours/{id}`). Supports filtering/sorting/paging with query parameters (`sort`, `fields`, `page`, `limit`, `field[gte]=`…). Each tour carries its `weatherOutlook` once it has one (the tour card's pill) - the forecast of the tours starting within 15 days is brought up to date first, at most every 6 hours.",
       params: [
         query('sort', 'e.g. `-startDate`'),
         query('fields', 'Only these fields, comma-separated.'),
@@ -1471,7 +1471,7 @@ const paths = {
       tag: T.tours,
       summary: 'One tour',
       description:
-        "Everything the tour page shows - schedule, accommodation, weather (`dailyWeather`, and `weatherOutlook` once every day has a forecast), Extrák, attendees with their payment rows. Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field. `canSeeMedia: false` for a guest who is not on the tour: `videos` is empty then, and the photo and video routes answer 403.",
+        "Everything the tour page shows - schedule, accommodation, weather (`dailyWeather`, and `weatherOutlook` once every day has a forecast), Extrák, attendees with their payment rows. `tour.reservations` say who is on the tour and nothing more: each with `_id`, `paid`, `bookedBy` (`_id`, `name` - no e-mail) and its attendees, whose `user` is the bare user id (no birthday, role or family: everyone reads this, guests too). Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field. `canSeeMedia: false` for a guest who is not on the tour: `videos` is empty then, and the photo and video routes answer 403.",
       params: [tourId],
       data: obj({ tour: ref('Tour'), canSeeMedia: bool() }),
       errors: [404],

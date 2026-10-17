@@ -140,10 +140,10 @@ export function makeTour(over: Partial<Tour> = {}): Tour {
     reservations: [
       {
         _id: 'r1',
-        bookedBy: { _id: 'me', name: 'Teszt Elek', email: 'elek@x.hu' },
+        bookedBy: { _id: 'me', name: 'Teszt Elek' },
         attendees: [
           { user: 'me', name: 'Teszt Elek' },
-          { user: { _id: 'kid' }, name: 'Teszt Kata' },
+          { user: 'kid', name: 'Teszt Kata' },
         ],
         paid: false,
       },
