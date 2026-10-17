@@ -35,6 +35,28 @@ describe('futókör: a GPX track', () => {
     expect(gpxName('<gpx></gpx>')).toBe('');
   });
 
+  it('reads points written as <trkpt ... />, and stops at one left open', () => {
+    const points = parseGpx(`<trkseg>
+      <trkpt lat="47" lon="19"/>
+      <trkptx lat="1" lon="1"></trkptx>
+      <trkpt lat="47.001" lon="19"><ele>105</ele></trkpt>
+      <trkpt lat="47.002" lon="19">
+      <trkpt lat="47.003" lon="19"/>`);
+    expect(points).toEqual([
+      { lat: 47, lng: 19, ele: null, time: null },
+      { lat: 47.001, lng: 19, ele: 105, time: null },
+    ]);
+  });
+
+  it('a broken file of a few MB is read at once, not in minutes', () => {
+    // Points without their </trkpt>: a single regex over the text searched
+    // to the end again for each of them (a frozen server).
+    const started = Date.now();
+    expect(parseGpx('<trkpt>'.repeat(1_400_000))).toEqual([]);
+    expect(parseGpx(`<trkpt lat="47" lon="19">${'<ele>'.repeat(1_000_000)}`)).toEqual([]);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
   it('measures the length and the climb, small bumps left out', () => {
     const measured = measureTrack(parseGpx(GPX));
     // 76 + 111 + 76 + 111 m.
