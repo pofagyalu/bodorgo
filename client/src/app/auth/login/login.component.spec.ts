@@ -1,11 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { Router } from '@angular/router';
 
 import { API } from '../../../testing/http';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { AuthService } from '../auth.service';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent', () => {
@@ -27,27 +26,27 @@ describe('LoginComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        {
-          provide: ActivatedRoute,
-          useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
-        },
-      ],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => vi.restoreAllMocks());
 
-  it('shows the way to the provider by default - also when the server cannot be asked', () => {
+  it('is the emergency login only: otherwise - or if the server cannot be asked - on to the landing page', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     open(false);
-    expect(fixture.nativeElement.textContent).toContain('Gyere bé');
+    expect(navigate).toHaveBeenLastCalledWith('/', { replaceUrl: true });
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
 
+    navigate.mockClear();
     open('error');
     expect(component.mode()).toBe('oidc');
+    expect(navigate).toHaveBeenCalledWith('/', { replaceUrl: true });
+
+    navigate.mockClear();
+    open(true);
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('with LOCAL_LOGIN on the server: an e-mail and password form instead', () => {
@@ -83,28 +82,5 @@ describe('LoginComponent', () => {
     expect(error).toHaveBeenCalledWith('Hibás e-mail cím vagy jelszó.');
     expect(component.password()).toBe('');
     expect(component.loggingIn()).toBe(false);
-  });
-
-  it('says why a login was refused', () => {
-    const error = vi
-      .spyOn(TestBed.inject(NotificationsService), 'addError')
-      .mockImplementation(() => {});
-    const route = TestBed.inject(ActivatedRoute) as { snapshot: object };
-    for (const [code, text] of [
-      ['not-invited', 'Még nem vagy felvéve'],
-      ['unverified-email', 'nincs megerősítve'],
-    ]) {
-      route.snapshot = { queryParamMap: convertToParamMap({ error: code }) };
-      open(false);
-      expect(error).toHaveBeenLastCalledWith(expect.stringContaining(text));
-    }
-    route.snapshot = { queryParamMap: convertToParamMap({}) };
-  });
-
-  it('the button starts the login', () => {
-    open(false);
-    const login = vi.spyOn(TestBed.inject(AuthService), 'login').mockImplementation(() => {});
-    fixture.nativeElement.querySelector('button').click();
-    expect(login).toHaveBeenCalled();
   });
 });

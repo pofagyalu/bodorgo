@@ -692,6 +692,10 @@ export const archiveUser = async (req, res) => {
   if (!user) {
     throw new AppError('No user found with that ID!', 404);
   }
+  // Suspended is locked out (requireAuth.js, the login callback): logged
+  // out at once wherever they are. Someone with no e-mail can't log in -
+  // just a name in a family -, so has nothing to end.
+  if (user.email) await endAppSessions(user._id);
 
   res.status(200).json({ status: 'success', data: { user: { _id: user._id, retired: true } } });
 };

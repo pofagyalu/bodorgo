@@ -1,11 +1,15 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 
-// Angular 20 defaults components to standalone: true; this can no longer
-// be declared in AuthModule (see auth.module.ts).
+// The emergency login's page, and nothing else: only when the server runs
+// with LOCAL_LOGIN=true (its .env, during a restore) - the role manager's
+// e-mail and password. Normally logging in goes straight to the provider
+// (header's "Gyere bé!"), and whoever comes here - by an old link, typing
+// it - is taken to the landing page. A refused login is said there too
+// (pages/home, login-refusals.ts).
 @Component({
   selector: 'app-login',
   imports: [FormsModule],
@@ -14,41 +18,22 @@ import { NotificationsService } from '../../notifications/notifications.service'
 })
 export class LoginComponent implements OnInit {
   private authService = inject(AuthService);
-  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private notifications = inject(NotificationsService);
 
-  // Which login the server runs with: 'oidc' - on to Authentik; 'local' -
-  // e-mail and password here (LOCAL_LOGIN=true in its .env). Nothing is
-  // shown until it's known.
+  // Which login the server runs with: 'local' - the form here; 'oidc' (or
+  // the server can't be asked) - off to the landing page. Nothing is shown
+  // until it's known.
   mode = signal<'oidc' | 'local' | null>(null);
   email = signal('');
   password = signal('');
   loggingIn = signal(false);
 
   ngOnInit() {
-    // authOidcController.js's callback() redirects here with this query
-    // param when Authentik let someone in whom no admin has added in the
-    // app (Klub → Felhasználók) - no session was created.
-    const error = this.route.snapshot.queryParamMap.get('error');
-    if (error === 'not-invited') {
-      this.notifications.addError(
-        'Még nem vagy felvéve a klub alkalmazásába - kérd meg egy admint, hogy vegyen fel.',
-      );
-    }
-    // The provider doesn't say their e-mail address is confirmed, and it is
-    // set to let in only those it does (Beállítások → OIDC szolgáltató).
-    if (error === 'unverified-email') {
-      this.notifications.addError(
-        'Az e-mail címed még nincs megerősítve - erősítsd meg a belépéshez használt fiókodban, aztán próbáld újra.',
-      );
-    }
-    this.authService
-      .loginMode()
-      .subscribe((res) => this.mode.set(res.localLogin ? 'local' : 'oidc'));
-  }
-
-  continueWithAuthentik() {
-    this.authService.login();
+    this.authService.loginMode().subscribe((res) => {
+      this.mode.set(res.localLogin ? 'local' : 'oidc');
+      if (!res.localLogin) this.router.navigateByUrl('/', { replaceUrl: true });
+    });
   }
 
   logInWithPassword() {

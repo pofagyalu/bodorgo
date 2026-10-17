@@ -273,7 +273,7 @@ describe('logging in through another provider', () => {
     const id = await setUp();
     for (const email_verified of [false, undefined, 'true']) {
       const res = await loginAs({ sub: 'other-7', email: 'tag@test.local', email_verified });
-      expect(res.headers.location).toContain('login?error=unverified-email');
+      expect(res.headers.location).toContain('?error=unverified-email');
     }
     expect((await User.findById(known._id)).lastLoginAt).toBeUndefined();
 
