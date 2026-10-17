@@ -71,6 +71,58 @@ describe('tours: what everyone sees of the attendees', () => {
   });
 });
 
+// The address may only ask for what the app uses (utils/apiFeatures.js):
+// a startDate range, a sort, a page - no hidden fields, no other operators.
+describe('tours: what the list may be asked for', () => {
+  const list = async (query) => {
+    const res = await request(app)
+      .get(`/tours${query}`)
+      .set(asUser(await createMember()));
+    expect(res.status).toBe(200);
+    return res.body.data.tours;
+  };
+
+  it('hidden fields stay hidden, whatever the address says', async () => {
+    await createTour({ sourceFolder: '/volume1/titkos/mappa' });
+    const tours = await list('?fields=+sourceFolder,+reviews');
+    expect(tours).toHaveLength(1);
+    expect(JSON.stringify(tours)).not.toContain('titkos');
+    expect(tours[0].title).toBeTruthy();
+  });
+
+  it('only a date range filters - any other operator or field is ignored', async () => {
+    await createTour({ title: 'Idei', startDate: new Date('2025-07-01') });
+    await createTour({ title: 'Tavalyi', startDate: new Date('2024-07-01') });
+    expect(await list('?title.regex=(a%2B)%2B%24')).toHaveLength(2);
+    expect(await list('?title=Idei&order.ne=1&maxCapacity.gt=5')).toHaveLength(2);
+    const year = await list('?startDate.gte=2025-01-01T00:00:00&startDate.lt=2026-01-01T00:00:00');
+    expect(year.map((t) => t.title)).toEqual(['Idei']);
+    expect(await list('?startDate.gte=nem-datum')).toHaveLength(2);
+  });
+
+  it('sorts by order or start date only; the page size is capped', async () => {
+    await createTour({ title: 'Első', order: 1, startDate: new Date('2025-08-01') });
+    await createTour({ title: 'Második', order: 2, startDate: new Date('2025-06-01') });
+    const titles = async (q) => (await list(q)).map((t) => t.title);
+    expect(await titles('')).toEqual(['Második', 'Első']);
+    expect(await titles('?sort=-startDate')).toEqual(['Első', 'Második']);
+    // A hidden field to sort by, or the same key twice: the default.
+    expect(await titles('?sort=sourceFolder')).toEqual(['Második', 'Első']);
+    expect(await titles('?sort=order&sort=-order')).toEqual(['Második', 'Első']);
+    expect(await titles('?limit=1&page=2')).toEqual(['Első']);
+    expect(await titles('?limit=999999')).toHaveLength(2);
+    expect(await titles('?limit=-5&page=x')).toHaveLength(2);
+  });
+
+  it('the last three are still the three newest', async () => {
+    for (const order of [1, 2, 3, 4]) await createTour({ title: `T${order}`, order });
+    const res = await request(app)
+      .get('/tours/last-3')
+      .set(asUser(await createMember()));
+    expect(res.body.data.tours.map((t) => t.title)).toEqual(['T4', 'T3', 'T2']);
+  });
+});
+
 describe('tours: public ticker', () => {
   it('works logged out and shows only the ticker fields of the next tour', async () => {
     await createTour({ title: 'Régi', startDate: new Date(Date.now() - 400 * 24 * 3600 * 1000) });

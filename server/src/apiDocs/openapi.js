@@ -1373,12 +1373,12 @@ const paths = {
       tag: T.tours,
       summary: 'All tours',
       description:
-        "With attendee counts - no reservations (who is on a tour: `/tours/{id}`). Supports filtering/sorting/paging with query parameters (`sort`, `fields`, `page`, `limit`, `field[gte]=`…). Each tour carries its `weatherOutlook` once it has one (the tour card's pill) - the forecast of the tours starting within 15 days is brought up to date first, at most every 6 hours.",
+        "With attendee counts - no reservations (who is on a tour: `/tours/{id}`). Only these query parameters are read, anything else in the address is ignored: `startDate.gte`/`.gt`/`.lte`/`.lt` (a date), `sort`, `page`, `limit` - no field selection and no other operators. Each tour carries its `weatherOutlook` once it has one (the tour card's pill) - the forecast of the tours starting within 15 days is brought up to date first, at most every 6 hours.",
       params: [
-        query('sort', 'e.g. `-startDate`'),
-        query('fields', 'Only these fields, comma-separated.'),
-        query('page', 'Page number.', { type: 'integer' }),
-        query('limit', 'Page size.', { type: 'integer' }),
+        query('sort', '`order`, `startDate`, or either with `-` (newest first). Default `-order`.'),
+        query('startDate.gte', 'From this date (also `.gt`, `.lte`, `.lt`).'),
+        query('page', 'Page number (from 1).', { type: 'integer' }),
+        query('limit', 'Page size, at most 100 (the default).', { type: 'integer' }),
       ],
       data: obj({ tours: arrayOf(ref('Tour')) }),
     }),

@@ -357,19 +357,8 @@ describe('reading tours', () => {
       maxAge: 30,
     });
   });
-
-  it('supports filtering, sorting, field selection and paging on the list', async () => {
-    await createTour({ title: 'A', duration: 2 });
-    await createTour({ title: 'B', duration: 5 });
-    const member = await createMember();
-    // (Bracket filters like duration[gte]=3 aren't parsed by Express 5's
-    // default query parser - unused by the app, so not tested here.)
-    const res = await request(app)
-      .get('/tours?duration=5&sort=-duration&fields=title,duration&page=1&limit=5')
-      .set(asUser(member));
-    expect(res.status).toBe(200);
-    expect(res.body.data.tours.map((t) => t.title)).toEqual(['B']);
-  });
+  // The list's query (filter, sort, page): tours.test.js's "what the list
+  // may be asked for".
 });
 
 describe('editing and deleting tours (admin)', () => {
