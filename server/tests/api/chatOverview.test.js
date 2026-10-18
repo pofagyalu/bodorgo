@@ -42,10 +42,10 @@ describe("a tour's chat closes at midnight after its last day", () => {
     );
   });
 
-  it('the test tour (11) is past like any other, but stays writable', () => {
+  it('tour 11 (where the chat was tried out) closes like any other past tour', () => {
     const eleven = { order: 11, startDate: daysAgo(400), duration: 3 };
     expect(tourChatPast(eleven)).toBe(true);
-    expect(tourChatClosed(eleven)).toBe(false);
+    expect(tourChatClosed(eleven)).toBe(true);
   });
 });
 

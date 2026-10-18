@@ -66,7 +66,7 @@ export class ChatList {
     return this.tours().map((tour) => ({
       past: byTour.get(tour._id)?.past ?? false,
       // Past, read-only and never written in: nothing will ever be said
-      // there - not listed. (The test tour's past chat, still writable, is.)
+      // there - not listed.
       silent: !byTour.get(tour._id)?.lastPost && (byTour.get(tour._id)?.closed ?? false),
       row: {
         key: tour._id,

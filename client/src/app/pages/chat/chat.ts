@@ -63,10 +63,6 @@ function storeRoomsWidth(width: number) {
   }
 }
 
-// The one past tour whose chat stays writable: the one the chat is tested
-// in. It's still listed among the archives.
-const ALWAYS_WRITABLE_TOUR_ORDER = 11;
-
 // A tour's chat is open until the tour is over - midnight after its last
 // day; from then on it's an archive, read-only (the server's rule -
 // chat/chatRooms.js).
@@ -117,17 +113,14 @@ export class Chat implements OnInit, OnDestroy {
   // Every tour, newest first, and the ones whose chat is open.
   allTours = signal<Tour[]>([]);
   visibleTours = computed(() => this.allTours().filter(isChatOpen));
-  // The past tours that were chatted in - archives, read-only (the test
-  // tour's is listed here too, though it can still be written in). A past
+  // The past tours that were chatted in - archives, read-only. A past
   // tour nobody ever wrote in isn't listed at all: nothing will ever be
   // said there.
   archivedTours = computed(() => {
     const written = new Set(
       (this.overview()?.tours ?? []).filter((t) => t.lastPost).map((t) => t.tourId),
     );
-    return this.allTours().filter(
-      (t) => !isChatOpen(t) && (written.has(t._id) || t.order === ALWAYS_WRITABLE_TOUR_ORDER),
-    );
+    return this.allTours().filter((t) => !isChatOpen(t) && written.has(t._id));
   });
   loaded = signal(false);
   readonly generalName = GENERAL_NAME;
@@ -144,7 +137,7 @@ export class Chat implements OnInit, OnDestroy {
   readOnly = computed(() => {
     const tour = this.selectedTour();
     if (!tour) return this.isGeneral() && !!this.generalOpensAt();
-    return !isChatOpen(tour) && tour.order !== ALWAYS_WRITABLE_TOUR_ORDER;
+    return !isChatOpen(tour);
   });
 
   // The general room is shut until the site's launch (the server says

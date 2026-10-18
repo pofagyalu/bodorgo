@@ -66,7 +66,7 @@ const OVERVIEW: ChatOverview = {
     { ...summary(), tourId: 'later', past: false, closed: false },
     { ...summary({ lastPost: lastPost() }), tourId: 'old', past: true, closed: true },
     { ...summary(), tourId: 'silent', past: true, closed: true },
-    { ...summary(), tourId: 'eleven', past: true, closed: false },
+    { ...summary(), tourId: 'eleven', past: true, closed: true },
   ],
 };
 
@@ -178,8 +178,8 @@ describe('Chat', () => {
     open();
     expect(page.allTours().map((t) => t._id)).toEqual(['later', 'next', 'eleven', 'old', 'silent']);
     expect(page.visibleTours().map((t) => t._id)).toEqual(['later', 'next']);
-    // a finished tour stays listed only if somebody wrote in it - or it's the 11th
-    expect(page.archivedTours().map((t) => t._id)).toEqual(['eleven', 'old']);
+    // a finished tour stays listed only if somebody wrote in it - the 11th too
+    expect(page.archivedTours().map((t) => t._id)).toEqual(['old']);
   });
 
   it('opens straight on the tour named in the address', () => {
@@ -194,11 +194,11 @@ describe('Chat', () => {
     expect(page.formatDate(NEXT)).toBe(`${Y + 1}. júl. 10.`);
   });
 
-  it("makes a finished tour's chat read-only, except the 11th", () => {
+  it("makes a finished tour's chat read-only - the 11th's too", () => {
     open({ tabor: 'old' });
     expect(page.readOnly()).toBe(true);
     page.selectTour('eleven');
-    expect(page.readOnly()).toBe(false);
+    expect(page.readOnly()).toBe(true);
   });
 
   it('counts unread messages, but not in the room that is on screen', () => {
@@ -409,7 +409,7 @@ describe('ChatList', () => {
   it('lists the coming tours soonest first and the finished ones newest first', () => {
     expect(list.active().map((r) => r.key)).toEqual(['next', 'later']);
     // a finished tour nobody wrote in is left out once its chat is closed
-    expect(list.archived().map((r) => r.key)).toEqual(['eleven', 'old']);
+    expect(list.archived().map((r) => r.key)).toEqual(['old']);
     expect(list.generalRow().summary?.unread).toBe(2);
     expect(list.showGeneral()).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Bükk');
