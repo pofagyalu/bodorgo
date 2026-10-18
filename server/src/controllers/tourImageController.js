@@ -161,10 +161,37 @@ export const setImageRestricted = async (req, res) => {
 // response via archiver - never written to a temp file on disk. A
 // restricted photo the requester can't view is simply left out, same as
 // the list endpoint.
+//
+// A whole album's originals load the NAS's disk and the home line's
+// upload for minutes: one at a time per person, at most ZIPS_AT_ONCE in
+// all. The link opens a new tab, so a "busy" is a small page there, not
+// an error's JSON.
+const ZIPS_AT_ONCE = 2;
+// user id -> 1 while theirs is going (exported for the tests).
+export const zipsRunning = new Map();
+const zipBusyPage = (message) =>
+  `<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Album letöltése</title></head>` +
+  `<body style="font-family:sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem;color:#23354a;line-height:1.5">` +
+  `<h1 style="font-size:1.3rem">Album letöltése</h1><p>${message}</p><p>Ezt a lapot bezárhatod.</p></body></html>`;
+
 export const downloadTourImagesZip = async (req, res) => {
   const tour = await Tour.findById(req.params.tourId).select('+images +sourceFolder title slug');
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
+  }
+
+  const userId = String(req.user._id);
+  if (zipsRunning.has(userId)) {
+    return res
+      .status(429)
+      .type('html')
+      .send(zipBusyPage('Már töltesz le egy albumot – várd meg, amíg az elkészül.'));
+  }
+  if (zipsRunning.size >= ZIPS_AT_ONCE) {
+    return res
+      .status(429)
+      .type('html')
+      .send(zipBusyPage('Most épp mások is töltenek le albumot – próbáld újra pár perc múlva.'));
   }
 
   const canSeeRestricted = await canViewRestrictedImages(req.user, req.params.tourId);
@@ -175,6 +202,10 @@ export const downloadTourImagesZip = async (req, res) => {
   }
 
   const baseDir = path.resolve(config.photosRoot, tour.sourceFolder);
+
+  // Theirs, until it's sent - or they close the tab.
+  zipsRunning.set(userId, 1);
+  res.on('close', () => zipsRunning.delete(userId));
 
   res.attachment(`${tour.slug || tour.title}-fenykepek.zip`);
 

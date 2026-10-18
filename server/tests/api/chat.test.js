@@ -123,6 +123,27 @@ describe('chat rooms', () => {
     expect(c.history.posts).toHaveLength(1);
   });
 
+  it('a message is at most 1000 characters - new or edited', async () => {
+    const tour = await createTour();
+    const roomId = String((await tourChatRoom(tour._id))._id);
+    const a = await joined(await createMember(), roomId);
+
+    const refused = next(a.socket, 'chat-error');
+    a.socket.emit('create-post', { chatRoomId: roomId, text: 'x'.repeat(1001) });
+    expect(await refused).toBe('Egy üzenet legfeljebb 1000 karakter lehet.');
+    expect(await Post.countDocuments({ chatRoomId: roomId })).toBe(0);
+
+    const created = next(a.socket, 'new-post');
+    a.socket.emit('create-post', { chatRoomId: roomId, text: 'y'.repeat(1000) });
+    const post = await created;
+    expect(post.text).toHaveLength(1000);
+
+    const tooLong = next(a.socket, 'chat-error');
+    a.socket.emit('edit-post', { postId: post._id, text: 'z'.repeat(1001) });
+    expect(await tooLong).toBe('Egy üzenet legfeljebb 1000 karakter lehet.');
+    expect((await Post.findById(post._id)).text).toHaveLength(1000);
+  });
+
   it('after leaving a chat room, its messages no longer arrive', async () => {
     const tour = await createTour();
     const roomId = String((await tourChatRoom(tour._id))._id);

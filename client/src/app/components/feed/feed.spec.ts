@@ -516,6 +516,16 @@ describe('Compose', () => {
     expect(compose.text()).toBe('');
   });
 
+  it('takes at most 1000 characters, and says how many near the end', () => {
+    expect(box.getAttribute('maxlength')).toBe('1000');
+    type('x'.repeat(899));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.char-count')).toBeNull();
+    type('x'.repeat(950));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.char-count').textContent.trim()).toBe('950/1000');
+  });
+
   it('does not send an empty message, a Shift+Enter, or while a photo is going up', () => {
     type('   ');
     compose.submit();

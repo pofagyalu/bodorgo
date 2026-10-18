@@ -52,6 +52,15 @@ describe('chat photos', () => {
     expect((await request(app).get(url)).status).toBe(401);
   });
 
+  it('a caption is at most 1000 characters, like a message', async () => {
+    const member = await createMember();
+    const room = await tourChatRoom((await createTour())._id);
+    const res = await send(member, room, { text: 'x'.repeat(1001) });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Egy üzenet legfeljebb 1000 karakter lehet.');
+    expect(await Post.countDocuments()).toBe(0);
+  });
+
   it('refuses a file that is not an image', async () => {
     const member = await createMember();
     const room = await tourChatRoom((await createTour())._id);

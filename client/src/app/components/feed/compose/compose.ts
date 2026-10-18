@@ -13,6 +13,9 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { shrinkImage } from '../../../shared/image-resize';
 
+// See compose's maxLength.
+export const CHAT_TEXT_MAX = 1000;
+
 // Someone who can be "@mentioned" in this tour's chat.
 export interface Mentionable {
   username: string;
@@ -31,6 +34,9 @@ const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerC
 })
 export class Compose {
   text = signal<string>('');
+  // The longest a message (or a photo's caption) may be - the server's
+  // limit too (postModel.js's POST_TEXT_MAX); the count shows near it.
+  readonly maxLength = CHAT_TEXT_MAX;
 
   // The tour's attendees with a username (not me) - typing "@" suggests them.
   mentionables = input<Mentionable[]>([]);

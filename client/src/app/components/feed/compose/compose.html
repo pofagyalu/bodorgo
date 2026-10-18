@@ -71,7 +71,11 @@
     (focus)="typing.set(true)"
     (blur)="typing.set(false); updateMentionQuery()"
     name="message"
+    [attr.maxlength]="maxLength"
   ></textarea>
+  @if (text().length > maxLength - 100) {
+    <span class="char-count">{{ text().length }}/{{ maxLength }}</span>
+  }
 
   <button type="submit" aria-label="Küldés" [disabled]="sending()">
     <mat-icon>{{ sending() ? 'hourglass_top' : 'send' }}</mat-icon>

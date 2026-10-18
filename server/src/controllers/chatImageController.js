@@ -1,7 +1,7 @@
 import fs from 'fs';
 import mongoose from 'mongoose';
 import multer from 'multer';
-import Post, { POST_POPULATE } from '../models/postModel.js';
+import Post, { POST_POPULATE, POST_TEXT_MAX, POST_TOO_LONG } from '../models/postModel.js';
 import User from '../models/userModel.js';
 import AppError from '../utils/appError.js';
 import logger from '../logger.js';
@@ -81,13 +81,9 @@ export const postChatImage = async (req, res) => {
       throw new AppError(`Ma már elküldtél ${limit} fotót – holnap újra küldhetsz.`, 429);
     }
 
-    const post = new Post({
-      chatRoomId: room._id,
-      creator: req.user._id,
-      text: String(req.body?.text ?? '')
-        .trim()
-        .slice(0, 4000),
-    });
+    const caption = String(req.body?.text ?? '').trim();
+    if (caption.length > POST_TEXT_MAX) throw new AppError(POST_TOO_LONG, 400);
+    const post = new Post({ chatRoomId: room._id, creator: req.user._id, text: caption });
     try {
       post.image = await saveChatImage(post._id, req.file.buffer);
     } catch (err) {
