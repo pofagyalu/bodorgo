@@ -263,6 +263,41 @@ describe('completing a payment', () => {
     expect(res.body.data.status).toBe('Expired');
   });
 
+  // The webhook or callback and the payer's own status check can come at
+  // the same moment, each having read the payment as not yet settled: the
+  // money is booked, the receipt sent, once.
+  it('Barion: the callback and the status check at the same moment settle it once', async () => {
+    const { member, reservation, paymentId } = await startedPayment('barion');
+    vi.mocked(sendResendEmail).mockClear();
+    // Barion answers a moment later - both have read the payment by then.
+    vi.mocked(getBarionPaymentState).mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+      return { Status: 'Succeeded' };
+    });
+    const [, status] = await Promise.all([
+      request(app).get('/payments/barion/callback?paymentId=barion-test'),
+      request(app).get(`/payments/${paymentId}/status`).set(asUser(member)),
+    ]);
+    vi.mocked(getBarionPaymentState).mockReset();
+    expect(status.body.data.status).toBe('Succeeded');
+    expect((await Reservation.findById(reservation._id)).attendees[0].paid).toBe(true);
+    const receipts = vi
+      .mocked(sendResendEmail)
+      .mock.calls.filter(([e]) => e.subject.includes('Előleg befizetve'));
+    expect(receipts).toHaveLength(1);
+  });
+
+  it('a late "expired" never undoes a success recorded a moment before', async () => {
+    const { member, paymentId } = await startedPayment('barion');
+    // While the status check waits for Barion, the callback settles it.
+    vi.mocked(getBarionPaymentState).mockImplementationOnce(async () => {
+      await Payment.updateOne({ _id: paymentId }, { status: 'Succeeded' });
+      return { Status: 'Expired' };
+    });
+    await request(app).get(`/payments/${paymentId}/status`).set(asUser(member));
+    expect((await Payment.findById(paymentId)).status).toBe('Succeeded');
+  });
+
   it('only the payer may see the status; receipts for the payer or an admin', async () => {
     const { paymentId, admin } = await startedPayment();
     const other = await createMember();
@@ -417,6 +452,27 @@ describe('membership dues', () => {
 
     vi.mocked(retrieveCheckoutSession).mockResolvedValueOnce({ payment_status: 'paid' });
     await request(app).get(`/payments/${payment._id}/status`).set(asUser(member));
+    const income = await Transaction.find({ user: member._id, membershipYear: thisYear });
+    expect(income).toHaveLength(1);
+  });
+
+  it('two status checks at the same moment book the dues once', async () => {
+    const member = await createMember({ memberSince: thisYear, lastLoginAt: new Date() });
+    await createAdmin();
+    const res = await request(app)
+      .post('/payments/membership/start')
+      .set(asUser(member))
+      .send({ items: [{ userId: member._id, year: thisYear }] });
+    const paymentId = res.body.data.paymentId;
+    vi.mocked(retrieveCheckoutSession).mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+      return { payment_status: 'paid' };
+    });
+    await Promise.all([
+      request(app).get(`/payments/${paymentId}/status`).set(asUser(member)),
+      request(app).get(`/payments/${paymentId}/status`).set(asUser(member)),
+    ]);
+    vi.mocked(retrieveCheckoutSession).mockReset();
     const income = await Transaction.find({ user: member._id, membershipYear: thisYear });
     expect(income).toHaveLength(1);
   });

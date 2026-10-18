@@ -728,13 +728,20 @@ async function markMembershipPaid(payment) {
 
 // Marks the payment itself as Succeeded and applies whichever purpose-
 // specific effect actually means "this money has been received" - shared
-// by both the webhook and the user-facing status check below, since
-// either can be the one that first learns the payment succeeded
-// (whichever happens first wins; the other finds status already updated
-// and does nothing further).
+// by the Stripe webhook, the Barion callback and the user-facing status
+// check below, since any of them can be the one that first learns the
+// payment succeeded. They can come at the same moment, each having read
+// the payment as not yet settled: the status is claimed in one step, and
+// only the one that claimed it books the money, sends the receipt and the
+// e-mails - the others do nothing (once they all did it: dues twice in
+// Pénzügyek, two receipts).
 async function markPaymentSucceeded(payment) {
+  const claimed = await Payment.updateOne(
+    { _id: payment._id, status: { $ne: 'Succeeded' } },
+    { $set: { status: 'Succeeded' } },
+  );
   payment.status = 'Succeeded';
-  await payment.save();
+  if (!claimed.modifiedCount) return;
 
   if (payment.purpose === 'membershipFee') {
     await markMembershipPaid(payment);
@@ -797,6 +804,14 @@ async function markPaymentSucceeded(payment) {
   }
 }
 
+// The gateway says the payment expired or was called off - only while it
+// is still Started: a success recorded a moment ago by another path is
+// never overwritten.
+async function markPaymentEnded(payment, status) {
+  const ended = await Payment.updateOne({ _id: payment._id, status: 'Started' }, { status });
+  if (ended.modifiedCount) payment.status = status;
+}
+
 // POST /payments/stripe/webhook - no auth (Stripe calls this server-to-
 // server), but signature-verified instead - see app.js's own comment on
 // why this one route needs the raw request body rather than the
@@ -843,8 +858,7 @@ export const barionCallback = async (req, res) => {
         (state.Status === 'Expired' || state.Status === 'Canceled') &&
         payment.status !== 'Expired'
       ) {
-        payment.status = state.Status === 'Canceled' ? 'Canceled' : 'Expired';
-        await payment.save();
+        await markPaymentEnded(payment, state.Status === 'Canceled' ? 'Canceled' : 'Expired');
       }
     } catch (err) {
       logger.error(
@@ -882,8 +896,7 @@ export const getPaymentStatus = async (req, res) => {
         (state.Status === 'Expired' || state.Status === 'Canceled') &&
         payment.status !== 'Expired'
       ) {
-        payment.status = state.Status === 'Canceled' ? 'Canceled' : 'Expired';
-        await payment.save();
+        await markPaymentEnded(payment, state.Status === 'Canceled' ? 'Canceled' : 'Expired');
       }
     } else {
       const session = await retrieveCheckoutSession(
@@ -893,8 +906,7 @@ export const getPaymentStatus = async (req, res) => {
       if (session.payment_status === 'paid' && payment.status !== 'Succeeded') {
         await markPaymentSucceeded(payment);
       } else if (session.status === 'expired' && payment.status !== 'Expired') {
-        payment.status = 'Expired';
-        await payment.save();
+        await markPaymentEnded(payment, 'Expired');
       }
     }
   }
