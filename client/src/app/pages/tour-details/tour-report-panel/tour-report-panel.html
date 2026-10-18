@@ -1,8 +1,4 @@
-<div
-  class="report-backdrop"
-  (mousedown)="pressedOutside = $event.target === $event.currentTarget"
-  (click)="backdropClick($event)"
->
+<div class="report-backdrop" (mousedown)="notePress($event)" (click)="backdropClick($event)">
   <div
     class="report-panel"
     (click)="$event.stopPropagation()"

@@ -1534,7 +1534,11 @@ describe('TourReportPanel', () => {
     const inside: HTMLElement = fixture.nativeElement.querySelector('.report-head');
 
     // Pressed in the window, let go outside: the click lands on the backdrop.
-    inside.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    // The press itself goes on as it is - cancelled, no text box in the
+    // window could take the cursor (2026-10-18).
+    const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    inside.dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(false);
     backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await settle();
     expect(closed).not.toHaveBeenCalled();
