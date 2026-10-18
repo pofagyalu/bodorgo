@@ -21,7 +21,7 @@
   }
 
   @if (media.loading() && !media.categories().length) {
-    <p class="empty-note">Betöltés...</p>
+    <app-loading size="large" />
   } @else if (media.error()) {
     <p class="empty-note">Nem sikerült betölteni a videókat.</p>
   } @else if (!media.categories().length) {

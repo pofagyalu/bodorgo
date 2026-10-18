@@ -14,6 +14,7 @@ import { TourSocketService } from '../../../services/tour-socket';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { Avatar } from '../../../components/avatar/avatar';
 
+import { Loading } from '../../../shared/loading/loading';
 // The chat page's Szobabeosztás panel: the selected tour's houses/rooms
 // (set up in the tour edit page's Szállás section) with who sleeps where.
 // An admin drags people between the "no room yet" list and the rooms (or,
@@ -24,7 +25,7 @@ import { Avatar } from '../../../components/avatar/avatar';
 @Component({
   selector: 'app-room-board',
   standalone: true,
-  imports: [RouterLink, MatIconModule, CdkDropListGroup, CdkDropList, CdkDrag, Avatar],
+  imports: [Loading, RouterLink, MatIconModule, CdkDropListGroup, CdkDropList, CdkDrag, Avatar],
   templateUrl: './room-board.html',
   styleUrl: './room-board.scss',
 })

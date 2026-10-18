@@ -110,7 +110,7 @@ describe('LoginSessions (Profilom → Bejelentkezések)', () => {
     await fixture.componentInstance.logOut();
     // While it runs: the spinner and the "please wait".
     fixture.detectChanges();
-    expect(el.querySelector('.logout-others app-spinner')).toBeTruthy();
+    expect(el.querySelector('.logout-others app-loading-spinner')).toBeTruthy();
     expect(el.querySelector('.busy-note')?.textContent).toContain('kérlek, várj');
     respond({
       'POST /auth/sessions/logout-others': { data: { appEnded: 2, authentikEnded: 5 } },

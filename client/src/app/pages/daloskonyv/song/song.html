@@ -253,7 +253,7 @@
   @if (notFound()) {
     <p class="note">Nincs ilyen dal a daloskönyvben.</p>
   } @else if (!song()) {
-    <p class="note">Betöltés…</p>
+    <app-loading size="large" />
   } @else {
     <!-- A finger drawn sideways across the song turns to the next one (to
          the left) or the one before (to the right) - song.ts's swipe*. The
@@ -450,7 +450,7 @@
               [showDiagrams]="showDiagrams()"
             />
           } @else {
-            <p class="note">Betöltés…</p>
+            <app-loading />
           }
         </article>
       }

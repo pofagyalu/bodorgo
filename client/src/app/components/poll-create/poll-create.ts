@@ -26,6 +26,7 @@ import { Tour } from '../../services/tour';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { lazyStyle } from '../../shared/lazy-style';
 
+import { Loading } from '../../shared/loading/loading';
 // datetime-local wants "YYYY-MM-DDTHH:mm" in local time.
 function toLocalInput(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -55,7 +56,7 @@ function defaultDeadline(): string {
 //   Voks's create button is theirs).
 @Component({
   selector: 'app-poll-create',
-  imports: [FormsModule, MatIconModule],
+  imports: [Loading, FormsModule, MatIconModule],
   templateUrl: './poll-create.html',
   styleUrl: './poll-create.scss',
 })

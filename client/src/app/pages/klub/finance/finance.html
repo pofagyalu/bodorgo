@@ -136,12 +136,11 @@
           @if (!filteredTransactions().length) {
             <tr>
               <td colspan="5" class="empty-row">
-                {{
-                  loading()
-                    ? 'Betöltés...'
-                    : 'Erre az időszakra még nincs
-              rögzített tétel.'
-                }}
+                @if (loading()) {
+                  <app-loading />
+                } @else {
+                  Erre az időszakra még nincs rögzített tétel.
+                }
               </td>
             </tr>
           } @else {

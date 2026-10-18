@@ -2,6 +2,7 @@ import { Component, HostListener, inject, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Tour, TourImage, TourService } from '../../../../../services/tour';
 
+import { Loading } from '../../../../../shared/loading/loading';
 // A photo of a tour's album, picked.
 export interface PickedTourPhoto {
   tourId: string;
@@ -13,7 +14,7 @@ export interface PickedTourPhoto {
 // of its photos. Laid over the editor; it only says what was picked.
 @Component({
   selector: 'app-quiz-photo-picker',
-  imports: [MatIconModule],
+  imports: [Loading, MatIconModule],
   templateUrl: './photo-picker.html',
   styleUrl: './photo-picker.scss',
 })

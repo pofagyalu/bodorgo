@@ -45,7 +45,11 @@
       </li>
     } @empty {
       <li class="empty-note">
-        {{ music.loading() ? 'Betöltés...' : (music.error() ?? 'Üres a lista.') }}
+        @if (music.loading()) {
+          <app-loading />
+        } @else {
+          {{ music.error() ?? 'Üres a lista.' }}
+        }
       </li>
     }
   </ol>

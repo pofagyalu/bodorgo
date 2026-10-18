@@ -16,7 +16,7 @@
     </div>
 
     @if (loading()) {
-      <p class="empty-note">Betöltés...</p>
+      <app-loading />
     } @else {
       <table class="fee-table">
         <thead>
@@ -150,7 +150,7 @@
         </button>
       </div>
     } @else {
-      <p class="empty-note">Betöltés...</p>
+      <app-loading />
     }
   </section>
 
@@ -168,7 +168,7 @@
     </div>
     <div class="reminder">
       @if (reminderLoading()) {
-        <p class="empty-note">Betöltés...</p>
+        <app-loading />
       } @else {
         <label class="reminder-switch">
           <input

@@ -7,6 +7,7 @@ import { formatForint } from '../../shared/format';
 import { PayProviderPicker } from '../../shared/pay-provider-picker/pay-provider-picker';
 import { PAYMENT_METHOD_NAMES, PaymentMethodKey } from '../../services/settings';
 
+import { Loading } from '../../shared/loading/loading';
 // Advance-payment page for one family (or a lone attendee with no family
 // on record) at a time - reached via the tour-details page's "Előleg
 // befizetés" button, which only ever appears once the logged-in user is
@@ -26,7 +27,7 @@ import { PAYMENT_METHOD_NAMES, PaymentMethodKey } from '../../services/settings'
 @Component({
   selector: 'app-payment',
   standalone: true,
-  imports: [RouterLink, PayProviderPicker],
+  imports: [Loading, RouterLink, PayProviderPicker],
   templateUrl: './payment.html',
   styleUrl: './payment.scss',
 })

@@ -25,6 +25,7 @@ import { TourCountdown } from '../../shared/tour-countdown/tour-countdown';
 import { PushService } from '../../services/push';
 import { NotificationsService } from '../../notifications/notifications.service';
 
+import { Loading } from '../../shared/loading/loading';
 // What the general room is called.
 const GENERAL_NAME = 'Bódorgók';
 // Below this width there's no sidebar: the list of chats is a screen of its
@@ -89,6 +90,7 @@ const GENERAL = 'general';
 @Component({
   selector: 'app-chat',
   imports: [
+    Loading,
     Feed,
     MatIconModule,
     RoomBoard,

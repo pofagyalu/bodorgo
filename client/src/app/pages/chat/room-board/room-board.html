@@ -12,7 +12,7 @@
 </div>
 
 @if (!loaded()) {
-  <p class="board-sub">Betöltés...</p>
+  <app-loading />
 } @else if (houses().length) {
   <!-- Final or not - everyone sees it; only an admin can switch it -->
   <div class="status" [class.status--final]="finalized()">

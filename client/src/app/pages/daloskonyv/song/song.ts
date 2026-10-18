@@ -27,6 +27,7 @@ import { ScreenAwake } from '../screen-awake';
 import { Metronome } from '../tempo';
 import { SONG_SEEN_MS, ViewTrackerService } from '../../../services/view-tracker';
 
+import { Loading } from '../../../shared/loading/loading';
 // The play button's paces, in rem per second at the normal letter size
 // (they grow with the letters): ▶, ▶▶, ▶▶▶.
 const PACES = [0, 0.6, 1.05, 1.7];
@@ -106,7 +107,7 @@ function scrollsSideways(el: HTMLElement | null, within: EventTarget | null) {
 
 @Component({
   selector: 'app-song',
-  imports: [RouterLink, MatIconModule, SongSheet],
+  imports: [Loading, RouterLink, MatIconModule, SongSheet],
   templateUrl: './song.html',
   styleUrl: './song.scss',
 })

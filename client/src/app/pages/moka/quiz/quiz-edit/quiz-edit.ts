@@ -32,6 +32,7 @@ import { QuizPreview } from './quiz-preview/quiz-preview';
 import { blockPageZoom } from '../../../../shared/page-zoom';
 import { PickedSong, QuizSongPicker } from './song-picker/song-picker';
 
+import { Loading } from '../../../../shared/loading/loading';
 // A question in the editor always has all four answer slots: one left
 // empty simply isn't an answer (see toDraft).
 const blankQuestion = (): QuizQuestion => ({
@@ -125,6 +126,7 @@ const hasAnswers = (type: QuizQuestionType) => type !== 'truefalse' && type !== 
 @Component({
   selector: 'app-quiz-edit',
   imports: [
+    Loading,
     NgTemplateOutlet,
     RouterLink,
     MatIconModule,

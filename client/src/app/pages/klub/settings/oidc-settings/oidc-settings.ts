@@ -7,6 +7,7 @@ import { FreshLoginService } from '../../../../auth/fresh-login.service';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import { OidcSettings, SettingsService } from '../../../../services/settings';
 
+import { Loading } from '../../../../shared/loading/loading';
 // Klub → Beállítások → OIDC szolgáltató: where everybody logs in. The role
 // manager's alone (the server refuses anyone else too) - the settings page
 // shows this tab to no one else. A wrong value here locks everyone out,
@@ -23,7 +24,7 @@ const FRESH_LOGIN_REQUIRED = 'fresh-login-required';
 
 @Component({
   selector: 'app-oidc-settings',
-  imports: [FormsModule, MatIconModule],
+  imports: [Loading, FormsModule, MatIconModule],
   templateUrl: './oidc-settings.html',
   styleUrl: './oidc-settings.scss',
 })

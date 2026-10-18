@@ -5,6 +5,7 @@ import { ActivityChart } from '../../../components/activity-chart/activity-chart
 import { DeviceChart } from '../../../components/device-chart/device-chart';
 import { StatsDays, ViewStats, ViewTrackerService } from '../../../services/view-tracker';
 
+import { Loading } from '../../../shared/loading/loading';
 // One row of a top list, whatever its kind.
 interface TopRow {
   key: string;
@@ -29,7 +30,7 @@ interface TopList {
 // only: nobody is shown who looked at what.
 @Component({
   selector: 'app-statistics',
-  imports: [RouterLink, PeriodPicker, ActivityChart, DeviceChart],
+  imports: [Loading, RouterLink, PeriodPicker, ActivityChart, DeviceChart],
   templateUrl: './statistics.html',
   styleUrl: './statistics.scss',
 })

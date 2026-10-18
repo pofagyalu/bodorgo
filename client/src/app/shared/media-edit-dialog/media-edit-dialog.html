@@ -56,7 +56,7 @@
 
       @if (restricted()) {
         @if (membersLoading()) {
-          <p class="note">Tagok betöltése…</p>
+          <app-loading text="Tagok betöltése…" />
         } @else if (membersError()) {
           <p class="error">Nem sikerült betölteni a tagokat.</p>
         } @else {

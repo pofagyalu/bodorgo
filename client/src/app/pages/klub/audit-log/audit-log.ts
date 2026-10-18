@@ -6,6 +6,7 @@ import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
 import { LogFiles } from './log-files/log-files';
 import { AuditAction, AuditEntry, SettingsService } from '../../../services/settings';
 
+import { Loading } from '../../../shared/loading/loading';
 // What each kind of entry is called on its label.
 const ACTION_LABELS: Record<AuditAction, string> = {
   'role-change': 'Szerepkör',
@@ -28,7 +29,7 @@ type AuditTab = 'events' | 'files';
 // files (log-files) - in the address as ?lap=fajlok.
 @Component({
   selector: 'app-audit-log',
-  imports: [DatePipe, TabStrip, LogFiles],
+  imports: [Loading, DatePipe, TabStrip, LogFiles],
   templateUrl: './audit-log.html',
   styleUrl: './audit-log.scss',
 })

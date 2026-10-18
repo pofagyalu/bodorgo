@@ -1,0 +1,18 @@
+// Small: the ring beside the text, in the middle of its line.
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  color: #777;
+  font-style: italic;
+}
+
+// Large: a whole page loading - the ring above the text, with room around.
+:host(.large) {
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  font-style: normal;
+}

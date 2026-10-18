@@ -16,6 +16,7 @@ import { Poll, PollService } from '../../services/poll';
 import { TourSocketService } from '../../services/tour-socket';
 import { NotificationsService } from '../../notifications/notifications.service';
 
+import { Loading } from '../../shared/loading/loading';
 // One poll, the same in the chat and on the Voks page: tap an answer
 // to vote (tap another to change it), counts and bars, who voted what on
 // an open ('Nyílt') poll, progress towards a minimum ("3 / 5 fő"), the
@@ -24,7 +25,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 // happen (the server's 'poll-updated' socket event).
 @Component({
   selector: 'app-poll-card',
-  imports: [MatIconModule, RouterLink],
+  imports: [Loading, MatIconModule, RouterLink],
   templateUrl: './poll-card.html',
   styleUrl: './poll-card.scss',
 })

@@ -9,7 +9,7 @@
   </div>
 
   @if (loading()) {
-    <p class="empty-note">Betöltés...</p>
+    <app-loading size="large" />
   } @else {
     @if (user(); as u) {
       <div class="profile-banner">

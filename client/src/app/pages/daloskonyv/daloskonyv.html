@@ -292,7 +292,7 @@
     </nav>
 
     @if (songs() === null) {
-      <p class="list-note">Betöltés…</p>
+      <app-loading />
     } @else if (!songs()!.length) {
       <p class="list-note">Még nincs dal a daloskönyvben.</p>
     } @else if (!filtered().length) {

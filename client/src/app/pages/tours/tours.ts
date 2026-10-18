@@ -9,10 +9,11 @@ import { AuthService } from '../../auth/auth.service';
 import { fold } from '../daloskonyv/search';
 import { countryFound } from '../../shared/countries';
 
+import { Loading } from '../../shared/loading/loading';
 @Component({
   selector: 'app-tours',
   standalone: true,
-  imports: [TourCard, RouterLink, MatIconModule],
+  imports: [Loading, TourCard, RouterLink, MatIconModule],
   templateUrl: './tours.html',
   styleUrl: './tours.scss',
 })

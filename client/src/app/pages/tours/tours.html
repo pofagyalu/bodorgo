@@ -105,7 +105,11 @@
     @for (tour of filteredTours(); track tour.order; let i = $index) {
       <app-tour-card [tour]="tour" [priority]="i === 0" />
     } @empty {
-      <p class="list-note">{{ loadingAll() ? 'Betöltés...' : 'Nincs ilyen tábor.' }}</p>
+      @if (loadingAll()) {
+        <app-loading />
+      } @else {
+        <p class="list-note">Nincs ilyen tábor.</p>
+      }
     }
   </div>
 </div>

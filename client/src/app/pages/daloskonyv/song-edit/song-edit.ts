@@ -22,13 +22,14 @@ import { chordsOverLyrics } from '../paste-chords';
 import { allKeys, chordSignature, detectKey, keyName } from '../song-key';
 import { TEMPO_MAX, TEMPO_MIN, TapTempo, readTempo } from '../tempo';
 
+import { Loading } from '../../../shared/loading/loading';
 // The Daloskönyv's editor - a new song, or an existing one: its title
 // and artist, and the ChordPro text with the song drawn live beside
 // it (under it on a phone). Only for the role manager (song-edit.guard.ts;
 // the server checks too).
 @Component({
   selector: 'app-song-edit',
-  imports: [RouterLink, MatIconModule, SongSheet],
+  imports: [Loading, RouterLink, MatIconModule, SongSheet],
   templateUrl: './song-edit.html',
   styleUrl: './song-edit.scss',
 })

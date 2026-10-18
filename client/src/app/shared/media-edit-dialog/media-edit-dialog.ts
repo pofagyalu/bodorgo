@@ -13,6 +13,7 @@ import {
 import { MemberUser, MembershipService } from '../../services/membership';
 import { ToggleSwitch } from '../toggle-switch/toggle-switch';
 
+import { Loading } from '../loading/loading';
 export interface MediaEdit {
   title: string;
   // The only members who see it - empty: every member does.
@@ -27,7 +28,7 @@ export interface MediaEdit {
 // what `saved` gives it, and says how that goes through `saving` and `error`.
 @Component({
   selector: 'app-media-edit-dialog',
-  imports: [ToggleSwitch],
+  imports: [Loading, ToggleSwitch],
   templateUrl: './media-edit-dialog.html',
   styleUrl: './media-edit-dialog.scss',
 })

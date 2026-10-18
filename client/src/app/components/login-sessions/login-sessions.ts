@@ -7,7 +7,7 @@ import { FreshLoginService } from '../../auth/fresh-login.service';
 import { UserService } from '../../services/user';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { Spinner } from '../../shared/spinner/spinner';
+import { LoadingSpinner } from '../loading-spinner/loading-spinner';
 
 type Ended = { data: { appEnded: number; authentikEnded: number | null } };
 // Someone else's come without "this browser".
@@ -23,7 +23,7 @@ type Shown = Omit<Sessions, 'here'> & { here?: Sessions['here'] };
 //   identifying again (server userRoutes.js), into the Napló.
 @Component({
   selector: 'app-login-sessions',
-  imports: [DatePipe, MatIconModule, Spinner],
+  imports: [DatePipe, MatIconModule, LoadingSpinner],
   templateUrl: './login-sessions.html',
   styleUrl: './login-sessions.scss',
 })

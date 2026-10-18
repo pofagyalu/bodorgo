@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ChatOverview, ChatRoomSummary } from '../../../services/chat';
 import { Tour, TourService } from '../../../services/tour';
 
+import { Loading } from '../../../shared/loading/loading';
 // One line of the list: the general room or a tour's.
 interface Row {
   key: string; // 'general' or the tour's id
@@ -34,7 +35,7 @@ const fullDate = new Intl.DateTimeFormat('hu-HU', {
 // opens it (the chat page shows the room then).
 @Component({
   selector: 'app-chat-list',
-  imports: [MatIconModule, NgTemplateOutlet],
+  imports: [Loading, MatIconModule, NgTemplateOutlet],
   templateUrl: './chat-list.html',
   styleUrl: './chat-list.scss',
 })

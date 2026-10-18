@@ -6,6 +6,7 @@ import { environment } from '../../../../../environments/environment';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
 
+import { Loading } from '../../../../shared/loading/loading';
 // Felhasználók → Meghívók (admins): everyone added with an e-mail who has
 // never logged in gets their own Authentik invitation link by e-mail - one
 // by one (a test, a resend) or in the two batches: club members first,
@@ -26,7 +27,7 @@ const ROLE_NAMES = { admin: 'Admin', member: 'Klubtag', guest: 'Vendég' };
 
 @Component({
   selector: 'app-invitations-panel',
-  imports: [DatePipe, MatIconModule],
+  imports: [Loading, DatePipe, MatIconModule],
   templateUrl: './invitations-panel.html',
   styleUrl: './invitations-panel.scss',
 })

@@ -4,6 +4,7 @@ import { FreshLoginService } from '../../../../auth/fresh-login.service';
 import { PaymentService, StripePayout, StripePayoutState } from '../../../../services/payment';
 import { PaymentWallet } from '../../../../services/settings';
 
+import { Loading } from '../../../../shared/loading/loading';
 const STATUS_LABELS: Record<StripePayout['status'], string> = {
   paid: 'megérkezett',
   pending: 'elindítva',
@@ -20,7 +21,7 @@ const STATUS_LABELS: Record<StripePayout['status'], string> = {
 // its own).
 @Component({
   selector: 'app-stripe-payout',
-  imports: [DatePipe],
+  imports: [Loading, DatePipe],
   templateUrl: './stripe-payout.html',
   styleUrls: ['../barion-withdraw/barion-withdraw.scss', './stripe-payout.scss'],
   host: { '[hidden]': '!configured()' },
