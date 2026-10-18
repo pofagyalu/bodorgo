@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type Quill from 'quill';
+import { emojiHandler, registerEmojiIcon, wireEmojiButton } from '../../shared/quill-emoji';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import {
@@ -91,19 +92,25 @@ export class PollCreate implements OnInit, AfterViewInit {
 
   private async openEditor() {
     const [{ default: QuillEditor }] = await Promise.all([import('quill'), lazyStyle('quill')]);
+    registerEmojiIcon(QuillEditor);
     this.quill = new QuillEditor(this.detailsEl().nativeElement, {
       theme: 'snow',
       placeholder: 'Részletek, linkek, felsorolás… (nem kötelező)',
       modules: {
-        toolbar: [
-          ['bold', 'italic', 'underline', 'strike'],
-          [{ color: [] }, { background: [] }],
-          [{ list: 'ordered' }, { list: 'bullet' }],
-          ['link'],
-          ['clean'],
-        ],
+        toolbar: {
+          container: [
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ color: [] }, { background: [] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link'],
+            ['emoji'],
+            ['clean'],
+          ],
+          handlers: { emoji: emojiHandler },
+        },
       },
     });
+    wireEmojiButton(this.quill);
     const details = this.poll()?.details;
     if (details) this.quill.clipboard.dangerouslyPasteHTML(details, 'silent');
     this.quill.focus();

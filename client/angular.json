@@ -47,6 +47,11 @@
                 "bundleName": "quill",
                 "inject": false
               },
+              {
+                "input": "src/quill-emoji.scss",
+                "bundleName": "quill",
+                "inject": false
+              },
               "src/styles.scss"
             ],
             "scripts": [],
