@@ -348,7 +348,7 @@ describe('the scoring', () => {
     const old = (await answer(bela, on, 1)).body.data.game;
     expect(old.players.map((p) => p.bonus)).toEqual([0, 0]);
     const { results } = (await as(anna).get('/jatekok/quiz/leaderboard')).body.data;
-    expect(results.every((r) => r.points <= 1000)).toBe(true);
+    expect(results.every((r) => r.average <= 1000)).toBe(true);
 
     await next(host, waiting);
     await answer(bela, waiting, 0);
@@ -367,11 +367,13 @@ describe('the scoring', () => {
     expect(games.find((g) => g._id === waiting._id).winners.map((w) => w.score)).toEqual([
       1300, 1200,
     ]);
+    // Both games played, one question each: half of both games' points.
     const top = (await as(anna).get('/jatekok/quiz/leaderboard')).body.data.results;
-    expect(top.slice(0, 2).map((r) => [r.name, r.points])).toEqual([
-      ['Béla', 1300],
-      ['Anna', 1200],
+    expect(top.map((r) => [r.name, r.games, r.questions])).toEqual([
+      ['Béla', 2, 2],
+      ['Anna', 2, 2],
     ]);
+    expect(top.every((r) => r.points > 1200 && r.average === r.points / 2)).toBe(true);
   });
 });
 
@@ -404,12 +406,14 @@ describe('the games’ list and the leaderboard', () => {
       [2, 'Anna'],
     ]);
 
-    // The best results of all time: who, in which game, how many points.
+    // The best players of all time: once each, by points per question - a
+    // wrong answer counts as 0.
     const { results } = (await as(anna).get('/jatekok/quiz/leaderboard')).body.data;
-    expect(results.map((r) => [r.name, r.title, r.gameId, r.place, r.points > 500])).toEqual([
-      ['Béla', 'Táborok', played._id, 1, true],
-      ['Anna', 'Táborok', played._id, 2, false],
+    expect(results.map((r) => [r.name, r.games, r.questions, r.average > 500])).toEqual([
+      ['Béla', 1, 1, true],
+      ['Anna', 1, 1, false],
     ]);
+    expect(results[1]).toMatchObject({ points: 0, average: 0 });
   });
 });
 

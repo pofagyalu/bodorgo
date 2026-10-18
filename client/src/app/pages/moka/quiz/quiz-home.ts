@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Avatar } from '../../../components/avatar/avatar';
@@ -17,7 +17,7 @@ const PIN_LENGTH = 6;
 // who scored how much in which game) and every game played so far, the newest first, with its winners.
 @Component({
   selector: 'app-quiz-home',
-  imports: [RouterLink, DatePipe, MatIconModule, Avatar, QuizShape],
+  imports: [RouterLink, DatePipe, DecimalPipe, MatIconModule, Avatar, QuizShape],
   templateUrl: './quiz-home.html',
   styleUrl: './quiz-home.scss',
 })

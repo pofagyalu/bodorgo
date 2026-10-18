@@ -64,7 +64,9 @@
     </ul>
   }
 
-  <!-- The best results of all time: who, in which game, how many points. -->
+  <!-- The best players of all time, by points per question. How many games
+       and questions it's from: beside it on a big screen, under the name on
+       a phone. -->
   <h2><mat-icon>leaderboard</mat-icon> Ranglista <small>minden idők legjobbjai</small></h2>
   @if (leaders(); as list) {
     @if (list.length) {
@@ -74,12 +76,13 @@
             <tr>
               <th></th>
               <th class="left">Játékos</th>
-              <th class="left">Kvíz</th>
-              <th>Pont</th>
+              <th class="wide">Kvíz</th>
+              <th class="wide">Kérdés</th>
+              <th>Pont / kérdés</th>
             </tr>
           </thead>
           <tbody>
-            @for (r of list; track r.gameId + r.userId; let i = $index) {
+            @for (r of list; track r.userId; let i = $index) {
               <tr [class.me]="r.userId === myId">
                 <td class="rank">{{ i + 1 }}.</td>
                 <td class="left who">
@@ -89,13 +92,14 @@
                     [userId]="r.userId"
                     [photoVersion]="r.photoUpdatedAt"
                   />
-                  {{ r.name }}
+                  <span class="name">
+                    {{ r.name }}
+                    <small class="counts">{{ r.games }} kvíz · {{ r.questions }} kérdés</small>
+                  </span>
                 </td>
-                <td class="left">
-                  <a [routerLink]="r.gameId" class="quiz-link">{{ r.title }}</a>
-                  <small>{{ r.finishedAt | date: 'yyyy. MM. dd.' }}</small>
-                </td>
-                <td class="gold">{{ r.points }}</td>
+                <td class="wide">{{ r.games }}</td>
+                <td class="wide">{{ r.questions }}</td>
+                <td class="gold">{{ r.average | number: '1.1-1' }}</td>
               </tr>
             }
           </tbody>

@@ -563,11 +563,10 @@ describe('QuizHome', () => {
               userId: 'u2',
               name: 'Béla',
               photoUpdatedAt: null,
-              gameId: 'g1',
-              title: 'Táborok',
-              finishedAt: '2026-01-01T10:20:00Z',
-              place: 1,
-              points: 900,
+              average: 843.75,
+              points: 3375,
+              games: 2,
+              questions: 4,
             },
           ],
         },
@@ -587,7 +586,14 @@ describe('QuizHome', () => {
     expect(text).toContain('🥇 Béla');
     expect(text).toContain('Ranglista');
     const row = (fixture.nativeElement as HTMLElement).querySelector('.leaders tbody tr');
-    expect(row?.textContent?.replace(/\s+/g, ' ')).toContain('Béla Táborok2026. 01. 01.900');
+    // Points per question to one decimal; the games and questions it's
+    // from (under the name on a phone, their own columns on a big screen).
+    const cells = [...(row?.querySelectorAll('td') ?? [])].map((td) =>
+      td.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(cells.slice(0, 4)).toEqual(['1.', 'B Béla 2 kvíz · 4 kérdés', '2', '4']);
+    // (The app's own locale writes it 843,8.)
+    expect(cells[4]).toMatch(/^843[.,]8$/);
   });
 
   it('finds a game by its code - digits only', () => {
