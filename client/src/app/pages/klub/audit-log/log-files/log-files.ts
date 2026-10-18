@@ -4,6 +4,7 @@ import { PeriodOption, PeriodPicker } from '../../../../components/period-picker
 import { LogFileInfo, SettingsService } from '../../../../services/settings';
 import { ToggleSwitch } from '../../../../shared/toggle-switch/toggle-switch';
 
+import { Loading } from '../../../../shared/loading/loading';
 const STEP = 500; // lines loaded at a time
 const MAX_LINES = 5000; // the server's limit; the rest only by download
 
@@ -43,7 +44,7 @@ function dayLabel(date: string): string {
 // they hold e-mail and IP addresses (server logFilesController.js).
 @Component({
   selector: 'app-log-files',
-  imports: [MatIconModule, PeriodPicker, ToggleSwitch],
+  imports: [Loading, MatIconModule, PeriodPicker, ToggleSwitch],
   templateUrl: './log-files.html',
   styleUrl: './log-files.scss',
 })

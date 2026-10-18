@@ -12,7 +12,7 @@
 </label>
 
 @if (!overview()) {
-  <p class="note">Betöltés...</p>
+  <app-loading />
 } @else if (nothingFound()) {
   <p class="note">Nincs ilyen Kotyogó.</p>
 } @else {

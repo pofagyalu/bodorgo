@@ -10,12 +10,13 @@ import {
 } from '../../../../shared/birthday/birthday.service';
 import { AuthService } from '../../../../auth/auth.service';
 
+import { Loading } from '../../../../shared/loading/loading';
 // Klub → Beállítások → Értesítések: what the app sends by itself - the
 // yearly report, the birthday and rank greetings. One of the settings page's tabs
 // (settings.ts shows them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-app-settings',
-  imports: [FormsModule, MatIconModule],
+  imports: [Loading, FormsModule, MatIconModule],
   templateUrl: './app-settings.html',
   styleUrl: './app-settings.scss',
 })

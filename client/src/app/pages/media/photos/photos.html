@@ -21,7 +21,7 @@
   }
 
   @if (media.photosLoading() && !media.photoCategories().length) {
-    <p class="empty-note">Betöltés...</p>
+    <app-loading size="large" />
   } @else if (media.photosError()) {
     <p class="empty-note">Nem sikerült betölteni a fotókat.</p>
   } @else if (!media.photoCategories().length) {
@@ -112,7 +112,7 @@
             } @else if (albumFailed()) {
               <p class="empty-note">Nem sikerült betölteni az album fotóit.</p>
             } @else {
-              <p class="empty-note">Betöltés...</p>
+              <app-loading />
             }
           </section>
         </div>

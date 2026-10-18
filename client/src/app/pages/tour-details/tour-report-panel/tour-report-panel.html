@@ -22,7 +22,7 @@
 
     <div class="report-body">
       @if (loading()) {
-        <p class="empty">Betöltés...</p>
+        <app-loading />
       } @else if (report(); as r) {
         <!-- Where it stands: finished (read-only) or being edited. -->
         @if (isFinal()) {

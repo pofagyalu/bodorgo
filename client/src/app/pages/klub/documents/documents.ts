@@ -21,12 +21,13 @@ import { BookDiagrams, SongService } from '../../../services/song';
 import { TabOption, TabStrip } from '../../../components/tab-strip/tab-strip';
 import { fadeIn } from '../../../shared/fade-in';
 
+import { Loading } from '../../../shared/loading/loading';
 // The first tab's value: every category (no category is called this).
 const ALL_CATEGORIES = 'all';
 
 @Component({
   selector: 'app-klub-documents',
-  imports: [MatIconModule, TabStrip],
+  imports: [Loading, MatIconModule, TabStrip],
   templateUrl: './documents.html',
   styleUrl: './documents.scss',
 })

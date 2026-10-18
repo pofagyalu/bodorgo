@@ -9,13 +9,23 @@ import { SiteFooter } from '../../shared/site-footer/site-footer';
 import { BodorgoTerm } from '../../shared/bodorgo-term/bodorgo-term';
 import { PopularViews } from '../../components/popular-views/popular-views';
 
+import { Loading } from '../../shared/loading/loading';
 // How long the map waits for Népszerű at most.
 const POPULAR_WAIT_MS = 4000;
 
 @Component({
   selector: 'app-homepage',
   standalone: true,
-  imports: [MatIconModule, RouterLink, ToursMap, SiteFooter, AgeChart, BodorgoTerm, PopularViews],
+  imports: [
+    Loading,
+    MatIconModule,
+    RouterLink,
+    ToursMap,
+    SiteFooter,
+    AgeChart,
+    BodorgoTerm,
+    PopularViews,
+  ],
   templateUrl: './homepage.html',
   styleUrl: './homepage.scss',
 })

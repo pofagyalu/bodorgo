@@ -5,7 +5,7 @@
   </div>
 
   @if (loading()) {
-    <p class="note">Betöltés…</p>
+    <app-loading size="large" />
   } @else {
     <!-- novalidate: the browser's own checks (a title, the tempo's bounds)
          would stop the save without a word here - a small bubble at a field

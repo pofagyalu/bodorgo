@@ -69,7 +69,7 @@
       <p class="empty-note" role="alert">A naplót nem sikerült betölteni.</p>
     }
     @if (loading()) {
-      <p class="empty-note">Betöltés…</p>
+      <app-loading />
     } @else if (hasMore() || failed()) {
       <button type="button" class="audit-more" (click)="load()">
         {{ failed() ? 'Újra' : 'Régebbiek' }}

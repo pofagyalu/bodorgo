@@ -208,7 +208,11 @@
                       <span class="year">{{ tourYear(t) }}</span> {{ t.title }}
                     </button>
                   } @empty {
-                    <span class="hint">{{ tours() ? 'Nincs egy tábor sem.' : 'Betöltés…' }}</span>
+                    @if (tours()) {
+                      <span class="hint">Nincs egy tábor sem.</span>
+                    } @else {
+                      <app-loading />
+                    }
                   }
                 </div>
               }

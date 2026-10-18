@@ -75,7 +75,7 @@
 
   <button type="button" class="logout-others" [disabled]="busy()" (click)="logOut()">
     @if (busy()) {
-      <app-spinner />
+      <app-loading-spinner size="1.125rem" />
       Kijelentkeztetés folyamatban…
     } @else {
       <mat-icon>logout</mat-icon>

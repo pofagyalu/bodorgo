@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { SettingsService, WeatherOutlookRules } from '../../../../services/settings';
 import { OutlookPackIcon, WeatherCondition } from '../../../../services/tour';
 
+import { Loading } from '../../../../shared/loading/loading';
 const MONTHS = [
   'január',
   'február',
@@ -29,6 +30,7 @@ const percent = (share: number) => Math.round(share * 100);
 // here by itself.
 @Component({
   selector: 'app-weather-rules',
+  imports: [Loading],
   templateUrl: './weather-rules.html',
   styleUrl: './weather-rules.scss',
 })

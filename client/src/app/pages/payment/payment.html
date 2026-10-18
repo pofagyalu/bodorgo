@@ -1,6 +1,6 @@
 <div class="payment-page">
   @if (loading()) {
-    <p class="loading-note">Betöltés...</p>
+    <app-loading size="large" />
   } @else if (error()) {
     <p class="error-note">{{ error() }}</p>
   } @else {

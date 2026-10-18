@@ -9,6 +9,7 @@ import { PhotoEditor, PhotoChange } from '../../../components/photo-editor/photo
 import { HuDateInput } from '../../../shared/hu-date-input/hu-date-input';
 import { LoginSessions } from '../../../components/login-sessions/login-sessions';
 
+import { Loading } from '../../../shared/loading/loading';
 interface AddressForm {
   zipCode: string;
   city: string;
@@ -34,7 +35,7 @@ function emptyAddress(): AddressForm {
 // create mode, since there's no Authentik account yet to source it from.
 @Component({
   selector: 'app-member-edit',
-  imports: [Avatar, PhotoEditor, HuDateInput, LoginSessions],
+  imports: [Loading, Avatar, PhotoEditor, HuDateInput, LoginSessions],
   templateUrl: './member-edit.html',
   styleUrl: './member-edit.scss',
 })

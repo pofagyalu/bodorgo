@@ -30,6 +30,7 @@ import {
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
 
+import { Loading } from '../../../shared/loading/loading';
 // Média → Fotók: every category (/media/fotok), or just one
 // (/media/fotok/<folder>) as picked in the Média sidebar. A category is a
 // subfolder of the NAS's bódorgó_egyéb (found by the sidebar's "Új média
@@ -43,7 +44,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 // one heap.
 @Component({
   selector: 'app-media-photos',
-  imports: [MatIconModule, MediaEditDialog, NgTemplateOutlet, RouterLink, TabStrip],
+  imports: [Loading, MatIconModule, MediaEditDialog, NgTemplateOutlet, RouterLink, TabStrip],
   templateUrl: './photos.html',
   styleUrl: './photos.scss',
 })

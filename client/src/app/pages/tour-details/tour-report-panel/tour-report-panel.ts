@@ -18,6 +18,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { errorMessage } from '../../../shared/errors';
 import { ReportDayEditor } from '../report-day-editor/report-day-editor';
 
+import { Loading } from '../../../shared/loading/loading';
 const SAVE_DELAY_MS = 1500;
 
 type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
@@ -32,7 +33,7 @@ type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 // tourReportController.js).
 @Component({
   selector: 'app-tour-report-panel',
-  imports: [FormsModule, MatIconModule, DatePipe, ReportDayEditor],
+  imports: [Loading, FormsModule, MatIconModule, DatePipe, ReportDayEditor],
   templateUrl: './tour-report-panel.html',
   styleUrl: './tour-report-panel.scss',
 })

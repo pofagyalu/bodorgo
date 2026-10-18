@@ -45,12 +45,12 @@ import { TourParticipants } from './tour-participants/tour-participants';
 import { TourVideos } from './tour-videos/tour-videos';
 import { CoverPlaceholder } from '../../shared/cover-placeholder/cover-placeholder';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { LoadingSpinner } from '../../components/loading-spinner/loading-spinner';
-
+import { Loading } from '../../shared/loading/loading';
 @Component({
   selector: 'app-tour-details',
   standalone: true,
   imports: [
+    Loading,
     MatIconModule,
     RouterLink,
     TourSchedule,
@@ -62,7 +62,6 @@ import { LoadingSpinner } from '../../components/loading-spinner/loading-spinner
     TourSignup,
     TourExtras,
     FitLine,
-    LoadingSpinner,
   ],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',

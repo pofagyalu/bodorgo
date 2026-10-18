@@ -7,7 +7,7 @@
     <h1 class="page-title">{{ isEditMode ? 'Tábor szerkesztése' : 'Új tábor létrehozása' }}</h1>
 
     @if (loading()) {
-      <p class="loading-note">Betöltés...</p>
+      <app-loading size="large" />
     } @else {
       <form class="tour-form" (ngSubmit)="save()">
         <div class="form-row">

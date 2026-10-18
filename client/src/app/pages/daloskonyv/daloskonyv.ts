@@ -30,6 +30,7 @@ import { ANNEXES } from './annexes';
 import { LETTERS, fold, foundIn, hungarianLetter, letterOf, searchSongs, songsOf } from './search';
 import { SEARCH_SETTLE_MS, ViewTrackerService } from '../../services/view-tracker';
 
+import { Loading } from '../../shared/loading/loading';
 // Daloskönyv: the club's songbook - for everyone logged in. The table of
 // contents (searchable), and the chosen song beside it (song/song.ts, the
 // child route): on a phone the song takes the list's place, on a wide
@@ -37,6 +38,7 @@ import { SEARCH_SETTLE_MS, ViewTrackerService } from '../../services/view-tracke
 @Component({
   selector: 'app-daloskonyv',
   imports: [
+    Loading,
     PlaylistPicker,
     NgTemplateOutlet,
     RouterLink,

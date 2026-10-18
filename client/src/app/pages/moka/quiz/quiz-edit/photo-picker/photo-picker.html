@@ -28,7 +28,7 @@
           }
         </div>
       } @else {
-        <p class="empty">Betöltés…</p>
+        <app-loading />
       }
     } @else if (tours(); as list) {
       <!-- Every tour, the newest first. -->
@@ -44,7 +44,7 @@
         }
       </div>
     } @else {
-      <p class="empty">Betöltés…</p>
+      <app-loading />
     }
   </div>
 </div>

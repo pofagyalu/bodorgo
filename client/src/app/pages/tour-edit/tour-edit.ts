@@ -10,6 +10,7 @@ import { CropDialog } from '../../components/crop-dialog/crop-dialog';
 import { AccommodationEditor } from './accommodation-editor/accommodation-editor';
 import { COUNTRIES, HOME_COUNTRY } from '../../shared/countries';
 
+import { Loading } from '../../shared/loading/loading';
 interface TourEditForm {
   order: number | null;
   title: string;
@@ -106,7 +107,7 @@ function toDatetimeLocal(iso: string): string {
 @Component({
   selector: 'app-tour-edit',
   standalone: true,
-  imports: [FormsModule, RouterLink, CropDialog, AccommodationEditor, PayMethodIcon],
+  imports: [Loading, FormsModule, RouterLink, CropDialog, AccommodationEditor, PayMethodIcon],
   templateUrl: './tour-edit.html',
   styleUrl: './tour-edit.scss',
 })

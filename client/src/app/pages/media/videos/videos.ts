@@ -22,6 +22,7 @@ import { VideoPlayer } from '../../../shared/video-player/video-player';
 import { VideoSmallCopy } from '../../../shared/video-small-copy/video-small-copy';
 import { SmallCopyJob, VideoCopiesService } from '../../../services/video-copies';
 
+import { Loading } from '../../../shared/loading/loading';
 interface Playing {
   category: MediaVideoCategory;
   video: MediaVideo;
@@ -39,7 +40,15 @@ const EDGE_GAP = 8;
 
 @Component({
   selector: 'app-media-videos',
-  imports: [MatIconModule, MediaEditDialog, TabStrip, VideoCard, VideoPlayer, VideoSmallCopy],
+  imports: [
+    Loading,
+    MatIconModule,
+    MediaEditDialog,
+    TabStrip,
+    VideoCard,
+    VideoPlayer,
+    VideoSmallCopy,
+  ],
   templateUrl: './videos.html',
   styleUrl: './videos.scss',
 })

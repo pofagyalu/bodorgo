@@ -14,6 +14,7 @@ import { BankAccount } from '../bank-account/bank-account';
 import { BarionWithdraw } from '../barion-withdraw/barion-withdraw';
 import { StripePayoutCard } from '../stripe-payout/stripe-payout';
 
+import { Loading } from '../../../../shared/loading/loading';
 // Klub → Beállítások → Fizetések: the fee the payer pays on top
 // (Átutalási díjak), the two bank accounts the money goes to - Tagdíjak and
 // Előlegek, whichever gateway it came through (Kiutalási számlaadatok) - and
@@ -22,7 +23,7 @@ import { StripePayoutCard } from '../stripe-payout/stripe-payout';
 // only hidden).
 @Component({
   selector: 'app-payment-settings',
-  imports: [FormsModule, BankAccount, BarionWithdraw, StripePayoutCard],
+  imports: [Loading, FormsModule, BankAccount, BarionWithdraw, StripePayoutCard],
   templateUrl: './payment-settings.html',
   styleUrl: './payment-settings.scss',
 })

@@ -8,12 +8,13 @@ import {
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
 
+import { Loading } from '../../../../shared/loading/loading';
 // Klub → Beállítások → Tárhely: the room the photos take - the chat's, and
 // the picture cache. One of the settings page's tabs (settings.ts shows
 // them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-storage-settings',
-  imports: [FormsModule],
+  imports: [Loading, FormsModule],
   templateUrl: './storage-settings.html',
   styleUrl: './storage-settings.scss',
 })

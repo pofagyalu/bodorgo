@@ -13,6 +13,7 @@ import {
 import { WaterfallChart, WaterfallStep } from '../../../components/waterfall-chart/waterfall-chart';
 import { PeriodOption, PeriodPicker } from '../../../components/period-picker/period-picker';
 
+import { Loading } from '../../../shared/loading/loading';
 function formatMoney(amount: number, currency: TransactionCurrency = 'HUF'): string {
   const formatted = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 }).format(amount);
   return currency === 'EUR' ? `${formatted} €` : `${formatted} Ft`;
@@ -24,7 +25,7 @@ function today(): string {
 
 @Component({
   selector: 'app-finance',
-  imports: [DatePipe, MatIconModule, WaterfallChart, PeriodPicker],
+  imports: [Loading, DatePipe, MatIconModule, WaterfallChart, PeriodPicker],
   templateUrl: './finance.html',
   styleUrl: './finance.scss',
 })

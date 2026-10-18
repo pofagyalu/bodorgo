@@ -4,6 +4,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { MusicTrack, PLAYLIST_NAMES, PlaylistKey } from '../../../../../services/music-player';
 import { QuizService, QuizSong } from '../../../../../services/quiz';
 
+import { Loading } from '../../../../../shared/loading/loading';
 // A song picked for a question - and three others of the same playlist,
 // to offer as the wrong answers.
 export interface PickedSong {
@@ -23,7 +24,7 @@ const DECOYS = 3;
 // typed). Laid over the editor; it only says what was picked.
 @Component({
   selector: 'app-quiz-song-picker',
-  imports: [MatIconModule],
+  imports: [Loading, MatIconModule],
   templateUrl: './song-picker.html',
   styleUrl: './song-picker.scss',
 })

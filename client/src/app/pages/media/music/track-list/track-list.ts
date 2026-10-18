@@ -4,6 +4,7 @@ import { MusicPlayerService, MusicTrack } from '../../../../services/music-playe
 import { HoverPreview } from '../../../../shared/hover-preview';
 import { playTime } from '../playlist-page';
 
+import { Loading } from '../../../../shared/loading/loading';
 // Which page's look the list wears: Bódorgó FM's paper and brass, Buli's
 // dark track table (with a head row), Duruzsoló's evening (a candle flame
 // marks the song that's on, not the bouncing bars).
@@ -14,7 +15,7 @@ export type TrackListLook = 'radio' | 'party' | 'lounge';
 // in itself; the page around it sets its room.
 @Component({
   selector: 'app-track-list',
-  imports: [MatIconModule, HoverPreview],
+  imports: [Loading, MatIconModule, HoverPreview],
   templateUrl: './track-list.html',
   styleUrl: './track-list.scss',
   host: { '[class]': 'look()' },

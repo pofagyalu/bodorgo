@@ -9,6 +9,7 @@ import {
 } from '../../../../services/settings';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 
+import { Loading } from '../../../../shared/loading/loading';
 const MONTHS = [
   'január',
   'február',
@@ -34,7 +35,7 @@ interface FeeRow {
 // (settings.ts shows them; every tab stays in the DOM, only hidden).
 @Component({
   selector: 'app-club-settings',
-  imports: [FormsModule, MatIconModule],
+  imports: [Loading, FormsModule, MatIconModule],
   templateUrl: './club-settings.html',
   styleUrl: './club-settings.scss',
 })

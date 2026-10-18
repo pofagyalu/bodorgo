@@ -10,6 +10,7 @@ import { PollCreate } from '../../components/poll-create/poll-create';
 import { TabOption, TabStrip } from '../../components/tab-strip/tab-strip';
 import { PeriodOption, PeriodPicker } from '../../components/period-picker/period-picker';
 
+import { Loading } from '../../shared/loading/loading';
 // The tabs, each a filter on the polls (after the search and the tour).
 type PollFilter = 'all' | 'waiting' | 'open' | 'closed' | 'voted';
 const FILTERS: { value: PollFilter; label: string; test: (p: Poll) => boolean }[] = [
@@ -51,7 +52,7 @@ const byClosing = (a: Poll, b: Poll) => a.closesAt.localeCompare(b.closesAt);
 // (components/poll-create), with "Hol?" (Általános or a tour).
 @Component({
   selector: 'app-szavazasok',
-  imports: [MatIconModule, PollCard, PollCreate, TabStrip, PeriodPicker],
+  imports: [Loading, MatIconModule, PollCard, PollCreate, TabStrip, PeriodPicker],
   templateUrl: './szavazasok.html',
   styleUrl: './szavazasok.scss',
 })

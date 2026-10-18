@@ -29,7 +29,7 @@ describe('WeatherRules', () => {
   it('waits for the numbers', () => {
     open(null);
     expect(text('h2')).toEqual(['Bódorgó jóléti index']);
-    expect(text('.empty-note')).toEqual(['Betöltés…']);
+    expect(text('app-loading')).toEqual(['Betöltés...']);
     expect(el.querySelector('.rules-columns')).toBeNull();
   });
 
