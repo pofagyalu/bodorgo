@@ -258,23 +258,26 @@ h2 {
   }
 }
 
-// Which game the result is from, with its day under it.
-.quiz-link {
+// How many games and questions the average is from: under the name on a
+// phone, its own two columns on a big screen.
+.counts {
   display: block;
-  max-width: 16rem;
-  color: inherit;
-  font-weight: 650;
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #8a989f;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
 
-  &:hover {
-    text-decoration: underline;
+.leaders .wide {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .counts {
+    display: none;
   }
 
-  + small {
-    color: #8a989f;
-    font-size: 0.75rem;
+  .leaders .wide {
+    display: table-cell;
   }
 }
 

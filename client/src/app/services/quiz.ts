@@ -213,17 +213,16 @@ export interface QuizGameSummary {
   }[];
 }
 
-// One line of the leaderboard: someone's result in one game - the best
-// results of all time are listed.
+// One line of the leaderboard: a player over every finished game they
+// played - ranked by points per question.
 export interface QuizResult {
   userId: string;
   name: string;
   photoUpdatedAt: string | null;
-  gameId: string;
-  title: string; // the game's (its quiz's)
-  finishedAt: string;
-  place: number; // in that game
+  average: number; // points ÷ questions, unrounded
   points: number;
+  games: number;
+  questions: number; // in those games, answered or not
 }
 
 interface QuizResponse {
@@ -323,7 +322,7 @@ export class QuizService {
       .pipe(map((res) => res.data.games));
   }
 
-  // The best results of all time, the most points first.
+  // The best players of all time, the best points per question first.
   getLeaderboard(): Observable<QuizResult[]> {
     return this.http
       .get<{ data: { results: QuizResult[] } }>(`${this.apiUrl}/leaderboard`)

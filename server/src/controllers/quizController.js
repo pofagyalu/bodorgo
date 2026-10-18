@@ -561,35 +561,46 @@ export const getGames = async (req, res) => {
   res.status(200).json({ status: 'success', data: { games: games.map(gameSummary) } });
 };
 
-// GET /jatekok/quiz/leaderboard - the best results of all time: who scored
-// how much in which game, over every finished game - the most points
-// first (then the earlier game). A player is in it once for each game they
-// played.
+// GET /jatekok/quiz/leaderboard - the best players of all time: everyone
+// once, by their points per question over every finished game they played
+// (bonuses included; a question left unanswered or answered wrong counts
+// as 0) - so neither how many games nor how long they were matters. The
+// best average first; of two the same, whoever answered more questions.
 const LEADERBOARD_SIZE = 50;
 export const getLeaderboard = async (req, res) => {
   const games = await QuizGame.find({ status: 'finished' })
-    .select('title finishedAt players answers scoring questions.type')
+    .select('finishedAt players answers scoring questions.type')
     .populate({ path: 'players.user', select: PLAYER_SELECT });
 
-  const results = [];
+  // user id -> { user, points, games, questions }
+  const totals = new Map();
   for (const game of games) {
     const people = new Map(playersOf(game).map((p) => [refId(p.user), p.user]));
     for (const place of standings([...people.keys()], scoredAnswers(game))) {
-      const user = people.get(place.user);
-      results.push({
-        userId: place.user,
-        name: shownName(user),
-        photoUpdatedAt: user.photoUpdatedAt ?? null,
-        gameId: game._id,
-        title: game.title,
-        finishedAt: game.finishedAt,
-        // Where they finished in that game.
-        place: place.rank,
-        points: place.score,
-      });
+      const row = totals.get(place.user) ?? {
+        user: people.get(place.user),
+        points: 0,
+        games: 0,
+        questions: 0,
+      };
+      row.points += place.score;
+      row.games += 1;
+      row.questions += game.questions.length;
+      totals.set(place.user, row);
     }
   }
-  results.sort((a, b) => b.points - a.points || a.finishedAt - b.finishedAt);
+  const results = [...totals]
+    .filter(([, t]) => t.questions > 0)
+    .map(([userId, t]) => ({
+      userId,
+      name: shownName(t.user),
+      photoUpdatedAt: t.user.photoUpdatedAt ?? null,
+      average: t.points / t.questions,
+      points: t.points,
+      games: t.games,
+      questions: t.questions,
+    }))
+    .sort((a, b) => b.average - a.average || b.questions - a.questions);
   res
     .status(200)
     .json({ status: 'success', data: { results: results.slice(0, LEADERBOARD_SIZE) } });

@@ -4697,18 +4697,20 @@ const paths = {
       tag: T.games,
       summary: 'The quiz leaderboard',
       description:
-        'The best results of all time: who scored how much in which game, over every finished game. The most points first (then the earlier game), 50 at most. A player is in it once for each game they played.',
+        'The best players of all time: everyone once, by their points per question over every finished game they played - bonuses included, a question left unanswered or answered wrong counts as 0 - so neither how many games they played nor how many questions those had matters. The best average first; of two the same, whoever answered more questions. 50 at most.',
       data: obj({
         results: arrayOf(
           obj({
             userId: id(),
             name: str(),
             photoUpdatedAt: { type: ['string', 'null'] },
-            gameId: id('The game the result is from.'),
-            title: str('That game’s (its quiz’s) title.'),
-            finishedAt: date(),
-            place: int('Where they finished in that game.'),
-            points: int(),
+            average: {
+              type: 'number',
+              description: 'Points per question (points ÷ questions), unrounded.',
+            },
+            points: int('All their points, over those games.'),
+            games: int('How many finished games they played.'),
+            questions: int('How many questions those games had.'),
           }),
         ),
       }),
