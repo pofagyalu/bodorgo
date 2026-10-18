@@ -1,6 +1,5 @@
 import config from '../config.js';
 import logger from '../logger.js';
-import { hungarianFromSuffix } from './hungarianGrammar.js';
 
 // api.openrouteservice.org is deprecated in favor of api.heigit.org's
 // unified path structure (api.heigit.org/<service>/<version>/...) - the old
@@ -8,6 +7,24 @@ import { hungarianFromSuffix } from './hungarianGrammar.js';
 // 2026-09-28. Everything else (api_key param, request/response shape) is
 // unchanged, per the migration announcement.
 const ORS_DIRECTIONS_URL = 'https://api.heigit.org/openrouteservice/v2/directions/driving-car';
+// How long one request may wait: a page waits on the driving route, so a
+// slow OpenRouteService is given up on (the Budapest figures instead).
+const REQUEST_TIMEOUT_MS = 5_000;
+// Given up on as too slow: passing - a warning, not an error (errors are
+// e-mailed to the role manager, see errorMail.js).
+const logFailure = (message, err) =>
+  err?.name === 'TimeoutError' ? logger.warn(message) : logger.error(message);
+// OpenRouteService answered, but with a failure. Busy or down on its side
+// (429, 5xx - its own gateway's "504 Gateway Time-out" page, 2026-10-18):
+// passing, a warning with just the status. Anything else is a refused
+// request - our mistake: an error, with (the start of) what it said.
+async function logBadAnswer(what, res) {
+  if (res.status === 429 || res.status >= 500) {
+    logger.warn(`${what} failed: ${res.status} (OpenRouteService busy or down)`);
+    return;
+  }
+  logger.error(`${what} failed: ${res.status} ${(await res.text()).slice(0, 500)}`);
+}
 
 // Same api.openrouteservice.org -> api.heigit.org migration as the
 // directions endpoint above, but geocoding moved under its own "pelias"
@@ -72,9 +89,9 @@ export async function geocodeAddress(text) {
     url.searchParams.set('focus.point.lon', String(BUDAPEST_CENTER.lng));
     url.searchParams.set('size', '1');
 
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
     if (!res.ok) {
-      logger.error(`OpenRouteService geocoding request failed: ${res.status} ${await res.text()}`);
+      await logBadAnswer('OpenRouteService geocoding request', res);
       return undefined;
     }
 
@@ -89,7 +106,7 @@ export async function geocodeAddress(text) {
 
     return { lat: coords[1], lng: coords[0] };
   } catch (err) {
-    logger.error(`Failed to geocode address "${text}": ${err.message}`);
+    logFailure(`Failed to geocode address "${text}": ${err.message}`, err);
     return undefined;
   }
 }
@@ -109,9 +126,9 @@ export async function computeDrivingRoute(from, to) {
     url.searchParams.set('start', `${from.lng},${from.lat}`);
     url.searchParams.set('end', `${to.lng},${to.lat}`);
 
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
     if (!res.ok) {
-      logger.error(`OpenRouteService request failed: ${res.status} ${await res.text()}`);
+      await logBadAnswer('OpenRouteService request', res);
       return undefined;
     }
 
@@ -129,45 +146,7 @@ export async function computeDrivingRoute(from, to) {
       durationMinutes: Math.round(seconds / 60),
     };
   } catch (err) {
-    logger.error(`Failed to compute driving route: ${err.message}`);
+    logFailure(`Failed to compute driving route: ${err.message}`, err);
     return undefined;
   }
-}
-
-// What every distance-showing surface (tour details page, Programfüzet
-// PDF) actually needs: real distance/duration plus the correctly-
-// suffixed Hungarian "from X" label - personalized to the given viewer's
-// own geocoded home address when they have one (see userModel.js's
-// location field), falling back to the tour's own cached Budapest-based
-// figures (computed once at tour save time - see tourModel.js) for an
-// anonymous visitor or a member who hasn't set an address yet. Computed
-// live, not cached, since (unlike the Budapest figures) it depends on
-// who's asking, not just the tour.
-export async function resolveDistanceInfo(tour, viewer) {
-  const fallback = {
-    distanceKm: tour.distanceFromBudapestKm ?? null,
-    durationMinutes: tour.drivingDurationFromBudapestMinutes ?? null,
-    fromLabel: hungarianFromSuffix('Budapest'),
-  };
-
-  if (
-    viewer?.location?.lat == null ||
-    viewer?.location?.lng == null ||
-    !viewer?.address?.city ||
-    tour.location?.coordinates?.length !== 2
-  ) {
-    return fallback;
-  }
-
-  const route = await computeDrivingRoute(viewer.location, {
-    lat: tour.location.coordinates[1],
-    lng: tour.location.coordinates[0],
-  });
-  if (!route) return fallback;
-
-  return {
-    distanceKm: route.distanceKm,
-    durationMinutes: route.durationMinutes,
-    fromLabel: hungarianFromSuffix(viewer.address.city),
-  };
 }

@@ -300,5 +300,8 @@
 } @else if (loadError()) {
   <p class="loading-note">{{ loadError() }}</p>
 } @else {
-  <p class="loading-note">Betöltés...</p>
+  <div class="loading-note">
+    <app-loading-spinner />
+    <p>Betöltés...</p>
+  </div>
 }

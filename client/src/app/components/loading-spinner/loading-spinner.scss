@@ -1,35 +1,54 @@
-.lds-ring {
+:host {
+  --ring-width: calc(var(--ring-size) / 5);
   display: inline-block;
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: var(--ring-size);
+  height: var(--ring-size);
+  vertical-align: middle;
 }
-.lds-ring div {
-  box-sizing: border-box;
-  display: block;
+
+// One ring, its colour turning from nothing (the tail) through the logo's
+// green and orange to blue (the head), cut out of a disc by a mask.
+.ring {
   position: absolute;
-  width: 51px;
-  height: 51px;
-  margin: 6px;
-  border: 6px solid #046b1a;
+  inset: 0;
   border-radius: 50%;
-  animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-  border-color: #046b1a transparent transparent transparent;
-}
-.lds-ring div:nth-child(1) {
-  animation-delay: -0.45s;
-}
-.lds-ring div:nth-child(2) {
-  animation-delay: -0.3s;
-}
-.lds-ring div:nth-child(3) {
-  animation-delay: -0.15s;
-}
-@keyframes lds-ring {
-  0% {
-    transform: rotate(0deg);
+  background: conic-gradient(
+    transparent 0%,
+    var(--logo-green) 30%,
+    var(--logo-orange) 65%,
+    var(--logo-blue) 100%
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--ring-width)),
+    #000 calc(100% - var(--ring-width) + 1px)
+  );
+  animation: ring-turn 1s linear infinite;
+
+  // The head's round end, at the top where the blue ends.
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: var(--ring-width);
+    height: var(--ring-width);
+    margin-left: calc(var(--ring-width) / -2);
+    border-radius: 50%;
+    background: var(--logo-blue);
   }
-  100% {
+}
+
+@keyframes ring-turn {
+  to {
     transform: rotate(360deg);
+  }
+}
+
+// No turning for whoever asked their device for less motion.
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    animation: none;
   }
 }

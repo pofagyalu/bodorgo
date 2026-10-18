@@ -7,7 +7,7 @@ import Reservation from '../models/reservationModel.js';
 import TourMailing from '../models/tourMailingModel.js';
 import AppError from '../utils/appError.js';
 import sendResendEmail from '../utils/resendEmail.js';
-import { resolveDistanceInfo } from '../utils/distance.js';
+import { resolveDistanceInfo } from '../utils/tourDistances.js';
 import { cleanMailHtml, escapeHtml, isBlankMailHtml, mailHtmlToText } from '../utils/mailHtml.js';
 import {
   partitionAttendeesByEmailEligibility,

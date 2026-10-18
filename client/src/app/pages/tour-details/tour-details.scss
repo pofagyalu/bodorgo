@@ -326,6 +326,11 @@
   text-align: center;
   color: #777;
   padding: 4rem 1rem;
+
+  // The logo-colour ring (components/loading-spinner), "Betöltés..." under it.
+  p {
+    margin: 0.75rem 0 0;
+  }
 }
 
 /* ---- Mobile ---- */

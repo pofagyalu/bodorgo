@@ -20,7 +20,7 @@ import {
   WEATHER_REFETCH_HOURS,
 } from '../utils/weather.js';
 import { buildWeatherOutlook } from '../utils/weatherOutlook.js';
-import { resolveDistanceInfo } from '../utils/distance.js';
+import { resolveDistanceInfo } from '../utils/tourDistances.js';
 import { tourDocuments } from './documentController.js';
 import { cleanOnSitePayment } from '../utils/onSitePayment.js';
 
@@ -73,44 +73,17 @@ function refreshWeatherOutlook(tour, today) {
   return true;
 }
 
-// One refresh of a tour's weather at a time: opening the app asks for the
-// tour list and the tour's page together, and both would refresh it - two
-// sets of requests to Open-Meteo at once (it answers 429 to that), and two
-// saves racing each other. A second caller waits for the running one and
-// takes its result from the database.
-const weatherRefreshes = new Map();
-
+// One tour's weather, by the server's own schedule (refreshToursWeather
+// below) - never on a page view: forecasts its still-upcoming days (a day
+// at most every WEATHER_REFETCH_HOURS), and once a day has passed, the
+// real recorded weather for it exactly once, frozen (isFinal) forever
+// after. Open-Meteo unreachable or slow: fetchForecast/fetchHistorical
+// give up (after a few seconds) and return null, and the next run tries
+// again. Then the tour's outlook from those forecasts
+// (refreshWeatherOutlook). The days are asked for one after another, not
+// all at once (Open-Meteo limits how many requests may run at the same
+// time).
 async function refreshTourWeather(tour) {
-  const id = String(tour._id);
-  const running = weatherRefreshes.get(id);
-  if (running) {
-    await running.catch(() => {});
-    const fresh = await Tour.findById(id).select('dailyWeather weatherOutlook').lean();
-    if (fresh) {
-      tour.dailyWeather = fresh.dailyWeather ?? [];
-      tour.weatherOutlook = fresh.weatherOutlook;
-    }
-    return;
-  }
-  const refresh = refreshTourWeatherNow(tour);
-  weatherRefreshes.set(id, refresh);
-  try {
-    await refresh;
-  } finally {
-    weatherRefreshes.delete(id);
-  }
-}
-
-// Called on every getTour - forecasts a tour's still-upcoming days
-// (throttled so repeat page views don't re-hit the API every time), and
-// once a day has passed, fetches the real recorded weather for it exactly
-// once and freezes it (isFinal) forever after. Never blocks the tour from
-// loading if Open-Meteo is unreachable - fetchForecast/fetchHistorical
-// already swallow their own errors and return null. Then the tour's
-// outlook from those forecasts (refreshWeatherOutlook). The days are asked
-// for one after another, not all at once (Open-Meteo limits how many
-// requests may run at the same time).
-async function refreshTourWeatherNow(tour) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -162,22 +135,42 @@ async function refreshTourWeatherNow(tour) {
   if (fetched || outlookChanged) await tour.save();
 }
 
-// The tour list shows each coming tour's outlook too (the card's pill), so
-// the tours close enough to have a forecast are brought up to date before
-// it is read - the same refresh a visit to the tour's own page does, with
-// the same limit on how often the forecast is asked for.
-async function refreshUpcomingToursWeather() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const horizon = new Date(today);
-  horizon.setDate(horizon.getDate() + MAX_FORECAST_DAYS_AHEAD + 1);
-  const tours = await Tour.find({ startDate: { $gt: today, $lt: horizon } });
-  // One tour after another, as the days of one (refreshTourWeatherNow).
-  for (const tour of tours) {
-    await refreshTourWeather(tour).catch((err) =>
-      logger.error(`Weather refresh failed for tour ${tour.order}: ${err.message}`),
-    );
-  }
+// The server's own weather round (server.js: at start, then every hour):
+// the tours whose start is within the forecast's reach and every tour with
+// a day still waiting for its recorded weather - one after another. What
+// a day was fetched at keeps it to once per WEATHER_REFETCH_HOURS whatever
+// the round's rhythm, a restart included. The pages only read what this
+// saved: a slow Open-Meteo never holds a page up (2026-10-18: one answer
+// that never came kept a tour's page loading for minutes).
+let weatherRound = null;
+export function refreshToursWeather() {
+  weatherRound ??= (async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const horizon = new Date(today);
+    horizon.setDate(horizon.getDate() + MAX_FORECAST_DAYS_AHEAD + 1);
+    const tours = await Tour.find({
+      startDate: { $lt: horizon },
+      $expr: {
+        $lt: [
+          {
+            $size: {
+              $filter: { input: { $ifNull: ['$dailyWeather', []] }, cond: '$$this.isFinal' },
+            },
+          },
+          '$duration',
+        ],
+      },
+    });
+    for (const tour of tours) {
+      await refreshTourWeather(tour).catch((err) =>
+        logger.error(`Weather refresh failed for tour ${tour.order}: ${err.message}`),
+      );
+    }
+  })().finally(() => {
+    weatherRound = null;
+  });
+  return weatherRound;
 }
 
 // GET /tours/ticker - the only tour data a logged-out visitor ever gets:
@@ -242,8 +235,6 @@ export const getAlltours = async (req, res) => {
     ...req.query,
     ...(res.locals.queryOverride || {}),
   };
-
-  await refreshUpcomingToursWeather();
 
   // EXECUTE QUERY
   const features = new APIFeatures(Tour.find(), customQuery)
@@ -316,8 +307,6 @@ export const getTour = async (req, res, next) => {
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
   }
-
-  await refreshTourWeather(tour);
 
   const participantCount = tour.reservations.reduce((sum, r) => sum + r.attendees.length, 0);
 
