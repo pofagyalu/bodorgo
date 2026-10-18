@@ -144,6 +144,27 @@ describe('beszámoló (tour report)', () => {
     expect(pdf.status).toBe(200);
   });
 
+  it('draws the emojis of a day in the PDF - black and white, with the emoji font', async () => {
+    const { admin, tour } = await setup();
+    await request(app)
+      .put(url(tour))
+      .set(asUser(admin))
+      .send({
+        days: [
+          day(
+            { insert: 'Megérkeztünk 🏕️ és ' },
+            { insert: 'esett az eső 🌧️', attributes: { bold: true } },
+            { insert: ', de este 🍺🎸 és ❤️' },
+            { insert: '\n' },
+          ),
+        ],
+      });
+    const pdf = await binary(request(app).get(url(tour, '/pdf?draft=1')).set(asUser(admin)));
+    expect(pdf.status).toBe(200);
+    // The emoji font is in it (pdfkit names an embedded font after it).
+    expect(pdf.body.toString('latin1')).toContain('NotoEmoji');
+  });
+
   it('gives the finished beszámoló as data, its people as aliases', async () => {
     const { admin, tour, anna, outsider } = await setup();
     await tour.constructor.updateOne(

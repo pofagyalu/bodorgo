@@ -37,6 +37,10 @@ const LOGO_PATH = path.join(rootDir, 'assets', 'img', 'logo.png');
 const FONT_REGULAR = path.join(rootDir, 'assets', 'fonts', 'Mulish-Regular.ttf');
 const FONT_BOLD = path.join(rootDir, 'assets', 'fonts', 'Mulish-Bold.ttf');
 const FONT_ITALIC = path.join(rootDir, 'assets', 'fonts', 'Mulish-Italic.ttf');
+// Google's Noto Emoji (OFL, kept here - nothing is fetched): the emojis of
+// a day's text, black and white - Mulish has none, and pdfkit draws no
+// colour emoji font.
+const FONT_EMOJI = path.join(rootDir, 'assets', 'fonts', 'NotoEmoji.ttf');
 
 const FACT_KEYS = ['place', 'dates', 'headcount'];
 export const MAX_DAYS = 10; // tourModel's duration max
@@ -460,6 +464,7 @@ function drawBullet(doc, level, x, y, color = INK) {
 }
 
 function fontFor(run) {
+  if (run.emoji) return 'Emoji';
   if (run.bold) return 'Heading';
   if (run.italic) return 'Italic';
   return 'Body';
@@ -475,7 +480,7 @@ function textLine(doc, runs, x, marker) {
   ensureRoom(doc, lineHeight);
   const top = doc.y;
   marker?.(top, lineHeight);
-  const parts = runs.length ? runs : [{ text: ' ' }];
+  const parts = runs.length ? runs.flatMap(splitEmoji) : [{ text: ' ' }];
   parts.forEach((run, i) => {
     doc.font(fontFor(run)).fontSize(BODY_SIZE).fillColor(INK);
     const options = {
@@ -487,6 +492,26 @@ function textLine(doc, runs, x, marker) {
     if (i === 0) doc.text(run.text, x, top, options);
     else doc.text(run.text, options);
   });
+}
+
+// An emoji with what belongs to it: the variation selector (❤️), a skin
+// tone, the joined parts of a family or a profession (👨‍👩‍👧), a flag's two
+// letters (🇭🇺), a keycap (1️⃣).
+const EMOJI =
+  /\p{Regional_Indicator}{2}|[0-9#*]️?⃣|\p{Extended_Pictographic}(?:️|[\u{1F3FB}-\u{1F3FF}])*(?:‍\p{Extended_Pictographic}(?:️|[\u{1F3FB}-\u{1F3FF}])*)*/gu;
+
+// A run of a day's text in pieces: its emojis apart (`emoji: true`, the
+// emoji font), the rest as it was - same bold/italic/underline.
+export function splitEmoji(run) {
+  const pieces = [];
+  let at = 0;
+  for (const m of run.text.matchAll(EMOJI)) {
+    if (m.index > at) pieces.push({ ...run, text: run.text.slice(at, m.index) });
+    pieces.push({ ...run, text: m[0], emoji: true });
+    at = m.index + m[0].length;
+  }
+  if (at < run.text.length) pieces.push({ ...run, text: run.text.slice(at) });
+  return pieces.length ? pieces : [run];
 }
 
 // What the weather was like on a day, for its heading: "napos · 20° / 5° ·
@@ -914,6 +939,7 @@ export async function renderReport(
   doc.registerFont('Body', FONT_REGULAR);
   doc.registerFont('Heading', FONT_BOLD);
   doc.registerFont('Italic', FONT_ITALIC);
+  doc.registerFont('Emoji', FONT_EMOJI);
   const contentWidth = doc.page.width - MARGIN * 2;
 
   doc
