@@ -7,14 +7,17 @@ import { AuthService, CurrentUser } from '../app/auth/auth.service';
 import { TourSocketService } from '../app/services/tour-socket';
 import { API, httpTesting } from './http';
 
-/** A failed answer for respond(): `fail(403, 'Nincs jogod.')`. */
+/** A failed answer for respond(): `fail(403, 'Nincs jogod.')` - and what
+ *  else the server's answer carries: `fail(403, '…', { code: '…' })`. */
 export class Failure {
   constructor(
     readonly status: number,
     readonly message?: string,
+    readonly extra?: object,
   ) {}
 }
-export const fail = (status = 500, message?: string) => new Failure(status, message);
+export const fail = (status = 500, message?: string, extra?: object) =>
+  new Failure(status, message, extra);
 
 type Reply = object | null | Failure | ((req: TestRequest) => object | null | Failure);
 
@@ -33,7 +36,9 @@ export function respond(routes: Record<string, Reply>) {
       const reply = routes[`${req.request.method} ${pathOf(req.request.url)}`];
       const answer = typeof reply === 'function' ? reply(req) : reply;
       if (answer instanceof Failure) {
-        req.flush(answer.message ? { message: answer.message } : null, {
+        const body =
+          answer.message || answer.extra ? { message: answer.message, ...answer.extra } : null;
+        req.flush(body, {
           status: answer.status,
           statusText: 'Error',
         });

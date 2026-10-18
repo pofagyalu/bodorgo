@@ -1,4 +1,5 @@
 import fs from 'fs';
+import zlib from 'zlib';
 import sharp from 'sharp';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
@@ -62,6 +63,61 @@ describe('chat photos', () => {
     const fake = await send(member, room, { buffer: Buffer.from('fake'), type: 'image/jpeg' });
     expect(fake.status).toBe(400);
     expect(await Post.countDocuments()).toBe(0);
+  });
+
+  it('refuses an SVG, whatever it is called - the bytes say what a file is', async () => {
+    const member = await createMember();
+    const room = await tourChatRoom((await createTour())._id);
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>',
+    );
+    expect((await send(member, room, { buffer: svg, type: 'image/svg+xml' })).status).toBe(400);
+    expect((await send(member, room, { buffer: svg, type: 'image/jpeg' })).status).toBe(400);
+    expect(await Post.countDocuments()).toBe(0);
+  });
+
+  it('refuses a small file that would unpack into a huge picture', async () => {
+    // A real PNG of 8000 x 6500 (52 MP) black pixels - a few hundred kB.
+    const chunk = (type, data) => {
+      const len = Buffer.alloc(4);
+      len.writeUInt32BE(data.length);
+      const crc = Buffer.alloc(4);
+      crc.writeUInt32BE(zlib.crc32(Buffer.concat([Buffer.from(type), data])));
+      return Buffer.concat([len, Buffer.from(type), data, crc]);
+    };
+    const [w, h] = [8000, 6500];
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(w, 0);
+    ihdr.writeUInt32BE(h, 4);
+    ihdr[8] = 8; // 8 bits, grey (colour type 0)
+    const rows = zlib.deflateSync(Buffer.alloc((w + 1) * h), { level: 9 });
+    const bomb = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('IHDR', ihdr),
+      chunk('IDAT', rows),
+      chunk('IEND', Buffer.alloc(0)),
+    ]);
+    const member = await createMember();
+    const room = await tourChatRoom((await createTour())._id);
+    const res = await send(member, room, { buffer: bomb, type: 'image/png' });
+    expect(res.status).toBe(400);
+    expect(await Post.countDocuments()).toBe(0);
+  });
+
+  it('photos sent at once can’t all slip under the daily limit', async () => {
+    await ClubSettings.findOneAndUpdate(
+      { key: 'club' },
+      { chatImages: { quotaMB: 1024, dailyLimit: 2 } },
+      { upsert: true },
+    );
+    const member = await createMember();
+    const room = await tourChatRoom((await createTour())._id);
+    const photo = await phonePhoto();
+    const answers = await Promise.all(
+      [1, 2, 3, 4].map(() => send(member, room, { buffer: photo })),
+    );
+    expect(answers.map((r) => r.status).sort()).toEqual([201, 201, 429, 429]);
+    expect(await Post.countDocuments({ creator: member._id })).toBe(2);
   });
 
   it('keeps to the daily limit per person', async () => {

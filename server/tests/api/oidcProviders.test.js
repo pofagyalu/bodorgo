@@ -66,6 +66,34 @@ describe('Beállítások → OIDC szolgáltató: other providers next to Authent
     expect((await ClubSettings.findOne({ key: 'club' }))?.oidcProviders ?? []).toHaveLength(0);
   });
 
+  it('every change only after identifying again - not on a phone logged in long ago', async () => {
+    const me = await owner();
+    const id = await add(me);
+    const calls = [
+      request(app).put(url).send({}),
+      request(app).post(`${url}/providers`).send(other),
+      request(app)
+        .put(`${url}/providers/${id}`)
+        .send({ ...other, name: 'Átírt' }),
+      request(app).delete(`${url}/providers/${id}`),
+      request(app).put(`${url}/active`).send({ provider: id }),
+    ];
+    for (const call of calls) {
+      const res = await call.set(asUser(me, { minutesAgo: 30 }));
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('fresh-login-required');
+    }
+    const [kept] = (await ClubSettings.findOne({ key: 'club' })).oidcProviders;
+    expect(kept.name).toBe('Másik');
+    expect(
+      (
+        await request(app)
+          .get(url)
+          .set(asUser(me, { minutesAgo: 30 }))
+      ).status,
+    ).toBe(200);
+  });
+
   it('Authentik is the only one, and the active one, to begin with', async () => {
     const res = await request(app)
       .get(url)

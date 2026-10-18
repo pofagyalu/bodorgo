@@ -3734,7 +3734,8 @@ const paths = {
       role: 'admin',
       summary: 'Set Authentik’s settings',
       description:
-        '**The role manager only.** An empty `clientSecret` / `apiToken` keeps the one in use; `removeApiToken: true` takes the token away (no invitations). Refused (400) unless the provider answers at the new address (`<serverUrl>/application/o/<providerSlug>/`) - a typo would lock everybody out -, and without `APP_SECRET_KEY` on the server. The secrets are stored encrypted (AES-256-GCM, key from `APP_SECRET_KEY`). Recorded in the history without the secrets’ values, and **e-mailed to every admin**.',
+        '**The role manager only.** An empty `clientSecret` / `apiToken` keeps the one in use; `removeApiToken: true` takes the token away (no invitations). Refused (400) unless the provider answers at the new address (`<serverUrl>/application/o/<providerSlug>/`) - a typo would lock everybody out -, and without `APP_SECRET_KEY` on the server. The secrets are stored encrypted (AES-256-GCM, key from `APP_SECRET_KEY`). Recorded in the history without the secrets’ values, and **e-mailed to every admin**.' +
+        FRESH_LOGIN,
       body: obj(
         {
           serverUrl: str('Authentik’s address, e.g. https://auth.example.org'),
@@ -3749,7 +3750,7 @@ const paths = {
         ['serverUrl', 'providerSlug', 'clientId'],
       ),
       data: ref('OidcSettings'),
-      errors: [400],
+      errors: [400, 403],
     }),
   },
   '/settings/oidc/providers': {
@@ -3758,11 +3759,12 @@ const paths = {
       role: 'admin',
       summary: 'Add another OIDC provider',
       description:
-        '**The role manager only.** A provider next to Authentik (which always stays): any OIDC provider that describes itself at its Issuer URL (`<issuerUrl>/.well-known/openid-configuration`). Not active yet - that is `/settings/oidc/active`. Refused (400) unless it answers there, with a name already taken, and over 10 providers. The secret is stored encrypted and never sent back. `created` in the answer is the new provider’s id. Recorded in the history and e-mailed to every admin.',
+        '**The role manager only.** A provider next to Authentik (which always stays): any OIDC provider that describes itself at its Issuer URL (`<issuerUrl>/.well-known/openid-configuration`). Not active yet - that is `/settings/oidc/active`. Refused (400) unless it answers there, with a name already taken, and over 10 providers. The secret is stored encrypted and never sent back. `created` in the answer is the new provider’s id. Recorded in the history and e-mailed to every admin.' +
+        FRESH_LOGIN,
       body: ref('OidcProviderInput'),
       data: ref('OidcSettings'),
       ok: 201,
-      errors: [400],
+      errors: [400, 403],
     }),
   },
   '/settings/oidc/providers/{id}': {
@@ -3771,21 +3773,23 @@ const paths = {
       role: 'admin',
       summary: 'Change another OIDC provider',
       description:
-        '**The role manager only.** The same fields; an empty `clientSecret` keeps the one it has. Refused (400) unless the provider answers at its Issuer URL. Recorded in the history and e-mailed to every admin.',
+        '**The role manager only.** The same fields; an empty `clientSecret` keeps the one it has. Refused (400) unless the provider answers at its Issuer URL. Recorded in the history and e-mailed to every admin.' +
+        FRESH_LOGIN,
       params: [path('id', 'The provider’s id.')],
       body: ref('OidcProviderInput'),
       data: ref('OidcSettings'),
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
     delete: op({
       tag: T.settings,
       role: 'admin',
       summary: 'Delete another OIDC provider',
       description:
-        '**The role manager only.** Not the active one (400). Authentik cannot be deleted. Recorded in the history and e-mailed to every admin.',
+        '**The role manager only.** Not the active one (400). Authentik cannot be deleted. Recorded in the history and e-mailed to every admin.' +
+        FRESH_LOGIN,
       params: [path('id', 'The provider’s id.')],
       data: ref('OidcSettings'),
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
   },
   '/settings/oidc/active': {
@@ -3794,10 +3798,11 @@ const paths = {
       role: 'admin',
       summary: 'Choose the provider everybody logs in through',
       description:
-        '**The role manager only.** `provider` is `authentik` or another provider’s id. Refused (400) unless that provider answers at its address and has a readable secret. From then on `/auth/login` goes there; people are matched by their e-mail, so their accounts stay (each provider’s own id of them is kept among the user’s `identities`). A provider with `requireVerifiedEmail` lets in only those whose `email_verified` claim is true (otherwise the landing page with `?error=unverified-email`). Invitations only work while Authentik is the active one’s user store. Recorded in the history and e-mailed to every admin.',
+        '**The role manager only.** `provider` is `authentik` or another provider’s id. Refused (400) unless that provider answers at its address and has a readable secret. From then on `/auth/login` goes there; people are matched by their e-mail, so their accounts stay (each provider’s own id of them is kept among the user’s `identities`). A provider with `requireVerifiedEmail` lets in only those whose `email_verified` claim is true (otherwise the landing page with `?error=unverified-email`). Invitations only work while Authentik is the active one’s user store. Recorded in the history and e-mailed to every admin.' +
+        FRESH_LOGIN,
       body: obj({ provider: str('`authentik` or a provider’s id.') }, ['provider']),
       data: ref('OidcSettings'),
-      errors: [400, 404],
+      errors: [400, 403, 404],
     }),
   },
   '/settings/president': {

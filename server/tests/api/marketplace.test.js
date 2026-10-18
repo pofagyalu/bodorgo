@@ -199,6 +199,30 @@ describe('Ócskapiac', () => {
     expect(none.status).toBe(400);
   });
 
+  it('an SVG sent past the app (straight to the API) is refused - on a new item and an old one', async () => {
+    // The app itself only ever sends a JPEG it drew (shared/image-resize.ts):
+    // this is someone calling the server directly.
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>',
+    );
+    const owner = await createMember();
+    const created = await request(app)
+      .post('/ocskapiac')
+      .set(asUser(owner))
+      .field('title', 'Bögre')
+      .field('priceKind', 'ingyen')
+      .attach('photos', svg, { filename: 'a.svg', contentType: 'image/svg+xml' });
+    expect(created.status).toBe(400);
+
+    const { item } = (await offer(owner)).body.data;
+    const changed = await request(app)
+      .patch(`/ocskapiac/${item._id}`)
+      .set(asUser(owner))
+      .attach('photos', svg, { filename: 'b.jpg', contentType: 'image/jpeg' });
+    expect(changed.status).toBe(400);
+    expect((await MarketItem.findById(item._id)).photos).toHaveLength(1);
+  });
+
   it('Odaadtam: kept for good, photos and all; nothing more can be asked', async () => {
     const owner = await createMember();
     const { item } = (await offer(owner)).body.data;

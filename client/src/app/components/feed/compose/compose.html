@@ -40,7 +40,12 @@
     <!-- Attach a photo (shrunk on the phone before sending). -->
     <label class="photo-btn" title="Fotó küldése" aria-label="Fotó küldése">
       <mat-icon>photo_camera</mat-icon>
-      <input type="file" accept="image/*" hidden (change)="pickPhoto($event)" />
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
+        hidden
+        (change)="pickPhoto($event)"
+      />
     </label>
 
     <!-- Start a poll in this chat (see poll-create). -->

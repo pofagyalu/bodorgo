@@ -4,6 +4,7 @@ import Post, { POST_POPULATE } from '../models/postModel.js';
 import { CHAT_IMAGES_DIR } from '../utils/dataDirs.js';
 import { getClubSettings } from '../utils/clubSettings.js';
 import { loadSharp } from '../photos/imageFiles.js';
+import { openUploadedImage, withUploadSlot } from '../utils/uploadedImages.js';
 import { budapestDate } from '../utils/membershipReminders.js';
 import { emitToChatRoom } from './tourEvents.js';
 
@@ -23,25 +24,29 @@ export const chatThumbPath = (postId) => path.join(CHAT_IMAGES_DIR, `${postId}.t
 
 // The photo and its thumbnail, from the uploaded bytes - throws if it isn't
 // a real image. Returns what the message records about it.
-export async function saveChatImage(postId, buffer) {
-  const sharp = await loadSharp();
-  fs.mkdirSync(CHAT_IMAGES_DIR, { recursive: true });
-  const full = await sharp(buffer)
-    .rotate() // upright by its EXIF orientation, before that's dropped
-    .resize({ width: MAX_SIDE, height: MAX_SIDE, fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 80 })
-    .toBuffer({ resolveWithObject: true });
-  const thumb = await sharp(full.data)
-    .resize({ width: THUMB_SIDE, height: THUMB_SIDE, fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 72 })
-    .toBuffer();
-  fs.writeFileSync(chatImagePath(postId), full.data);
-  fs.writeFileSync(chatThumbPath(postId), thumb);
-  return {
-    width: full.info.width,
-    height: full.info.height,
-    size: full.data.length + thumb.length,
-  };
+// Only a real picture, in its turn (utils/uploadedImages.js).
+export function saveChatImage(postId, buffer) {
+  return withUploadSlot(async () => {
+    const sharp = await loadSharp();
+    const uploaded = await openUploadedImage(buffer);
+    fs.mkdirSync(CHAT_IMAGES_DIR, { recursive: true });
+    const full = await uploaded
+      .rotate() // upright by its EXIF orientation, before that's dropped
+      .resize({ width: MAX_SIDE, height: MAX_SIDE, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer({ resolveWithObject: true });
+    const thumb = await sharp(full.data)
+      .resize({ width: THUMB_SIDE, height: THUMB_SIDE, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 72 })
+      .toBuffer();
+    fs.writeFileSync(chatImagePath(postId), full.data);
+    fs.writeFileSync(chatThumbPath(postId), thumb);
+    return {
+      width: full.info.width,
+      height: full.info.height,
+      size: full.data.length + thumb.length,
+    };
+  });
 }
 
 export function deleteChatImageFiles(postId) {

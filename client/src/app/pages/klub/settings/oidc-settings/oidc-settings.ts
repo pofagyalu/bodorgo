@@ -2,13 +2,25 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.service';
+import { AuthService } from '../../../../auth/auth.service';
+import { FreshLoginService } from '../../../../auth/fresh-login.service';
 import { NotificationsService } from '../../../../notifications/notifications.service';
 import { OidcSettings, SettingsService } from '../../../../services/settings';
 
 // Klub → Beállítások → OIDC szolgáltató: where everybody logs in. The role
 // manager's alone (the server refuses anyone else too) - the settings page
 // shows this tab to no one else. A wrong value here locks everyone out,
-// hence the warning on top and the question before each save.
+// hence the warning on top and the question before each save. Every change
+// only by someone who identified themselves in the last minutes (server
+// auth/freshLogin.js): asked as soon as they step into a field - before
+// anything is typed, coming back from the provider reloads the page -, and
+// before a delete or a switch; and asked again, never just refused, if the
+// minutes ran out meanwhile.
+// What the identifying dialog names (fresh-login.service.ts).
+const CHANGE = 'Az OIDC szolgáltató módosítása';
+// The server's answer when the minutes ran out (auth/freshLogin.js).
+const FRESH_LOGIN_REQUIRED = 'fresh-login-required';
+
 @Component({
   selector: 'app-oidc-settings',
   imports: [FormsModule, MatIconModule],
@@ -19,6 +31,8 @@ export class OidcSettingsTab implements OnInit {
   private settingsService = inject(SettingsService);
   private notifications = inject(NotificationsService);
   private confirm = inject(ConfirmService);
+  private freshLogin = inject(FreshLoginService);
+  private auth = inject(AuthService);
 
   oidc = signal<OidcSettings | null>(null);
   // The form. The two secrets start empty every time: the server never
@@ -102,6 +116,29 @@ export class OidcSettingsTab implements OnInit {
     );
   });
 
+  // Stepping into one of the tab's fields: identified in the last minutes,
+  // or asked now. The field is left first, so the dialog closing doesn't
+  // step into it again; identified on another tab meanwhile, they are put
+  // back in it.
+  async startEditing(event: FocusEvent) {
+    const field = event.target as HTMLElement | null;
+    if (!field?.matches('input, textarea, select')) return;
+    if (this.auth.hasFreshLogin()) return;
+    field.blur();
+    if (await this.freshLogin.ensure(CHANGE)) field.focus();
+  }
+
+  // The server said the minutes ran out (between asking and saving): asked
+  // again, with the way to the provider - not just an error.
+  private failed(err: { error?: { code?: string; message?: string } }, fallback: string) {
+    if (err?.error?.code === FRESH_LOGIN_REQUIRED) {
+      this.auth.freshLoginGone();
+      void this.freshLogin.ensure(CHANGE);
+      return;
+    }
+    this.notifications.addError(err?.error?.message ?? fallback);
+  }
+
   // Opens a provider's settings (again: what was typed into them is gone).
   openProvider(id: string) {
     this.oidcOpen.set(id);
@@ -116,6 +153,7 @@ export class OidcSettingsTab implements OnInit {
 
   async saveProvider() {
     if (this.savingProvider()) return;
+    if (!this.auth.hasFreshLogin() && !(await this.freshLogin.ensure(CHANGE))) return;
     const saved = this.openedProvider();
     const ok = await this.confirm.ask({
       message: saved ? `Biztosan mented: ${saved.name}?` : 'Biztosan felveszed az új szolgáltatót?',
@@ -145,7 +183,7 @@ export class OidcSettingsTab implements OnInit {
       },
       error: (err) => {
         this.savingProvider.set(false);
-        this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+        this.failed(err, 'A mentés nem sikerült.');
       },
     });
   }
@@ -153,6 +191,7 @@ export class OidcSettingsTab implements OnInit {
   async deleteProvider(id: string) {
     const provider = this.oidc()?.providers.find((p) => p.id === id);
     if (!provider || this.savingProvider()) return;
+    if (!this.auth.hasFreshLogin() && !(await this.freshLogin.ensure(CHANGE))) return;
     const ok = await this.confirm.ask({
       message: `Biztosan törlöd: ${provider.name}?`,
       detail: 'A beállításai és a mentett secretje elvesznek.',
@@ -168,7 +207,7 @@ export class OidcSettingsTab implements OnInit {
       },
       error: (err) => {
         this.savingProvider.set(false);
-        this.notifications.addError(err?.error?.message ?? 'A törlés nem sikerült.');
+        this.failed(err, 'A törlés nem sikerült.');
       },
     });
   }
@@ -178,6 +217,7 @@ export class OidcSettingsTab implements OnInit {
     const o = this.oidc();
     const row = this.providerRows().find((p) => p.id === id);
     if (!o || !row || o.active === id || this.activatingOidc()) return;
+    if (!this.auth.hasFreshLogin() && !(await this.freshLogin.ensure(CHANGE))) return;
     const ok = await this.confirm.ask({
       title: 'VESZÉLYES ZÓNA!!!',
       message: `Biztosan ezentúl mindenki ezen keresztül lépjen be: ${row.name}?`,
@@ -195,7 +235,7 @@ export class OidcSettingsTab implements OnInit {
       },
       error: (err) => {
         this.activatingOidc.set(false);
-        this.notifications.addError(err?.error?.message ?? 'A váltás nem sikerült.');
+        this.failed(err, 'A váltás nem sikerült.');
       },
     });
   }
@@ -226,6 +266,7 @@ export class OidcSettingsTab implements OnInit {
 
   async saveOidc() {
     if (this.savingOidc()) return;
+    if (!this.auth.hasFreshLogin() && !(await this.freshLogin.ensure(CHANGE))) return;
     const ok = await this.confirm.ask({
       message: 'Biztosan mented az OIDC szolgáltató beállításait?',
       detail:
@@ -253,7 +294,7 @@ export class OidcSettingsTab implements OnInit {
         },
         error: (err) => {
           this.savingOidc.set(false);
-          this.notifications.addError(err?.error?.message ?? 'A mentés nem sikerült.');
+          this.failed(err, 'A mentés nem sikerült.');
         },
       });
   }
