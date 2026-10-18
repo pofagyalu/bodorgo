@@ -368,6 +368,34 @@ describe('KlubProfile', () => {
     'GET /users/me/family': {
       data: { members: [{ _id: 'kid', name: 'Teszt Kata', role: 'member' }] },
     },
+    'GET /payments/mine': {
+      data: {
+        payments: [
+          {
+            _id: 'pay1',
+            paidAt: '2026-10-13T10:02:00Z',
+            purpose: 'membershipFee',
+            method: 'stripe',
+            amount: 1102,
+            currency: 'HUF',
+            tour: null,
+            people: [{ name: 'Teszt Elek', year: 2026 }],
+            hasReceipt: true,
+          },
+          {
+            _id: 'pay2',
+            paidAt: '2026-06-01T08:00:00Z',
+            purpose: 'tourAdvance',
+            method: 'barion',
+            amount: 23718,
+            currency: 'HUF',
+            tour: { _id: 't27', title: 'Szlovák Paradicsom', order: 27, slug: 'szlovak' },
+            people: [{ name: 'Teszt Elek' }, { name: 'Teszt Kata' }],
+            hasReceipt: false,
+          },
+        ],
+      },
+    },
   });
 
   function open(routes = loaded(), state: PushState = 'off') {
@@ -428,12 +456,36 @@ describe('KlubProfile', () => {
     expect(rows[1]).not.toContain('Fizetve');
   });
 
+  it('Befizetéseim: my online payments, what for, how much - and the receipt to download', () => {
+    open();
+    const rows = [...fixture.nativeElement.querySelectorAll('.payment-row')] as HTMLElement[];
+    expect(rows.map((r) => r.querySelector('strong')?.textContent?.trim())).toEqual([
+      'Tagdíj 2026',
+      'Előleg – 27. Szlovák Paradicsom – Teszt Elek, Teszt Kata',
+    ]);
+    expect(rows[0].textContent).toContain('2026. 10. 13.');
+    expect(rows[0].textContent).toContain('Bankkártya (Stripe)');
+    expect(rows[0].querySelector('.payment-amount')?.textContent?.replace(/\s/g, ' ')).toBe(
+      '1102 Ft', // Hungarian: no space in a four-digit number
+    );
+    const receipt = rows[0].querySelector<HTMLAnchorElement>('.payment-receipt');
+    expect(receipt?.getAttribute('href')).toContain('/payments/pay1/receipt');
+    expect(rows[1].querySelector('.payment-receipt')).toBeNull();
+  });
+
+  it('Befizetéseim: nothing paid online yet', () => {
+    open({ ...loaded(), 'GET /payments/mine': { data: { payments: [] } } });
+    expect(fixture.nativeElement.textContent).toContain('Még nem fizettél online.');
+  });
+
   it('says what could not be loaded', () => {
     open({
       'GET /users/me': fail(),
       'GET /users/me/attendance': fail(),
       'GET /users/me/family': fail(),
+      'GET /payments/mine': fail(),
     });
+    expect(page.myPaymentsError()).toBe('A befizetéseid betöltése nem sikerült.');
     expect(page.loading()).toBe(false);
     expect(page.profile()).toBeNull();
     expect(page.attendanceError()).toBe('A táboraid betöltése nem sikerült.');

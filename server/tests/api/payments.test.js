@@ -286,6 +286,66 @@ describe('completing a payment', () => {
   });
 });
 
+// Profilom → Befizetéseim: what I paid online myself, with the receipt.
+describe('my online payments', () => {
+  it('lists my own Stripe/Barion payments that went through - not cash, not anyone else’s', async () => {
+    const year = new Date().getFullYear();
+    const member = await createMember({ memberSince: year, lastLoginAt: new Date() });
+    const admin = await createAdmin();
+    const res = await request(app)
+      .post('/payments/membership/start')
+      .set(asUser(member))
+      .send({ items: [{ userId: member._id, year }] });
+    vi.mocked(retrieveCheckoutSession).mockResolvedValueOnce({ payment_status: 'paid' });
+    await request(app).get(`/payments/${res.body.data.paymentId}/status`).set(asUser(member));
+
+    // Not mine to see: a cash payment recorded for me, someone else's,
+    // one started but never finished.
+    await Payment.create({
+      purpose: 'membershipFee',
+      createdBy: member._id,
+      method: 'cash',
+      amount: 1000,
+      status: 'Succeeded',
+      members: [{ user: member._id, name: member.name, amount: 1000, membershipYear: year - 1 }],
+    });
+    await Payment.create({
+      purpose: 'membershipFee',
+      createdBy: admin._id,
+      method: 'stripe',
+      amount: 1102,
+      status: 'Succeeded',
+    });
+    await Payment.create({
+      purpose: 'membershipFee',
+      createdBy: member._id,
+      method: 'barion',
+      amount: 1102,
+      status: 'Started',
+    });
+
+    const mine = await request(app).get('/payments/mine').set(asUser(member));
+    expect(mine.status).toBe(200);
+    expect(mine.body.data.payments).toEqual([
+      expect.objectContaining({
+        _id: res.body.data.paymentId,
+        purpose: 'membershipFee',
+        method: 'stripe',
+        amount: 1102,
+        people: [{ name: member.name, year }],
+        hasReceipt: true,
+        tour: null,
+      }),
+    ]);
+    // ...and its receipt downloads.
+    const receipt = await request(app)
+      .get(`/payments/${res.body.data.paymentId}/receipt`)
+      .set(asUser(member));
+    expect(receipt.status).toBe(200);
+    expect((await request(app).get('/payments/mine')).status).toBe(401);
+  });
+});
+
 describe('cash payments (admin)', () => {
   it('records a cash advance, and can undo it', async () => {
     const { tour, reservation, attendeeId, admin } = await pricedTour();
