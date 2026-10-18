@@ -329,7 +329,8 @@ export const saveReport = async (req, res) => {
   }
   const report = existing ?? new TourReport({ tour: tour._id });
   const attendeeIds = new Set((await tourAttendees(tour)).map((a) => a.id));
-  const hikeIds = new Set((await tourHikeNumbers(tour)).map((h) => h.id));
+  // A hike of several recordings: a link to any of them is a link to it.
+  const hikeIds = new Set((await tourHikeNumbers(tour)).flatMap((h) => h.parts ?? [h.id]));
   report.days = days.map((d) => (d ? cleanDelta(d, attendeeIds, hikeIds) : null));
   report.facts = facts;
   report.photo = photo;
@@ -1073,7 +1074,9 @@ export const downloadReportPdf = async (req, res) => {
         name: hike.name,
         day: hike.day,
         stats: trackStats(hike.track),
-        map: await hikeMap(hike.id),
+        // Of several recordings, one map of them all (a beszámoló finished
+        // before they were joined keeps its own: parts unset).
+        map: await hikeMap(hike.parts ?? hike.id),
       })),
     ),
     photo,

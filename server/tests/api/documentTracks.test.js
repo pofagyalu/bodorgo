@@ -9,6 +9,8 @@ import { fetchMapTile } from '../../src/utils/mapTiles.js';
 import {
   ensureDocumentTracks,
   ensureTrackMap,
+  outingName,
+  tourHikeNumbers,
   tourHikes,
   trackMapPath,
   trackOf,
@@ -17,10 +19,10 @@ import {
 import { TRACK_MAP_HEIGHT, TRACK_MAP_WIDTH, renderTrackMap } from '../../src/utils/trackMap.js';
 
 // A walk north of Mátraháza: a point every 100 s, ~55 m apart, climbing
-// 5 m a step - recorded from 09:12 Budapest time on `day` (with times) or
-// planned (without).
-const gpx = ({ day = '2026-07-11', times = true, heights = true } = {}) => {
-  const start = Date.parse(`${day}T07:12:00Z`);
+// 5 m a step - recorded from 09:12 Budapest time on `day` (with times; `at`:
+// another start, UTC) or planned (without). 48 minutes 20 seconds long.
+const gpx = ({ day = '2026-07-11', times = true, heights = true, at = '07:12' } = {}) => {
+  const start = Date.parse(`${day}T${at}:00Z`);
   const points = Array.from({ length: 30 }, (_, i) => {
     const ele = heights ? `<ele>${700 + i * 5}</ele>` : '';
     const time = times ? `<time>${new Date(start + i * 100000).toISOString()}</time>` : '';
@@ -264,5 +266,93 @@ describe("a hike's map and its place in the beszámoló", () => {
     expect(hike.header).toMatch(/, 2\. nap, 2026-07-11:$/);
     expect(hike.body).toMatch(/^túra – Kékes, 1,6 km, 48 p, \+145 m \/ −0 m$/);
     expect(res.body.data.hikes).toMatchObject([{ name: 'Kékes', day: 2, date: '2026-07-11' }]);
+  });
+});
+
+// A watch stops at a long lunch, the way on is a new recording: the pieces
+// of one day following each other within 2 hours are one hike.
+describe('a hike recorded in pieces', () => {
+  it('pieces within 2 hours on a day are one hike: numbers added up, one map with the stops', async () => {
+    await fakeTiles();
+    const admin = await createAdmin();
+    const tour = await createTour({ duration: 3, startDate: new Date('2026-07-09T22:00:00Z') });
+    // Uploaded in any order - the times put them in theirs. 07:12-08:00,
+    // then 09:00-09:48 (a 1-hour stop), then 12:00 (over 2 hours later:
+    // another hike), and one the next day.
+    await upload(admin, tour, 'velence 2', gpx({ at: '09:00' }));
+    await upload(admin, tour, 'Délután', gpx({ at: '12:00' }));
+    await upload(admin, tour, 'velence 1', gpx());
+    await upload(admin, tour, 'Másnap', gpx({ day: '2026-07-12' }));
+    await new Promise((r) => setTimeout(r, 50)); // the uploads' own tries at the map
+
+    const numbers = await tourHikeNumbers(tour);
+    expect(numbers.map((h) => [h.name, h.day, h.parts.length])).toEqual([
+      ['velence', 1, 2],
+      ['Délután', 1, 1],
+      ['Másnap', 2, 1],
+    ]);
+    const joined = numbers[0].track;
+    const single = numbers[1].track;
+    expect(joined.distanceM).toBeCloseTo(single.distanceM * 2, 0);
+    expect(joined.durationSec).toBe(single.durationSec * 2);
+    expect(joined.stops).toBe(1);
+
+    const hikes = await tourHikes(tour);
+    expect(hikes[0].stats).toEqual([
+      ['Indulás', '09:12'],
+      ['Érkezés', '11:48'],
+      ['Táv', expect.stringMatching(/ km$/)],
+      ['Menetidő', '1 ó 37 p'],
+      ['Megállók', '1 · 1 ó 00 p'],
+      ['Emelkedő', '290 m'],
+      ['Lejtő', '0 m'],
+    ]);
+    // One map of both pieces, beside the first one; the others their own.
+    expect(hikes[0].map).toMatch(/-hike-[0-9a-f]{8}-map\.jpg$/);
+    expect(fs.existsSync(hikes[0].map)).toBe(true);
+    expect(hikes[1].map).toMatch(/[^e]-map\.jpg$/);
+
+    // A piece gone: the joined map goes, and the hike is what's left.
+    const second = await Document.findOne({ name: 'velence 2' });
+    await request(app).delete(`/documents/${second._id}`).set(asUser(admin));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(fs.existsSync(hikes[0].map)).toBe(false);
+    const after = await tourHikeNumbers(tour);
+    expect(after[0]).toMatchObject({ name: 'velence 1', parts: [expect.any(String)] });
+  });
+
+  it("a note linked to any piece of a hike stays linked - the beszámoló's hike is the whole", async () => {
+    const admin = await createAdmin();
+    const tour = await createTour({ duration: 3, startDate: new Date('2026-07-09T22:00:00Z') });
+    await upload(admin, tour, 'Cuha szurdok oda', gpx());
+    await upload(admin, tour, 'Cuha szurdok vissza', gpx({ at: '08:41' }));
+    const back = await Document.findOne({ name: 'Cuha szurdok vissza' });
+
+    await request(app)
+      .put(`/tours/${tour._id}/report`)
+      .set(asUser(admin))
+      .send({
+        days: [
+          null,
+          {
+            ops: [
+              { insert: 'visszafelé', attributes: { hike: String(back._id) } },
+              { insert: '\n' },
+            ],
+          },
+        ],
+        facts: {},
+        photo: null,
+      });
+    const got = await request(app).get(`/tours/${tour._id}/report`).set(asUser(admin));
+    expect(got.body.data.report.hikes).toEqual([{ id: expect.any(String), name: 'Cuha szurdok' }]);
+    expect(JSON.stringify(got.body.data.report.days[1])).toContain(String(back._id));
+  });
+
+  it('is named after the words its pieces start with', () => {
+    const named = (...names) => outingName(names.map((name) => ({ name })));
+    expect(named('velence 4', 'velence 3', 'Velence 2')).toBe('velence');
+    expect(named('Cuha szurdok oda', 'Cuha szurdok vissza')).toBe('Cuha szurdok');
+    expect(named('Délelőtt', 'Délután')).toBe('Délelőtt');
   });
 });
