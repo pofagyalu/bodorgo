@@ -37,6 +37,7 @@ import {
   paymentFee,
   paymentMethod,
 } from '../utils/clubSettings.js';
+import { escapeHtml } from '../utils/mailHtml.js';
 
 async function loadAttendeePayments(tourId) {
   const tour = await Tour.findById(tourId);
@@ -566,11 +567,11 @@ Jó bódorgást! 🏕️
 A Bódorgó csapata`;
 
   const linesHtml = attendees
-    .map((a) => `<li>${a.name}: ${formatForint(a.amount)} Ft</li>`)
+    .map((a) => `<li>${escapeHtml(a.name)}: ${formatForint(a.amount)} Ft</li>`)
     .join('');
   const feeLineHtml = feeAmount > 0 ? `<li>${feeLabel}: ${formatForint(feeAmount)} Ft</li>` : '';
-  const html = `<p>Kedves ${payerName}!</p>
-<p>Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${tourTitle}" táborhoz:</p>
+  const html = `<p>Kedves ${escapeHtml(payerName)}!</p>
+<p>Köszönjük, hogy befizetted a szállás előlegét magadnak és az alábbi résztvevőknek a(z) "${escapeHtml(tourTitle)}" táborhoz:</p>
 <ul>${linesHtml}${feeLineHtml}</ul>
 <p><strong>Összesen: ${formatForint(total)} Ft</strong></p>
 <p>A fizetésről szóló igazolást mellékeltük ehhez az e-mailhez.</p>
@@ -603,9 +604,12 @@ A Bódorgó csapata`;
 
   const feeLineHtml = feeAmount > 0 ? `<li>${feeLabel}: ${formatForint(feeAmount)} Ft</li>` : '';
   const linesHtml = members
-    .map((m) => `<li>${m.name} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft</li>`)
+    .map(
+      (m) =>
+        `<li>${escapeHtml(m.name)} (${m.membershipYear}. év): ${formatForint(m.amount)} Ft</li>`,
+    )
     .join('');
-  const html = `<p>Kedves ${payerName}!</p>
+  const html = `<p>Kedves ${escapeHtml(payerName)}!</p>
 <p>Köszönjük a klubtagsági díj befizetését:</p>
 <ul>${linesHtml}${feeLineHtml}</ul>
 <p><strong>Összesen: ${formatForint(total)} Ft</strong></p>
@@ -649,7 +653,7 @@ async function notifyAdminsIfTourFullyPaid(tourId, tourTitle) {
     to: adminEmails,
     subject: `Mindenki befizette az előleget - ${tourTitle}`,
     text: `A(z) "${tourTitle}" táborhoz mindenki (${attendeePayments.length} fő) befizette az előleget.`,
-    html: `<p>A(z) <strong>${tourTitle}</strong> táborhoz mindenki (${attendeePayments.length} fő) befizette az előleget.</p>`,
+    html: `<p>A(z) <strong>${escapeHtml(tourTitle)}</strong> táborhoz mindenki (${attendeePayments.length} fő) befizette az előleget.</p>`,
   });
 }
 

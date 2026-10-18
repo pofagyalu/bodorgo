@@ -14,6 +14,7 @@ import { tourDocuments } from './documentController.js';
 import { huDate, huDateWeekday } from '../utils/huDate.js';
 import { onSitePaymentText } from '../utils/onSitePayment.js';
 import { addressWithCountry } from '../utils/countries.js';
+import { escapeHtml } from '../utils/mailHtml.js';
 
 // Same root-resolution as app.js's express.static(path.join(rootDir, 'public'))
 // - the cover image lives under there; the logo/fonts live under
@@ -1131,7 +1132,7 @@ function programfuzetEmailBody(recipientName, tourTitle) {
   return {
     subject: `Programfüzet - ${tourTitle}`,
     text: `Szia ${recipientName}!\n\nCsatolva küldjük a(z) "${tourTitle}" tábor programfüzetét.\n\nÜdvözlettel,\nBódorgó\n\n${noReplyNote}`,
-    html: `<p>Szia ${recipientName}!</p><p>Csatolva küldjük a(z) "${tourTitle}" tábor programfüzetét.</p><p>Üdvözlettel,<br>Bódorgó</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
+    html: `<p>Szia ${escapeHtml(recipientName)}!</p><p>Csatolva küldjük a(z) "${escapeHtml(tourTitle)}" tábor programfüzetét.</p><p>Üdvözlettel,<br>Bódorgó</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
   };
 }
 

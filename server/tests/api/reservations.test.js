@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import {
   createAdmin,
@@ -33,6 +33,25 @@ describe('signing up for a tour', () => {
     expect(saved.attendees[0].nights).toBe(3);
     expect(String(saved.bookedBy)).toBe(String(member._id));
     expect(sendResendEmail).toHaveBeenCalledOnce();
+  });
+
+  // A name is the person's own text (it came from the login provider): in
+  // an e-mail's HTML it stays text - never a link someone else is sent.
+  it("puts names and the tour's title into the e-mail as text, never as HTML", async () => {
+    const tour = await createTour({ duration: 4, title: 'Sarud <b>2026</b>' });
+    const member = await createMember({
+      name: '<a href="https://hamis.example">Kattints ide</a>',
+      lastLoginAt: new Date(),
+    });
+    await signUp(tour, member);
+    const { html, text } = vi.mocked(sendResendEmail).mock.calls[0][0];
+    expect(html).not.toContain('<a href="https://hamis.example">');
+    expect(html).toContain(
+      '&lt;a href=&quot;https://hamis.example&quot;&gt;Kattints ide&lt;/a&gt;',
+    );
+    expect(html).toContain('Sarud &lt;b&gt;2026&lt;/b&gt;');
+    // The plain-text copy shows it as it is - nothing can become a link there.
+    expect(text).toContain('Kattints ide');
   });
 
   it('lets a member register their family, but nobody else', async () => {

@@ -8,6 +8,7 @@ import sendResendEmail from '../utils/resendEmail.js';
 import logger from '../logger.js';
 import Cancellation from '../models/cancellationModel.js';
 import { emitToTour } from '../chat/tourEvents.js';
+import { escapeHtml } from '../utils/mailHtml.js';
 
 // The club didn't exist before this date, so it can't have contributed
 // money toward a tour's accommodation before it either - see
@@ -81,16 +82,16 @@ function registrationConfirmationEmailBody(
   let introHtml;
   if (registrantIsRecipient && registrantIsAttendee && otherNames.length > 0) {
     intro = `Gratulálunk, ${recipientName}!\n\nBebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${tourTitle}" táborra:\n\n${otherNames.map((n) => `- ${n}`).join('\n')}`;
-    introHtml = `<p>Gratulálunk, ${recipientName}!</p><p>Bebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${tourTitle}" táborra:</p><ul>${otherNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+    introHtml = `<p>Gratulálunk, ${escapeHtml(recipientName)}!</p><p>Bebiztosítottad a helyet a magad és az alábbi családtagok számára a(z) "${escapeHtml(tourTitle)}" táborra:</p><ul>${otherNames.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`;
   } else if (registrantIsRecipient && registrantIsAttendee) {
     intro = `Gratulálunk, ${recipientName}!\n\nBebiztosítottad a helyet magadnak a(z) "${tourTitle}" táborra.`;
-    introHtml = `<p>Gratulálunk, ${recipientName}!</p><p>Bebiztosítottad a helyet magadnak a(z) "${tourTitle}" táborra.</p>`;
+    introHtml = `<p>Gratulálunk, ${escapeHtml(recipientName)}!</p><p>Bebiztosítottad a helyet magadnak a(z) "${escapeHtml(tourTitle)}" táborra.</p>`;
   } else if (registrantIsRecipient) {
     // Registered only other people (e.g. an admin signing up a member who
     // called in) - not attending themselves, so no "gratulálunk" framing
     // implying they secured their own spot too.
     intro = `Sikeresen jelentkeztetted az alábbi résztvevőket a(z) "${tourTitle}" táborra:\n\n${otherNames.map((n) => `- ${n}`).join('\n')}`;
-    introHtml = `<p>Sikeresen jelentkeztetted az alábbi résztvevőket a(z) "${tourTitle}" táborra:</p><ul>${otherNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+    introHtml = `<p>Sikeresen jelentkeztetted az alábbi résztvevőket a(z) "${escapeHtml(tourTitle)}" táborra:</p><ul>${otherNames.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`;
   } else {
     // A family member signed up by someone else - still a "gratulálunk"
     // (they're getting a spot too, they just didn't click the button
@@ -104,10 +105,10 @@ function registrationConfirmationEmailBody(
     const verb = registrantIsAttendee ? 'benevezett magán kívül' : 'jelentkeztetett';
     if (remainingNames.length > 0) {
       intro = `Gratulálunk, ${recipientName}!\n\n${registrantName} ${verb} téged és még az alábbi családtagokat is a(z) "${tourTitle}" táborra:\n\n${remainingNames.map((n) => `- ${n}`).join('\n')}`;
-      introHtml = `<p>Gratulálunk, ${recipientName}!</p><p>${registrantName} ${verb} téged és még az alábbi családtagokat is a(z) "${tourTitle}" táborra:</p><ul>${remainingNames.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+      introHtml = `<p>Gratulálunk, ${escapeHtml(recipientName)}!</p><p>${escapeHtml(registrantName)} ${verb} téged és még az alábbi családtagokat is a(z) "${escapeHtml(tourTitle)}" táborra:</p><ul>${remainingNames.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`;
     } else {
       intro = `Gratulálunk, ${recipientName}!\n\n${registrantName} ${verb} téged is a(z) "${tourTitle}" táborra.`;
-      introHtml = `<p>Gratulálunk, ${recipientName}!</p><p>${registrantName} ${verb} téged is a(z) "${tourTitle}" táborra.</p>`;
+      introHtml = `<p>Gratulálunk, ${escapeHtml(recipientName)}!</p><p>${escapeHtml(registrantName)} ${verb} téged is a(z) "${escapeHtml(tourTitle)}" táborra.</p>`;
     }
   }
 
@@ -583,7 +584,7 @@ function withdrawalEmailBody(
   return {
     subject: `Lemondás - ${tourTitle}`,
     text: `Szia ${recipientName}!\n\nTájékoztatunk, hogy ${what}${by}.\n\nÜdvözlettel,\nBódorgó\n\n${noReplyNote}`,
-    html: `<p>Szia ${recipientName}!</p><p>Tájékoztatunk, hogy ${what}${by}.</p><p>Üdvözlettel,<br>Bódorgó</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
+    html: `<p>Szia ${escapeHtml(recipientName)}!</p><p>Tájékoztatunk, hogy ${escapeHtml(what)}${escapeHtml(by)}.</p><p>Üdvözlettel,<br>Bódorgó</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
   };
 }
 
