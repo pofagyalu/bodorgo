@@ -208,6 +208,14 @@ export class TourReportPanel implements OnInit, OnDestroy {
   // let go outside it ends in a click on that area as well.
   pressedOutside = false;
 
+  // Where the press began - and nothing more: a template handler that
+  // comes out `false` (as `pressedOutside = …` did on every press inside
+  // the window) makes Angular cancel the press, and then no text box in
+  // the window got the cursor (2026-10-18).
+  notePress(event: MouseEvent): void {
+    this.pressedOutside = event.target === event.currentTarget;
+  }
+
   backdropClick(event: MouseEvent) {
     const outside = this.pressedOutside && event.target === event.currentTarget;
     this.pressedOutside = false;
