@@ -15,6 +15,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import Quill from 'quill';
+import { emojiHandler, registerEmojiIcon, wireEmojiButton } from '../../../shared/quill-emoji';
 import { firstValueFrom } from 'rxjs';
 import { ExtraDocument, MailingsResponse, SentMailing, TourService } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
@@ -104,20 +105,26 @@ export class TourMailPanel implements AfterViewInit, OnDestroy {
     // The editor's stylesheet comes with it (shared/lazy-style) - asked for
     // already when the tour page showed an admin the button (tour-extras).
     void lazyStyle('quill');
+    registerEmojiIcon(Quill);
     this.quill = new Quill(this.editorEl.nativeElement, {
       theme: 'snow',
       placeholder:
         'Írd ide a levelet… (pl. hideg lesz, hozz meleg ruhát; a maradékot csak készpénzben lehet fizetni)',
       modules: {
-        toolbar: [
-          ['bold', 'italic', 'underline', 'strike'],
-          [{ color: [] }, { background: [] }],
-          [{ list: 'ordered' }, { list: 'bullet' }],
-          ['link'],
-          ['clean'],
-        ],
+        toolbar: {
+          container: [
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ color: [] }, { background: [] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link'],
+            ['emoji'],
+            ['clean'],
+          ],
+          handlers: { emoji: emojiHandler },
+        },
       },
     });
+    wireEmojiButton(this.quill);
     this.quill.enable(false);
     this.quill.on('text-change', (_delta, _old, source) => {
       this.isEmpty.set(this.quill!.getText().trim().length === 0);

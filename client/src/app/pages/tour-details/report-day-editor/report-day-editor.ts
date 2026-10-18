@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import Quill from 'quill';
+import { emojiHandler, registerEmojiIcon, wireEmojiButton } from '../../../shared/quill-emoji';
 import { ReportAttendee, ReportHike } from '../../../services/tour';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { lazyStyle } from '../../../shared/lazy-style';
@@ -117,6 +118,7 @@ export class ReportDayEditor {
     // (tour-extras).
     void lazyStyle('quill');
     const el = this.editorEl().nativeElement;
+    registerEmojiIcon(Quill);
     const quill = new Quill(el, {
       theme: 'snow',
       placeholder: this.placeholder(),
@@ -128,11 +130,13 @@ export class ReportDayEditor {
             [{ indent: '-1' }, { indent: '+1' }],
             // The hike button only on a tour that has a walked hike.
             this.hikes().length ? ['person', 'hike'] : ['person'],
+            ['emoji'],
             ['clean'],
           ],
           handlers: {
             person: () => this.openPicker('person'),
             hike: () => this.openPicker('hike'),
+            emoji: emojiHandler,
           },
         },
       },
@@ -146,6 +150,7 @@ export class ReportDayEditor {
     wrap
       ?.querySelector('.ql-clean')
       ?.setAttribute('title', 'Formázás törlése a kijelölt szövegről (az összekötést is)');
+    wireEmojiButton(quill);
     const content = this.content();
     if (content) quill.setContents(content as never, 'silent');
     quill.on('text-change', (delta, _old, source) => {
