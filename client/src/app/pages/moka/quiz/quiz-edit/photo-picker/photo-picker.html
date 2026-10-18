@@ -19,6 +19,25 @@
       <!-- The album: tap a photo to take it. -->
       @if (photos(); as list) {
         <div class="photos">
+          <!-- Back to the tours - another tour, or closing it for a photo of
+               the phone - right where the eye already is. -->
+          <button type="button" class="photo back-tile" (click)="back()">
+            <!-- A cartoon arrow turning back: its shadow, the body, a highlight. -->
+            <svg class="back-arrow" viewBox="0 0 64 64" aria-hidden="true">
+              <path
+                class="arrow-shadow"
+                d="M54 50 C 58 24, 41 9, 27 14 L 27 4 L 6 22 L 27 40 L 27 29 C 36 27, 42 35, 38 50 Z"
+                transform="translate(2 3)"
+              />
+              <path
+                class="arrow-body"
+                d="M54 50 C 58 24, 41 9, 27 14 L 27 4 L 6 22 L 27 40 L 27 29 C 36 27, 42 35, 38 50 Z"
+              />
+              <path class="arrow-shine" d="M49 43 C 50 30, 42 19, 31 19" />
+              <circle class="arrow-dot" cx="18" cy="19" r="1.6" />
+            </svg>
+            <span>Vissza</span>
+          </button>
           @for (p of list; track p.filename) {
             <button type="button" class="photo" (click)="pick(p)">
               <img [src]="thumbUrl(p)" alt="" loading="lazy" />

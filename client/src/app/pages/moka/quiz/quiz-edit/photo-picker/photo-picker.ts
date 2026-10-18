@@ -1,6 +1,9 @@
 import { Component, HostListener, inject, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { forkJoin, map, of } from 'rxjs';
+import { AuthService } from '../../../../../auth/auth.service';
 import { Tour, TourImage, TourService } from '../../../../../services/tour';
+import { UserService } from '../../../../../services/user';
 
 import { Loading } from '../../../../../shared/loading/loading';
 // A photo of a tour's album, picked.
@@ -10,8 +13,10 @@ export interface PickedTourPhoto {
 }
 
 // Móka → Kvíz → the editor: a picture for a question from the tours'
-// albums - first the tour (every one of them, the newest first), then one
-// of its photos. Laid over the editor; it only says what was picked.
+// albums - first the tour (the newest first), then one of its photos. Only
+// tours that can have photos for the asker: none that hasn't started yet,
+// and for a guest only their own (the server wouldn't give them another's
+// album - utils/tourMediaAccess.js). Laid over the editor; it only says what was picked.
 @Component({
   selector: 'app-quiz-photo-picker',
   imports: [Loading, MatIconModule],
@@ -20,6 +25,8 @@ export interface PickedTourPhoto {
 })
 export class QuizPhotoPicker {
   private tourService = inject(TourService);
+  private userService = inject(UserService);
+  private auth = inject(AuthService);
 
   picked = output<PickedTourPhoto>();
   closed = output<void>();
@@ -31,11 +38,23 @@ export class QuizPhotoPicker {
   photos = signal<TourImage[] | null>(null);
 
   constructor() {
-    this.tourService.getTours().subscribe({
-      next: (res) =>
+    const guest = this.auth.user()?.role === 'guest';
+    forkJoin({
+      tours: this.tourService.getTours().pipe(map((res) => res.data.tours)),
+      mine: guest
+        ? this.userService
+            .getMyAttendance()
+            .pipe(map((res) => new Set(res.data.tours.map((t) => t.tour._id))))
+        : of(null),
+    }).subscribe({
+      next: ({ tours, mine }) => {
+        const now = Date.now();
         this.tours.set(
-          [...res.data.tours].sort((a, b) => Date.parse(b.startDate) - Date.parse(a.startDate)),
-        ),
+          tours
+            .filter((t) => Date.parse(t.startDate) <= now && (!mine || mine.has(t._id)))
+            .sort((a, b) => Date.parse(b.startDate) - Date.parse(a.startDate)),
+        );
+      },
       error: () => this.tours.set([]),
     });
   }
