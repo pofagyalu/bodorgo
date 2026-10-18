@@ -154,7 +154,12 @@
                   <span class="hint">Kép mentése…</span>
                 } @else {
                   <label class="pic-btn">
-                    <input type="file" accept="image/*" hidden (change)="pickFile(i, $event)" />
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
+                      hidden
+                      (change)="pickFile(i, $event)"
+                    />
                     <mat-icon>add_photo_alternate</mat-icon> Saját kép
                   </label>
                   <button type="button" class="pic-btn" (click)="pickingFor.set(i)">

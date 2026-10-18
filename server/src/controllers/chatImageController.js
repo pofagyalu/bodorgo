@@ -68,27 +68,46 @@ export const postChatImage = async (req, res) => {
   if (await chatRoomClosed(room)) throw new AppError(chatClosedMessage(room), 403);
   if (!req.file) throw new AppError('Nincs kép kiválasztva.', 400);
 
-  const { chatImages } = await getClubSettings();
-  const limit = chatImages?.dailyLimit ?? 10;
-  if ((await photosSentToday(req.user._id)) >= limit) {
-    throw new AppError(`Ma már elküldtél ${limit} fotót – holnap újra küldhetsz.`, 429);
-  }
-
-  const post = new Post({
-    chatRoomId: room._id,
-    creator: req.user._id,
-    text: String(req.body?.text ?? '')
-      .trim()
-      .slice(0, 4000),
-  });
+  // This one taken (before anything is awaited): photos still on their way
+  // count against the daily limit too - several sent at once can't all
+  // slip under it.
+  const userId = String(req.user._id);
+  const mine = (sending.get(userId) ?? 0) + 1;
+  sending.set(userId, mine);
   try {
-    post.image = await saveChatImage(post._id, req.file.buffer);
-  } catch (err) {
-    logger.warn(`chat image for chat room ${room._id} could not be read: ${err.message}`);
-    throw new AppError('Ez a fájl nem kép, vagy nem olvasható.', 400);
-  }
-  await post.save();
+    const { chatImages } = await getClubSettings();
+    const limit = chatImages?.dailyLimit ?? 10;
+    if ((await photosSentToday(req.user._id)) + mine > limit) {
+      throw new AppError(`Ma már elküldtél ${limit} fotót – holnap újra küldhetsz.`, 429);
+    }
 
+    const post = new Post({
+      chatRoomId: room._id,
+      creator: req.user._id,
+      text: String(req.body?.text ?? '')
+        .trim()
+        .slice(0, 4000),
+    });
+    try {
+      post.image = await saveChatImage(post._id, req.file.buffer);
+    } catch (err) {
+      logger.warn(`chat image for chat room ${room._id} could not be read: ${err.message}`);
+      throw new AppError('Ez a fájl nem kép, vagy nem olvasható.', 400);
+    }
+    await post.save();
+    return await sent(res, room, post);
+  } finally {
+    const left = (sending.get(userId) ?? 1) - 1;
+    if (left) sending.set(userId, left);
+    else sending.delete(userId);
+  }
+};
+
+// Photos being sent right now, per person (userId → how many).
+const sending = new Map();
+
+// A photo's message, saved: live for everyone in the room.
+async function sent(res, room, post) {
   const populated = await post.populate(POST_POPULATE);
   emitToChatRoom(room._id, 'new-post', populated);
   const io = getIo();
@@ -98,7 +117,7 @@ export const postChatImage = async (req, res) => {
   );
 
   res.status(201).json({ status: 'success', data: { post: populated } });
-};
+}
 
 // A photo still on disk, of a message in this chat room that wasn't deleted.
 async function servable(req) {
