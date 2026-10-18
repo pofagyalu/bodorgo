@@ -884,7 +884,14 @@ describe('QuizPhotoPicker', () => {
     fixture.detectChanges();
     respond({
       'GET /tours': {
-        data: { tours: [tour('t1', 'Mátra', '2024-07-01'), tour('t2', 'Bükk', '2025-07-01')] },
+        data: {
+          tours: [
+            tour('t1', 'Mátra', '2024-07-01'),
+            tour('t2', 'Bükk', '2025-07-01'),
+            // Not started yet - no photos to pick from.
+            tour('t3', 'Zemplén', '2099-07-01'),
+          ],
+        },
       },
     });
     fixture.detectChanges();
@@ -905,6 +912,11 @@ describe('QuizPhotoPicker', () => {
     fixture.detectChanges();
     expect(picker.photos()?.map((p) => p.filename)).toEqual(['IMG_1.jpg']);
     expect(picker.thumbUrl(picker.photos()![0])).toBe(`${API}/tours/t2/images/IMG_1.jpg/thumb`);
+    // Before the first photo, a tile back to the tours.
+    const tiles = (fixture.nativeElement as HTMLElement).querySelectorAll('.photos .photo');
+    expect(tiles[0].classList).toContain('back-tile');
+    expect(tiles[0].textContent).toContain('Vissza');
+    expect(tiles).toHaveLength(2);
 
     const picked = vi.fn();
     const closed = vi.fn();
@@ -917,6 +929,21 @@ describe('QuizPhotoPicker', () => {
     expect(picker.tour()).toBeNull();
     picker.close();
     expect(closed).toHaveBeenCalled();
+  });
+
+  it('offers a guest only the tours they were on', () => {
+    setUp();
+    logIn({ role: 'guest' });
+    const fixture = TestBed.createComponent(QuizPhotoPicker);
+    const picker = fixture.componentInstance;
+    fixture.detectChanges();
+    respond({
+      'GET /tours': {
+        data: { tours: [tour('t1', 'Mátra', '2024-07-01'), tour('t2', 'Bükk', '2025-07-01')] },
+      },
+      'GET /users/me/attendance': { data: { tours: [{ tour: { _id: 't1' } }] } },
+    });
+    expect(picker.tours()?.map((t) => t.title)).toEqual(['Mátra']);
   });
 
   it('shows nothing to pick when the lists cannot be loaded', () => {
