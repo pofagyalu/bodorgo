@@ -310,7 +310,8 @@ describe('a hike recorded in pieces', () => {
     // One map of both pieces, beside the first one; the others their own.
     expect(hikes[0].map).toMatch(/-hike-[0-9a-f]{8}-map\.jpg$/);
     expect(fs.existsSync(hikes[0].map)).toBe(true);
-    expect(hikes[1].map).toMatch(/[^e]-map\.jpg$/);
+    expect(hikes[1].map).toMatch(/-map\.jpg$/);
+    expect(hikes[1].map).not.toMatch(/-hike-/);
 
     // A piece gone: the joined map goes, and the hike is what's left.
     const second = await Document.findOne({ name: 'velence 2' });
