@@ -6,6 +6,7 @@ import {
   recordCashPayment,
   deleteCashPayment,
   getPaymentStatus,
+  getMyPayments,
   downloadReceipt,
   barionCallback,
   getWithdrawalStatus,
@@ -52,6 +53,8 @@ router.post(
   createStripePayoutNow,
 );
 router.delete('/:id', requireAuth, restrictTo('admin'), requireFreshLogin, deleteCashPayment);
+// Profilom → Befizetéseim: my own online payments, with their receipts.
+router.get('/mine', requireAuth, getMyPayments);
 router.get('/:id/status', requireAuth, getPaymentStatus);
 router.get('/:id/receipt', requireAuth, downloadReceipt);
 

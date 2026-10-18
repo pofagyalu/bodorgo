@@ -270,6 +270,50 @@
         }
       </section>
 
+      <!-- Befizetéseim: what I paid online myself (Stripe, Barion), with the
+           receipt to download - cash isn't here, there is no receipt for it. -->
+      <section class="panel">
+        <h2>Befizetéseim</h2>
+        <p class="subtext">
+          Az általad online (bankkártyával vagy Barionnal) fizetett tagdíjak és előlegek - az
+          igazolást bármikor letöltheted.
+        </p>
+
+        @if (myPaymentsError()) {
+          <p class="error-note">{{ myPaymentsError() }}</p>
+        } @else if (myPayments() === null) {
+          <app-loading />
+        } @else if (myPayments()!.length === 0) {
+          <p class="empty-note">Még nem fizettél online.</p>
+        } @else {
+          <ul class="payment-list">
+            @for (p of myPayments(); track p._id) {
+              <li class="payment-row">
+                <span class="payment-main">
+                  <strong>{{ paymentFor(p) }}</strong>
+                  <small
+                    >{{ p.paidAt.slice(0, 10).replaceAll('-', '. ') }}. ·
+                    {{ paymentMethod(p) }}</small
+                  >
+                </span>
+                <span class="payment-amount">{{ paymentMoney(p) }}</span>
+                @if (p.hasReceipt) {
+                  <a
+                    [href]="receiptUrl(p._id)"
+                    target="_blank"
+                    class="payment-receipt"
+                    title="Fizetési igazolás letöltése (PDF)"
+                  >
+                    <mat-icon>download</mat-icon>
+                    Igazolás
+                  </a>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
       <section class="panel">
         <h2>Értesítések</h2>
         <p class="subtext">Te döntöd el, miről kérsz üzenetet.</p>

@@ -10,6 +10,20 @@ import type { PaymentMethodKey, PaymentWallet } from './settings';
 export type PaymentStatus =
   'Prepared' | 'Started' | 'Succeeded' | 'Failed' | 'Canceled' | 'Expired';
 
+// One of my online payments (Profilom → Befizetéseim): dues - whose and
+// which year (`people`) - or a tour's advance - for whom.
+export interface MyPayment {
+  _id: string;
+  paidAt: string;
+  purpose: 'membershipFee' | 'tourAdvance';
+  method: 'stripe' | 'barion';
+  amount: number;
+  currency: string;
+  tour: { _id: string; title: string; order: number; slug: string } | null;
+  people: { name: string; year?: number }[];
+  hasReceipt: boolean;
+}
+
 export interface StartPaymentResponse {
   status: string;
   data: { gatewayUrl: string; paymentId: string };
@@ -135,6 +149,14 @@ export class PaymentService {
   // delayed or (on a dev machine) can never arrive at all.
   getPaymentStatus(paymentId: string): Observable<PaymentStatusResponse> {
     return this.http.get<PaymentStatusResponse>(`${this.apiUrl}/${paymentId}/status`);
+  }
+
+  // Profilom → Befizetéseim: my own online payments that went through, the
+  // latest first (server paymentController.js's getMyPayments).
+  getMyPayments(): Observable<{ status: string; data: { payments: MyPayment[] } }> {
+    return this.http.get<{ status: string; data: { payments: MyPayment[] } }>(
+      `${this.apiUrl}/mine`,
+    );
   }
 
   // A plain GET URL, not an HttpClient call - the browser navigates/

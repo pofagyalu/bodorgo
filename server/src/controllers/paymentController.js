@@ -910,6 +910,44 @@ export const getPaymentStatus = async (req, res) => {
 // plain "logged in, that's it" check, since the filename itself (date,
 // real name) is guessable/informative enough that anyone logged in could
 // otherwise fetch someone else's payment record.
+// GET /payments/mine - Profilom → Befizetéseim: the payments I made myself
+// online (Stripe or Barion) that went through, the latest first - what for
+// (dues: whose and which year; an advance: which tour, for whom), how
+// much, how, and whether its receipt can be downloaded (/:id/receipt).
+// Cash handed over isn't here: there is no receipt for it.
+export const getMyPayments = async (req, res) => {
+  const payments = await Payment.find({
+    createdBy: req.user._id,
+    status: 'Succeeded',
+    method: { $in: ['stripe', 'barion'] },
+  })
+    .sort('-createdAt')
+    .populate('tour', 'title order slug startDate')
+    .lean();
+  res.status(200).json({
+    status: 'success',
+    data: {
+      payments: payments.map((p) => ({
+        _id: p._id,
+        paidAt: p.updatedAt ?? p.createdAt,
+        purpose: p.purpose,
+        method: p.method,
+        amount: p.amount,
+        currency: p.currency ?? 'HUF',
+        tour: p.tour
+          ? { _id: p.tour._id, title: p.tour.title, order: p.tour.order, slug: p.tour.slug }
+          : null,
+        // Dues: whose, which year. An advance: for whom.
+        people: (p.purpose === 'membershipFee' ? p.members : (p.attendees ?? [])).map((x) => ({
+          name: x.name,
+          ...(x.membershipYear != null && { year: x.membershipYear }),
+        })),
+        hasReceipt: !!p.receiptFilename,
+      })),
+    },
+  });
+};
+
 export const downloadReceipt = async (req, res) => {
   const payment = await Payment.findById(req.params.id);
   if (!payment) {

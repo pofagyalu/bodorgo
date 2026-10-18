@@ -2468,6 +2468,29 @@ const paths = {
       errors: [400, 502],
     }),
   },
+  '/payments/mine': {
+    get: op({
+      tag: T.payments,
+      summary: 'My online payments',
+      description:
+        'Profilom → Befizetéseim: the payments I made myself online (Stripe or Barion) that went through, the latest first. Cash handed over isn’t here - there is no receipt for it. `people`: whose dues and which `year`, or whom an advance was for. `hasReceipt`: the PDF can be downloaded from `/payments/{id}/receipt`.',
+      data: obj({
+        payments: arrayOf(
+          obj({
+            _id: id(),
+            paidAt: date(),
+            purpose: str('`membershipFee` or `tourAdvance`.'),
+            method: str('`stripe` or `barion`.'),
+            amount: num(),
+            currency: str(),
+            tour: { type: ['object', 'null'] },
+            people: arrayOf(obj({ name: str(), year: int() })),
+            hasReceipt: bool(),
+          }),
+        ),
+      }),
+    }),
+  },
   '/payments/{id}/status': {
     get: op({
       tag: T.payments,

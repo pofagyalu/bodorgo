@@ -9,7 +9,7 @@ import {
   FamilyMember,
 } from '../../../services/user';
 import { NotificationsService } from '../../../notifications/notifications.service';
-import { PaymentService } from '../../../services/payment';
+import { MyPayment, PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
 import { PushService } from '../../../services/push';
 import { errorMessage } from '../../../shared/errors';
@@ -101,6 +101,11 @@ export class KlubProfile implements OnInit {
   family = signal<FamilyMember[]>([]);
   familyError = signal<string | null>(null);
 
+  // Befizetéseim: my own online payments, with their receipts - null while
+  // they load (server paymentController.js's getMyPayments).
+  myPayments = signal<MyPayment[] | null>(null);
+  myPaymentsError = signal<string | null>(null);
+
   // Signal-driven, matching the rest of the Klub area's own convention
   // (finance.ts/documents.ts/members.ts) rather than [(ngModel)] - keeps
   // this whole subtree free of a FormsModule dependency.
@@ -127,6 +132,7 @@ export class KlubProfile implements OnInit {
     this.load();
     this.loadAttendance();
     this.loadFamily();
+    this.loadMyPayments();
     this.push.refresh().catch(() => {});
   }
 
@@ -174,6 +180,32 @@ export class KlubProfile implements OnInit {
       next: (res) => this.attendance.set(res.data.tours),
       error: () => this.attendanceError.set('A táboraid betöltése nem sikerült.'),
     });
+  }
+
+  private loadMyPayments() {
+    this.paymentService.getMyPayments().subscribe({
+      next: (res) => this.myPayments.set(res.data.payments),
+      error: () => this.myPaymentsError.set('A befizetéseid betöltése nem sikerült.'),
+    });
+  }
+
+  // What a payment was for: "Tagdíj 2026", "Előleg – 27. Szlovák Paradicsom" -
+  // and whose, when it was for more than one.
+  paymentFor(p: MyPayment): string {
+    const names = p.people.length > 1 ? ` – ${p.people.map((x) => x.name).join(', ')}` : '';
+    if (p.purpose === 'membershipFee') {
+      const years = [...new Set(p.people.map((x) => x.year).filter(Boolean))].join(', ');
+      return `Tagdíj ${years}${names}`;
+    }
+    return `Előleg – ${p.tour ? `${p.tour.order}. ${p.tour.title}` : 'tábor'}${names}`;
+  }
+
+  paymentMoney(p: MyPayment): string {
+    return `${p.amount.toLocaleString('hu-HU')} ${p.currency === 'HUF' ? 'Ft' : p.currency}`;
+  }
+
+  paymentMethod(p: MyPayment): string {
+    return p.method === 'barion' ? 'Barion' : 'Bankkártya (Stripe)';
   }
 
   private loadFamily() {
