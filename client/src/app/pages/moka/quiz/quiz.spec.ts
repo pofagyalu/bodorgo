@@ -931,7 +931,7 @@ describe('QuizPhotoPicker', () => {
     expect(closed).toHaveBeenCalled();
   });
 
-  it("offers a guest only the tours they were on", () => {
+  it('offers a guest only the tours they were on', () => {
     setUp();
     logIn({ role: 'guest' });
     const fixture = TestBed.createComponent(QuizPhotoPicker);
