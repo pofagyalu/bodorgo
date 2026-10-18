@@ -12,6 +12,7 @@ import User from '../../src/models/userModel.js';
 import Tour from '../../src/models/tourModel.js';
 import Reservation from '../../src/models/reservationModel.js';
 import { fetchForecast, fetchHistorical } from '../../src/utils/weather.js';
+import { refreshToursWeather } from '../../src/controllers/tourController.js';
 
 describe('reading tours', () => {
   it('a tour page carries payments, attendee photos and usernames', async () => {
@@ -56,9 +57,8 @@ describe('reading tours', () => {
       duration: 2,
     });
     const past = await createTour({ startDate: new Date('2023-05-01'), duration: 2 });
-    const member = await createMember();
-    await request(app).get(`/tours/${soon._id}`).set(asUser(member));
-    await request(app).get(`/tours/${past._id}`).set(asUser(member));
+    await refreshToursWeather();
+    await refreshToursWeather();
     const savedSoon = await Tour.findById(soon._id);
     const savedPast = await Tour.findById(past._id);
     expect(savedSoon.dailyWeather).toHaveLength(2);
@@ -73,11 +73,11 @@ describe('reading tours', () => {
     expect(askedDates).toEqual(['2023-05-01', '2023-05-02']);
     // Past days are final: never fetched again.
     vi.mocked(fetchHistorical).mockClear();
-    await request(app).get(`/tours/${past._id}`).set(asUser(member));
+    await refreshToursWeather();
     expect(fetchHistorical).not.toHaveBeenCalled();
   });
 
-  it('refreshes a tour once when the list and its page are opened together - one day at a time', async () => {
+  it('a page view never asks for the weather; the round asks each day once, one at a time', async () => {
     let running = 0;
     let most = 0;
     vi.mocked(fetchForecast)
@@ -100,14 +100,19 @@ describe('reading tours', () => {
     ]);
     expect(list.status).toBe(200);
     expect(page.status).toBe(200);
-    // Each day asked for once, never two requests at the same time.
+    expect(fetchForecast).not.toHaveBeenCalled();
+
+    // Two rounds started together are one: each day asked for once, never
+    // two requests at the same time.
+    await Promise.all([refreshToursWeather(), refreshToursWeather()]);
     expect(fetchForecast).toHaveBeenCalledTimes(3);
     expect(most).toBe(1);
-    // Both answers carry the same, saved weather.
-    const listed = list.body.data.tours.find((t) => t._id === String(soon._id));
-    expect(page.body.data.tour.dailyWeather).toHaveLength(3);
-    expect(listed.weatherOutlook).toEqual(page.body.data.tour.weatherOutlook);
-    expect((await Tour.findById(soon._id)).dailyWeather).toHaveLength(3);
+    // The next round, within 12 hours: nothing asked again.
+    await refreshToursWeather();
+    expect(fetchForecast).toHaveBeenCalledTimes(3);
+    // The pages read what it saved.
+    const again = await request(app).get(`/tours/${soon._id}`).set(asUser(member));
+    expect(again.body.data.tour.dailyWeather).toHaveLength(3);
   });
 
   it('keeps the forecast on the day itself, freezes it the day after, asks nothing beyond 15 days', async () => {
@@ -131,9 +136,8 @@ describe('reading tours', () => {
     const running = await createTour({ startDate: midnight(-1), duration: 2 });
     // The 15th and the 16th day ahead.
     const far = await createTour({ startDate: midnight(15), duration: 2 });
-    const member = await createMember();
-    await request(app).get(`/tours/${running._id}`).set(asUser(member));
-    await request(app).get(`/tours/${far._id}`).set(asUser(member));
+    await refreshToursWeather();
+    await refreshToursWeather();
 
     const byDay = (tour) => [...tour.dailyWeather].sort((a, b) => a.day - b.day);
     const savedRunning = byDay(await Tour.findById(running._id));
@@ -171,6 +175,7 @@ describe('reading tours', () => {
       const far = await createTour({ startDate: midnight(14), duration: 3 });
       const member = await createMember();
 
+      await refreshToursWeather();
       const list = await request(app).get('/tours').set(asUser(member));
       const listed = (id) => list.body.data.tours.find((t) => t._id === String(id));
       expect(listed(near._id).weatherOutlook).toMatchObject({
@@ -181,11 +186,15 @@ describe('reading tours', () => {
       expect(listed(far._id).weatherOutlook).toBeUndefined();
       expect((await Tour.findById(near._id)).dailyWeather[0].rainChance).toBe(10);
 
+      await refreshToursWeather();
+
       const res = await request(app).get(`/tours/${near._id}`).set(asUser(member));
       expect(res.body.data.tour.weatherOutlook.pack.map((p) => p.icon)).toEqual(['tshirt']);
       expect(res.body.data.tour.weatherOutlook.days).toHaveLength(2);
-      // Asked for once by the list, not again by the page.
+      // Asked for by the round only - not by the list or the page.
       expect(fetchForecast).toHaveBeenCalledTimes(2 + 2);
+
+      await refreshToursWeather();
 
       const farPage = await request(app).get(`/tours/${far._id}`).set(asUser(member));
       expect(farPage.body.data.tour.weatherOutlook).toBeUndefined();
@@ -194,7 +203,7 @@ describe('reading tours', () => {
     it('follows the forecast until the start date', async () => {
       const tour = await createTour({ startDate: midnight(2), duration: 1 });
       const member = await createMember();
-      await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      await refreshToursWeather();
       expect((await Tour.findById(tour._id)).weatherOutlook.tier).toBe('perfect');
 
       // The next refresh brings a storm.
@@ -209,6 +218,7 @@ describe('reading tours', () => {
         windSpeedKmh: 50,
         rainChance: 100,
       });
+      await refreshToursWeather();
       const res = await request(app).get(`/tours/${tour._id}`).set(asUser(member));
       expect(res.body.data.tour.weatherOutlook).toMatchObject({ tier: 'rough', frozen: false });
     });
@@ -216,12 +226,13 @@ describe('reading tours', () => {
     it('freezes on the start date and never changes again', async () => {
       const tour = await createTour({ startDate: midnight(1), duration: 2 });
       const member = await createMember();
-      await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      await refreshToursWeather();
       const promised = (await Tour.findById(tour._id)).weatherOutlook.toObject();
       expect(promised.frozen).toBe(false);
 
       // The tour is now in its second day: day 1 gets its recorded weather.
       await Tour.updateOne({ _id: tour._id }, { $set: { startDate: midnight(-1) } });
+      await refreshToursWeather();
       const res = await request(app).get(`/tours/${tour._id}`).set(asUser(member));
       expect(res.body.data.tour.dailyWeather.find((w) => w.day === 1)).toMatchObject({
         condition: 'rain',
@@ -239,6 +250,7 @@ describe('reading tours', () => {
     it('is never made up for a tour that started without one', async () => {
       const tour = await createTour({ startDate: midnight(0), duration: 2 });
       const member = await createMember();
+      await refreshToursWeather();
       const res = await request(app).get(`/tours/${tour._id}`).set(asUser(member));
       expect(res.body.data.tour.dailyWeather).toHaveLength(2);
       expect(res.body.data.tour.weatherOutlook).toBeUndefined();
@@ -246,8 +258,7 @@ describe('reading tours', () => {
 
     it('goes when the tour moves to other days', async () => {
       const tour = await createTour({ startDate: midnight(1), duration: 1 });
-      const member = await createMember();
-      await request(app).get(`/tours/${tour._id}`).set(asUser(member));
+      await refreshToursWeather();
       const saved = await Tour.findById(tour._id);
       expect(saved.weatherOutlook).toBeDefined();
       saved.startDate = midnight(40);

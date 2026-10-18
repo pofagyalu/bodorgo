@@ -231,7 +231,7 @@ const schemas = {
     dailyWeather: arrayOf({
       type: 'object',
       description:
-        'Weather per day (Open-Meteo): `day`, `condition`, `tempDayC`, `tempNightC`, `windSpeedKmh`, `rainChance` (0-100, forecast only), `isFinal`. A forecast from at most 15 days before the day, asked for again at most every 6 hours; once the day is over, the recorded weather (`isFinal: true`), never changed again.',
+        'Weather per day (Open-Meteo): `day`, `condition`, `tempDayC`, `tempNightC`, `windSpeedKmh`, `rainChance` (0-100, forecast only), `isFinal`. A forecast from at most 15 days before the day, fetched by the server on its own (every hour it looks; a day at most every 12 hours) - never on a page view; once the day is over, the recorded weather (`isFinal: true`), never changed again.',
     }),
     weatherOutlook: ref('WeatherOutlook'),
     extraDocuments: arrayOf(ref('TourDocument')),
@@ -1374,7 +1374,7 @@ const paths = {
       tag: T.tours,
       summary: 'All tours',
       description:
-        "With attendee counts - no reservations (who is on a tour: `/tours/{id}`). Only these query parameters are read, anything else in the address is ignored: `startDate.gte`/`.gt`/`.lte`/`.lt` (a date), `sort`, `page`, `limit` - no field selection and no other operators. Each tour carries its `weatherOutlook` once it has one (the tour card's pill) - the forecast of the tours starting within 15 days is brought up to date first, at most every 6 hours.",
+        "With attendee counts - no reservations (who is on a tour: `/tours/{id}`). Only these query parameters are read, anything else in the address is ignored: `startDate.gte`/`.gt`/`.lte`/`.lt` (a date), `sort`, `page`, `limit` - no field selection and no other operators. Each tour carries its `weatherOutlook` once it has one (the tour card's pill) - as the server last saved it (it fetches the forecast itself, see `dailyWeather`); the list never waits for the weather.",
       params: [
         query('sort', '`order`, `startDate`, or either with `-` (newest first). Default `-order`.'),
         query('startDate.gte', 'From this date (also `.gt`, `.lte`, `.lt`).'),

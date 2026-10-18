@@ -10,6 +10,7 @@ import registerQuizHandlers from './jatekok/quiz/quizSocket.js';
 import registerDartsHandlers from './jatekok/darts/dartsSocket.js';
 import logger from './logger.js';
 import { checkPollReminders } from './chat/pollReminders.js';
+import { refreshToursWeather } from './controllers/tourController.js';
 import { warmUpMusic } from './music/jellyfin.js';
 import { ensureDocumentPreviews } from './utils/documentPreviews.js';
 import { ensureDocumentTracks } from './utils/documentTracks.js';
@@ -98,6 +99,15 @@ mongoose
     // New tour recap videos are announced by an admin's "Új média
     // felfedezése" (see photos/discovery.js), not on a schedule - the NAS
     // is only read when someone has actually added something.
+
+    // The tours' weather (Open-Meteo): at start, then every hour - each day
+    // asked for at most every 12 hours (tourController.js's
+    // refreshToursWeather). On every server: each has its own tours. The
+    // pages only read what it saved.
+    const weatherRound = () =>
+      refreshToursWeather().catch((err) => logger.error(`Weather round failed: ${err.message}`));
+    weatherRound();
+    setInterval(weatherRound, 60 * 60 * 1000);
 
     // Every 10 minutes: remind people about polls closing within 2 hours
     // they haven't voted in (see chat/pollReminders.js). Live server only

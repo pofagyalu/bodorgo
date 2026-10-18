@@ -12,8 +12,11 @@ const HISTORICAL_URL = 'https://archive-api.open-meteo.com/v1/archive';
 
 export const MAX_FORECAST_DAYS_AHEAD = 15;
 // A day's forecast is asked for again at most this often (see
-// tourController.js's refreshTourWeather).
-export const WEATHER_REFETCH_HOURS = 6;
+// tourController.js's refreshToursWeather - the server's own round).
+export const WEATHER_REFETCH_HOURS = 12;
+// How long one request may take: a slow Open-Meteo is given up on, and the
+// next round asks again.
+const REQUEST_TIMEOUT_MS = 10_000;
 
 // Thresholds for classifyDay below.
 const RAIN_MM = 3; // this much rain in a day is a rainy day, however sunny
@@ -81,7 +84,7 @@ async function fetchDailyWeather(baseUrl, lat, lng, dateStr, extraDaily = '') {
   );
   url.searchParams.set('timezone', 'auto');
 
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   if (!res.ok) {
     const err = new Error(`Open-Meteo request failed: ${res.status} ${await res.text()}`);
     err.status = res.status;
