@@ -15,6 +15,7 @@ import { assertFreshLogin } from '../auth/freshLogin.js';
 import { isInitialAdmin } from '../utils/roleManager.js';
 import { endAppSessions, listAppSessions } from '../utils/appSessions.js';
 import { endAuthentikSessions, listAuthentikSessions } from '../utils/authentikSessions.js';
+import { escapeHtml } from '../utils/mailHtml.js';
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -214,7 +215,7 @@ async function emailAdminsAboutRank(user, tours, rank) {
     text: `${line}
 
 Ma lépett be először azóta.`,
-    html: `<p>${line}</p><p>Ma lépett be először azóta.</p>`,
+    html: `<p>${escapeHtml(line)}</p><p>Ma lépett be először azóta.</p>`,
   });
 }
 

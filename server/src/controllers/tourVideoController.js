@@ -17,6 +17,7 @@ import {
   tourVideoList,
   tourVideosRoot,
 } from '../utils/tourVideos.js';
+import { escapeHtml } from '../utils/mailHtml.js';
 
 // The tour recap videos - matched to tours by their file names (see
 // utils/tourVideos.js), streamed straight from the NAS. Any logged-in
@@ -98,7 +99,7 @@ function videoReadyEmailBody(recipientName, tourTitle, videoPageUrl) {
   return {
     subject: `Elkészült a videó - ${tourTitle}`,
     text: `Szia ${recipientName}!\n\nElkészült a(z) "${tourTitle}" tábor videója, itt nézheted meg: ${videoPageUrl}\n\nÜdvözlettel,\nBódorgó\n\n${noReplyNote}`,
-    html: `<p>Szia ${recipientName}!</p><p>Elkészült a(z) "${tourTitle}" tábor videója, <a href="${videoPageUrl}">itt nézheted meg</a>.</p><p>Üdvözlettel,<br>Bódorgó</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
+    html: `<p>Szia ${escapeHtml(recipientName)}!</p><p>Elkészült a(z) "${escapeHtml(tourTitle)}" tábor videója, <a href="${videoPageUrl}">itt nézheted meg</a>.</p><p>Üdvözlettel,<br>Bódorgó</p><p style="color:#888;font-size:0.85em;">${noReplyNote}</p>`,
   };
 }
 

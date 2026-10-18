@@ -45,6 +45,7 @@ import {
   trimUrl,
 } from '../utils/oidcSettings.js';
 import { canEncrypt, encryptSecret } from '../utils/secretBox.js';
+import { escapeHtml } from '../utils/mailHtml.js';
 
 // Klub → Beállítások: club-wide settings. For now the yearly membership
 // fee, by the year each amount takes effect (see utils/clubSettings.js).
@@ -462,11 +463,11 @@ export const updateBarionWallet = async (req, res) => {
 
     const admins = await User.find({ role: 'admin', email: { $nin: [null, ''] } }).select('email');
     if (admins.length) {
-      const lines = changes.map((c) => `<li>${c}</li>`).join('');
+      const lines = changes.map((c) => `<li>${escapeHtml(c)}</li>`).join('');
       await sendResendEmail({
         to: admins.map((a) => a.email),
         subject: `Bódorgó: megváltozott a Barion beállítás (${WALLETS[key]})`,
-        html: `<p>${req.user.name} megváltoztatta a(z) <strong>${WALLETS[key]}</strong> Barion-számla beállításait:</p><ul>${lines}</ul><p>Ha nem tudsz róla, azonnal nézd meg a Klub → Beállítások oldalon!</p>`,
+        html: `<p>${escapeHtml(req.user.name)} megváltoztatta a(z) <strong>${WALLETS[key]}</strong> Barion-számla beállításait:</p><ul>${lines}</ul><p>Ha nem tudsz róla, azonnal nézd meg a Klub → Beállítások oldalon!</p>`,
         text: [
           `${req.user.name} megváltoztatta a(z) ${WALLETS[key]} Barion-számla beállításait:`,
           ...changes,
@@ -748,11 +749,11 @@ async function mailOidcChange(req, changes) {
   logger.info(`OIDC settings changed by ${req.user.name}: ${changes.join('; ')}`);
   const admins = await User.find({ role: 'admin', email: { $nin: [null, ''] } }).select('email');
   if (!admins.length) return;
-  const lines = changes.map((c) => `<li>${c}</li>`).join('');
+  const lines = changes.map((c) => `<li>${escapeHtml(c)}</li>`).join('');
   await sendResendEmail({
     to: admins.map((a) => a.email),
     subject: 'Bódorgó: megváltozott az OIDC szolgáltató beállítása',
-    html: `<p>${req.user.name} megváltoztatta a bejelentkezés (OIDC szolgáltató) beállításait:</p><ul>${lines}</ul><p>Ha nem tudsz róla, azonnal szólj a szerepkör-kezelő adminnak!</p>`,
+    html: `<p>${escapeHtml(req.user.name)} megváltoztatta a bejelentkezés (OIDC szolgáltató) beállításait:</p><ul>${lines}</ul><p>Ha nem tudsz róla, azonnal szólj a szerepkör-kezelő adminnak!</p>`,
     text: [
       `${req.user.name} megváltoztatta a bejelentkezés (OIDC szolgáltató) beállításait:`,
       ...changes,
