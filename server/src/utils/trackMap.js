@@ -18,6 +18,8 @@ export const MAP_CREDIT = '© OpenStreetMap közreműködők';
 const TRACK_COLOR = '#d81b60';
 const START_COLOR = '#2e7d32';
 const END_COLOR = '#c62828';
+// Where a hike recorded in several pieces stopped between two of them.
+const STOP_COLOR = '#f6b528';
 
 // Web Mercator: a position in the world's pixels at a zoom.
 const worldX = (lng, z) => ((lng + 180) / 360) * 2 ** z * TILE;
@@ -49,35 +51,47 @@ function frame(points) {
 }
 
 // The track as an SVG the size of the picture: a white-edged line, a green
-// dot where it starts, a red one where it ends.
-function trackOverlay(points, { z, left, top }) {
-  const xy = [];
-  for (const p of points) {
-    const at = [worldX(p.lng, z) - left, worldY(p.lat, z) - top];
-    // A watch's point every second: one per pixel is plenty.
-    const last = xy.at(-1);
-    if (!last || Math.hypot(at[0] - last[0], at[1] - last[1]) >= 1) xy.push(at);
-  }
-  const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-  const dot = ([x, y], color) =>
-    `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="9" fill="${color}" stroke="#fff" stroke-width="3"/>`;
-  const stroke = (color, width) =>
-    `<polyline points="${line}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"/>`;
+// dot where it starts, a red one where it ends - and of a hike recorded in
+// pieces, each piece its own line, a yellow dot where each but the last
+// one ended (a stop: lunch, a swim).
+function trackOverlay(pieces, { z, left, top }) {
+  const lines = pieces.map((points) => {
+    const xy = [];
+    for (const p of points) {
+      const at = [worldX(p.lng, z) - left, worldY(p.lat, z) - top];
+      // A watch's point every second: one per pixel is plenty.
+      const last = xy.at(-1);
+      if (!last || Math.hypot(at[0] - last[0], at[1] - last[1]) >= 1) xy.push(at);
+    }
+    return xy;
+  });
+  const dot = ([x, y], color, r = 9) =>
+    `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${color}" stroke="#fff" stroke-width="3"/>`;
+  const stroke = (xy, color, width) =>
+    `<polyline points="${xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"/>`;
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${TRACK_MAP_WIDTH}" height="${TRACK_MAP_HEIGHT}">` +
-      stroke('#fff', 8) +
-      stroke(TRACK_COLOR, 4.5) +
-      dot(xy.at(-1), END_COLOR) +
-      dot(xy[0], START_COLOR) +
+      lines.map((xy) => stroke(xy, '#fff', 8)).join('') +
+      lines.map((xy) => stroke(xy, TRACK_COLOR, 4.5)).join('') +
+      lines
+        .slice(0, -1)
+        .map((xy) => dot(xy.at(-1), STOP_COLOR, 7))
+        .join('') +
+      dot(lines.at(-1).at(-1), END_COLOR) +
+      dot(lines[0][0], START_COLOR) +
       `</svg>`,
   );
 }
 
-// The map of a track ({ lat, lng } points, in order), as a JPEG buffer.
-// Throws when a tile can't be had - the beszámoló then goes without the
-// map (and it is tried again the next time).
-export async function renderTrackMap(points) {
-  if (points.length < 2) throw new Error('track map: no track');
+// The map of a track ({ lat, lng } points, in order) - or of a hike
+// recorded in pieces (a list of such tracks, in the order they were
+// walked) -, as a JPEG buffer. Throws when a tile can't be had - the
+// beszámoló then goes without the map (and it is tried again the next
+// time).
+export async function renderTrackMap(track) {
+  const pieces = (Array.isArray(track[0]) ? track : [track]).filter((p) => p.length >= 2);
+  const points = pieces.flat();
+  if (!pieces.length) throw new Error('track map: no track');
   const view = frame(points);
   const { z, left, top } = view;
   const [firstCol, lastCol] = [
@@ -129,7 +143,7 @@ export async function renderTrackMap(points) {
       width: TRACK_MAP_WIDTH,
       height: TRACK_MAP_HEIGHT,
     })
-    .composite([{ input: trackOverlay(points, view) }])
+    .composite([{ input: trackOverlay(pieces, view) }])
     .jpeg({ quality: 86 })
     .toBuffer();
 }
