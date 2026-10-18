@@ -45,6 +45,7 @@ import { TourParticipants } from './tour-participants/tour-participants';
 import { TourVideos } from './tour-videos/tour-videos';
 import { CoverPlaceholder } from '../../shared/cover-placeholder/cover-placeholder';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { LoadingSpinner } from '../../components/loading-spinner/loading-spinner';
 
 @Component({
   selector: 'app-tour-details',
@@ -61,6 +62,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
     TourSignup,
     TourExtras,
     FitLine,
+    LoadingSpinner,
   ],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
