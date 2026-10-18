@@ -12,6 +12,7 @@ import {
 } from '../helpers/factories.js';
 import Tour from '../../src/models/tourModel.js';
 import { clearTourVideoCache } from '../../src/utils/tourVideos.js';
+import { zipsRunning } from '../../src/controllers/tourImageController.js';
 
 // A tour's album and its recap videos: the members' and the admins' - a
 // guest's only on a tour they are on themselves (utils/tourMediaAccess.js).
@@ -127,5 +128,33 @@ describe("a tour's photos and videos for a guest", () => {
     await createReservation(tour, [guest]);
     // On the tour it gets as far as reading the file - which is no picture.
     expect((await pick()).status).not.toBe(404);
+  });
+});
+
+// A whole album's originals load the NAS and the home line: one zip at a
+// time per person, at most two in all (tourImageController.js).
+describe("an album's zip", () => {
+  it('one at a time per person, two in all - a busy one is a page to read', async () => {
+    const tour = await tourWithMedia();
+    const member = await createMember();
+    const url = `/tours/${tour._id}/images/download-zip`;
+
+    expect((await get(member, url)).status).toBe(200);
+    expect(zipsRunning.size).toBe(0); // freed once it's sent
+
+    zipsRunning.set(String(member._id), 1);
+    const mine = await get(member, url);
+    expect(mine.status).toBe(429);
+    expect(mine.headers['content-type']).toContain('text/html');
+    expect(mine.text).toContain('Már töltesz le egy albumot');
+    zipsRunning.clear();
+
+    zipsRunning.set('a', 1);
+    zipsRunning.set('b', 1);
+    const third = await get(member, url);
+    expect(third.status).toBe(429);
+    expect(third.text).toContain('mások is töltenek le albumot');
+    zipsRunning.clear();
+    expect((await get(member, url)).status).toBe(200);
   });
 });

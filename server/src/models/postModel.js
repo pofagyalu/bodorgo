@@ -4,6 +4,11 @@ import { Schema, model } from 'mongoose';
 // szomorú, sírás.
 export const REACTIONS = ['👍', '😂', '😮', '😢', '😭'];
 
+// The longest a chat message (or a photo's caption) may be - each one goes
+// out to every phone in the room.
+export const POST_TEXT_MAX = 1000;
+export const POST_TOO_LONG = `Egy üzenet legfeljebb ${POST_TEXT_MAX} karakter lehet.`;
+
 // What a message goes out with, wherever it's sent: its author's and
 // every reacting person's name/username.
 export const POST_POPULATE = [
@@ -32,6 +37,7 @@ const PostSchema = new Schema(
       type: String,
       trim: true,
       default: '',
+      maxlength: POST_TEXT_MAX,
     },
 
     // A photo sent with the message (see chat/chatImages.js): the files are

@@ -1939,10 +1939,11 @@ const paths = {
     get: op({
       tag: T.gallery,
       summary: 'All photos as a zip',
-      description: 'Streamed; only the photos I may see.',
+      description:
+        'Streamed; only the photos I may see. One at a time per person and at most two in all (they load the NAS and the home line): while busy, 429 with a short Hungarian HTML page (the link opens a new tab).',
       params: [tourIdT],
       response: file(['application/zip'], 'The zip.'),
-      errors: [403, 404],
+      errors: [403, 404, 429],
     }),
   },
   '/tours/{tourId}/images/{filename}': {
@@ -2216,7 +2217,7 @@ const paths = {
       multipart: obj(
         {
           image: { type: 'string', format: 'binary', description: 'At most 12 MB.' },
-          text: str('Optional caption.'),
+          text: str('Optional caption - at most 1000 characters, like a message (400 otherwise).'),
         },
         ['image'],
       ),

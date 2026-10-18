@@ -88,10 +88,14 @@
       [value]="draft()"
       (input)="draft.set($any($event.target).value)"
       (keydown)="onEditKeydown($event)"
+      [attr.maxlength]="maxLength"
       aria-label="Üzenet szerkesztése"
     ></textarea>
     <div class="edit-actions">
       <span class="edit-hint">Enter: mentés · Esc: mégse</span>
+      @if (draft().length > maxLength - 100) {
+        <span class="edit-hint">{{ draft().length }}/{{ maxLength }}</span>
+      }
       <button type="button" class="mini-btn" (click)="cancelEdit()">Mégse</button>
       <button
         type="button"

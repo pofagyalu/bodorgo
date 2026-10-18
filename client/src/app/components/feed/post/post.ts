@@ -14,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { usernameKey } from '../../../shared/usernames';
 import { PollCard } from '../../poll-card/poll-card';
 import { lazyStyle } from '../../../shared/lazy-style';
+import { CHAT_TEXT_MAX } from '../compose/compose';
 
 // Fixed, brand-matched colors instead of per-user hashing: orange for your
 // own name, blue for everyone else's (see post.scss for the bubble
@@ -227,6 +228,8 @@ export class Post {
 
   editing = signal(false);
   draft = signal('');
+  // Edited, a message stays within the same limit (compose's maxLength).
+  readonly maxLength = CHAT_TEXT_MAX;
   confirmingDelete = signal(false);
   askDelete() {
     this.confirmingDelete.set(true);

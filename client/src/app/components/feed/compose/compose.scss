@@ -225,3 +225,11 @@
     transition: none;
   }
 }
+
+// Near the limit: how much of it is written ("950/1000").
+.char-count {
+  align-self: center;
+  font-size: 0.7rem;
+  color: #888;
+  white-space: nowrap;
+}

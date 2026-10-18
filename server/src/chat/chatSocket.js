@@ -1,4 +1,9 @@
-import Post, { POST_POPULATE, REACTIONS } from '../models/postModel.js';
+import Post, {
+  POST_POPULATE,
+  POST_TEXT_MAX,
+  POST_TOO_LONG,
+  REACTIONS,
+} from '../models/postModel.js';
 import ChatRoom from '../models/chatRoomModel.js';
 import logger from '../logger.js';
 import { chatChannel, setIo, tourRoom } from './tourEvents.js';
@@ -90,7 +95,8 @@ export default function registerChatHandlers(io) {
 
     socket.on('create-post', async ({ chatRoomId, text } = {}) => {
       if (!sessionUser) return notLoggedIn();
-      if (!chatRoomId || !text?.trim()) return;
+      if (!chatRoomId || typeof text !== 'string' || !text.trim()) return;
+      if (text.trim().length > POST_TEXT_MAX) return socket.emit('chat-error', POST_TOO_LONG);
 
       try {
         const room = await ChatRoom.findById(chatRoomId);
@@ -129,9 +135,10 @@ export default function registerChatHandlers(io) {
     socket.on('edit-post', async ({ postId, text }) => {
       try {
         const post = await loadOwnPost(postId);
-        if (!post || !text?.trim()) {
+        if (!post || typeof text !== 'string' || !text.trim()) {
           return socket.emit('chat-error', 'Ezt az üzenetet nem szerkesztheted.');
         }
+        if (text.trim().length > POST_TEXT_MAX) return socket.emit('chat-error', POST_TOO_LONG);
         post.text = text.trim();
         post.editedAt = new Date();
         await post.save();
