@@ -14,6 +14,17 @@ const REQUEST_TIMEOUT_MS = 5_000;
 // e-mailed to the role manager, see errorMail.js).
 const logFailure = (message, err) =>
   err?.name === 'TimeoutError' ? logger.warn(message) : logger.error(message);
+// OpenRouteService answered, but with a failure. Busy or down on its side
+// (429, 5xx - its own gateway's "504 Gateway Time-out" page, 2026-10-18):
+// passing, a warning with just the status. Anything else is a refused
+// request - our mistake: an error, with (the start of) what it said.
+async function logBadAnswer(what, res) {
+  if (res.status === 429 || res.status >= 500) {
+    logger.warn(`${what} failed: ${res.status} (OpenRouteService busy or down)`);
+    return;
+  }
+  logger.error(`${what} failed: ${res.status} ${(await res.text()).slice(0, 500)}`);
+}
 
 // Same api.openrouteservice.org -> api.heigit.org migration as the
 // directions endpoint above, but geocoding moved under its own "pelias"
@@ -80,7 +91,7 @@ export async function geocodeAddress(text) {
 
     const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
     if (!res.ok) {
-      logger.error(`OpenRouteService geocoding request failed: ${res.status} ${await res.text()}`);
+      await logBadAnswer('OpenRouteService geocoding request', res);
       return undefined;
     }
 
@@ -117,7 +128,7 @@ export async function computeDrivingRoute(from, to) {
 
     const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
     if (!res.ok) {
-      logger.error(`OpenRouteService request failed: ${res.status} ${await res.text()}`);
+      await logBadAnswer('OpenRouteService request', res);
       return undefined;
     }
 
