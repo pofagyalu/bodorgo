@@ -129,17 +129,20 @@ router
 router.get('/president/seal.png', requireAuth, restrictTo('admin'), getPresidentSeal);
 
 // OIDC szolgáltató: where people log in - a wrong value locks everybody
-// out, so the role manager only. Secrets go in, never out.
+// out, so the role manager only. Secrets go in, never out. Every change
+// only by someone who identified themselves in the last minutes
+// (auth/freshLogin.js): pointed at a provider of someone else's, a phone
+// left logged in would hand them every account.
 router
   .route('/oidc')
   .get(requireAuth, roleManagerOnly, getOidcSettingsView)
-  .put(requireAuth, roleManagerOnly, updateOidcSettings);
+  .put(requireAuth, roleManagerOnly, requireFreshLogin, updateOidcSettings);
 // Other providers next to Authentik, and which one is the active one.
-router.post('/oidc/providers', requireAuth, roleManagerOnly, addOidcProvider);
+router.post('/oidc/providers', requireAuth, roleManagerOnly, requireFreshLogin, addOidcProvider);
 router
   .route('/oidc/providers/:id')
-  .put(requireAuth, roleManagerOnly, updateOidcProvider)
-  .delete(requireAuth, roleManagerOnly, deleteOidcProvider);
-router.put('/oidc/active', requireAuth, roleManagerOnly, setActiveOidcProvider);
+  .put(requireAuth, roleManagerOnly, requireFreshLogin, updateOidcProvider)
+  .delete(requireAuth, roleManagerOnly, requireFreshLogin, deleteOidcProvider);
+router.put('/oidc/active', requireAuth, roleManagerOnly, requireFreshLogin, setActiveOidcProvider);
 
 export default router;

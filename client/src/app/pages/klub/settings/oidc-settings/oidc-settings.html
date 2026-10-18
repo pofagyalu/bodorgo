@@ -98,7 +98,8 @@
   </section>
 
   @if (oidcOpen() !== 'authentik') {
-    <section class="panel oidc-other">
+    <!-- Typing into it asks to identify again first (oidc-settings.ts). -->
+    <section class="panel oidc-other" (focusin)="startEditing($event)">
       <div class="panel-title">
         <div>
           <h2>{{ openedProvider()?.name ?? 'Új szolgáltató' }}</h2>
@@ -248,7 +249,11 @@
     </section>
   }
 
-  <div class="oidc-authentik" [hidden]="oidcOpen() !== 'authentik'">
+  <div
+    class="oidc-authentik"
+    [hidden]="oidcOpen() !== 'authentik'"
+    (focusin)="startEditing($event)"
+  >
     <div class="cards">
       <section class="panel">
         <div class="panel-title">

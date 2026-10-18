@@ -606,6 +606,77 @@ describe('KlubSettings', () => {
       expect(oidcTab().oidcServerUrl()).toBe('https://auth.test');
     });
 
+    describe('changes only after identifying again', () => {
+      const confirm = () => TestBed.inject(ConfirmService);
+      const asking = 'Az OIDC szolgáltató módosítása: ehhez újra azonosítanod kell magad.';
+      const longAgo = () => {
+        logIn({ role: 'admin', canManageRoles: true, freshLoginSecondsLeft: 0 });
+        open({ ...loaded(), 'GET /settings/oidc': { data: oidc } });
+      };
+      afterEach(() => sessionStorage.clear());
+
+      it('asks as soon as a field is stepped into - and sends them to the provider', async () => {
+        longAgo();
+        const go = vi
+          .spyOn(TestBed.inject(AuthService), 'identifyAgain')
+          .mockImplementation(() => {});
+        const field = fixture.nativeElement.querySelector(
+          '.oidc-authentik input',
+        ) as HTMLInputElement;
+        const blur = vi.spyOn(field, 'blur');
+        field.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+        respond({
+          'GET /auth/me': { loggedIn: true, id: 'me', role: 'admin', canManageRoles: true },
+        });
+        await settle();
+        expect(blur).toHaveBeenCalled();
+        expect(confirm().pending()?.message).toBe(asking);
+        confirm().answer(true);
+        await settle();
+        expect(go).toHaveBeenCalled();
+      });
+
+      it('saving, adding a provider: asked first, nothing sent on a no', async () => {
+        longAgo();
+        for (const action of [
+          () => oidcTab().saveOidc(),
+          () => {
+            oidcTab().openProvider('new');
+            return oidcTab().saveProvider();
+          },
+        ]) {
+          void action();
+          respond({
+            'GET /auth/me': { loggedIn: true, id: 'me', role: 'admin', canManageRoles: true },
+          });
+          await settle();
+          expect(confirm().pending()?.message).toBe(asking);
+          confirm().answer(false);
+          await settle();
+        }
+        http.expectNone(`${API}/settings/oidc`);
+      });
+
+      it('the minutes ran out meanwhile: asked again, not just refused', async () => {
+        asOwner();
+        oidcTab().oidcClientId.set('client-2');
+        void oidcTab().saveOidc();
+        confirm().answer(true);
+        await settle();
+        respond({
+          'PUT /settings/oidc': fail(403, 'Ehhez a művelethez újra azonosítanod kell magad.', {
+            code: 'fresh-login-required',
+          }),
+        });
+        respond({
+          'GET /auth/me': { loggedIn: true, id: 'me', role: 'admin', canManageRoles: true },
+        });
+        await settle();
+        expect(confirm().pending()?.message).toBe(asking);
+        expect(error).not.toHaveBeenCalled();
+      });
+    });
+
     it("what is still only in the server's .env can be saved as it is", () => {
       asOwner({ ...oidc, source: 'env' });
       expect(oidcTab().oidcDirty()).toBe(false);
