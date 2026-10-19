@@ -2439,7 +2439,7 @@ const paths = {
       tag: T.payments,
       summary: 'Pay tour advances',
       description:
-        'For myself and my family - the server works out who is still unpaid and how much, never trusting the amount, and adds the chosen method’s fee (see `/settings/payment-methods`); a switched-off method is refused. Advances go to the tour Stripe account / Barion wallet. Answers with the gateway page to send the browser to.',
+        'For myself and my family - the server works out who is still unpaid and how much, never trusting the amount, and adds the chosen method’s fee (see `/settings/payment-methods`); a switched-off method is refused. Advances go to the tour Stripe account / Barion wallet. Answers with the gateway page to send the browser to, payable for half an hour. 409 while an earlier payment for any of the same attendees is still under way (started in the last 31 minutes, not finished or left with Mégse) - its message says who started it and when.',
       body: obj(
         {
           tourId: id(),
@@ -2449,7 +2449,7 @@ const paths = {
         ['tourId', 'attendeeIds'],
       ),
       data: obj({ gatewayUrl: str(), paymentId: id() }),
-      errors: [400, 502],
+      errors: [400, 409, 502],
     }),
   },
   '/payments/membership/start': {
@@ -2457,7 +2457,7 @@ const paths = {
       tag: T.payments,
       summary: 'Pay membership dues',
       description:
-        'One payment for several person + year pairs (family members, unpaid years), plus the chosen method’s fee (see `/settings/payment-methods`); a switched-off method is refused. Dues go to the club’s Stripe account / Barion wallet.',
+        'One payment for several person + year pairs (family members, unpaid years), plus the chosen method’s fee (see `/settings/payment-methods`); a switched-off method is refused. Dues go to the club’s Stripe account / Barion wallet. The gateway page is payable for half an hour. 409 while an earlier payment for any of the same person + year pairs is still under way (started in the last 31 minutes, not finished or left with Mégse) - its message says who started it and when.',
       body: obj(
         {
           items: arrayOf(obj({ userId: id(), year: int() })),
@@ -2466,7 +2466,7 @@ const paths = {
         ['items'],
       ),
       data: obj({ gatewayUrl: str(), paymentId: id() }),
-      errors: [400, 502],
+      errors: [400, 409, 502],
     }),
   },
   '/payments/mine': {
