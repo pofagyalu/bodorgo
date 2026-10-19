@@ -13,6 +13,7 @@ import {
   stripeAccountReady,
   getStripePayoutState,
   createStripePayout,
+  PAYMENT_WINDOW_MINUTES,
 } from '../utils/stripe.js';
 import {
   createBarionPayment,
@@ -233,6 +234,48 @@ function chargeableAmount(subtotal, settings) {
   return subtotal + paymentFee(subtotal, settings);
 }
 
+// A payment just made (not yet sent to the gateway): refused - and
+// removed - when an earlier one for any of the same dues (person + year)
+// or advance (attendee) is still under way, i.e. its page can still take
+// money (PAYMENT_WINDOW_MINUTES). The earlier one wins, so of two started
+// at the same moment exactly one goes on. Left with Mégse/Vissza, a
+// payment is Canceled at once and frees them.
+async function refuseIfUnderWay(payment, user) {
+  const covers =
+    payment.purpose === 'membershipFee'
+      ? {
+          $or: payment.members.map((m) => ({
+            members: { $elemMatch: { user: m.user, membershipYear: m.membershipYear } },
+          })),
+        }
+      : { 'attendees.attendeeId': { $in: payment.attendees.map((a) => a.attendeeId) } };
+  const others = await Payment.find({
+    _id: { $ne: payment._id },
+    purpose: payment.purpose,
+    status: { $in: ['Prepared', 'Started'] },
+    createdAt: { $gt: new Date(Date.now() - PAYMENT_WINDOW_MINUTES * 60 * 1000) },
+    ...covers,
+  }).populate('createdBy', 'name');
+  const earlier = others.find(
+    (o) =>
+      o.createdAt < payment.createdAt ||
+      (+o.createdAt === +payment.createdAt && String(o._id) < String(payment._id)),
+  );
+  if (!earlier) return;
+
+  await Payment.deleteOne({ _id: payment._id });
+  const at = earlier.createdAt.toLocaleTimeString('hu-HU', {
+    timeZone: 'Europe/Budapest',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const who =
+    String(earlier.createdBy?._id) === String(user._id)
+      ? `Ezt a befizetést már elindítottad ${at}-kor`
+      : `Ezt a befizetést már elindította ${earlier.createdBy?.name ?? 'valaki'} ${at}-kor`;
+  throw new AppError(`${who}. Fejezd be ott, vagy próbáld újra fél óra múlva.`, 409);
+}
+
 // POST /payments/membership/start - requireAuth. Same gateway-agnostic
 // start machinery as startPayment below (Stripe or Barion, see
 // startGatewayPayment), just for a club member's own yearly dues instead
@@ -263,6 +306,7 @@ export const startMembershipPayment = async (req, res) => {
     })),
     amount,
   });
+  await refuseIfUnderWay(payment, req.user);
 
   // Same origin-detection reasoning as startPayment below.
   const requestOrigin = req.headers.origin;
@@ -323,6 +367,7 @@ export const startPayment = async (req, res) => {
     })),
     amount,
   });
+  await refuseIfUnderWay(payment, req.user);
 
   // The payer's browser needs to land back wherever it actually started -
   // config.clientBaseUrl is fixed to production (needed elsewhere,

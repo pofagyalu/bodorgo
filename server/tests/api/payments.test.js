@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import request from 'supertest';
+import mongoose from 'mongoose';
 import Stripe from 'stripe';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
@@ -93,6 +94,8 @@ describe('paying a tour advance', () => {
         ...values,
       });
       const res = await start(member, { tourId: tour._id, attendeeIds: [attendeeId] });
+      // Left on the gateway's page (Mégse) - the next try may start.
+      await Payment.updateMany({}, { status: 'Canceled' });
       return (await Payment.findById(res.body.data.paymentId)).amount;
     };
     expect(await amountWith({})).toBe(6000);
@@ -156,6 +159,34 @@ describe('paying a tour advance', () => {
     expect(
       (await start(stranger, { tourId: '000000000000000000000000', attendeeIds: ['x'] })).status,
     ).toBe(404);
+  });
+
+  it('refuses a second start of the same advance while the first page can take money', async () => {
+    const { tour, member, attendeeId } = await pricedTour();
+    const familyId = new mongoose.Types.ObjectId();
+    const kata = await createMember({ name: 'Kata', familyId });
+    await User.updateOne({ _id: member._id }, { familyId });
+    const first = await start(member, { tourId: tour._id, attendeeIds: [attendeeId] });
+    expect(first.status).toBe(200);
+
+    // Mine again, in another window - or my family's.
+    const again = await start(member, { tourId: tour._id, attendeeIds: [attendeeId] });
+    expect(again.status).toBe(409);
+    expect(again.body.message).toMatch(
+      /^Ezt a befizetést már elindítottad \d\d:\d\d-kor\. Fejezd be ott, vagy próbáld újra fél óra múlva\.$/,
+    );
+    const theirs = await start(kata, { tourId: tour._id, attendeeIds: [attendeeId] });
+    expect(theirs.status).toBe(409);
+    expect(theirs.body.message).toContain(`már elindította ${member.name} `);
+    expect(await Payment.countDocuments()).toBe(1);
+    expect(createCheckoutSession).toHaveBeenCalledOnce();
+
+    // Half an hour on, that page can't take money any more.
+    await Payment.collection.updateOne(
+      { _id: new mongoose.Types.ObjectId(first.body.data.paymentId) },
+      { $set: { createdAt: new Date(Date.now() - 32 * 60 * 1000) } },
+    );
+    expect((await start(member, { tourId: tour._id, attendeeIds: [attendeeId] })).status).toBe(200);
   });
 
   it('marks the payment failed when the gateway is down', async () => {
@@ -475,6 +506,24 @@ describe('membership dues', () => {
     vi.mocked(retrieveCheckoutSession).mockReset();
     const income = await Transaction.find({ user: member._id, membershipYear: thisYear });
     expect(income).toHaveLength(1);
+  });
+
+  it('refuses dues already being paid - not other years, and not once that page was left', async () => {
+    const member = await createMember({ memberSince: thisYear - 1, lastLoginAt: new Date() });
+    const send = (items) =>
+      request(app).post('/payments/membership/start').set(asUser(member)).send({ items });
+    const first = await send([{ userId: member._id, year: thisYear }]);
+    expect(first.status).toBe(200);
+    // This year again (with last year): refused. Last year alone: goes.
+    const both = await send([
+      { userId: member._id, year: thisYear - 1 },
+      { userId: member._id, year: thisYear },
+    ]);
+    expect(both.status).toBe(409);
+    expect((await send([{ userId: member._id, year: thisYear - 1 }])).status).toBe(200);
+    // Left with Mégse: this year may start again.
+    await Payment.updateOne({ _id: first.body.data.paymentId }, { status: 'Canceled' });
+    expect((await send([{ userId: member._id, year: thisYear }])).status).toBe(200);
   });
 
   it('refuses years already paid, outside membership, or other families', async () => {

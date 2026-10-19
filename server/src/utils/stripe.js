@@ -27,6 +27,13 @@ function clientFor(account) {
 // it's only special-cased for *payouts*, not charges), unlike genuinely
 // zero-decimal currencies like JPY. Getting this wrong would silently
 // charge 100x too much or too little.
+// How long a payment page can take money: Stripe's page is opened with
+// this expiry (its minimum is 30 minutes), Barion's lasts 30 minutes on
+// its own. Until then the same dues or advance can't be started again
+// (paymentController.js's refuseIfUnderWay) - two pages open at once
+// could both be paid.
+export const PAYMENT_WINDOW_MINUTES = 31;
+
 export async function createCheckoutSession({
   account,
   referenceId,
@@ -53,6 +60,8 @@ export async function createCheckoutSession({
     ],
     success_url: successUrl,
     cancel_url: cancelUrl,
+    // Payable for half an hour only, not Stripe's default day.
+    expires_at: Math.floor(Date.now() / 1000) + PAYMENT_WINDOW_MINUTES * 60,
   });
 }
 
