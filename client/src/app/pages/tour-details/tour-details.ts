@@ -28,6 +28,7 @@ import {
 } from '../../services/tour';
 import { UserService, FamilyMember, AdminUser } from '../../services/user';
 import { AuthService } from '../../auth/auth.service';
+import { PaymentMethods, SettingsService, canPayOnline } from '../../services/settings';
 import { ViewTrackerService } from '../../services/view-tracker';
 import { environment } from '../../../environments/environment';
 import { shuffledLogoColors } from '../../shared/logo-colors';
@@ -70,6 +71,7 @@ export class TourDetails {
   private route = inject(ActivatedRoute);
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private tourService = inject(TourService);
+  private settingsService = inject(SettingsService);
   private userService = inject(UserService);
   private sanitizer = inject(DomSanitizer);
   private notifications = inject(NotificationsService);
@@ -249,6 +251,11 @@ export class TourDetails {
   // page, so it's hidden entirely rather than shown pointlessly. Same
   // isInMyPaymentGroup rule the payment page itself uses to build its own
   // list, so the two can never disagree about who's included.
+  // ...and only while advances can be paid online at all (a gateway on, with
+  // an account for advances) - else the payment page could only say no.
+  private paymentMethods = signal<PaymentMethods | null>(null);
+  canPayAdvanceOnline = computed(() => canPayOnline(this.paymentMethods(), 'tour'));
+
   hasUnpaidAdvanceInMyGroup = computed(() => {
     const me = this.auth.user();
     return this.attendeePayments().some(
@@ -378,6 +385,12 @@ export class TourDetails {
     }
     this.tourId = id;
     this.loadTour(id);
+    if (this.auth.isLoggedIn()) {
+      this.settingsService.getPaymentMethods().subscribe({
+        next: (res) => this.paymentMethods.set(res.data),
+        error: () => {}, // no button then - the payment page would say the same
+      });
+    }
 
     // auth.user() often isn't resolved yet at construction time - see
     // profile.ts's constructor for the same reasoning. A 'guest' needs

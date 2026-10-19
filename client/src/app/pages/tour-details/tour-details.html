@@ -241,7 +241,9 @@
         [alreadySignedUp]="alreadySignedUp()"
         [isFull]="isFull()"
         [signUpOpen]="signUpOpen()"
-        [showAdvancePayment]="!!paymentTotals() && hasUnpaidAdvanceInMyGroup()"
+        [showAdvancePayment]="
+          !!paymentTotals() && hasUnpaidAdvanceInMyGroup() && canPayAdvanceOnline()
+        "
         (signedUp)="onSignedUp()"
       />
     }
