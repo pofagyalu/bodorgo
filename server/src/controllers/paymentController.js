@@ -220,12 +220,7 @@ async function chosenMethod(body, wallet) {
   if (!settings.enabled || (method === 'stripe' && !stripeAccountReady(wallet))) {
     throw new AppError(`A(z) ${PAYMENT_METHOD_NAMES[method]} fizetés most nem érhető el.`, 400);
   }
-  // No real money: Stripe's test key, or Barion's sandbox.
-  const testMode =
-    method === 'barion'
-      ? config.barion.baseUrl !== 'https://api.barion.com'
-      : !String(config.stripe.accounts[wallet]?.secretKey ?? '').startsWith('sk_live_');
-  return { method, settings, testMode };
+  return { method, settings };
 }
 
 // The gateway's own cut is passed on to the payer rather than absorbed by
@@ -250,7 +245,7 @@ export const startMembershipPayment = async (req, res) => {
   if (!Array.isArray(items) || items.length === 0) {
     throw new AppError('Nincs kiválasztott tagdíj tétel.', 400);
   }
-  const { method, settings, testMode } = await chosenMethod(req.body, 'membership');
+  const { method, settings } = await chosenMethod(req.body, 'membership');
 
   const payable = await resolvePayableMembers(items, req.user);
   const subtotal = payable.reduce((sum, p) => sum + p.amount, 0);
@@ -259,7 +254,6 @@ export const startMembershipPayment = async (req, res) => {
   const payment = await Payment.create({
     purpose: 'membershipFee',
     method,
-    testMode,
     createdBy: req.user._id,
     members: payable.map((p) => ({
       user: p._id,
@@ -310,7 +304,7 @@ export const startPayment = async (req, res) => {
   if (!tourId || !Array.isArray(attendeeIds) || attendeeIds.length === 0) {
     throw new AppError('Hiányzó vagy hibás adatok.', 400);
   }
-  const { method, settings, testMode } = await chosenMethod(req.body, 'tour');
+  const { method, settings } = await chosenMethod(req.body, 'tour');
 
   const { tour, payable } = await resolvePayableAttendees(tourId, attendeeIds, req.user);
   const subtotal = payable.reduce((sum, p) => sum + p.advance, 0);
@@ -319,7 +313,6 @@ export const startPayment = async (req, res) => {
   const payment = await Payment.create({
     purpose: 'tourAdvance',
     method,
-    testMode,
     tour: tour._id,
     createdBy: req.user._id,
     attendees: payable.map((p) => ({
@@ -934,8 +927,7 @@ export const getPaymentStatus = async (req, res) => {
 // real name) is guessable/informative enough that anyone logged in could
 // otherwise fetch someone else's payment record.
 // GET /payments/mine - Profilom → Befizetéseim: the payments I made myself
-// online (Stripe or Barion) that went through with real money (not a
-// gateway's test side - paymentModel.js's testMode), the latest first - what for
+// online (Stripe or Barion) that went through, the latest first - what for
 // (dues: whose and which year; an advance: which tour, for whom), how
 // much, how, and whether its receipt can be downloaded (/:id/receipt).
 // Cash handed over isn't here: there is no receipt for it.
@@ -944,7 +936,6 @@ export const getMyPayments = async (req, res) => {
     createdBy: req.user._id,
     status: 'Succeeded',
     method: { $in: ['stripe', 'barion'] },
-    testMode: { $ne: true },
   })
     .sort('-createdAt')
     .populate('tour', 'title order slug startDate')
