@@ -1,7 +1,9 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  // Above the app's own top bar (header.scss, 10000) - on a phone it
+  // covered the picker's header, its back arrow and close button.
+  z-index: 10001;
   background: #10253699;
 }
 
@@ -10,7 +12,7 @@
 .panel {
   position: fixed;
   inset: 0;
-  z-index: 1001;
+  z-index: 10002;
   display: flex;
   flex-direction: column;
   background: #f5f7f5;
@@ -155,7 +157,8 @@
 
 @media (min-width: 48rem) {
   .panel {
-    inset: 5vh max(1.5rem, calc((100vw - 64rem) / 2));
+    // Its top under the site's header (5rem here), like the editor's preview.
+    inset: calc(var(--header-height, 5rem) + 1.5rem) max(1.5rem, calc((100vw - 64rem) / 2)) 5vh;
     border-radius: 1.25rem;
     overflow: hidden;
     box-shadow: 0 1rem 3rem #10253666;
