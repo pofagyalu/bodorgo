@@ -102,7 +102,7 @@ function missingOf(q: QuizQuestion): string | null {
   if (q.type === 'song' && !q.song) return 'válassz hozzá dalt.';
   if (!q.text.trim()) return 'írd be a kérdést.';
   if (q.type === 'map') {
-    if (!q.place) return 'koppints a térképen a helyes helyre.';
+    if (!q.place) return 'koppints a térképen a helyszínre, vagy add meg a koordinátákat.';
     if (!onMap(q.place, q.bounds ?? DEFAULT_BOUNDS)) return 'a hely nincs a térkép látható részén.';
   } else if (hasAnswers(q.type)) {
     if (filled(q.answers) < MIN_ANSWERS) return 'legalább két válasz kell.';
