@@ -156,6 +156,15 @@ export const PAYMENT_METHOD_LOGOS: Record<PaymentMethodKey, string> = {
   barion: 'assets/images/providers/barion-smart-banner-light.svg',
 };
 
+// Whether anything can take this kind of payment online now: a gateway
+// switched on (Beállítások) that has an account for it - else there's no
+// point in offering it (the tour page's "Előleg befizetés").
+export function canPayOnline(methods: PaymentMethods | null, wallet: PaymentWallet): boolean {
+  return (
+    !!methods && Object.values(methods).some((m) => !!m?.enabled && m.wallets?.[wallet] !== false)
+  );
+}
+
 // The fee on top of a sum - the same sum the server charges (its
 // utils/clubSettings.js's paymentFee): worked out backwards, so what's left
 // after the gateway's cut is the sum itself.

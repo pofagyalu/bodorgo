@@ -124,6 +124,51 @@ describe('TourDetails', () => {
     expect(page.hasUnpaidAdvanceInMyGroup()).toBe(true);
   });
 
+  it('offers "Előleg befizetés" only while advances can be paid online', () => {
+    const method = (enabled: boolean, tour: boolean) => ({
+      enabled,
+      feePercent: 1.5,
+      feeFixed: 85,
+      feeMin: 0,
+      wallets: { membership: true, tour },
+    });
+    const button = () => fixture.nativeElement.textContent.includes('Előleg befizetés');
+    open('member');
+    // Not known yet - not offered.
+    expect(button()).toBe(false);
+
+    // Stripe without an account for advances, Barion off: nothing can take it.
+    respond({
+      'GET /settings/payment-methods': {
+        data: { stripe: method(true, false), barion: method(false, true) },
+      },
+    });
+    fixture.detectChanges();
+    expect(page.canPayAdvanceOnline()).toBe(false);
+    expect(button()).toBe(false);
+  });
+
+  it('shows "Előleg befizetés" once a gateway can take advances', () => {
+    open('member');
+    respond({
+      'GET /settings/payment-methods': {
+        data: {
+          stripe: {
+            enabled: true,
+            feePercent: 1.5,
+            feeFixed: 85,
+            feeMin: 0,
+            wallets: { membership: true, tour: true },
+          },
+          barion: { enabled: false, feePercent: 1.6, feeFixed: 0, feeMin: 0 },
+        },
+      },
+    });
+    fixture.detectChanges();
+    expect(page.canPayAdvanceOnline()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Előleg befizetés');
+  });
+
   it('shows the programme cost in euros for a euro tour', () => {
     open('member', makeTour({ accommodationCurrency: 'EUR', eurHufExchangeRate: 390 }));
     expect(page.allAttendees()[0].optionalProgramsCost).toBe(11); // 4000 Ft, rounded up
