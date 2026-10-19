@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import {
   UserService,
@@ -325,5 +326,36 @@ export class KlubProfile implements OnInit {
 
   receiptUrl(paymentId: string): string {
     return this.paymentService.receiptUrl(paymentId);
+  }
+
+  // The receipt fetched by the page and saved under the server's file
+  // name - a refusal (no file, not theirs) is a message here, never the
+  // server's answer on a page of its own.
+  downloadReceipt(event: Event, paymentId: string) {
+    event.preventDefault();
+    this.paymentService.downloadReceipt(paymentId).subscribe({
+      next: (res) => {
+        const name =
+          /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ??
+          'fizetesi-igazolas.pdf';
+        const url = URL.createObjectURL(res.body!);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      error: async (err: HttpErrorResponse) => {
+        // The error's body is a Blob too - the server's JSON in it.
+        let message = 'Az igazolás letöltése nem sikerült.';
+        try {
+          const body = JSON.parse(await (err.error as Blob).text()) as { message?: string };
+          if (body.message) message = body.message;
+        } catch {
+          // not JSON: the general message
+        }
+        this.notifications.addError(message);
+      },
+    });
   }
 }
