@@ -323,7 +323,7 @@ describe('completing a payment', () => {
 
 // Profilom → Befizetéseim: what I paid online myself, with the receipt.
 describe('my online payments', () => {
-  it('lists my own Stripe/Barion payments that went through - not cash, not anyone else’s', async () => {
+  it('lists my own Stripe/Barion payments that went through - not cash, not a test one, not anyone else’s', async () => {
     const year = new Date().getFullYear();
     const member = await createMember({ memberSince: year, lastLoginAt: new Date() });
     const admin = await createAdmin();
@@ -333,9 +333,22 @@ describe('my online payments', () => {
       .send({ items: [{ userId: member._id, year }] });
     vi.mocked(retrieveCheckoutSession).mockResolvedValueOnce({ payment_status: 'paid' });
     await request(app).get(`/payments/${res.body.data.paymentId}/status`).set(asUser(member));
+    // The tests' Stripe key is a test one: the payment says so. Made real
+    // here - as on live.
+    const started = await Payment.findById(res.body.data.paymentId);
+    expect(started.testMode).toBe(true);
+    await Payment.updateOne({ _id: started._id }, { testMode: false });
 
-    // Not mine to see: a cash payment recorded for me, someone else's,
-    // one started but never finished.
+    // Not mine to see: a cash payment recorded for me, a test one, someone
+    // else's, one started but never finished.
+    await Payment.create({
+      purpose: 'membershipFee',
+      createdBy: member._id,
+      method: 'barion',
+      testMode: true,
+      amount: 1102,
+      status: 'Succeeded',
+    });
     await Payment.create({
       purpose: 'membershipFee',
       createdBy: member._id,

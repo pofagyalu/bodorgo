@@ -2474,7 +2474,7 @@ const paths = {
       tag: T.payments,
       summary: 'My online payments',
       description:
-        'Profilom → Befizetéseim: the payments I made myself online (Stripe or Barion) that went through, the latest first. Cash handed over isn’t here - there is no receipt for it. `people`: whose dues and which `year`, or whom an advance was for. `hasReceipt`: the PDF can be downloaded from `/payments/{id}/receipt`.',
+        'Profilom → Befizetéseim: the payments I made myself online (Stripe or Barion) that went through with real money - not the ones made on a gateway’s test side (Stripe’s test key, Barion’s sandbox) -, the latest first. Cash handed over isn’t here - there is no receipt for it. `people`: whose dues and which `year`, or whom an advance was for. `hasReceipt`: the PDF can be downloaded from `/payments/{id}/receipt`.',
       data: obj({
         payments: arrayOf(
           obj({

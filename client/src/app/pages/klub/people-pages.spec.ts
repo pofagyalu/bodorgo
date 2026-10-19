@@ -473,6 +473,39 @@ describe('KlubProfile', () => {
     expect(rows[1].querySelector('.payment-receipt')).toBeNull();
   });
 
+  it('Befizetéseim: the receipt is fetched by the page - saved under its name, a refusal a message', async () => {
+    open();
+    const link = fixture.nativeElement.querySelector('.payment-receipt') as HTMLAnchorElement;
+    const saved = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+
+    // A real click: no new tab, the page asks for it.
+    const click = new MouseEvent('click', { cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    http.expectOne(`${API}/payments/pay1/receipt`).flush(new Blob(['%PDF']), {
+      headers: { 'Content-Disposition': 'attachment; filename="2026-10-13_nagy.pdf"' },
+    });
+    expect(saved).toHaveBeenCalled();
+    expect((saved.mock.contexts[0] as HTMLAnchorElement).download).toBe('2026-10-13_nagy.pdf');
+
+    page.downloadReceipt(new Event('click'), 'pay1');
+    http
+      .expectOne(`${API}/payments/pay1/receipt`)
+      .flush(
+        new Blob([JSON.stringify({ message: 'Az igazolás fájlja nem található a szerveren.' })]),
+        {
+          status: 404,
+          statusText: 'Not Found',
+        },
+      );
+    await vi.waitFor(() =>
+      expect(error).toHaveBeenCalledWith('Az igazolás fájlja nem található a szerveren.'),
+    );
+    saved.mockRestore();
+  });
+
   it('Befizetéseim: nothing paid online yet', () => {
     open({ ...loaded(), 'GET /payments/mine': { data: { payments: [] } } });
     expect(fixture.nativeElement.textContent).toContain('Még nem fizettél online.');

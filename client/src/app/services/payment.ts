@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { PaymentMethodKey, PaymentWallet } from './settings';
@@ -159,14 +159,15 @@ export class PaymentService {
     );
   }
 
-  // A plain GET URL, not an HttpClient call - the browser navigates/
-  // downloads directly (see profile.html's <a [href]>), same as the tour
-  // PDF/documents downloads. Requires being logged in as the payment's
-  // own payer (or an admin) - the session cookie rides along
-  // automatically, same cross-origin behavior already proven by those
-  // other requireAuth-gated downloads.
+  // A payment's receipt PDF - only its own payer's (or an admin's). The
+  // link's address; the page fetches it itself (downloadReceipt), so a
+  // refusal is a message on the page, not the server's answer in a tab.
   receiptUrl(paymentId: string): string {
     return `${this.apiUrl}/${paymentId}/receipt`;
+  }
+
+  downloadReceipt(paymentId: string): Observable<HttpResponse<Blob>> {
+    return this.http.get(this.receiptUrl(paymentId), { observe: 'response', responseType: 'blob' });
   }
 
   // Admin-only. Whether this wallet's WALLET_KEY/WITHDRAW_NAME/

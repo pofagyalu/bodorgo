@@ -88,7 +88,9 @@ export default function createApp(sessionMiddleware) {
       // succeeded - none of the three are in a CORS response's default
       // safelist.
       allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
-      exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length'],
+      // Content-Disposition: a download fetched by the page (a payment's
+      // receipt) keeps the server's file name.
+      exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Disposition'],
     }),
   );
 

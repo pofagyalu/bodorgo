@@ -115,6 +115,15 @@ const paymentSchema = new Schema(
     receiptFilename: {
       type: String,
     },
+    // Paid through a gateway's test side (Stripe's sk_test_ key, Barion's
+    // sandbox) - no real money moved, so Profilom → Befizetéseim leaves it
+    // out. Set when the payment starts (paymentController.js's
+    // chosenMethod); the ones from before were marked by
+    // scripts/markTestPayments.mjs.
+    testMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );
