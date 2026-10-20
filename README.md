@@ -50,9 +50,9 @@ The main menu, and what is behind each item. Page names are the Hungarian ones t
   - **Videos** — the tour's recap videos, streamed from the NAS.
   - **360° panorama** — a round badge on the cover opens it in a popup.
   - **Extrák** — the tour's documents; for organizers: letters to the attendees, the Programfüzet PDF, the Excel export, the accommodation.
-  - **Beszámoló** — the tour's report, written by an admin day by day; once marked Kész, attendees download it as a PDF with a wax seal.
+  - **Beszámoló** — the tour's report, written by an admin day by day (any time, even before the tour); once marked Kész, attendees and admins download it as a PDF with a wax seal. Kész is possible only from the day after the tour's last day (Budapest time), and keeps the tour as it was at that moment. Before Kész an admin can preview it as a PDF marked PISZKOZAT. Visszanyitás makes a Kész one editable again; meanwhile the attendees keep downloading the last Kész copy.
   - **Reviews** — attendees rate a tour once it is over.
-  - **Lezárás** — an admin closes a finished tour for good. From then on the tour, its programme, sign-ups, payments, documents, letters and rooms are frozen; reviews, new photos and an unfinished beszámoló stay open. There is no reopen button.
+  - **Lezárás** — an admin closes a finished tour for good. From then on the tour, its programme, sign-ups, payments, documents, letters and rooms are frozen; reviews, new photos and an unfinished beszámoló stay open. Once that beszámoló is Kész it is frozen too: no more editing and no Visszanyitás. There is no reopen button for the tour.
 - **Paying the advance** (`/taborok/:id/befizetes`) by card, or cash recorded by an admin.
 - **New tour / edit tour** (admins), including the accommodation: houses, rooms, beds.
 
@@ -68,15 +68,17 @@ The main menu, and what is behind each item. Page names are the Hungarian ones t
 
 Polls for a tour's attendees or for everyone, with a "Rád vár" section for the ones still waiting for your vote. People who have not voted are reminded two hours before a poll closes.
 
-### Média (`/media`, members only)
+### Média (`/media`)
 
-- **Videók** and **Fotók** — the club's videos and photos that do not belong to one tour, by category. The role manager can give each one its own title and limit who may see it.
-- **Zene** — three radios played from the club's Jellyfin: **Bódorgó FM**, **Buli** and **Duruzsoló**, with a player in the header.
+In everyone's menu; for a guest it shows Zene alone.
+
+- **Videók** and **Fotók** (members only) — the club's videos and photos that do not belong to one tour, by category. The role manager can give each one its own title and limit who may see it.
+- **Zene** (everyone logged in) — three radios played from the club's Jellyfin: **Bódorgó FM**, **Buli** and **Duruzsoló**, with a player in the header. On each radio page every control (shuffle, previous, play, stop, next, repeat one) is in the now-playing bar; admins reload the list from Jellyfin with **Lista frissítése** in the header's top right corner.
 - **Daloskönyv** — the songbook (below).
 
 ### Daloskönyv — the songbook
 
-Members reach it in Média → Zene (`/media/zene/daloskonyv`); guests, who have no Média, through Klub's menu (`/daloskonyv`). Same pages either way.
+Everyone logged in, guests too, reaches it in Média → Zene (`/media/zene/daloskonyv`). The old `/daloskonyv` addresses lead there.
 
 - The songs in alphabetical order, searchable by title, artist and lyrics; an alphabet rail; a filter by artist.
 - A song's page: lyrics with the chords above the syllables, guitar or ukulele chord diagrams, transposing, letter size, the song's key and tempo, a tap-to-start auto-scroll, "played tonight" ticks, previous / random / next.
@@ -120,7 +122,7 @@ Roles live **in the app**, not in Authentik:
 | --- | --- | --- |
 | `admin` | the organizers | everything, plus the editing pages |
 | `member` | dues-paying club members | everything but the admin pages |
-| `guest` | everyone else: family, friends, children | tours, chat, votes, songbook, games, own profile. No Média, no finances, no documents |
+| `guest` | everyone else: family, friends, children | tours, chat, votes, Média → Zene (the radios and the songbook), games, own profile. No Videók / Fotók, no finances, no documents |
 
 One admin is the **role manager**: only they can change anyone's role, and a few things are theirs alone (who may see a Média item, the songbook's book, Futókörök for now).
 
