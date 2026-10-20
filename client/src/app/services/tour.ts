@@ -157,6 +157,24 @@ export interface WeatherOutlook {
   frozen: boolean;
 }
 
+// The sun's moments of one tour day (server utils/sunDays.js), as instants
+// - shown in the place's own time zone (shared/countries.ts's timeZoneOf).
+// Blue hour is the sun between -6° and -4°, golden hour between -4° and
+// +6°, night below -18°.
+export interface SunDay {
+  day: number;
+  nightEnd: string;
+  blueHourStart: string;
+  goldenHourStart: string;
+  sunrise: string;
+  dayStart: string;
+  goldenHour: string;
+  sunset: string;
+  blueHour: string;
+  blueHourEnd: string;
+  night: string;
+}
+
 export interface Attendee {
   // The user's bare id - from getTour and signUp() alike. getTour sends
   // nothing more about them (no birthday, role or family: everyone reads
@@ -246,6 +264,8 @@ export interface Tour {
   dailyWeather?: DailyWeather[];
   // Also on the list endpoint (the tour card's pill).
   weatherOutlook?: WeatherOutlook;
+  // "Az idő járása" (tour-sun-day) - the single-tour endpoint only.
+  sunDays?: SunDay[];
   reservations?: Reservation[];
   // The inputs behind each attendee's accommodation breakdown (see
   // AttendeePayment below) - all optional, a tour with none of these set

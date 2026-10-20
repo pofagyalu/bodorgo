@@ -3,6 +3,7 @@ import slugify from 'slugify';
 import { computeDrivingRoute, BUDAPEST_CENTER } from '../utils/distance.js';
 import logger from '../logger.js';
 import { COUNTRY_CODES, HOME_COUNTRY } from '../utils/countries.js';
+import { computeSunDays, SUN_MOMENTS } from '../utils/sunDays.js';
 
 const { Schema } = mongoose;
 
@@ -401,6 +402,16 @@ const tourSchema = new Schema(
       ),
       default: undefined,
     },
+    // "Az idő járása": the sun's moments of each tour day (utils/sunDays.js)
+    // as instants - worked out by the pre('save') below, only when the dates
+    // or the place change (or a tour has none yet). [] without a place.
+    sunDays: [
+      {
+        _id: false,
+        day: { type: Number, required: true, min: 1 },
+        ...Object.fromEntries(SUN_MOMENTS.map(([name]) => [name, Date])),
+      },
+    ],
     attachments: [String],
     // No longer required at creation time - a brand new tour is created
     // first (needs a real _id/order before a cover can be named after
@@ -528,6 +539,20 @@ tourSchema.pre('save', function () {
   // itself moves to other days.
   if (this.isModified('startDate') || this.isModified('duration')) {
     this.weatherOutlook = undefined;
+  }
+});
+
+// The sun's moments (sunDays) follow the tour's days and place - and a tour
+// saved before they were kept gets them on its next save
+// (scripts/fillSunDays.mjs does every tour at once).
+tourSchema.pre('save', function () {
+  if (
+    this.isModified('startDate') ||
+    this.isModified('duration') ||
+    this.isModified('location.coordinates') ||
+    !this.sunDays?.length
+  ) {
+    this.sunDays = computeSunDays(this);
   }
 });
 

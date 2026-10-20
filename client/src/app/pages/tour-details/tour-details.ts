@@ -38,6 +38,7 @@ import { addressWithCountry } from '../../shared/countries';
 import { CalendarEvent, downloadIcs, googleCalendarUrl } from '../../shared/calendar-event';
 import { TourSchedule } from './tour-schedule/tour-schedule';
 import { TourWeatherOutlook } from './tour-weather-outlook/tour-weather-outlook';
+import { TourSunDay } from './tour-sun-day/tour-sun-day';
 import { ReviewStars } from './review-stars/review-stars';
 import { PickerOption, TourSignup } from './tour-signup/tour-signup';
 import { TourExtras } from './tour-extras/tour-extras';
@@ -56,6 +57,7 @@ import { Loading } from '../../shared/loading/loading';
     RouterLink,
     TourSchedule,
     TourWeatherOutlook,
+    TourSunDay,
     ReviewStars,
     TourParticipants,
     TourVideos,
