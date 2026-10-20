@@ -3,7 +3,7 @@
 // Buli and Duruzsoló: one page in two looks. Each part's layout comes first,
 // then what it looks like in each look:
 // - Buli (party): a modern streaming-app look - dark, a gradient header
-//   from the cover's colors, the big green play button.
+//   from the cover's colors, the green play button.
 // - Duruzsoló (lounge): an evening by candlelight - a dusk sky, amber for
 //   everything that glows, cream text, serif headings; soft, round and slow
 //   - nothing bounces.
@@ -58,13 +58,14 @@ button {
 
 // A gradient from the cover's pink/purple into the dark.
 #{$party} .hero {
-  align-items: flex-end;
+  position: relative;
+  align-items: center;
   gap: clamp(1rem, 3vw, 1.5rem);
   padding: clamp(1rem, 2.5vw, 1.375rem) clamp(1.25rem, 3vw, 2rem);
   background: linear-gradient(180deg, #a3237a 0%, #5b1f8f 55%, $party-bg 100%);
 }
 
-// The evening sky - the buttons at its right end.
+// The evening sky - the admins' reload in its top right corner.
 #{$lounge} .hero {
   position: relative;
   align-items: center;
@@ -184,13 +185,15 @@ button {
   color: rgba(243, 233, 216, 0.85);
 }
 
+// Buli: whose list it is, on a line of its own.
+#{$party} .owner {
+  font-size: 0.875rem;
+  color: $party-text;
+}
+
 #{$party} .meta {
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.8);
-
-  strong {
-    color: $party-text;
-  }
 }
 
 #{$lounge} .meta {
@@ -200,81 +203,47 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-// --- The action row ---
+// --- The admins' reload, in the header's top right corner ---
 
-.actions {
-  display: flex;
-  align-items: center;
+.hero-refresh {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
 }
 
-#{$party} .actions {
-  gap: 1.25rem;
-  padding: 0.75rem clamp(1.25rem, 3vw, 2rem);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent);
-}
-
-#{$lounge} .actions {
-  flex: none;
-  gap: 0.75rem;
-}
-
-.play-big {
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border-radius: 50%;
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: progress;
-  }
-}
-
-#{$party} .play-big {
-  width: 3.5rem;
-  height: 3.5rem;
-  border: 0;
-  background: $party-green;
-  color: #000;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.35);
-  transition:
-    transform 0.1s,
-    background 0.15s;
+// In the play button's color, in a ring - a little bigger than the others.
+.hero-refresh .icon-btn {
+  width: 2.75rem;
+  height: 2.75rem;
 
   mat-icon {
-    width: 2rem;
-    height: 2rem;
-    font-size: 2rem;
-  }
-
-  &:hover:not(:disabled) {
-    transform: scale(1.05);
-    background: #3be477;
+    width: 1.625rem;
+    height: 1.625rem;
+    font-size: 1.625rem;
   }
 }
 
-// An amber ring, not a filled disc: it fills when pointed at.
-#{$lounge} .play-big {
-  width: 4rem;
-  height: 4rem;
+#{$party} .hero-refresh .icon-btn {
+  border: 2px solid $party-green;
+  color: $party-green;
+
+  &:hover:not(:disabled) {
+    color: #3be477;
+    border-color: #3be477;
+    background: rgba(30, 215, 96, 0.14);
+  }
+}
+
+#{$lounge} .hero-refresh .icon-btn {
+  width: 2.75rem;
+  height: 2.75rem;
   border: 2px solid $lounge-amber;
-  background: rgba(240, 184, 96, 0.12);
-  color: $lounge-amber-light;
-  transition:
-    background 0.4s ease,
-    color 0.4s ease,
-    box-shadow 0.4s ease;
-
-  mat-icon {
-    width: 2.25rem;
-    height: 2.25rem;
-    font-size: 2.25rem;
-  }
+  color: $lounge-amber;
 
   &:hover:not(:disabled) {
-    background: $lounge-amber;
-    color: $lounge-night;
-    box-shadow: 0 0 1.75rem rgba(240, 184, 96, 0.5);
+    color: $lounge-amber-light;
+    border-color: $lounge-amber-light;
+    background: rgba(240, 184, 96, 0.14);
   }
 }
 
@@ -476,6 +445,11 @@ button {
   border: 0;
   border-radius: 50%;
 
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
   mat-icon {
     width: 1.5rem;
     height: 1.5rem;
@@ -483,15 +457,19 @@ button {
   }
 }
 
+// Buli's green play button ("Nyomd meg a zöld gombot").
 #{$party} .play-small {
   width: 2.25rem;
   height: 2.25rem;
-  background: $party-text;
+  background: $party-green;
   color: #000;
-  transition: transform 0.1s;
+  transition:
+    transform 0.1s,
+    background 0.15s;
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: scale(1.06);
+    background: #3be477;
   }
 }
 
@@ -649,25 +627,20 @@ input[type='range'] {
     padding: 0.75rem 0.75rem 3rem;
   }
 
-  // Buli: the cover above the name.
-  #{$party} .hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  // Duruzsoló: the cover and the name side by side, the buttons in a row
-  // under them.
-  #{$lounge} .hero {
-    flex-wrap: wrap;
-  }
-
-  #{$lounge} .cover {
+  // The cover and the name side by side: a smaller cover, the texts keep
+  // their size.
+  .cover {
     width: 5.5rem;
   }
 
-  #{$lounge} .actions {
-    width: 100%;
-    justify-content: center;
+  .hero-refresh {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+
+  // Six buttons in the bar: closer together.
+  .buttons {
+    gap: 0.25rem;
   }
 }
 
@@ -678,11 +651,12 @@ input[type='range'] {
 }
 
 // Phone (no Média sidebar): Bódorgó FM | Buli rádió | Duruzsoló - shown
-// exactly when the sidebar isn't (media.scss).
+// exactly when the sidebar isn't (media.scss). All three on one line, even
+// on a phone, filling it: the spare room shared out as padding.
 .list-chips {
   display: none;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-wrap: nowrap;
+  gap: 0.375rem;
   margin-bottom: 0.75rem;
 }
 
@@ -693,10 +667,13 @@ input[type='range'] {
 }
 
 .chip {
+  flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.4375rem 0.875rem;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.4375rem 0.5rem;
+  white-space: nowrap;
   border-radius: 999px;
   font-size: 0.8125rem;
   font-weight: 700;
