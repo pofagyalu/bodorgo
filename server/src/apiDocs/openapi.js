@@ -234,6 +234,7 @@ const schemas = {
         'Weather per day (Open-Meteo): `day`, `condition`, `tempDayC`, `tempNightC`, `windSpeedKmh`, `rainChance` (0-100, forecast only), `isFinal`. A forecast from at most 15 days before the day, fetched by the server on its own (every hour it looks; a day at most every 12 hours) - never on a page view; once the day is over, the recorded weather (`isFinal: true`), never changed again.',
     }),
     weatherOutlook: ref('WeatherOutlook'),
+    sunDays: arrayOf(ref('SunDay')),
     extraDocuments: arrayOf(ref('TourDocument')),
     coverUpdatedAt: date('When the cover was uploaded - the cover URL carries it (`?v=`).'),
     secretTour: bool('Titkos túra - its details are hidden until it starts.'),
@@ -268,6 +269,24 @@ const schemas = {
     }),
     description:
       '"Életviteli tanácsok" - one mood for the whole tour and what to pack, texts included (Hungarian, not too serious). Absent until every day of the tour has a forecast (so from 15 days before its last day); follows the forecast until the start date, then stays as it was for good. A tour that started without one never gets one. The numbers behind it: `server/src/utils/weatherOutlookSettings.js`.',
+  },
+
+  SunDay: {
+    ...obj({
+      day: int('Which day of the tour (1-based).'),
+      nightEnd: date('Night is over: the sun rises past -18°.'),
+      blueHourStart: date('Morning blue hour starts (-6°).'),
+      goldenHourStart: date('Morning golden hour starts (-4°).'),
+      sunrise: date('Sunrise.'),
+      dayStart: date('Daylight: the sun is past +6°, the morning golden hour is over.'),
+      goldenHour: date('Evening golden hour starts (+6°).'),
+      sunset: date('Sunset.'),
+      blueHour: date('Evening blue hour starts (-4°).'),
+      blueHourEnd: date('Evening blue hour ends (-6°).'),
+      night: date('Night starts (-18°).'),
+    }),
+    description:
+      '"Az idő járása" - the sun\'s moments of one tour day (suncalc), as instants: the page shows them in the place\'s own time zone (Romania and Ukraine an hour ahead of Budapest). Worked out by the server when the tour is saved with new dates or a new place, never on a page view. Only on `/tours/{id}`, not on the list.',
   },
 
   ScheduleEvent: obj({

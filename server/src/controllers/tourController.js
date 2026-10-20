@@ -268,8 +268,9 @@ export const getAlltours = async (req, res) => {
     const price = totals?.averagePricePerPersonPerNight ?? tour.price;
 
     // The reservations were loaded only for the counts above: the list
-    // shows none of them, and they carry everyone's birthday.
-    const { reservations: _reservations, ...shown } = tour.toObject();
+    // shows none of them, and they carry everyone's birthday. The sun's
+    // moments (sunDays) are for the tour page alone.
+    const { reservations: _reservations, sunDays: _sunDays, ...shown } = tour.toObject();
     return { ...shown, participantCount, price };
   });
 

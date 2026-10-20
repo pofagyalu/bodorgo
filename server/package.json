@@ -52,6 +52,7 @@
     "slugify": "^1.6.6",
     "socket.io": "^4.8.1",
     "stripe": "^22.6.2",
+    "suncalc": "2.1.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "validator": "^13.15.23",

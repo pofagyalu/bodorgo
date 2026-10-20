@@ -1,0 +1,114 @@
+<!-- Az idő járása: the sun's day on each tour day -->
+@if (day(); as d) {
+  <section class="sun-section">
+    <h2 class="section-heading">Az idő járása</h2>
+
+    <div class="sky" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
+      <!-- A few stars twinkling in the corners of the night sky. -->
+      <span class="star star--1"></span>
+      <span class="star star--2"></span>
+      <span class="star star--3"></span>
+      <span class="star star--4"></span>
+
+      <!-- The day, then a row: the arrows at the ends, between them the
+           sun and what it is doing. -->
+      <header class="sky-head">
+        <p class="sky-date">{{ dateLabel() }}</p>
+
+        <div class="sky-row">
+          <button
+            type="button"
+            class="sky-arrow"
+            aria-label="Előző nap"
+            [disabled]="index() === 0"
+            (click)="step(-1)"
+          >
+            <span class="material-icons" aria-hidden="true">chevron_left</span>
+          </button>
+
+          @if (focus(); as f) {
+            <div class="sky-focus">
+              <div
+                class="big-sun"
+                [class]="'big-sun big-sun--' + f.phase"
+                [class.big-sun--live]="f.now"
+              >
+                <span class="big-sun-disc"></span>
+              </div>
+
+              <div class="sky-info">
+                <!-- The moments' times are on the line already: only "now" here. -->
+                @if (f.now) {
+                  <small class="sky-now">most · {{ f.time }}</small>
+                }
+                <strong>{{ f.name }}</strong>
+                <em>{{ f.line }}</em>
+                <span class="sky-daylight">
+                  {{ daylight() }}
+                  @if (daylightChange()) {
+                    <span> · {{ daylightChange() }}</span>
+                  }
+                </span>
+              </div>
+            </div>
+          }
+
+          <button
+            type="button"
+            class="sky-arrow"
+            aria-label="Következő nap"
+            [disabled]="index() === days().length - 1"
+            (click)="step(1)"
+          >
+            <span class="material-icons" aria-hidden="true">chevron_right</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- The day's line: one moment after the other - top to bottom on a
+           phone, left to right on a wide screen. Tracked by the day too,
+           so a new day draws itself again. -->
+      <ol class="line" [class.line--live]="live()">
+        @for (m of moments(); track m.id; let i = $index) {
+          <li
+            class="stretch"
+            [class.stretch--wide]="m.wide"
+            [class.stretch--now]="progress()[i] === 'now'"
+            [class.stretch--ahead]="progress()[i] === 'ahead'"
+            [style.--i]="i"
+            [attr.data-from]="m.phase"
+            [attr.data-to]="m.nextPhase"
+          >
+            @if (m.nextPhase) {
+              <span class="link"></span>
+            }
+            @if (nowSpot()?.index === i) {
+              <span class="link link--done" [style.--f]="nowSpot()!.fraction"></span>
+              <span class="now-dot" [style.--f]="nowSpot()!.fraction" title="Most"></span>
+            }
+
+            <button
+              type="button"
+              class="moment"
+              [class.moment--selected]="selected() === m.key"
+              [class.moment--small]="m.size === 'small'"
+              (click)="select(m.key)"
+            >
+              <span class="moment-time">{{ m.time }}</span>
+              <span class="moment-dot" [class]="'moment-dot moment-dot--' + m.size">
+                <span
+                  class="moment-sun"
+                  [class]="'moment-sun moment-sun--' + (m.key === 'night' ? 'moon' : m.phase)"
+                ></span>
+              </span>
+              <span class="moment-text">
+                <span class="moment-name">{{ m.name }}</span>
+                <span class="moment-line">{{ m.line }}</span>
+              </span>
+            </button>
+          </li>
+        }
+      </ol>
+    </div>
+  </section>
+}

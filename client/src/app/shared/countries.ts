@@ -21,6 +21,14 @@ export const COUNTRIES = [
 
 export const HOME_COUNTRY = 'HU';
 
+// The time zone a tour's clock times are shown in (Az idő járása): the
+// place's own - Romania and Ukraine are an hour ahead, everywhere else a
+// tour goes keeps Budapest's time.
+const EASTERN = ['RO', 'UA'];
+export function timeZoneOf(country: string | undefined): string {
+  return EASTERN.includes(country ?? '') ? 'Europe/Bucharest' : 'Europe/Budapest';
+}
+
 const abroad = (country: string | undefined) =>
   COUNTRIES.find((c) => c.code === country && c.code !== HOME_COUNTRY);
 
