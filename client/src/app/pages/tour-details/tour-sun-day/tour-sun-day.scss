@@ -310,8 +310,10 @@ $gap: 0.9rem;
     filter 0.25s;
 }
 
+// The crescent is its shadow alone - --c only colours the hover glow.
 .moment-sun--moon {
   --c: #{$moon};
+  background: transparent;
 }
 
 // Pointing at a moment: its sun swells and glows, its name lights up -
