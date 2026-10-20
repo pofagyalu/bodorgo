@@ -13,6 +13,27 @@ import { Loading } from '../../shared/loading/loading';
 // How long the map waits for Népszerű at most.
 const POPULAR_WAIT_MS = 4000;
 
+// The statistics this device got last time: shown at once on the next
+// visit - no spinner - and replaced as soon as the fresh ones come. They
+// are the club's numbers, the same for everyone logged in.
+const STATS_KEY = 'homepage-stats';
+
+function keptStats(): TourStatsResponse['data'] | null {
+  try {
+    return JSON.parse(localStorage.getItem(STATS_KEY) ?? 'null');
+  } catch {
+    return null;
+  }
+}
+
+function keepStats(stats: TourStatsResponse['data']) {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch {
+    // Not kept (private window, no room): the next visit waits for them.
+  }
+}
+
 @Component({
   selector: 'app-homepage',
   standalone: true,
@@ -32,9 +53,10 @@ const POPULAR_WAIT_MS = 4000;
 export class HomePage {
   private tourService = inject(TourService);
 
-  stats = signal<TourStatsResponse['data'] | null>(null);
-  // The statistics have come (or failed): what is under them may come too.
-  statsLoaded = signal(false);
+  stats = signal<TourStatsResponse['data'] | null>(keptStats());
+  // The statistics are there (kept from last time, or come, or failed):
+  // what is under them may come too.
+  statsLoaded = signal(this.stats() !== null);
   // Népszerű has its answer too (see popular-views.ts's settled).
   popularSettled = signal(false);
   // The map and the footer come only once the blocks above them are in,
@@ -102,6 +124,7 @@ export class HomePage {
       next: (res) => {
         this.stats.set(res.data);
         this.statsLoaded.set(true);
+        keepStats(res.data);
       },
       error: (err) => {
         console.error('Failed to load tour stats:', err);

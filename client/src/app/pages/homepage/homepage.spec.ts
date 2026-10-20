@@ -24,7 +24,27 @@ describe('HomePage', () => {
     fixture.detectChanges();
   }
 
+  beforeEach(() => localStorage.clear());
   afterEach(() => vi.useRealTimers());
+
+  it('shows the statistics kept from last time at once, then the fresh ones', async () => {
+    await open();
+    expect(el().querySelector('app-loading')).not.toBeNull();
+    respond({ 'GET /tours/tour-stats': STATS });
+    fixture.detectChanges();
+    expect(JSON.parse(localStorage.getItem('homepage-stats')!).totalTours).toBe(12);
+
+    // The next visit: no spinner - last time's numbers, until the new ones.
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    await open();
+    expect(page.statsLoaded()).toBe(true);
+    expect(page.stats()!.totalTours).toBe(12);
+    expect(el().querySelector('app-loading')).toBeNull();
+    respond({ 'GET /tours/tour-stats': { data: { ...STATS.data, totalTours: 13 } } });
+    fixture.detectChanges();
+    expect(page.stats()!.totalTours).toBe(13);
+  });
 
   it('shows the map only after the statistics and Népszerű', async () => {
     await open();

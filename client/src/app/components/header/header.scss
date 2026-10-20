@@ -307,8 +307,9 @@
    each used exactly once here so no two menu items (active or currently
    hidden - Voks/Versenyek in header.html) ever collide:
    Táborok=green, Chat=blue, Klub=dark-green, Kijelentkezés=red,
-   Voks=brown, Versenyek=yellow, Ócskapiac=orange (ex-Profil, now folded
-   into Klub Profilom). */
+   Voks=brown, Média=orange, Ócskapiac=yellow (also Versenyek's, which is
+   not in the menu now). Profil is folded
+   into Klub Profilom. */
 .green {
   color: var(--logo-green);
 }

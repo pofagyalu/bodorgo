@@ -853,60 +853,86 @@ export const getTourStats = async (req, res) => {
   // Only tours that have already ended count ("N tábor eddig") - same
   // "ended" as the reviews (tourHasEnded); the ones still ahead are
   // counted separately, for the card's "+N hamarosan".
-  const tourDates = await Tour.find().select('startDate duration');
-  const totalTours = tourDates.filter((t) => tourHasEnded(t)).length;
-  const upcomingTours = tourDates.length - totalTours;
+  const tourCounts = async () => {
+    const tourDates = await Tour.find().select('startDate duration');
+    const totalTours = tourDates.filter((t) => tourHasEnded(t)).length;
+    return { totalTours, upcomingTours: tourDates.length - totalTours };
+  };
 
-  const participantStats = await Reservation.aggregate([
-    { $unwind: '$attendees' }, // each attendee becomes its own doc
-    {
-      $group: {
-        _id: '$tour',
-        totalParticipantsForTour: { $sum: 1 },
+  const participants = async () => {
+    const participantStats = await Reservation.aggregate([
+      { $unwind: '$attendees' }, // each attendee becomes its own doc
+      {
+        $group: {
+          _id: '$tour',
+          totalParticipantsForTour: { $sum: 1 },
+        },
       },
-    },
-    { $sort: { totalParticipantsForTour: -1 } },
-  ]);
-
-  const totalParticipants = participantStats.reduce(
-    (sum, t) => sum + t.totalParticipantsForTour,
-    0,
-  );
-
-  const topEntry = participantStats[0];
-  const mostAttendedTourDoc = topEntry
-    ? await Tour.findById(topEntry._id).select('title order slug')
-    : null;
+      { $sort: { totalParticipantsForTour: -1 } },
+    ]);
+    const topEntry = participantStats[0];
+    return {
+      totalParticipants: participantStats.reduce((sum, t) => sum + t.totalParticipantsForTour, 0),
+      topEntry,
+      mostAttendedTourDoc: topEntry
+        ? await Tour.findById(topEntry._id).select('title order slug')
+        : null,
+    };
+  };
 
   // Quantity as a tiebreaker so a tour with one 5-star rating doesn't beat
   // one with a real track record of high ratings.
-  const bestRatedTourDoc = await Tour.findOne()
-    .sort('-ratingsAverage -ratingsQuantity')
-    .select('title order slug ratingsAverage ratingsQuantity');
+  const bestRated = () =>
+    Tour.findOne()
+      .sort('-ratingsAverage -ratingsQuantity')
+      .select('title order slug ratingsAverage ratingsQuantity');
 
   // The gender split across every tour attendee on record (not every
   // registered user - plenty of those, e.g. login-less family members,
   // have never actually attended a tour). Attendees whose gender isn't
   // set are excluded rather than counted as a third bucket.
-  const [genderAgg] = await Reservation.aggregate([
-    { $unwind: '$attendees' },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'attendees.user',
-        foreignField: '_id',
-        as: 'attendeeUser',
+  const gender = () =>
+    Reservation.aggregate([
+      { $unwind: '$attendees' },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'attendees.user',
+          foreignField: '_id',
+          as: 'attendeeUser',
+        },
       },
-    },
-    { $unwind: '$attendeeUser' },
-    { $match: { 'attendeeUser.gender': { $in: ['férfi', 'nő'] } } },
-    {
-      $group: {
-        _id: null,
-        maleCount: { $sum: { $cond: [{ $eq: ['$attendeeUser.gender', 'férfi'] }, 1, 0] } },
-        femaleCount: { $sum: { $cond: [{ $eq: ['$attendeeUser.gender', 'nő'] }, 1, 0] } },
+      { $unwind: '$attendeeUser' },
+      { $match: { 'attendeeUser.gender': { $in: ['férfi', 'nő'] } } },
+      {
+        $group: {
+          _id: null,
+          maleCount: { $sum: { $cond: [{ $eq: ['$attendeeUser.gender', 'férfi'] }, 1, 0] } },
+          femaleCount: { $sum: { $cond: [{ $eq: ['$attendeeUser.gender', 'nő'] }, 1, 0] } },
+        },
       },
-    },
+    ]);
+
+  // All at the same time - none needs another's answer - so the homepage
+  // waits for the slowest one, not for all of them in a row. Everyone the
+  // club knows (totalPeople): each person once, however many tours they
+  // were on - the number of Klub → Felhasználók's "Mindenki".
+  const [
+    { totalTours, upcomingTours },
+    { totalParticipants, topEntry, mostAttendedTourDoc },
+    bestRatedTourDoc,
+    [genderAgg],
+    attendeeAges,
+    totalPeople,
+    running,
+  ] = await Promise.all([
+    tourCounts(),
+    participants(),
+    bestRated(),
+    gender(),
+    attendeeAgeStats(),
+    User.countDocuments(),
+    runningStats(),
   ]);
 
   // Rounding the two independently could land on e.g. 34/67 (101) - deriving
@@ -917,12 +943,6 @@ export const getTourStats = async (req, res) => {
   const genderRatio =
     malePercentage === null ? null : { malePercentage, femalePercentage: 100 - malePercentage };
 
-  const attendeeAges = await attendeeAgeStats();
-
-  // Everyone the club knows - each person once, however many tours they
-  // were on: the number of Klub → Felhasználók's "Mindenki".
-  const totalPeople = await User.countDocuments();
-
   res.status(200).json({
     status: 'success',
     data: {
@@ -932,7 +952,7 @@ export const getTourStats = async (req, res) => {
       totalPeople,
       genderRatio,
       attendeeAges,
-      running: await runningStats(),
+      running,
       mostAttendedTour: mostAttendedTourDoc
         ? {
             _id: mostAttendedTourDoc._id,
