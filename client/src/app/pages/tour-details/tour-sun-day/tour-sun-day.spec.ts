@@ -53,7 +53,7 @@ describe('TourSunDay', () => {
   it('shows the nine moments of the first day in local time', () => {
     show(makeTour({ sunDays: twoDays }));
     expect(text('.section-heading')).toEqual(['Az idő járása']);
-    expect(text('.sky-date')).toEqual(['1. nap · július 10., szombat']);
+    expect(text('.sky-date')).toEqual(['2027. július 10., szombat']);
     expect(text('.moment-name')).toEqual([
       'Éjszaka vége',
       'Kékóra',
@@ -90,7 +90,7 @@ describe('TourSunDay', () => {
     expect(prev.disabled).toBe(true);
     next.click();
     fixture.detectChanges();
-    expect(text('.sky-date')).toEqual(['2. nap · július 11., vasárnap']);
+    expect(text('.sky-date')).toEqual(['2027. július 11., vasárnap']);
     expect(text('.sky-daylight')).toEqual([
       '15 ó 45 p napfény · 2 perccel kevesebb, mint előző nap',
     ]);
@@ -111,7 +111,7 @@ describe('TourSunDay', () => {
     vi.setSystemTime(new Date('2027-07-11T20:00:00+02:00'));
     show(makeTour({ sunDays: twoDays }));
     // Opens on today, the second day.
-    expect(text('.sky-date')).toEqual(['2. nap · július 11., vasárnap']);
+    expect(text('.sky-date')).toEqual(['2027. július 11., vasárnap']);
     expect(text('.sky-info strong')).toEqual(['Aranyóra']);
     expect(text('.sky-now')).toEqual(['most · 20:00']);
     // In the stretch from the evening Aranyóra (19:51) to sunset (20:36).

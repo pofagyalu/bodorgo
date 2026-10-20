@@ -168,17 +168,17 @@ export class TourSunDay {
     }));
   });
 
-  // The date line of the header: "2. nap · július 12., szombat".
+  // The date line of the header: "2027. július 12., hétfő".
   dateLabel = computed(() => {
     const day = this.day();
     if (!day) return '';
-    const date = new Intl.DateTimeFormat('hu-HU', {
+    return new Intl.DateTimeFormat('hu-HU', {
       timeZone: this.timeZone(),
+      year: 'numeric',
       month: 'long',
       day: 'numeric',
       weekday: 'long',
     }).format(Date.parse(day.dayStart));
-    return `${day.day}. nap · ${date}`;
   });
 
   // "15 ó 47 p napfény", and how it differs from the day before.
