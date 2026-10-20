@@ -169,7 +169,23 @@ describe('StyledPlaylist', () => {
     fixture.detectChanges();
   }
 
-  it('shows Buli in the party look: whose list it is, the play button in a row of its own', async () => {
+  // Both looks: shuffle ⏮ ▶ ⏹ ⏭ repeat in the now-playing bar, no other
+  // button row.
+  function expectAllControlsInBar() {
+    expect(el().querySelector('.actions')).toBeNull();
+    expect(el().querySelector('.play-big')).toBeNull();
+    const buttons = el().querySelectorAll('.now-controls .buttons > button');
+    expect([...buttons].map((b) => b.getAttribute('title'))).toEqual([
+      'Véletlen sorrend',
+      'Előző dal',
+      'Lejátszás',
+      'Leállítás',
+      'Következő dal',
+      'Ez a dal ismétlődjön',
+    ]);
+  }
+
+  it('shows Buli in the party look: whose list it is, every control in the now-playing bar', async () => {
     open('buli');
     await settle();
     fixture.detectChanges();
@@ -178,29 +194,35 @@ describe('StyledPlaylist', () => {
     expect(el().querySelector('h1')!.textContent).toBe('Buli rádió');
     expect(el().querySelector('.cover')!.getAttribute('src')).toBe('assets/images/buli-cover.svg');
     expect(el().querySelector('.tagline')).toBeNull();
-    expect(el().querySelector('.meta')!.textContent).toMatch(/Bódorgó\s+·\s+3 dal\s+· kb\. 9 perc/);
-    // The row is under the header, ▶ first.
-    expect(el().querySelector('.hero .actions')).toBeNull();
-    expect(el().querySelector('.actions')!.firstElementChild!.classList).toContain('play-big');
+    expect(el().querySelector('.hero-text .owner')!.textContent).toBe('Csűrdöngölő kultúrpajta');
+    expect(el().querySelector('.meta')!.textContent).toMatch(/^\s*3 dal\s+· kb\. 9 perc\s*$/);
+    expectAllControlsInBar();
     expect(text()).toContain('Indítsd el a bulit!');
     expect(fixture.debugElement.query(By.directive(TrackList)).componentInstance.look()).toBe(
       'party',
     );
   });
 
-  it('shows Duruzsoló in the lounge look: a tagline, the play button in the header', async () => {
+  it('shows Duruzsoló in the lounge look: a tagline, every control in the now-playing bar', async () => {
     open('hatter');
     await settle();
     fixture.detectChanges();
     expect(el().querySelector('.page.look--lounge')).not.toBeNull();
     expect(el().querySelector('h1')!.textContent).toBe('Duruzsoló');
     expect(el().querySelector('.tagline')!.textContent).toBe('Zene a beszélgetések mellé');
-    expect(el().querySelector('.meta')!.textContent).not.toContain('Bódorgó');
-    // In the header, ▶ between shuffle and repeat.
-    const buttons = el().querySelectorAll('.hero .actions > button');
-    expect([...buttons].map((b) => b.classList[0])).toEqual(['icon-btn', 'play-big', 'icon-btn']);
+    expect(el().querySelector('.owner')).toBeNull();
+    expectAllControlsInBar();
     expect(text()).toContain('Gyújts gyertyát, tölts egy pohárral…');
     expect(el().querySelectorAll('.track').length).toBe(3);
+  });
+
+  it('gives an admin the Duruzsoló reload in the header’s top right corner', async () => {
+    open('hatter', 'admin');
+    await settle();
+    fixture.detectChanges();
+    const reload = el().querySelector('.hero .hero-refresh button')!;
+    expect(reload.getAttribute('title')).toBe('Lista frissítése');
+    expectAllControlsInBar();
   });
 
   it('shows what is on, and plays the song picked in the list', async () => {
@@ -257,14 +279,17 @@ describe('StyledPlaylist', () => {
     open('buli');
     await settle();
     fixture.detectChanges();
-    expect(el().querySelectorAll('.actions > button').length).toBe(3);
+    expect(el().querySelector('.hero-refresh')).toBeNull();
   });
 
   it('lets an admin reload the list from Jellyfin', async () => {
     open('buli', 'admin');
     await settle();
     fixture.detectChanges();
-    expect(el().querySelectorAll('.actions > button').length).toBe(4);
+    expect(el().querySelector('.hero .hero-refresh button')!.getAttribute('title')).toBe(
+      'Lista frissítése',
+    );
+    expectAllControlsInBar();
     const notifications = TestBed.inject(NotificationsService);
     const success = vi.spyOn(notifications, 'addSuccess').mockImplementation(() => {});
     const error = vi.spyOn(notifications, 'addError').mockImplementation(() => {});

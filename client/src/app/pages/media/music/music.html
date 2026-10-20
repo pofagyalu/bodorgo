@@ -18,25 +18,25 @@
          (fm-radio). -->
     <app-fm-radio />
 
+    @if (isAdmin()) {
+      <!-- Admins: reload the list from Jellyfin now - in the top right
+           corner. -->
+      <button
+        type="button"
+        class="refresh"
+        title="Lista frissítése"
+        [disabled]="refreshing()"
+        (click)="refresh()"
+      >
+        <mat-icon [class.spin]="refreshing()">refresh</mat-icon>
+      </button>
+    }
+
     <!-- The whole playlist - tap a song to play it -->
     <section class="playlist">
       <div class="playlist-head">
         <h2>Műsor</h2>
-        <span class="count">
-          {{ tracks().length }} dal
-          @if (isAdmin()) {
-            <!-- Admins: reload the list from Jellyfin now. -->
-            <button
-              type="button"
-              class="refresh"
-              title="Lista frissítése"
-              [disabled]="refreshing()"
-              (click)="refresh()"
-            >
-              <mat-icon [class.spin]="refreshing()">refresh</mat-icon>
-            </button>
-          }
-        </span>
+        <span class="count">{{ tracks().length }} dal</span>
       </div>
       <app-track-list
         look="radio"

@@ -535,6 +535,11 @@ button {
     justify-items: center;
   }
 
+  // The name stays on the left, as on a wide screen.
+  .station-title {
+    justify-self: start;
+  }
+
   .radio {
     width: 100%;
     aspect-ratio: 2;
@@ -579,9 +584,16 @@ button {
   }
 }
 
+// Phone: "világzenei rádió" on a line of its own under the name, without
+// the dash - clear of the admins' reload in the corner.
 @media (max-width: 580px) {
   .tagline {
+    display: block;
     white-space: normal;
+  }
+
+  .dash {
+    display: none;
   }
 }
 
