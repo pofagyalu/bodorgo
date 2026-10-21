@@ -34,9 +34,28 @@ const sendErrorDev = (err, res) => {
   });
 };
 
+// Where an unexpected error broke, short: our own code's first three places
+// ("tourCourseWindow (futokor/tourWindow.js:54)"), never Node's or a
+// library's - the whole stack is a screenful nobody reads.
+export const whereItBroke = (err) =>
+  String(err?.stack ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /[\\/]src[\\/]/.test(line) && !/node_modules/.test(line))
+    .slice(0, 3)
+    .map((line) =>
+      line
+        .slice(3)
+        .replace(/\S*[\\/]src[\\/]/, '(')
+        .replace(/:\d+\)?$/, ')'),
+    )
+    .join(' ← ');
+
 // Production: an expected (operational) error's own message goes to the
-// user; anything else only a generic one - never a stack trace.
-const sendErrorProd = (err, res) => {
+// user; anything else only a generic one - never a stack trace. The log
+// gets where it broke and the names of the fields sent - not their
+// values, which may be phone numbers and the like.
+const sendErrorProd = (err, req, res) => {
   if (err.isOperational) {
     res.status(err.statusCode).json({
       status: err.status,
@@ -44,7 +63,13 @@ const sendErrorProd = (err, res) => {
       ...(typeof err.code === 'string' ? { code: err.code } : {}),
     });
   } else {
-    logger.error('ERROR 💣', err);
+    const where = whereItBroke(err);
+    const fields = Object.keys(req.body ?? {});
+    logger.error(
+      `ERROR 💣 ${err.name ?? 'Error'}: ${err.message}` +
+        (where ? ` - at ${where}` : '') +
+        (fields.length ? ` - fields sent: ${fields.join(', ')}` : ''),
+    );
     res.status(500).json({
       status: 'error',
       message: 'Váratlan hiba történt. Kérjük, próbáld újra később.',
@@ -74,6 +99,6 @@ export default (err, req, res, next) => {
     if (err.name === 'ValidationError') error = handleValidationErrorsDB(err);
     if (err.name === 'JsonWebTokenError') error = handleJWTError();
     if (err.name === 'TokenExpiredError') error = handleJWTExpiredError();
-    sendErrorProd(error, res);
+    sendErrorProd(error, req, res);
   }
 };
