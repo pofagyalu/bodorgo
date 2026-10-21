@@ -19,6 +19,32 @@ export const mediaEditorOnly = (req, res, next) =>
 
 // With viewers set it is only for them (and the admins); with none, for
 // every member.
+// A Média video is stricter (mediaVideoTitleModel.js's access): only an
+// 'all' one is every member's, a 'chosen' one its viewers', and one with
+// nothing set - a new one - the admins' alone.
+export const VIDEO_ACCESS = ['all', 'chosen', 'admins'];
+export const videoAccessOf = (own) => own?.access ?? (own?.viewers?.length ? 'chosen' : 'admins');
+export const mayWatch = (user, own) => {
+  if (user.role === 'admin') return true;
+  const access = videoAccessOf(own);
+  if (access === 'all') return true;
+  return access === 'chosen' && own.viewers.some((v) => String(v) === String(user._id));
+};
+
+// A video's access after a PATCH: only when the body has it (viewers sent
+// alone, some: 'chosen'). 'chosen' needs at least one viewer; the other two
+// keep none.
+export function videoAccessFrom(body, own, viewers) {
+  const access = body?.access ?? (body?.viewers?.length ? 'chosen' : videoAccessOf(own));
+  if (!VIDEO_ACCESS.includes(access)) {
+    throw new AppError('A láthatóság: mindenki, a kiválasztottak vagy csak az adminok.', 400);
+  }
+  if (access === 'chosen' && !viewers.length) {
+    throw new AppError('Válassz ki legalább egy tagot.', 400);
+  }
+  return { access, viewers: access === 'chosen' ? viewers : [] };
+}
+
 export const maySee = (user, own) =>
   user.role === 'admin' ||
   !own?.viewers?.length ||

@@ -36,8 +36,8 @@
         <input
           type="radio"
           name="media-edit-access"
-          [checked]="!restricted()"
-          (change)="restricted.set(false); nobodyChosen.set(false)"
+          [checked]="choice() === 'all'"
+          (change)="pick('all')"
         />
         Minden klubtag
       </label>
@@ -45,14 +45,26 @@
         <input
           type="radio"
           name="media-edit-access"
-          [checked]="restricted()"
-          (change)="restricted.set(true)"
+          [checked]="choice() === 'chosen'"
+          (change)="pick('chosen')"
         />
         Csak a kiválasztott tagok
         @if (restricted() && chosen().size) {
           <span class="chosen-count">{{ chosen().size }}</span>
         }
       </label>
+      <!-- A video: a new one starts so, until it is opened up. -->
+      @if (access() !== null) {
+        <label class="choice">
+          <input
+            type="radio"
+            name="media-edit-access"
+            [checked]="choice() === 'admins'"
+            (change)="pick('admins')"
+          />
+          Csak az adminok
+        </label>
+      }
 
       @if (restricted()) {
         @if (membersLoading()) {

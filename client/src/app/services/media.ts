@@ -31,8 +31,9 @@ export interface MediaVideo {
   // 720...) - the player's quality switch is labelled with them.
   height?: number | null;
   smallHeight?: number | null;
-  // The role manager only: the only members who see it - empty: every
-  // member does.
+  // The role manager only: who sees it besides the admins (VideoAccess),
+  // and the chosen members when it is 'chosen'.
+  access?: VideoAccess;
   viewers?: string[];
   // Admins only: an Új média felfedezése met it in the last two weeks.
   isNew?: boolean;
@@ -107,9 +108,16 @@ export const photoNewCount = (c: MediaPhotoCategory) =>
 // An opened album's place among MediaService.albumPhotos.
 export const albumKey = (category: string, album: string) => `${category}/${album}`;
 
+// Who sees a video besides the admins: every member, the chosen ones, or
+// nobody - a new video (nothing set yet) is the admins' alone (server
+// mediaVideoTitleModel.js).
+export type VideoAccess = 'all' | 'chosen' | 'admins';
+
 // What the role manager sets for a video or a photo.
 export interface MediaSettings {
   title: string;
+  // A video's only.
+  access?: VideoAccess;
   viewers: string[];
   // A video's only: made with AI.
   aiGenerated?: boolean;
@@ -173,6 +181,7 @@ export class MediaService {
             id: string;
             title: string;
             discoveredTitle: string;
+            access: VideoAccess;
             viewers: string[];
             aiGenerated: boolean;
           };
@@ -191,6 +200,7 @@ export class MediaService {
                         ? {
                             ...v,
                             title: res.data.video.title,
+                            access: res.data.video.access,
                             viewers: res.data.video.viewers,
                             aiGenerated: res.data.video.aiGenerated,
                           }

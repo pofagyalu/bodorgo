@@ -133,6 +133,7 @@
     [title]="e.video.title"
     [discoveredTitle]="e.video.discoveredTitle"
     [viewers]="e.video.viewers ?? []"
+    [access]="e.video.access ?? 'admins'"
     [aiGenerated]="!!e.video.aiGenerated"
     [saving]="savingEdit()"
     [error]="editError()"

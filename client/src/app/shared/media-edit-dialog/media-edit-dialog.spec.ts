@@ -17,7 +17,11 @@ describe('MediaEditDialog', () => {
   let dialog: MediaEditDialog;
   let saved: MediaEdit[];
 
-  function open(viewers: string[] = [], members: object = { data: { users } }) {
+  function open(
+    viewers: string[] = [],
+    members: object = { data: { users } },
+    access: 'all' | 'chosen' | 'admins' | null = null,
+  ) {
     TestBed.configureTestingModule({ providers: [httpTesting()] });
     fixture = TestBed.createComponent(MediaEditDialog);
     dialog = fixture.componentInstance;
@@ -26,6 +30,7 @@ describe('MediaEditDialog', () => {
     fixture.componentRef.setInput('discoveredTitle', 'Farsang');
     fixture.componentRef.setInput('discoveredLabel', 'A fájl neve szerint');
     fixture.componentRef.setInput('viewers', viewers);
+    fixture.componentRef.setInput('access', access);
     saved = [];
     dialog.saved.subscribe((edit) => saved.push(edit));
     fixture.detectChanges();
@@ -47,7 +52,7 @@ describe('MediaEditDialog', () => {
   it('offers the active members only, and saves the chosen ones', () => {
     open();
     expect(dialog.members().map((m) => m._id)).toEqual(['m1', 'm2']);
-    dialog.restricted.set(true);
+    dialog.pick('chosen');
     save(); // nobody chosen: that would open it to everyone
     expect(saved).toEqual([]);
     expect(dialog.nobodyChosen()).toBe(true);
@@ -122,5 +127,40 @@ describe('MediaEditDialog', () => {
     fixture.nativeElement.querySelector('app-toggle-switch button').click();
     save();
     expect(saved).toEqual([{ title: 'Jelmezbál', viewers: [], aiGenerated: false }]);
+  });
+
+  // The radios under "Ki láthatja?", as the page shows them.
+  const choices = () =>
+    [...fixture.nativeElement.querySelectorAll('.access > .choice')].map((l: Element) =>
+      l.textContent!.replace(/\s+/g, ' ').trim(),
+    );
+
+  it('a photo has two choices - no "Csak az adminok", nothing about it saved', () => {
+    open();
+    expect(choices()).toEqual(['Minden klubtag', 'Csak a kiválasztott tagok']);
+    save();
+    expect(saved[0].access).toBeUndefined();
+  });
+
+  it('a new video starts as "Csak az adminok", and saves it with nobody chosen', () => {
+    open([], { data: { users } }, 'admins');
+    expect(choices()).toEqual(['Minden klubtag', 'Csak a kiválasztott tagok', 'Csak az adminok']);
+    expect(dialog.choice()).toBe('admins');
+    expect(fixture.nativeElement.querySelector('.members')).toBeNull();
+    save();
+    expect(saved).toEqual([{ title: 'Jelmezbál', access: 'admins', viewers: [] }]);
+  });
+
+  it('a video opened to every member, or to the chosen ones, says which', () => {
+    open([], { data: { users } }, 'admins');
+    dialog.pick('all');
+    save();
+    dialog.pick('chosen');
+    dialog.toggle('m1');
+    save();
+    expect(saved).toEqual([
+      { title: 'Jelmezbál', access: 'all', viewers: [] },
+      { title: 'Jelmezbál', access: 'chosen', viewers: ['m1'] },
+    ]);
   });
 });

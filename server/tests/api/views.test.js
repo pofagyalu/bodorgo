@@ -4,6 +4,7 @@ import path from 'path';
 import request from 'supertest';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
+import { openMediaVideos } from '../helpers/media.js';
 import {
   createAdmin,
   createGuest,
@@ -44,7 +45,9 @@ beforeAll(async () => {
 });
 
 // A fake Jellyfin with one playlist (Bódorgó FM) of two songs.
-beforeEach(() => {
+beforeEach(async () => {
+  // Every member sees the Média videos (a new one would be the admins' alone).
+  await openMediaVideos();
   clearPopularCache();
   clearTourVideoCache();
   clearPlaylistCache();

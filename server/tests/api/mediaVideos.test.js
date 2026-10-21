@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import request from 'supertest';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createGuest, createMember } from '../helpers/factories.js';
 import { parseVideoName } from '../../src/controllers/mediaVideoController.js';
@@ -55,6 +55,16 @@ beforeAll(() => {
   put('reklam/Season 01/A magyar igazság (2024) S01E01 -thumb.jpg');
   put('farsang/notes.txt'); // not a video - ignored
 });
+
+// A new video is the admins' alone (mediaVideoTitleModel.js's access): the
+// tests open these to every member first, as scripts/fillVideoAccess.mjs
+// did with the ones already there.
+const VIDEOS = [
+  { category: 'farsang', path: 'Season 01/Farsang (2024) S01E01.mp4' },
+  { category: 'farsang', path: 'Season 01/Farsang (2025) S01E02.mp4' },
+  { category: 'reklam', path: 'Season 01/A magyar igazság (2024) S01E01 .mp4' },
+];
+beforeEach(() => MediaVideoTitle.insertMany(VIDEOS.map((v) => ({ ...v, access: 'all' }))));
 
 describe('Média videos', () => {
   it('lists the categories with their videos, newest first, for members only', async () => {
@@ -176,7 +186,7 @@ describe('Média videos: own title and viewers', () => {
   it('the role manager gives a video its own title, and takes it back', async () => {
     const admin = await createManager();
     const [video] = (await farsang(admin)).videos;
-    expect((await farsang(admin)).videos[0].viewers).toEqual([]);
+    expect((await farsang(admin)).videos[0]).toMatchObject({ access: 'all', viewers: [] });
 
     const member = await createMember();
     const otherAdmin = await createAdmin();
@@ -238,10 +248,10 @@ describe('Média videos: own title and viewers', () => {
     expect((await get(other, 'video', respelled)).status).toBe(404);
     expect((await get(chosen, 'video', respelled)).status).toBe(200);
 
-    // A title change leaves the viewers alone; an empty list opens it again.
+    // A title change leaves the viewers alone; 'all' opens it again.
     await request(app).patch(`${base}/${video.id}`).set(asUser(admin)).send({ title: 'Új' });
     expect((await get(other, 'video')).status).toBe(404);
-    await request(app).patch(`${base}/${video.id}`).set(asUser(admin)).send({ viewers: [] });
+    await request(app).patch(`${base}/${video.id}`).set(asUser(admin)).send({ access: 'all' });
     expect((await get(other, 'video')).status).toBe(200);
     expect((await farsang(other)).videos[0].title).toBe('Új');
     await request(app).patch(`${base}/${video.id}`).set(asUser(admin)).send({ title: '' });
@@ -255,6 +265,37 @@ describe('Média videos: own title and viewers', () => {
     expect((await patch('mindenki')).status).toBe(400);
     expect((await patch(['nem-id'])).status).toBe(400);
     expect((await patch(['64b000000000000000000000'])).status).toBe(400);
+  });
+
+  it('a new video is the admins’ alone - until it is opened to the members', async () => {
+    const admin = await createManager();
+    const otherAdmin = await createAdmin();
+    const member = await createMember();
+    // As one put on the NAS today: nothing set for it.
+    await MediaVideoTitle.deleteMany({ path: VIDEOS[1].path });
+    const [video] = (await farsang(admin)).videos;
+    expect(video).toMatchObject({ year: 2025, access: 'admins', viewers: [] });
+    expect((await farsang(otherAdmin)).videos.map((v) => v.year)).toEqual([2025, 2024]);
+    expect((await farsang(member)).videos.map((v) => v.year)).toEqual([2024]);
+    const get = (user) => request(app).get(`${base}/${video.id}/video`).set(asUser(user));
+    expect((await get(member)).status).toBe(404);
+    expect((await get(otherAdmin)).status).toBe(200);
+
+    const patch = (body) => request(app).patch(`${base}/${video.id}`).set(asUser(admin)).send(body);
+    // "Csak a kiválasztott tagok" with nobody chosen is refused.
+    expect((await patch({ access: 'chosen', viewers: [] })).status).toBe(400);
+    expect((await patch({ access: 'mindenki' })).status).toBe(400);
+
+    const opened = await patch({ access: 'all' });
+    expect(opened.body.data.video).toMatchObject({ access: 'all', viewers: [] });
+    expect((await get(member)).status).toBe(200);
+
+    // And back to the admins - the viewers go with it.
+    await patch({ access: 'chosen', viewers: [String(member._id)] });
+    const closed = await patch({ access: 'admins' });
+    expect(closed.body.data.video).toMatchObject({ access: 'admins', viewers: [] });
+    expect((await get(member)).status).toBe(404);
+    expect((await farsang(admin)).videos[0].access).toBe('admins');
   });
 
   it('marks a video as made with AI - for everyone to see - and takes it back', async () => {
@@ -278,8 +319,6 @@ describe('Média videos: own title and viewers', () => {
 
     await patch({ title: '', aiGenerated: false });
     expect((await farsang(member)).videos[0].aiGenerated).toBe(false);
-    // Nothing left to keep: no record.
-    expect(await MediaVideoTitle.countDocuments()).toBe(0);
   });
 });
 
