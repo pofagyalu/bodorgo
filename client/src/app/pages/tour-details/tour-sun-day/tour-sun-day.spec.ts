@@ -123,6 +123,54 @@ describe('TourSunDay', () => {
     expect(Number(now.style.getPropertyValue('--f'))).toBeCloseTo(9 / 45, 2);
   });
 
+  it('on a phone, today scrolls the line (not the page) to where the sun is now', () => {
+    // jsdom lays nothing out: a phone's sizes, made up - the line a
+    // 280 px window over 600 px of moments, each moment 60 px tall.
+    const scrolled: number[] = [];
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.tagName === 'OL' ? 600 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.tagName === 'OL' ? 280 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.tagName === 'LI'
+        ? 100 + [...this.parentElement!.children].indexOf(this) * 60
+        : 100;
+    });
+    vi.spyOn(Element.prototype, 'scrollTop', 'set').mockImplementation((top: number) => {
+      scrolled.push(top);
+    });
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-07-11T20:00:00+02:00'));
+    show(makeTour({ sunDays: twoDays }));
+    // In the stretch after the evening Aranyóra - the 6th moment.
+    expect(scrolled).toEqual([5 * 60]);
+
+    // Another day isn't scrolled; coming back to today is, once.
+    el.querySelectorAll<HTMLButtonElement>('.sky-arrow')[0].click();
+    fixture.detectChanges();
+    el.querySelectorAll<HTMLButtonElement>('.sky-arrow')[1].click();
+    fixture.detectChanges();
+    fixture.detectChanges();
+    expect(scrolled).toEqual([5 * 60, 5 * 60]);
+    vi.restoreAllMocks();
+  });
+
+  it('a day that is not today is not scrolled', () => {
+    const scrolled = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+    show(makeTour({ sunDays: twoDays }));
+    expect(scrolled).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
   it('shows a tour in Romania in Romanian time', () => {
     show(makeTour({ sunDays: twoDays, location: { ...makeTour().location, country: 'RO' } }));
     expect(text('.moment-time')[3]).toBe('05:51'); // sunrise

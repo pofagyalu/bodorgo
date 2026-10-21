@@ -212,6 +212,21 @@ $gap: 0.9rem;
   padding: 0;
 }
 
+// A phone: the header stays, the line scrolls in its own window - four and
+// a half moments tall, the half one showing there is more. A swipe past its
+// end goes on with the page (the browser's own scroll chaining). Its
+// bottom edge fades out.
+@media (max-width: 768px) {
+  .line {
+    max-height: 17.5rem;
+    overflow-y: auto;
+    // Room for the first moment's ring, which the window would cut.
+    margin-top: 1.2rem;
+    padding-top: 0.2rem;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent);
+  }
+}
+
 .stretch {
   position: relative;
 }

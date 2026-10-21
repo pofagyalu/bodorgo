@@ -1,4 +1,14 @@
-import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  afterRenderEffect,
+  computed,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { SunDay, Tour } from '../../../services/tour';
 import { timeZoneOf } from '../../../shared/countries';
 
@@ -253,9 +263,39 @@ export class TourSunDay {
     return day && { phase: day.phase, name: day.name, line: day.line, time: day.time, now: false };
   });
 
+  // The line's own scrolling window (a phone - on a wide screen it doesn't
+  // scroll).
+  private line = viewChild<ElementRef<HTMLOListElement>>('line');
+  // The day the line was last shown for, and whether it was taken to now.
+  private shownDay: number | null = null;
+  private tookToNow = false;
+
   constructor() {
     const timer = setInterval(() => this.now.set(Date.now()), MINUTE);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
+
+    // A tour day that is today: the line scrolls (inside its window, not
+    // the page) to where the sun is now - once per showing of the day, so
+    // the minute ticks never take a scrolled line back.
+    afterRenderEffect(() => {
+      const day = this.day()?.day ?? null;
+      const live = this.live();
+      const spot = this.nowSpot();
+      const list = this.line()?.nativeElement;
+      if (day !== this.shownDay) {
+        this.shownDay = day;
+        this.tookToNow = false;
+      }
+      if (!live || !list || this.tookToNow) return;
+      this.tookToNow = true;
+      if (list.scrollHeight <= list.clientHeight) return;
+      // The stretch the sun is in - or, the night over, the last moment.
+      const rows = list.children;
+      const row = (
+        spot ? rows[spot.index] : this.progress()[0] === 'past' ? rows[rows.length - 1] : null
+      ) as HTMLElement | null | undefined;
+      if (row) list.scrollTop = row.offsetTop - list.offsetTop;
+    });
   }
 
   step(by: number) {
