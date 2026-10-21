@@ -9,13 +9,7 @@ import logger from '../logger.js';
 import Cancellation from '../models/cancellationModel.js';
 import { emitToTour } from '../chat/tourEvents.js';
 import { escapeHtml } from '../utils/mailHtml.js';
-
-// The club didn't exist before this date, so it can't have contributed
-// money toward a tour's accommodation before it either - see
-// computeAttendeePayments below. Guarded here (not just disabled in the
-// tour-edit form) so a stale/manually-set clubSubsidyAmount on an old
-// tour can never actually get applied.
-const CLUB_FOUNDING_DATE = new Date('2019-01-01T00:00:00.000Z');
+import { CLUB_FOUNDING_DATE } from '../utils/tourSubsidy.js';
 
 // Who a given caller is allowed to register depends on their role:
 // - guest: only themselves.
