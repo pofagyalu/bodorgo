@@ -1,11 +1,10 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { PaymentTotals, Tour, TourService } from '../../../services/tour';
 import { AuthService } from '../../../auth/auth.service';
 import { AttendeeList, AttendeeListRow } from '../attendee-list/attendee-list';
 
-// A tour's Résztvevők (tour-details): the heading row - it opens and closes
-// the list, with the head count, "Megtelt" and an admin's Excel export - and
+// A tour's Résztvevők (tour-details): the heading row - the head count, "Megtelt" and an admin's Excel export - and
 // under it the attendee list. Who is on the list, the count and the totals
 // are worked out by tour-details, which needs them for the sign-up and the
 // program too; after an admin changed someone's nights it reloads the tour
@@ -30,17 +29,8 @@ export class TourParticipants {
   nightsUpdated = output<void>();
 
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
-
-  // Restores whatever expand/collapse choice was last made (see
-  // tour.ts's showParticipantsPreference), instead of always resetting to
-  // collapsed when navigating back to a tour.
-  showParticipants = signal(this.tourService.showParticipantsPreference);
-
-  toggleParticipants() {
-    const next = !this.showParticipants();
-    this.showParticipants.set(next);
-    this.tourService.showParticipantsPreference = next;
-  }
+  // Never below 0, even if more signed up than the tour has places.
+  freePlaces = computed(() => Math.max(0, this.tour().maxCapacity - this.participantCount()));
 
   attendeesExcelUrl(tourId: string): string {
     return this.tourService.attendeesExcelUrl(tourId);

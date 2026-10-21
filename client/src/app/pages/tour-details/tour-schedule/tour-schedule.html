@@ -1,9 +1,8 @@
 <!-- Programterv: the day-by-day schedule -->
 <!-- An admin drags an event by its grip onto another day's block (the
      blocks are one group of drop targets - see moveEvent). -->
+<!-- No "Programterv" heading: the tab above says it. -->
 <section class="schedule-section" cdkDropListGroup>
-  <h2 class="section-heading">Programterv</h2>
-
   @for (day of dayGroups(); track day.day) {
     <div
       class="day-block"
@@ -12,7 +11,21 @@
       [cdkDropListData]="day.day"
       (cdkDropListDropped)="moveEvent($event)"
     >
-      <h3 class="day-heading" [class.day-heading--admin]="canEdit()">
+      <!-- The day and its date, then at the line's right end the weather
+           (icon + temps together) and an admin's + button. A click on it
+           folds the day's events away, another opens them again. -->
+      <h3
+        class="day-heading"
+        role="button"
+        tabindex="0"
+        [class.day-heading--collapsed]="collapsedDays().has(day.day)"
+        [attr.aria-expanded]="!collapsedDays().has(day.day)"
+        (click)="toggleDay(day.day)"
+        (keydown.enter)="toggleDay(day.day)"
+        (keydown.space)="$event.preventDefault(); toggleDay(day.day)"
+      >
+        <span class="day-heading-daynum">{{ day.day }}. nap</span>
+        <span class="day-heading-date">{{ day.label }}</span>
         @if (day.weather; as w) {
           <span class="day-weather" [title]="weatherConditionLabel(w.condition)">
             <img [src]="weatherIconPath(w.condition)" alt="" class="day-weather-icon" />
@@ -23,68 +36,78 @@
             <mat-icon class="day-weather-icon day-weather-icon--placeholder">help_outline</mat-icon>
           </span>
         }
-        <span class="day-heading-daynum">{{ day.day }}. nap –</span>
-        <span class="day-heading-date">{{ day.label }}</span>
         @if (canEdit()) {
           <button
             type="button"
             class="icon-btn icon-btn--add"
             title="Esemény hozzáadása"
-            (click)="startAddEvent(day.day)"
+            (click)="$event.stopPropagation(); startAddEvent(day.day)"
+            (keydown.enter)="$event.stopPropagation()"
+            (keydown.space)="$event.stopPropagation()"
           >
             <mat-icon>add</mat-icon>
           </button>
         }
       </h3>
 
-      @if (addingEventForDay() === day.day) {
-        <app-event-form
-          [model]="addEventForm"
-          [saving]="addingEvent()"
-          [error]="addEventError()"
-          (save)="saveNewEvent(day.day)"
-          (cancelled)="cancelAddEvent()"
-        />
-      }
-      @if (day.events.length) {
-        <ul class="event-list">
-          @for (ev of day.events; track ev._id) {
-            <li
-              class="event-row"
-              [class.event-row--draggable]="canEdit()"
-              cdkDrag
-              [cdkDragData]="ev"
-              [cdkDragDisabled]="!canEdit()"
-            >
-              <!-- Where it would land, while it's over another day. -->
-              <div class="event-placeholder" *cdkDragPlaceholder></div>
-              @if (canEdit()) {
-                <span
-                  class="drag-handle"
-                  cdkDragHandle
-                  title="Húzd át egy másik napra"
-                  aria-label="Esemény áthúzása egy másik napra"
-                >
-                  <mat-icon>drag_indicator</mat-icon>
-                </span>
-              }
-              <app-tour-event
-                class="event-body"
-                [event]="ev"
-                [tourId]="tour()._id"
-                [candidates]="candidates()"
-                [userPhotos]="userPhotos()"
-                [usernames]="usernames()"
-                [locked]="!!tour().closed"
-                (updated)="eventUpdated.emit($event)"
-                (removed)="eventRemoved.emit($event)"
-              />
-            </li>
+      <!-- The day's events slide shut and open (tour-schedule.scss's
+           .day-fold); a folded day's are inert - not reachable by Tab. -->
+      <div
+        class="day-fold"
+        [class.day-fold--open]="!collapsedDays().has(day.day)"
+        [attr.inert]="collapsedDays().has(day.day) ? '' : null"
+      >
+        <div class="day-fold-clip">
+          @if (addingEventForDay() === day.day) {
+            <app-event-form
+              [model]="addEventForm"
+              [saving]="addingEvent()"
+              [error]="addEventError()"
+              (save)="saveNewEvent(day.day)"
+              (cancelled)="cancelAddEvent()"
+            />
           }
-        </ul>
-      } @else {
-        <p class="empty-note">Erre a napra még nincs program megadva.</p>
-      }
+          @if (day.events.length) {
+            <ul class="event-list">
+              @for (ev of day.events; track ev._id) {
+                <li
+                  class="event-row"
+                  [class.event-row--draggable]="canEdit()"
+                  cdkDrag
+                  [cdkDragData]="ev"
+                  [cdkDragDisabled]="!canEdit()"
+                >
+                  <!-- Where it would land, while it's over another day. -->
+                  <div class="event-placeholder" *cdkDragPlaceholder></div>
+                  @if (canEdit()) {
+                    <span
+                      class="drag-handle"
+                      cdkDragHandle
+                      title="Húzd át egy másik napra"
+                      aria-label="Esemény áthúzása egy másik napra"
+                    >
+                      <mat-icon>drag_indicator</mat-icon>
+                    </span>
+                  }
+                  <app-tour-event
+                    class="event-body"
+                    [event]="ev"
+                    [tourId]="tour()._id"
+                    [candidates]="candidates()"
+                    [userPhotos]="userPhotos()"
+                    [usernames]="usernames()"
+                    [locked]="!!tour().closed"
+                    (updated)="eventUpdated.emit($event)"
+                    (removed)="eventRemoved.emit($event)"
+                  />
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty-note">Erre a napra még nincs program megadva.</p>
+          }
+        </div>
+      </div>
     </div>
   }
 </section>

@@ -192,64 +192,82 @@
       </div>
     </div>
 
-    <!-- Életviteli tanácsok: the weather outlook and what to pack - only
-         once every day of the tour has a forecast (tour-weather-outlook). -->
-    <app-tour-weather-outlook [tour]="t" />
-
-    <!-- Az idő járása: the sun's day on each tour day (tour-sun-day). -->
-    <app-tour-sun-day [tour]="t" />
-
-    <!-- Row 2: day-by-day schedule (tour-schedule). -->
-    <app-tour-schedule
-      [tour]="t"
-      [candidates]="myScheduleEventCandidates()"
-      [userPhotos]="userPhotos()"
-      [usernames]="usernames()"
-      (eventUpdated)="onEventUpdated($event)"
-      (eventAdded)="onEventAdded($event)"
-      (eventRemoved)="onEventRemoved($event)"
+    <!-- The tour's parts under tabs (components/tab-strip): one shown at a
+         time. Every part stays in the DOM (only hidden), so what is open
+         or half-typed in one keeps while another is looked at. -->
+    <app-tab-strip
+      class="tour-tabs"
+      label="A túra részei"
+      [options]="tabs()"
+      [value]="activeTab()"
+      (valueChange)="selectTab($any($event))"
     />
+
+    <!-- Programterv: the day-by-day schedule (tour-schedule). -->
+    <div role="tabpanel" [hidden]="activeTab() !== 'schedule'">
+      <app-tour-schedule
+        [tour]="t"
+        [candidates]="myScheduleEventCandidates()"
+        [userPhotos]="userPhotos()"
+        [usernames]="usernames()"
+        (eventUpdated)="onEventUpdated($event)"
+        (eventAdded)="onEventAdded($event)"
+        (eventRemoved)="onEventRemoved($event)"
+      />
+    </div>
+
+    <!-- Résztvevők: the heading row and the attendee list (see
+         tour-participants), then the sign-up bar and the "who" picker
+         (tour-signup) - not on a closed tour. -->
+    <div role="tabpanel" [hidden]="activeTab() !== 'people'">
+      <app-tour-participants
+        [tour]="t"
+        [attendees]="allAttendees()"
+        [participantCount]="participantCount()"
+        [isFull]="isFull()"
+        [totals]="paymentTotals()"
+        [userPhotos]="userPhotos()"
+        (nightsUpdated)="onAttendeeNightsUpdated()"
+      />
+
+      @if (!t.closed) {
+        <app-tour-signup
+          [tourId]="t._id"
+          [options]="pickerOptions()"
+          [alreadySignedUp]="alreadySignedUp()"
+          [isFull]="isFull()"
+          [signUpOpen]="signUpOpen()"
+          [showAdvancePayment]="
+            !!paymentTotals() && hasUnpaidAdvanceInMyGroup() && canPayAdvanceOnline()
+          "
+          (signedUp)="onSignedUp()"
+        />
+      }
+    </div>
+
+    <!-- Áttekintő: Életviteli tanácsok - the weather outlook and what to
+         pack, only once every day of the tour has a forecast
+         (tour-weather-outlook) - and Az idő járása, the sun's day on each
+         tour day (tour-sun-day). -->
+    <div role="tabpanel" [hidden]="activeTab() !== 'overview'">
+      <app-tour-weather-outlook [tour]="t" />
+      <app-tour-sun-day [tour]="t" />
+    </div>
 
     <!-- Extrák: Programfüzet, beszámoló, uploaded documents, the admin's
-         letter and beszámoló dialogs (see tour-extras). -->
-    <app-tour-extras
-      [tour]="t"
-      [images]="tourImages()"
-      (documentsChanged)="onDocumentsChanged($event)"
-      (tourClosed)="onTourClosed($event)"
-    />
-
-    <!-- Tábori videók: the recap video(s), found on the NAS by the tour
-         number (server/src/utils/tourVideos.js) - see tour-videos. -->
-    <app-tour-videos [tour]="t" [videos]="videos()" />
-
-    <!-- Row 3: Résztvevők - the heading row and the attendee list (see
-         tour-participants). -->
-    <app-tour-participants
-      [tour]="t"
-      [attendees]="allAttendees()"
-      [participantCount]="participantCount()"
-      [isFull]="isFull()"
-      [totals]="paymentTotals()"
-      [userPhotos]="userPhotos()"
-      (nightsUpdated)="onAttendeeNightsUpdated()"
-    />
-
-    <!-- Sign up: the bar and the "who" picker (tour-signup) - not on a
-         closed tour. -->
-    @if (!t.closed) {
-      <app-tour-signup
-        [tourId]="t._id"
-        [options]="pickerOptions()"
-        [alreadySignedUp]="alreadySignedUp()"
-        [isFull]="isFull()"
-        [signUpOpen]="signUpOpen()"
-        [showAdvancePayment]="
-          !!paymentTotals() && hasUnpaidAdvanceInMyGroup() && canPayAdvanceOnline()
-        "
-        (signedUp)="onSignedUp()"
+         letter and beszámoló dialogs (see tour-extras); then the Tábori
+         videók - the recap video(s), found on the NAS by the tour number
+         (server/src/utils/tourVideos.js), see tour-videos. -->
+    <div role="tabpanel" [hidden]="activeTab() !== 'extras'">
+      <app-tour-extras
+        [tour]="t"
+        [images]="tourImages()"
+        (documentsChanged)="onDocumentsChanged($event)"
+        (tourClosed)="onTourClosed($event)"
       />
-    }
+
+      <app-tour-videos [tour]="t" [videos]="videos()" />
+    </div>
 
     <!-- Map popup - an embedded iframe instead of a new tab, so clicking the
        location never navigates the user away from this page. -->

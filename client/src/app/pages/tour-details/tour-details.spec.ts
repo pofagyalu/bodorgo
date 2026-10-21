@@ -1,16 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 
 import { API } from '../../../testing/http';
 import { fail, logIn, pageTesting, respond } from '../../../testing/component';
-import { makePayment, makeTour, tourResponse } from '../../../testing/fixtures';
+import { makePayment, makeTour, makeWeatherOutlook, tourResponse } from '../../../testing/fixtures';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PhotoGalleryService } from '../../shared/photo-gallery';
 import { ViewTrackerService } from '../../services/view-tracker';
 import { Tour } from '../../services/tour';
 import { TourDetails } from './tour-details';
-import { TourParticipants } from './tour-participants/tour-participants';
 
 const IMAGES = [
   { filename: 'a.jpg', width: 1000, height: 750, size: 300, restricted: false },
@@ -54,7 +52,12 @@ describe('TourDetails', () => {
         pageTesting(),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap(id ? { id } : {}) } },
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap(id ? { id } : {}),
+              queryParamMap: convertToParamMap({}),
+            },
+          },
         },
       ],
     });
@@ -83,7 +86,12 @@ describe('TourDetails', () => {
         pageTesting(),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }) } },
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap({ id: 't1' }),
+              queryParamMap: convertToParamMap({}),
+            },
+          },
         },
       ],
     });
@@ -111,6 +119,44 @@ describe('TourDetails', () => {
     expect(page.signUpOpen()).toBe(true); // it starts next year
     expect(page.tourImages()).toEqual([]); // photos are for logged-in people
     expect(fixture.nativeElement.textContent).toContain('Mátra');
+  });
+
+  it('shows one part at a time under the tabs, Programterv first', () => {
+    open('member');
+    const shown = () =>
+      [...fixture.nativeElement.querySelectorAll('[role="tabpanel"]:not([hidden]) > *')].map(
+        (el: Element) => el.tagName.toLowerCase(),
+      );
+    expect(shown()).toEqual(['app-tour-schedule']);
+
+    page.selectTab('people');
+    fixture.detectChanges();
+    expect(shown()).toEqual(['app-tour-participants', 'app-tour-signup']);
+
+    page.selectTab('overview');
+    fixture.detectChanges();
+    expect(shown()).toEqual(['app-tour-weather-outlook', 'app-tour-sun-day']);
+
+    page.selectTab('extras');
+    fixture.detectChanges();
+    expect(shown()).toEqual(['app-tour-extras', 'app-tour-videos']);
+  });
+
+  it('shows the places taken on the Résztvevők tab', () => {
+    open('member');
+    const tab: HTMLElement = fixture.nativeElement.querySelectorAll('[role="tab"]')[1];
+    expect(tab.textContent).toContain('Résztvevők');
+    expect(tab.querySelector('.count')?.textContent).toBe(`2/${makeTour().maxCapacity}`);
+  });
+
+  it('shows the Életviteli tanácsok under Áttekintő', () => {
+    open('member', makeTour({ weatherOutlook: makeWeatherOutlook() }));
+    page.selectTab('overview');
+    fixture.detectChanges();
+    const outlook: HTMLElement = fixture.nativeElement.querySelector(
+      '[role="tabpanel"]:not([hidden]) app-tour-weather-outlook',
+    );
+    expect(outlook.textContent).toContain('Életviteli tanácsok');
   });
 
   it('lists the attendees by name with what their optional programmes cost', () => {
@@ -286,14 +332,9 @@ describe('TourDetails', () => {
     expect(page.showCalendarMenu()).toBe(false);
   });
 
-  it('shows the attendees in the participant list once it is opened', () => {
+  it('shows the attendees in the participant list', () => {
     open('member');
-    const participants: TourParticipants = fixture.debugElement.query(
-      By.directive(TourParticipants),
-    ).componentInstance;
-    expect(fixture.nativeElement.textContent).toContain('Résztvevők (2/');
-    participants.toggleParticipants();
-    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('2 fő jelentkezett, ');
     expect(fixture.nativeElement.textContent).toContain('Teszt Kata');
   });
 

@@ -8,7 +8,7 @@ import { fail, logIn, pageTesting, respond, settle } from '../../../testing/comp
 import { makePayment, makeTour } from '../../../testing/fixtures';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
-import { ExtraDocument, ScheduleEntry, Tour, TourService, TourVideo } from '../../services/tour';
+import { ExtraDocument, ScheduleEntry, Tour, TourVideo } from '../../services/tour';
 import { VideoCopiesService } from '../../services/video-copies';
 import { VideoCard } from '../../shared/video-card/video-card';
 import { VideoPlayer } from '../../shared/video-player/video-player';
@@ -423,29 +423,16 @@ describe('TourParticipants', () => {
 
   const text = () => fixture.nativeElement.textContent as string;
 
-  it('shows the head count, and the list only once it is opened', () => {
+  it('shows the head count and the list', () => {
     open('member');
-    expect(text()).toContain(`Résztvevők (1/${makeTour().maxCapacity})`);
-    expect(text()).not.toContain('Teszt Kata');
-    fixture.nativeElement.querySelector('.participants-heading').click();
-    fixture.detectChanges();
+    expect(text()).toContain(`1 fő jelentkezett, ${makeTour().maxCapacity - 1} hely szabad`);
     expect(text()).toContain('Teszt Kata');
-  });
-
-  it('remembers whether the list was open', () => {
-    open('member');
-    participants.toggleParticipants();
-    expect(participants.showParticipants()).toBe(true);
-    expect(TestBed.inject(TourService).showParticipantsPreference).toBe(true);
-    participants.toggleParticipants();
-    expect(TestBed.inject(TourService).showParticipantsPreference).toBe(false);
   });
 
   it('says so when nobody has signed up, and marks a full tour', () => {
     open('member', []);
     expect(text()).not.toContain('Megtelt');
     fixture.componentRef.setInput('isFull', true);
-    participants.toggleParticipants();
     fixture.detectChanges();
     expect(text()).toContain('Megtelt');
     expect(text()).toContain('Még senki nem jelentkezett erre a táborra.');
@@ -457,18 +444,12 @@ describe('TourParticipants', () => {
     open('admin');
     const link: HTMLAnchorElement = fixture.nativeElement.querySelector('.excel-export-btn');
     expect(link.getAttribute('href')).toBe(`${API}/tours/t1/attendees/export.xlsx`);
-    // The link's click doesn't open or close the list.
-    link.addEventListener('click', (e) => e.preventDefault());
-    link.click();
-    expect(participants.showParticipants()).toBe(false);
   });
 
   it('passes on that an attendee was changed', () => {
     open('admin');
     let updated = 0;
     participants.nightsUpdated.subscribe(() => updated++);
-    participants.toggleParticipants();
-    fixture.detectChanges();
     fixture.debugElement.query(By.directive(AttendeeList)).componentInstance.nightsUpdated.emit();
     expect(updated).toBe(1);
   });
@@ -710,15 +691,45 @@ describe('TourSchedule', () => {
     open(tour);
     const days = schedule.dayGroups();
     expect(days.map((d) => d.label)).toEqual([
-      '2026. július 10., péntek',
-      '2026. július 11., szombat',
-      '2026. július 12., vasárnap',
+      '2026. júl. 10., péntek',
+      '2026. júl. 11., szombat',
+      '2026. júl. 12., vasárnap',
     ]);
     expect(days.map((d) => d.events.map((e) => e._id))).toEqual([['a', 'b'], [], ['c']]);
     expect(days[1].weather).toMatchObject({ condition: 'rain' });
     expect(schedule.weatherIconPath('rain')).toBe('assets/images/weather/rain.svg');
     expect(schedule.weatherConditionLabel('partly-cloudy')).toBe('Változóan felhős');
     expect(fixture.nativeElement.textContent).toContain('Vacsora');
+  });
+
+  it('folds a day away with a click on its heading, and opens it again', () => {
+    open(
+      makeTour({
+        startDate: '2026-07-10T08:00:00',
+        schedule: [{ _id: 'a', day: 1, time: '10:00', description: 'Érkezés' }],
+      }),
+    );
+    const heading = () => fixture.nativeElement.querySelector('.day-heading') as HTMLElement;
+    const fold = () => fixture.nativeElement.querySelector('.day-fold') as HTMLElement;
+    expect(fold().textContent).toContain('Érkezés');
+    heading().click();
+    fixture.detectChanges();
+    expect(fold().classList.contains('day-fold--open')).toBe(false);
+    expect(fold().hasAttribute('inert')).toBe(true);
+    expect(heading().getAttribute('aria-expanded')).toBe('false');
+
+    heading().click();
+    fixture.detectChanges();
+    expect(fold().classList.contains('day-fold--open')).toBe(true);
+    expect(fold().hasAttribute('inert')).toBe(false);
+
+    // The + doesn't fold the day - and opens a folded one.
+    heading().click();
+    fixture.detectChanges();
+    (heading().querySelector('.icon-btn--add') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(schedule.collapsedDays().has(1)).toBe(false);
+    expect(schedule.addingEventForDay()).toBe(1);
   });
 
   it('is read-only for members, and for everyone once the tour is closed', () => {

@@ -25,28 +25,3 @@
        slide from tab to tab. -->
   <span #ink class="ink" aria-hidden="true"></span>
 </div>
-
-<!-- More tabs that way: an arrow over the faded end (the tabs themselves
-     are reached with Tab, so these stay out of the keyboard's way). -->
-@if (moreBefore()) {
-  <button
-    type="button"
-    class="arrow arrow--before"
-    tabindex="-1"
-    aria-hidden="true"
-    (click)="page(-1)"
-  >
-    <mat-icon>chevron_left</mat-icon>
-  </button>
-}
-@if (moreAfter()) {
-  <button
-    type="button"
-    class="arrow arrow--after"
-    tabindex="-1"
-    aria-hidden="true"
-    (click)="page(1)"
-  >
-    <mat-icon>chevron_right</mat-icon>
-  </button>
-}
