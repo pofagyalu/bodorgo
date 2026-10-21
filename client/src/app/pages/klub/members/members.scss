@@ -75,7 +75,10 @@ button {
 // The tabs themselves (components/tab-strip): as wide as they need, and
 // narrower - scrolling sideways - when the bar has no more room. The line
 // under them is the bar's.
+// On a big screen the tabs' text is the size of the tour page's tabs, not
+// the small one of a phone.
 .people-tabs app-tab-strip {
+  --tab-font-size: 1.15rem;
   flex: 0 1 auto;
   border-bottom: 0;
 }
@@ -678,6 +681,7 @@ button {
   }
 
   .people-tabs app-tab-strip {
+    --tab-font-size: 0.8125rem;
     flex: none;
     width: 100%;
     border-bottom: 1px solid #dde8e3;

@@ -9,7 +9,7 @@ import {
   effect,
   ViewChild,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { GalleryPhoto, PhotoGalleryService } from '../../shared/photo-gallery';
@@ -48,6 +48,20 @@ import { TourVideos } from './tour-videos/tour-videos';
 import { CoverPlaceholder } from '../../shared/cover-placeholder/cover-placeholder';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { Loading } from '../../shared/loading/loading';
+import { TabOption, TabStrip } from '../../components/tab-strip/tab-strip';
+
+// The page's tabs under the tour's info, each one's name in the address
+// (?lap=...).
+type TourTab = 'schedule' | 'people' | 'overview' | 'extras';
+const TAB_KEYS: Record<TourTab, string> = {
+  schedule: 'programterv',
+  people: 'resztvevok',
+  overview: 'attekinto',
+  extras: 'extrak',
+};
+const TAB_BY_KEY: Record<string, TourTab> = Object.fromEntries(
+  Object.entries(TAB_KEYS).map(([tab, key]) => [key, tab as TourTab]),
+);
 @Component({
   selector: 'app-tour-details',
   standalone: true,
@@ -65,12 +79,14 @@ import { Loading } from '../../shared/loading/loading';
     TourSignup,
     TourExtras,
     FitLine,
+    TabStrip,
   ],
   templateUrl: './tour-details.html',
   styleUrl: './tour-details.scss',
 })
 export class TourDetails {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private tourService = inject(TourService);
   private settingsService = inject(SettingsService);
@@ -101,6 +117,35 @@ export class TourDetails {
   distanceIconColor = this.infoLineIconColors[2];
   dateIconColor = this.infoLineIconColors[3];
   contactIconColor = this.infoLineIconColors[4];
+
+  // --- The tabs: Programterv, Résztvevők, Áttekintő (Életviteli tanácsok +
+  // Az idő járása), Extrák (with the Tábori videók) ---
+  // Résztvevők carries the places taken ("36/40") - on a wide screen only
+  // (tour-details.scss).
+  tabs = computed<(TabOption & { value: TourTab })[]>(() => [
+    { value: 'schedule', label: 'Programterv' },
+    {
+      value: 'people',
+      label: 'Résztvevők',
+      count: `${this.participantCount()}/${this.tour()?.maxCapacity ?? 0}`,
+    },
+    { value: 'overview', label: 'Áttekintő' },
+    { value: 'extras', label: 'Extrák' },
+  ]);
+  // The open tab - also in the address, so a reload stays on it.
+  activeTab = signal<TourTab>(
+    TAB_BY_KEY[this.route.snapshot.queryParamMap.get('lap') ?? ''] ?? 'schedule',
+  );
+
+  selectTab(tab: TourTab) {
+    this.activeTab.set(tab);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { lap: TAB_KEYS[tab] },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
 
   private tourId!: string;
   tour = signal<Tour | null>(null);

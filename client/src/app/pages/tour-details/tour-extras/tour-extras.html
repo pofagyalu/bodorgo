@@ -1,9 +1,10 @@
 <!-- Extra infók: the always-present Programfüzet card, plus whatever
    admin-uploaded documents (map, beszámoló, etc.) this tour has. -->
 <section class="extra-info-section">
-  <div class="section-header-row">
-    <h2 class="section-heading">Extrák</h2>
-    @if (canEdit() && (tour().extraDocuments ?? []).length < 5) {
+  <!-- No "Extrák" heading: the tab above says it. An admin's upload
+       button gets a row of its own. -->
+  @if (canEdit() && (tour().extraDocuments ?? []).length < 5) {
+    <div class="section-header-row">
       <button
         type="button"
         class="icon-btn icon-btn--add icon-btn--upload"
@@ -13,8 +14,8 @@
       >
         <mat-icon>upload_file</mat-icon>
       </button>
-    }
-  </div>
+    </div>
+  }
 
   @if (addingDocument()) {
     <div class="document-upload-form">

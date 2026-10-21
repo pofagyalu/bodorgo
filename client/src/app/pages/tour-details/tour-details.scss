@@ -328,6 +328,24 @@
   padding: 4rem 1rem;
 }
 
+/* ---- The tabs under the tour's info ---- */
+
+// On a big screen the tabs' text is the size of a heading, not the small
+// one of the other pages' tab rows.
+.tour-tabs {
+  --tab-font-size: 1.15rem;
+  --tab-pad-x: 1.4rem;
+  --tab-count-font-size: 0.85rem;
+  // The open tab's text green; Résztvevők's "36/40" in the tab's own text
+  // colour on light grey.
+  --tab-active: #2f8f55;
+  --tab-count-bg: #eceff0;
+  // Rounder corners - still a rectangle, not a capsule.
+  --tab-count-radius: 0.55rem;
+  --tab-count-pad: 0.4rem 0.6rem;
+  margin: -1rem 0 2rem;
+}
+
 /* ---- Mobile ---- */
 
 @media (max-width: 768px) {
@@ -357,6 +375,18 @@
 
   .hero-title {
     font-size: 1.6rem;
+  }
+
+  // All four tabs in one row on a phone: less room beside each label.
+  .tour-tabs {
+    // The four tabs share the row out - all in one line, nothing to scroll.
+    --tab-font-size: 0.8125rem;
+    --tab-pad-x: 0.25rem;
+    --tab-gap: 0;
+    --tab-flex: 1 1 auto;
+    // No room for Résztvevők's "36/40" on a phone.
+    --tab-count-display: none;
+    margin: 0.4rem 0 1.5rem;
   }
 
   .map-modal-backdrop {

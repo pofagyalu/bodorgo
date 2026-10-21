@@ -8,8 +8,6 @@ describe('TabStrip', () => {
   let row: HTMLElement;
 
   const tabs = () => [...fixture.nativeElement.querySelectorAll('[role="tab"]')] as HTMLElement[];
-  const arrows = () =>
-    [...fixture.nativeElement.querySelectorAll('.arrow')].map((a: HTMLElement) => a.className);
 
   /** The row as a browser would lay it out: this wide, with this much in it. */
   function layOut(clientWidth: number, scrollWidth: number, scrollLeft = 0) {
@@ -53,30 +51,26 @@ describe('TabStrip', () => {
     expect(tabs()[2].classList.contains('active')).toBe(true);
   });
 
-  it('has no arrows while every tab fits', () => {
+  it('fades no end while every tab fits, and never shows arrows', () => {
     layOut(300, 300);
-    expect(arrows()).toEqual([]);
+    expect(row.classList.contains('more-before')).toBe(false);
     expect(row.classList.contains('more-after')).toBe(false);
+    layOut(300, 500, 100);
+    expect(fixture.nativeElement.querySelector('.arrow')).toBeNull();
   });
 
-  it('shows on which side there are more tabs', () => {
+  it('fades out the side where there are more tabs', () => {
     layOut(300, 500);
-    expect(arrows()).toEqual(['arrow arrow--after']);
+    expect(row.classList.contains('more-before')).toBe(false);
     expect(row.classList.contains('more-after')).toBe(true);
 
     layOut(300, 500, 100);
-    expect(arrows()).toEqual(['arrow arrow--before', 'arrow arrow--after']);
+    expect(row.classList.contains('more-before')).toBe(true);
+    expect(row.classList.contains('more-after')).toBe(true);
 
     layOut(300, 500, 200);
-    expect(arrows()).toEqual(['arrow arrow--before']);
+    expect(row.classList.contains('more-before')).toBe(true);
     expect(row.classList.contains('more-after')).toBe(false);
-  });
-
-  it('scrolls most of a screenful with an arrow', () => {
-    row.scrollBy = vi.fn() as unknown as typeof row.scrollBy;
-    layOut(300, 500);
-    fixture.nativeElement.querySelector('.arrow--after').click();
-    expect(row.scrollBy).toHaveBeenCalledWith({ left: 210, behavior: 'smooth' });
   });
 
   it('brings the open tab to the middle', () => {

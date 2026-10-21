@@ -142,8 +142,10 @@ button {
 }
 
 // The tabs (components/tab-strip) pick every category or one of them:
-// the others are hidden.
+// the others are hidden. On a big screen their text is the size of the
+// tour page's tabs, not the small one of a phone.
 .category-tabs {
+  --tab-font-size: 1.15rem;
   margin-bottom: 1rem;
 }
 
@@ -170,6 +172,7 @@ button {
   .category-tabs {
     // Stays under the Klub menu while the page scrolls, edge to edge -
     // nothing of the page shows beside it.
+    --tab-font-size: 0.8125rem;
     position: sticky;
     top: calc(var(--klub-nav-height) - 1px);
     z-index: 20;

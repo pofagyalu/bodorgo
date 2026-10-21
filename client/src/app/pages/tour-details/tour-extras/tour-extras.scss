@@ -7,17 +7,6 @@
   margin-bottom: 3rem;
 }
 
-// The same section heading as the tour page's other sections
-// (tour-details.scss's .section-heading) - each component styles its own.
-.section-heading {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 1.2rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 2px solid #eee;
-}
-
 // The tour page's round icon buttons (tour-details.scss's .icon-btn).
 .icon-btn {
   display: inline-flex;
@@ -74,26 +63,13 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  // The heading's line runs under the whole row (as under Programterv),
-  // not just under the word.
   margin-bottom: 1.2rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 2px solid #eee;
 
-  .section-heading {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: 0;
-  }
-
-  // Extrák's upload button: at the end of the heading's line - in the
-  // flow, not pinned like the day blocks' add button.
-  // Right edge in line with the days' add buttons above (they sit inside
-  // .day-block's 1.5rem padding).
+  // Extrák's upload button: at the row's right end - in the flow, not
+  // pinned like the day blocks' add button.
   .icon-btn--upload {
     position: static;
     margin-left: auto;
-    margin-right: 1.5rem;
   }
 }
 

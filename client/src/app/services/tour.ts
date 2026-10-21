@@ -688,11 +688,6 @@ export class TourService {
   // ...and its order by date (true: oldest first), the same way.
   toursAscending = false;
 
-  // Same reasoning, for the tour-details page's "Résztvevők" expand/
-  // collapse toggle - remembers whether it was last left open, instead of
-  // always resetting to collapsed when navigating back to a tour.
-  showParticipantsPreference = false;
-
   // A plain GET URL, not an HttpClient call - the browser navigates/
   // downloads directly (see tour-details.html's <a [href]>), same as any
   // other file download; the server sets Content-Disposition so it saves

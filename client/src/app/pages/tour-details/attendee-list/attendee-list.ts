@@ -243,8 +243,7 @@ export class AttendeeList implements OnInit {
   }
 
   // Collapsed by default for every family, on every fresh load - not
-  // persisted across navigation like tour.ts's own showParticipantsPreference,
-  // since this is a much more granular, per-tour-view choice.
+  // persisted across navigation, since this is a per-tour-view choice.
   expandedFamilyKeys = signal<Set<string>>(new Set());
 
   isFamilySubtotalExpanded(key: string): boolean {

@@ -340,3 +340,33 @@
     cursor: default;
   }
 }
+
+// On a phone: the text a little smaller, and the buttons as small as the
+// day heading's + and right under it (the row's padding matches the
+// heading's - tour-schedule.scss).
+@media (max-width: 768px) {
+  .event-main {
+    font-size: 0.9rem;
+    min-height: 1.75rem;
+  }
+
+  .event-main--admin {
+    padding-right: 4rem;
+  }
+
+  .icon-btn--edit,
+  .icon-btn--delete {
+    width: 1.75rem;
+    height: 1.75rem;
+
+    mat-icon {
+      font-size: 1.2rem;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+  }
+
+  .icon-btn--delete {
+    right: 2.15rem;
+  }
+}

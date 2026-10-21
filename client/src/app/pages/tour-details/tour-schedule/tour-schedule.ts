@@ -87,7 +87,8 @@ export class TourSchedule {
     const dateFmt = new Intl.DateTimeFormat('hu-HU', {
       weekday: 'long',
       year: 'numeric',
-      month: 'long',
+      // "okt." - short, so the day's heading stays one line on a phone.
+      month: 'short',
       day: 'numeric',
     });
 
@@ -162,7 +163,19 @@ export class TourSchedule {
     });
   }
 
+  // The days folded up by a click on their heading (another click opens
+  // them again) - all open when the page opens.
+  collapsedDays = signal<ReadonlySet<number>>(new Set());
+
+  toggleDay(day: number) {
+    const next = new Set(this.collapsedDays());
+    if (!next.delete(day)) next.add(day);
+    this.collapsedDays.set(next);
+  }
+
   startAddEvent(day: number) {
+    // The + of a folded day opens it, so the form can be seen.
+    if (this.collapsedDays().has(day)) this.toggleDay(day);
     this.addEventError.set(null);
     this.addEventForm = { time: '08:00', description: '', isOptional: false, extraCost: null };
     this.addingEventForDay.set(day);
