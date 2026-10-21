@@ -47,7 +47,11 @@ export function atLocalHour(day, hour, timeZone) {
 
 export function tourCourseWindow(tour) {
   const timeZone = timeZoneOf(countryOf(tour.location));
-  const firstDay = new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(tour.startDate));
+  // Its first day on the place's own calendar ("2026-10-22") - by the zone's
+  // offset, not the 'en-CA' formatting trick: the live server's Node has
+  // only English locale data, where that gives "10/22/2026" (utils/huDate.js).
+  const start = new Date(tour.startDate).getTime();
+  const firstDay = new Date(start + zoneOffset(start, timeZone)).toISOString().slice(0, 10);
   const sunDays = tour.sunDays?.length ? tour.sunDays : computeSunDays(tour);
   const closingDay = sunDays[Math.max((tour.duration ?? 1) - 2, 0)];
   return {
