@@ -80,6 +80,12 @@ const transactionSchema = new Schema(
       type: String,
       enum: ['barion', 'stripe', 'cash'],
     },
+    // A tour's Klub hozzájárulása (Szállásköltség expense) - made and kept
+    // in step by the tour's own save (utils/tourSubsidy.js), one per tour.
+    tour: {
+      type: Schema.Types.ObjectId,
+      ref: 'Tour',
+    },
   },
   { timestamps: true },
 );

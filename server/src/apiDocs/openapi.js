@@ -218,7 +218,9 @@ const schemas = {
     childPricePerNight: num('Child price per night.'),
     childAgeLimitYears: int('Below this age the child price applies.'),
     advancePaymentPercentage: num('Előleg - the share paid in advance (0-100).'),
-    clubSubsidyAmount: num('Klubtámogatás - per person.'),
+    clubSubsidyAmount: num(
+      'Klub hozzájárulása: the club’s one sum (HUF) toward the accommodation, split among the club members on the tour. None before 2019 or on a tour quoted in EUR. Kept in Pénzügyek as one Szállásköltség expense on the tour’s last day (see `Transaction.tour`).',
+    ),
     ratingsAverage: num('Average rating (1-10).'),
     ratingsQuantity: int('Number of ratings.'),
     summary: str('Short description.'),
@@ -429,6 +431,9 @@ const schemas = {
     currency: str('Currency.', { enum: ['HUF', 'EUR'] }),
     membershipYear: int('For Tagdíj income.'),
     paymentMethod: str('For payments.', { enum: ['barion', 'stripe', 'cash'] }),
+    tour: id(
+      'A tour’s Klub hozzájárulása: made and kept in step by the tour’s own save (amount, "<title> - szállásköltség támogatás", its last day), removed at 0 or with the tour.',
+    ),
   }),
 
   FutokorCourse: obj({
@@ -1407,7 +1412,7 @@ const paths = {
       role: 'admin',
       summary: 'Create a tour',
       description:
-        '`order` (the tour number) is required and must be unused. The cover comes separately (`POST /tours/{id}/cover`).',
+        '`order` (the tour number) is required and must be unused. The cover comes separately (`POST /tours/{id}/cover`). A `clubSubsidyAmount` makes its expense in Pénzügyek (see `Transaction.tour`).',
       body: ref('Tour'),
       ok: 201,
       data: obj({ tour: ref('Tour') }),
@@ -1502,7 +1507,7 @@ const paths = {
       role: 'admin',
       summary: 'Update a tour',
       description:
-        'Any tour fields. Setting the advance to exactly 0 marks every attendee paid. New dates or a new place work out its sun times (`sunDays`) again, and move its Futókör course with them (open from 10:00 on the first day until sunset on the day before the last). `onSitePayment` (Fizetési módok - how the rest is paid at the house): `{ cash, card, szep }` (szep: SZÉP kártya). Shown to attendees on the attendee list (the Fizetendő column) and in the Programfüzet.',
+        'Any tour fields. Setting the advance to exactly 0 marks every attendee paid. New dates or a new place work out its sun times (`sunDays`) again, and move its Futókör course with them (open from 10:00 on the first day until sunset on the day before the last). `onSitePayment` (Fizetési módok - how the rest is paid at the house): `{ cash, card, szep }` (szep: SZÉP kártya). Shown to attendees on the attendee list (the Fizetendő column) and in the Programfüzet. Its Klub hozzájárulása (`clubSubsidyAmount`) is kept in Pénzügyek as one expense - made, changed or removed (at 0) with each save, see `Transaction.tour`.',
       params: [tourId],
       body: ref('Tour'),
       data: obj({ tour: ref('Tour') }),
@@ -1513,6 +1518,7 @@ const paths = {
       tag: T.tours,
       role: 'admin',
       summary: 'Delete a tour',
+      description: 'Its Klub hozzájárulása expense in Pénzügyek goes with it.',
       params: [tourId],
       ok: 204,
       errors: [403, 404],

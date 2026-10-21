@@ -24,6 +24,8 @@ import { resolveDistanceInfo } from '../utils/tourDistances.js';
 import { tourDocuments } from './documentController.js';
 import { cleanOnSitePayment } from '../utils/onSitePayment.js';
 import { tourCourseWindow } from '../futokor/tourWindow.js';
+import Transaction from '../models/transactionModel.js';
+import { syncSubsidyTransaction } from '../utils/tourSubsidy.js';
 
 // YYYY-MM-DD of the date's own calendar day (server local time). Not
 // toISOString(): the tour days are local midnights, which in Hungary are
@@ -479,6 +481,7 @@ export const createTour = async (req, res) => {
   if (!newTour) {
     throw new AppError('Invalid data sent', 404);
   }
+  await syncSubsidyTransaction(newTour, req.user._id);
 
   res.status(201).json({ status: 'success', data: { tour: newTour } });
 };
@@ -536,6 +539,8 @@ export const updateTour = async (req, res) => {
   if (advanceBecameZero) {
     await markAllAttendeesPaidForTour(tour._id);
   }
+  // Its Klub hozzájárulása in Pénzügyek follows it (utils/tourSubsidy.js).
+  await syncSubsidyTransaction(tour, req.user._id);
 
   res.status(200).json({ status: 'success', data: { tour } });
 };
@@ -552,6 +557,8 @@ export const deleteTour = async (req, res) => {
   if (!tour) {
     throw new AppError('No tour found with that ID!', 404);
   }
+  // Its Klub hozzájárulása goes with it.
+  await Transaction.deleteMany({ tour: tour._id });
 
   res.status(204).json({ status: 'success', data: null });
 };
