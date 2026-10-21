@@ -3153,7 +3153,7 @@ const paths = {
       role: 'member',
       summary: 'All video categories and videos',
       description:
-        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, `coverVersion` on one with a cover (and on a category with one) - when the cover file was last changed, in milliseconds; put in the cover's address as `?v=` it makes a replaced cover show at once instead of after the browser's hour -, `small` - its small copy: `none`, `queued`, `converting`, `ready` (then that is what plays unless the original is asked for) or `failed` -, `height` and `smallHeight` - the lines of the original's picture and of the small copy's (the original's, 720 at most), what the player's quality switch is labelled with; null when the file's header can't be read - and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read) - and `aiGenerated` - made with AI (the page marks it). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. A video an admin kept for chosen members is left out for everyone else (an admin gets every video). The role manager only: `viewers` - the ids of the users who may see the video; empty when every member may. On a video, `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
+        "Each category with its videos, newest first. A video has its title, year, season and episode (from its file name), whether it has a cover and subtitles, `coverVersion` on one with a cover (and on a category with one) - when the cover file was last changed, in milliseconds; put in the cover's address as `?v=` it makes a replaced cover show at once instead of after the browser's hour -, `small` - its small copy: `none`, `queued`, `converting`, `ready` (then that is what plays unless the original is asked for) or `failed` -, `height` and `smallHeight` - the lines of the original's picture and of the small copy's (the original's, 720 at most), what the player's quality switch is labelled with; null when the file's header can't be read - and `durationSeconds` - its length, read from the file's own header (MP4/MOV; null when it can't be read) - and `aiGenerated` - made with AI (the page marks it). `title` is an admin's own title when one was given (see PATCH /media/videos/{category}/{id}); `discoveredTitle` is always the one from the file name. Who sees a video besides the admins (who get every one): every member when it is open to all, only its chosen members, or nobody - **a video with nothing set (a new one, just put on the NAS) is the admins' alone** until the role manager opens it. One a user may not see is left out for them. The role manager only: `access` (`all`, `chosen` or `admins`) and `viewers` - the ids of the chosen members (empty unless `chosen`). On a video, `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field.",
       data: obj({ categories: arrayOf({ type: 'object' }) }),
     }),
   },
@@ -3175,10 +3175,11 @@ const paths = {
       role: 'admin',
       summary: 'Give a video its own title, say who may see it, mark it AI-made',
       description:
-        'The role manager only (403 for any other admin). Only the fields sent change. `title` is shown instead of the one read from the file name; the file itself is not renamed. An empty title (or one equal to the file name\'s) removes the correction, so the discovered title shows again. At most 200 characters. `viewers` are the only members who see the video from then on - in the list, and its video, cover and subtitles (404 for anyone else); admins always see it. An empty list gives it back to every member. 400 when an id is not a user\'s. `aiGenerated`: made with AI - its card and the player show an "AI" mark; 400 when not true or false.',
+        'The role manager only (403 for any other admin). Only the fields sent change. `title` is shown instead of the one read from the file name; the file itself is not renamed. An empty title (or one equal to the file name\'s) removes the correction, so the discovered title shows again. At most 200 characters. `access`: who sees it besides the admins (who always do) - `all` every member, `chosen` only `viewers` (at least one; 400 with none), `admins` nobody else (a new video starts so). With `all` or `admins` the viewers are cleared. Sent alone, a non-empty `viewers` means `chosen`. Anyone not let in gets 404 for the video, its cover and subtitles. 400 when an id is no user, or `access` is something else. `aiGenerated`: made with AI - its card and the player show an "AI" mark; 400 when not true or false.',
       params: [path('category', 'The category.'), path('id', 'The video.')],
       body: obj({
         title: str('The new title; empty to go back to the discovered one.'),
+        access: str('`all`, `chosen` or `admins`.'),
         viewers: arrayOf(str('A user id.')),
         aiGenerated: bool('Made with AI.'),
       }),
@@ -3187,6 +3188,7 @@ const paths = {
           id: str('The video.'),
           title: str('The title now shown.'),
           discoveredTitle: str('The title from the file name.'),
+          access: str('`all`, `chosen` or `admins`.'),
           viewers: arrayOf(str('A user id.')),
           aiGenerated: bool('Made with AI.'),
         }),

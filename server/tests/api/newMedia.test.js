@@ -2,9 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 import request from 'supertest';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createMember, createTour } from '../helpers/factories.js';
+import { openMediaVideos } from '../helpers/media.js';
 import Tour from '../../src/models/tourModel.js';
 import MediaPhoto from '../../src/models/mediaPhotoModel.js';
 import VideoSeen from '../../src/models/videoSeenModel.js';
@@ -38,6 +39,8 @@ beforeAll(async () => {
   putVideo(tourVideosRoot, 'Season 12/28 - Csöde (2025) S12E01.mp4');
   putVideo(mediaVideosRoot, 'farsang/Season 01/Farsang (2024) S01E01.mp4');
 });
+// Every member sees them (a new one would be the admins' alone).
+beforeEach(() => openMediaVideos());
 
 // Starts discovery and waits for it to finish.
 async function discover(admin) {

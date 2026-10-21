@@ -5,6 +5,7 @@ import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, asUser } from '../helpers/app.js';
 import { createAdmin, createMember, createTour } from '../helpers/factories.js';
+import { openMediaVideos } from '../helpers/media.js';
 import { clearTourVideoCache } from '../../src/utils/tourVideos.js';
 
 // ffmpeg itself is faked: each run "succeeds" at once, and the one that
@@ -45,7 +46,11 @@ beforeAll(() => {
   put(mediaRoot, 'szilveszter/Season 01/Szilveszter (2022) S01E03.mp4', 'original-2022');
   put(tourRoot, `${season}/31 - Valahol (2025) S09E01.mp4`, 'tour-original');
 });
-beforeEach(() => clearTourVideoCache());
+beforeEach(async () => {
+  clearTourVideoCache();
+  // Every member sees them (a new one would be the admins' alone).
+  await openMediaVideos();
+});
 
 const szilveszter = async (user) =>
   (await request(app).get('/media/videos').set(asUser(user))).body.data.categories.find(

@@ -7,7 +7,9 @@ import MediaVideoTitle from '../models/mediaVideoTitleModel.js';
 import {
   aiGeneratedFrom,
   canEditMedia,
-  maySee,
+  mayWatch,
+  videoAccessFrom,
+  videoAccessOf,
   ownSettingsFrom,
   saveOwnSettings,
 } from '../utils/mediaAccess.js';
@@ -172,7 +174,7 @@ export const listMediaVideos = async (req, res) => {
   const categories = MEDIA_VIDEO_CATEGORIES.map((category) => {
     const root = categoryRoot(category);
     const videos = findVideoFiles(root)
-      .filter((relPath) => maySee(req.user, settings.get(`${category.key}/${relPath}`)))
+      .filter((relPath) => mayWatch(req.user, settings.get(`${category.key}/${relPath}`)))
       .map((relPath) => {
         const parsed = parseVideoName(relPath);
         const own = settings.get(`${category.key}/${relPath}`);
@@ -182,9 +184,10 @@ export const listMediaVideos = async (req, res) => {
           title: own?.title || parsed.title,
           // An admin: "Új" on one a discovery has just met.
           ...(newKeys.has(videoKey(`media:${category.key}`, relPath)) ? { isNew: true } : {}),
-          // Who may see it (empty: every member) - only the one who sets it
-          // is told.
-          ...(canEdit ? { viewers: (own?.viewers ?? []).map(String) } : {}),
+          // Who may see it - only the one who sets it is told.
+          ...(canEdit
+            ? { access: videoAccessOf(own), viewers: (own?.viewers ?? []).map(String) }
+            : {}),
           // What the file name says - what an emptied title goes back to.
           discoveredTitle: parsed.title,
           // Made with AI - marked on its card and in the player.
@@ -258,16 +261,12 @@ async function videoPath(req) {
   if (!fs.existsSync(fullPath)) throw new AppError('Nincs ilyen videó.', 404);
 
   if (req.user.role !== 'admin') {
-    // The category's videos this user is not among the viewers of.
-    const hidden = await MediaVideoTitle.find({
-      category: req.params.category,
-      'viewers.0': { $exists: true },
-      viewers: { $ne: req.user._id },
-    }).lean();
-    const asked = hidden.length ? canonicalPath(fullPath) : null;
-    if (hidden.some((h) => canonicalPath(resolveVideoPath(root, h.path)) === asked)) {
-      throw new AppError('Nincs ilyen videó.', 404);
-    }
+    // What was set for this file (however its path was spelt in the
+    // address) - none: a new video, the admins' alone.
+    const settings = await MediaVideoTitle.find({ category: req.params.category }).lean();
+    const asked = canonicalPath(fullPath);
+    const own = settings.find((h) => canonicalPath(resolveVideoPath(root, h.path)) === asked);
+    if (!mayWatch(req.user, own)) throw new AppError('Nincs ilyen videó.', 404);
   }
   return { root, relPath, fullPath, area: category.folder };
 }
@@ -321,21 +320,24 @@ export function mediaVideoPaths() {
 }
 
 // PATCH /media/videos/:category/:id - the role manager: the video's own title, shown
-// instead of the one from its file name, who may see it, and whether it was
-// made with AI. Only what is sent changes. An empty title (or the file
-// name's own) takes the correction away; an empty viewers list gives the
-// video back to every member.
+// instead of the one from its file name, who may see it (access: 'all',
+// 'chosen' with its viewers, or 'admins'), and whether it was made with AI.
+// Only what is sent changes. An empty title (or the file name's own) takes
+// the correction away.
 export const updateMediaVideo = async (req, res) => {
   const { relPath } = await videoPath(req);
   const category = req.params.category;
   const discoveredTitle = parseVideoName(relPath).title;
   const own = await MediaVideoTitle.findOne({ category, path: relPath }).lean();
-  const { title, viewers } = await ownSettingsFrom(req.body, own, discoveredTitle);
+  const sent = await ownSettingsFrom(req.body, own, discoveredTitle);
+  const { access, viewers } = videoAccessFrom(req.body, own, sent.viewers);
+  const { title } = sent;
   const aiGenerated = aiGeneratedFrom(req.body, own);
+  // Always kept (access is set): no record would mean the admins' alone.
   await saveOwnSettings(
     MediaVideoTitle,
     { category, path: relPath },
-    { title, viewers, aiGenerated },
+    { title, viewers, access, aiGenerated },
   );
   res.status(200).json({
     status: 'success',
@@ -344,6 +346,7 @@ export const updateMediaVideo = async (req, res) => {
         id: req.params.id,
         title: title || discoveredTitle,
         discoveredTitle,
+        access,
         viewers,
         aiGenerated,
       },
