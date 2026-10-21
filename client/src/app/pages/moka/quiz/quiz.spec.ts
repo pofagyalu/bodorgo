@@ -1473,6 +1473,8 @@ describe('QuizScoringPage', () => {
     const save = () =>
       (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.btn--save')!;
     expect(inputs(fixture).every((i) => !i.disabled)).toBe(true);
+    // No arrows on them, nothing for the browser to check.
+    expect(inputs(fixture).every((i) => i.type === 'text' && !i.step && !i.min)).toBe(true);
     expect(page.speedExample()).toEqual({ quarter: 875, half: 750 });
     expect(page.streakSteps()).toEqual([]);
     expect(page.reachKm()).toBe(330);
@@ -1503,8 +1505,34 @@ describe('QuizScoringPage', () => {
     page.set('mapReachPct', '25');
     page.set('minPoints', '12.5');
     expect([page.valid(), page.speedExample()]).toEqual([false, null]);
+
+    // The limits: at least 100 at the last moment, at least 10% on the map,
+    // and a faster one never gets less than the one after it - each said
+    // under its own field.
+    const errors = () => {
+      fixture.detectChanges();
+      return [...(fixture.nativeElement as HTMLElement).querySelectorAll('.error')].map((e) =>
+        e.textContent!.trim(),
+      );
+    };
+    page.set('minPoints', '99');
+    page.set('mapReachPct', '9');
+    page.setBonus(1, '400');
+    expect(page.valid()).toBe(false);
+    expect(errors()).toEqual([
+      'Legalább 100 pont legyen.',
+      'Nem lehet kevesebb, mint a 2. leggyorsabb bónusza.',
+      'Legalább 10% legyen.',
+    ]);
+    page.setBonus(1, '0');
+    page.setBonus(2, '50');
+    expect(errors()).toContain('Nem lehet kevesebb, mint a 3. leggyorsabb bónusza.');
+    page.setBonus(2, '0');
+    page.set('mapReachPct', '25');
+    page.set('minPoints', 'sok');
+    expect(errors()).toEqual(['Egész számot írj be.']);
     page.set('minPoints', '200');
-    fixture.detectChanges();
+    expect(errors()).toEqual([]);
     expect(save().disabled).toBe(false);
 
     const sent = { minPoints: 200, orderBonus: [300, 0, 0], mapReachPct: 25, streakBonus: 100 };

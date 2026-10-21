@@ -11,7 +11,9 @@
   </p>
 
   @if (draft(); as d) {
-    <form class="cards" (submit)="$event.preventDefault(); save()">
+    <!-- Plain text fields: no arrows, and no check by the browser (in its own
+         language) - problems() says what is wrong, under the field. -->
+    <form class="cards" novalidate (submit)="$event.preventDefault(); save()">
       <!-- Speed -->
       <div class="card">
         <h2><mat-icon>bolt</mat-icon> Gyorsaság</h2>
@@ -24,18 +26,19 @@
           <span>Jó válasz az utolsó pillanatban</span>
           <span class="input">
             <input
-              type="number"
+              type="text"
               inputmode="numeric"
-              min="1"
-              [max]="max()"
-              step="50"
               [value]="d.minPoints"
               [disabled]="!canEdit()"
+              [attr.aria-invalid]="!!problems()?.minPoints"
               (input)="set('minPoints', $any($event.target).value)"
             />
             pont
           </span>
         </label>
+        @if (problems()?.minPoints; as problem) {
+          <p class="error">{{ problem }}</p>
+        }
         <p class="hint">
           Közben egyenletesen csökken.
           @if (speedExample(); as e) {
@@ -58,19 +61,20 @@
             <span class="input">
               +
               <input
-                type="number"
+                type="text"
                 inputmode="numeric"
-                min="0"
-                [max]="max()"
-                step="50"
                 [value]="d.orderBonus[$index]"
                 [disabled]="!canEdit()"
                 [attr.aria-label]="place + ' jó válasz bónusza'"
+                [attr.aria-invalid]="!!problems()?.orderBonus?.[$index]"
                 (input)="setBonus($index, $any($event.target).value)"
               />
               pont
             </span>
           </label>
+          @if (problems()?.orderBonus?.[$index]; as problem) {
+            <p class="error">{{ problem }}</p>
+          }
         }
         <p class="hint">Térképes kérdésnél nincs: ott nem a gyorsaság számít.</p>
       </div>
@@ -87,18 +91,19 @@
           <span class="input">
             +
             <input
-              type="number"
+              type="text"
               inputmode="numeric"
-              min="0"
-              [max]="max()"
-              step="50"
               [value]="d.streakBonus"
               [disabled]="!canEdit()"
+              [attr.aria-invalid]="!!problems()?.streakBonus"
               (input)="set('streakBonus', $any($event.target).value)"
             />
             pont
           </span>
         </label>
+        @if (problems()?.streakBonus; as problem) {
+          <p class="error">{{ problem }}</p>
+        }
         @if (streakSteps().length) {
           <ul class="steps">
             @for (s of streakSteps(); track s.nth) {
@@ -124,18 +129,19 @@
           <span>Eddig a távolságig ér pontot</span>
           <span class="input">
             <input
-              type="number"
+              type="text"
               inputmode="numeric"
-              [min]="minMapReach"
-              [max]="maxMapReach"
-              step="5"
               [value]="d.mapReachPct"
               [disabled]="!canEdit()"
+              [attr.aria-invalid]="!!problems()?.mapReachPct"
               (input)="set('mapReachPct', $any($event.target).value)"
             />
             %
           </span>
         </label>
+        @if (problems()?.mapReachPct; as problem) {
+          <p class="error">{{ problem }}</p>
+        }
         <p class="hint">
           A kérdés térképének átlójához mérve ({{ minMapReach }}–{{ maxMapReach }}%), mert minden
           kérdés más kivágást mutat. Odáig a pont egyenletesen csökken, azon túl 0.
@@ -152,9 +158,6 @@
           <small>Még senki sem állította át: ez az alapbeállítás.</small>
         }
         @if (canEdit()) {
-          @if (!valid()) {
-            <small class="bad">Valamelyik mezőben nem megfelelő szám áll.</small>
-          }
           <div class="actions">
             <button type="button" class="btn" [disabled]="!changed() || saving()" (click)="reset()">
               <mat-icon>undo</mat-icon> Visszaállítás

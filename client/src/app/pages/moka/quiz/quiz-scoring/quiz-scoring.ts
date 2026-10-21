@@ -12,10 +12,20 @@ import {
 } from '../../../../services/quiz';
 
 // The limits of what can be set (the server checks the same).
-const MIN_MAP_REACH = 5;
+const MIN_LAST_POINTS = 100;
+const MIN_MAP_REACH = 10;
 const MAX_MAP_REACH = 100;
 
 const whole = (n: number, min: number, max: number) => Number.isInteger(n) && n >= min && n <= max;
+// What is wrong with a field, in words under it - '' when nothing.
+const problem = (n: number, min: number, max: number, unit: string) =>
+  !Number.isInteger(n)
+    ? 'Egész számot írj be.'
+    : n < min
+      ? `Legalább ${min}${unit} legyen.`
+      : n > max
+        ? `Legfeljebb ${max}${unit} lehet.`
+        : '';
 const same = (a: QuizScoring, b: QuizScoring) =>
   a.minPoints === b.minPoints &&
   a.mapReachPct === b.mapReachPct &&
@@ -48,15 +58,28 @@ export class QuizScoringPage {
   canEdit = computed(() => !!this.view()?.canEdit);
   max = computed(() => this.view()?.maxPoints ?? 1000);
 
-  valid = computed(() => {
+  // What is wrong with each field.
+  problems = computed(() => {
     const d = this.draft();
-    return (
-      !!d &&
-      whole(d.minPoints, 1, this.max()) &&
-      d.orderBonus.every((b) => whole(b, 0, this.max())) &&
-      whole(d.mapReachPct, MIN_MAP_REACH, MAX_MAP_REACH) &&
-      whole(d.streakBonus, 0, this.max())
-    );
+    if (!d) return null;
+    const max = this.max();
+    return {
+      minPoints: problem(d.minPoints, MIN_LAST_POINTS, max, ' pont'),
+      // A faster one never gets less than the one after it.
+      orderBonus: d.orderBonus.map(
+        (b, i) =>
+          problem(b, 0, max, ' pont') ||
+          (i < 2 && whole(d.orderBonus[i + 1], 0, max) && b < d.orderBonus[i + 1]
+            ? `Nem lehet kevesebb, mint a ${this.places[i + 1].toLowerCase()} bónusza.`
+            : ''),
+      ),
+      mapReachPct: problem(d.mapReachPct, MIN_MAP_REACH, MAX_MAP_REACH, '%'),
+      streakBonus: problem(d.streakBonus, 0, max, ' pont'),
+    };
+  });
+  valid = computed(() => {
+    const p = this.problems();
+    return !!p && !p.minPoints && p.orderBonus.every((b) => !b) && !p.mapReachPct && !p.streakBonus;
   });
   changed = computed(() => {
     const d = this.draft();
@@ -68,7 +91,7 @@ export class QuizScoringPage {
   // A right answer after a quarter, and after half, of the time.
   speedExample = computed(() => {
     const min = this.draft()?.minPoints ?? NaN;
-    if (!whole(min, 1, this.max())) return null;
+    if (!whole(min, MIN_LAST_POINTS, this.max())) return null;
     const at = (used: number) => Math.round(this.max() - (this.max() - min) * used);
     return { quarter: at(0.25), half: at(0.5) };
   });

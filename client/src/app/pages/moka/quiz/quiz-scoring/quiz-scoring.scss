@@ -123,7 +123,7 @@ h1 {
       outline-offset: 0.0625rem;
     }
 
-    &:invalid {
+    &[aria-invalid='true'] {
       border-color: #b3261e;
     }
 
@@ -135,6 +135,15 @@ h1 {
       -webkit-text-fill-color: currentColor;
     }
   }
+}
+
+// What is wrong with the field above.
+.error {
+  margin: -0.5rem 0 0;
+  color: #b3261e;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: right;
 }
 
 .hint {
@@ -168,11 +177,6 @@ h1 {
   small {
     color: #6a7a83;
     font-size: 0.8125rem;
-  }
-
-  .bad {
-    color: #b3261e;
-    font-weight: 700;
   }
 }
 

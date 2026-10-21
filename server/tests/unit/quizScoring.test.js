@@ -67,12 +67,15 @@ describe('cleanScoring', () => {
     const bad = [
       [undefined, 'utolsó pillanat'],
       [scoring({ minPoints: 0 }), 'utolsó pillanat'],
+      [scoring({ minPoints: 99 }), 'utolsó pillanat'],
       [scoring({ minPoints: 1001 }), 'utolsó pillanat'],
       [scoring({ minPoints: 499.5 }), 'utolsó pillanat'],
       [scoring({ orderBonus: [100, 50] }), 'leggyorsabbak'],
       [scoring({ orderBonus: [100, -1, 0] }), 'leggyorsabbak'],
       [scoring({ orderBonus: '300' }), 'leggyorsabbak'],
-      [scoring({ mapReachPct: 4 }), 'térképes'],
+      [scoring({ orderBonus: [100, 200, 0] }), 'lassabb'],
+      [scoring({ orderBonus: [300, 100, 200] }), 'lassabb'],
+      [scoring({ mapReachPct: 9 }), 'térképes'],
       [scoring({ mapReachPct: 101 }), 'térképes'],
       [scoring({ streakBonus: '100' }), 'sorozatbónusz'],
     ];

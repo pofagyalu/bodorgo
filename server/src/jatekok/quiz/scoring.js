@@ -50,7 +50,9 @@ export const DEFAULT_SCORING = {
 // above, with a bonus for the three fastest.
 export const INITIAL_SCORING = { ...DEFAULT_SCORING, orderBonus: [300, 200, 100] };
 export const MAX_STREAK_STEPS = 5;
-export const MIN_MAP_REACH = 5;
+// A right answer is never worth less than this, however late.
+export const MIN_LAST_POINTS = 100;
+export const MIN_MAP_REACH = 10;
 export const MAX_MAP_REACH = 100;
 
 const isWhole = (n, min, max) => Number.isInteger(n) && n >= min && n <= max;
@@ -59,8 +61,10 @@ const isWhole = (n, min, max) => Number.isInteger(n) && n >= min && n <= max;
 // won't do.
 export function cleanScoring(body) {
   const { minPoints, orderBonus, mapReachPct, streakBonus } = body ?? {};
-  if (!isWhole(minPoints, 1, BASE_POINTS)) {
-    return { error: `Az utolsó pillanat pontja 1 és ${BASE_POINTS} közötti egész szám lehet.` };
+  if (!isWhole(minPoints, MIN_LAST_POINTS, BASE_POINTS)) {
+    return {
+      error: `Az utolsó pillanat pontja ${MIN_LAST_POINTS} és ${BASE_POINTS} közötti egész szám lehet.`,
+    };
   }
   if (
     !Array.isArray(orderBonus) ||
@@ -68,6 +72,9 @@ export function cleanScoring(body) {
     !orderBonus.every((b) => isWhole(b, 0, BASE_POINTS))
   ) {
     return { error: `A leggyorsabbak bónusza 0 és ${BASE_POINTS} közötti egész szám lehet.` };
+  }
+  if (orderBonus[0] < orderBonus[1] || orderBonus[1] < orderBonus[2]) {
+    return { error: 'A gyorsabb bónusza nem lehet kisebb a lassabbénál.' };
   }
   if (!isWhole(mapReachPct, MIN_MAP_REACH, MAX_MAP_REACH)) {
     return {
