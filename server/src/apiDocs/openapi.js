@@ -1502,7 +1502,7 @@ const paths = {
       role: 'admin',
       summary: 'Update a tour',
       description:
-        'Any tour fields. Setting the advance to exactly 0 marks every attendee paid. `onSitePayment` (Fizetési módok - how the rest is paid at the house): `{ cash, card, szep }` (szep: SZÉP kártya). Shown to attendees on the attendee list (the Fizetendő column) and in the Programfüzet.',
+        'Any tour fields. Setting the advance to exactly 0 marks every attendee paid. New dates or a new place work out its sun times (`sunDays`) again, and move its Futókör course with them (open from 10:00 on the first day until sunset on the day before the last). `onSitePayment` (Fizetési módok - how the rest is paid at the house): `{ cash, card, szep }` (szep: SZÉP kártya). Shown to attendees on the attendee list (the Fizetendő column) and in the Programfüzet.',
       params: [tourId],
       body: ref('Tour'),
       data: obj({ tour: ref('Tour') }),
@@ -4916,7 +4916,7 @@ const paths = {
       tag: T.race,
       summary: 'Make a course',
       description:
-        'Two kinds. **A tour’s course** (admins only; with `tourId`, `opensAt`, `closesAt`): one per tour, its cards chosen afterwards from the club’s; no two tours’ courses may be open at the same time. **My own track** (anyone; `name` and `points`, 1-20): mine to change, open from now (or from `opensAt`) and for good unless a `closesAt` is given, and it can be open alongside any other course; its cards - a START/FINISH and one per point, P<n>-S, P<n>-01... - are made with it.',
+        'Two kinds. **A tour’s course** (admins only; with `tourId`): one per tour, its cards chosen afterwards from the club’s. It is open as its tour says - from 10:00 on the first day (the place’s own time) until sunset on the day before the last (a one-day tour: that day’s sunset), from the tour’s `sunDays`; times sent are ignored, and it follows the tour when the tour’s dates or place change. 400 for a tour that is already over (its closing time has passed) or has no place on the map; no two tours’ courses may be open at the same time. **My own track** (anyone; `name` and `points`, 1-20): mine to change, open from now (or from `opensAt`) and for good unless a `closesAt` is given, and it can be open alongside any other course; its cards - a START/FINISH and one per point, P<n>-S, P<n>-01... - are made with it.',
       body: obj({
         tourId: id('A tour’s course.'),
         name: str(
@@ -4928,7 +4928,7 @@ const paths = {
           type: ['string', 'null'],
           format: 'date-time',
           description:
-            'A tour’s course needs it. My own track: none (or null) - it is open for good.',
+            'My own track only: none (or null) - it is open for good. Ignored for a tour’s course.',
         },
       }),
       ok: 201,
@@ -4941,7 +4941,7 @@ const paths = {
       tag: T.race,
       summary: 'Change a course',
       description:
-        'Whoever may change it (a tour’s course: admins; a user’s own track: its maker and admins - 403 otherwise). Its name, when it is open, the longest a run may take, the loop’s length, and its points. A tour’s course: `startTagId` (a START/FINISH card of the club’s) and `stops` - the checkpoint cards in the order they are passed. My own track: `points` (how many - the cards follow) and/or `stops` for the points in order, without `tagId`. A stop can carry how far along the loop it is (`distanceAlongM`, growing; optional - without distances there are times but no pace and no speed check) or where it is on the map (`lat`, `lng`): with a track on the course, a point that has a place gets its distance measured along the loop. Every runner’s runs are worked out again afterwards.',
+        'Whoever may change it (a tour’s course: admins; a user’s own track: its maker and admins - 403 otherwise). Its name, when it is open (my own track only - a tour’s course is open as its tour says, sent times are ignored), the longest a run may take, the loop’s length, and its points. A tour’s course: `startTagId` (a START/FINISH card of the club’s) and `stops` - the checkpoint cards in the order they are passed. My own track: `points` (how many - the cards follow) and/or `stops` for the points in order, without `tagId`. A stop can carry how far along the loop it is (`distanceAlongM`, growing; optional - without distances there are times but no pace and no speed check) or where it is on the map (`lat`, `lng`): with a track on the course, a point that has a place gets its distance measured along the loop. Every runner’s runs are worked out again afterwards.',
       params: [path('id', 'The course.')],
       body: obj({
         name: str(),
@@ -4950,7 +4950,7 @@ const paths = {
           type: ['string', 'null'],
           format: 'date-time',
           description:
-            'My own track: null (or an empty string) takes the closing time away - it is then open for good. A tour’s course always has one.',
+            'My own track: null (or an empty string) takes the closing time away - it is then open for good. Ignored for a tour’s course.',
         },
         maxRunDurationMin: num(),
         distanceM: { type: ['number', 'null'], description: 'The whole loop, in metres.' },

@@ -7,6 +7,7 @@ import { ConfirmService } from '../../../../shared/confirm-dialog/confirm.servic
 import { errorMessage } from '../../../../shared/errors';
 import { FutokorCourse, FutokorService, FutokorTag } from '../../../../services/futokor';
 import { Tour, TourService } from '../../../../services/tour';
+import { timeZoneOf } from '../../../../shared/countries';
 import { CourseMap } from '../course-map/course-map';
 import { canNfc } from '../nfc/nfc';
 import { NfcWrite } from '../nfc/nfc-write';
@@ -43,6 +44,19 @@ const toInput = (iso: string | Date) => {
 const fromInput = (value: string) => new Date(value).toISOString();
 const numberOrNull = (value: string) => (value.trim() === '' ? null : Number(value));
 
+// A tour's course is open as its tour says (server futokor/tourWindow.js):
+// from 10:00 on the first day until sunset on the day before the last (a
+// one-day tour: that day). The calendar day `plus` days after a tour's
+// first, where the tour is - "2026-10-24".
+function tourDay(tour: Tour, plus: number): string {
+  const timeZone = timeZoneOf(tour.location?.country);
+  const first = new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(tour.startDate));
+  const [y, m, d] = first.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + plus)).toISOString().slice(0, 10);
+}
+const closingDay = (tour: Tour) => tourDay(tour, Math.max(tour.duration - 2, 0));
+const dotted = (day: string) => `${day.replaceAll('-', '. ')}.`;
+
 // Móka → Futókörök → Pályaszerkesztő: where the courses are made and set
 // up - not run. Anyone makes their own tracks here and owns them: the name
 // and when it's open, the loop from a GPX file, the points put on the map,
@@ -72,11 +86,17 @@ export class FutokorEditor {
   newName = signal('');
   newPoints = signal(3);
 
-  // A new tour's course (admins): by default open from now until tomorrow
-  // evening.
+  // A new tour's course (admins): open as its tour says.
   newTourId = signal('');
-  newOpensAt = signal(toInput(new Date()));
-  newClosesAt = signal(toInput(new Date(Date.now() + 36 * 3600 * 1000)));
+  newWindow = computed(() => {
+    const tour = this.tours().find((t) => t._id === this.newTourId());
+    return tour
+      ? {
+          opens: `${dotted(tourDay(tour, 0))} 10:00`,
+          closes: `${dotted(closingDay(tour))}, napnyugtakor`,
+        }
+      : null;
+  });
 
   // The course being changed, and its form.
   openId = signal<string | null>(null);
@@ -87,11 +107,16 @@ export class FutokorEditor {
 
   startTags = computed(() => this.tags().filter((t) => t.kind === 'startFinish' && !t.retired));
   stopTags = computed(() => this.tags().filter((t) => t.kind === 'checkpoint' && !t.retired));
-  // The tours that have no course yet, the latest first.
+  // The tours that have no course yet and aren't over (their course would
+  // close no earlier than today), the latest first.
   freeTours = computed(() => {
     const taken = new Set(this.courses().map((c) => c.tour?._id));
+    const today = (t: Tour) =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: timeZoneOf(t.location?.country) }).format(
+        new Date(),
+      );
     return this.tours()
-      .filter((t) => !taken.has(t._id))
+      .filter((t) => !taken.has(t._id) && closingDay(t) >= today(t))
       .sort((a, b) => b.startDate.localeCompare(a.startDate));
   });
 
@@ -175,19 +200,13 @@ export class FutokorEditor {
 
   createForTour() {
     if (!this.newTourId()) return;
-    this.futokor
-      .createTourCourse({
-        tourId: this.newTourId(),
-        opensAt: fromInput(this.newOpensAt()),
-        closesAt: fromInput(this.newClosesAt()),
-      })
-      .subscribe({
-        next: (course) => {
-          this.newTourId.set('');
-          this.saved(course);
-        },
-        error: (err) => this.fail(err, 'Nem sikerült létrehozni a pályát.'),
-      });
+    this.futokor.createTourCourse({ tourId: this.newTourId() }).subscribe({
+      next: (course) => {
+        this.newTourId.set('');
+        this.saved(course);
+      },
+      error: (err) => this.fail(err, 'Nem sikerült létrehozni a pályát.'),
+    });
   }
 
   // --- The form of the course being changed ---
@@ -334,8 +353,10 @@ export class FutokorEditor {
     this.futokor
       .updateCourse(course._id, {
         name: d.name,
-        opensAt: fromInput(d.opensAt),
-        closesAt: d.closesAt ? fromInput(d.closesAt) : null,
+        // A tour's course is open as its tour says.
+        ...(own
+          ? { opensAt: fromInput(d.opensAt), closesAt: d.closesAt ? fromInput(d.closesAt) : null }
+          : {}),
         distanceM: numberOrNull(d.distanceM),
         maxRunDurationMin: numberOrNull(d.maxRunDurationMin),
         ...(own ? { points: stops.length } : { startTagId: d.startTagId }),

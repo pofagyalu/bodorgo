@@ -21,6 +21,7 @@ import { tagUrl, verifyTagToken } from '../futokor/tags.js';
 import { gpxName, measureTrack, parseGpx, placeCheckpoints, thinTrack } from '../futokor/gpx.js';
 import { GPX_DIR } from '../utils/dataDirs.js';
 import { userOfFutokod } from '../utils/futokod.js';
+import { tourCourseWindow } from '../futokor/tourWindow.js';
 import { computeAge } from './userController.js';
 
 // Futókör: the checkpoint running race (Móka → Futókörök). A course is a
@@ -314,10 +315,10 @@ async function overlappingTourCourse(opensAt, closesAt, exceptId) {
   });
 }
 
-// When a course is open, from what was sent (and what it had). A tour's
-// course needs both ends. A user's own track (`own`) may go without a
-// closing time - none sent, null or empty: it's open for good.
-function parseWindow(body, current = {}, own = false) {
+// When a user's own track is open, from what was sent (and what it had).
+// It may go without a closing time - none sent, null or empty: it's open
+// for good. (A tour's course is open as its tour says - windowOfTour.)
+function parseWindow(body, current = {}) {
   const opensAt = body.opensAt !== undefined ? new Date(body.opensAt) : current.opensAt;
   const sent = body.closesAt === '' ? null : body.closesAt;
   const closesAt =
@@ -325,11 +326,9 @@ function parseWindow(body, current = {}, own = false) {
   if (!opensAt || Number.isNaN(+opensAt) || (closesAt && Number.isNaN(+closesAt))) {
     throw new AppError('A pálya nyitása és zárása kell.', 400);
   }
-  if (!closesAt) {
-    if (!own) throw new AppError('A pálya nyitása és zárása kell.', 400);
-    return { opensAt, closesAt: null };
+  if (closesAt && closesAt <= opensAt) {
+    throw new AppError('A pálya zárása a nyitása után legyen.', 400);
   }
-  if (closesAt <= opensAt) throw new AppError('A pálya zárása a nyitása után legyen.', 400);
   return { opensAt, closesAt };
 }
 
@@ -483,9 +482,25 @@ export const getCourses = async (req, res) => {
   });
 };
 
+// A tour's course is open as its tour says (futokor/tourWindow.js) - from
+// 10:00 on the first day until sunset on the day before the last.
+function windowOfTour(tour) {
+  const window = tourCourseWindow(tour);
+  if (!window.closesAt) {
+    throw new AppError(
+      'A tábornak nincs helye a térképen, így a zárását sem lehet kiszámolni.',
+      400,
+    );
+  }
+  return window;
+}
+
+const TOUR_WINDOW_FIELDS = 'title startDate duration location sunDays';
+
 // POST /futokor/courses - a new course.
-// - A tour's (admins): { tourId, name?, opensAt, closesAt } - its cards
-//   are chosen afterwards, from the club's.
+// - A tour's (admins): { tourId, name? } - open as the tour says (see
+//   windowOfTour), and only for a tour not yet over; its cards are chosen
+//   afterwards, from the club's.
 // - My own track (anyone): { name, points, opensAt?, closesAt? } - open
 //   from now, and for good unless a closing time is given; its cards (a
 //   START/FINISH and one per point) are made with it.
@@ -494,12 +509,15 @@ export const createCourse = async (req, res) => {
 
   if (tourId !== undefined) {
     if (!isAdmin(req.user)) throw new AppError('Tábori pályát csak admin készíthet.', 403);
-    const tour = validId(tourId) ? await Tour.findById(tourId).select('title') : null;
+    const tour = validId(tourId) ? await Tour.findById(tourId).select(TOUR_WINDOW_FIELDS) : null;
     if (!tour) throw new AppError('Nincs ilyen tábor.', 400);
     if (await FutokorCourse.exists({ tour: tour._id })) {
       throw new AppError('Ennek a tábornak már van pályája.', 400);
     }
-    const window = parseWindow(req.body);
+    const window = windowOfTour(tour);
+    if (window.closesAt <= new Date()) {
+      throw new AppError('Ez a tábor már véget ért - pályát már nem kaphat.', 400);
+    }
     if (await overlappingTourCourse(window.opensAt, window.closesAt, null)) {
       throw new AppError('Ebben az időszakban már nyitva van egy másik tábori pálya.', 400);
     }
@@ -520,11 +538,10 @@ export const createCourse = async (req, res) => {
   if (!Number.isInteger(points) || points < 1 || points > MAX_OWN_POINTS) {
     throw new AppError(`Egy pályán 1-${MAX_OWN_POINTS} ellenőrzőpont lehet.`, 400);
   }
-  const window = parseWindow(
-    { opensAt: req.body.opensAt ?? new Date(), closesAt: req.body.closesAt ?? null },
-    {},
-    true,
-  );
+  const window = parseWindow({
+    opensAt: req.body.opensAt ?? new Date(),
+    closesAt: req.body.closesAt ?? null,
+  });
   const course = new FutokorCourse({ name: cleanName, createdBy: req.user._id, ...window });
   await setOwnPoints(course, points);
   await course.save();
@@ -532,7 +549,8 @@ export const createCourse = async (req, res) => {
 };
 
 // PATCH /futokor/courses/:id - whoever may change it: its name, when it's
-// open, the longest a run may take, how long the loop is, and its points.
+// open (a user's own track only - a tour's follows its tour), the longest a
+// run may take, how long the loop is, and its points.
 // - A tour's course: { startTagId, stops: [{ tagId, distanceAlongM?, lat?,
 //   lng? }] } - the club's cards, in the order they're passed.
 // - A user's own track: { points } (how many - the cards follow) and/or
@@ -547,15 +565,10 @@ export const updateCourse = async (req, res) => {
   if (typeof body.name === 'string' && body.name.trim()) {
     course.name = body.name.trim().slice(0, 60);
   }
-  if (body.opensAt !== undefined || body.closesAt !== undefined) {
-    const window = parseWindow(body, course, isOwnTrack(course));
-    if (
-      !isOwnTrack(course) &&
-      (await overlappingTourCourse(window.opensAt, window.closesAt, course._id))
-    ) {
-      throw new AppError('Ebben az időszakban már nyitva van egy másik tábori pálya.', 400);
-    }
-    Object.assign(course, window);
+  // A tour's course is open as its tour says (windowOfTour, kept in step by
+  // tourController.js's updateTour): times sent for it are ignored.
+  if (isOwnTrack(course) && (body.opensAt !== undefined || body.closesAt !== undefined)) {
+    Object.assign(course, parseWindow(body, course));
   }
   if (body.maxRunDurationMin !== undefined) {
     course.maxRunDurationMin =

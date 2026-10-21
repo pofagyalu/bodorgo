@@ -10,6 +10,7 @@ import {
   FutokorTag,
 } from '../../src/models/futokorModels.js';
 import GpxTrack from '../../src/models/gpxTrackModel.js';
+import Tour from '../../src/models/tourModel.js';
 import { tagToken, verifyTagToken } from '../../src/futokor/tags.js';
 import User from '../../src/models/userModel.js';
 import { ensureFutokodok } from '../../src/utils/futokod.js';
@@ -27,22 +28,26 @@ const patch = (user, url, body) =>
   request(app).patch(`/futokor${url}`).set(asUser(user)).send(body);
 
 const HOUR = 3600 * 1000;
+const DAY = 24 * HOUR;
 // A moment of the course's opening day, `sec` seconds after its start.
 const T0 = Date.now() - 2 * HOUR;
 const at = (sec) => new Date(T0 + sec * 1000).toISOString();
+
+// A tour's course is open as its tour says - a test moves it straight in
+// the database.
+const openAt = (id, opensAt, closesAt) =>
+  FutokorCourse.updateOne({ _id: id }, { $set: { opensAt, closesAt } });
 
 // A 900 m course open now: START/FINISH and two checkpoints 300 m apart.
 async function openCourse(owner) {
   await post(owner, '/tags', { kind: 'startFinish' });
   await post(owner, '/tags', { count: 3 });
   const tour = await createTour();
-  const made = await post(owner, '/courses', {
-    tourId: String(tour._id),
-    opensAt: new Date(T0 - HOUR),
-    closesAt: new Date(T0 + 24 * HOUR),
-  });
+  const made = await post(owner, '/courses', { tourId: String(tour._id) });
   expect(made.status, made.body.message).toBe(201);
   const id = made.body.data.course._id;
+  // Open now (as its tour says, it would only open a month from now).
+  await openAt(id, new Date(T0 - HOUR), new Date(T0 + 24 * HOUR));
   const set = await patch(owner, `/courses/${id}`, {
     distanceM: 900,
     startTagId: 'S1',
@@ -144,19 +149,61 @@ describe('Futókör: a course', () => {
       ['T01', '2. pont', 2, 600],
     ]);
 
-    const window = { opensAt: new Date(T0), closesAt: new Date(T0 + HOUR) };
-    const same = await post(owner, '/courses', { tourId: course.tour._id, ...window });
+    const same = await post(owner, '/courses', { tourId: course.tour._id });
     expect(same.status).toBe(400);
-    const other = await createTour();
-    const overlap = await post(owner, '/courses', { tourId: String(other._id), ...window });
+    // Still open in ten days: a tour in five days can't have one.
+    await openAt(course._id, new Date(T0), new Date(Date.now() + 10 * DAY));
+    const other = await createTour({ startDate: new Date(Date.now() + 5 * DAY) });
+    const overlap = await post(owner, '/courses', { tourId: String(other._id) });
     expect(overlap.status).toBe(400);
-    const later = await post(owner, '/courses', {
-      tourId: String(other._id),
-      opensAt: new Date(T0 + 48 * HOUR),
-      closesAt: new Date(T0 + 72 * HOUR),
-    });
-    expect(later.status).toBe(201);
+    const later = await createTour({ startDate: new Date(Date.now() + 20 * DAY) });
+    expect((await post(owner, '/courses', { tourId: String(later._id) })).status).toBe(201);
     expect((await get(owner, '/courses')).body.data.courses).toHaveLength(2);
+  });
+
+  it('is open as its tour says: 10:00 on the first day until sunset on the day before the last', async () => {
+    const owner = await createOwner();
+    // Mátraháza, 4 days from 2 July next year - its own sun times.
+    const year = new Date().getFullYear() + 1;
+    const tour = await createTour({
+      startDate: new Date(`${year}-07-02T12:00:00Z`),
+      duration: 4,
+      location: { address: 'Mátraháza', coordinates: [19.97, 47.87] },
+    });
+    const made = await post(owner, '/courses', {
+      tourId: String(tour._id),
+      opensAt: new Date(0), // whatever is sent, it is the tour's
+      closesAt: new Date(1),
+    });
+    expect(made.status, made.body.message).toBe(201);
+    const budapest = (iso) =>
+      new Date(iso).toLocaleString('hu-HU', { timeZone: 'Europe/Budapest' });
+    const course = made.body.data.course;
+    expect(budapest(course.opensAt)).toBe(`${year}. 07. 02. 10:00:00`);
+    const stored = await Tour.findById(tour._id);
+    expect(course.closesAt).toBe(stored.sunDays[2].sunset.toISOString());
+    expect(budapest(course.closesAt).startsWith(`${year}. 07. 04. 20:`)).toBe(true);
+
+    // Sent times change nothing.
+    const sent = await patch(owner, `/courses/${course._id}`, { opensAt: new Date(0) });
+    expect(sent.body.data.course.opensAt).toBe(course.opensAt);
+
+    // The tour moves a week later: so does its course.
+    const moved = await request(app)
+      .patch(`/tours/${tour._id}`)
+      .set(asUser(owner))
+      .send({ startDate: new Date(`${year}-07-09T12:00:00Z`) });
+    expect(moved.status, moved.body.message).toBe(200);
+    const after = await FutokorCourse.findById(course._id);
+    expect(budapest(after.opensAt)).toBe(`${year}. 07. 09. 10:00:00`);
+  });
+
+  it('only for a tour that is not over, and has a place', async () => {
+    const owner = await createOwner();
+    const over = await createTour({ startDate: new Date(Date.now() - 10 * DAY) });
+    expect((await post(owner, '/courses', { tourId: String(over._id) })).status).toBe(400);
+    const nowhere = await createTour({ location: { address: 'Valahol' } });
+    expect((await post(owner, '/courses', { tourId: String(nowhere._id) })).status).toBe(400);
   });
 
   it('carries its track and where its points are - saving it again keeps them', async () => {
@@ -210,7 +257,6 @@ describe('Futókör: a course', () => {
         ],
       },
       { distanceM: 500 }, // shorter than where the last checkpoint is
-      { opensAt: new Date(T0), closesAt: new Date(T0 - HOUR) },
     ];
     for (const body of bad) expect((await set(body)).status, JSON.stringify(body)).toBe(400);
   });
@@ -223,10 +269,7 @@ describe('Futókör: a course', () => {
     expect(active.course).toMatchObject({ _id: course._id, flagSpeedMps: 5.5 });
     expect(active.runs).toEqual([]);
 
-    await patch(owner, `/courses/${course._id}`, {
-      opensAt: new Date(Date.now() + HOUR),
-      closesAt: new Date(Date.now() + 2 * HOUR),
-    });
+    await openAt(course._id, new Date(Date.now() + HOUR), new Date(Date.now() + 2 * HOUR));
     expect((await get(owner, '/active')).body.data.course._id).toBe(course._id);
   });
 });

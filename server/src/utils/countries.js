@@ -20,6 +20,13 @@ export const COUNTRIES = {
 export const COUNTRY_CODES = Object.keys(COUNTRIES);
 export const HOME_COUNTRY = 'HU';
 
+// The time zone a tour's clock times are in: the place's own - Romania and
+// Ukraine are an hour ahead, everywhere else a tour goes keeps Budapest's
+// time (the client's shared/countries.ts has the same).
+const EASTERN = ['RO', 'UA'];
+export const timeZoneOf = (country) =>
+  EASTERN.includes(country) ? 'Europe/Bucharest' : 'Europe/Budapest';
+
 // The code an address written the old way ends with - "…, SK" or
 // "…, Szlovákia" - or null. Tours had no country field before 2026-10-13;
 // a beszámoló frozen before then still holds its address like that.

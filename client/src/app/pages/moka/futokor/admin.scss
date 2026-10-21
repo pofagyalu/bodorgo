@@ -524,6 +524,14 @@ a.text {
 }
 
 // A note under a field (the editor: "left empty, it's open for good").
+// A tour's course: when it's open, as its tour says - shown, not set.
+.window {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin: 0.75rem 0;
+}
+
 .field-note {
   display: block;
   margin-top: 0.25rem;
