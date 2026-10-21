@@ -53,23 +53,14 @@
               }
             </select>
           </label>
-          <label>
-            Nyitás
-            <input
-              type="datetime-local"
-              [value]="newOpensAt()"
-              (input)="newOpensAt.set($any($event.target).value)"
-            />
-          </label>
-          <label>
-            Zárás
-            <input
-              type="datetime-local"
-              [value]="newClosesAt()"
-              (input)="newClosesAt.set($any($event.target).value)"
-            />
-          </label>
         </div>
+        <!-- Not chosen: open as the tour says (server futokor/tourWindow.js). -->
+        @if (newWindow(); as w) {
+          <p class="window">
+            <span><strong>Nyitás:</strong> {{ w.opens }}</span>
+            <span><strong>Zárás:</strong> {{ w.closes }}</span>
+          </p>
+        }
         <button type="button" class="primary" [disabled]="!newTourId()" (click)="createForTour()">
           <mat-icon>add</mat-icon> Tábori pálya létrehozása
         </button>
@@ -115,26 +106,39 @@
                   (input)="set('name', $any($event.target).value)"
                 />
               </label>
-              <label>
-                Nyitás
-                <input
-                  type="datetime-local"
-                  [value]="d.opensAt"
-                  (input)="set('opensAt', $any($event.target).value)"
-                />
-              </label>
-              <label>
-                Zárás
-                <input
-                  type="datetime-local"
-                  [value]="d.closesAt"
-                  (input)="set('closesAt', $any($event.target).value)"
-                />
-                <!-- My own track needs none: it's then open for good. -->
-                @if (c.kind === 'own') {
-                  <small class="field-note">Üresen hagyva a pálya mindig nyitva van.</small>
-                }
-              </label>
+              <!-- A tour's course is open as its tour says - shown, not set. -->
+              @if (c.kind === 'tour') {
+                <p class="window">
+                  <span
+                    ><strong>Nyitás:</strong> {{ c.opensAt | date: 'yyyy. MM. dd. HH:mm' }}</span
+                  >
+                  <span
+                    ><strong>Zárás:</strong>
+                    {{ c.closesAt | date: 'yyyy. MM. dd. HH:mm' }} (napnyugta)</span
+                  >
+                </p>
+              } @else {
+                <label>
+                  Nyitás
+                  <input
+                    type="datetime-local"
+                    [value]="d.opensAt"
+                    (input)="set('opensAt', $any($event.target).value)"
+                  />
+                </label>
+                <label>
+                  Zárás
+                  <input
+                    type="datetime-local"
+                    [value]="d.closesAt"
+                    (input)="set('closesAt', $any($event.target).value)"
+                  />
+                  <!-- My own track needs none: it's then open for good. -->
+                  @if (c.kind === 'own') {
+                    <small class="field-note">Üresen hagyva a pálya mindig nyitva van.</small>
+                  }
+                </label>
+              }
               <label>
                 Leghosszabb futás (perc)
                 <input

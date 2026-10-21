@@ -408,10 +408,10 @@ describe('FutokorService', () => {
       ['getCourses', () => service.getCourses(), 'GET', `${futokor}/courses`],
       [
         'createTourCourse',
-        () => service.createTourCourse({ tourId: 't1', opensAt: 'a', closesAt: 'b' }),
+        () => service.createTourCourse({ tourId: 't1' }),
         'POST',
         `${futokor}/courses`,
-        { tourId: 't1', opensAt: 'a', closesAt: 'b' },
+        { tourId: 't1' },
       ],
       [
         'createOwnTrack',

@@ -315,12 +315,14 @@ textarea {
 // Its number, and its buttons - under it where they don't fit beside.
 .q-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.25rem 0.5rem;
+  gap: 0.5rem;
 
+  // Always one line - on a phone the gaps and the tools shrink to make room
+  // (see below).
   strong {
+    white-space: nowrap;
     font-family: Marhey, sans-serif;
     font-size: 1.125rem;
     color: var(--logo-red);
@@ -329,6 +331,7 @@ textarea {
 
 .q-tools {
   display: flex;
+  flex: none;
   gap: 0.125rem;
 
   button {
@@ -353,6 +356,30 @@ textarea {
 
     &.danger {
       color: #b3261e;
+    }
+  }
+}
+
+// A phone (an S23+ is 24rem wide): the tools a little smaller, so the
+// title still has room beside them.
+@media (max-width: 30rem) {
+  .q-head {
+    gap: 0.25rem;
+  }
+
+  .q-head strong {
+    font-size: 1rem;
+  }
+
+  .q-tools {
+    gap: 0;
+
+    button {
+      width: 2.25rem;
+    }
+
+    .preview-btn {
+      padding: 0 0.6rem;
     }
   }
 }

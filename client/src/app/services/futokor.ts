@@ -778,7 +778,8 @@ export class FutokorService {
   }
 
   // A tour's course (admins): its cards are chosen afterwards.
-  createTourCourse(body: { tourId: string; opensAt: string; closesAt: string }) {
+  // A tour's course: open as its tour says (server futokor/tourWindow.js).
+  createTourCourse(body: { tourId: string }) {
     return this.http
       .post<{ data: { course: FutokorCourse } }>(`${this.apiUrl}/courses`, body)
       .pipe(map(this.one));

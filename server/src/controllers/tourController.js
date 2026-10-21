@@ -23,6 +23,7 @@ import { buildWeatherOutlook } from '../utils/weatherOutlook.js';
 import { resolveDistanceInfo } from '../utils/tourDistances.js';
 import { tourDocuments } from './documentController.js';
 import { cleanOnSitePayment } from '../utils/onSitePayment.js';
+import { tourCourseWindow } from '../futokor/tourWindow.js';
 
 // YYYY-MM-DD of the date's own calendar day (server local time). Not
 // toISOString(): the tour days are local midnights, which in Hungary are
@@ -517,8 +518,20 @@ export const updateTour = async (req, res) => {
   // automatic side effect.
   const advanceBecameZero =
     tour.isModified('advancePaymentPercentage') && tour.advancePaymentPercentage === 0;
+  // Its Futókör course is open as the tour says (futokor/tourWindow.js).
+  const daysOrPlaceMoved = [
+    'startDate',
+    'duration',
+    'location.coordinates',
+    'location.country',
+  ].some((path) => tour.isModified(path));
 
   await tour.save();
+
+  if (daysOrPlaceMoved) {
+    const window = tourCourseWindow(tour);
+    if (window.closesAt) await FutokorCourse.updateOne({ tour: tour._id }, { $set: window });
+  }
 
   if (advanceBecameZero) {
     await markAllAttendeesPaidForTour(tour._id);
