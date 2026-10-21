@@ -645,15 +645,15 @@ const schemas = {
   QuizScoring: obj(
     {
       minPoints: int(
-        'What a right answer is worth at the last moment (1-1000); an instant one is always worth 1000, and it falls evenly between the two. 1000 switches speed off.',
+        'What a right answer is worth at the last moment (100-1000); an instant one is always worth 1000, and it falls evenly between the two. 1000 switches speed off.',
       ),
       orderBonus: {
         ...arrayOf(int()),
         description:
-          'Three numbers (0-1000 each): the bonus of the fastest, the 2nd and the 3rd fastest right answer to a question. Not on a map question.',
+          'Three numbers (0-1000 each): the bonus of the fastest, the 2nd and the 3rd fastest right answer to a question - none smaller than the one after it. Not on a map question.',
       },
       mapReachPct: int(
-        'A map question: how far a pin may be from the place to be worth anything, in % of the shown map’s diagonal (5-100).',
+        'A map question: how far a pin may be from the place to be worth anything, in % of the shown map’s diagonal (10-100).',
       ),
       streakBonus: int(
         'The bonus for each right answer in a row after the first (0-1000): the 2nd in a row gets it once, the 3rd twice... at most `maxStreakSteps` times. A wrong or a missed answer ends the row; a map question neither ends nor lengthens it. 0: none.',
