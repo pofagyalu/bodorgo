@@ -68,7 +68,7 @@
       <!-- The day's line: one moment after the other - top to bottom on a
            phone, left to right on a wide screen. Tracked by the day too,
            so a new day draws itself again. -->
-      <ol class="line" [class.line--live]="live()">
+      <ol class="line" #line [class.line--live]="live()">
         @for (m of moments(); track m.id; let i = $index) {
           <li
             class="stretch"
