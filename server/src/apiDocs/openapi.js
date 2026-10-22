@@ -4130,7 +4130,7 @@ const paths = {
             durationMs: int('May be null.'),
             streamUrl: str('Relative - `/music/{key}/stream/{itemId}` on this server.'),
             imageUrl: str(
-              'Relative - `/music/{key}/image/{itemId}`, or null if there is no picture.',
+              'Relative - `/music/{key}/image/{itemId}?v=<the picture tag>`, or null if there is no picture. The tag changes with the picture, so a changed picture gets a new address (no browser keeps the old one).',
             ),
           }),
         ),
