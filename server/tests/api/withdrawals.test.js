@@ -57,6 +57,45 @@ describe('Lemondás - withdrawing someone from a tour', () => {
     ).toBe(403);
   });
 
+  it('shows in the list what someone had paid before withdrawing', async () => {
+    const admin = await createAdmin();
+    const member = await createMember({ name: 'Fizető Tag' });
+    // A EUR tour: 10 €/night per person, 2 nights, 30%: 6 € advance at
+    // 400 Ft/€ = 2 400 Ft.
+    const tour = await createTour({
+      duration: 3,
+      pricingMode: 'perPerson',
+      accommodationPricePerNight: 10,
+      accommodationCurrency: 'EUR',
+      eurHufExchangeRate: 400,
+      advancePaymentPercentage: 30,
+    });
+    const reservation = await createReservation(tour, [member]);
+    const attendee = reservation.attendees[0];
+    const paid = await request(app)
+      .post('/payments/cash')
+      .set(asUser(admin))
+      .send({ tourId: tour._id, attendeeIds: [String(attendee._id)] });
+    expect(paid.status).toBe(201);
+
+    expect(
+      (
+        await request(app)
+          .delete(url(tour, reservation, attendee))
+          .set(asUser(admin))
+      ).status,
+    ).toBe(200);
+    const list = await request(app).get(`/tours/${tour._id}/cancellations`).set(asUser(admin));
+    expect(list.body.data.cancellations).toEqual([
+      expect.objectContaining({
+        name: 'Fizető Tag',
+        wasPaid: true,
+        paidAdvance: 2400,
+        paidAdvanceInCurrency: 6,
+      }),
+    ]);
+  });
+
   it("only whoever could sign them up - a stranger can't, an admin can", async () => {
     const owner = await createMember();
     const stranger = await createMember();

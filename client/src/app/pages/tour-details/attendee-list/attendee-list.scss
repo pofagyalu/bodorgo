@@ -328,6 +328,19 @@
   padding: 1px 6px;
 }
 
+// What someone had paid before withdrawing, after "fizetett".
+.cancel-paid {
+  margin-left: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1b6548;
+}
+
+.cancel-paid-huf {
+  font-weight: 400;
+  font-size: 0.75rem;
+}
+
 .cancel-meta {
   font-size: 0.82rem;
   color: #56666e;

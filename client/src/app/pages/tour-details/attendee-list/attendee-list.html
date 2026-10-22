@@ -424,6 +424,18 @@
             <strong>{{ c.name }}</strong>
             @if (c.wasPaid) {
               <span class="paid-flag" title="Az előleget már kifizette">fizetett</span>
+              <!-- What they had paid: euros on a EUR tour, the forints in
+                   brackets; forints otherwise. -->
+              @if (c.paidAdvance != null) {
+                <span class="cancel-paid">
+                  @if (currency === 'EUR') {
+                    {{ formatEuro(c.paidAdvanceInCurrency ?? 0) }} €
+                    <span class="cancel-paid-huf">({{ formatForint(c.paidAdvance) }} Ft)</span>
+                  } @else {
+                    {{ formatForint(c.paidAdvance) }} Ft
+                  }
+                </span>
+              }
             }
             <span class="cancel-meta">
               {{ c.cancelledAt | date: 'yyyy. MM. dd. HH:mm' }} · {{ c.cancelledByName }}

@@ -399,6 +399,7 @@ const schemas = {
   }),
 
   Cancellation: obj({
+    // + paidAdvance / paidAdvanceInCurrency in the Lemondások list (see that route).
     _id: id(),
     tour: id(),
     user: id(),
@@ -1615,6 +1616,8 @@ const paths = {
       tag: T.signup,
       role: 'admin',
       summary: 'Lemondások - who was taken off',
+      description:
+        'Newest first. Someone who had paid: `paidAdvance` - the advance they paid, in HUF, from their payments (matched by name among the payments of people no longer on the list) - and `paidAdvanceInCurrency`, the same in the tour currency (EUR: euros to the cent); both null otherwise. Worked out each time, never stored.',
       params: [tourIdT],
       data: obj({ cancellations: arrayOf(ref('Cancellation')) }),
     }),
