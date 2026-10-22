@@ -75,7 +75,7 @@ export class Payment {
         // paid is this specific person's own real status (see
         // AttendeePayment's comment), not the whole reservation's.
         const mine = res.data.attendeePayments.filter(
-          (p) => p.advance != null && !p.paid && isInMyPaymentGroup(p, me),
+          (p) => p.advance != null && !p.paid && !p.onSite && isInMyPaymentGroup(p, me),
         );
         this.myGroup.set(mine);
         this.selectedAttendeeIds.set(new Set(mine.map((p) => p.attendeeId)));

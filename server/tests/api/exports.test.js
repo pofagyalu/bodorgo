@@ -240,6 +240,8 @@ describe('attendee Excel export (admin)', () => {
     // 200 €, of which 30% (60 €) in advance; the 4000 Ft wine tasting: 10 €.
     expect([4, 5, 6, 7].map((c) => parentRow.getCell(c).value)).toEqual([200, 60, 140, 10]);
     expect([...formats].every((f) => f.includes('€') && !f.includes('Ft'))).toBe(true);
+    // Euros always with their cents.
+    expect([...formats].every((f) => f.includes('0.00'))).toBe(true);
   });
 
   it('is admin-only and 404s for an unknown tour', async () => {

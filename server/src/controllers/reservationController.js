@@ -7,6 +7,7 @@ import { partitionAttendeesByEmailEligibility } from './tourPdfController.js';
 import sendResendEmail from '../utils/resendEmail.js';
 import logger from '../logger.js';
 import Cancellation from '../models/cancellationModel.js';
+import Payment from '../models/paymentModel.js';
 import { emitToTour } from '../chat/tourEvents.js';
 import { escapeHtml } from '../utils/mailHtml.js';
 import { CLUB_FOUNDING_DATE } from '../utils/tourSubsidy.js';
@@ -250,6 +251,26 @@ export async function markAllAttendeesPaidForTour(tourId) {
   await Reservation.updateMany({ tour: tourId }, { $set: { 'attendees.$[].paid': true } });
 }
 
+// What each attendee of a tour really paid as their advance, in HUF
+// (attendeeId -> amount): their succeeded Payment records, online or cash -
+// for computeAttendeePayments once the advances are declared paid.
+export async function loadPaidAdvances(tourId) {
+  const payments = await Payment.find({
+    tour: tourId,
+    purpose: 'tourAdvance',
+    status: 'Succeeded',
+  }).select('attendees.attendeeId attendees.amount');
+  const paid = new Map();
+  for (const payment of payments) {
+    for (const a of payment.attendees) {
+      if (a.amount == null) continue;
+      const id = String(a.attendeeId);
+      paid.set(id, (paid.get(id) ?? 0) + a.amount);
+    }
+  }
+  return paid;
+}
+
 // Each attendee's accommodation share, computed fresh from the tour's own
 // per-night rate/advance-%/subsidy rather than stored - editing any of
 // those on the tour immediately recalculates everyone rather than going
@@ -257,7 +278,14 @@ export async function markAllAttendeesPaidForTour(tourId) {
 // no accommodation pricing configured yet (totalPrice/advance/rest all
 // null in that case), since the row also carries name/nights - useful for
 // the plain "who's registered" view regardless of billing setup.
-export function computeAttendeePayments(tour, reservations) {
+//
+// Once the advances are declared paid (tour.advancePaidAt, "Előleg
+// befizetve") they are facts, not recalculated: who paid keeps the advance
+// they really paid - paidAdvances, attendeeId -> HUF from their Payment
+// records (loadPaidAdvances below; the computed one only when there is no
+// record, an old hand-ticked paid) - and everyone else, a latecomer too,
+// has 0 advance and pays their whole price on site (onSite).
+export function computeAttendeePayments(tour, reservations, paidAdvances = new Map()) {
   const rows = reservations.flatMap((r) =>
     r.attendees.map((a) => ({
       reservationId: String(r._id),
@@ -293,12 +321,23 @@ export function computeAttendeePayments(tour, reservations) {
 
   // Worked out in the tour's own currency (accommodationCurrency): a tour
   // quoted in EUR is paid on site in EUR, so its Teljes ár/Fizetendő are
-  // whole euros (rounded up, like forints). Only the advance - always
-  // paid to the club, in HUF - is converted, once per person, at the
-  // tour's own rate (see advanceHufOf): `advance` is that HUF amount,
-  // `advanceInCurrency` the same advance in the tour's currency.
+  // in euros to the cent (rounded up to the cent, as forints are to the
+  // forint - whole euros made each advance up to a euro too big, carried
+  // into its HUF amount). Only the advance - always paid to the club, in
+  // HUF - is converted, once per person, at the tour's own rate (see
+  // advanceHufOf): `advance` is that HUF amount (whole forints, rounded
+  // up), `advanceInCurrency` the same advance in the tour's currency.
   const isEur = tour.accommodationCurrency === 'EUR';
-  const advanceHufOf = (amount) => (isEur ? Math.ceil(toHuf(tour, amount)) : amount);
+  // "Előleg befizetve" (see the comment above the function).
+  const advancesClosed = !!tour.advancePaidAt;
+  // Floating point leaves crumbs (6.6 * 365 = 2409.0000000000005): cut
+  // them before rounding up, or a whole forint/cent would be added.
+  const clean = (x) => Number(x.toFixed(6));
+  // Rounded up in the club's favour: to the cent (EUR) or the forint.
+  const roundUp = (x) => (isEur ? Math.ceil(clean(x * 100)) / 100 : Math.ceil(x));
+  // A sum or difference of such amounts, kept to the cent.
+  const exact = (x) => (isEur ? Math.round(x * 100) / 100 : x);
+  const advanceHufOf = (amount) => (isEur ? Math.ceil(clean(toHuf(tour, amount))) : amount);
   const nightlyRate = tour.accommodationPricePerNight;
   const childPricePerNight = tour.childPricePerNight;
   const advancePct = tour.advancePaymentPercentage;
@@ -383,7 +422,7 @@ export function computeAttendeePayments(tour, reservations) {
   // charge is already their own exact nights * rate, so summing the
   // individually-computed (still ceiled, for the same rounding-in-the-
   // club's-favor reasoning) amounts below IS the true total.
-  const totalAdvance = perPerson ? null : Math.ceil((totalHouseFee * advancePct) / 100);
+  const totalAdvance = perPerson ? null : roundUp((totalHouseFee * advancePct) / 100);
 
   let totalSubsidyApplied = 0;
   let summedTotalPrice = 0;
@@ -419,24 +458,35 @@ export function computeAttendeePayments(tour, reservations) {
       };
     }
 
-    // Rounded up rather than to the nearest forint - a fractional split
-    // should never leave the club collecting less than the real cost,
-    // even by a few forints, so every attendee's share rounds in the
-    // club's favor.
-    const totalPrice = Math.ceil(r.nights * nightlyRateFor(r));
-    const advance = Math.ceil((totalPrice * advancePct) / 100);
-    const restBeforeSubsidy = totalPrice - advance;
+    // Rounded up rather than to the nearest forint (cent) - a fractional
+    // split should never leave the club collecting less than the real
+    // cost, even by a few forints, so every attendee's share rounds in
+    // the club's favor.
+    const totalPrice = roundUp(r.nights * nightlyRateFor(r));
+    // The advance: worked out from the price - or, once the advances are
+    // declared paid, what this person really paid (0 if they didn't).
+    let advance = roundUp((totalPrice * advancePct) / 100);
+    let advanceHuf = advanceHufOf(advance);
+    const onSite = advancesClosed && !r.paid;
+    if (onSite) {
+      advance = 0;
+      advanceHuf = 0;
+    } else if (advancesClosed && paidAdvances.has(r.attendeeId)) {
+      advanceHuf = paidAdvances.get(r.attendeeId);
+      advance = isEur ? exact(advanceHuf / tour.eurHufExchangeRate) : advanceHuf;
+    }
+    const restBeforeSubsidy = exact(totalPrice - advance);
     // Capped at this person's own rest rather than floored at 0 after
     // subtracting - the difference matters for totalSubsidyApplied below,
     // which needs to reflect subsidy actually used, not nominally assigned.
-    const appliedSubsidy = r.isClubMember ? Math.min(subsidyShare, restBeforeSubsidy) : 0;
+    const appliedSubsidy = r.isClubMember
+      ? Math.max(0, Math.min(subsidyShare, restBeforeSubsidy))
+      : 0;
     const rest = restBeforeSubsidy - appliedSubsidy;
 
-    const advanceHuf = advanceHufOf(advance);
-
     totalSubsidyApplied += appliedSubsidy;
-    summedTotalPrice += totalPrice;
-    summedAdvance += advance;
+    summedTotalPrice = exact(summedTotalPrice + totalPrice);
+    summedAdvance = exact(summedAdvance + advance);
     summedAdvanceHuf += advanceHuf;
 
     return {
@@ -448,6 +498,9 @@ export function computeAttendeePayments(tour, reservations) {
       userId: r.userId,
       paid: r.paid,
       feeExempt: false,
+      // Didn't pay before the advances were declared paid: their whole
+      // price on site ("helyszínen").
+      onSite,
       totalPrice,
       advance: advanceHuf,
       advanceInCurrency: advance,
@@ -470,6 +523,24 @@ export function computeAttendeePayments(tour, reservations) {
       ? Math.ceil(toHuf(tour, (perPerson ? summedTotalPrice : totalHouseFee) / totalPersonNights))
       : null;
 
+  // Once declared paid: every advance that came in for the tour - the
+  // list's people's, and those of people who withdrew since (their payments
+  // stay; paidAdvances has them too) - for "Előleg befizetve ... · 243,00 €".
+  // Never stored: summed from the payments each time.
+  let advancePaidTotal = null;
+  let advancePaidTotalInCurrency = null;
+  if (advancesClosed) {
+    const listed = new Set(rows.map((r) => r.attendeeId));
+    let withdrawnHuf = 0;
+    for (const [attendeeId, huf] of paidAdvances) {
+      if (!listed.has(attendeeId)) withdrawnHuf += huf;
+    }
+    advancePaidTotal = summedAdvanceHuf + withdrawnHuf;
+    advancePaidTotalInCurrency = exact(
+      summedAdvance + (isEur ? withdrawnHuf / tour.eurHufExchangeRate : withdrawnHuf),
+    );
+  }
+
   return {
     attendeePayments,
     totals: perPerson
@@ -477,15 +548,23 @@ export function computeAttendeePayments(tour, reservations) {
           totalPrice: summedTotalPrice,
           advance: summedAdvanceHuf,
           advanceInCurrency: summedAdvance,
-          rest: summedTotalPrice - summedAdvance - totalSubsidyApplied,
+          rest: exact(summedTotalPrice - summedAdvance - totalSubsidyApplied),
           averagePricePerPersonPerNight,
+          advancePaidTotal,
+          advancePaidTotalInCurrency,
         }
       : {
-          totalPrice: totalHouseFee,
-          advance: advanceHufOf(totalAdvance),
-          advanceInCurrency: totalAdvance,
-          rest: totalHouseFee - totalAdvance - totalSubsidyApplied,
+          totalPrice: exact(totalHouseFee),
+          // Once declared paid: what really came in, not the configured
+          // share.
+          advance: advancesClosed ? summedAdvanceHuf : advanceHufOf(totalAdvance),
+          advanceInCurrency: advancesClosed ? summedAdvance : totalAdvance,
+          rest: exact(
+            totalHouseFee - (advancesClosed ? summedAdvance : totalAdvance) - totalSubsidyApplied,
+          ),
           averagePricePerPersonPerNight,
+          advancePaidTotal,
+          advancePaidTotalInCurrency,
         },
   };
 }

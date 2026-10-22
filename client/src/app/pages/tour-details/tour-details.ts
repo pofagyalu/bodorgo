@@ -261,11 +261,12 @@ export class TourDetails {
     if (!this.tour()?.reservations) return [];
     const programCosts = this.optionalProgramsCostByUserId();
     // The programs' prices are in HUF; on a EUR tour the list shows them in
-    // EUR like the rest (the tour's rate, rounded up to whole euros).
+    // EUR like the rest (the tour's rate, rounded up to the cent - the
+    // Excel export the same, server tourExcelController.js).
     const t = this.tour();
     const inTourCurrency = (huf: number) =>
       t?.accommodationCurrency === 'EUR' && t.eurHufExchangeRate
-        ? Math.ceil(huf / t.eurHufExchangeRate)
+        ? Math.ceil(Number(((huf / t.eurHufExchangeRate) * 100).toFixed(6))) / 100
         : huf;
     return [...this.attendeePayments()]
       .map((p) => ({
@@ -306,7 +307,7 @@ export class TourDetails {
   hasUnpaidAdvanceInMyGroup = computed(() => {
     const me = this.auth.user();
     return this.attendeePayments().some(
-      (p) => p.advance != null && !p.paid && isInMyPaymentGroup(p, me),
+      (p) => p.advance != null && !p.paid && !p.onSite && isInMyPaymentGroup(p, me),
     );
   });
 

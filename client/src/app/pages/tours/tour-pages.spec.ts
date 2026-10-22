@@ -444,6 +444,49 @@ describe('TourEdit', () => {
     expect(navigate).toHaveBeenCalledWith(['/taborok', 'matra']);
   });
 
+  it('asks the moment "Előleg befizetve" is ticked, and sends it only the once', async () => {
+    open('t1', tourResponse(makeTour()));
+    const confirm = TestBed.inject(ConfirmService);
+
+    // Mégse: the box is unticked again, and saving doesn't send it.
+    const no = page.onAdvancePaidChange(true);
+    expect(confirm.pending()?.message).toBe('Előleg biztosan be van fizetve?');
+    expect(confirm.pending()).toMatchObject({ confirmText: 'Igen', cancelText: 'Mégse' });
+    confirm.answer(false);
+    await no;
+    expect(page.form.advancePaid).toBe(false);
+
+    // Igen: it stays ticked, and the save sends it - with no more questions.
+    const yes = page.onAdvancePaidChange(true);
+    confirm.answer(true);
+    await yes;
+    expect(page.form.advancePaid).toBe(true);
+    page.save();
+    expect(confirm.pending()).toBeNull();
+    const req = http.expectOne((r) => r.method === 'PATCH');
+    expect(req.request.body.advancePaid).toBe(true);
+    req.flush(tourResponse(makeTour()));
+  });
+
+  it('shows a tour whose advances are declared paid as such, and never sends it again', async () => {
+    open('t1', tourResponse(makeTour({ advancePaidAt: '2026-09-22T10:00:00Z' })));
+    expect(page.form).toMatchObject({ advancePaid: true, advancePaidAt: '2026-09-22T10:00:00Z' });
+    expect(page.advancePaidDate('2026-09-22T10:00:00Z')).toBe('2026. szept. 22.');
+    const box = fixture.nativeElement.querySelector(
+      'input[name="advancePaid"]',
+    ) as HTMLInputElement;
+    // The form sets a box's disabled a moment later.
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(box.disabled).toBe(true);
+
+    page.save(); // no question this time
+    expect(TestBed.inject(ConfirmService).pending()).toBeNull();
+    const req = http.expectOne((r) => r.method === 'PATCH');
+    expect(req.request.body.advancePaid).toBeUndefined();
+    req.flush(tourResponse(makeTour()));
+  });
+
   it('stays on the form when the save fails', () => {
     open('t1', tourResponse(makeTour()));
     page.save();

@@ -3,6 +3,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { PaymentTotals, Tour, TourService } from '../../../services/tour';
 import { AuthService } from '../../../auth/auth.service';
 import { AttendeeList, AttendeeListRow } from '../attendee-list/attendee-list';
+import { formatEuro, formatForint } from '../../../shared/format';
 
 // A tour's Résztvevők (tour-details): the heading row - the head count, "Megtelt" and an admin's Excel export - and
 // under it the attendee list. Who is on the list, the count and the totals
@@ -31,6 +32,29 @@ export class TourParticipants {
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   // Never below 0, even if more signed up than the tour has places.
   freePlaces = computed(() => Math.max(0, this.tour().maxCapacity - this.participantCount()));
+
+  // "Előleg befizetve 2026. febr. 1. · 45 980 Ft" (13,60 € on a EUR tour):
+  // when the advances were declared paid, and what came in, in the
+  // currency it was paid in. Null before.
+  advancePaidNote = computed(() => {
+    const at = this.tour().advancePaidAt;
+    if (!at) return null;
+    const date = new Intl.DateTimeFormat('hu-HU', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(at));
+    // A EUR tour's advances were paid in euros: the sum in euros, no Ft.
+    // Everything that came in - people who withdrew since included.
+    const totals = this.totals();
+    const sum =
+      totals?.advancePaidTotal == null
+        ? null
+        : this.tour().accommodationCurrency === 'EUR'
+          ? `${formatEuro(totals.advancePaidTotalInCurrency ?? 0)} €`
+          : `${formatForint(totals.advancePaidTotal)} Ft`;
+    return sum ? `Előleg befizetve ${date} · ${sum}` : `Előleg befizetve ${date}`;
+  });
 
   attendeesExcelUrl(tourId: string): string {
     return this.tourService.attendeesExcelUrl(tourId);

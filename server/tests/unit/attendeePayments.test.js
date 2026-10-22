@@ -182,6 +182,104 @@ describe('computeAttendeePayments - per house', () => {
   });
 });
 
+describe('computeAttendeePayments - once the advances are declared paid', () => {
+  // Attendee ids are `${reservationId}-a${index}` (see reservation above).
+  it('per house: who paid keeps what they paid, a latecomer pays it all on site', () => {
+    // The house: 30 000 Ft a night, 2 nights = 60 000 Ft, 20% advance.
+    // A and B paid 6 000 Ft each while they were two (30 000 Ft each);
+    // then C joined: 20 000 Ft each now.
+    const tour = {
+      startDate: '2024-01-01',
+      duration: 3,
+      accommodationPricePerNight: 30000,
+      advancePaymentPercentage: 20,
+      advancePaidAt: new Date('2024-01-01'),
+    };
+    const { attendeePayments, totals } = computeAttendeePayments(
+      tour,
+      [
+        reservation('r1', [
+          { name: 'A', nights: 2, paid: true, user: { role: 'guest' } },
+          { name: 'B', nights: 2, paid: true, user: { role: 'guest' } },
+          { name: 'C', nights: 2, user: { role: 'guest' } },
+        ]),
+      ],
+      new Map([
+        ['r1-a0', 6000],
+        ['r1-a1', 6000],
+      ]),
+    );
+    const p = byName(attendeePayments);
+    expect(p.A).toMatchObject({ totalPrice: 20000, advance: 6000, rest: 14000, onSite: false });
+    expect(p.C).toMatchObject({
+      totalPrice: 20000,
+      advance: 0,
+      advanceInCurrency: 0,
+      rest: 20000,
+      onSite: true,
+    });
+    expect(totals).toMatchObject({ totalPrice: 60000, advance: 12000, rest: 48000 });
+  });
+
+  it('a EUR tour: the paid forints back in euros; no record - the worked-out advance', () => {
+    const tour = {
+      startDate: '2026-10-22',
+      duration: 4,
+      pricingMode: 'perPerson',
+      accommodationPricePerNight: 11,
+      accommodationCurrency: 'EUR',
+      eurHufExchangeRate: 365,
+      advancePaymentPercentage: 20,
+      advancePaidAt: new Date('2026-09-22'),
+    };
+    const { attendeePayments, totals } = computeAttendeePayments(
+      tour,
+      [
+        reservation('r1', [
+          // Paid 7 € (2 555 Ft) under the old whole-euro rounding.
+          { name: 'Paid', nights: 3, paid: true, user: { role: 'member' } },
+          // Ticked paid by hand, no Payment record: 6,60 € worked out.
+          { name: 'Ticked', nights: 3, paid: true, user: { role: 'member' } },
+          { name: 'Late', nights: 3, user: { role: 'member' } },
+        ]),
+      ],
+      new Map([
+        ['r1-a0', 2555],
+        // Someone who withdrew since: their 6 € (2 190 Ft) still came in.
+        ['gone', 2190],
+      ]),
+    );
+    const p = byName(attendeePayments);
+    expect(p.Paid).toMatchObject({ advance: 2555, advanceInCurrency: 7, rest: 26 });
+    expect(p.Ticked).toMatchObject({ advance: 2409, advanceInCurrency: 6.6, rest: 26.4 });
+    expect(p.Late).toMatchObject({ advance: 0, rest: 33, onSite: true });
+    expect(totals).toMatchObject({
+      totalPrice: 99,
+      advance: 2555 + 2409,
+      advanceInCurrency: 13.6,
+      rest: 85.4,
+      // Everything that came in, the withdrawn one's too.
+      advancePaidTotal: 2555 + 2409 + 2190,
+      advancePaidTotalInCurrency: 19.6,
+    });
+  });
+
+  it('nothing changes before they are declared paid', () => {
+    const tour = {
+      startDate: '2024-01-01',
+      duration: 2,
+      accommodationPricePerNight: 10000,
+      advancePaymentPercentage: 10,
+    };
+    const [row] = computeAttendeePayments(
+      tour,
+      [reservation('r1', [{ name: 'H', nights: 1, user: { role: 'guest' } }])],
+      new Map([['r1-a0', 5000]]),
+    ).attendeePayments;
+    expect(row).toMatchObject({ advance: 1000, rest: 9000, onSite: false });
+  });
+});
+
 describe('computeAttendeePayments - per person and unconfigured', () => {
   it('prices children (by age on the tour start date) at the child rate', () => {
     const tour = {
@@ -207,7 +305,7 @@ describe('computeAttendeePayments - per person and unconfigured', () => {
     expect(totals).toMatchObject({ totalPrice: 33000, advance: 6600 });
   });
 
-  it('a EUR tour: prices in whole euros (rounded up), only the advance in HUF', () => {
+  it('a EUR tour: prices to the cent (rounded up), only the advance in HUF', () => {
     const tour = {
       startDate: '2024-01-01',
       duration: 4,
@@ -225,14 +323,21 @@ describe('computeAttendeePayments - per person and unconfigured', () => {
       ]),
     ]);
     const p = byName(attendeePayments);
-    // 300 € / 7 person-nights: A 128.57 -> 129 €, advance 25% -> 33 €.
+    // 300 € / 7 person-nights: A 128.5714 -> 128.58 €, advance 25% = 32.145
+    // -> 32.15 €, in HUF 32.15 * 395.5 = 12715.325 -> 12716 Ft.
     expect(p.A).toMatchObject({
-      totalPrice: 129,
-      advanceInCurrency: 33,
-      advance: Math.ceil(33 * 395.5), // 13052 Ft
-      rest: 96,
+      totalPrice: 128.58,
+      advanceInCurrency: 32.15,
+      advance: 12716,
+      rest: 96.43,
     });
-    expect(p.C).toMatchObject({ totalPrice: 43, advanceInCurrency: 11, advance: 4351, rest: 32 });
+    // C: 42.857 -> 42.86 €, 10.715 -> 10.72 €, 10.72 * 395.5 = 4239.76 -> 4240 Ft.
+    expect(p.C).toMatchObject({
+      totalPrice: 42.86,
+      advanceInCurrency: 10.72,
+      advance: 4240,
+      rest: 32.14,
+    });
     expect(totals).toMatchObject({
       totalPrice: 300,
       advanceInCurrency: 75,
@@ -240,6 +345,38 @@ describe('computeAttendeePayments - per person and unconfigured', () => {
       rest: 225, // no subsidy taken off
       // The tour card's Ft/fő/éj stays in HUF.
       averagePricePerPersonPerNight: Math.ceil((300 / 7) * 395.5),
+    });
+  });
+
+  it('a EUR tour per person: no floating-point crumbs add a forint or a cent', () => {
+    // Tátrai ősz: 11 €/night, 3 nights, 20% advance at 365 Ft/€.
+    const tour = {
+      startDate: '2026-10-22',
+      duration: 4,
+      pricingMode: 'perPerson',
+      accommodationPricePerNight: 11,
+      accommodationCurrency: 'EUR',
+      eurHufExchangeRate: 365,
+      advancePaymentPercentage: 20,
+    };
+    const { attendeePayments, totals } = computeAttendeePayments(tour, [
+      reservation('r1', [
+        { name: 'A', nights: 3, user: { role: 'member' } },
+        { name: 'B', nights: 3, user: { role: 'member' } },
+      ]),
+    ]);
+    // 6.6 * 365 is 2409.0000000000005 in floating point - still 2409 Ft.
+    expect(byName(attendeePayments).A).toMatchObject({
+      totalPrice: 33,
+      advanceInCurrency: 6.6,
+      advance: 2409,
+      rest: 26.4,
+    });
+    expect(totals).toMatchObject({
+      totalPrice: 66,
+      advanceInCurrency: 13.2,
+      advance: 4818,
+      rest: 52.8,
     });
   });
 

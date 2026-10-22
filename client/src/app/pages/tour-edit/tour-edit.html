@@ -202,6 +202,26 @@
           </p>
         }
 
+        <!-- Előleg befizetve: declares the advances paid - asked once more the
+             moment it is ticked, and never undone (the box stays ticked, with its date):
+             who paid keeps what they paid, everyone else pays it all on
+             site. Only for a tour that exists. -->
+        @if (isEditMode) {
+          <label class="advance-paid form-field-full">
+            <input
+              type="checkbox"
+              [ngModel]="form.advancePaid"
+              (ngModelChange)="onAdvancePaidChange($event)"
+              name="advancePaid"
+              [disabled]="!!form.advancePaidAt"
+            />
+            Előleg befizetve
+            @if (form.advancePaidAt) {
+              <span class="advance-paid-date">{{ advancePaidDate(form.advancePaidAt) }}</span>
+            }
+          </label>
+        }
+
         <!-- Fizetési módok: how the rest (Fizetendő) can be paid at the house -
              the attendee list's Fizetendő symbol and the Programfüzet show it
              (see pay-methods, server utils/onSitePayment.js). -->

@@ -12,6 +12,18 @@ export function formatForint(amount: number | null): string {
   return sign + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
+// A euro amount always with its cents, the Hungarian way: "1 234,50" -
+// a EUR tour's prices are worked out to the cent (server
+// reservationController.js's computeAttendeePayments).
+export function formatEuro(amount: number | null): string {
+  if (amount == null) return '';
+  const cents = Math.round(amount * 100);
+  const sign = cents < 0 ? '-' : '';
+  const whole = Math.floor(Math.abs(cents) / 100).toString();
+  const rest = String(Math.abs(cents) % 100).padStart(2, '0');
+  return `${sign}${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')},${rest}`;
+}
+
 // "kb. 2ó 45p" / "kb. 45p" / "kb. 2ó" - short, it's in brackets
 // after the distance on the tour page. "kb." (approx.) since this is a
 // routing estimate (see distance.js server-side), not a promise -

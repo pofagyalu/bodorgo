@@ -4,7 +4,11 @@ import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import Payment from '../models/paymentModel.js';
 import { FutokorCourse, FutokorRun } from '../models/futokorModels.js';
-import { computeAttendeePayments, markAllAttendeesPaidForTour } from './reservationController.js';
+import {
+  computeAttendeePayments,
+  loadPaidAdvances,
+  markAllAttendeesPaidForTour,
+} from './reservationController.js';
 import { tourHasEnded } from './reviewController.js';
 import { computeAge } from './userController.js';
 import { tourVideoList } from '../utils/tourVideos.js';
@@ -314,9 +318,12 @@ export const getTour = async (req, res, next) => {
 
   const participantCount = tour.reservations.reduce((sum, r) => sum + r.attendees.length, 0);
 
+  // Once the advances are declared paid, what each attendee really paid.
+  const paidAdvances = tour.advancePaidAt ? await loadPaidAdvances(tour._id) : undefined;
   const { attendeePayments, totals: paymentTotals } = computeAttendeePayments(
     tour,
     tour.reservations,
+    paidAdvances,
   );
 
   // Which real Payment (if any) backs each attendee row - lets the admin
@@ -437,9 +444,17 @@ export const getTour = async (req, res, next) => {
 // The tour form's Fizetési módok (onSitePayment) - only what it offers,
 // cleaned (see utils/onSitePayment.js); the rest of the body as it is.
 // ...and never the Lezárás fields: a tour is closed only through closeTour
-// below, and opened again by nobody.
+// below, and opened again by nobody. Nor "Előleg befizetve": its date is
+// set by updateTour alone (advancePaid: true), once.
 function withCleanOnSitePayment(body) {
-  const { closed: _closed, closedAt: _closedAt, closedBy: _closedBy, ...rest } = body ?? {};
+  const {
+    closed: _closed,
+    closedAt: _closedAt,
+    closedBy: _closedBy,
+    advancePaid: _advancePaid,
+    advancePaidAt: _advancePaidAt,
+    ...rest
+  } = body ?? {};
   if (rest.onSitePayment === undefined) return rest;
   return { ...rest, onSitePayment: cleanOnSitePayment(rest.onSitePayment) };
 }
@@ -508,6 +523,11 @@ export const updateTour = async (req, res) => {
       throw new AppError(`A ${req.body.order}. sorszám már foglalt ("${existing.title}").`, 400);
     }
   }
+
+  // "Előleg befizetve": the date is the server's, set once - advancePaid:
+  // true sets it to now; it can never be changed or cleared after (the
+  // body's own advancePaidAt is dropped, withCleanOnSitePayment).
+  if (req.body.advancePaid === true && !tour.advancePaidAt) tour.advancePaidAt = new Date();
 
   for (const [key, value] of Object.entries(withCleanOnSitePayment(req.body))) {
     tour[key] = value;

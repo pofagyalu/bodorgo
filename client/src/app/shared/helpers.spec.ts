@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { downloadIcs, googleCalendarUrl, icsContent } from './calendar-event';
 import { errorMessage } from './errors';
-import { formatDrivingDuration, formatForint } from './format';
+import { formatDrivingDuration, formatEuro, formatForint } from './format';
 import { cssColor, pageFont, prefersReducedMotion } from './charts';
 import { shuffledLogoColors } from './logo-colors';
 import { PHOTO_WIDTHS, photoSlide } from './photo-sizes';
@@ -47,6 +47,21 @@ describe('formatForint', () => {
     [1999.6, '2 000'],
   ])('%s is "%s"', (amount, text) => {
     expect(formatForint(amount)).toBe(text);
+  });
+});
+
+describe('formatEuro', () => {
+  it.each([
+    [null, ''],
+    [0, '0,00'],
+    [6.6, '6,60'],
+    [26.4, '26,40'],
+    [128.58, '128,58'],
+    [1234.5, '1 234,50'],
+    [0.1 + 0.2, '0,30'],
+    [-12.05, '-12,05'],
+  ])('%s is "%s"', (amount, text) => {
+    expect(formatEuro(amount)).toBe(text);
   });
 });
 

@@ -16,7 +16,7 @@ import { PaymentService } from '../../../services/payment';
 import { AuthService } from '../../../auth/auth.service';
 import { FreshLoginService } from '../../../auth/fresh-login.service';
 import { NotificationsService } from '../../../notifications/notifications.service';
-import { formatForint } from '../../../shared/format';
+import { formatEuro, formatForint } from '../../../shared/format';
 import { Avatar } from '../../../components/avatar/avatar';
 import { PayMethods } from './pay-methods/pay-methods';
 
@@ -33,6 +33,8 @@ export interface AttendeeListRow {
   advance: number | null; // always HUF - see tour.ts's AttendeePayment
   advanceInCurrency: number | null;
   rest: number | null;
+  // Didn't pay before the advances were declared paid: it all on site.
+  onSite?: boolean;
   paid: boolean;
   // Admin-only override - see tour.ts's own AttendeePayment comment.
   feeExempt: boolean;
@@ -143,18 +145,26 @@ export class AttendeeList implements OnInit {
   // exemption or withdrawal, for an admin either.
   @Input() locked = false;
 
+  // "Előleg befizetve" (the tour's advancePaidAt): no cash advance, and no
+  // undoing one, any more.
+  @Input() advancesClosed = false;
+
   isAdmin = computed(() => this.auth.user()?.role === 'admin');
   readonly formatForint = formatForint;
+  readonly formatEuro = formatEuro;
 
-  // An amount in the tour's currency: "12 500 Ft" or "129 €".
+  // An amount in the tour's currency: "12 500 Ft" or "128,58 €" (euros
+  // always with their cents).
   money(amount: number | null | undefined): string {
-    return `${formatForint(amount ?? 0)} ${this.currency === 'EUR' ? '€' : 'Ft'}`;
+    return this.currency === 'EUR'
+      ? `${formatEuro(amount ?? 0)} €`
+      : `${formatForint(amount ?? 0)} Ft`;
   }
 
   // On a EUR tour, the advance's euro amount - the Előleg cell's tooltip.
   advanceTitle(inCurrency: number | null | undefined): string | null {
     return this.currency === 'EUR' && inCurrency != null
-      ? `${formatForint(inCurrency)} € előleg, forintban fizetve`
+      ? `${formatEuro(inCurrency)} € előleg, forintban fizetve`
       : null;
   }
   // Prices are set for this tour - only then are there amounts, or any

@@ -194,6 +194,35 @@ textarea {
   margin: 2rem 0 0;
 }
 
+// Előleg befizetve: one checkbox line; once set, its date beside it.
+.advance-paid {
+  display: flex;
+  // One line - the form's labels are columns otherwise.
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  font-weight: 600;
+  cursor: pointer;
+
+  input {
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  input:disabled {
+    cursor: default;
+  }
+}
+
+.advance-paid-date {
+  font-weight: 400;
+  color: #667;
+}
+
 // Fizetési módok: the three methods as tick-able tiles.
 .pay-methods {
   display: flex;

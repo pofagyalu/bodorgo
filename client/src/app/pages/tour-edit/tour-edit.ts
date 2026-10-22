@@ -11,6 +11,7 @@ import { AccommodationEditor } from './accommodation-editor/accommodation-editor
 import { COUNTRIES, HOME_COUNTRY } from '../../shared/countries';
 
 import { Loading } from '../../shared/loading/loading';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 interface TourEditForm {
   order: number | null;
   title: string;
@@ -54,6 +55,10 @@ interface TourEditForm {
   clubSubsidyAmount: number | null;
   // Fizetési módok: how the rest can be paid at the house.
   payment: OnSitePayment;
+  // "Előleg befizetve": ticked to declare the advances paid (confirmed on
+  // save, never undone); advancePaidAt is when it was - set by the server.
+  advancePaid: boolean;
+  advancePaidAt: string | null;
 }
 
 function emptyPayment(): OnSitePayment {
@@ -89,6 +94,8 @@ function emptyForm(): TourEditForm {
     // exception, so it starts filled in rather than blank.
     clubSubsidyAmount: 0,
     payment: emptyPayment(),
+    advancePaid: false,
+    advancePaidAt: null,
   };
 }
 
@@ -116,6 +123,7 @@ export class TourEdit implements OnDestroy {
   private router = inject(Router);
   private tourService = inject(TourService);
   private notifications = inject(NotificationsService);
+  private confirm = inject(ConfirmService);
   auth = inject(AuthService);
   environment = environment;
   readonly countries = COUNTRIES;
@@ -209,6 +217,8 @@ export class TourEdit implements OnDestroy {
           advancePaymentPercentage: t.advancePaymentPercentage ?? null,
           clubSubsidyAmount: t.clubSubsidyAmount ?? 0,
           payment: t.onSitePayment ? { ...t.onSitePayment } : emptyPayment(),
+          advancePaid: !!t.advancePaidAt,
+          advancePaidAt: t.advancePaidAt ?? null,
         };
         this.loading.set(false);
       },
@@ -277,6 +287,29 @@ export class TourEdit implements OnDestroy {
     this.coverPreviewUrl.set(URL.createObjectURL(cover));
   }
 
+  // When the advances were declared paid: "2026. szept. 22."
+  advancePaidDate(iso: string): string {
+    return new Intl.DateTimeFormat('hu-HU', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(iso));
+  }
+
+  // "Előleg befizetve" can't be taken back - asked the moment it's ticked;
+  // Mégse unticks it. (Saving then just sends it.)
+  async onAdvancePaidChange(ticked: boolean) {
+    this.form.advancePaid = ticked;
+    if (!ticked) return;
+    const sure = await this.confirm.ask({
+      message: 'Előleg biztosan be van fizetve?',
+      confirmText: 'Igen',
+      cancelText: 'Mégse',
+      danger: false,
+    });
+    if (!sure) this.form.advancePaid = false;
+  }
+
   save() {
     this.error.set(null);
     this.saving.set(true);
@@ -331,6 +364,8 @@ export class TourEdit implements OnDestroy {
       // there's no reason to persist a misleading number either.
       clubSubsidyAmount: this.subsidyAllowed ? (f.clubSubsidyAmount ?? undefined) : 0,
       onSitePayment: f.payment,
+      // Sent only the once - the server dates it and never takes it back.
+      advancePaid: f.advancePaid && !f.advancePaidAt ? true : undefined,
     };
 
     const wasEditMode = this.isEditMode;

@@ -5,7 +5,7 @@ import Tour from '../models/tourModel.js';
 import Reservation from '../models/reservationModel.js';
 import User from '../models/userModel.js';
 import Transaction from '../models/transactionModel.js';
-import { computeAttendeePayments } from './reservationController.js';
+import { computeAttendeePayments, loadPaidAdvances } from './reservationController.js';
 import {
   createCheckoutSession,
   retrieveCheckoutSession,
@@ -50,8 +50,17 @@ async function loadAttendeePayments(tourId) {
     path: 'attendees.user',
     select: 'role birthday familyId',
   });
-  const { attendeePayments } = computeAttendeePayments(tour, reservations);
+  const paidAdvances = tour.advancePaidAt ? await loadPaidAdvances(tour._id) : undefined;
+  const { attendeePayments } = computeAttendeePayments(tour, reservations, paidAdvances);
   return { tour, attendeePayments };
+}
+
+// "Előleg befizetve" (tour.advancePaidAt): the advances are facts now - no
+// new one is paid, online or in cash; the rest is paid on site.
+function assertAdvancesOpen(tour) {
+  if (tour?.advancePaidAt) {
+    throw new AppError('Az előlegek már befizetve - a többit a helyszínen kell fizetni.', 400);
+  }
 }
 
 // Recomputes, from real server-side data, exactly who the caller is
@@ -66,6 +75,7 @@ export async function resolvePayableAttendees(tourId, attendeeIds, user) {
   const { tour, attendeePayments } = await loadAttendeePayments(tourId);
   // No new payment for a closed tour (one already under way still finishes).
   assertTourOpen(tour);
+  assertAdvancesOpen(tour);
 
   const requested = new Set(attendeeIds.map(String));
   const myFamilyId = user.familyId ? String(user.familyId) : null;
@@ -92,6 +102,7 @@ export async function resolvePayableAttendees(tourId, attendeeIds, user) {
 export async function resolvePayableAttendeesForAdmin(tourId, attendeeIds) {
   const { tour, attendeePayments } = await loadAttendeePayments(tourId);
   assertTourOpen(tour);
+  assertAdvancesOpen(tour);
 
   const requested = new Set(attendeeIds.map(String));
   const payable = attendeePayments.filter(
@@ -569,8 +580,10 @@ export const deleteCashPayment = async (req, res) => {
     return res.status(204).json({ status: 'success', data: null });
   }
 
-  // A closed tour's cash payments stay as they are.
+  // A closed tour's cash payments stay as they are - and so do they once
+  // the advances are declared paid (paid is paid).
   await assertTourOpenById(payment.tour);
+  assertAdvancesOpen(await Tour.findById(payment.tour).select('advancePaidAt'));
   for (const a of payment.attendees) {
     await Reservation.updateOne(
       { _id: a.reservationId, 'attendees._id': a.attendeeId },

@@ -71,6 +71,20 @@
   }
 }
 
+// A EUR tour's advance: the euros, and under them the forints - smaller,
+// in brackets (attendee-list.html's advanceAmount).
+.advance-amount {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.advance-huf {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #778;
+}
+
 .paid-icon {
   color: #2e9e57;
 }
@@ -80,6 +94,14 @@
   height: 0.875rem;
   font-size: 0.875rem;
   color: #f08c00;
+}
+
+// "helyszínen" after an amount: it all paid on site (the advances were
+// declared paid before this person paid one).
+.on-site {
+  margin-left: 0.3rem;
+  font-size: 0.8rem;
+  color: #b4500f;
 }
 
 // Optional schedule events (e.g. an extra breakfast) - a genuinely
@@ -437,27 +459,57 @@
     }
   }
 
-  // Left: the name and under it the nights · price; right: the advance
-  // and under it what is left to pay.
-  .card-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.75rem;
+  // A person in two lines, as a grid so everything lines up: the name |
+  // ✓/✗ | the advance | "előleg" (+ its forints); under them the nights ·
+  // price | | what is left | "hátra". The amounts share one right-aligned
+  // column, the words the next one.
+  .card-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    column-gap: 0.3rem;
+    row-gap: 0.2rem;
+    align-items: center;
   }
 
-  .card-left,
-  .card-right {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    min-width: 0;
+  // The second line starts in the first column (also when there are no
+  // prices to fill the first line's right side).
+  .card-sub--left {
+    grid-column: 1;
   }
 
-  .card-right {
-    flex: none;
-    align-items: flex-end;
-    text-align: right;
+  .card-amount--rest {
+    grid-column: 3;
+  }
+
+  // The right side: numbers and words alike, one colour and size.
+  .card-amount,
+  .card-label {
+    color: #445;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .card-amount {
+    justify-self: end;
+  }
+
+  // ✓/✗ close to its amount.
+  .card-mark {
+    display: inline-flex;
+    justify-self: end;
+    margin-right: -0.2rem;
+
+    mat-icon {
+      width: 1rem;
+      height: 1rem;
+      font-size: 1rem;
+    }
+  }
+
+  // A EUR tour's advance in forints: after "előleg", smaller, same colour.
+  .card-huf {
+    margin-left: 0.25rem;
+    font-size: 0.6875rem;
   }
 
   .card-sub {
@@ -466,8 +518,8 @@
     white-space: nowrap;
   }
 
-  // The left one's under-line starts under the name, not under the photo.
-  .card-left > .card-sub {
+  // A person's under-line starts under the name, not under the photo.
+  .card-row:not(.card-row--family):not(.card-row--totals) .card-sub--left {
     padding-left: calc(28px + 0.5rem);
   }
 
@@ -504,10 +556,6 @@
   .card-row--family {
     background: #f4f7f6;
     font-weight: 700;
-
-    .card-left > .card-sub {
-      padding-left: 0;
-    }
   }
 
   // Összesen: a card of its own at the end, in bold.

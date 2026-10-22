@@ -288,6 +288,9 @@ export interface Tour {
   childPricePerNight?: number;
   childAgeLimitYears?: number;
   advancePaymentPercentage?: number;
+  // "Előleg befizetve": when an admin declared the advances paid - from
+  // then on they are facts (server computeAttendeePayments).
+  advancePaidAt?: string;
   clubSubsidyAmount?: number;
   // Admin-uploaded extras shown in the "Extra infók" section (a map, a
   // beszámoló, places-to-visit notes, etc.) - only populated on the
@@ -459,6 +462,9 @@ export interface AttendeePayment {
   // attendee (counted toward capacity/nights), just excluded from
   // totalPrice/advance/rest below, which are always 0 when this is true.
   feeExempt: boolean;
+  // Didn't pay before the tour's advances were declared paid (Tour's
+  // advancePaidAt): 0 advance, the whole price on site ("helyszínen").
+  onSite?: boolean;
   totalPrice: number | null;
   advance: number | null;
   advanceInCurrency: number | null;
@@ -489,6 +495,10 @@ export interface PaymentTotals {
   advance: number;
   advanceInCurrency: number;
   rest: number;
+  // Once the advances are declared paid: every advance that came in for
+  // the tour, people who withdrew since included (null before).
+  advancePaidTotal?: number | null;
+  advancePaidTotalInCurrency?: number | null;
 }
 
 // Distance/duration/wording for the info-line's directions_car row -
@@ -560,6 +570,8 @@ export interface TourPayload {
   advancePaymentPercentage?: number;
   clubSubsidyAmount?: number;
   onSitePayment?: OnSitePayment;
+  // "Előleg befizetve" - once; the server dates it (advancePaidAt).
+  advancePaid?: boolean;
 }
 
 export interface SignUpResponse {
