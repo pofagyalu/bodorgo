@@ -136,7 +136,8 @@ describe('background music', () => {
         artist: 'Zenekar',
         durationMs: 180000,
         streamUrl: '/music/bodorgo-fm/stream/a1',
-        imageUrl: '/music/bodorgo-fm/image/a1',
+        // The picture's tag in it: a changed picture, a new address.
+        imageUrl: expect.stringMatching(/^\/music\/bodorgo-fm\/image\/a1\?v=/),
       },
       {
         id: 'b2',
@@ -144,7 +145,7 @@ describe('background music', () => {
         artist: 'Énekes',
         durationMs: 240000,
         streamUrl: '/music/bodorgo-fm/stream/b2',
-        imageUrl: '/music/bodorgo-fm/image/b2',
+        imageUrl: '/music/bodorgo-fm/image/b2?v=t',
       },
       {
         id: 'c3',

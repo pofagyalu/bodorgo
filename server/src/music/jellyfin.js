@@ -114,7 +114,12 @@ export function toTrack(key, item, picture = null) {
     artist,
     durationMs: item.RunTimeTicks ? Math.round(item.RunTimeTicks / TICKS_PER_MS) : null,
     streamUrl: `/music/${key}/stream/${item.Id}`,
-    imageUrl: picture ? `/music/${key}/image/${item.Id}` : null,
+    // The picture's tag in the address: a changed picture is a new address,
+    // so no browser (or the app's offline copy) keeps showing the old one -
+    // a picture is cached for a day (2026-10-22: changed covers didn't show).
+    imageUrl: picture
+      ? `/music/${key}/image/${item.Id}?v=${encodeURIComponent(picture.tag)}`
+      : null,
     imageFrom: picture?.from ?? null,
     imageTag: picture?.tag ?? null,
   };
