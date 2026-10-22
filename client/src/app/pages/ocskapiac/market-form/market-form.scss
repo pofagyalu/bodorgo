@@ -1,7 +1,9 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  // Above the app's header (z-index up to 20000), like the other pages'
+  // popups - it slid under it at 1000; under the confirm dialog (30000).
+  z-index: 29999;
   display: grid;
   place-items: center;
   padding: 1rem;

@@ -65,7 +65,24 @@
       </div>
 
       @if (item().description) {
-        <p class="description">{{ item().description }}</p>
+        <!-- A link in it: a short "katt ide", opening in a new tab; its
+             address shows on hover (shared/link-parts). -->
+        <p class="description">
+          @for (part of descriptionParts(); track $index) {
+            @if (part.href) {
+              <a
+                class="description-link"
+                [href]="part.href"
+                [title]="part.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                >katt ide</a
+              >
+            } @else {
+              <span>{{ part.text }}</span>
+            }
+          }
+        </p>
       }
 
       <!-- Who holds / who asks. -->

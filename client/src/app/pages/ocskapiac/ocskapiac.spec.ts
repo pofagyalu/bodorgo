@@ -243,6 +243,20 @@ describe('MarketItemDialog', () => {
     expect(success).toHaveBeenCalledTimes(2);
   });
 
+  it('shows a link in the description as "katt ide", opening in a new tab', () => {
+    const { fixture } = open(
+      item({ description: 'Képek itt: https://example.com/kepek/1. Hívj!' }),
+    );
+    const description = fixture.nativeElement.querySelector('.description') as HTMLElement;
+    const link = description.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('katt ide');
+    expect(link.getAttribute('href')).toBe('https://example.com/kepek/1');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toContain('noopener');
+    // The full stop after it stays text - no stray spaces around the pieces.
+    expect(description.textContent?.trim()).toBe('Képek itt: katt ide. Hívj!');
+  });
+
   it('a note is cleared only once it was sent', () => {
     const { dialog } = open(item());
     dialog.note.set('Hívlak este!');
