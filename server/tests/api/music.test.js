@@ -59,14 +59,39 @@ beforeEach(async () => {
           : new Response('Error processing request.', { status: 400 });
       }
       if (String(url).includes('/Playlists/pl2/Items')) {
-        return new Response(JSON.stringify({ Items: [{ Id: 'p9', Name: 'Buli dal' }] }), {
-          status: 200,
-        });
+        return new Response(
+          JSON.stringify({
+            Items: [
+              {
+                Id: 'p9',
+                Name: 'Buli dal',
+                ImageTags: { Primary: 'own9' },
+                AlbumId: 'alb2',
+                AlbumPrimaryImageTag: 't',
+              },
+            ],
+          }),
+          { status: 200 },
+        );
       }
       if (String(url).includes('/Playlists/pl3/Items')) {
-        return new Response(JSON.stringify({ Items: [{ Id: 'h7', Name: 'Halk dal' }] }), {
-          status: 200,
-        });
+        // A song with its own picture - and an artist with a photo, and an
+        // album with a cover too.
+        return new Response(
+          JSON.stringify({
+            Items: [
+              {
+                Id: 'h7',
+                Name: 'Halk dal',
+                ImageTags: { Primary: 'own7' },
+                ArtistItems: [{ Id: 'art1' }],
+                AlbumId: 'alb2',
+                AlbumPrimaryImageTag: 't',
+              },
+            ],
+          }),
+          { status: 200 },
+        );
       }
       if (String(url).endsWith('/Items/art1/Images')) {
         return new Response(JSON.stringify([{ ImageType: 'Primary' }]), { status: 200 });
@@ -74,7 +99,7 @@ beforeEach(async () => {
       if (String(url).endsWith('/Items/art2/Images')) {
         return new Response(JSON.stringify([]), { status: 200 });
       }
-      if (/\/Items\/(art1|alb2)\/Images\/Primary/.test(String(url))) {
+      if (/\/Items\/(art1|alb2|h7|p9)\/Images\/Primary/.test(String(url))) {
         return new Response('JPEGDATA', { status: 200, headers: { 'content-type': 'image/jpeg' } });
       }
       if (String(url).includes('/Audio/a1/stream')) {
@@ -168,6 +193,17 @@ describe('background music', () => {
     expect((await request(app).get('/music/bodorgo-fm/image/c3').set(asUser(guest))).status).toBe(
       404,
     );
+  });
+
+  it("Buli, Duruzsoló: a song's own picture first - before the artist's photo and the album cover", async () => {
+    const guest = await createGuest();
+    expect((await request(app).get('/music/buli/image/p9').set(asUser(guest))).status).toBe(200);
+    expect(calls.some((c) => c.url.includes('/Items/p9/Images/Primary'))).toBe(true);
+    const res = await request(app).get('/music/hatter/image/h7').set(asUser(guest));
+    expect(res.status).toBe(200);
+    const pictures = calls.filter((c) => c.url.includes('/Images/Primary')).map((c) => c.url);
+    expect(pictures.some((u) => u.includes('/Items/h7/Images/Primary'))).toBe(true);
+    expect(pictures.some((u) => /\/Items\/(art1|alb2)\/Images\/Primary/.test(u))).toBe(false);
   });
 
   it('the pictures are kept on the server: Jellyfin is asked for each only once', async () => {

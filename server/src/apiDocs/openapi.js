@@ -4155,7 +4155,7 @@ const paths = {
       tag: T.music,
       summary: 'One track’s thumbnail',
       description:
-        'The artist’s photo if Jellyfin has one, otherwise the album cover (or the track’s own picture) - square, resized by Jellyfin, a WebP, cached a day. Served from the server’s own copy (THUMBNAILS_ROOT/_music): fetched from Jellyfin once - when a list is loaded and a song’s picture isn’t there yet, or has changed in Jellyfin. Only a track of that playlist.',
+        'The artist’s photo if Jellyfin has one, otherwise the album cover (or the track’s own picture); on Buli and Duruzsoló (`buli`, `hatter`) the track’s own picture first, then those - square, resized by Jellyfin, a WebP, cached a day. Served from the server’s own copy (THUMBNAILS_ROOT/_music): fetched from Jellyfin once - when a list is loaded and a song’s picture isn’t there yet, or has changed in Jellyfin. Only a track of that playlist.',
       params: [musicKey, path('itemId', 'A track’s id from the playlist.')],
       response: file(['image/jpeg'], 'The picture.'),
       errors: [403, 404, 502],
