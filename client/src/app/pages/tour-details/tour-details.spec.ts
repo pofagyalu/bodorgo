@@ -217,7 +217,8 @@ describe('TourDetails', () => {
 
   it('shows the programme cost in euros for a euro tour', () => {
     open('member', makeTour({ accommodationCurrency: 'EUR', eurHufExchangeRate: 390 }));
-    expect(page.allAttendees()[0].optionalProgramsCost).toBe(11); // 4000 Ft, rounded up
+    // 4000 Ft / 390 = 10.2564 € - rounded up to the cent.
+    expect(page.allAttendees()[0].optionalProgramsCost).toBe(10.26);
   });
 
   it('offers a member the family members who are not signed up yet', () => {

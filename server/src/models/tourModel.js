@@ -149,6 +149,14 @@ const tourSchema = new Schema(
       enum: ['HUF', 'EUR'],
       default: 'HUF',
     },
+    // "Előleg befizetve": when an admin declared the advances paid (tour
+    // edit, confirmed) - set once by updateTour, never changed or cleared
+    // after. From then on the advances are facts: who paid keeps what they
+    // really paid (their Payment records), everyone else - anyone who
+    // didn't pay, a latecomer - pays nothing in advance and their whole
+    // price on site; no new advance can be paid (computeAttendeePayments,
+    // paymentController.js).
+    advancePaidAt: Date,
     // Required whenever accommodationCurrency is 'EUR' (see the validator
     // below) - the admin's own manually-entered EUR->HUF rate as of when
     // they configured this tour's pricing, used by toHuf to convert

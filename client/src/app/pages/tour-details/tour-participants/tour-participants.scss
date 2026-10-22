@@ -7,13 +7,32 @@
   margin-bottom: 3rem;
 }
 
+// "Előleg befizetve …": a quiet line above the head count.
+.advance-paid-note {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: none;
+  margin: 0;
+  color: #2f8f55;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.advance-paid-icon {
+  font-size: 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
 // One row: the head count, "Megtelt" and an admin's Excel button.
 .participants-heading {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex: 1 1 auto;
   min-height: 2.25rem;
-  margin: 0 0 1.2rem;
+  margin: 0;
   font-size: 1.1rem;
   font-weight: 400;
   color: #333;
@@ -26,6 +45,8 @@
   align-items: center;
   gap: 0.2rem;
   margin-left: auto;
+  // Room between the head count and the Excel badge.
+  padding-left: 1.5rem;
 }
 
 // "36 fő jelentkezett, 4 hely szabad": may wrap on a narrow phone, the
@@ -85,10 +106,38 @@
   font-style: italic;
 }
 
+// The advances' line and the head count: one line on a wide screen, the
+// advances on the left, the head count (with Megtelt and the Excel badge)
+// at the right end. Without the advances' line the head count's row is as
+// wide as ever.
+.participants-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 1.2rem;
+}
+
+.advance-paid-note + .participants-heading {
+  flex: 0 1 auto;
+  margin-left: auto;
+}
+
 // On a phone the row gets tight (the text, "Megtelt", and an admin's
 // Excel button - that one the same as on a wide screen): smaller text and
 // badge.
 @media (max-width: 600px) {
+  // One under the other, the advances first.
+  .participants-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .advance-paid-note + .participants-heading {
+    flex: 1 1 auto;
+    margin-left: 0;
+  }
+
   .participants-heading {
     font-size: 1rem;
     gap: 0.25rem;

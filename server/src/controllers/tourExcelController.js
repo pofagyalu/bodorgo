@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import ExcelJS from 'exceljs';
 import Tour from '../models/tourModel.js';
 import AppError from '../utils/appError.js';
-import { computeAttendeePayments } from './reservationController.js';
+import { computeAttendeePayments, loadPaidAdvances } from './reservationController.js';
 import { huDate } from '../utils/huDate.js';
 
 // Hungarian even on the live server (see utils/huDate.js).
@@ -47,13 +47,13 @@ function familyLabel(members) {
 // participants are recorded per User.
 // A EUR tour's sheet is all in EUR (the house owner is paid in EUR, no
 // forints at all): the optional events' HUF prices are converted at the
-// tour's rate, rounded up to whole euros.
+// tour's rate, rounded up to the cent.
 function eventCostForAttendee(event, userId, tour) {
   if (!userId) return null;
   const isParticipant = (event.participants ?? []).some((p) => String(p.user) === userId);
   if (!isParticipant) return null;
   return tour.accommodationCurrency === 'EUR'
-    ? Math.ceil(event.extraCost / tour.eurHufExchangeRate)
+    ? Math.ceil(Number(((event.extraCost / tour.eurHufExchangeRate) * 100).toFixed(6))) / 100
     : event.extraCost;
 }
 
@@ -62,7 +62,8 @@ function eventColumnLabel(event) {
 }
 
 const HUF_FORMAT = '#,##0" Ft"';
-const EUR_FORMAT = '#,##0" €"';
+// Euros always with their cents: 26,40 €.
+const EUR_FORMAT = '#,##0.00" €"';
 const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF445A67' } };
 const FAMILY_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCEAF3' } };
 const TOTAL_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
@@ -99,7 +100,12 @@ export const downloadAttendeesExcel = async (req, res) => {
     throw new AppError('No tour found with that ID!', 404);
   }
 
-  const { attendeePayments, totals } = computeAttendeePayments(tour, tour.reservations);
+  const paidAdvances = tour.advancePaidAt ? await loadPaidAdvances(tour._id) : undefined;
+  const { attendeePayments, totals } = computeAttendeePayments(
+    tour,
+    tour.reservations,
+    paidAdvances,
+  );
   const hasPricing = totals !== null;
   // A EUR tour: every amount in EUR - the advance too (advanceInCurrency),
   // not the forints it was paid in.

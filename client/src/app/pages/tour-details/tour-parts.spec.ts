@@ -82,6 +82,37 @@ describe('AttendeeList', () => {
     fixture.detectChanges();
   }
 
+  it('a EUR tour: the advance in euros, the forints under it in brackets', () => {
+    open('member', {
+      currency: 'EUR',
+      attendees: [
+        row({
+          attendeeId: 'a1',
+          name: 'Teszt Elek',
+          userId: 'me',
+          advance: 2464,
+          advanceInCurrency: 6.75,
+        }),
+      ],
+    });
+    const amounts = [...fixture.nativeElement.querySelectorAll('.advance-amount')].map(
+      (el: Element) => el.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(amounts).toContain('6,75 €(2 464 Ft)');
+  });
+
+  it('shows who pays it all on site, with no cash button once the advances are paid', () => {
+    open('admin', {
+      attendees: [
+        row({ attendeeId: 'a1', name: 'Késő Béla', userId: 'b', paid: false, onSite: true }),
+      ],
+      advancesClosed: true,
+    });
+    const text = (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ');
+    expect(text).toContain('helyszínen');
+    expect(fixture.nativeElement.querySelector('.icon-btn--cash')).toBeNull();
+  });
+
   it('has a card per family for a phone, each person in two lines', () => {
     open('member');
     const cards = [...fixture.nativeElement.querySelectorAll('.family-card')] as HTMLElement[];
@@ -93,8 +124,11 @@ describe('AttendeeList', () => {
     const text = elek.textContent!.replace(/\s+/g, ' ');
     expect(text).toContain(`${ROWS[0].nights} éj`);
     expect(text).toContain('opció');
-    expect(text).toContain('Ft előleg');
-    expect(text).toContain('hátra');
+    // Two lines, the amounts in one column, the words in the next.
+    const cells = (cls: string) =>
+      [...elek.querySelectorAll(`.${cls}`)].map((c) => c.textContent?.trim());
+    expect(cells('card-amount')).toEqual(['6 000 Ft', '14 000 Ft']);
+    expect(cells('card-label')).toEqual(['előleg', 'hátra']);
     // A member can withdraw his own family's people: their Lemondás on a
     // third line - not on the other families' cards.
     expect(cards[2].querySelectorAll('.card-actions .icon-btn--withdraw').length).toBe(2);
@@ -190,8 +224,11 @@ describe('AttendeeList', () => {
     expect(list.advanceTitle(30)).toBeNull();
 
     fixture.componentRef.setInput('currency', 'EUR');
-    expect(list.money(30)).toBe('30 €');
-    expect(list.advanceTitle(30)).toBe('30 € előleg, forintban fizetve');
+    // Euros always with their cents.
+    expect(list.money(30)).toBe('30,00 €');
+    expect(list.money(26.4)).toBe('26,40 €');
+    expect(list.money(1234.5)).toBe('1 234,50 €');
+    expect(list.advanceTitle(6.6)).toBe('6,60 € előleg, forintban fizetve');
     expect(list.advanceTitle(null)).toBeNull();
   });
 
@@ -463,6 +500,36 @@ describe('TourParticipants', () => {
     open('member');
     expect(text()).toContain(`1 fő jelentkezett, ${makeTour().maxCapacity - 1} hely szabad`);
     expect(text()).toContain('Teszt Kata');
+  });
+
+  it('says first when the advances were declared paid, and how much came in', () => {
+    open('member');
+    expect(fixture.nativeElement.querySelector('.advance-paid-note')).toBeNull();
+
+    fixture.componentRef.setInput('tour', makeTour({ advancePaidAt: '2026-09-22T10:00:00Z' }));
+    fixture.componentRef.setInput('totals', {
+      totalPrice: 66,
+      advance: 4818,
+      advanceInCurrency: 13.2,
+      rest: 52.8,
+      // People who withdrew since included.
+      advancePaidTotal: 4964,
+      advancePaidTotalInCurrency: 13.6,
+    });
+    fixture.detectChanges();
+    const note = fixture.nativeElement.querySelector('.advance-paid-note') as HTMLElement;
+    expect(note.textContent).toContain('Előleg befizetve 2026. szept. 22. · 4 964 Ft');
+    // Before the head count.
+    expect(text().indexOf('Előleg befizetve')).toBeLessThan(text().indexOf('fő jelentkezett'));
+
+    // A EUR tour's advances were paid in euros: no Ft.
+    fixture.componentRef.setInput(
+      'tour',
+      makeTour({ advancePaidAt: '2026-02-01T11:00:00Z', accommodationCurrency: 'EUR' }),
+    );
+    fixture.detectChanges();
+    expect(note.textContent).toContain('Előleg befizetve 2026. febr. 1. · 13,60 €');
+    expect(note.textContent).not.toContain('Ft');
   });
 
   it('says so when nobody has signed up, and marks a full tour', () => {

@@ -1,27 +1,37 @@
 <section class="participants-section">
-  <!-- No "Résztvevők" heading (the tab above says it): how many signed up
-       and how many places are left, "Megtelt" and an admin's Excel button. -->
-  <div class="participants-heading">
-    <span class="participants-title"
-      >{{ participantCount() }} fő jelentkezett, {{ freePlaces() }} hely szabad</span
-    >
-    @if (isFull()) {
-      <span class="full-badge">Megtelt</span>
+  <!-- One line on a wide screen - the advances on the left, the head count
+       on the right; on a phone one under the other. -->
+  <div class="participants-top">
+    <!-- First: once the advances are declared paid, when and how much. -->
+    @if (advancePaidNote(); as note) {
+      <p class="advance-paid-note">
+        <mat-icon class="advance-paid-icon">check_circle</mat-icon>{{ note }}
+      </p>
     }
-    <span class="participants-heading-actions">
-      @if (isAdmin()) {
-        <a
-          [href]="attendeesExcelUrl(tour()._id)"
-          class="excel-export-btn"
-          aria-label="Résztvevő lista letöltése Excelben"
-          title="A teljes résztvevő lista Excel fájlba mentése - ki mennyit fizetett, ki mennyivel tartozik még"
-        >
-          <!-- The same on a phone and a wide screen: download + a sheet. -->
-          <mat-icon>download</mat-icon>
-          <mat-icon>grid_on</mat-icon>
-        </a>
+    <!-- No "Résztvevők" heading (the tab above says it): how many signed up
+       and how many places are left, "Megtelt" and an admin's Excel button. -->
+    <div class="participants-heading">
+      <span class="participants-title"
+        >{{ participantCount() }} fő jelentkezett, {{ freePlaces() }} hely szabad</span
+      >
+      @if (isFull()) {
+        <span class="full-badge">Megtelt</span>
       }
-    </span>
+      <span class="participants-heading-actions">
+        @if (isAdmin()) {
+          <a
+            [href]="attendeesExcelUrl(tour()._id)"
+            class="excel-export-btn"
+            aria-label="Résztvevő lista letöltése Excelben"
+            title="A teljes résztvevő lista Excel fájlba mentése - ki mennyit fizetett, ki mennyivel tartozik még"
+          >
+            <!-- The same on a phone and a wide screen: download + a sheet. -->
+            <mat-icon>download</mat-icon>
+            <mat-icon>grid_on</mat-icon>
+          </a>
+        }
+      </span>
+    </div>
   </div>
 
   @if (attendees().length) {
@@ -34,6 +44,7 @@
       [userPhotos]="userPhotos()"
       [paymentMethods]="tour().onSitePayment"
       [locked]="!!tour().closed"
+      [advancesClosed]="!!tour().advancePaidAt"
       (nightsUpdated)="nightsUpdated.emit()"
     />
   } @else {

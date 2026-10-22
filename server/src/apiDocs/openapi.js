@@ -218,6 +218,9 @@ const schemas = {
     childPricePerNight: num('Child price per night.'),
     childAgeLimitYears: int('Below this age the child price applies.'),
     advancePaymentPercentage: num('Előleg - the share paid in advance (0-100).'),
+    advancePaidAt: date(
+      'Előleg befizetve: when an admin declared the advances paid - set once by the tour save (`advancePaid: true`), never changed after.',
+    ),
     clubSubsidyAmount: num(
       'Klub hozzájárulása: the club’s one sum (HUF) toward the accommodation, split among the club members on the tour. None before 2019 or on a tour quoted in EUR. Kept in Pénzügyek as one Szállásköltség expense on the tour’s last day (see `Transaction.tour`).',
     ),
@@ -1496,7 +1499,7 @@ const paths = {
       tag: T.tours,
       summary: 'One tour',
       description:
-        "Everything the tour page shows - schedule, accommodation, weather (`dailyWeather`, and `weatherOutlook` once every day has a forecast), Extrák, attendees with their payment rows. `tour.reservations` say who is on the tour and nothing more: each with `_id`, `paid`, `bookedBy` (`_id`, `name` - no e-mail) and its attendees, whose `user` is the bare user id (no birthday, role or family: everyone reads this, guests too). Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: whole euros, rounded up); `advance` is always the HUF paid to the club, `advanceInCurrency` the same advance in the tour's currency. A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field. `canSeeMedia: false` for a guest who is not on the tour: `videos` is empty then, and the photo and video routes answer 403.",
+        "Everything the tour page shows - schedule, accommodation, weather (`dailyWeather`, and `weatherOutlook` once every day has a forecast), Extrák, attendees with their payment rows. `tour.reservations` say who is on the tour and nothing more: each with `_id`, `paid`, `bookedBy` (`_id`, `name` - no e-mail) and its attendees, whose `user` is the bare user id (no birthday, role or family: everyone reads this, guests too). Payment rows' `totalPrice`/`rest` are in the tour's `accommodationCurrency` (EUR: euros to the cent, rounded up to the cent); `advance` is always the HUF paid to the club (whole forints, rounded up), `advanceInCurrency` the same advance in the tour's currency. Once the advances are declared paid (`advancePaidAt`): the advance is what each person really paid, and `onSite: true` (0 advance, the whole price as `rest`) for whoever did not pay; `paymentTotals.advancePaidTotal`/`advancePaidTotalInCurrency` is every advance that came in for the tour, people who withdrew since included (null before). A EUR tour gets no club subsidy. `videos` are the tour's recap videos; on one of them `isNew: true` is on what an Új média felfedezése has added in the last 14 days - for admins only, nobody else gets the field. `canSeeMedia: false` for a guest who is not on the tour: `videos` is empty then, and the photo and video routes answer 403.",
       params: [tourId],
       data: obj({ tour: ref('Tour'), canSeeMedia: bool() }),
       errors: [404],
@@ -1507,7 +1510,7 @@ const paths = {
       role: 'admin',
       summary: 'Update a tour',
       description:
-        'Any tour fields. Setting the advance to exactly 0 marks every attendee paid. New dates or a new place work out its sun times (`sunDays`) again, and move its Futókör course with them (open from 10:00 on the first day until sunset on the day before the last). `onSitePayment` (Fizetési módok - how the rest is paid at the house): `{ cash, card, szep }` (szep: SZÉP kártya). Shown to attendees on the attendee list (the Fizetendő column) and in the Programfüzet. Its Klub hozzájárulása (`clubSubsidyAmount`) is kept in Pénzügyek as one expense - made, changed or removed (at 0) with each save, see `Transaction.tour`.',
+        "Any tour fields. Setting the advance to exactly 0 marks every attendee paid. New dates or a new place work out its sun times (`sunDays`) again, and move its Futókör course with them (open from 10:00 on the first day until sunset on the day before the last). `onSitePayment` (Fizetési módok - how the rest is paid at the house): `{ cash, card, szep }` (szep: SZÉP kártya). Shown to attendees on the attendee list (the Fizetendő column) and in the Programfüzet. Its Klub hozzájárulása (`clubSubsidyAmount`) is kept in Pénzügyek as one expense - made, changed or removed (at 0) with each save, see `Transaction.tour`. `advancePaid: true` (Előleg befizetve, once): the server sets `advancePaidAt` to now - it is never changed or cleared after, and `advancePaidAt` itself is never taken from the body. From then on the attendee rows' advance is what each person really paid (their payment records), `onSite: true` with 0 advance and the whole price as `rest` for whoever did not pay, and no advance is paid any more.",
       params: [tourId],
       body: ref('Tour'),
       data: obj({ tour: ref('Tour') }),
@@ -1928,7 +1931,7 @@ const paths = {
       role: 'admin',
       summary: 'Attendee list as Excel',
       description:
-        'For the house owner: nights, price, advance, rest - grouped by family. A EUR tour: every amount in EUR (the advance and the optional events too), no forints.',
+        'For the house owner: nights, price, advance, rest - grouped by family. A EUR tour: every amount in EUR to the cent, shown with two decimals (the advance and the optional events too), no forints.',
       params: [tourId],
       response: file(
         ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
@@ -2464,7 +2467,7 @@ const paths = {
       tag: T.payments,
       summary: 'Pay tour advances',
       description:
-        'For myself and my family - the server works out who is still unpaid and how much, never trusting the amount, and adds the chosen method’s fee (see `/settings/payment-methods`); a switched-off method is refused. Advances go to the tour Stripe account / Barion wallet. Answers with the gateway page to send the browser to, payable for half an hour. 409 while an earlier payment for any of the same attendees is still under way (started in the last 31 minutes, not finished or left with Mégse) - its message says who started it and when.',
+        "For myself and my family - the server works out who is still unpaid and how much, never trusting the amount, and adds the chosen method’s fee (see `/settings/payment-methods`); a switched-off method is refused. Advances go to the tour Stripe account / Barion wallet. Answers with the gateway page to send the browser to, payable for half an hour. 409 while an earlier payment for any of the same attendees is still under way (started in the last 31 minutes, not finished or left with Mégse) - its message says who started it and when. Not once the tour's advances are declared paid (`advancePaidAt`, Előleg befizetve): 400.",
       body: obj(
         {
           tourId: id(),
@@ -2545,7 +2548,7 @@ const paths = {
       role: 'admin',
       summary: 'Undo a cash payment',
       description:
-        'Only `method: cash` - an online payment can never be undone here. The payment’s record is removed; the Napló (`/settings/audit-log`) keeps what it was and who had recorded it.' +
+        "Only `method: cash` - an online payment can never be undone here. The payment’s record is removed; the Napló (`/settings/audit-log`) keeps what it was and who had recorded it. Not once the tour's advances are declared paid (`advancePaidAt`, Előleg befizetve): 400 - paid is paid." +
         FRESH_LOGIN,
       params: [path('id', 'The payment.')],
       ok: 204,
@@ -2582,7 +2585,7 @@ const paths = {
       role: 'admin',
       summary: 'Record a cash tour advance',
       description:
-        'Someone paid an admin in cash: marked paid at once, no e-mail. Recorded in the Napló (`/settings/audit-log`).' +
+        "Someone paid an admin in cash: marked paid at once, no e-mail. Recorded in the Napló (`/settings/audit-log`). Not once the tour's advances are declared paid (`advancePaidAt`, Előleg befizetve): 400." +
         FRESH_LOGIN,
       body: obj({ tourId: id(), attendeeIds: arrayOf(id()) }, ['tourId', 'attendeeIds']),
       ok: 201,
