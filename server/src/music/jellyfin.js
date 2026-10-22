@@ -20,9 +20,12 @@ import logger from '../logger.js';
 //   (titleAndArtist).
 export const PLAYLISTS = {
   'bodorgo-fm': { id: () => config.jellyfin.playlistId },
-  buli: { id: () => config.jellyfin.buliPlaylistId },
+  // Its songs' own pictures are the ones the owner picks (pictureSource).
+  buli: { id: () => config.jellyfin.buliPlaylistId, ownPictureFirst: true },
   hatter: {
     id: () => config.jellyfin.hatterPlaylistId,
+    // Its songs' own pictures are the ones the owner picks (pictureSource).
+    ownPictureFirst: true,
     collections: ['Házigazda kedvencei'],
   },
 };
@@ -144,8 +147,14 @@ function artistPhoto(itemId) {
 // A song's thumbnail: the artist's photo if Jellyfin has one, else the
 // album cover, else the song's own picture - none: null. The artist: the
 // album's, unless that is a collection's name (the playlist's
-// `collections`) - then the track's own.
-async function pictureSource(item, collections = []) {
+// `collections`) - then the track's own. A playlist with ownPictureFirst
+// (Buli, Duruzsoló): the song's own picture before all of those - its songs sit
+// in a collection's folder, whose one cover (or the artists' photos) hid
+// the covers picked for each song (2026-10-22).
+async function pictureSource(item, { collections = [], ownPictureFirst = false } = {}) {
+  if (ownPictureFirst && item.ImageTags?.Primary) {
+    return { from: item.Id, tag: item.ImageTags.Primary };
+  }
   const albumArtist = item.AlbumArtists?.[0];
   const performer = collections.some((c) => same(c, albumArtist?.Name)) ? null : albumArtist;
   const artistId = performer?.Id || item.ArtistItems?.[0]?.Id;
@@ -198,7 +207,7 @@ async function fetchPlaylist(key) {
   // One after the other: asked for every artist at once, Jellyfin drops some.
   const tracks = [];
   for (const i of items) {
-    tracks.push(toTrack(key, i, await pictureSource(i, PLAYLISTS[key].collections)));
+    tracks.push(toTrack(key, i, await pictureSource(i, PLAYLISTS[key])));
   }
   return tracks;
 }
