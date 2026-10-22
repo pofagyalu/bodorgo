@@ -330,6 +330,13 @@
 
 /* ---- The tabs under the tour's info ---- */
 
+// The tabs' contents: at least a screen tall (under the header), so with
+// the tabs scrolled to the top a shorter tab never shortens the page - the
+// browser would pull it back down to show the description.
+.tour-panels {
+  min-height: calc(100dvh - var(--header-height));
+}
+
 // On a big screen the tabs' text is the size of a heading, not the small
 // one of the other pages' tab rows.
 .tour-tabs {

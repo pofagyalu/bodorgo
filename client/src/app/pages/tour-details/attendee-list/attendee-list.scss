@@ -108,99 +108,31 @@
   border-bottom: none;
 }
 
-// One person paying for their whole family is the norm here, so seeing
-// "what's left for us as a family" at a glance matters - collapsed by
-// default (a slim, low-weight bar) so it doesn't compete with the roster
-// itself, but the whole row is clickable (see attendee-list.ts's
-// toggleFamilySubtotal), not just the small label inside it.
+// One person paying for their whole family is the norm here, so "what's
+// left for us as a family" is always shown under the family's people: the
+// numbers bold, the same emphasis as the grand .totals-row below.
 .family-subtotal-row {
-  cursor: pointer;
   background: #eef4f8;
-
-  &:hover {
-    background: #e2edf5;
-  }
 
   td {
     border-bottom: 1px solid #dbe6ee;
-  }
-}
-
-// Once opened, the numbers themselves get the same bold/emphasized
-// treatment as the grand .totals-row below the whole table, so a family
-// subtotal reads as "this is a sum", not just another attendee row.
-.family-subtotal-row--expanded {
-  background: #dceaf3;
-
-  &:hover {
-    background: #cfe1ee;
-  }
-
-  td {
     font-weight: 700;
     color: #1a4971;
   }
 }
 
-.family-subtotal-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
+.family-label {
   font-weight: 600;
   color: #1a4971;
-  cursor: pointer;
-
-  mat-icon {
-    font-size: 1.1rem;
-    width: 1.1rem;
-    height: 1.1rem;
-  }
 }
 
 .family-paid-count {
-  font-size: 0.8rem;
+  // A fraction sign (½, ⅔ - attendee-list.ts's fraction) is drawn small:
+  // a size up, so it reads.
+  font-size: 1.15rem;
+  line-height: 1;
   color: #1a4971;
   white-space: nowrap;
-}
-
-// The Előleg/Fizetendő/paid-count cells stay in the DOM at all times
-// (never conditionally removed) specifically so this transition can
-// animate them - clipped by the cell's own overflow:hidden.
-//
-// CSS applies whichever rule's own `transition` is in effect for the
-// state being transitioned TO, so the two directions can be timed
-// differently on purpose: collapsing uses THIS rule's transition (the
-// resting state), sliding the full -100% back to the left first and only
-// starting the fade once that slide has completely finished (delay
-// exactly matches the slide's own duration). Expanding uses the
-// --expanded rule below instead, where slide and fade simply run
-// together - the collapse's stricter "slide, then fade" order isn't
-// needed on the way in.
-.family-value-cell {
-  overflow: hidden;
-}
-
-.family-value {
-  display: inline-block;
-  // 100% of its own width - a genuinely complete slide off to the left,
-  // not just a small nudge.
-  transform: translateX(-100%);
-  opacity: 0;
-  transition:
-    transform 0.3s ease,
-    opacity 0.15s ease 0.3s;
-}
-
-.family-subtotal-row--expanded .family-value {
-  transform: translateX(0);
-  opacity: 1;
-  transition:
-    transform 0.3s ease,
-    opacity 0.2s ease;
 }
 
 .nights-edit-cell input {
@@ -465,5 +397,122 @@
   &:disabled {
     opacity: 0.6;
     cursor: default;
+  }
+}
+
+// --- A phone: a card per family instead of the table (attendee-list.html's
+// .attendee-cards) ---
+
+.attendee-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .attendee-table {
+    display: none;
+  }
+
+  .attendee-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  // One family: a white card with a light border, its people separated by
+  // a thin line.
+  .family-card {
+    border: 1px solid #e3e8e6;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 0.3rem 1rem rgba(0, 0, 0, 0.16);
+    overflow: hidden;
+  }
+
+  .card-row {
+    padding: 0.55rem 0.75rem;
+
+    & + & {
+      border-top: 1px solid #eef1f0;
+    }
+  }
+
+  // Left: the name and under it the nights · price; right: the advance
+  // and under it what is left to pay.
+  .card-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .card-left,
+  .card-right {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .card-right {
+    flex: none;
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .card-sub {
+    color: #667;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  // The left one's under-line starts under the name, not under the photo.
+  .card-left > .card-sub {
+    padding-left: calc(28px + 0.5rem);
+  }
+
+  .dot {
+    margin: 0 0.35rem;
+  }
+
+  .attendee-name {
+    font-weight: 600;
+    flex-wrap: wrap;
+  }
+
+  .card-nights-input {
+    width: 3.5rem;
+    padding: 0.15rem 0.3rem;
+    font: inherit;
+  }
+
+  // The row's buttons (an admin's, or a member's Lemondás) on a third line,
+  // at the right.
+  .card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+
+    .icon-btn {
+      width: 1.75rem;
+      height: 1.75rem;
+    }
+  }
+
+  // The family's sums: the card's bottom row, a light tint, bold.
+  .card-row--family {
+    background: #f4f7f6;
+    font-weight: 700;
+
+    .card-left > .card-sub {
+      padding-left: 0;
+    }
+  }
+
+  // Összesen: a card of its own at the end, in bold.
+  .card-row--totals {
+    font-weight: 700;
+    background: #f4f7f6;
   }
 }

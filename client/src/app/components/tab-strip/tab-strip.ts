@@ -37,6 +37,9 @@ export class TabStrip {
   label = input.required<string>();
   options = input.required<TabOption[]>();
   value = model.required<string>();
+  // The tabs always fit the row (the page shares the row out among them -
+  // the tour page): nothing scrolls, and no end is ever faded out.
+  fit = input(false);
 
   private scroller = viewChild.required<ElementRef<HTMLElement>>('scroller');
   private ink = viewChild.required<ElementRef<HTMLElement>>('ink');
@@ -76,6 +79,7 @@ export class TabStrip {
   }
 
   measure() {
+    if (this.fit()) return;
     const row = this.scroller().nativeElement;
     this.moreBefore.set(row.scrollLeft > EDGE);
     this.moreAfter.set(row.scrollLeft < row.scrollWidth - row.clientWidth - EDGE);

@@ -85,104 +85,24 @@
 
           @if (showActions) {
             <td class="row-actions">
-              @if (isAdmin()) {
-                @if (editingAttendeeId() === a.attendeeId) {
-                  <button
-                    type="button"
-                    class="icon-btn icon-btn--save"
-                    title="Mentés"
-                    [disabled]="savingNights()"
-                    (click)="saveNights(a)"
-                  >
-                    <mat-icon>check</mat-icon>
-                  </button>
-                  <button
-                    type="button"
-                    class="icon-btn icon-btn--cancel"
-                    title="Mégse"
-                    (click)="cancelEditNights()"
-                  >
-                    <mat-icon>close</mat-icon>
-                  </button>
-                } @else {
-                  <button
-                    type="button"
-                    class="icon-btn icon-btn--edit"
-                    title="Éjszakák szerkesztése"
-                    (click)="startEditNights(a)"
-                  >
-                    <mat-icon>hotel</mat-icon>
-                  </button>
-                  @if ((!a.paid && a.advance != null) || a.paymentMethod === 'cash') {
-                    <button
-                      type="button"
-                      class="icon-btn icon-btn--cash"
-                      [class.icon-btn--cash-active]="a.paymentMethod === 'cash'"
-                      [title]="
-                        a.paymentMethod === 'cash'
-                          ? 'Készpénzes fizetés visszavonása'
-                          : 'Készpénzes fizetés'
-                      "
-                      [disabled]="markingCashPaidId() === a.attendeeId"
-                      (click)="toggleCashPaid(a)"
-                    >
-                      <mat-icon>attach_money</mat-icon>
-                    </button>
-                  }
-                  @if (!a.paid || a.feeExempt) {
-                    <button
-                      type="button"
-                      class="icon-btn icon-btn--exempt"
-                      [class.icon-btn--exempt-active]="a.feeExempt"
-                      [title]="
-                        a.feeExempt ? 'Díjmentesség visszavonása' : 'Megjelölés díjmentesként'
-                      "
-                      [disabled]="togglingFeeExemptId() === a.attendeeId"
-                      (click)="toggleFeeExempt(a)"
-                    >
-                      <mat-icon>loyalty</mat-icon>
-                    </button>
-                  }
-                }
-              }
-              @if (canWithdraw(a) && editingAttendeeId() !== a.attendeeId) {
-                <button
-                  type="button"
-                  class="icon-btn icon-btn--withdraw"
-                  title="Lemondás"
-                  (click)="askWithdraw(a)"
-                >
-                  <mat-icon>person_remove</mat-icon>
-                </button>
-              }
+              <ng-container *ngTemplateOutlet="rowActions; context: { $implicit: a }" />
             </td>
           }
         </tr>
       }
       @if (canSeeFamilySubtotal(group)) {
-        <tr
-          class="family-subtotal-row"
-          [class.attendee-row--stripe]="group.familyStripe === 1"
-          [class.family-subtotal-row--expanded]="isFamilySubtotalExpanded(group.key)"
-          (click)="toggleFamilySubtotal(group.key)"
-        >
+        <!-- The family's sums - always shown. -->
+        <tr class="family-subtotal-row" [class.attendee-row--stripe]="group.familyStripe === 1">
           <td colspan="2">
-            <button type="button" class="family-subtotal-toggle">
-              <mat-icon>{{
-                isFamilySubtotalExpanded(group.key) ? 'chevron_left' : 'chevron_right'
-              }}</mat-icon>
-              {{ familyLabel(group) }}
-            </button>
+            <span class="family-label">{{ familyLabel(group) }}</span>
           </td>
           @if (hasPricing()) {
-            <td class="family-value-cell">
-              <span class="family-value">{{ money(familySubtotal(group).totalPrice) }}</span>
-            </td>
-            <td class="family-value-cell">
+            <td>{{ money(familySubtotal(group).totalPrice) }}</td>
+            <td>
               <!-- The family's advances: all paid (tick), none (cross), or
                    how many of them. -->
               <span
-                class="family-value advance-cell"
+                class="advance-cell"
                 [attr.title]="advanceTitle(familySubtotal(group).advanceInCurrency)"
               >
                 @if (familySubtotal(group).paidCount === familySubtotal(group).memberCount) {
@@ -190,25 +110,17 @@
                 } @else if (familySubtotal(group).paidCount === 0) {
                   <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">close</mat-icon>
                 } @else {
-                  <span class="family-paid-count" title="Ennyien fizették ki az előleget"
-                    >{{ familySubtotal(group).paidCount }}/{{
-                      familySubtotal(group).memberCount
-                    }}</span
-                  >
+                  <span class="family-paid-count" title="Ennyien fizették ki az előleget">{{
+                    fraction(familySubtotal(group).paidCount, familySubtotal(group).memberCount)
+                  }}</span>
                 }
                 {{ formatForint(familySubtotal(group).advance) }} Ft
               </span>
             </td>
-            <td class="family-value-cell">
-              <span class="family-value">{{ money(familySubtotal(group).rest) }}</span>
-            </td>
+            <td>{{ money(familySubtotal(group).rest) }}</td>
           }
           @if (hasOptionalPrograms) {
-            <td class="optional-col family-value-cell">
-              <span class="family-value">{{
-                money(familySubtotal(group).optionalProgramsCost)
-              }}</span>
-            </td>
+            <td class="optional-col">{{ money(familySubtotal(group).optionalProgramsCost) }}</td>
           }
           @if (showActions) {
             <td></td>
@@ -237,6 +149,214 @@
     </tfoot>
   }
 </table>
+
+<!-- On a phone the table gives way to this (attendee-list.scss): a card
+     per family, each person in it in two lines - the name, and under it the nights · the price
+     (· the options); on the right ✓ or ✗ and the advance's amount
+     "előleg", under it what is still to pay - and the row's buttons on a
+     third line, when it has any. The families' sums and Összesen the same
+     way. No column headings. -->
+<div class="attendee-cards">
+  @for (group of groupedFamilies; track group.key) {
+    <!-- One family, one card: its people, then its sums at the bottom. -->
+    <div class="family-card">
+      @for (a of group.members; track a.attendeeId) {
+        <div class="card-row">
+          <div class="card-main">
+            <div class="card-left">
+              <span class="attendee-name">
+                <app-avatar
+                  class="attendee-avatar"
+                  [name]="a.name"
+                  [userId]="a.userId"
+                  [photoVersion]="a.userId ? userPhotos[a.userId] : null"
+                />
+                {{ a.name }}
+                @if (a.feeExempt) {
+                  <span class="exempt-badge" title="Nem kell fizetnie a szállásért">Ingyenes</span>
+                }
+              </span>
+              <span class="card-sub">
+                @if (editingAttendeeId() === a.attendeeId) {
+                  <input
+                    class="card-nights-input"
+                    type="number"
+                    min="0"
+                    aria-label="Éjszakák"
+                    [(ngModel)]="editNights"
+                  />
+                  éj
+                } @else {
+                  {{ a.nights }} éj
+                }
+                @if (hasPricing()) {
+                  <span class="dot">·</span>{{ money(a.totalPrice) }}
+                }
+                @if (a.optionalProgramsCost > 0) {
+                  <span class="dot">·</span>+{{ money(a.optionalProgramsCost) }} opció
+                }
+              </span>
+            </div>
+            @if (hasPricing()) {
+              <div class="card-right">
+                <span class="advance-cell" [attr.title]="advanceTitle(a.advanceInCurrency)">
+                  @if (a.paid) {
+                    <mat-icon class="paid-icon" title="Előleg kifizetve">check</mat-icon>
+                  } @else {
+                    <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">close</mat-icon>
+                  }
+                  @if (a.advance != null) {
+                    {{ formatForint(a.advance) }} Ft
+                  }
+                  előleg
+                </span>
+                <span class="card-sub">{{ money(a.rest) }} hátra</span>
+              </div>
+            }
+          </div>
+          @if (isAdmin() || canWithdraw(a)) {
+            <div class="card-actions">
+              <ng-container *ngTemplateOutlet="rowActions; context: { $implicit: a }" />
+            </div>
+          }
+        </div>
+      }
+      @if (canSeeFamilySubtotal(group)) {
+        <!-- The family's sums, at the card's bottom - always shown. -->
+        <div class="card-row card-row--family">
+          <div class="card-main">
+            <div class="card-left">
+              <span class="family-label">{{ familyLabel(group) }}</span>
+              @if (hasPricing()) {
+                <span class="card-sub">
+                  {{ money(familySubtotal(group).totalPrice) }}
+                  @if (familySubtotal(group).optionalProgramsCost > 0) {
+                    <span class="dot">·</span>+{{
+                      money(familySubtotal(group).optionalProgramsCost)
+                    }}
+                    opció
+                  }
+                </span>
+              }
+            </div>
+            @if (hasPricing()) {
+              <div class="card-right">
+                <span
+                  class="advance-cell"
+                  [attr.title]="advanceTitle(familySubtotal(group).advanceInCurrency)"
+                >
+                  @if (familySubtotal(group).paidCount === familySubtotal(group).memberCount) {
+                    <mat-icon class="paid-icon" title="Előleg kifizetve">check</mat-icon>
+                  } @else if (familySubtotal(group).paidCount === 0) {
+                    <mat-icon class="unpaid-icon" title="Előleg nincs kifizetve">close</mat-icon>
+                  } @else {
+                    <span class="family-paid-count" title="Ennyien fizették ki az előleget">{{
+                      fraction(familySubtotal(group).paidCount, familySubtotal(group).memberCount)
+                    }}</span>
+                  }
+                  {{ formatForint(familySubtotal(group).advance) }} Ft előleg
+                </span>
+                <span class="card-sub">{{ money(familySubtotal(group).rest) }} hátra</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+  @if (hasPricing() && totals) {
+    <div class="family-card card-row card-row--totals">
+      <div class="card-main">
+        <div class="card-left">
+          <span>Összesen</span>
+          <span class="card-sub">
+            {{ money(totals.totalPrice) }}
+            @if (hasOptionalPrograms) {
+              <span class="dot">·</span>+{{ money(totalOptionalProgramsCost) }} opció
+            }
+          </span>
+        </div>
+        <div class="card-right">
+          <span [attr.title]="advanceTitle(totals.advanceInCurrency)"
+            >{{ formatForint(totals.advance) }} Ft előleg</span
+          >
+          <span class="card-sub">{{ money(totals.rest) }} hátra</span>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- A row's buttons - in the table's last column, and on a phone on the
+     row's third line. -->
+<ng-template #rowActions let-a>
+  @if (isAdmin()) {
+    @if (editingAttendeeId() === a.attendeeId) {
+      <button
+        type="button"
+        class="icon-btn icon-btn--save"
+        title="Mentés"
+        [disabled]="savingNights()"
+        (click)="saveNights(a)"
+      >
+        <mat-icon>check</mat-icon>
+      </button>
+      <button
+        type="button"
+        class="icon-btn icon-btn--cancel"
+        title="Mégse"
+        (click)="cancelEditNights()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="icon-btn icon-btn--edit"
+        title="Éjszakák szerkesztése"
+        (click)="startEditNights(a)"
+      >
+        <mat-icon>hotel</mat-icon>
+      </button>
+      @if ((!a.paid && a.advance != null) || a.paymentMethod === 'cash') {
+        <button
+          type="button"
+          class="icon-btn icon-btn--cash"
+          [class.icon-btn--cash-active]="a.paymentMethod === 'cash'"
+          [title]="
+            a.paymentMethod === 'cash' ? 'Készpénzes fizetés visszavonása' : 'Készpénzes fizetés'
+          "
+          [disabled]="markingCashPaidId() === a.attendeeId"
+          (click)="toggleCashPaid(a)"
+        >
+          <mat-icon>attach_money</mat-icon>
+        </button>
+      }
+      @if (!a.paid || a.feeExempt) {
+        <button
+          type="button"
+          class="icon-btn icon-btn--exempt"
+          [class.icon-btn--exempt-active]="a.feeExempt"
+          [title]="a.feeExempt ? 'Díjmentesség visszavonása' : 'Megjelölés díjmentesként'"
+          [disabled]="togglingFeeExemptId() === a.attendeeId"
+          (click)="toggleFeeExempt(a)"
+        >
+          <mat-icon>loyalty</mat-icon>
+        </button>
+      }
+    }
+  }
+  @if (canWithdraw(a) && editingAttendeeId() !== a.attendeeId) {
+    <button
+      type="button"
+      class="icon-btn icon-btn--withdraw"
+      title="Lemondás"
+      (click)="askWithdraw(a)"
+    >
+      <mat-icon>person_remove</mat-icon>
+    </button>
+  }
+</ng-template>
 
 <!-- Admin-only: who has withdrawn from this tour, newest first. -->
 @if (isAdmin() && cancellations().length) {

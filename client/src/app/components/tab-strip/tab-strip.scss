@@ -28,6 +28,11 @@
     display: none;
   }
 
+  // All the tabs fit (the fit input): no scrolling.
+  &.scroller--fit {
+    overflow-x: visible;
+  }
+
   // The end with more tabs fades out - a mask, so it works over any
   // background.
   --fade: 3rem;

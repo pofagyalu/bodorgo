@@ -131,12 +131,9 @@ app-event-form {
   // In the heading's row, at its right end, after the weather - centred
   // on the same line as the weather and the date.
   flex: none;
-  // "Filled" look (a solid dark rounded-rectangle container, not just a
-  // bare glyph) - a dark tone, so the icon reads clearly rather than
-  // blending into the heading's light grey.
-  background: #445a67;
+  // Just the icon, dark grey - no filled box around it.
   border-radius: 8px;
-  color: #fff;
+  color: #445a67;
 
   // The "+" glyph reads as thin/spindly at this size otherwise - a text
   // stroke thickens it without needing a different icon font. No effect
@@ -146,13 +143,31 @@ app-event-form {
   }
 
   &:hover {
-    background: #37474f;
+    background: #dde5e2;
+    color: #2b3a42;
   }
 }
 
-// The icon and the temps together, pushed to the line's right end (before
-// an admin's + button) - no pill around them, the temps in the events' own
-// text colour.
+// "ma" on today's day: dark green on light green, the "1. nap" pill's
+// shape - pushed right, the weather then right beside it.
+.day-today {
+  flex: none;
+  margin-left: auto;
+  padding: 0.3rem 0.55rem;
+  border-radius: 0.55rem;
+  background: #d9efe0;
+  color: #1f6b3d;
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.day-today + .day-weather {
+  margin-left: 0;
+}
+
+// The icon and the temps together in one pill, pushed to the line's right
+// end (before an admin's + button).
 .day-weather {
   flex-shrink: 0;
   margin-left: auto;
@@ -210,6 +225,17 @@ app-event-form {
 
   & + & {
     border-top: 1px solid #e9eeec;
+  }
+}
+
+// The event going on now (tour-schedule.ts's currentEventId): the whole
+// row light green, as "ma" in the heading. The day's last row keeps the
+// card's rounded bottom corners.
+.event-row--now {
+  background: #d9efe0;
+
+  &:last-child {
+    border-radius: 0 0 9px 9px;
   }
 }
 
@@ -302,12 +328,12 @@ app-event-form {
     flex-wrap: nowrap;
     gap: 0.4rem;
     padding: 0.4rem 0.6rem;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
 
   .day-heading-daynum {
     padding: 0.25rem 0.45rem;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
   }
 
   .day-heading-date {
@@ -321,6 +347,11 @@ app-event-form {
     gap: 0.2rem;
     padding: 0.05rem 0.45rem 0.05rem 0.1rem;
     font-size: 0.7rem;
+  }
+
+  .day-today {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
   }
 
   .day-weather-icon {
