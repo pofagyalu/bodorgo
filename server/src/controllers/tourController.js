@@ -501,6 +501,13 @@ export const createTour = async (req, res) => {
   res.status(201).json({ status: 'success', data: { tour: newTour } });
 };
 
+// The same [lng, lat] (both missing counts as the same too).
+function sameCoordinates(a, b) {
+  const has = (c) => Array.isArray(c) || (c && typeof c.length === 'number');
+  if (!has(a) || !has(b)) return !has(a) && !has(b);
+  return a.length === b.length && [...a].every((n, i) => Number(n) === Number(b[i]));
+}
+
 // Loads and .save()s rather than findByIdAndUpdate, which bypasses the
 // model's pre('save') hooks entirely - that used to mean a title change
 // left the old slug in place, and location.coordinates changing needed its
@@ -530,6 +537,20 @@ export const updateTour = async (req, res) => {
   if (req.body.advancePaid === true && !tour.advancePaidAt) tour.advancePaidAt = new Date();
 
   for (const [key, value] of Object.entries(withCleanOnSitePayment(req.body))) {
+    if (key === 'location' && value && typeof value === 'object') {
+      // Field by field, and the coordinates only when they really differ:
+      // the edit form always sends the place back, and a new coordinates
+      // array counts as changed even with the same numbers - which emptied
+      // the tour's weather (tourModel.js's pre('save')) on every save
+      // (2026-10-22, Tátrai ősz on its first day).
+      for (const [field, fieldValue] of Object.entries(value)) {
+        if (field === 'coordinates' && sameCoordinates(tour.location?.coordinates, fieldValue)) {
+          continue;
+        }
+        tour.set(`location.${field}`, fieldValue);
+      }
+      continue;
+    }
     tour[key] = value;
   }
 

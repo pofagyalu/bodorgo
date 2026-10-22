@@ -773,5 +773,42 @@ export const withdrawAttendee = async (req, res) => {
 // GET /tours/:tourId/cancellations - admin-only "Lemondások" list, newest first.
 export const getCancellations = async (req, res) => {
   const cancellations = await Cancellation.find({ tour: req.params.tourId }).sort('-cancelledAt');
-  res.status(200).json({ status: 'success', data: { cancellations } });
+
+  // Who paid before withdrawing: the advance they paid (their payments stay
+  // after they leave the list), for the Lemondások line - in HUF, and on a
+  // EUR tour in euros too. Matched by name among the payments of people no
+  // longer on the list; worked out each time, never stored.
+  const [tour, reservations, payments] = await Promise.all([
+    Tour.findById(req.params.tourId).select('accommodationCurrency eurHufExchangeRate'),
+    Reservation.find({ tour: req.params.tourId }).select('attendees._id'),
+    Payment.find({
+      tour: req.params.tourId,
+      purpose: 'tourAdvance',
+      status: 'Succeeded',
+    }).select('attendees.attendeeId attendees.name attendees.amount'),
+  ]);
+  const listed = new Set(reservations.flatMap((r) => r.attendees.map((a) => String(a._id))));
+  const paidByName = new Map();
+  for (const payment of payments) {
+    for (const a of payment.attendees) {
+      if (listed.has(String(a.attendeeId)) || a.amount == null) continue;
+      paidByName.set(a.name, (paidByName.get(a.name) ?? 0) + a.amount);
+    }
+  }
+  const isEur = tour?.accommodationCurrency === 'EUR' && tour.eurHufExchangeRate;
+  const withAmounts = cancellations.map((c) => {
+    const paidAdvance = c.wasPaid ? (paidByName.get(c.name) ?? null) : null;
+    return {
+      ...c.toObject(),
+      paidAdvance,
+      paidAdvanceInCurrency:
+        paidAdvance == null
+          ? null
+          : isEur
+            ? Math.round((paidAdvance / tour.eurHufExchangeRate) * 100) / 100
+            : paidAdvance,
+    };
+  });
+
+  res.status(200).json({ status: 'success', data: { cancellations: withAmounts } });
 };

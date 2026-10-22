@@ -198,6 +198,26 @@ describe('AttendeeList', () => {
     expect(list.showActions).toBe(true);
   });
 
+  it('shows in Lemondások what someone had paid before withdrawing', () => {
+    open('admin', { currency: 'EUR' });
+    list.cancellations.set([
+      {
+        _id: 'c2',
+        name: 'Sárga Csenge',
+        reason: '',
+        wasPaid: true,
+        cancelledAt: '2026-10-21T10:00:00Z',
+        cancelledByName: 'Sárga Emil',
+        paidAdvance: 2464,
+        paidAdvanceInCurrency: 6.75,
+      },
+    ]);
+    list.showCancellations.set(true);
+    fixture.detectChanges();
+    const paid = fixture.nativeElement.querySelector('.cancel-paid') as HTMLElement;
+    expect(paid.textContent?.replace(/\s+/g, ' ').trim()).toBe('6,75 € (2 464 Ft)');
+  });
+
   it('gives a family its subtotal row with one member on the tour too - not someone with no family', () => {
     open('admin', {
       attendees: [

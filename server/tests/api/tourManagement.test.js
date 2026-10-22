@@ -394,6 +394,43 @@ describe('editing and deleting tours (admin)', () => {
     ).toBe(404);
   });
 
+  it('keeps the weather when the form saves the same place - empties it for a new one', async () => {
+    const admin = await createAdmin();
+    const tour = await createTour();
+    // Weather already fetched (put in directly - a new tour starts empty).
+    await Tour.updateOne(
+      { _id: tour._id },
+      { dailyWeather: [{ day: 1, condition: 'clear', isFinal: false, fetchedAt: new Date() }] },
+    );
+    const save = (location) =>
+      request(app)
+        .patch(`/tours/${tour._id}`)
+        .set(asUser(admin))
+        .send({
+          startDate: new Date(tour.startDate).toISOString(),
+          duration: tour.duration,
+          maxCapacity: 30,
+          location,
+        });
+    const place = {
+      description: 'Teszt hely',
+      address: 'Teszt utca 1',
+      coordinates: [19.04, 47.5],
+    };
+
+    // What the edit form sends: the same place, a new address text even.
+    expect((await save({ ...place, address: 'Teszt utca 2' })).status).toBe(200);
+    let saved = await Tour.findById(tour._id);
+    expect(saved.dailyWeather).toHaveLength(1);
+    expect(saved.location.address).toBe('Teszt utca 2');
+
+    // Really moved: its old weather goes.
+    expect((await save({ ...place, coordinates: [20.1, 48.2] })).status).toBe(200);
+    saved = await Tour.findById(tour._id);
+    expect(saved.dailyWeather).toHaveLength(0);
+    expect([...saved.location.coordinates]).toEqual([20.1, 48.2]);
+  });
+
   it('marks everyone paid when the advance is set to exactly 0%', async () => {
     const admin = await createAdmin();
     const tour = await createTour({

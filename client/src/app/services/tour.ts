@@ -307,6 +307,10 @@ export interface Cancellation {
   reason: string;
   wasPaid: boolean;
   cancelledAt: string;
+  // What they had paid before withdrawing: HUF, and in the tour's currency
+  // (null if they hadn't).
+  paidAdvance?: number | null;
+  paidAdvanceInCurrency?: number | null;
 }
 
 // A letter an admin sent to a tour's attendees (see mailingController.js)
