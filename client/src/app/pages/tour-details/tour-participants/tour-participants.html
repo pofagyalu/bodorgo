@@ -13,10 +13,12 @@
         <a
           [href]="attendeesExcelUrl(tour()._id)"
           class="excel-export-btn"
+          aria-label="Résztvevő lista letöltése Excelben"
           title="A teljes résztvevő lista Excel fájlba mentése - ki mennyit fizetett, ki mennyivel tartozik még"
         >
+          <!-- The same on a phone and a wide screen: download + a sheet. -->
           <mat-icon>download</mat-icon>
-          <span class="excel-text">Excel</span>
+          <mat-icon>grid_on</mat-icon>
         </a>
       }
     </span>

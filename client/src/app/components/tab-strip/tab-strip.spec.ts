@@ -59,6 +59,15 @@ describe('TabStrip', () => {
     expect(fixture.nativeElement.querySelector('.arrow')).toBeNull();
   });
 
+  it('never fades an end when told all the tabs fit', () => {
+    fixture.componentRef.setInput('fit', true);
+    fixture.detectChanges();
+    layOut(300, 310);
+    expect(row.classList.contains('scroller--fit')).toBe(true);
+    expect(row.classList.contains('more-after')).toBe(false);
+    expect(row.classList.contains('more-before')).toBe(false);
+  });
+
   it('fades out the side where there are more tabs', () => {
     layOut(300, 500);
     expect(row.classList.contains('more-before')).toBe(false);

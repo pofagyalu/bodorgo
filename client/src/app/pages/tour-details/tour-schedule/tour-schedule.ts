@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import {
   CdkDrag,
@@ -25,6 +25,8 @@ interface DayGroup {
   label: string;
   events: ScheduleEntry[];
   weather?: DailyWeather;
+  // Its calendar date (Date.toDateString) - which day is today.
+  dateKey: string;
 }
 
 // A tour's Programterv (tour-details): the day-by-day schedule, each day
@@ -86,8 +88,8 @@ export class TourSchedule {
     const start = new Date(t.startDate);
     const dateFmt = new Intl.DateTimeFormat('hu-HU', {
       weekday: 'long',
-      year: 'numeric',
-      // "okt." - short, so the day's heading stays one line on a phone.
+      // "okt. 22., csütörtök": no year and a short month, so the day's
+      // heading stays one line on a phone.
       month: 'short',
       day: 'numeric',
     });
@@ -104,9 +106,69 @@ export class TourSchedule {
 
       const weather = t.dailyWeather?.find((w) => w.day === day);
 
-      groups.push({ day, label: dateFmt.format(date), events, weather });
+      groups.push({
+        day,
+        label: dateFmt.format(date),
+        events,
+        weather,
+        dateKey: date.toDateString(),
+      });
     }
     return groups;
+  });
+
+  // The time "ma" and the highlighted event are worked out from. Set again
+  // only at the next moment either of them changes (nextChange) - not by
+  // polling.
+  private now = signal(new Date());
+
+  constructor() {
+    effect((onCleanup) => {
+      // From the real clock: a moment already past (the phone was asleep)
+      // fires at once and catches up.
+      const timer = setTimeout(
+        () => this.now.set(new Date()),
+        Math.max(0, this.nextChange().getTime() - Date.now()),
+      );
+      onCleanup(() => clearTimeout(timer));
+    });
+  }
+
+  // When "ma" or the highlighted event next changes: today's next event
+  // starting, or else midnight (a new day - or the tour over).
+  private nextChange = computed(() => {
+    const now = this.now();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const day = this.dayGroups().find((d) => d.day === this.todayDay());
+    const next = (day?.events ?? [])
+      .map((e) => {
+        const [hours, minutes] = e.time.split(':').map(Number);
+        const at = new Date(now);
+        at.setHours(hours, minutes, 0, 0);
+        return at;
+      })
+      .find((at) => at > now);
+    return next ?? midnight;
+  });
+
+  // The tour's day that is today ("ma" in its heading) - none before the
+  // tour and after it.
+  todayDay = computed<number | null>(() => {
+    const today = this.now().toDateString();
+    return this.dayGroups().find((d) => d.dateKey === today)?.day ?? null;
+  });
+
+  // The event going on now: on today's day, the last one that has started
+  // - until the next one starts, the day's last one until midnight. None
+  // before the day's first event, and none on any other day.
+  currentEventId = computed<string | null>(() => {
+    const day = this.dayGroups().find((d) => d.day === this.todayDay());
+    if (!day) return null;
+    const now = this.now();
+    const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const started = day.events.filter((e) => e.time.padStart(5, '0') <= clock);
+    return started.at(-1)?._id ?? null;
   });
 
   private static readonly WEATHER_ICONS: Record<WeatherCondition, string> = {

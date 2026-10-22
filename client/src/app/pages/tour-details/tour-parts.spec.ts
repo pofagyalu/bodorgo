@@ -82,6 +82,26 @@ describe('AttendeeList', () => {
     fixture.detectChanges();
   }
 
+  it('has a card per family for a phone, each person in two lines', () => {
+    open('member');
+    const cards = [...fixture.nativeElement.querySelectorAll('.family-card')] as HTMLElement[];
+    // Three families, then Összesen.
+    expect(cards.length).toBe(4);
+    const elek = [...cards[2].querySelectorAll('.card-row')].find((r) =>
+      r.textContent?.includes('Teszt Elek'),
+    ) as HTMLElement;
+    const text = elek.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain(`${ROWS[0].nights} éj`);
+    expect(text).toContain('opció');
+    expect(text).toContain('Ft előleg');
+    expect(text).toContain('hátra');
+    // A member can withdraw his own family's people: their Lemondás on a
+    // third line - not on the other families' cards.
+    expect(cards[2].querySelectorAll('.card-actions .icon-btn--withdraw').length).toBe(2);
+    expect(cards[0].querySelector('.card-actions')).toBeNull();
+    expect(cards[3].textContent).toContain('Összesen');
+  });
+
   it('groups families together, ordered by the first name in each', () => {
     open('member');
     expect(list.groupedFamilies.map((g) => g.members.map((m) => m.name))).toEqual([
@@ -108,6 +128,19 @@ describe('AttendeeList', () => {
     });
   });
 
+  it('writes how many of a family paid as a fraction sign', () => {
+    open('member');
+    expect(list.fraction(1, 2)).toBe('½');
+    expect(list.fraction(2, 3)).toBe('⅔');
+    expect(list.fraction(2, 7)).toBe('²⁄₇');
+    expect(list.fraction(2, 4)).toBe('²⁄₄');
+    expect(list.fraction(3, 12)).toBe('³⁄₁₂');
+    // Teszt Elek paid, Teszt Kata not: "½" on the family's sums.
+    expect(fixture.nativeElement.querySelector('.family-paid-count')?.textContent?.trim()).toBe(
+      '½',
+    );
+  });
+
   it("shows a member only their own family's subtotal", () => {
     open('member');
     const [other, solo, mine] = list.groupedFamilies;
@@ -115,10 +148,13 @@ describe('AttendeeList', () => {
     expect(list.canSeeFamilySubtotal(other)).toBe(false);
     expect(list.canSeeFamilySubtotal(solo)).toBe(false);
 
-    list.toggleFamilySubtotal(mine.key);
-    expect(list.isFamilySubtotalExpanded(mine.key)).toBe(true);
-    list.toggleFamilySubtotal(mine.key);
-    expect(list.isFamilySubtotalExpanded(mine.key)).toBe(false);
+    // Always shown - in the table and on the family's phone card.
+    const rows = [...fixture.nativeElement.querySelectorAll('.family-subtotal-row')];
+    expect(rows.length).toBe(1);
+    expect(rows[0].textContent).toContain(list.familyLabel(mine));
+    const cardSums = [...fixture.nativeElement.querySelectorAll('.card-row--family')];
+    expect(cardSums.length).toBe(1);
+    expect(cardSums[0].textContent).toContain('hátra');
   });
 
   it('shows an admin every subtotal and the cancellations', () => {
@@ -691,15 +727,75 @@ describe('TourSchedule', () => {
     open(tour);
     const days = schedule.dayGroups();
     expect(days.map((d) => d.label)).toEqual([
-      '2026. júl. 10., péntek',
-      '2026. júl. 11., szombat',
-      '2026. júl. 12., vasárnap',
+      'júl. 10., péntek',
+      'júl. 11., szombat',
+      'júl. 12., vasárnap',
     ]);
     expect(days.map((d) => d.events.map((e) => e._id))).toEqual([['a', 'b'], [], ['c']]);
     expect(days[1].weather).toMatchObject({ condition: 'rain' });
     expect(schedule.weatherIconPath('rain')).toBe('assets/images/weather/rain.svg');
     expect(schedule.weatherConditionLabel('partly-cloudy')).toBe('Változóan felhős');
     expect(fixture.nativeElement.textContent).toContain('Vacsora');
+  });
+
+  it('marks today with "ma" and highlights the event going on now, as the clock moves', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    try {
+      // Day 2 of 3, before its first event.
+      vi.setSystemTime(new Date(2026, 6, 11, 7, 30));
+      open(
+        makeTour({
+          startDate: new Date(2026, 6, 10, 8).toISOString(),
+          duration: 3,
+          schedule: [
+            { _id: 'x', day: 1, time: '09:00', description: 'Érkezés' },
+            { _id: 'b', day: 2, time: '10:00', description: 'Túra' },
+            { _id: 'a', day: 2, time: '08:00', description: 'Reggeli' },
+            { _id: 'z', day: 3, time: '09:00', description: 'Búcsú' },
+          ],
+        }),
+      );
+      const badges = () =>
+        [...fixture.nativeElement.querySelectorAll('.day-today')].map((b: Element) =>
+          b.textContent?.trim(),
+        );
+      const highlighted = () =>
+        (fixture.nativeElement.querySelector('.event-row--now') as HTMLElement | null)?.textContent;
+      const at = (day: number, hours: number, minutes: number) => {
+        // The clock runs on to then - the page's own timer fires at each
+        // moment something changes.
+        vi.advanceTimersByTime(new Date(2026, 6, 9 + day, hours, minutes).getTime() - Date.now());
+        fixture.detectChanges();
+      };
+
+      expect(schedule.todayDay()).toBe(2);
+      expect(badges()).toEqual(['ma']);
+      expect(schedule.currentEventId()).toBeNull();
+
+      at(2, 8, 0);
+      expect(schedule.currentEventId()).toBe('a');
+      expect(highlighted()).toContain('Reggeli');
+      at(2, 9, 59);
+      expect(schedule.currentEventId()).toBe('a');
+      at(2, 10, 0);
+      expect(schedule.currentEventId()).toBe('b');
+      at(2, 23, 59); // the day's last event lasts until midnight
+      expect(schedule.currentEventId()).toBe('b');
+
+      at(3, 8, 0); // the last day, before its event
+      expect(schedule.todayDay()).toBe(3);
+      expect(schedule.currentEventId()).toBeNull();
+      at(3, 23, 59);
+      expect(schedule.currentEventId()).toBe('z');
+
+      at(4, 0, 0); // the tour is over
+      expect(schedule.todayDay()).toBeNull();
+      expect(schedule.currentEventId()).toBeNull();
+      expect(badges()).toEqual([]);
+      expect(highlighted()).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('folds a day away with a click on its heading, and opens it again', () => {

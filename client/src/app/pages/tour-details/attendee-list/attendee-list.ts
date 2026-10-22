@@ -8,7 +8,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { TourService, PaymentTotals, Cancellation, OnSitePayment } from '../../../services/tour';
@@ -78,6 +78,25 @@ export interface FamilySubtotal {
   optionalProgramsCost: number;
 }
 
+// The fractions that have a sign of their own (attendee-list's fraction).
+const FRACTION_SIGNS: Record<string, string> = {
+  '1/2': '½',
+  '1/3': '⅓',
+  '2/3': '⅔',
+  '1/4': '¼',
+  '3/4': '¾',
+  '1/5': '⅕',
+  '2/5': '⅖',
+  '3/5': '⅗',
+  '4/5': '⅘',
+  '1/6': '⅙',
+  '5/6': '⅚',
+  '1/8': '⅛',
+  '3/8': '⅜',
+  '5/8': '⅝',
+  '7/8': '⅞',
+};
+
 // The tour-details "Résztvevők" list, doing double duty: a plain roster
 // for anyone looking at the tour, and (once an admin has set the tour's
 // accommodationPricePerNight/advancePaymentPercentage) each person's own
@@ -88,7 +107,7 @@ export interface FamilySubtotal {
 @Component({
   selector: 'app-attendee-list',
   standalone: true,
-  imports: [FormsModule, MatIconModule, Avatar, DatePipe, PayMethods],
+  imports: [FormsModule, MatIconModule, Avatar, DatePipe, NgTemplateOutlet, PayMethods],
   templateUrl: './attendee-list.html',
   styleUrl: './attendee-list.scss',
 })
@@ -204,6 +223,16 @@ export class AttendeeList implements OnInit {
     });
   }
 
+  // How many of a family paid the advance, as one fraction sign: "½", "⅔"
+  // - or, with no such sign (2 of 7), raised and lowered digits: "²⁄₇".
+  // The real counts, never reduced (2 of 4 stays "²⁄₄").
+  fraction(paid: number, of: number): string {
+    const sign = FRACTION_SIGNS[`${paid}/${of}`];
+    if (sign) return sign;
+    const digits = (n: number, set: string) => [...String(n)].map((d) => set[+d]).join('');
+    return `${digits(paid, '⁰¹²³⁴⁵⁶⁷⁸⁹')}⁄${digits(of, '₀₁₂₃₄₅₆₇₈₉')}`;
+  }
+
   // "Nagy család összesen" when every member shares the same first name
   // token (Hungarian surname-first convention) - falls back to a plain
   // "Család összesen" for a blended family or differing surnames, rather
@@ -240,26 +269,6 @@ export class AttendeeList implements OnInit {
     if (group.familyId == null) return false;
     if (this.isAdmin()) return true;
     return group.familyId === this.auth.user()?.familyId;
-  }
-
-  // Collapsed by default for every family, on every fresh load - not
-  // persisted across navigation, since this is a per-tour-view choice.
-  expandedFamilyKeys = signal<Set<string>>(new Set());
-
-  isFamilySubtotalExpanded(key: string): boolean {
-    return this.expandedFamilyKeys().has(key);
-  }
-
-  toggleFamilySubtotal(key: string) {
-    this.expandedFamilyKeys.update((set) => {
-      const next = new Set(set);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
   }
 
   editingAttendeeId = signal<string | null>(null);

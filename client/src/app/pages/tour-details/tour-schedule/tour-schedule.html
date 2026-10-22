@@ -26,6 +26,10 @@
       >
         <span class="day-heading-daynum">{{ day.day }}. nap</span>
         <span class="day-heading-date">{{ day.label }}</span>
+        <!-- Today's day: "ma", just before the weather. -->
+        @if (todayDay() === day.day) {
+          <span class="day-today">ma</span>
+        }
         @if (day.weather; as w) {
           <span class="day-weather" [title]="weatherConditionLabel(w.condition)">
             <img [src]="weatherIconPath(w.condition)" alt="" class="day-weather-icon" />
@@ -73,6 +77,7 @@
                 <li
                   class="event-row"
                   [class.event-row--draggable]="canEdit()"
+                  [class.event-row--now]="currentEventId() === ev._id"
                   cdkDrag
                   [cdkDragData]="ev"
                   [cdkDragDisabled]="!canEdit()"
