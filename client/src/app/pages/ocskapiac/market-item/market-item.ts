@@ -16,6 +16,7 @@ import { NotificationsService } from '../../../notifications/notifications.servi
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { Avatar } from '../../../components/avatar/avatar';
 import { errorMessage } from '../../../shared/errors';
+import { linkParts } from '../../../shared/link-parts';
 import { daysLeft } from '../market-card/market-card';
 
 // One Ócskapiac item opened over the page: its photos (swiped sideways),
@@ -35,6 +36,8 @@ export class MarketItemDialog {
   private confirm = inject(ConfirmService);
 
   item = input.required<MarketItem>();
+  // The description in pieces, its links apart ("katt ide").
+  descriptionParts = computed(() => linkParts(this.item().description ?? ''));
   changed = output<MarketItem>();
   deleted = output<string>();
   edit = output<MarketItem>();

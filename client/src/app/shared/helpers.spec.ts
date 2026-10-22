@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { downloadIcs, googleCalendarUrl, icsContent } from './calendar-event';
 import { errorMessage } from './errors';
 import { formatDrivingDuration, formatEuro, formatForint } from './format';
+import { linkParts } from './link-parts';
 import { cssColor, pageFont, prefersReducedMotion } from './charts';
 import { shuffledLogoColors } from './logo-colors';
 import { PHOTO_WIDTHS, photoSlide } from './photo-sizes';
@@ -234,5 +235,20 @@ describe('calendar event', () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
+  });
+});
+
+describe('linkParts', () => {
+  it('cuts the http(s) links out of a text, what ends a sentence left out', () => {
+    expect(linkParts('Nézd: https://a.hu/x?y=1, és (http://b.hu/z).')).toEqual([
+      { text: 'Nézd: ' },
+      { text: 'https://a.hu/x?y=1', href: 'https://a.hu/x?y=1' },
+      { text: ',' },
+      { text: ' és (' },
+      { text: 'http://b.hu/z', href: 'http://b.hu/z' },
+      { text: ').' },
+    ]);
+    expect(linkParts('nincs benne link')).toEqual([{ text: 'nincs benne link' }]);
+    expect(linkParts('')).toEqual([]);
   });
 });
